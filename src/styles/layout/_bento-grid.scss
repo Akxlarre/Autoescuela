@@ -1,0 +1,347 @@
+/* ============================================================
+   BENTO GRID SYSTEM v3
+   
+   Arquitectura de tres capas:
+     1. Clases de proporción  → describen la FORMA de la celda
+     2. data-attributes       → control de placement EXACTO
+     3. Componentes internos  → card, media utilities
+   
+   Breakpoints: $bp-sm(640) · $bp-md(768) · $bp-lg(1024)
+   Columnas:    1 → 4 → 8 → 12
+   ============================================================ */
+
+/* ── BREAKPOINT VARIABLES ─────────────────────────────────── */
+$bp-sm: 640px;
+$bp-md: 768px;
+$bp-lg: 1024px;
+
+/* ── 1. DESIGN TOKENS ─────────────────────────────────────── */
+/* Tokens expuestos en .bento-grid para evitar polución global.
+   Override: redeclara estas variables en un selector más específico. */
+
+/* ── 2. GRID CONTAINER ─────────────────────────────────────── */
+@layer bento.grid, bento.proportions, bento.placement, bento.components;
+
+@layer bento.grid {
+  .bento-grid {
+    /* ── Tokens (scoped al contenedor) ── */
+    --bento-cols-mobile: 1;
+    --bento-cols-sm: 4;
+    --bento-cols-md: 8;
+    --bento-cols-lg: 12;
+
+    --bento-row-min: 120px;
+    --bento-row-max: auto;
+
+    --bento-gap-mobile: var(--space-3);
+    --bento-gap-sm: var(--space-3);
+    --bento-gap-md: var(--space-4);
+    --bento-gap-lg: var(--space-5);
+
+    --bento-pad-mobile: var(--space-4);
+    --bento-pad-sm: var(--space-5);
+    --bento-pad-md: var(--space-6);
+    --bento-pad-lg: var(--space-8);
+
+    /* ── Grid setup ── */
+    display: grid;
+    grid-template-columns: repeat(var(--bento-cols-mobile), minmax(0, 1fr));
+    grid-auto-rows: minmax(var(--bento-row-min), var(--bento-row-max));
+    grid-auto-flow: dense;
+    gap: var(--bento-gap-mobile);
+    padding: var(--bento-pad-mobile);
+
+    /* Container queries: permite que hijos respondan al tamaño del grid */
+    container-type: inline-size;
+    container-name: bento;
+
+    @media (min-width: $bp-sm) {
+      grid-template-columns: repeat(var(--bento-cols-sm), minmax(0, 1fr));
+      gap: var(--bento-gap-sm);
+      padding: var(--bento-pad-sm);
+    }
+
+    @media (min-width: $bp-md) {
+      grid-template-columns: repeat(var(--bento-cols-md), minmax(0, 1fr));
+      gap: var(--bento-gap-md);
+      padding: var(--bento-pad-md);
+    }
+
+    @media (min-width: $bp-lg) {
+      grid-template-columns: repeat(var(--bento-cols-lg), minmax(0, 1fr));
+      gap: var(--bento-gap-lg);
+      padding: var(--bento-pad-lg);
+    }
+  }
+}
+
+/* ── 3. PROPORTION MIXIN ──────────────────────────────────────
+   
+   Genera las 4 media queries para una celda bento.
+   
+   Parámetros:
+     $sm   — columnas en breakpoint sm (640px)
+     $md   — columnas en breakpoint md (768px)
+     $lg   — columnas en breakpoint lg (1024px)
+     $rows — filas que ocupa (default: 1)
+   
+   Tabla de proporciones:
+   ┌──────────────────────────────────────────────────┐
+   │  Clase          sm(4)   md(8)   lg(12)   rows   │
+   │  ──────────────────────────────────────────────  │
+   │  bento-square   2       2       3        1      │
+   │  bento-wide     4       4       6        1      │
+   │  bento-tall     2       2       3        2      │
+   │  bento-feature  4       6       8        2      │
+   │  bento-hero     1/-1    1/-1    1/-1     2      │
+   │  bento-banner   1/-1    1/-1    1/-1     1      │
+   └──────────────────────────────────────────────────┘
+   ─────────────────────────────────────────────────── */
+
+@mixin bento-cell($sm, $md, $lg, $rows: 1) {
+  grid-column: span var(--bento-cols-mobile);
+
+  @if $rows >1 {
+    grid-row: span $rows;
+  }
+
+  @media (min-width: $bp-sm) {
+    grid-column: span $sm;
+
+    @if $rows >1 {
+      grid-row: span $rows;
+    }
+  }
+
+  @media (min-width: $bp-md) {
+    grid-column: span $md;
+  }
+
+  @media (min-width: $bp-lg) {
+    grid-column: span $lg;
+  }
+}
+
+/* ── 4. CLASES DE PROPORCIÓN + LEGACY ALIASES ─────────────────
+   
+   Legacy aliases (bento-1x1, bento-2x1, etc.) se agrupan
+   con su clase principal. NO duplican código.
+   ─────────────────────────────────────────────────────────── */
+
+@layer bento.proportions {
+
+  /* Square: celda cuadrada estándar */
+  .bento-square,
+  .bento-1x1 {
+    @include bento-cell(2, 2, 3);
+  }
+
+  /* Wide: proporción 2:1 horizontal */
+  .bento-wide,
+  .bento-2x1,
+  .bento-3x1,
+  .bento-4x1 {
+    @include bento-cell(4, 4, 6);
+  }
+
+  /* Tall: columna alta, 2 filas */
+  .bento-tall,
+  .bento-2x2 {
+    @include bento-cell(2, 2, 3, 2);
+  }
+
+  /* Feature: elemento protagonista, 2/3 del ancho + doble alto */
+  .bento-feature,
+  .bento-3x2 {
+    @include bento-cell(4, 6, 8, 2);
+  }
+
+  /* Hero: full-width, siempre se expande al total de columnas */
+  .bento-hero {
+    grid-column: 1 / -1;
+    grid-row: span 2;
+  }
+
+  /* Banner: full-width, una fila */
+  .bento-banner {
+    grid-column: 1 / -1;
+    grid-row: span 1;
+  }
+}
+
+/* ── 5. CAPA DE PLACEMENT (data-attributes) ───────────────────
+   
+   Complementa o sobreescribe la clase de proporción cuando
+   necesitas posición o tamaño exacto.
+   
+   Ejemplo:
+   <div class="bento-square"
+        data-col-span="4"
+        data-col-start="7"
+        data-row-span="2">
+   
+   Activo en md (768px+) y lg (1024px+) para mayor flexibilidad.
+   ─────────────────────────────────────────────────────────── */
+
+@layer bento.placement {
+
+  @media (min-width: $bp-md) {
+    @for $i from 1 through 8 {
+      [data-col-span-md="#{$i}"] {
+        grid-column: span $i;
+      }
+    }
+
+    @for $i from 1 through 7 {
+      [data-col-start-md="#{$i}"] {
+        grid-column-start: $i;
+      }
+    }
+
+    @for $i from 1 through 4 {
+      [data-row-span-md="#{$i}"] {
+        grid-row: span $i;
+      }
+    }
+  }
+
+  @media (min-width: $bp-lg) {
+    @for $i from 1 through 12 {
+      [data-col-span="#{$i}"] {
+        grid-column: span $i;
+      }
+    }
+
+    @for $i from 1 through 11 {
+      [data-col-start="#{$i}"] {
+        grid-column-start: $i;
+      }
+    }
+
+    @for $i from 1 through 4 {
+      [data-row-span="#{$i}"] {
+        grid-row: span $i;
+      }
+    }
+  }
+}
+
+/* ── 6. CARD COMPONENT ────────────────────────────────────────
+   
+   Componente visual recomendado para las celdas del grid.
+   Consume tokens del design system para theming automático.
+   ─────────────────────────────────────────────────────────── */
+
+@layer bento.components {
+
+  .bento-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--card-radius);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    /* Previene blowout del contenido */
+    min-height: 0;
+    min-width: 0;
+  }
+
+  /* Variante sin padding — para imágenes full-bleed */
+  .bento-card--flush {
+    padding: 0;
+  }
+
+  .bento-card--flush>.bento-card__body {
+    padding: var(--space-5);
+  }
+
+  /* Cuerpo interno con control de alineación vertical */
+  .bento-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    flex: 1;
+  }
+
+  .bento-card__body--bottom {
+    justify-content: flex-end;
+  }
+
+  .bento-card__body--center {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .bento-card__body--spread {
+    justify-content: space-between;
+  }
+}
+
+/* ── 7. MEDIA UTILITIES ───────────────────────────────────────
+   
+   Para celdas con imagen/medio visual. Garantizan que la imagen
+   llene la celda (object-fit: cover) sin deformar el grid.
+   ─────────────────────────────────────────────────────────── */
+
+@layer bento.components {
+
+  .bento-media {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .bento-media img,
+  .bento-media video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .bento-media--top img,
+  .bento-media--top video {
+    object-position: top center;
+  }
+
+  .bento-media--center img,
+  .bento-media--center video {
+    object-position: center;
+  }
+
+  .bento-media--left img,
+  .bento-media--left video {
+    object-position: center left;
+  }
+}
+
+/* ── 8. ACCESIBILIDAD ─────────────────────────────────────────
+   
+   IMPORTANTE: dense flow puede desincronizar el orden visual
+   del orden DOM. Cuando esto ocurra:
+   
+   1. Asegúrate de que el orden DOM sea lógico para lectores
+      de pantalla (AT navega el DOM, no la posición visual).
+   
+   2. Si el orden visual es crítico para entender el contenido,
+      considera usar grid-template-areas en lugar de dense flow
+      para esa sección específica.
+   
+   3. Cuando uses data-col-start para anclar items, verifica
+      que el orden DOM coincida con el orden visual para
+      navegación por teclado y lectores de pantalla.
+   ─────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .bento-grid,
+  .bento-grid * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

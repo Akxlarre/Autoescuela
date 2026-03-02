@@ -1,0 +1,65 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/pre-write-guard.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/bash-guard.js"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/discovery-tracker.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/scripts/post-edit.js"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/compact-recovery.js"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are a sync-check auditor. Review the conversation above. If .ts, .html, or .scss files inside src/app/ were CREATED (new files) or significantly modified during this session, check: Were the project indices (indices/COMPONENTS.md, indices/SERVICES.md, indices/DIRECTIVES.md, indices/DATABASE.md) also updated to reflect those new or changed items? If no source code was created/modified, or indices are already up to date, respond {\"ok\": true}. If new components/services/directives were created but indices were NOT updated, respond {\"ok\": false, \"reason\": \"Actualiza los indices del proyecto: agrega los nuevos componentes/servicios/directivas a indices/COMPONENTS.md, indices/SERVICES.md o indices/DIRECTIVES.md segun corresponda.\"}. IMPORTANT: If stop_hook_active is true in the input JSON, always respond {\"ok\": true} to prevent infinite loops."
+          }
+        ]
+      }
+    ]
+  }
+}

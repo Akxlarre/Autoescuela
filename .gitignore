@@ -1,0 +1,28 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Angular
+dist/
+tmp/
+out-tsc/
+bazel-out/
+
+# Entornos y credenciales
+.env
+.env.*
+!.env.example
+
+# IDEs y Editores
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Agentes de IA e Indexed (Koa Blueprint)
+.mcp.json
+.claude/logs/
+.gemini/
+indices/

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Autoescuela</title>
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <!--
+    Anti-FOWT (Flash of Wrong Theme): aplica el atributo data-mode='dark'
+    ANTES de que Angular bootstrappee, eliminando el parpadeo blanco inicial
+    cuando el usuario tiene dark mode guardado en localStorage.
+    Debe ejecutarse de forma síncrona en <head> para bloquear el primer render.
+  -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('app-color-mode');
+          var isDark =
+            mode === 'dark' ||
+            (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (isDark) {
+            document.documentElement.setAttribute('data-mode', 'dark');
+          }
+        } catch (e) {
+          // localStorage puede estar bloqueado en modo incógnito estricto
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <app-root></app-root>
+  </body>
+</html>

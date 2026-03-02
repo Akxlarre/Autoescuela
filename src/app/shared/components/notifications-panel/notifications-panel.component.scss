@@ -1,0 +1,146 @@
+// Panel host — posición absoluta desde el wrapper del topbar
+:host {
+  display: block;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  z-index: 50;
+}
+
+.notif-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 480px;
+  overflow: hidden;
+  padding: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+// ── Header ──────────────────────────────────────────────────────────────────
+.notif-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+// ── Lista ────────────────────────────────────────────────────────────────────
+.notif-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+// ── Item ─────────────────────────────────────────────────────────────────────
+.notif-panel__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  position: relative;
+  outline: none;
+  transition: background-color 150ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(
+      --surface-hover,
+      color-mix(in srgb, var(--color-primary) 6%, transparent)
+    );
+  }
+
+  &.is-unread {
+    background-color: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  }
+}
+
+// ── Icono de tipo ─────────────────────────────────────────────────────────────
+.notif-panel__icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+
+  &.type-info {
+    background: var(--color-primary-muted);
+    color: var(--color-primary);
+  }
+  &.type-success {
+    background: var(--state-success-bg);
+    color: var(--state-success);
+  }
+  &.type-warning {
+    background: var(--state-warning-bg);
+    color: var(--state-warning);
+  }
+  &.type-error {
+    background: var(--state-error-bg);
+    color: var(--state-error);
+  }
+}
+
+// ── Contenido ─────────────────────────────────────────────────────────────────
+.notif-panel__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-panel__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-panel__msg {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0 0 3px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notif-panel__time {
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+}
+
+// ── Dot "no leída" ───────────────────────────────────────────────────────────
+.notif-panel__dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--ds-brand, var(--color-primary));
+  align-self: center;
+}
+
+// ── Estado vacío ─────────────────────────────────────────────────────────────
+.notif-panel__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  list-style: none;
+}

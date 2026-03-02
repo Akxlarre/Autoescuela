@@ -1,0 +1,44 @@
+{
+  "name": "autoescuela",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "claude:review": "claude -p \"Revisa el código de esta sesión y sugiere mejoras de arquitectura\" --allowedTools Read,Glob,Grep",
+    "claude:sync": "claude -p \"Ejecuta /sync-indices para actualizar los índices del proyecto\" --allowedTools Read,Edit,Glob,Grep",
+    "claude:fix": "claude -p \"Ejecuta ng lint, identifica los errores y corrígelos\" --allowedTools Read,Edit,Bash",
+    "claude:tdd": "claude -p \"Ejecuta las pruebas unitarias (ng test --watch=false). Si fallan, auto-corrige la lógica hasta que el compilador pase en verde.\" --allowedTools Read,Edit,Bash",
+    "lint:arch": "node scripts/architect.js"
+  },
+  "private": true,
+  "packageManager": "npm@10.9.3",
+  "dependencies": {
+    "@angular/animations": "^21.2.0",
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@primeng/themes": "^21.0.4",
+    "@supabase/supabase-js": "^2.98.0",
+    "@tailwindcss/postcss": "^4.2.1",
+    "gsap": "^3.14.2",
+    "lucide-angular": "^0.575.0",
+    "postcss": "^8.5.6",
+    "primeng": "^21.1.1",
+    "rxjs": "~7.8.0",
+    "tailwindcss": "^4.2.1",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.0",
+    "@angular/cli": "^21.2.0",
+    "@angular/compiler-cli": "^21.2.0",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
+  }
+}

@@ -1,0 +1,81 @@
+// ── Fix transparencia: .card + .card-tinted + .card-accent ───────────────
+// Ninguna de estas clases tiene regla global en el proyecto — se definen aquí.
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: var(--card-padding);
+}
+
+// Fondo con tinte de marca muy sutil usando --gradient-subtle del DS
+// (sky 6% → 2%, se adapta automáticamente a dark mode)
+.card-tinted {
+  background: var(--gradient-subtle), var(--card-bg);
+}
+
+// Borde superior de marca — usa --accent-border-width (3px) del DS
+.card-accent {
+  border-top: var(--accent-border-width) solid var(--ds-brand);
+}
+
+// ── Chip de ícono ─────────────────────────────────────────────────────────
+// Cuadrado redondeado con fondo semántico — ancla visual del KPI.
+// Default: tinte de marca (color-primary-muted).
+.kpi-card__icon-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+}
+
+// ── Variantes semánticas — chip ───────────────────────────────────────────
+.kpi-card--success .kpi-card__icon-chip {
+  background: var(--state-success-bg);
+  color: var(--state-success);
+}
+
+.kpi-card--warning .kpi-card__icon-chip {
+  background: var(--state-warning-bg);
+  color: var(--state-warning);
+}
+
+.kpi-card--error .kpi-card__icon-chip {
+  background: var(--state-error-bg);
+  color: var(--state-error);
+}
+
+// ── Pill de tendencia ─────────────────────────────────────────────────────
+// Reemplaza el texto plano por una pill con fondo semántico.
+.kpi-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  line-height: 1;
+
+  &--up {
+    background: var(--state-success-bg);
+    color: var(--state-success);
+  }
+
+  &--down {
+    background: var(--state-error-bg);
+    color: var(--state-error);
+  }
+}
+
+// ── Variantes de tamaño del valor principal ───────────────────────────────
+.kpi-card--md .kpi-value {
+  font-size: var(--text-3xl);
+}
+
+.kpi-card--sm .kpi-value {
+  font-size: var(--text-2xl);
+}

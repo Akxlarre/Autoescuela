@@ -1,0 +1,63 @@
+/* ============================================================
+   VIEW TRANSITIONS — Page Navigation
+   
+   Transiciones visuales para navegación de rutas usando la
+   View Transitions API nativa (activada por withViewTransitions).
+   
+   Sidebar + topbar permanecen estáticos.
+   Solo el área main-content anima: page-out ↑ / page-in ↓
+   
+   Cambio de tema: sin animación especial — el CSS transition
+   en body (background-color, color, border-color) ya provee
+   una transición suave de 220ms via tokens del design system.
+   
+   Requiere:
+     - `withViewTransitions()` en app.config.ts
+     - `view-transition-name: main-content` en .shell-content
+   ============================================================ */
+
+/* ── 1. ROOT — Sidebar y topbar estáticos ─────────────────── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* ── 2. NAVEGACIÓN DE RUTAS — page-out / page-in ──────────── */
+/* Asimetría intencional: salida rápida (180ms), entrada suave (280ms).
+   Movimiento vertical sutil (6-8px) — premium sin distracción. */
+
+::view-transition-old(main-content) {
+  animation: vt-page-out var(--duration-page-out, 180ms) cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+::view-transition-new(main-content) {
+  animation: vt-page-in var(--duration-page-in, 280ms) cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes vt-page-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes vt-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── 3. ACCESIBILIDAD ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+
+  ::view-transition-old(main-content),
+  ::view-transition-new(main-content) {
+    animation: none !important;
+  }
+}

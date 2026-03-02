@@ -1,0 +1,144 @@
+// ══════════════════════════════════════════════════════════════════════════
+// DashboardComponent — estilos del hero Frosted Split
+//
+// Arquitectura de capas del hero:
+//   1. Outer (.hero-split) — bg: var(--color-primary) → el sky actúa como
+//      el «relleno» que el glass difumina para el efecto frosted
+//   2. Left (.hero-split__glass) — panel de vidrio translúcido sobre el sky
+//   3. Right (.hero-split__brand) — sky sólido expuesto, número gigante
+// ══════════════════════════════════════════════════════════════════════════
+
+// ── Contenedor externo ────────────────────────────────────────────────────
+.hero-split {
+  display: flex;
+  background: var(--color-primary);
+  overflow: hidden; // clip del border-radius del host
+}
+
+// ── Panel izquierdo — glass frosted ───────────────────────────────────────
+// 72% opacidad: deja ver el sky-500 de fondo difuminado → efecto frosted
+.hero-split__glass {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-8);
+
+  background: color-mix(in srgb, var(--bg-surface-mix) 72%, transparent);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid color-mix(in srgb, var(--color-primary-text) 15%, transparent);
+}
+
+// ── Panel derecho — brand sólido ──────────────────────────────────────────
+// Hereda el sky-500 del outer. Override local de --state-success
+// para que .indicator-live muestre puntos blancos en este contexto.
+.hero-split__brand {
+  width: 256px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-8);
+  gap: var(--space-3);
+
+  // ── Override de variable CSS local ──
+  // .indicator-live usa var(--state-success) para sus dots.
+  // Al redefinirlo aquí, lo heredan todos sus descendientes automáticamente.
+  --state-success: color-mix(in srgb, var(--color-primary-text) 90%, transparent);
+
+  color: var(--color-primary-text);
+}
+
+// ── Chips de datos operacionales (panel izquierdo) ────────────────────────
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  width: fit-content;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-surface-mix) 88%, transparent);
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  strong {
+    font-weight: var(--font-semibold);
+    color: var(--color-primary);
+  }
+}
+
+// ── CTA primario (panel izquierdo) ────────────────────────────────────────
+.hero-cta-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  font-family: var(--font-body);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-btn);
+
+  &:hover {
+    background: var(--color-primary-hover);
+  }
+}
+
+// ── CTA ghost (panel izquierdo) ───────────────────────────────────────────
+.hero-cta-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  font-family: var(--font-body);
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: var(--transition-btn);
+
+  &:hover {
+    background: var(--bg-subtle);
+    color: var(--text-primary);
+  }
+}
+
+// ── Número del día — el héroe visual ──────────────────────────────────────
+// Más grande que --text-5xl (3rem) para dominar el panel derecho.
+.hero-number {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 5.5rem;
+  font-weight: var(--font-bold);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--color-primary-text);
+  font-variant-numeric: tabular-nums;
+}
+
+// ── Etiqueta encima del número ────────────────────────────────────────────
+.hero-number-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: color-mix(in srgb, var(--color-primary-text) 65%, transparent);
+}
+
+// ── Desglose de clases (12 prácticas · 6 teóricas) ───────────────────────
+.hero-breakdown {
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--color-primary-text) 75%, transparent);
+  margin-top: var(--space-1);
+}

@@ -1,0 +1,52 @@
+/* Design System Tokens */
+@use './styles/tokens/variables';
+
+/* PrimeNG overrides (design system tokens + toast position) */
+@use './styles/vendors/primeng-overrides';
+
+/* Layouts */
+@use './styles/layout/bento-grid';
+@use './styles/layout/page-shell';
+
+/* Motion — View Transitions API (page navigation) */
+@use './styles/motion/view-transitions';
+
+/* Typography — Bricolage Grotesque (referenced in --font-display / --font-body) */
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap');
+
+/* ── Inputs nativos — color directo (unlayered) ──────────────────────────────
+   PrimeNG Aura contiene `input { color: inherit }` en @layer primeng, que tiene
+   mayor prioridad que el @layer base de Tailwind. Eso hace que los inputs hereden
+   el color del body (blanco en dark mode). Este bloque es CSS sin @layer, por lo
+   que gana sobre cualquier @layer del sistema. */
+input,
+textarea {
+  color: var(--input-text);
+  background-color: var(--input-bg);
+}
+
+/* Bloqueo de scroll (drawer mobile, modales) */
+body.layout-drawer-open,
+body.modal-open {
+  overflow: hidden;
+}
+
+/* Modal overlay wrapper — estilos globales.
+   El div se crea via document.createElement (fuera de encapsulación Angular),
+   por lo que necesita !important para garantizar posicionamiento. */
+.modal-overlay__wrapper {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+  overflow: auto;
+}
+
+.modal-overlay__wrapper > * {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  pointer-events: auto !important;
+}

@@ -1,0 +1,124 @@
+/* ============================================================
+   TAILWIND CSS v4 — Utility Layer
+   
+   Este archivo actúa como capa de utilidades de Tailwind,
+   complementando el design system SCSS.
+   
+   Stack:
+     SCSS (_variables.scss)  → Design tokens, layouts, mixins
+     Tailwind (este archivo) → Utility classes para composición rápida
+   
+   Layer order (definido en PrimeNG config):
+     tailwind-base → primeng → tailwind-utilities
+   ============================================================ */
+
+@import 'tailwindcss';
+
+/* ── Content scanning para Angular inline templates ────────────
+   Rutas relativas al archivo CSS (src/tailwind.css).
+   Angular usa templates inline en .ts — Tailwind v4 los detecta.
+
+   NOTA CRÍTICA: Angular @angular/build:application solo lee
+   postcss.config.JSON (no .mjs/.js). El plugin @tailwindcss/postcss
+   debe estar declarado en postcss.config.json en la raíz del proyecto.
+   Sin eso, el CSS pasa por esbuild sin ser procesado por Tailwind.
+   ──────────────────────────────────────────────────────────────── */
+@source ".";
+@source "./app/**/*.ts";
+@source "./app/**/*.html";
+
+/* ── @theme: Mapeo de Design System → Tailwind ────────────── */
+/* Extiende las utilidades de Tailwind con los tokens del
+   design system. Ejemplo: class="text-brand bg-surface p-4"  */
+
+@theme {
+  /* ── Colores de marca ── */
+  --color-brand: var(--ds-brand);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-brand-dark: var(--color-primary-dark);
+  --color-brand-muted: var(--color-primary-muted);
+  --color-brand-text: var(--color-primary-text);
+
+  /* ── Superficies ── */
+  --color-base: var(--bg-base);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-subtle: var(--bg-subtle);
+
+  /* ── Texto ── */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  /* ── Bordes ── */
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-brand: var(--accent-border);
+
+  /* ── Estados ── */
+  --color-success: var(--state-success);
+  --color-warning: var(--state-warning);
+  --color-error: var(--state-error);
+  --color-info: var(--state-info);
+
+  /* ── Fuentes ── */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* ── Radios ── */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-full: var(--radius-full);
+
+  /* ── Sombras ── */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* ── Espaciado (spacing) ── */
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+  --spacing-8: var(--space-8);
+  --spacing-10: var(--space-10);
+  --spacing-12: var(--space-12);
+  --spacing-16: var(--space-16);
+
+  /* ── Duración ── */
+  --duration-instant: var(--duration-instant);
+  --duration-fast: var(--duration-fast);
+  --duration-normal: var(--duration-normal);
+  --duration-slow: var(--duration-slow);
+  --duration-slower: var(--duration-slower);
+
+  /* ── Easing (transition-timing-function) ── */
+  --ease-standard: var(--ease-standard);
+  --ease-spring: var(--ease-spring);
+  --ease-out: var(--ease-out);
+  --ease-in: var(--ease-in);
+}
+
+/* ── Disable Preflight ─────────────────────────────────────── */
+/* PrimeNG tiene su propio reset. Preflight de Tailwind conflictuaría
+   con botones, headings, y tablas de PrimeNG. Desactivamos. */
+@layer base {
+  /* Fix de color en inputs nativos — belt-and-suspenders.
+     Las clases Tailwind text-[var(--input-text)] y bg-[var(--input-bg)] aplican
+     lo mismo, pero este fallback garantiza el color correcto si el scanner
+     no detecta la clase (e.g. en builds CI). PrimeNG (unlayered) tiene mayor
+     precedencia y no se ve afectado por esta regla de @layer base. */
+  input,
+  textarea {
+    color: var(--input-text, var(--text-primary));
+    background-color: var(--input-bg, var(--bg-subtle));
+  }
+}

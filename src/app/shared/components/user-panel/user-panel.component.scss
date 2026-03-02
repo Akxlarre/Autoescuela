@@ -1,0 +1,90 @@
+// Panel host — posición absoluta desde el wrapper del topbar user item
+:host {
+  display: block;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 250px;
+  z-index: 50;
+  transform-origin: top right;
+}
+
+.user-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+}
+
+// ── Header (Info de usuario) ────────────────────────────────────────────────
+.user-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.user-panel__avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border: 1px solid var(--border-subtle);
+}
+
+.user-panel__name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+}
+
+.user-panel__email {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+// ── Lista de acciones ────────────────────────────────────────────────────────
+.user-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.user-panel__item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: background-color 150ms ease, color 150ms ease;
+  outline: none;
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--surface-hover);
+    color: var(--text-primary);
+
+    app-icon {
+      color: var(--text-primary);
+    }
+  }
+}
