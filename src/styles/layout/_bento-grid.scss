@@ -223,6 +223,17 @@ $bp-lg: 1024px;
         grid-row: span $i;
       }
     }
+
+    /* Dashboard: Actividad (izq) + Alertas (der) — forzar 50/50 y misma altura en desktop.
+       Selector directo para que no sea pisado por auto-placement ni por otras reglas. */
+    .bento-grid > .bento-activity-lg {
+      grid-column: 1 / span 6;
+      grid-row: span 2;
+    }
+    .bento-grid > .bento-alerts-lg {
+      grid-column: 7 / span 6;
+      grid-row: span 2;
+    }
   }
 }
 

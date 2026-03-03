@@ -4,6 +4,8 @@ Transiciones visuales para navegación usando la [View Transitions API](https://
 
 ## Cómo Funciona
 
+### Navegación intra-app (página ↔ página)
+
 Sidebar y topbar permanecen **estáticos**. Solo el área `main-content` anima:
 
 - **Salida** (`vt-page-out`): fade-out + translateY(-6px) en 180ms
@@ -12,6 +14,25 @@ Sidebar y topbar permanecen **estáticos**. Solo el área `main-content` anima:
 Asimetría intencional: salida rápida, entrada suave.
 
 **No requiere código adicional** — funciona automáticamente con cada navegación de ruta.
+
+### Login → App (transición cinematic)
+
+El root completo anima con blur + scale para dar sensación de "entrar" a la app:
+
+- **Salida** (`vt-login-out`): fade-out + blur(4px) + scale(0.97) en 250ms
+- **Entrada** (`vt-login-in`): fade-in + blur(0) + scale(1.02→1) en 400ms con 80ms delay
+
+Activada imperativamente por `onViewTransitionCreated` en `app.config.ts`.
+El callback detecta la ruta de origen/destino y añade `.vt-login-enter` al `<html>`.
+
+### App → Login (logout)
+
+Versión más sutil sin scale agresivo:
+
+- **Salida** (`vt-logout-out`): fade-out + blur(3px) en 250ms
+- **Entrada** (`vt-logout-in`): fade-in + blur(0) + scale(0.98→1) en 400ms
+
+Clase CSS temporal: `.vt-login-leave`.
 
 ## Cambio de Tema
 
@@ -32,17 +53,23 @@ Esto provee un cambio suave de 220ms sin complejidad adicional.
 
 | Pieza | Archivo | Función |
 |---|---|---|
-| CSS keyframes | `styles/motion/_view-transitions.scss` | `vt-page-out`, `vt-page-in` |
+| CSS keyframes | `styles/motion/_view-transitions.scss` | `vt-page-out`, `vt-page-in`, `vt-login-out`, `vt-login-in`, `vt-logout-out`, `vt-logout-in` |
 | `view-transition-name` | `app-shell.component.ts` → `.shell-content` | Identifica el área animable |
 | `withViewTransitions()` | `app.config.ts` | Activa la API para navegación |
+| `onViewTransitionCreated` | `app.config.ts` | Discrimina login↔app vs navegación normal |
 
 ## Tokens
 
 | Variable | Default | Uso |
 |---|---|---|
-| `--duration-page-out` | `180ms` | Duración salida |
-| `--duration-page-in` | `280ms` | Duración entrada |
+| `--duration-page-out` | `180ms` | Duración salida intra-app |
+| `--duration-page-in` | `280ms` | Duración entrada intra-app |
+| `--duration-login-out` | `250ms` | Duración salida login↔app |
+| `--duration-login-in` | `400ms` | Duración entrada login↔app |
+| `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Easing de salida |
+| `--ease-out` | `cubic-bezier(0, 0, 0.2, 1)` | Easing de entrada |
 
 ## Accesibilidad
 
-`prefers-reduced-motion: reduce` desactiva todas las animaciones automáticamente.
+`prefers-reduced-motion: reduce` desactiva todas las animaciones automáticamente
+(tanto intra-app como login↔app).

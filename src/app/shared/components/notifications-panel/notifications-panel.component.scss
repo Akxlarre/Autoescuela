@@ -5,7 +5,20 @@
   top: calc(100% + 8px);
   right: 0;
   width: 340px;
+  max-width: calc(100vw - 32px);
   z-index: 50;
+}
+
+// En pantallas pequeñas, el panel se muestra centrado y fijo bajo el topbar
+@media (max-width: 768px) {
+  :host {
+    position: fixed;
+    top: calc(56px + 8px); // altura del topbar + separación
+    left: 16px;
+    right: 16px;
+    width: auto;
+    max-width: min(420px, calc(100vw - 32px));
+  }
 }
 
 .notif-panel {
@@ -52,10 +65,8 @@
 
   &:hover,
   &:focus-visible {
-    background-color: var(
-      --surface-hover,
-      color-mix(in srgb, var(--color-primary) 6%, transparent)
-    );
+    background-color: var(--surface-hover,
+        color-mix(in srgb, var(--color-primary) 6%, transparent));
   }
 
   &.is-unread {
@@ -78,14 +89,17 @@
     background: var(--color-primary-muted);
     color: var(--color-primary);
   }
+
   &.type-success {
     background: var(--state-success-bg);
     color: var(--state-success);
   }
+
   &.type-warning {
     background: var(--state-warning-bg);
     color: var(--state-warning);
   }
+
   &.type-error {
     background: var(--state-error-bg);
     color: var(--state-error);
@@ -114,6 +128,7 @@
   margin: 0 0 3px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

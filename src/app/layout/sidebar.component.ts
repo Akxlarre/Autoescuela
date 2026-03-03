@@ -13,7 +13,6 @@ import { ThemeService } from '@core/services/ui/theme.service';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { MenuConfigService } from '@core/services/auth/menu-config.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { Button } from 'primeng/button';
 import { Avatar } from 'primeng/avatar';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
@@ -31,7 +30,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   selector: 'app-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, RouterLinkActive, Button, Avatar, IconComponent],
+  imports: [RouterLink, RouterLinkActive, Avatar, IconComponent],
   template: `
     <nav
       #sidebarEl
@@ -70,19 +69,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         }
       </div>
 
-      <!-- Footer: theme toggle + usuario -->
+      <!-- Footer: usuario -->
       <div class="flex items-center gap-2 border-t border-border-subtle p-4 shrink-0">
-        <p-button
-          [text]="true"
-          [rounded]="true"
-          severity="secondary"
-          size="small"
-          [icon]="theme.darkMode() ? 'pi pi-sun' : 'pi pi-moon'"
-          [ariaLabel]="theme.darkMode() ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
-          data-llm-action="toggle-color-mode"
-          (onClick)="theme.cycleColorMode($event)"
-        />
-
         @if (auth.currentUser(); as user) {
           <div class="flex flex-1 items-center gap-2 min-w-0">
             <p-avatar [label]="user.initials" shape="circle" size="normal" />

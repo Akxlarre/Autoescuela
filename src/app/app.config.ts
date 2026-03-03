@@ -62,6 +62,7 @@ import {
   Monitor,
   PlayCircle,
   Receipt,
+  ShieldAlert,
   ShieldCheck,
   Star,
   Tag,
@@ -82,7 +83,31 @@ import { provideCoreAuth } from '@core/auth/provide-core-auth';
  */
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideRouter(routes, withComponentInputBinding(), withViewTransitions()),
+    provideRouter(
+      routes,
+      withComponentInputBinding(),
+      withViewTransitions({
+        onViewTransitionCreated: ({ transition, from, to }) => {
+          const fromUrl = '/' + from.url.map((s) => s.path).join('/');
+          const toUrl = '/' + to.url.map((s) => s.path).join('/');
+
+          const isLoginToApp = fromUrl === '/login' && toUrl.startsWith('/app');
+          const isAppToLogin = fromUrl.startsWith('/app') && toUrl === '/login';
+
+          if (isLoginToApp) {
+            document.documentElement.classList.add('vt-login-enter');
+            transition.finished.then(() =>
+              document.documentElement.classList.remove('vt-login-enter'),
+            );
+          } else if (isAppToLogin) {
+            document.documentElement.classList.add('vt-login-leave');
+            transition.finished.then(() =>
+              document.documentElement.classList.remove('vt-login-leave'),
+            );
+          }
+        },
+      }),
+    ),
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
@@ -161,6 +186,7 @@ export const appConfig: ApplicationConfig = {
         Monitor,
         PlayCircle,
         Receipt,
+        ShieldAlert,
         ShieldCheck,
         Star,
         Tag,

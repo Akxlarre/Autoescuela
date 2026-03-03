@@ -14,12 +14,12 @@ Registrar el listener de teclado a nivel de documento para que el usuario pueda 
 
 ## Cuándo usarlo
 - Una sola vez en el componente raíz o layout principal
-- Cuando la app tiene `app-search-panel` y `SearchPanelService`
+- Cuando la app tiene `app-search-panel` y `SearchPanelFacadeService`
 
 ## Cuándo NO usarlo
 - Si no hay panel de búsqueda global
 - En componentes anidados (el listener es a nivel document, basta con uno)
 
 ## Dependencias
-- `SearchPanelService.open()` — dispara la apertura del panel
+- `SearchPanelFacadeService.open()` — dispara la apertura del panel
 - El panel debe estar en el DOM (topbar) y reaccionar a `openRequested()`

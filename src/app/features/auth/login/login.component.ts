@@ -66,98 +66,29 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         />
       </div>
 
-      <!-- ── Dev: acceso rápido a la app sin autenticación ─────────── -->
+      <!-- ── Recordatorio de credenciales de prueba ─────────────────── -->
       @if (devMode) {
-        <button
-          type="button"
-          class="flex items-center gap-2 rounded-lg border border-dashed border-border-default bg-surface px-4 py-2 font-body text-xs text-text-muted transition-[var(--transition-color)] hover:border-brand hover:text-brand"
-          data-llm-action="dev-skip-auth-navigate-to-app"
-          (click)="navigateToApp()"
+        <div
+          class="w-full max-w-[440px] rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-[11px] text-text-muted shadow-sm"
+          aria-label="Credenciales de prueba disponibles"
         >
-          <app-icon name="arrow-right" [size]="13" />
-          Saltarme el login → ir a la app
-        </button>
+          <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
+            <app-icon name="info" [size]="14" style="color: var(--text-muted)" />
+            Credenciales de prueba
+          </p>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
+            <span>admin@test.com</span>
+            <span>secretaria@test.com</span>
+            <span>alumno@test.com</span>
+            <span>instructor@test.com</span>
+          </div>
+          <p class="m-0">
+            <span class="font-semibold text-text-secondary">Contraseña:</span>
+            <span class="font-normal"> Test123456</span>
+          </p>
+        </div>
       }
-      <!-- ── /Dev: acceso rápido ───────────────────────────────────── -->
-
-      <!-- ── Dev Test Panel ───────────────────────────────────────────
-           Permite visualizar todos los estados sin flujo auth real.
-           TODO: eliminar antes de producción.
-      ─────────────────────────────────────────────────────────────── -->
-      <div
-        class="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-border-default bg-surface px-5 py-3 shadow-sm"
-        role="toolbar"
-        aria-label="Panel de pruebas visuales"
-      >
-        <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-          Test visual
-        </span>
-
-        <div class="h-4 w-px bg-border-default"></div>
-
-        <!-- Modos -->
-        <div class="flex items-center gap-1" role="group" aria-label="Modo del formulario">
-          @for (m of modes; track m.value) {
-            <button
-              type="button"
-              class="rounded-md border px-3 py-1 text-xs font-medium transition-[var(--transition-color)]"
-              [class.border-brand]="mode() === m.value"
-              [class.text-brand]="mode() === m.value"
-              [class.bg-brand-muted]="mode() === m.value"
-              [class.border-border-default]="mode() !== m.value"
-              [class.text-text-secondary]="mode() !== m.value"
-              (click)="switchMode(m.value)"
-            >
-              {{ m.label }}
-            </button>
-          }
-        </div>
-
-        <div class="h-4 w-px bg-border-default"></div>
-
-        <!-- Estados -->
-        <div class="flex items-center gap-1" role="group" aria-label="Estados visuales">
-          <button
-            type="button"
-            class="rounded-md border px-3 py-1 text-xs font-medium transition-[var(--transition-color)]"
-            [class.border-error]="errorMsg()"
-            [class.text-error]="errorMsg()"
-            [class.bg-[var(--state-error-bg)]]="errorMsg()"
-            [class.border-border-default]="!errorMsg()"
-            [class.text-text-secondary]="!errorMsg()"
-            (click)="toggleError()"
-          >
-            Error
-          </button>
-
-          <button
-            type="button"
-            class="rounded-md border px-3 py-1 text-xs font-medium transition-[var(--transition-color)]"
-            [class.border-success]="successMsg()"
-            [class.text-success]="successMsg()"
-            [class.bg-[var(--state-success-bg)]]="successMsg()"
-            [class.border-border-default]="!successMsg()"
-            [class.text-text-secondary]="!successMsg()"
-            (click)="toggleSuccess()"
-          >
-            Éxito
-          </button>
-
-          <button
-            type="button"
-            class="rounded-md border px-3 py-1 text-xs font-medium transition-[var(--transition-color)]"
-            [class.border-brand]="loading()"
-            [class.text-brand]="loading()"
-            [class.bg-brand-muted]="loading()"
-            [class.border-border-default]="!loading()"
-            [class.text-text-secondary]="!loading()"
-            (click)="loading.set(!loading())"
-          >
-            Cargando
-          </button>
-        </div>
-      </div>
-      <!-- ── /Dev Test Panel ──────────────────────────────────────── -->
+      <!-- ── /Recordatorio de credenciales de prueba ────────────────── -->
     </div>
   `,
   host: { style: 'display: contents;' },

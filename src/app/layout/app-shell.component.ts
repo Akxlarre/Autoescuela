@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, inject } from "@angular/core";
 import { RouterOutlet } from "@angular/router";
 
 import { LayoutService } from "@core/services/ui/layout.service";
-import { SearchPanelService } from "@core/services/ui/search-panel.service";
+import { SearchPanelFacadeService } from "@core/services/ui/search-panel.service";
 import { SearchPanelComponent } from "@shared/components/search-panel/search-panel.component";
 import { AnimateInDirective } from "@core/directives/animate-in.directive";
 import { SidebarComponent } from "./sidebar.component";
@@ -78,5 +78,5 @@ import { TopbarComponent } from "./topbar.component";
 })
 export class AppShellComponent {
   protected readonly layout = inject(LayoutService);
-  protected readonly search = inject(SearchPanelService);
+  protected readonly search = inject(SearchPanelFacadeService);
 }

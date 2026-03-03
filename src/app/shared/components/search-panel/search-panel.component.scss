@@ -2,9 +2,19 @@
 :host {
   display: block;
   position: fixed;
-  top: calc(56px + 8px); /* topbar h-[56px] + gap */
-  width: min(480px, calc(100vw - 48px));
+  top: calc(56px + 8px);
+  /* topbar h-[56px] + gap */
+  width: min(480px, calc(100vw - 32px));
   z-index: 50;
+}
+
+// En pantallas pequeñas, el panel se centra y ocupa casi todo el ancho
+@media (max-width: 768px) {
+  :host {
+    left: 16px;
+    right: 16px !important; // ignora el right dinámico del anchor
+    width: auto;
+  }
 }
 
 .search-panel {

@@ -4,21 +4,21 @@ import { Injectable, signal } from '@angular/core';
 export type SearchPanelAnchor = { rightPx: number };
 
 /**
- * SearchPanelService — estado global del panel de búsqueda.
+ * SearchPanelFacadeService — estado global del panel de búsqueda.
  *
  * Consumido por SearchShortcutDirective (Ctrl+K / Cmd+K).
  * Conecta la directiva de teclado con el componente de UI del buscador.
  *
  * Uso en el componente de búsqueda:
  * ```ts
- * readonly search = inject(SearchPanelService);
+ * readonly search = inject(SearchPanelFacadeService);
  * // En template: @if (search.isOpen()) { <app-search-panel /> }
  * ```
  */
 @Injectable({
   providedIn: 'root',
 })
-export class SearchPanelService {
+export class SearchPanelFacadeService {
   private _isOpen = signal(false);
   private _anchor = signal<SearchPanelAnchor | null>(null);
 

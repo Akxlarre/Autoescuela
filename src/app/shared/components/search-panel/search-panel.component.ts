@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 
-import { SearchPanelService } from '@core/services/ui/search-panel.service';
+import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 /**
@@ -15,7 +15,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
  *
  * - `query` es estado local de UI (signal interno).
  * - La apertura/cierre y la animación de entrada se gestionan en TopbarComponent.
- * - Ctrl+K se maneja via [appSearchShortcut]. El posicionamiento usa SearchPanelService.anchor.
+ * - Ctrl+K se maneja via [appSearchShortcut]. El posicionamiento usa SearchPanelFacadeService.anchor.
  *
  * Emite `queryChange` al escribir y `closed` al pulsar Escape.
  */
@@ -65,7 +65,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   styleUrl: './search-panel.component.scss',
 })
 export class SearchPanelComponent {
-  private readonly search = inject(SearchPanelService);
+  private readonly search = inject(SearchPanelFacadeService);
 
   /** Estado local del query — pura UI, sin Facade */
   protected readonly query = signal('');

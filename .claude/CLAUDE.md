@@ -35,6 +35,8 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 ## Reglas del proyecto
 
 @.claude/rules/architecture.md
+@.claude/rules/models.md
+@.claude/rules/facades.md
 @.claude/rules/visual-system.md
 @.claude/rules/testing-tdd.md
 @.claude/rules/ai-readability.md

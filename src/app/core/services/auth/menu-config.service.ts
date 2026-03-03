@@ -1,5 +1,5 @@
 import { Injectable, computed, inject } from '@angular/core';
-import { RoleService } from '@core/services/auth/role.service';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 /** Item de navegación lateral. `icon` es el nombre kebab-case de Lucide. */
 export interface NavItem {
@@ -25,10 +25,10 @@ export interface NavGroup {
  */
 @Injectable({ providedIn: 'root' })
 export class MenuConfigService {
-  private readonly role = inject(RoleService);
+  private readonly auth = inject(AuthFacade);
 
   readonly menuItems = computed<NavGroup[]>(() => {
-    switch (this.role.currentRole()) {
+    switch (this.auth.currentUser()?.role) {
       case 'admin':
         return ADMIN_NAV;
       case 'secretaria':
@@ -39,6 +39,8 @@ export class MenuConfigService {
         return ALUMNO_NAV;
       case 'relator':
         return RELATOR_NAV;
+      default:
+        return [];
     }
   });
 }

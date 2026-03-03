@@ -12,9 +12,9 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { NotificationsService } from '@core/services/infrastructure/notifications.service';
-import { SearchPanelService } from '@core/services/ui/search-panel.service';
+import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
 import { ThemeService } from '@core/services/ui/theme.service';
-import { RoleService, UserRole } from '@core/services/auth/role.service';
+import { UserRole } from '@core/models/ui/user.model';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SearchShortcutDirective } from '@core/directives/search-shortcut.directive';
@@ -27,7 +27,7 @@ import { Button } from 'primeng/button';
  * TopbarComponent — barra superior de la aplicación.
  *
  * Smart component: inyecta LayoutService, AuthFacade, NotificationsService,
- * SearchPanelService, ThemeService, GsapAnimationsService y RoleService.
+ * SearchPanelFacadeService, ThemeService, GsapAnimationsService y RoleService.
  *
  * Responsabilidades de animación:
  * - animateBell() → oscilación pendular (estilo Aladino) al abrir panel de notificaciones
@@ -53,23 +53,24 @@ import { Button } from 'primeng/button';
   template: `
     <header
       appSearchShortcut
-      class="sticky top-0 z-10 flex h-[56px] items-center gap-4 border-b border-border-subtle bg-surface px-6 shadow-[var(--shadow-layout-topbar)]"
+      class="sticky top-0 z-10 flex h-[56px] items-center gap-2 px-4 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-[var(--shadow-layout-topbar)] shrink-0"
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->
       <p-button
-        class="!flex lg:!hidden"
+        class="!flex lg:!hidden shrink-0"
         [text]="true"
         [rounded]="true"
         severity="secondary"
-        icon="pi pi-bars"
         ariaLabel="Abrir menú de navegación"
         data-llm-action="toggle-mobile-sidebar"
         (onClick)="layout.toggleSidebar()"
-      />
+      >
+        <app-icon name="menu" [size]="20" />
+      </p-button>
 
       <!-- Título de sección / breadcrumb -->
-      <div class="flex-1 text-sm font-medium text-text-secondary" aria-label="Sección actual">
+      <div class="flex-1 min-w-0 flex items-center overflow-hidden whitespace-nowrap text-sm font-medium text-text-secondary" aria-label="Sección actual">
         <!-- TODO: conectar BreadcrumbService o título de la ruta activa -->
       </div>
 
@@ -79,32 +80,7 @@ import { Button } from 'primeng/button';
         role="toolbar"
         aria-label="Acciones globales"
       >
-        <!-- Selector de rol — DEV only, eliminar cuando login sea real -->
-        <div
-          class="flex items-center gap-1.5 px-2 py-1 rounded-md border mr-2"
-          style="border-color: var(--border-subtle)"
-          title="Selector de rol (solo en desarrollo)"
-        >
-          <span
-            class="text-[10px] font-semibold uppercase tracking-widest"
-            style="color: var(--text-muted)"
-            >ROL</span
-          >
-          <select
-            class="text-xs font-semibold bg-transparent border-none outline-none cursor-pointer"
-            style="color: var(--ds-brand)"
-            [value]="roleService.currentRole()"
-            (change)="onRoleChange($event)"
-            aria-label="Cambiar rol de desarrollo"
-            data-llm-action="dev-switch-role"
-          >
-            <option value="admin">Admin</option>
-            <option value="secretaria">Secretaria</option>
-            <option value="instructor">Instructor</option>
-            <option value="alumno">Alumno</option>
-            <option value="relator">Relator</option>
-          </select>
-        </div>
+
 
         <!-- Búsqueda — wrapper con click-outside -->
         <div
@@ -224,9 +200,9 @@ export class TopbarComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly auth = inject(AuthFacade);
   protected readonly notifications = inject(NotificationsService);
-  protected readonly search = inject(SearchPanelService);
+  protected readonly search = inject(SearchPanelFacadeService);
   protected readonly theme = inject(ThemeService);
-  protected readonly roleService = inject(RoleService);
+
   private readonly gsap = inject(GsapAnimationsService);
   private readonly router = inject(Router);
 
@@ -256,12 +232,6 @@ export class TopbarComponent {
 
     this.panelOpen.set(opening);
     if (opening) this.userPanelOpen.set(false); // Close user panel if notifications open
-  }
-
-  onRoleChange(event: Event): void {
-    const role = (event.target as HTMLSelectElement).value as UserRole;
-    this.roleService.setRole(role);
-    void this.router.navigate(['/app', role, 'dashboard']);
   }
 
   onUserAction(action: 'profile' | 'settings'): void {

@@ -1,5 +1,12 @@
 <router-outlet />
 <p-toast
   position="bottom-right"
-  [breakpoints]="{ '768px': { width: '100%', right: '0', left: '0' } }"
+  [breakpoints]="{
+    '768px': {
+      width: 'min(360px, 100vw - 32px)',
+      right: 'auto',
+      left: '50%',
+      transform: 'translateX(-50%)'
+    }
+  }"
 />

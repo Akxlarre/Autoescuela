@@ -107,8 +107,12 @@
   --duration-page-out: 180ms;
   --duration-page-in: 280ms;
   /* Asimetría intencional: salida rápida, entrada suave */
+  --duration-login-out: 250ms;
+  --duration-login-in: 400ms;
+  /* Login → App: transición más dramática que la navegación intra-app */
   --duration-theme: 220ms;
-  --duration-toast-life: 3s; /* Sincronizado con MessageService.add({ life: 3000 }) */
+  --duration-toast-life: 3s;
+  /* Sincronizado con MessageService.add({ life: 3000 }) */
   --duration-toast-enter: 250ms;
   --duration-toast-leave: 180ms;
 
@@ -204,11 +208,9 @@
   /* Gradientes */
   --gradient-primary: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
   --gradient-hero: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
-  --gradient-subtle: linear-gradient(
-    135deg,
-    rgba(14, 165, 233, 0.06) 0%,
-    rgba(14, 165, 233, 0.02) 100%
-  );
+  --gradient-subtle: linear-gradient(135deg,
+      rgba(14, 165, 233, 0.06) 0%,
+      rgba(14, 165, 233, 0.02) 100%);
 
   /* Aliases semánticos — separación: acción ≠ texto */
   --action-primary: var(--ds-brand);
@@ -397,11 +399,9 @@
 
   --gradient-primary: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
   --gradient-hero: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #a78bfa 100%);
-  --gradient-subtle: linear-gradient(
-    135deg,
-    rgba(56, 189, 248, 0.12) 0%,
-    rgba(56, 189, 248, 0.04) 100%
-  );
+  --gradient-subtle: linear-gradient(135deg,
+      rgba(56, 189, 248, 0.12) 0%,
+      rgba(56, 189, 248, 0.04) 100%);
 
   --action-primary: var(--ds-brand);
   --action-primary-hover: var(--color-primary-hover);
@@ -571,10 +571,12 @@ body {
     transform: scale(1);
     opacity: 0.7;
   }
+
   70% {
     transform: scale(2.4);
     opacity: 0;
   }
+
   100% {
     transform: scale(2.4);
     opacity: 0;
@@ -585,12 +587,15 @@ body {
   0% {
     transform: scale(1);
   }
+
   40% {
     transform: scale(1.1);
   }
+
   70% {
     transform: scale(0.97);
   }
+
   100% {
     transform: scale(1);
   }
@@ -636,6 +641,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .indicator-live::after,
   .badge-pulse {
     animation: none;

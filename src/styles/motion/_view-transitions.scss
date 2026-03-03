@@ -7,6 +7,10 @@
    Sidebar + topbar permanecen estáticos.
    Solo el área main-content anima: page-out ↑ / page-in ↓
    
+   Login → App: transición cinematic controlada por la clase
+   .vt-login-enter en documentElement (añadida imperativamente
+   desde onViewTransitionCreated en app.config.ts).
+   
    Cambio de tema: sin animación especial — el CSS transition
    en body (background-color, color, border-color) ya provee
    una transición suave de 220ms via tokens del design system.
@@ -53,11 +57,84 @@
   }
 }
 
-/* ── 3. ACCESIBILIDAD ─────────────────────────────────────── */
+/* ── 3. LOGIN ↔ APP — Transición cinematic ────────────────── */
+/* Activada imperativamente: app.config.ts → onViewTransitionCreated
+   añade .vt-login-enter al documentElement cuando la navegación
+   sale de /login hacia /app. Sobreescribe la regla del root (§1)
+   para animar el snapshot completo con blur + scale.
+
+   Duración mayor y más cinematográfica que la navegación intra-app
+   para dar sensación de "entrar" a la aplicación. */
+
+.vt-login-enter::view-transition-old(root) {
+  animation: vt-login-out var(--duration-login-out, 250ms) var(--ease-in) both;
+}
+
+.vt-login-enter::view-transition-new(root) {
+  animation: vt-login-in var(--duration-login-in, 400ms) var(--ease-out) 80ms both;
+}
+
+@keyframes vt-login-out {
+  to {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(0.97);
+  }
+}
+
+@keyframes vt-login-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: scale(1.02);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+/* Logout (app → login): salida más sutil, sin scale agresivo */
+.vt-login-leave::view-transition-old(root) {
+  animation: vt-logout-out var(--duration-login-out, 250ms) var(--ease-in) both;
+}
+
+.vt-login-leave::view-transition-new(root) {
+  animation: vt-logout-in var(--duration-login-in, 400ms) var(--ease-out) 80ms both;
+}
+
+@keyframes vt-logout-out {
+  to {
+    opacity: 0;
+    filter: blur(3px);
+  }
+}
+
+@keyframes vt-logout-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+/* ── 4. ACCESIBILIDAD ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
 
   ::view-transition-old(main-content),
-  ::view-transition-new(main-content) {
+  ::view-transition-new(main-content),
+  .vt-login-enter::view-transition-old(root),
+  .vt-login-enter::view-transition-new(root),
+  .vt-login-leave::view-transition-old(root),
+  .vt-login-leave::view-transition-new(root) {
     animation: none !important;
   }
 }

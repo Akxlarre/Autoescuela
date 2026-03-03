@@ -7,7 +7,7 @@ import {
   effect,
 } from "@angular/core";
 import { AuthFacade } from "@core/facades/auth.facade";
-import type { UserRole } from "@core/models/domain/user.model";
+import type { UserRole } from "@core/models/ui/user.model";
 
 /**
  * Directiva estructural para renderizar contenido según el rol del usuario.

@@ -1,5 +1,5 @@
 import { Directive, inject } from "@angular/core";
-import { SearchPanelService } from "@core/services/ui/search-panel.service";
+import { SearchPanelFacadeService } from "@core/services/ui/search-panel.service";
 
 /**
  * Atajo global Ctrl+K / Cmd+K para abrir el panel de búsqueda.
@@ -11,7 +11,7 @@ import { SearchPanelService } from "@core/services/ui/search-panel.service";
   host: { "(document:keydown)": "onKeyDown($event)" },
 })
 export class SearchShortcutDirective {
-  private readonly searchPanel = inject(SearchPanelService);
+  private readonly searchPanel = inject(SearchPanelFacadeService);
 
   onKeyDown(event: KeyboardEvent): void {
     if ((event.ctrlKey || event.metaKey) && event.key === "k") {
