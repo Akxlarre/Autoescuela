@@ -26,3 +26,5 @@ bazel-out/
 .claude/logs/
 .gemini/
 indices/
+
+environments/
