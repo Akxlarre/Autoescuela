@@ -1,6 +1,6 @@
 import { TestBed } from "@angular/core/testing";
 import { provideRouter, Router } from "@angular/router";
-import type { User } from "@core/models/user.model";
+import type { User } from "@core/models/domain/user.model";
 import { AuthFacade } from "./auth.facade";
 import { SupabaseService } from "./supabase.service";
 

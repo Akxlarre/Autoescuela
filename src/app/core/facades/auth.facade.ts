@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, inject } from "@angular/core";
 import { Router } from "@angular/router";
-import type { User } from "@core/models/user.model";
-import { getInitialsFromDisplayName } from "@core/models/user.model";
+import type { User } from "@core/models/domain/user.model";
+import { getInitialsFromDisplayName } from "@core/models/domain/user.model";
 import { SupabaseService } from "../services/infrastructure/supabase.service";
 
 /**

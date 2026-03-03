@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 
-import type { Notification, NotificationType } from '@core/models/notification.model';
+import type { Notification, NotificationType } from '@core/models/ui/notification.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 /**

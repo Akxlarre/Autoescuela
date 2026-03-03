@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import type { Notification, NotificationType } from '@core/models/notification.model';
+import type { Notification, NotificationType } from '@core/models/ui/notification.model';
 
 export type NotificationFilter = 'all' | 'unread' | NotificationType;
 
