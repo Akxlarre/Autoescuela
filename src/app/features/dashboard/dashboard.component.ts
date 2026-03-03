@@ -3,7 +3,6 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardComponent } from '@shared/components/kpi-card/kpi-card.component';
-import { KpiCardSkeletonComponent } from '@shared/components/kpi-card/kpi-card-skeleton.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { DashboardFacade } from '@core/services/dashboard.facade';
@@ -49,7 +48,6 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
     BentoGridLayoutDirective,
     CardHoverDirective,
     IconComponent,
-    KpiCardSkeletonComponent,
     KpiCardVariantComponent,
     AlertCardComponent,
   ],
@@ -118,22 +116,19 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
       ──────────────────────────────────────────────────────────── -->
       @for (kpi of kpis(); track kpi.id) {
         <div class="bento-square" appCardHover>
-          @if (loading()) {
-            <app-kpi-card-skeleton />
-          } @else {
-            <app-kpi-card-variant
-              [label]="kpi.label"
-              [value]="kpi.value"
-              [suffix]="kpi.suffix ?? ''"
-              [prefix]="kpi.prefix ?? ''"
-              [trend]="kpi.trend"
-              [trendLabel]="kpi.trendLabel ?? ''"
-              [subValue]="kpi.subValue ?? ''"
-              [accent]="kpi.accent ?? false"
-              [icon]="kpi.icon"
-              [color]="kpi.color ?? 'default'"
-            />
-          }
+          <app-kpi-card-variant
+            [label]="kpi.label"
+            [value]="kpi.value"
+            [suffix]="kpi.suffix ?? ''"
+            [prefix]="kpi.prefix ?? ''"
+            [trend]="kpi.trend"
+            [trendLabel]="kpi.trendLabel ?? ''"
+            [subValue]="kpi.subValue ?? ''"
+            [accent]="kpi.accent ?? false"
+            [icon]="kpi.icon"
+            [color]="kpi.color ?? 'default'"
+            [loading]="loading()"
+          />
         </div>
       }
 

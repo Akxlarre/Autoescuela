@@ -2,23 +2,17 @@ import {
   Component,
   ChangeDetectionStrategy,
   input,
+  ElementRef,
+  inject,
+  afterNextRender,
+  viewChild,
 } from '@angular/core';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * SkeletonBlockComponent — Átomo de loading placeholder.
- *
- * Dumb component reutilizable para construir skeletons colocated.
- * Soporta formas rectangulares, circulares y texto.
- *
- * @example
- * <!-- Rectángulo (default) -->
- * <app-skeleton-block width="100%" height="120px" />
- *
- * <!-- Círculo (avatar placeholder) -->
- * <app-skeleton-block variant="circle" width="48px" height="48px" />
- *
- * <!-- Línea de texto -->
- * <app-skeleton-block variant="text" width="60%" />
+ * 
+ * Ahora usa GSAP para un shimmer sincronizado y de alta performance.
  */
 @Component({
   selector: 'app-skeleton-block',
@@ -26,6 +20,7 @@ import {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
+      #block
       class="relative overflow-hidden rounded-md bg-subtle"
       [class.!rounded-full]="variant() === 'circle'"
       [class.!rounded-sm]="variant() === 'text'"
@@ -33,7 +28,7 @@ import {
       [style.height]="variant() === 'text' ? '1em' : height()"
       aria-hidden="true"
     >
-      <div class="pointer-events-none absolute inset-0 animate-[shimmer_1.5s_ease-in-out_infinite] bg-[linear-gradient(90deg,transparent_0%,var(--bg-elevated)_50%,transparent_100%)]"></div>
+      <!-- El shimmer se inyecta dinámicamente vía GSAP -->
     </div>
   `,
   styles: []
@@ -42,4 +37,13 @@ export class SkeletonBlockComponent {
   readonly variant = input<'rect' | 'circle' | 'text'>('rect');
   readonly width = input('100%');
   readonly height = input('16px');
+
+  private readonly block = viewChild.required<ElementRef<HTMLElement>>('block');
+  private readonly gsap = inject(GsapAnimationsService);
+
+  constructor() {
+    afterNextRender(() => {
+      this.gsap.createShimmer(this.block().nativeElement);
+    });
+  }
 }

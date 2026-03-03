@@ -112,6 +112,52 @@ export class GsapAnimationsService {
   }
 
   /**
+   * Shimmer Effect — Animación de brillo para skeletons.
+   * Crea un timeline infinito que desliza un gradiente.
+   * @param el - El elemento que actuará como máscara para el brillo
+   * @returns Un timeline de GSAP para control manual si es necesario
+   */
+  createShimmer(el: HTMLElement): gsap.core.Timeline {
+    // Si ya tiene un shimmer, no crear otro
+    if (el.dataset['gsapShimmer'] === 'true') return gsap.timeline();
+    el.dataset['gsapShimmer'] = 'true';
+
+    // Asegurar que el elemento tenga la estructura necesaria
+    // El brillo es un pseudo-elemento o un div absoluto hijo
+    let shimmerEl = el.querySelector('.gsap-shimmer') as HTMLElement;
+    if (!shimmerEl) {
+      shimmerEl = document.createElement('div');
+      shimmerEl.className = 'gsap-shimmer pointer-events-none absolute inset-0 z-10';
+
+      // UX/UI Improvement: Wider shimmer (150%) for a softer, more elegant sweep
+      shimmerEl.style.width = '150%';
+      // 105deg angle gives a subtle, premium directional flow compared to rigid 90deg
+      shimmerEl.style.background = 'linear-gradient(105deg, transparent 0%, var(--shimmer-highlight, rgba(255,255,255,0.2)) 50%, transparent 100%)';
+      shimmerEl.style.transform = 'translateX(-150%)';
+
+      el.classList.add('relative', 'overflow-hidden');
+      el.appendChild(shimmerEl);
+    }
+
+    const tl = gsap.timeline({ repeat: -1 });
+
+    if (!this.shouldAnimate()) {
+      gsap.set(shimmerEl, { display: 'none' });
+      return tl;
+    }
+
+    tl.to(shimmerEl, {
+      x: '100%',
+      // Slightly slower duration to match the wider sweep
+      duration: 1.8,
+      ease: 'none',
+      repeatDelay: 0.4,
+    });
+
+    return tl;
+  }
+
+  /**
    * Hover en cards — sombra elevada sobre fondo claro.
    * Usa tokens del design system (white-labeling).
    * @param el - Elemento card

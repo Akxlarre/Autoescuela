@@ -83,6 +83,23 @@ En componentes con datos numéricos (KPIs, métricas, estadísticas):
 </span>
 ```
 
+## Skeletons y Estados de Carga (OBLIGATORIO)
+
+El proyecto utiliza un patrón estricto de **Single-Component Skeleton** para evitar deuda técnica y Layout Shift térmico (CLS).
+
+- **PROHIBIDO** crear componentes duplicados tipo `*-skeleton.component.ts` (ej: `kpi-card-skeleton.component.ts`).
+- **OBLIGATORIO** manejar el estado dentro del mismo componente: todo componente que cargue datos debe aceptar un input numérico/booleano `loading` y resolver el skeleton internamente usando un bloque `@if (loading())`.
+- **OBLIGATORIO** usar `<app-skeleton-block>` para los placeholders. Este componente usa `GsapAnimationsService.createShimmer()` automáticamente. No usar CSS `@keyframes` para los brillos.
+
+```html
+<!-- CORRECTO (Dentro del mismo app-feature.component.ts) -->
+@if (loading()) {
+  <app-skeleton-block variant="text" width="100%" height="20px" />
+} @else {
+  <p>{{ data().title }}</p>
+}
+```
+
 ## Bento Grid
 
 - Contenedor: `.bento-grid` + directiva `[appBentoGridLayout]`
