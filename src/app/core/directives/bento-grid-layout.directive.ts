@@ -1,5 +1,5 @@
 import { Directive, ElementRef, inject, InjectionToken } from '@angular/core';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * Contexto para que hijos de un bento-grid disparen animaciones de reflow.

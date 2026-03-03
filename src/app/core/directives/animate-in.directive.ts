@@ -4,7 +4,7 @@ import {
   inject,
   afterNextRender,
 } from '@angular/core';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * Animación de entrada automática para elementos que aparecen condicionalmente.

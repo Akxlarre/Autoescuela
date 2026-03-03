@@ -1,6 +1,6 @@
 import { Directive, ElementRef, inject, input, effect } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { ModalOverlayService } from '@core/services/modal-overlay.service';
+import { ModalOverlayService } from '@core/services/ui/modal-overlay.service';
 
 /**
  * Mueve el host al contenedor de overlay cuando el modal está abierto,

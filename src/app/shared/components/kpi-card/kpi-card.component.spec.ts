@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { provideIcons, TrendingUp, TrendingDown } from "lucide-angular";
 import { KpiCardComponent } from "./kpi-card.component";
-import { GsapAnimationsService } from "@core/services/gsap-animations.service";
+import { GsapAnimationsService } from "@core/services/ui/gsap-animations.service";
 
 describe("KpiCardComponent", () => {
   let fixture: ComponentFixture<KpiCardComponent>;

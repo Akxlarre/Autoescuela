@@ -30,19 +30,45 @@ import {
   Search,
   X,
   XCircle,
-  // ── Acciones comunes (ampliar según el proyecto — ver lucide.dev) ──
+  // ── Acciones comunes ──
   Check,
   Edit,
   Info,
   Trash2,
   Moon,
   Sun,
-  // ── Autoescuela ──
+  // ── Autoescuela — iconos de navegación por rol ──
+  Archive,
+  Award,
+  BookOpen,
+  Brain,
+  Briefcase,
+  Calculator,
   Calendar,
   Car,
+  CheckSquare,
+  ClipboardCheck,
+  Clock,
   CreditCard,
+  DollarSign,
+  Eye,
+  FilePlus,
+  FileText,
+  Flag,
+  FolderOpen,
   GraduationCap,
+  HelpCircle,
+  MessageCircle,
+  Monitor,
+  PlayCircle,
+  Receipt,
+  ShieldCheck,
+  Star,
+  Tag,
+  Truck,
   UserCheck,
+  UserMinus,
+  Wrench,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -74,7 +100,7 @@ export const appConfig: ApplicationConfig = {
     MessageService,
     ConfirmationService,
     /**
-     * Lucide Icons — Set mínimo del shell (23 íconos).
+     * Lucide Icons — set completo para todos los roles (46 íconos).
      *
      * lucide-angular 0.575 usa LucideAngularModule.pick() (no provideIcons).
      * Para añadir más: importar de 'lucide-angular' y agregar al objeto.
@@ -82,6 +108,7 @@ export const appConfig: ApplicationConfig = {
      */
     importProvidersFrom(
       LucideAngularModule.pick({
+        // Shell & boilerplate
         Activity,
         AlertCircle,
         AlertTriangle,
@@ -110,12 +137,38 @@ export const appConfig: ApplicationConfig = {
         Trash2,
         Moon,
         Sun,
-        // ── Autoescuela ──
+        // Autoescuela — navegación por rol
+        Archive,
+        Award,
+        BookOpen,
+        Brain,
+        Briefcase,
+        Calculator,
         Calendar,
         Car,
+        CheckSquare,
+        ClipboardCheck,
+        Clock,
         CreditCard,
+        DollarSign,
+        Eye,
+        FilePlus,
+        FileText,
+        Flag,
+        FolderOpen,
         GraduationCap,
+        MessageCircle,
+        Monitor,
+        PlayCircle,
+        Receipt,
+        ShieldCheck,
+        Star,
+        Tag,
+        Truck,
         UserCheck,
+        UserMinus,
+        HelpCircle,
+        Wrench,
       }),
     ),
   ],

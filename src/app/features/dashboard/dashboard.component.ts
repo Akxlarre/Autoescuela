@@ -8,8 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { AuthFacade } from '@core/services/auth.facade';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';

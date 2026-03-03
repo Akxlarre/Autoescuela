@@ -11,7 +11,7 @@
  *   import { provideCoreAuth } from '@core/auth';
  *   providers: [provideCoreAuth(), ...]
  */
-export { AuthFacade } from "@core/services/auth.facade";
+export { AuthFacade } from "@core/facades/auth.facade";
 export { authGuard } from "@core/guards/auth.guard";
 export { HasRoleDirective } from "@core/directives/has-role.directive";
 export { authInterceptor } from "@core/interceptors/auth.interceptor";

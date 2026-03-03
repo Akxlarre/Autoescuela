@@ -1,6 +1,6 @@
 import { inject } from "@angular/core";
 import { Router, type CanActivateFn } from "@angular/router";
-import { AuthFacade } from "@core/services/auth.facade";
+import { AuthFacade } from "@core/facades/auth.facade";
 
 /**
  * Guard para rutas públicas (login, register).

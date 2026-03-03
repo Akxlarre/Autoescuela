@@ -5,7 +5,7 @@ import {
 } from '@angular/common/http';
 import { from, throwError } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
-import { SupabaseService } from '@core/services/supabase.service';
+import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
 /**
  * Interceptor funcional de autenticación (Angular v15+).

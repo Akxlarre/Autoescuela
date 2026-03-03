@@ -6,7 +6,7 @@ import {
   input,
   effect,
 } from "@angular/core";
-import { AuthFacade } from "@core/services/auth.facade";
+import { AuthFacade } from "@core/facades/auth.facade";
 import type { UserRole } from "@core/models/user.model";
 
 /**

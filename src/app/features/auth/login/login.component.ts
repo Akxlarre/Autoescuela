@@ -9,8 +9,8 @@ import {
   isDevMode,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthFacade } from '@core/services/auth.facade';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import {
   LoginCardComponent,
   LoginFormData,

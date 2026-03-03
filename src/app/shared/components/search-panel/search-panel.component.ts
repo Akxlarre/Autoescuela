@@ -7,7 +7,7 @@ import {
   signal,
 } from '@angular/core';
 
-import { SearchPanelService } from '@core/services/search-panel.service';
+import { SearchPanelService } from '@core/services/ui/search-panel.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 /**

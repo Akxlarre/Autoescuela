@@ -1,6 +1,6 @@
 import { inject, isDevMode } from '@angular/core';
 import { Router, type CanActivateFn } from '@angular/router';
-import { AuthFacade } from '@core/services/auth.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 export const authGuard: CanActivateFn = async () => {
   // En modo desarrollo se omite la verificación de sesión para acceso rápido.

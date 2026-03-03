@@ -6,13 +6,15 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { Router } from '@angular/router';
 
-import { AuthFacade } from '@core/services/auth.facade';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
-import { LayoutService } from '@core/services/layout.service';
-import { NotificationsService } from '@core/services/notifications.service';
-import { SearchPanelService } from '@core/services/search-panel.service';
-import { ThemeService } from '@core/services/theme.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { NotificationsService } from '@core/services/infrastructure/notifications.service';
+import { SearchPanelService } from '@core/services/ui/search-panel.service';
+import { ThemeService } from '@core/services/ui/theme.service';
+import { RoleService, UserRole } from '@core/services/auth/role.service';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SearchShortcutDirective } from '@core/directives/search-shortcut.directive';
@@ -25,13 +27,15 @@ import { Button } from 'primeng/button';
  * TopbarComponent — barra superior de la aplicación.
  *
  * Smart component: inyecta LayoutService, AuthFacade, NotificationsService,
- * SearchPanelService, ThemeService y GsapAnimationsService.
+ * SearchPanelService, ThemeService, GsapAnimationsService y RoleService.
  *
  * Responsabilidades de animación:
  * - animateBell() → oscilación pendular (estilo Aladino) al abrir panel de notificaciones
  * - [appAnimateIn] en ambos paneles → fade+slide de entrada
  * - [appClickOutside] en los wrappers → cierre al clic exterior
  * - [appSearchShortcut] en el <header> → Ctrl+K / Cmd+K abre el buscador
+ *
+ * Selector de rol: visible solo en desarrollo. Se eliminará cuando el login sea real.
  */
 @Component({
   selector: 'app-topbar',
@@ -70,7 +74,38 @@ import { Button } from 'primeng/button';
       </div>
 
       <!-- Acciones de la derecha -->
-      <div class="toolbar-actions flex items-center gap-1" role="toolbar" aria-label="Acciones globales">
+      <div
+        class="toolbar-actions flex items-center gap-1"
+        role="toolbar"
+        aria-label="Acciones globales"
+      >
+        <!-- Selector de rol — DEV only, eliminar cuando login sea real -->
+        <div
+          class="flex items-center gap-1.5 px-2 py-1 rounded-md border mr-2"
+          style="border-color: var(--border-subtle)"
+          title="Selector de rol (solo en desarrollo)"
+        >
+          <span
+            class="text-[10px] font-semibold uppercase tracking-widest"
+            style="color: var(--text-muted)"
+            >ROL</span
+          >
+          <select
+            class="text-xs font-semibold bg-transparent border-none outline-none cursor-pointer"
+            style="color: var(--ds-brand)"
+            [value]="roleService.currentRole()"
+            (change)="onRoleChange($event)"
+            aria-label="Cambiar rol de desarrollo"
+            data-llm-action="dev-switch-role"
+          >
+            <option value="admin">Admin</option>
+            <option value="secretaria">Secretaria</option>
+            <option value="instructor">Instructor</option>
+            <option value="alumno">Alumno</option>
+            <option value="relator">Relator</option>
+          </select>
+        </div>
+
         <!-- Búsqueda — wrapper con click-outside -->
         <div
           #searchWrapper
@@ -92,7 +127,6 @@ import { Button } from 'primeng/button';
           >
             <app-icon name="search" [size]="18" />
           </p-button>
-
         </div>
 
         <!-- Cambio de tema -->
@@ -192,7 +226,9 @@ export class TopbarComponent {
   protected readonly notifications = inject(NotificationsService);
   protected readonly search = inject(SearchPanelService);
   protected readonly theme = inject(ThemeService);
+  protected readonly roleService = inject(RoleService);
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly router = inject(Router);
 
   protected readonly panelOpen = signal(false);
   protected readonly userPanelOpen = signal(false);
@@ -220,6 +256,12 @@ export class TopbarComponent {
 
     this.panelOpen.set(opening);
     if (opening) this.userPanelOpen.set(false); // Close user panel if notifications open
+  }
+
+  onRoleChange(event: Event): void {
+    const role = (event.target as HTMLSelectElement).value as UserRole;
+    this.roleService.setRole(role);
+    void this.router.navigate(['/app', role, 'dashboard']);
   }
 
   onUserAction(action: 'profile' | 'settings'): void {

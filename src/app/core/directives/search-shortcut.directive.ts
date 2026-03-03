@@ -1,5 +1,5 @@
 import { Directive, inject } from "@angular/core";
-import { SearchPanelService } from "@core/services/search-panel.service";
+import { SearchPanelService } from "@core/services/ui/search-panel.service";
 
 /**
  * Atajo global Ctrl+K / Cmd+K para abrir el panel de búsqueda.

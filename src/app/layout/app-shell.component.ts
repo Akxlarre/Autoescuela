@@ -1,8 +1,8 @@
 import { Component, ChangeDetectionStrategy, inject } from "@angular/core";
 import { RouterOutlet } from "@angular/router";
 
-import { LayoutService } from "@core/services/layout.service";
-import { SearchPanelService } from "@core/services/search-panel.service";
+import { LayoutService } from "@core/services/ui/layout.service";
+import { SearchPanelService } from "@core/services/ui/search-panel.service";
 import { SearchPanelComponent } from "@shared/components/search-panel/search-panel.component";
 import { AnimateInDirective } from "@core/directives/animate-in.directive";
 import { SidebarComponent } from "./sidebar.component";

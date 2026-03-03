@@ -4,7 +4,7 @@ import {
   inject,
   afterNextRender,
 } from '@angular/core';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * Aplica el efecto hover de card vía GSAP: sombra elevada + y: -2px al hacer hover.

@@ -8,7 +8,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '../icon/icon.component';
 
 /**

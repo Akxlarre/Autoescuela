@@ -8,11 +8,11 @@ import {
 } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
-import { AuthFacade } from '@core/services/auth.facade';
-import { ThemeService } from '@core/services/theme.service';
-import { LayoutService } from '@core/services/layout.service';
-import { MenuConfigService } from '@core/services/menu-config.service';
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { ThemeService } from '@core/services/ui/theme.service';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { MenuConfigService } from '@core/services/auth/menu-config.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { Button } from 'primeng/button';
 import { Avatar } from 'primeng/avatar';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -21,7 +21,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
  * SidebarComponent — navegación lateral principal.
  *
  * Smart component: inyecta AuthFacade, ThemeService, LayoutService y MenuConfigService.
- * Los nav items se leen desde MenuConfigService — edita ese servicio para añadir rutas.
+ * Los nav items se leen desde MenuConfigService agrupados por NavGroup — edita ese
+ * servicio para añadir rutas. El rol activo (RoleService vía MenuConfigService)
+ * determina qué grupos se renderizan.
  *
  * GSAP: addPillHovers() se aplica en afterNextRender para feedback de hover/press.
  */
@@ -41,23 +43,32 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         <span class="font-display text-lg font-bold text-brand">{{ appName }}</span>
       </div>
 
-      <!-- Nav items -->
-      <ul class="m-0 flex flex-1 flex-col gap-1 px-3 list-none overflow-y-auto min-h-0" role="list">
-        @for (item of menuConfig.menuItems(); track item.routerLink) {
-          <li>
-            <a
-              [routerLink]="item.routerLink"
-              routerLinkActive="!bg-brand-muted !text-brand"
-              class="flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium text-text-secondary no-underline transition-[var(--transition-color)] hover:bg-brand-muted hover:text-brand"
-              [attr.aria-label]="item.label"
-              [attr.data-llm-nav]="item.routerLink"
+      <!-- Nav groups -->
+      <div class="flex flex-1 flex-col overflow-y-auto min-h-0 px-3">
+        @for (group of menuConfig.menuItems(); track group.group) {
+          <div class="mb-4">
+            <p
+              class="text-[10px] font-semibold uppercase tracking-widest px-3 mb-1"
+              style="color: var(--text-muted)"
             >
-              <app-icon [name]="item.icon" [size]="18" />
-              <span>{{ item.label }}</span>
-            </a>
-          </li>
+              {{ group.group }}
+            </p>
+            @for (item of group.items; track item.routerLink) {
+              <a
+                [routerLink]="item.routerLink"
+                routerLinkActive="!bg-brand-muted !text-brand"
+                [routerLinkActiveOptions]="{ exact: true }"
+                class="flex items-center gap-3 rounded-md px-4 py-2.5 text-sm font-medium text-text-secondary no-underline transition-[var(--transition-color)] hover:bg-brand-muted hover:text-brand"
+                [attr.aria-label]="item.label"
+                [attr.data-llm-nav]="item.routerLink"
+              >
+                <app-icon [name]="item.icon" [size]="16" />
+                <span>{{ item.label }}</span>
+              </a>
+            }
+          </div>
         }
-      </ul>
+      </div>
 
       <!-- Footer: theme toggle + usuario -->
       <div class="flex items-center gap-2 border-t border-border-subtle p-4 shrink-0">

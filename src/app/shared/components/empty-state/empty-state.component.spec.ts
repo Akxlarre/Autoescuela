@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from "@angular/core/testing";
 import { provideIcons, Search, Plus, X } from "lucide-angular";
 import { EmptyStateComponent } from "./empty-state.component";
-import { GsapAnimationsService } from "@core/services/gsap-animations.service";
+import { GsapAnimationsService } from "@core/services/ui/gsap-animations.service";
 
 describe("EmptyStateComponent", () => {
   let fixture: ComponentFixture<EmptyStateComponent>;

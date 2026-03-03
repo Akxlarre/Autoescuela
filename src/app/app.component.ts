@@ -2,7 +2,7 @@ import { Component, ChangeDetectionStrategy, computed, inject } from '@angular/c
 import { RouterOutlet } from '@angular/router';
 import { Toast } from 'primeng/toast';
 
-import { GsapAnimationsService } from '@core/services/gsap-animations.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * AppComponent — raíz de la aplicación.

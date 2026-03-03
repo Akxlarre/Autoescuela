@@ -8,7 +8,7 @@ import {
   X,
 } from "lucide-angular";
 import { AlertCardComponent, AlertSeverity } from "./alert-card.component";
-import { GsapAnimationsService } from "@core/services/gsap-animations.service";
+import { GsapAnimationsService } from "@core/services/ui/gsap-animations.service";
 
 describe("AlertCardComponent", () => {
   let fixture: ComponentFixture<AlertCardComponent>;
