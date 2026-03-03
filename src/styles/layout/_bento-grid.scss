@@ -51,23 +51,28 @@ $bp-lg: 1024px;
     gap: var(--bento-gap-mobile);
     padding: var(--bento-pad-mobile);
 
-    /* Container queries: permite que hijos respondan al tamaño del grid */
-    container-type: inline-size;
-    container-name: bento;
+    /* Premium UX: suaviza los saltos de tracks del grid cuando cambia el breakpoint */
+    transition: grid-template-columns 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+      gap 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+      padding 0.45s cubic-bezier(0.25, 1, 0.5, 1);
 
-    @media (min-width: $bp-sm) {
+    /* Container queries: Eliminado de aquí para que escuche a su padre <main> */
+    /* container-type: inline-size; */
+    /* container-name: bento; */
+
+    @container layoutmain (min-width: #{$bp-sm}) {
       grid-template-columns: repeat(var(--bento-cols-sm), minmax(0, 1fr));
       gap: var(--bento-gap-sm);
       padding: var(--bento-pad-sm);
     }
 
-    @media (min-width: $bp-md) {
+    @container layoutmain (min-width: #{$bp-md}) {
       grid-template-columns: repeat(var(--bento-cols-md), minmax(0, 1fr));
       gap: var(--bento-gap-md);
       padding: var(--bento-pad-md);
     }
 
-    @media (min-width: $bp-lg) {
+    @container layoutmain (min-width: #{$bp-lg}) {
       grid-template-columns: repeat(var(--bento-cols-lg), minmax(0, 1fr));
       gap: var(--bento-gap-lg);
       padding: var(--bento-pad-lg);
@@ -105,7 +110,7 @@ $bp-lg: 1024px;
     grid-row: span $rows;
   }
 
-  @media (min-width: $bp-sm) {
+  @container layoutmain (min-width: #{$bp-sm}) {
     grid-column: span $sm;
 
     @if $rows >1 {
@@ -113,11 +118,11 @@ $bp-lg: 1024px;
     }
   }
 
-  @media (min-width: $bp-md) {
+  @container layoutmain (min-width: #{$bp-md}) {
     grid-column: span $md;
   }
 
-  @media (min-width: $bp-lg) {
+  @container layoutmain (min-width: #{$bp-lg}) {
     grid-column: span $lg;
   }
 }
@@ -185,7 +190,7 @@ $bp-lg: 1024px;
 
 @layer bento.placement {
 
-  @media (min-width: $bp-md) {
+  @container layoutmain (min-width: #{$bp-md}) {
     @for $i from 1 through 8 {
       [data-col-span-md="#{$i}"] {
         grid-column: span $i;
@@ -205,7 +210,7 @@ $bp-lg: 1024px;
     }
   }
 
-  @media (min-width: $bp-lg) {
+  @container layoutmain (min-width: #{$bp-lg}) {
     @for $i from 1 through 12 {
       [data-col-span="#{$i}"] {
         grid-column: span $i;
@@ -226,11 +231,12 @@ $bp-lg: 1024px;
 
     /* Dashboard: Actividad (izq) + Alertas (der) — forzar 50/50 y misma altura en desktop.
        Selector directo para que no sea pisado por auto-placement ni por otras reglas. */
-    .bento-grid > .bento-activity-lg {
+    .bento-grid>.bento-activity-lg {
       grid-column: 1 / span 6;
       grid-row: span 2;
     }
-    .bento-grid > .bento-alerts-lg {
+
+    .bento-grid>.bento-alerts-lg {
       grid-column: 7 / span 6;
       grid-row: span 2;
     }
@@ -259,6 +265,8 @@ $bp-lg: 1024px;
     /* Previene blowout del contenido */
     min-height: 0;
     min-width: 0;
+    /* Soften breakpoint snaps during continuous container resizing */
+    transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
   /* Variante sin padding — para imágenes full-bleed */

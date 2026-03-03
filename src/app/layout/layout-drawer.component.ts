@@ -42,8 +42,8 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     <div
       #backdropEl
       data-drawer-backdrop
-      class="fixed inset-0 bg-black/50 z-[-1]"
-      style="opacity: 0; display: none; pointer-events: none;"
+      class="absolute inset-0 bg-black/50 z-0"
+      style="opacity: 0; display: none;"
       (click)="close()"
       aria-hidden="true"
     ></div>
@@ -51,7 +51,8 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     <!-- Panel principal -->
     <div
       #panelEl
-      class="flex flex-col w-full h-full bg-surface overflow-hidden"
+      data-drawer-panel
+      class="relative z-10 flex flex-col w-full h-full bg-surface overflow-hidden"
       style="min-height: 0;"
     >
       <!-- Header -->

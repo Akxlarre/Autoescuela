@@ -648,6 +648,7 @@ export class GsapAnimationsService {
    */
   animateLayoutDrawerEnter(drawerEl: HTMLElement, backdropEl: HTMLElement | null): void {
     const isMobile = window.innerWidth < 768;
+    const panelEl = drawerEl.querySelector('[data-drawer-panel]') as HTMLElement;
 
     if (isMobile) {
       // ── MOBILE: fullscreen fixed con slide-in desde la derecha ────────────
@@ -658,25 +659,27 @@ export class GsapAnimationsService {
         inset: '0',
         width: '100%',
         height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
+        display: 'block', // 'flex' was causing inner elements to stack
         zIndex: 60,
         overflow: 'hidden',
+        x: '0%', // asegurar que host no esté dezplazado
       });
 
       if (!this.shouldAnimate()) {
-        if (backdropEl) {
-          gsap.set(backdropEl, { display: 'block', opacity: 0.5, pointerEvents: 'auto', zIndex: 59 });
-        }
+        if (backdropEl) gsap.set(backdropEl, { display: 'block', opacity: 0.5 });
+        if (panelEl) gsap.set(panelEl, { x: '0%' });
         return;
       }
 
       const tl = gsap.timeline();
-      tl.fromTo(drawerEl, { x: '100%' }, { x: '0%', duration: 0.4, ease: 'power3.out' }, 0);
 
       if (backdropEl) {
-        gsap.set(backdropEl, { display: 'block', pointerEvents: 'auto', zIndex: 59 });
+        gsap.set(backdropEl, { display: 'block' });
         tl.fromTo(backdropEl, { opacity: 0 }, { opacity: 0.5, duration: 0.3, ease: 'power2.out' }, 0);
+      }
+
+      if (panelEl) {
+        tl.fromTo(panelEl, { x: '100%' }, { x: '0%', duration: 0.4, ease: 'power3.out' }, 0);
       }
     } else {
       // ── DESKTOP: layout-shift animando el width ───────────────────────────
@@ -690,6 +693,7 @@ export class GsapAnimationsService {
           position: 'relative',
           borderLeft: '1px solid var(--border-subtle)',
         });
+        if (panelEl) gsap.set(panelEl, { clearProps: 'x' }); // limpiar posible estado móvil
         return;
       }
 
@@ -700,6 +704,7 @@ export class GsapAnimationsService {
         borderLeft: '1px solid var(--border-subtle)',
         overflow: 'hidden',
       });
+      if (panelEl) gsap.set(panelEl, { clearProps: 'x' });
 
       gsap.fromTo(
         drawerEl,
@@ -727,14 +732,16 @@ export class GsapAnimationsService {
    */
   animateLayoutDrawerLeave(drawerEl: HTMLElement, backdropEl: HTMLElement | null, onComplete: () => void): void {
     const isMobile = window.innerWidth < 768;
+    const panelEl = drawerEl.querySelector('[data-drawer-panel]') as HTMLElement;
 
     if (isMobile) {
       // ── MOBILE: slide-out a la derecha + fade del backdrop ────────────────
       document.body.style.overflow = ''; // restaurar scroll
 
       if (!this.shouldAnimate()) {
-        gsap.set(drawerEl, { display: 'none', x: '100%' });
-        if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0, pointerEvents: 'none' });
+        gsap.set(drawerEl, { display: 'none' });
+        if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0 });
+        if (panelEl) gsap.set(panelEl, { x: '100%' });
         onComplete();
         return;
       }
@@ -742,12 +749,15 @@ export class GsapAnimationsService {
       const tl = gsap.timeline({
         onComplete: () => {
           gsap.set(drawerEl, { display: 'none', clearProps: 'position,inset,zIndex,x' });
-          if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0, pointerEvents: 'none' });
+          if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0 });
+          if (panelEl) gsap.set(panelEl, { clearProps: 'x' });
           onComplete();
         },
       });
 
-      tl.to(drawerEl, { x: '100%', duration: 0.35, ease: 'power3.in' }, 0);
+      if (panelEl) {
+        tl.to(panelEl, { x: '100%', duration: 0.35, ease: 'power3.in' }, 0);
+      }
       if (backdropEl) {
         tl.to(backdropEl, { opacity: 0, duration: 0.25, ease: 'power2.in' }, 0);
       }

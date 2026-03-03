@@ -20,7 +20,9 @@ Sistema de layout tipo bento basado en CSS Grid con arquitectura de 3 capas.
 
 ## Clases de Proporción
 
-Describen la **forma** de la celda. Responsive automático.
+Describen la **forma** de la celda. 
+
+> **NUEVO (Container Queries):** El grid es 100% responsivo pero escucha al *ancho de su contenedor* (`@container layoutmain`), no de la pantalla. Esto asegura que si un panel lateral reduce el espacio disponible, el bento-grid reaccionará y adaptará sus columnas correctamente. El contenedor padre (ej. `<main>`) debe tener `style="container-type: inline-size; container-name: layoutmain;"`.
 
 | Clase | Mobile (1col) | sm/640px (4col) | md/768px (8col) | lg/1024px (12col) |
 |---|---|---|---|---|
