@@ -41,14 +41,17 @@ CREATE POLICY select_enrollments ON enrollments
 -- ============================================================================
 -- 3. CORRECCIÓN: Libro de Clases (Class Book)
 -- ============================================================================
--- Limitamos el acceso a solo estudiantes dueños de la matrícula.
+-- Limitamos el acceso a solo estudiantes vinculados al curso de la promoción.
 DROP POLICY IF EXISTS select_class_book ON class_book;
 
 CREATE POLICY select_class_book ON class_book
   FOR SELECT USING (
     auth_user_role() IN ('admin', 'secretary')
     OR (auth_user_role() = 'student' 
-        AND enrollment_id IN (SELECT id FROM enrollments WHERE student_id = auth_student_id())) 
+        AND promotion_course_id IN (
+          SELECT promotion_course_id FROM enrollments 
+          WHERE student_id = auth_student_id() AND promotion_course_id IS NOT NULL
+        )) 
   );
 
 -- ============================================================================

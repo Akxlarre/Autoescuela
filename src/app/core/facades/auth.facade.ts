@@ -61,10 +61,25 @@ export class AuthFacade {
     email?: string;
     user_metadata?: Record<string, unknown>;
   }): Promise<void> {
+    // Definimos la interfaz para la respuesta del JOIN con roles
+    interface UserWithRole {
+      id: number;
+      first_names: string;
+      paternal_last_name: string;
+      branch_id: number;
+      first_login: boolean;
+      active: boolean;
+      role_id: number;
+      roles: {
+        name: string;
+      } | null;
+    }
+
     const { data: dbUser, error } = await this.supabase.client
       .from("users")
       .select("id, first_names, paternal_last_name, branch_id, first_login, active, role_id, roles(name)")
       .eq("supabase_uid", authUser.id)
+      .returns<UserWithRole | null>() // Ajustamos para permitir null con maybeSingle
       .maybeSingle();
 
     if (error) {
@@ -75,7 +90,7 @@ export class AuthFacade {
       ? `${dbUser.first_names} ${dbUser.paternal_last_name}`
       : (authUser.user_metadata?.["display_name"] as string) ?? (authUser.email ? authUser.email.split("@")[0] : "Usuario");
 
-    let roleName = (dbUser?.roles as any)?.name?.toLowerCase() || 'unknown';
+    let roleName = dbUser?.roles?.name?.toLowerCase() || 'unknown';
 
     // Normalizar roles en inglés que vengan de la base de datos
     const roleMap: Record<string, string> = {
@@ -95,7 +110,7 @@ export class AuthFacade {
       dbId: dbUser?.id,
       name,
       email: authUser.email ?? "",
-      role: roleName as any,
+      role: roleName as any, // Mantenemos el cast final a UserRole
       initials: getInitialsFromDisplayName(name),
       firstLogin: dbUser?.first_login,
       branchId: dbUser?.branch_id,
@@ -164,16 +179,17 @@ export class AuthFacade {
     const { error } = await this.supabase.client.auth.updateUser({ password });
     if (error) return { error };
 
-    const user = this._currentUser();
-
     // Utilizamos un RPC (Stored Procedure) porque las políticas RLS 
     // de la tabla "users" impiden que los no-admin hagan UPDATE directamente.
     const { error: dbError } = await this.supabase.client.rpc('user_complete_first_login');
 
     if (dbError) {
       console.error("Error clearing first_login via RPC:", dbError);
+      return { error: new Error('Password updated but login flag failed. Please contact admin.') };
     }
 
+    // SOLO si el RPC fue exitoso, actualizamos el estado del Signal en el cliente.
+    const user = this._currentUser();
     if (user) {
       this._currentUser.set({ ...user, firstLogin: false });
     }
