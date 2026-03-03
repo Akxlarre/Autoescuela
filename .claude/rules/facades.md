@@ -31,7 +31,7 @@ export class EjemploFacade {
 
   // 1. ESTADO REACTIVO (Privado)
   // Nadie fuera del Facade sabe cómo se forma ni lo puede mutar.
-  private _datos = signal<DominioModel[]>([]);
+  private _datos = signal<DtoModel[]>([]);
   private _isLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
 
@@ -61,3 +61,50 @@ export class EjemploFacade {
 3. **Acción 2 (Si no existe):** Crear `<Dominio>Facade`. (Añadir la query y el signal privado/público).
 4. **Acción 3:** Inyectar el `<Dominio>Facade` en el Smart Component.
 5. **Acción 4:** Disparar un método del Facade (ej: `cargar()`) desde el `ngOnInit` (o constructor) y dejar que la UI se actualice sola por reactividad (vía `OnPush` y señales). Nunca esperar (await) la respuesta en la UI a menos que sea una acción bloqueante específica (ej. login).
+
+## 6. Transformación de Modelos (DTO → UI Model)
+
+El Facade es el **único lugar** donde se permite transformar un DTO de base de datos en un modelo de UI.
+
+### ¿Cuándo transformar y cuándo no?
+
+**✅ Crea un UI Model y transforma en el Facade cuando:**
+- Necesitas **combinar campos** (ej: `first_names` + `paternal_last_name` → `name`)
+- Necesitas **campos derivados** que no existen en la BD (ej: `initials`, `badgeColor`, `isExpired`)  
+- Los nombres de BD son confusos para la UI (`snake_case` → `camelCase` descriptivo)
+- Necesitas solo un subconjunto de campos relevantes para la vista
+
+**✅ Expone el DTO directamente cuando:**
+- El DTO ya tiene exactamente los campos que la vista necesita
+- Los nombres son claros y directamente utilizables en templates
+- Crear un UI Model sería duplicar exactamente la misma estructura sin valor agregado
+
+> **Regla de oro:** No crees modelos de UI por burocracia. El objetivo es claridad, no capas artificiales.
+
+### Ejemplo de transformación (basado en `AuthFacade`):
+
+```typescript
+import type { User as UserDto } from '@core/models/dto/user.model';   // ← DTO crudo de BD
+import type { User as UserUi } from '@core/models/ui/user.model';     // ← Modelo limpio para la UI
+
+private async loadUserFromSession(authUser: SupabaseAuthUser): Promise<void> {
+  // 1. Lee de BD → recibe DTO
+  const { data: dbUser } = await this.supabase.client
+    .from('users')
+    .select('id, first_names, paternal_last_name, ...')
+    .eq('supabase_uid', authUser.id)
+    .maybeSingle();
+
+  // 2. Transforma DTO → UI Model (aquí ocurre el mapeo)
+  const user: UserUi = {
+    id: authUser.id,
+    name: `${dbUser.first_names} ${dbUser.paternal_last_name}`, // combinación de campos
+    initials: getInitialsFromDisplayName(name),                 // campo derivado
+    role: dbUser?.roles?.name as UserRole,
+    firstLogin: dbUser?.first_login,
+  };
+
+  // 3. Expone el UI Model vía Signal (la vista solo conoce esto)
+  this._currentUser.set(user);
+}
+```

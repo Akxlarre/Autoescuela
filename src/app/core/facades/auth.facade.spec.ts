@@ -1,6 +1,6 @@
 import { TestBed } from "@angular/core/testing";
 import { provideRouter, Router } from "@angular/router";
-import type { User } from "@core/models/domain/user.model";
+import type { User } from "@core/models/dto/user.model";
 import { AuthFacade } from "./auth.facade";
 import { SupabaseService } from "./supabase.service";
 
@@ -15,7 +15,7 @@ describe("AuthFacade", () => {
         onAuthStateChange: jasmine
           .createSpy("onAuthStateChange")
           .and.returnValue({
-            data: { subscription: { unsubscribe: () => {} } },
+            data: { subscription: { unsubscribe: () => { } } },
           }),
       },
       from: () => ({

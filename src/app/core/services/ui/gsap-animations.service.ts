@@ -595,7 +595,185 @@ export class GsapAnimationsService {
   }
 
   /**
-   * Drawer — salida (cierre).
+   * Drawer — entrada con backdrop (slide + blur/fade opcional).
+   * @param backdropEl - Elemento backdrop u overlay
+   * @param panelEl - Elemento panel lateral
+   */
+  animateDrawerEnter(backdropEl: HTMLElement, panelEl: HTMLElement): void {
+    if (!this.shouldAnimate()) {
+      gsap.set(backdropEl, { opacity: 1 });
+      gsap.set(panelEl, { x: 0 });
+      return;
+    }
+
+    const tl = gsap.timeline();
+    tl.fromTo(
+      backdropEl,
+      { opacity: 0 },
+      { opacity: 1, duration: 0.35, ease: 'power2.out' },
+      0
+    ).fromTo(
+      panelEl,
+      { x: '100%' },
+      { x: '0%', duration: 0.45, ease: 'power3.out', clearProps: 'transform' },
+      0
+    );
+  }
+
+  /**
+   * Drawer — salida con backdrop.
+   * @param backdropEl - Elemento backdrop u overlay
+   * @param panelEl - Elemento panel lateral
+   * @param onComplete - Callback al finalizar
+   */
+  animateDrawerLeave(backdropEl: HTMLElement, panelEl: HTMLElement, onComplete?: () => void): void {
+    if (!this.shouldAnimate()) {
+      onComplete?.();
+      return;
+    }
+
+    const tl = gsap.timeline({ onComplete });
+    tl.to(backdropEl, { opacity: 0, duration: 0.3, ease: 'power2.in' }, 0)
+      .to(panelEl, { x: '100%', duration: 0.35, ease: 'power3.in' }, 0);
+  }
+
+  /**
+   * Layout Drawer — Entrada (modo adaptativo)
+   *
+   * - Desktop (≥768px): Layout-shift animando el width del elemento hermano.
+   * - Mobile  (<768px): Panel fullscreen fixed + backdrop semitransparente.
+   *
+   * @param drawerEl  Elemento host del layout drawer
+   * @param backdropEl Elemento backdrop (solo necesario en mobile)
+   */
+  animateLayoutDrawerEnter(drawerEl: HTMLElement, backdropEl: HTMLElement | null): void {
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+      // ── MOBILE: fullscreen fixed con slide-in desde la derecha ────────────
+      document.body.style.overflow = 'hidden'; // bloquear scroll del body
+
+      gsap.set(drawerEl, {
+        position: 'fixed',
+        inset: '0',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 60,
+        overflow: 'hidden',
+      });
+
+      if (!this.shouldAnimate()) {
+        if (backdropEl) {
+          gsap.set(backdropEl, { display: 'block', opacity: 0.5, pointerEvents: 'auto', zIndex: 59 });
+        }
+        return;
+      }
+
+      const tl = gsap.timeline();
+      tl.fromTo(drawerEl, { x: '100%' }, { x: '0%', duration: 0.4, ease: 'power3.out' }, 0);
+
+      if (backdropEl) {
+        gsap.set(backdropEl, { display: 'block', pointerEvents: 'auto', zIndex: 59 });
+        tl.fromTo(backdropEl, { opacity: 0 }, { opacity: 0.5, duration: 0.3, ease: 'power2.out' }, 0);
+      }
+    } else {
+      // ── DESKTOP: layout-shift animando el width ───────────────────────────
+      const targetWidth = Math.max(400, window.innerWidth * 0.45);
+
+      if (!this.shouldAnimate()) {
+        gsap.set(drawerEl, {
+          width: targetWidth,
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          borderLeft: '1px solid var(--border-subtle)',
+        });
+        return;
+      }
+
+      gsap.set(drawerEl, {
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        borderLeft: '1px solid var(--border-subtle)',
+        overflow: 'hidden',
+      });
+
+      gsap.fromTo(
+        drawerEl,
+        { width: 0, opacity: 0 },
+        {
+          width: targetWidth,
+          opacity: 1,
+          duration: 0.45,
+          ease: 'power3.out',
+          clearProps: 'opacity',
+        }
+      );
+    }
+  }
+
+  /**
+   * Layout Drawer — Salida (modo adaptativo)
+   *
+   * - Desktop: colapsa el width a 0.
+   * - Mobile:  slide-out a la derecha + fade del backdrop.
+   *
+   * @param drawerEl  Elemento host
+   * @param backdropEl Elemento backdrop
+   * @param onComplete Callback crítico (destruye el NgComponentOutlet)
+   */
+  animateLayoutDrawerLeave(drawerEl: HTMLElement, backdropEl: HTMLElement | null, onComplete: () => void): void {
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+      // ── MOBILE: slide-out a la derecha + fade del backdrop ────────────────
+      document.body.style.overflow = ''; // restaurar scroll
+
+      if (!this.shouldAnimate()) {
+        gsap.set(drawerEl, { display: 'none', x: '100%' });
+        if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0, pointerEvents: 'none' });
+        onComplete();
+        return;
+      }
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          gsap.set(drawerEl, { display: 'none', clearProps: 'position,inset,zIndex,x' });
+          if (backdropEl) gsap.set(backdropEl, { display: 'none', opacity: 0, pointerEvents: 'none' });
+          onComplete();
+        },
+      });
+
+      tl.to(drawerEl, { x: '100%', duration: 0.35, ease: 'power3.in' }, 0);
+      if (backdropEl) {
+        tl.to(backdropEl, { opacity: 0, duration: 0.25, ease: 'power2.in' }, 0);
+      }
+    } else {
+      // ── DESKTOP: colapso del width ────────────────────────────────────────
+      if (!this.shouldAnimate()) {
+        gsap.set(drawerEl, { display: 'none', width: '0px' });
+        onComplete();
+        return;
+      }
+
+      gsap.to(drawerEl, {
+        width: 0,
+        opacity: 0,
+        duration: 0.35,
+        ease: 'power3.in',
+        onComplete: () => {
+          gsap.set(drawerEl, { display: 'none', clearProps: 'opacity' });
+          onComplete();
+        },
+      });
+    }
+  }
+
+  /**
+   * Drawer — salida (cierre - versión legacy sin backdrop).
    * @param drawerEl - Elemento drawer
    * @param onComplete - Callback al finalizar
    */
@@ -619,7 +797,7 @@ export class GsapAnimationsService {
    * @returns Función de cleanup para ngOnDestroy
    */
   addPressFeedback(el: HTMLElement): () => void {
-    if (!this.shouldAnimate()) return () => {};
+    if (!this.shouldAnimate()) return () => { };
 
     const down = () =>
       gsap.to(el, {
@@ -657,7 +835,7 @@ export class GsapAnimationsService {
    * @returns Función de cleanup para ngOnDestroy
    */
   addInteractiveFeedback(el: HTMLElement): () => void {
-    if (!this.shouldAnimate()) return () => {};
+    if (!this.shouldAnimate()) return () => { };
 
     let isHovered = false;
 
@@ -740,7 +918,7 @@ export class GsapAnimationsService {
    * @param containerEl - Contenedor con .p-menu-item-content o .p-menu-item-link
    */
   addPillHovers(containerEl: HTMLElement): () => void {
-    if (!this.shouldAnimate()) return () => {};
+    if (!this.shouldAnimate()) return () => { };
 
     let pills = containerEl.querySelectorAll<HTMLElement>('.p-menu-item-content');
     if (pills.length === 0) {
@@ -1003,7 +1181,7 @@ export class GsapAnimationsService {
    * @returns Función de cleanup para detener el pulso
    */
   animateRestTimerPulse(el: HTMLElement): () => void {
-    if (!this.shouldAnimate()) return () => {};
+    if (!this.shouldAnimate()) return () => { };
 
     gsap.set(el, { opacity: 0 });
     const tween = gsap.to(el, {

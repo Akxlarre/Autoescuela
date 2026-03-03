@@ -322,6 +322,14 @@
     color var(--duration-fast) var(--ease-standard),
     background-color var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard);
+
+  /* ── Scrollbar ── */
+  --scrollbar-width: 6px;
+  --scrollbar-width-hover: 10px;
+  --scrollbar-thumb: var(--text-muted);
+  --scrollbar-thumb-hover: var(--text-muted);
+  --scrollbar-track: transparent;
+  --scrollbar-radius: var(--radius-full);
 }
 
 /* ============================================================
@@ -417,6 +425,10 @@
 
   --card-bg: var(--bg-surface);
   --card-border: var(--border-subtle);
+
+  /* ── Scrollbar (dark) ── */
+  --scrollbar-thumb: var(--text-muted);
+  --scrollbar-thumb-hover: var(--text-muted);
 }
 
 /* ============================================================

@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject } from "@angular/core";
+import { Component, ChangeDetectionStrategy, inject, effect } from "@angular/core";
 import { RouterOutlet } from "@angular/router";
 
 import { LayoutService } from "@core/services/ui/layout.service";
@@ -7,6 +7,8 @@ import { SearchPanelComponent } from "@shared/components/search-panel/search-pan
 import { AnimateInDirective } from "@core/directives/animate-in.directive";
 import { SidebarComponent } from "./sidebar.component";
 import { TopbarComponent } from "./topbar.component";
+import { LayoutDrawerComponent } from "./layout-drawer.component";
+import { LayoutDrawerFacadeService } from "@core/services/ui/layout-drawer.facade.service";
 
 /**
  * AppShellComponent — layout principal de rutas protegidas.
@@ -28,7 +30,7 @@ import { TopbarComponent } from "./topbar.component";
   selector: "app-shell",
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent, SearchPanelComponent, AnimateInDirective],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, SearchPanelComponent, AnimateInDirective, LayoutDrawerComponent],
   template: `
     <!-- Panel de búsqueda — fuera del grid para evitar que overflow:hidden lo recorte -->
     @if (search.isOpen()) {
@@ -52,7 +54,7 @@ import { TopbarComponent } from "./topbar.component";
     }
 
     <div
-      class="grid h-[100dvh] grid-cols-1 overflow-hidden bg-base lg:grid-cols-[auto_1fr]"
+      class="shell-container grid h-[100dvh] grid-cols-1 overflow-hidden bg-base lg:grid-cols-[auto_1fr]"
     >
       <!-- Sidebar -->
       <app-sidebar
@@ -61,17 +63,24 @@ import { TopbarComponent } from "./topbar.component";
         [class.translate-x-0]="layout.sidebarOpen()"
       />
 
-      <!-- Main: topbar + content -->
-      <div class="grid min-w-0 grid-rows-[auto_1fr] overflow-hidden">
+      <!-- Main Column: topbar + (content area + drawer) -->
+      <div class="flex flex-col min-w-0 bg-[var(--bg-canvas)] overflow-hidden">
+        <!-- Topbar spans full width of the main column -->
         <app-topbar />
 
-        <main
-          class="overflow-y-auto p-6"
-          role="main"
-          tabindex="-1"
-        >
-          <router-outlet />
-        </main>
+        <!-- Shifting container for main content and drawer -->
+        <div class="flex flex-1 min-w-0 overflow-hidden">
+          <main
+            class="flex-1 overflow-y-auto p-6"
+            role="main"
+            tabindex="-1"
+          >
+            <router-outlet />
+          </main>
+
+          <!-- Layout-shifting Drawer -->
+          <app-layout-drawer />
+        </div>
       </div>
     </div>
   `,
@@ -79,4 +88,16 @@ import { TopbarComponent } from "./topbar.component";
 export class AppShellComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly search = inject(SearchPanelFacadeService);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  constructor() {
+    // Premium Feel: Si abrimos el layout drawer global y estamos en pantallas
+    // algo ajustadas (<= 1280px), colapsamos el Sidebar para cederle espacio al drawer.
+    effect(() => {
+      const isDrawerOpen = this.layoutDrawer.isOpen();
+      if (isDrawerOpen && window.innerWidth <= 1280) {
+        this.layout.closeSidebar();
+      }
+    });
+  }
 }

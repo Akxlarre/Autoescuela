@@ -22,6 +22,7 @@ import {
   TrendingUp,
   User,
   Users,
+  UserPlus,
   // ── Shell support (topbar, login, mobile drawer) ──
   Bell,
   BellOff,
@@ -149,6 +150,7 @@ export const appConfig: ApplicationConfig = {
         TrendingUp,
         User,
         Users,
+        'user-plus': UserPlus,
         Bell,
         BellOff,
         LogOut,

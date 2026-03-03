@@ -1,5 +1,6 @@
 /* Design System Tokens */
 @use './styles/tokens/variables';
+@use './styles/tokens/scrollbar';
 
 /* PrimeNG overrides (design system tokens + toast position) */
 @use './styles/vendors/primeng-overrides';
@@ -43,7 +44,7 @@ body.modal-open {
   overflow: auto;
 }
 
-.modal-overlay__wrapper > * {
+.modal-overlay__wrapper>* {
   position: fixed !important;
   inset: 0 !important;
   width: 100% !important;

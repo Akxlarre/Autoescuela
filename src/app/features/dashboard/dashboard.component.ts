@@ -7,6 +7,8 @@ import { KpiCardSkeletonComponent } from '@shared/components/kpi-card/kpi-card-s
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { DashboardFacade } from '@core/services/dashboard.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -98,6 +100,7 @@ import { DashboardFacade } from '@core/services/dashboard.facade';
                   [class.border-[var(--border-subtle)]]="idx !== 0"
                   [class.hover:bg-[var(--bg-subtle)]]="idx !== 0"
                   [attr.data-llm-action]="action.llmAction"
+                  (click)="handleQuickAction(action.id)"
                 >
                   @if(action.icon) {
                     <app-icon [name]="action.icon" [size]="16" />
@@ -218,6 +221,7 @@ import { DashboardFacade } from '@core/services/dashboard.facade';
 export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Estado ────────────────────────────────────────────────────────────────
 
@@ -233,6 +237,16 @@ export class DashboardComponent {
   constructor() {
     // Iniciar la carga de datos del dashboard al construir el componente
     this.dashboardFacade.loadDashboardData();
+  }
+
+  handleQuickAction(actionId: string) {
+    if (actionId === 'qa1') {
+      this.openNuevaMatriculaDrawer();
+    }
+  }
+
+  openNuevaMatriculaDrawer(): void {
+    this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
   }
 
   // Animaciones GSAP deshabilitadas temporalmente — causaban contenido invisible

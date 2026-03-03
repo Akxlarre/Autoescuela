@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    PAGE SHELL — Patrones de layout de página
    
    Complementa al Bento Grid System:
@@ -12,7 +12,7 @@ $bp-sm: 640px !default;
 $bp-md: 768px !default;
 $bp-lg: 1024px !default;
 
-/* ── LAYER ──────────────────────────────────────────────────── */
+/* ── LAYER ────────────────────────────────────────────────── */
 @layer page-shell;
 
 @layer page-shell {
@@ -195,5 +195,32 @@ $bp-lg: 1024px !default;
         font-size: var(--text-sm);
         max-width: 360px;
         margin: 0;
+    }
+
+    /* ── 10. FULLSCREEN BUFFER ──────────────────────────────────
+       Integra el "aire" en el sidebar y topbar para no romper
+       la continuidad visual de sus fondos en modo F11.
+       ───────────────────────────────────────────────────────── */
+    @media (display-mode: fullscreen) {
+
+        /* Sidebar: incrementa su padding superior interno */
+        app-sidebar nav {
+            padding-top: calc(var(--space-4) + var(--space-3)) !important;
+
+            @media (min-width: $bp-lg) {
+                padding-top: calc(var(--space-4) + var(--space-4)) !important;
+            }
+        }
+
+        /* Topbar: incrementa su altura total y añade padding superior */
+        app-topbar header {
+            height: calc(56px + var(--space-3)) !important;
+            padding-top: var(--space-3) !important;
+
+            @media (min-width: $bp-lg) {
+                height: calc(56px + var(--space-4)) !important;
+                padding-top: var(--space-4) !important;
+            }
+        }
     }
 }

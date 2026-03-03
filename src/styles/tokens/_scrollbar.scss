@@ -1,0 +1,57 @@
+/* ============================================================
+   Autoescuela — Modern Scrollbar Refinement
+   Advanced implementation: Auto-Hide + Thumb Expansion
+   ============================================================ */
+
+@media (pointer: fine) {
+
+    /* ── 1. Firefox: Minimalist sync ── */
+    @supports not selector(::-webkit-scrollbar) {
+        * {
+            scrollbar-width: thin;
+            /* Subtle idle state for Firefox (color-mix is supported in modern FF) */
+            scrollbar-color: color-mix(in srgb, var(--scrollbar-thumb) 50%, transparent) transparent;
+        }
+    }
+
+    /* ── 2. Webkit (Chrome, Edge, Safari): Advanced Micro-interactions ── */
+
+    ::-webkit-scrollbar {
+        /* Hit area invisible más grande (14px) para que sea fácil apuntar con el mouse */
+        width: 14px;
+        height: 14px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        /* Estado reposo: muy sutil (40% opacidad del gris claro) */
+        background-color: color-mix(in srgb, var(--scrollbar-thumb) 40%, transparent);
+        border-radius: var(--scrollbar-radius);
+        background-clip: content-box;
+
+        /* El borde transparente actúa como margen interno. 
+       14px total - (5px * 2) = 4px de grosor visible. (macOS style incial) */
+        border: 5px solid transparent;
+
+        transition: background-color var(--duration-fast) var(--ease-standard),
+            border-width var(--duration-fast) var(--ease-standard);
+    }
+
+    /* Micro-interacción: Expansión suave */
+    ::-webkit-scrollbar-thumb:hover {
+        /* Sube a 80% opacidad (se hace más notable pero no cambia de familia de color) */
+        background-color: color-mix(in srgb, var(--scrollbar-thumb-hover) 80%, transparent) !important;
+        /* 14px - (4px * 2) = 6px visibles. Crece de 4px a 6px (expansión elegante y no brusca) */
+        border-width: 4px !important;
+    }
+
+    /* Estado Activo (Click/Arrastre) */
+    ::-webkit-scrollbar-thumb:active {
+        background-color: var(--scrollbar-thumb-hover) !important;
+        /* 100% opacidad al agarrarlo */
+        border-width: 4px !important;
+    }
+}
