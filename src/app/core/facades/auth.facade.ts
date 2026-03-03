@@ -75,12 +75,14 @@ export class AuthFacade {
       } | null;
     }
 
-    const { data: dbUser, error } = await this.supabase.client
+    const result = await this.supabase.client
       .from("users")
       .select("id, first_names, paternal_last_name, branch_id, first_login, active, role_id, roles(name)")
       .eq("supabase_uid", authUser.id)
-      .returns<UserWithRole | null>() // Ajustamos para permitir null con maybeSingle
       .maybeSingle();
+
+    const dbUser = result.data as unknown as UserWithRole | null;
+    const error = result.error;
 
     if (error) {
       console.error("Error fetching user profile:", error);
