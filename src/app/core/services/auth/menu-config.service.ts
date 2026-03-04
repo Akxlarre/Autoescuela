@@ -65,7 +65,7 @@ const ADMIN_NAV: NavGroup[] = [
     items: [
       { label: 'Base de Alumnos', icon: 'users', routerLink: '/app/admin/alumnos' },
       { label: 'Certificados', icon: 'award', routerLink: '/app/admin/certificacion' },
-      { label: 'Psicotécnico', icon: 'brain', routerLink: '/app/admin/psicotecnico' },
+      { label: 'Servicios Especiales', icon: 'settings_pro', routerLink: '/app/admin/servicios-especiales' },
     ],
   },
   {

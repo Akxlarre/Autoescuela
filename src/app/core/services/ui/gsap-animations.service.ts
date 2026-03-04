@@ -186,6 +186,7 @@ export class GsapAnimationsService {
         y: 0,
         duration: 0.32,
         ease: 'power2.inOut',
+        clearProps: 'boxShadow,borderColor,transform',
       });
 
     el.addEventListener('mouseenter', enter);

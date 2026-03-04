@@ -12,6 +12,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { IconComponent } from '../icon/icon.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
+
 /**
  * KpiCardVariantComponent — Variante de molécula de métrica (KPI) con subtexto estadístico.
  *
@@ -21,11 +23,11 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
   selector: 'app-kpi-card-variant',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, CardHoverDirective],
   template: `
     <div
-      class="card card-tinted flex flex-col gap-2 h-full"
-      style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--card-radius); padding: var(--card-padding);"
+      appCardHover
+      class="bento-card flex flex-col gap-2 h-full"
       [class.card-accent]="accent()"
       [attr.data-color-variant]="color()"
       [attr.aria-busy]="loading()"
@@ -153,12 +155,15 @@ export class KpiCardVariantComponent {
     return `${sign}${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}%`;
   });
 
-  private readonly valueEl = viewChild.required<ElementRef<HTMLElement>>('valueEl');
+  private readonly valueEl = viewChild<ElementRef<HTMLElement>>('valueEl');
   private readonly gsap = inject(GsapAnimationsService);
 
   constructor() {
     afterNextRender(() => {
-      this.gsap.animateCounter(this.valueEl().nativeElement, this.value(), '');
+      const el = this.valueEl();
+      if (el) {
+        this.gsap.animateCounter(el.nativeElement, this.value(), '');
+      }
     });
   }
 }

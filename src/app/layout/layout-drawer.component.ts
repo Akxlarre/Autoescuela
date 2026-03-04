@@ -74,22 +74,40 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
           </h2>
         </div>
 
-        <!-- Botón cerrar — siempre visible con área de toque generosa -->
-        <button
-          appPressFeedback
-          (click)="close()"
-          class="flex items-center justify-center shrink-0 w-10 h-10 rounded-full border-none bg-transparent cursor-pointer transition-colors"
-          style="color: var(--text-muted);"
-          onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
-          onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
-          aria-label="Cerrar panel"
-        >
-          <app-icon name="x" [size]="22" />
-        </button>
+        <div class="flex items-center gap-1 shrink-0">
+          <!-- Acciones Dinámicas -->
+          @for (action of actions(); track action.label) {
+            <button
+               appPressFeedback
+               (click)="action.callback()"
+               class="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium"
+               style="color: var(--text-muted);"
+               onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
+               onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
+               [attr.data-llm-action]="action.llmAction"
+            >
+              <app-icon [name]="action.icon" [size]="16" />
+              <span class="hidden sm:inline">{{ action.label }}</span>
+            </button>
+          }
+
+          <!-- Botón cerrar — siempre visible con área de toque generosa -->
+          <button
+            appPressFeedback
+            (click)="close()"
+            class="flex items-center justify-center w-10 h-10 rounded-full border-none bg-transparent cursor-pointer transition-colors"
+            style="color: var(--text-muted);"
+            onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
+            onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
+            aria-label="Cerrar panel"
+          >
+            <app-icon name="x" [size]="22" />
+          </button>
+        </div>
       </header>
 
       <!-- Body Dinámico -->
-      <div class="flex-1 w-full overflow-y-auto px-4 py-5 box-border">
+      <div class="flex-1 w-full overflow-y-auto px-4 py-2 box-border flex flex-col">
         @if (component()) {
           <ng-container *ngComponentOutlet="component()!" />
         }
@@ -107,6 +125,7 @@ export class LayoutDrawerComponent implements OnDestroy {
   readonly component = this.layoutDrawer.component;
   readonly title = this.layoutDrawer.title;
   readonly icon = this.layoutDrawer.icon;
+  readonly actions = this.layoutDrawer.actions;
 
   private isCurrentlyVisible = false;
 

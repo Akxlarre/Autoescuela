@@ -115,7 +115,7 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
            Solo 1 card-accent por sección bento → va en la primera KPI.
       ──────────────────────────────────────────────────────────── -->
       @for (kpi of kpis(); track kpi.id) {
-        <div class="bento-square" appCardHover>
+        <div class="bento-square">
           <app-kpi-card-variant
             [label]="kpi.label"
             [value]="kpi.value"

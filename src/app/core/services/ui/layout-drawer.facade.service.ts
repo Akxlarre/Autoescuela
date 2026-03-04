@@ -16,9 +16,14 @@ export class LayoutDrawerFacadeService {
     readonly component = this.layoutDrawer.component;
     readonly title = this.layoutDrawer.title;
     readonly icon = this.layoutDrawer.icon;
+    readonly actions = this.layoutDrawer.actions;
 
-    open(component: Type<any>, title: string, icon?: string): void {
-        this.layoutDrawer.open(component, title, icon);
+    open(component: Type<any>, title: string, icon?: string, actions?: any[]): void {
+        this.layoutDrawer.open(component, title, icon, actions);
+    }
+
+    setActions(actions: any[]): void {
+        this.layoutDrawer.setActions(actions);
     }
 
     close(): void {

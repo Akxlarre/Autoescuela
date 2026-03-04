@@ -23,7 +23,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
       >
         <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
         <code class="text-xs" style="color: var(--text-muted)">
-          mockup/web/src/pages/admin/clase-profesional/relatores.astro
+          mock/web/src/pages/admin/clase-profesional/relatores.astro
         </code>
       </div>
     </div>

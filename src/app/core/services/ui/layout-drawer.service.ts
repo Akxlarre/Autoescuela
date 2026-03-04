@@ -1,10 +1,18 @@
 import { Injectable, signal, computed, Type, inject } from '@angular/core';
 
+export interface LayoutDrawerAction {
+    label: string;
+    icon: string;
+    callback: () => void;
+    llmAction?: string;
+}
+
 export interface LayoutDrawerState {
     isOpen: boolean;
     component: Type<any> | null;
     title: string;
     icon?: string;
+    actions?: LayoutDrawerAction[];
 }
 
 /**
@@ -22,7 +30,8 @@ export class LayoutDrawerService {
         isOpen: false,
         component: null,
         title: '',
-        icon: undefined
+        icon: undefined,
+        actions: []
     });
 
     // Selectors
@@ -31,17 +40,26 @@ export class LayoutDrawerService {
     readonly component = computed(() => this._state().component);
     readonly title = computed(() => this._state().title);
     readonly icon = computed(() => this._state().icon);
+    readonly actions = computed(() => this._state().actions ?? []);
 
     /**
      * Abre el drawer arquitectónico inyectando un componente dinámico.
      */
-    open(component: Type<any>, title: string, icon?: string): void {
+    open(component: Type<any>, title: string, icon?: string, actions?: LayoutDrawerAction[]): void {
         this._state.set({
             isOpen: true,
             component,
             title,
-            icon
+            icon,
+            actions
         });
+    }
+
+    /**
+     * Actualiza las acciones del header dinámicamente si el componente ya está abierto.
+     */
+    setActions(actions: LayoutDrawerAction[]): void {
+        this._state.update(s => ({ ...s, actions }));
     }
 
     /**
@@ -57,6 +75,12 @@ export class LayoutDrawerService {
      * Destruye el componente renderizado (llamado DESPUÉS de la salida GSAP).
      */
     clear(): void {
-        this._state.update(s => ({ ...s, component: null, title: '', icon: undefined }));
+        this._state.update(s => ({
+            ...s,
+            component: null,
+            title: '',
+            icon: undefined,
+            actions: []
+        }));
     }
 }

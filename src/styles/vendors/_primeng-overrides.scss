@@ -655,8 +655,8 @@ app-main-layout p-toast.p-toast-top-center,
     display: flex;
     align-items: center;
     gap: 0;
-    padding-bottom: var(--space-4);
-    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-2);
     border-bottom: 1px solid var(--border-default);
   }
 
@@ -674,8 +674,8 @@ app-main-layout p-toast.p-toast-top-center,
   .p-step-header {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
+    gap: var(--space-1-5, 0.375rem);
+    padding: var(--space-1) var(--space-2);
     border: none;
     background: transparent;
     border-radius: var(--radius-md);
@@ -735,26 +735,32 @@ app-main-layout p-toast.p-toast-top-center,
     transform: scale(1.05);
   }
 
-  &.stepper-premium--step-2 .p-step:nth-child(1) .p-step-number,
-  &.stepper-premium--step-3 .p-step:nth-child(1) .p-step-number,
-  &.stepper-premium--step-3 .p-step:nth-child(2) .p-step-number {
-    font-size: 0;
-    position: relative;
-    background: var(--state-success) !important;
-    color: white !important;
-  }
+  /* Completed steps: green checkmark indicator + green separator
+     Generated for steps 2–6 (each marks all previous steps as completed) */
+  @for $step from 2 through 6 {
+    @for $prev from 1 through ($step - 1) {
+      &.stepper-premium--step-#{$step} .p-step:nth-child(#{$prev}) .p-step-number {
+        font-size: 0;
+        position: relative;
+        background: var(--state-success) !important;
+        color: white !important;
+      }
 
-  &.stepper-premium--step-2 .p-step:nth-child(1) .p-step-number::after,
-  &.stepper-premium--step-3 .p-step:nth-child(1) .p-step-number::after,
-  &.stepper-premium--step-3 .p-step:nth-child(2) .p-step-number::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1;
+      &.stepper-premium--step-#{$step} .p-step:nth-child(#{$prev}) .p-step-number::after {
+        content: '✓';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.75rem;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      &.stepper-premium--step-#{$step} .p-step:nth-child(#{$prev}) .p-stepper-separator {
+        background: var(--state-success);
+      }
+    }
   }
 
   .p-stepper-separator {
@@ -765,12 +771,6 @@ app-main-layout p-toast.p-toast-top-center,
     background: var(--border-default);
     border-radius: var(--radius-full);
     transition: background var(--stepper-transition);
-  }
-
-  &.stepper-premium--step-2 .p-step:nth-child(1) .p-stepper-separator,
-  &.stepper-premium--step-3 .p-step:nth-child(1) .p-stepper-separator,
-  &.stepper-premium--step-3 .p-step:nth-child(2) .p-stepper-separator {
-    background: var(--state-success);
   }
 
   .p-steppanel-content {

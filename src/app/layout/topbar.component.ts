@@ -53,7 +53,7 @@ import { Button } from 'primeng/button';
   template: `
     <header
       appSearchShortcut
-      class="sticky top-0 z-10 flex h-[56px] items-center gap-2 px-4 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-[var(--shadow-layout-topbar)] shrink-0"
+      class="sticky top-0 z-40 flex h-[56px] items-center gap-2 px-4 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-[var(--shadow-layout-topbar)] shrink-0"
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->

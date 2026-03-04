@@ -4,6 +4,7 @@ npm-debug.log
 yarn-error.log
 
 # Angular
+.angular/
 dist/
 tmp/
 out-tsc/
@@ -25,6 +26,5 @@ bazel-out/
 .mcp.json
 .claude/logs/
 .gemini/
-indices/
 
 environments/

@@ -37,6 +37,21 @@ export const routes: Routes = [
         (m) => m.ForcePasswordChangeComponent,
       ),
   },
+  {
+    path: 'recuperar-contrasena',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./features/auth/recuperar-contrasena/recuperar-contrasena.component').then(
+        (m) => m.RecuperarContrasenaComponent,
+      ),
+  },
+  {
+    path: 'acceso-denegado',
+    loadComponent: () =>
+      import('./features/acceso-denegado/acceso-denegado.component').then(
+        (m) => m.AccesoDenegadoComponent,
+      ),
+  },
 
   // Rutas protegidas — envueltas en el layout AppShell
   {
@@ -175,10 +190,17 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'psicotecnico',
+            path: 'servicios-especiales',
             loadComponent: () =>
-              import('./features/admin/psicotecnico/admin-psicotecnico.component').then(
-                (m) => m.AdminPsicotecnicoComponent,
+              import('./features/admin/servicios-especiales/admin-servicios-especiales.component').then(
+                (m) => m.AdminServiciosEspecialesComponent,
+              ),
+          },
+          {
+            path: 'notificaciones',
+            loadComponent: () =>
+              import('./features/admin/notificaciones/admin-notificaciones.component').then(
+                (m) => m.AdminNotificacionesComponent,
               ),
           },
           {
@@ -216,13 +238,6 @@ export const routes: Routes = [
                 (m) => m.AdminAuditoriaComponent,
               ),
           },
-          {
-            path: 'notificaciones',
-            loadComponent: () =>
-              import('./features/admin/notificaciones/admin-notificaciones.component').then(
-                (m) => m.AdminNotificacionesComponent,
-              ),
-          },
         ],
       },
 
@@ -248,6 +263,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'alumnos/pre-inscritos',
+            loadComponent: () =>
+              import('./features/secretaria/alumnos-pre-inscritos/secretaria-alumnos-pre-inscritos.component').then(
+                (m) => m.SecretariaAlumnosPreInscritosComponent,
+              ),
+          },
+          {
             path: 'agenda',
             loadComponent: () =>
               import('./features/secretaria/agenda/secretaria-agenda.component').then(
@@ -259,6 +281,20 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/secretaria/asistencia/secretaria-asistencia.component').then(
                 (m) => m.SecretariaAsistenciaComponent,
+              ),
+          },
+          {
+            path: 'asistencia/matriz',
+            loadComponent: () =>
+              import('./features/secretaria/asistencia-matriz/secretaria-asistencia-matriz.component').then(
+                (m) => m.SecretariaAsistenciaMatrizComponent,
+              ),
+          },
+          {
+            path: 'asistencia/profesional',
+            loadComponent: () =>
+              import('./features/secretaria/asistencia-profesional/secretaria-asistencia-profesional.component').then(
+                (m) => m.SecretariaAsistenciaProfesionalComponent,
               ),
           },
           {
@@ -324,13 +360,7 @@ export const routes: Routes = [
                 (m) => m.SecretariaObservacionesComponent,
               ),
           },
-          {
-            path: 'psicotecnico',
-            loadComponent: () =>
-              import('./features/secretaria/psicotecnico/secretaria-psicotecnico.component').then(
-                (m) => m.SecretariaPsicotecnicoComponent,
-              ),
-          },
+
           {
             path: 'profesional/relatores',
             loadComponent: () =>
@@ -423,6 +453,20 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/instructor/clase/instructor-clase.component').then(
                 (m) => m.InstructorClaseComponent,
+              ),
+          },
+          {
+            path: 'clase/:id',
+            loadComponent: () =>
+              import('./features/instructor/clase-detail/instructor-clase-detail.component').then(
+                (m) => m.InstructorClaseDetailComponent,
+              ),
+          },
+          {
+            path: 'ficha/:id',
+            loadComponent: () =>
+              import('./features/instructor/ficha/instructor-ficha.component').then(
+                (m) => m.InstructorFichaComponent,
               ),
           },
           {
@@ -611,6 +655,20 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/relator/acta-final/relator-acta-final.component').then(
                 (m) => m.RelatorActaFinalComponent,
+              ),
+          },
+          {
+            path: 'notificaciones',
+            loadComponent: () =>
+              import('./features/relator/notificaciones/relator-notificaciones.component').then(
+                (m) => m.RelatorNotificacionesComponent,
+              ),
+          },
+          {
+            path: 'alumno/:id',
+            loadComponent: () =>
+              import('./features/relator/alumno-detail/relator-alumno-detail.component').then(
+                (m) => m.RelatorAlumnoDetailComponent,
               ),
           },
         ],

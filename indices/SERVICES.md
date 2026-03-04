@@ -1,0 +1,27 @@
+# Registro de Servicios
+
+> **Regla de Actualización (OBLIGATORIA):** El Agente DEBE usar sus herramientas de sistema (escritura de archivos) para registrar el servicio en la tabla correspondiente al crearlo. Solo si el entorno no los soporta, usa el bloque `<memory_update>` para el humano.
+
+## 1. Core & Utility Services
+Servicios estructurales compartidos que proveen funcionalidades base, autenticación o UI interactions globales.
+
+| Servicio | Responsabilidad Principal | Ubicación (File Path) | Dependencias | Estado |
+|----------|---------------------------|-----------------------|--------------|--------|
+| `SupabaseService` | Cliente Supabase singleton — NO inyectar en UI, solo en Facades/Services | `core/services/supabase.service.ts` | @supabase/supabase-js | ✅ Estable |
+| `ThemeService` | Modo claro/oscuro/sistema con `[data-mode='dark']` en documentElement; persiste en localStorage | `core/services/theme.service.ts` | GsapAnimationsService, MessageService | ✅ Estable |
+| `GsapAnimationsService` | Centraliza TODAS las animaciones GSAP: bento, counters, hover, page enter, reduced-motion | `core/services/gsap-animations.service.ts` | gsap, ScrollTrigger | ✅ Estable |
+| `LayoutService` | Estado responsive del sidebar drawer en mobile (`sidebarOpen` signal) | `core/services/layout.service.ts` | — | ✅ Estable |
+| `RoleService` | Dev role switcher — signal `currentRole` (`UserRole`), persiste en sessionStorage. Expone `setRole()`. Para usar en layout y topbar. Se elimina cuando el login sea real. | `core/services/role.service.ts` | — | ✅ Estable |
+| `MenuConfigService` | Navegación por rol — `menuItems = computed<NavGroup[]>()` según `RoleService.currentRole()`. Interfaces: `NavItem { label, icon, routerLink, badge? }` / `NavGroup { group, items }`. 5 navs: admin (7 grupos), secretaria (4), instructor (2), alumno (3), relator (1). | `core/services/menu-config.service.ts` | RoleService | ✅ Estable |
+| `NotificationsService` | Estado signal de notificaciones en-app con filtros y `unreadCount` computed | `core/services/notifications.service.ts` | — | ✅ Estable |
+| `SearchPanelService` | Estado signal del panel de búsqueda global (open/close/toggle) para `[appSearchShortcut]` | `core/services/search-panel.service.ts` | — | ✅ Estable |
+| `BreadcrumbService` | Breadcrumb reactivo; consume `NavGroup[]` de `MenuConfigService` vía `buildFromGroups(url, groups)`; deriva trail desde grupos y sus items | `core/services/breadcrumb.service.ts` | Router, MenuConfigService | ✅ Estable |
+| `ConfirmModalService` | Modal de confirmación imperativo con patrón `confirm() → Promise<boolean>`; sin dependencia de PrimeNG | `core/services/confirm-modal.service.ts` | — | ✅ Estable |
+| `ModalOverlayService` | Teleporta modales al overlay container (z-index > topbar) | `core/services/modal-overlay.service.ts` | — | ✅ Estable |
+
+## 2. Facades & Feature-Specific State
+Servicios que median entre la UI (`features/`) y las APIs de datos (`SupabaseService`/`HttpClient`). Manejan el estado del dominio (`toSignal()`).
+
+| Facade | Manejo de Dominio | Ubicación (File Path) | Dependencias | Estado |
+|--------|-------------------|-----------------------|--------------|--------|
+| `AuthFacade` | Autenticación con Supabase; expone `currentUser`, `isAuthenticated`, `login()`, `logout()`, `whenReady` | `core/services/auth.facade.ts` | SupabaseService, Router | ✅ Estable |
