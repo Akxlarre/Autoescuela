@@ -86,3 +86,9 @@
 | `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min disponibles** por instructor+vehículo en las próximas 4 semanas. Filtra por `available_days`/`available_from`/`available_until` y excluye solapamientos reales de instructor y vehículo. Usar para agenda de matrícula (RF-046). | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
 
 > **Nota `v_class_b_schedule_availability`:** El rol `student` no puede ver `instructors` ni `vehicles` según sus policies actuales, por lo que la vista devuelve vacío si la consulta un alumno. Si se requiere self-service de selección de horario, implementar un RPC `SECURITY DEFINER` específico.
+
+## Edge Functions (`supabase/functions/`)
+
+| Función | Ubicación | Invocación | Descripción |
+|---------|-----------|------------|-------------|
+| `generate-contract-pdf` | `supabase/functions/generate-contract-pdf/index.ts` | `supabase.functions.invoke('generate-contract-pdf', { body: { enrollment_id } })` | Genera PDF de contrato de matrícula (RF-083). Lee enrollment+student+course+branch, construye HTML con cláusulas legales, renderiza a PDF (builder interno sin deps externas), sube a Storage bucket `documents` path `contracts/{id}/`, upsert en `digital_contracts` con content_hash SHA-256. Retorna `{ pdfUrl }`. Usa `SUPABASE_SERVICE_ROLE_KEY` (admin). |

@@ -1,8 +1,8 @@
-import { Injectable, signal, computed, inject } from "@angular/core";
-import { Router } from "@angular/router";
-import type { User } from "@core/models/ui/user.model";
-import { getInitialsFromDisplayName } from "@core/models/ui/user.model";
-import { SupabaseService } from "../services/infrastructure/supabase.service";
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
+import type { User } from '@core/models/ui/user.model';
+import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
+import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
 /**
  * AuthFacade - Facade de autenticación con Supabase.
@@ -12,12 +12,11 @@ import { SupabaseService } from "../services/infrastructure/supabase.service";
  * La UI inyecta AuthFacade; nunca inyecta SupabaseService directamente.
  */
 @Injectable({
-  providedIn: "root",
+  providedIn: 'root',
 })
 export class AuthFacade {
   private supabase = inject(SupabaseService);
   private router = inject(Router);
-
 
   private _currentUser = signal<User | null>(null);
 
@@ -38,12 +37,9 @@ export class AuthFacade {
     this.whenReady = Promise.race([readyPromise, timeout]);
 
     this.supabase.client.auth.onAuthStateChange((event: any, session: any) => {
-      if (
-        (event === "SIGNED_IN" || event === "INITIAL_SESSION") &&
-        session?.user
-      ) {
+      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         this.loadUserFromSession(session.user);
-      } else if (event === "SIGNED_OUT") {
+      } else if (event === 'SIGNED_OUT') {
         this._currentUser.set(null);
       }
     });
@@ -76,31 +72,34 @@ export class AuthFacade {
     }
 
     const result = await this.supabase.client
-      .from("users")
-      .select("id, first_names, paternal_last_name, branch_id, first_login, active, role_id, roles(name)")
-      .eq("supabase_uid", authUser.id)
+      .from('users')
+      .select(
+        'id, first_names, paternal_last_name, branch_id, first_login, active, role_id, roles(name)',
+      )
+      .eq('supabase_uid', authUser.id)
       .maybeSingle();
 
     const dbUser = result.data as unknown as UserWithRole | null;
     const error = result.error;
 
     if (error) {
-      console.error("Error fetching user profile:", error);
+      console.error('Error fetching user profile:', error);
     }
 
     const name = dbUser
       ? `${dbUser.first_names} ${dbUser.paternal_last_name}`
-      : (authUser.user_metadata?.["display_name"] as string) ?? (authUser.email ? authUser.email.split("@")[0] : "Usuario");
+      : ((authUser.user_metadata?.['display_name'] as string) ??
+        (authUser.email ? authUser.email.split('@')[0] : 'Usuario'));
 
     let roleName = dbUser?.roles?.name?.toLowerCase() || 'unknown';
 
     // Normalizar roles en inglés que vengan de la base de datos
     const roleMap: Record<string, string> = {
-      'secretary': 'secretaria',
-      'student': 'alumno',
-      'teacher': 'instructor',
-      'speaker': 'relator',
-      'administrator': 'admin'
+      secretary: 'secretaria',
+      student: 'alumno',
+      teacher: 'instructor',
+      speaker: 'relator',
+      administrator: 'admin',
     };
 
     if (roleMap[roleName]) {
@@ -111,7 +110,7 @@ export class AuthFacade {
       id: authUser.id,
       dbId: dbUser?.id,
       name,
-      email: authUser.email ?? "",
+      email: authUser.email ?? '',
       role: roleName as any, // Mantenemos el cast final a UserRole
       initials: getInitialsFromDisplayName(name),
       firstLogin: dbUser?.first_login,
@@ -121,10 +120,7 @@ export class AuthFacade {
     this._currentUser.set(user);
   }
 
-  async login(
-    email: string,
-    password: string,
-  ): Promise<{ error: Error | null }> {
+  async login(email: string, password: string): Promise<{ error: Error | null }> {
     const { error } = await this.supabase.signIn(email, password);
 
     // Si el inicio de sesión es exitoso, debemos esperar a que el listener onAuthStateChange
@@ -154,9 +150,9 @@ export class AuthFacade {
     return {
       data: result.data
         ? {
-          user: result.data.user ?? undefined,
-          session: result.data.session ?? undefined,
-        }
+            user: result.data.user ?? undefined,
+            session: result.data.session ?? undefined,
+          }
         : null,
       error: (result.error as Error) ?? null,
     };
@@ -170,7 +166,7 @@ export class AuthFacade {
   logout(): void {
     this.supabase.signOut();
     this._currentUser.set(null);
-    this.router.navigate(["/"]);
+    this.router.navigate(['/']);
   }
 
   setUser(user: User | null): void {
@@ -181,12 +177,12 @@ export class AuthFacade {
     const { error } = await this.supabase.client.auth.updateUser({ password });
     if (error) return { error };
 
-    // Utilizamos un RPC (Stored Procedure) porque las políticas RLS 
+    // Utilizamos un RPC (Stored Procedure) porque las políticas RLS
     // de la tabla "users" impiden que los no-admin hagan UPDATE directamente.
     const { error: dbError } = await this.supabase.client.rpc('user_complete_first_login');
 
     if (dbError) {
-      console.error("Error clearing first_login via RPC:", dbError);
+      console.error('Error clearing first_login via RPC:', dbError);
       return { error: new Error('Password updated but login flag failed. Please contact admin.') };
     }
 
