@@ -42,7 +42,7 @@
 | Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
 |------------|----------------|-------------------|-----------|--------|
 | `app-drawer` | Overlay / Drawer | `isOpen` (boolean signal, req), `title` (string, req), `icon` (string), `hasFooter` (boolean) — outputs: `closed`. Dumb: animaciones con GSAP, content project. | `shared/components/drawer/drawer.component.ts` | ✅ Estable |
-| `app-alumnos-list-content` | Organismo / Tabla | `basePath` (string, req) — Lista de alumnos con búsqueda, filtros, KPIs y tabla PrimeNG. | `shared/components/alumnos-list-content/alumnos-list-content.component.ts` | ✅ Estable |
+| `app-alumnos-list-content` | Organismo / Tabla (Dumb) | `basePath` (string, req), `alumnos` (`AlumnoTableRow[]`, []), `isLoading` (boolean, false), `alumnosPorVencer` (`AlumnoTableRow[]`, []) — output: `refreshRequested`. Búsqueda, filtros, KPIs y tabla PrimeNG. La data real la pasa el padre smart (`AdminAlumnosComponent` / `SecretariaAlumnosComponent`) vía `AdminAlumnosFacade`. | `shared/components/alumnos-list-content/alumnos-list-content.component.ts` | ✅ Estable |
 
 ## Layout (Shell)
 *Componentes estructurales del shell de la aplicación — no son páginas enrutables.*

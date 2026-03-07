@@ -2,11 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   input,
+  output,
   signal,
+  effect,
   inject,
   viewChild,
   ElementRef,
-  afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -34,33 +35,12 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 // Services
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
-interface Expediente {
-  ci: boolean;
-  foto: boolean;
-  medico: boolean;
-  semep: boolean;
-}
-
-interface Alumno {
-  id: string;
-  nombre: string;
-  apellido: string;
-  rut: string;
-  email: string;
-  celular: string;
-  sucursal: string;
-  comuna: string;
-  nroExpediente: string;
-  fechaIngreso: string;
-  status: 'Activo' | 'Finalizado' | 'Retirado' | 'Pre-inscrito';
-  cursa: string;
-  pago_por_pagar: number;
-  pago_total: number;
-  exp_teorico: 'pendiente' | 'aprobado' | 'reprobado';
-  exp_practico: 'pendiente' | 'aprobado' | 'reprobado';
-  expediente: Expediente;
-  vencimiento?: string;
-}
+// Models
+import type {
+  AlumnoTableRow,
+  AlumnoExpediente,
+  AlumnoStatus,
+} from '@core/models/ui/alumno-table-row.model';
 
 interface ExpedienteStatus {
   label: 'Completo' | 'Parcial' | 'Pendiente';
@@ -127,11 +107,7 @@ interface ExpedienteStatus {
             <app-icon name="archive" [size]="16" class="mr-2" />
           </button>
           <!-- Ver Pre-inscritos -->
-          <button
-            pButton
-            label="Ver Pre-inscritos"
-            class="p-button-outlined p-button-secondary"
-          >
+          <button pButton label="Ver Pre-inscritos" class="p-button-outlined p-button-secondary">
             <app-icon name="users" [size]="16" class="mr-2" />
           </button>
           <!-- Nueva Matrícula -->
@@ -147,19 +123,18 @@ interface ExpedienteStatus {
       </div>
 
       <!-- KPIs Grilla -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" #bentoGrid appBentoGridLayout>
-        @if (loading()) {
+      <div
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        #bentoGrid
+        appBentoGridLayout
+      >
+        @if (isLoading()) {
           <app-skeleton-block height="120px" />
           <app-skeleton-block height="120px" />
           <app-skeleton-block height="120px" />
           <app-skeleton-block height="120px" />
         } @else {
-          <app-kpi-card
-            label="Total Alumnos"
-            [value]="totalAlumnos()"
-            icon="users"
-            size="md"
-          />
+          <app-kpi-card label="Total Alumnos" [value]="totalAlumnos()" icon="users" size="md" />
           <app-kpi-card
             label="Activos"
             [value]="activos()"
@@ -179,14 +154,17 @@ interface ExpedienteStatus {
           />
           <app-action-kpi-card
             label="Por Vencer"
-            [value]="alumnosPorVencer.length"
+            [value]="alumnosPorVencer().length"
             icon="alert-triangle"
             size="md"
             color="error"
             [pulse]="true"
             (click)="isDrawerOpen.set(true)"
           >
-            <div footer class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors">
+            <div
+              footer
+              class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors"
+            >
               <span>Ver detalles</span>
               <app-icon name="arrow-right" [size]="12" />
             </div>
@@ -197,10 +175,16 @@ interface ExpedienteStatus {
       <!-- Filtros y Tabla -->
       <div class="card p-0 overflow-hidden shadow-sm" #tableCard>
         <!-- Toolbar de la tabla -->
-        <div class="p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-surface">
+        <div
+          class="p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-surface"
+        >
           <div class="flex flex-wrap items-center gap-3">
             <span class="p-input-icon-left w-full md:w-80 relative">
-              <app-icon name="search" [size]="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10" />
+              <app-icon
+                name="search"
+                [size]="16"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10"
+              />
               <input
                 pInputText
                 type="text"
@@ -230,18 +214,14 @@ interface ExpedienteStatus {
             ></p-select>
           </div>
           <div class="flex items-center gap-2">
-            <button
-              pButton
-              label="Exportar"
-              class="p-button-outlined p-button-sm h-10"
-            >
+            <button pButton label="Exportar" class="p-button-outlined p-button-sm h-10">
               <app-icon name="file-text" [size]="14" class="mr-2" />
             </button>
             <button
               pButton
               label="Actualizar"
               class="p-button-outlined p-button-sm h-10"
-              [loading]="loading()"
+              [loading]="isLoading()"
               (click)="refresh()"
             >
               <app-icon name="refresh-cw" [size]="14" class="mr-2" />
@@ -250,7 +230,7 @@ interface ExpedienteStatus {
         </div>
 
         <!-- Tabla -->
-        @if (loading()) {
+        @if (isLoading()) {
           <div class="p-4 space-y-4">
             <app-skeleton-block height="40px" />
             <app-skeleton-block height="40px" />
@@ -285,11 +265,15 @@ interface ExpedienteStatus {
                 <!-- Alumno -->
                 <td class="pl-6 py-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase">
+                    <div
+                      class="w-9 h-9 rounded-full bg-bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                    >
                       {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                     </div>
                     <div class="flex flex-col">
-                      <span class="font-bold text-sm text-text-primary">{{ alumno.nombre }} {{ alumno.apellido }}</span>
+                      <span class="font-bold text-sm text-text-primary"
+                        >{{ alumno.nombre }} {{ alumno.apellido }}</span
+                      >
                       <span class="text-xs text-text-muted">{{ alumno.email }}</span>
                     </div>
                   </div>
@@ -300,7 +284,9 @@ interface ExpedienteStatus {
                 <td class="text-xs text-text-muted font-mono">{{ alumno.nroExpediente }}</td>
                 <!-- Curso -->
                 <td>
-                  <span class="text-xs px-2 py-0.5 rounded-full bg-bg-elevated border border-border-subtle text-text-secondary">
+                  <span
+                    class="text-xs px-2 py-0.5 rounded-full bg-bg-elevated border border-border-subtle text-text-secondary"
+                  >
                     {{ alumno.cursa }}
                   </span>
                 </td>
@@ -321,7 +307,16 @@ interface ExpedienteStatus {
                     [value]="exp.label + ' · ' + exp.count"
                     [severity]="exp.severity"
                     styleClass="text-[10px] font-bold px-2 py-0.5"
-                    [pTooltip]="'CI: ' + (alumno.expediente.ci ? '✓' : '✗') + ' | Foto: ' + (alumno.expediente.foto ? '✓' : '✗') + ' | Médico: ' + (alumno.expediente.medico ? '✓' : '✗') + ' | SEMEP: ' + (alumno.expediente.semep ? '✓' : '✗')"
+                    [pTooltip]="
+                      'CI: ' +
+                      (alumno.expediente.ci ? '✓' : '✗') +
+                      ' | Foto: ' +
+                      (alumno.expediente.foto ? '✓' : '✗') +
+                      ' | Médico: ' +
+                      (alumno.expediente.medico ? '✓' : '✗') +
+                      ' | SEMEP: ' +
+                      (alumno.expediente.semep ? '✓' : '✗')
+                    "
                   ></p-tag>
                 </td>
                 <!-- Acciones -->
@@ -387,22 +382,36 @@ interface ExpedienteStatus {
       [hasFooter]="true"
     >
       <div class="flex flex-col gap-4 p-1">
-        @for (item of alumnosPorVencer; track item.id) {
-          <div class="card p-3 flex items-center justify-between hover:bg-bg-subtle/20 transition-all border-l-4 border-l-error">
+        @for (item of alumnosPorVencer(); track item.id) {
+          <div
+            class="card p-3 flex items-center justify-between hover:bg-bg-subtle/20 transition-all border-l-4 border-l-error"
+          >
             <div class="flex flex-col gap-0.5">
-              <span class="font-bold text-sm text-text-primary">{{ item.nombre }} {{ item.apellido }}</span>
-              <span class="text-xs text-text-muted font-mono">{{ item.cursa }} — {{ item.nroExpediente }}</span>
+              <span class="font-bold text-sm text-text-primary"
+                >{{ item.nombre }} {{ item.apellido }}</span
+              >
+              <span class="text-xs text-text-muted font-mono"
+                >{{ item.cursa }} — {{ item.nroExpediente }}</span
+              >
               <span class="text-xs text-error font-medium">Vence: {{ item.vencimiento }}</span>
             </div>
-            <button pButton class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center" pTooltip="Contactar">
+            <button
+              pButton
+              class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center"
+              pTooltip="Contactar"
+            >
               <app-icon name="message-circle" [size]="18" />
             </button>
           </div>
         }
       </div>
       <div footer class="w-full flex gap-2">
-        <button pButton label="Descargar Reporte Mora" class="p-button-outlined p-button-secondary w-full">
-           <app-icon name="download" [size]="16" class="mr-2" />
+        <button
+          pButton
+          label="Descargar Reporte Mora"
+          class="p-button-outlined p-button-secondary w-full"
+        >
+          <app-icon name="download" [size]="16" class="mr-2" />
         </button>
       </div>
     </app-drawer>
@@ -410,9 +419,16 @@ interface ExpedienteStatus {
   styles: [],
 })
 export class AlumnosListContentComponent {
+  // ── Inputs ──────────────────────────────────────────────────────────────
   readonly basePath = input.required<string>();
-  readonly loading = signal(true);
+  readonly alumnos = input<AlumnoTableRow[]>([]);
+  readonly isLoading = input(false);
+  readonly alumnosPorVencer = input<AlumnoTableRow[]>([]);
 
+  // ── Outputs ─────────────────────────────────────────────────────────────
+  readonly refreshRequested = output<void>();
+
+  // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -423,184 +439,29 @@ export class AlumnosListContentComponent {
   isDrawerOpen = signal(false);
 
   cursos = ['Clase B', 'Clase B + SENCE', 'Clase A2', 'Profesional'];
-  estados = ['Activo', 'Finalizado', 'Retirado', 'Pre-inscrito'];
+  estados = [
+    'Activo',
+    'Finalizado',
+    'Retirado',
+    'Pre-inscrito',
+    'Pendiente Pago',
+    'Docs Pendientes',
+    'Inactivo',
+  ];
   expedienteOpciones = ['Completo', 'Parcial', 'Pendiente'];
 
-  private readonly alumnosMock: Alumno[] = [
-    {
-      id: '1',
-      nombre: 'María',
-      apellido: 'González Pérez',
-      rut: '18.234.567-8',
-      email: 'maria@email.cl',
-      celular: '+56 9 8765 4321',
-      sucursal: 'Santiago Centro',
-      comuna: 'Santiago',
-      nroExpediente: 'EXP-2026-0001',
-      fechaIngreso: '2026-02-01',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 45000,
-      pago_total: 180000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: true, semep: false },
-    },
-    {
-      id: '2',
-      nombre: 'Juan Pablo',
-      apellido: 'Rojas',
-      rut: '19.456.789-0',
-      email: 'juan@email.cl',
-      celular: '+56 9 7654 3210',
-      sucursal: 'Providencia',
-      comuna: 'Providencia',
-      nroExpediente: 'EXP-2026-0002',
-      fechaIngreso: '2026-02-01',
-      status: 'Pre-inscrito',
-      cursa: 'Clase B',
-      pago_por_pagar: 180000,
-      pago_total: 180000,
-      exp_teorico: 'pendiente',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: false, semep: false },
-    },
-    {
-      id: '3',
-      nombre: 'Ana',
-      apellido: 'Martínez Silva',
-      rut: '17.890.123-4',
-      email: 'ana@email.cl',
-      celular: '+56 9 6543 2109',
-      sucursal: 'Las Condes',
-      comuna: 'Las Condes',
-      nroExpediente: 'EXP-2026-0003',
-      fechaIngreso: '2026-01-30',
-      status: 'Pre-inscrito',
-      cursa: 'Clase B',
-      pago_por_pagar: 180000,
-      pago_total: 180000,
-      exp_teorico: 'pendiente',
-      exp_practico: 'pendiente',
-      expediente: { ci: false, foto: false, medico: false, semep: false },
-    },
-    {
-      id: '4',
-      nombre: 'Carlos',
-      apellido: 'Fernández',
-      rut: '20.123.456-7',
-      email: 'carlos@email.cl',
-      celular: '+56 9 5432 1098',
-      sucursal: 'Santiago Centro',
-      comuna: 'Estación Central',
-      nroExpediente: 'EXP-2026-0004',
-      fechaIngreso: '2026-01-28',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 0,
-      pago_total: 180000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'aprobado',
-      expediente: { ci: true, foto: true, medico: true, semep: true },
-    },
-    {
-      id: '5',
-      nombre: 'Sofía',
-      apellido: 'Vargas López',
-      rut: '18.567.890-1',
-      email: 'sofia@email.cl',
-      celular: '+56 9 4321 0987',
-      sucursal: 'Providencia',
-      comuna: 'Providencia',
-      nroExpediente: 'EXP-2026-0005',
-      fechaIngreso: '2026-01-25',
-      status: 'Retirado',
-      cursa: 'Clase B',
-      pago_por_pagar: 60000,
-      pago_total: 180000,
-      exp_teorico: 'reprobado',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: false, medico: false, semep: false },
-    },
-    {
-      id: '6',
-      nombre: 'Roberto',
-      apellido: 'Muñoz',
-      rut: '18.901.234-5',
-      email: 'r.munoz@email.cl',
-      celular: '+56 9 5555 4444',
-      sucursal: 'Las Condes',
-      comuna: 'Las Condes',
-      nroExpediente: 'EXP-2026-0006',
-      fechaIngreso: '2026-01-20',
-      status: 'Finalizado',
-      cursa: 'Clase A2',
-      pago_por_pagar: 0,
-      pago_total: 250000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'aprobado',
-      expediente: { ci: true, foto: true, medico: true, semep: true },
-    },
-  ];
-
-  alumnosPorVencer: Alumno[] = [
-    {
-      id: '7',
-      nombre: 'Juan',
-      apellido: 'Pérez',
-      rut: '12.345.678-9',
-      email: 'juan.perez@email.com',
-      celular: '+56 9 1234 5678',
-      sucursal: 'Santiago Centro',
-      comuna: 'Santiago',
-      nroExpediente: 'EXP-2026-0007',
-      fechaIngreso: '2025-10-01',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 50000,
-      pago_total: 180000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: false, semep: false },
-      vencimiento: 'Hoy',
-    },
-    {
-      id: '8',
-      nombre: 'Lucía',
-      apellido: 'Vera',
-      rut: '19.444.555-6',
-      email: 'lucia@email.cl',
-      celular: '+56 9 2222 1111',
-      sucursal: 'Providencia',
-      comuna: 'Providencia',
-      nroExpediente: 'EXP-2026-0008',
-      fechaIngreso: '2025-11-15',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 35000,
-      pago_total: 180000,
-      exp_teorico: 'pendiente',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: true, semep: false },
-      vencimiento: 'En 2 días',
-    },
-  ];
-
   constructor() {
-    afterNextRender(() => {
-      setTimeout(() => {
-        this.loading.set(false);
+    effect(() => {
+      if (!this.isLoading() && this.bentoGrid()) {
         setTimeout(() => {
-          if (this.bentoGrid()) {
-            this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
-          }
+          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
         }, 100);
-      }, 1200);
+      }
     });
   }
 
-  filteredAlumnos(): Alumno[] {
-    return this.alumnosMock.filter((a) => {
+  filteredAlumnos(): AlumnoTableRow[] {
+    return this.alumnos().filter((a) => {
       const term = this.searchTerm.toLowerCase();
       const matchSearch =
         !term ||
@@ -609,12 +470,8 @@ export class AlumnosListContentComponent {
         a.rut.includes(term) ||
         a.nroExpediente.toLowerCase().includes(term);
 
-      const matchCurso =
-        !this.selectedCurso || a.cursa === this.selectedCurso;
-
-      const matchEstado =
-        !this.selectedEstado || a.status === this.selectedEstado;
-
+      const matchCurso = !this.selectedCurso || a.cursa === this.selectedCurso;
+      const matchEstado = !this.selectedEstado || a.status === this.selectedEstado;
       const matchExpediente = (() => {
         if (!this.selectedExpediente) return true;
         const exp = this.getExpedienteStatus(a.expediente);
@@ -626,18 +483,18 @@ export class AlumnosListContentComponent {
   }
 
   totalAlumnos(): number {
-    return this.alumnosMock.length;
+    return this.alumnos().length;
   }
 
   activos(): number {
-    return this.alumnosMock.filter((a) => a.status === 'Activo').length;
+    return this.alumnos().filter((a) => a.status === 'Activo').length;
   }
 
   conDeuda(): number {
-    return this.alumnosMock.filter((a) => a.pago_por_pagar > 0).length;
+    return this.alumnos().filter((a) => a.pago_por_pagar > 0).length;
   }
 
-  getExpedienteStatus(exp: Expediente): ExpedienteStatus {
+  getExpedienteStatus(exp: AlumnoExpediente): ExpedienteStatus {
     const docs = [exp.ci, exp.foto, exp.medico, exp.semep];
     const ok = docs.filter(Boolean).length;
     const total = docs.length;
@@ -647,7 +504,9 @@ export class AlumnosListContentComponent {
     return { label: 'Parcial', severity: 'warn', count };
   }
 
-  getStatusSeverity(status: string): 'success' | 'secondary' | 'info' | 'danger' | 'warn' | undefined {
+  getStatusSeverity(
+    status: AlumnoStatus | string,
+  ): 'success' | 'secondary' | 'info' | 'danger' | 'warn' | undefined {
     switch (status) {
       case 'Activo':
         return 'success';
@@ -657,16 +516,19 @@ export class AlumnosListContentComponent {
         return 'danger';
       case 'Pre-inscrito':
         return 'warn';
+      case 'Pendiente Pago':
+        return 'warn';
+      case 'Docs Pendientes':
+        return 'info';
+      case 'Inactivo':
+        return 'secondary';
       default:
         return 'secondary';
     }
   }
 
   refresh(): void {
-    this.loading.set(true);
-    setTimeout(() => {
-      this.loading.set(false);
-    }, 1000);
+    this.refreshRequested.emit();
   }
 
   resetFilters(): void {
@@ -679,34 +541,22 @@ export class AlumnosListContentComponent {
   // RF-054
   enviarEnlaceZoom(): void {
     const confirmacion = confirm(
-      '📹 Enviar Enlace de Zoom — Clase Teórica\n\n' +
-      'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
-      '¿Confirmar envío masivo?'
+      'Enviar Enlace de Zoom — Clase Teorica\n\n' +
+        'Esta accion enviara un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
+        'Confirmar envio masivo?',
     );
     if (confirmacion) {
-      alert(
-        '✓ Enlaces enviados exitosamente\n\n' +
-        '• Correos enviados a alumnos activos\n' +
-        '• Enlace: https://zoom.us/j/123456789\n\n' +
-        '[Mockup — RF-054]'
-      );
+      alert('Mockup RF-054 — Enlace enviado exitosamente.');
     }
   }
 
   // RF-054
   registrarAsistenciaZoom(): void {
-    alert(
-      '📋 Registrar Asistencia — Clase Teórica Zoom\n\n' +
-      'Pasos para registrar asistencia:\n' +
-      '1. Descarga el reporte de asistencia desde Zoom\n' +
-      '2. Revisa la lista de nombres/correos de asistentes\n' +
-      '3. Marca manualmente quiénes asistieron\n\n' +
-      '[Mockup — RF-054]'
-    );
+    alert('Mockup RF-054 — Registrar Asistencia Zoom.');
   }
 
   // RF-086
   exportarFicha(id: string): void {
-    alert(`📄 Exportando Ficha de Matrícula (${id})...\n\nSe generará un PDF con los datos del alumno y el contrato firmado.\n\n[Mockup — RF-086]`);
+    alert(`Mockup RF-086 — Exportando Ficha de Matricula (${id}).`);
   }
 }
