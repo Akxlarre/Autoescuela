@@ -50,6 +50,15 @@ export interface DiscountData {
   reason: string;
 }
 
+// ─── Available Discount (from BD, for predefined selection) ───
+
+export interface AvailableDiscount {
+  id: number;
+  name: string;
+  discountType: 'percentage' | 'fixed_amount';
+  value: number;
+}
+
 // ─── Singular Course Alert ───
 
 export interface SingularPaymentAlert {
@@ -66,7 +75,13 @@ export interface EnrollmentPaymentData {
   /** basePrice (or amountDue) minus discount */
   totalToPay: number;
   paymentMethod: PaymentMethod | null;
+  /** Descuentos predefinidos cargados desde la tabla `discounts` */
+  availableDiscounts: AvailableDiscount[];
+  /** ID del descuento predefinido seleccionado (null = ninguno o manual) */
+  selectedDiscountId: number | null;
   /** Singular courses require full payment — disables "pendiente" option */
   isSingularCourse: boolean;
   singularAlert: SingularPaymentAlert;
+  /** pricing !== null && paymentMethod !== null */
+  canAdvance: boolean;
 }

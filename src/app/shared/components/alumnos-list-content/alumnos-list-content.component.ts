@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   input,
   signal,
   inject,
@@ -22,7 +23,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
-import { KpiCardComponent } from '../kpi-card/kpi-card.component';
+import { KpiCardVariantComponent } from '../kpi-card/kpi-card-variant.component';
 import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
 import { DrawerComponent } from '../drawer/drawer.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
@@ -30,6 +31,8 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 
 // Services
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -68,6 +71,21 @@ interface ExpedienteStatus {
   count: string;
 }
 
+/** Forma de KPI para app-kpi-card-variant (compatible con Dashboard). */
+interface AlumnoKpiItem {
+  id: string;
+  label: string;
+  value: number;
+  icon: 'users' | 'user-check' | 'alert-circle';
+  color: 'default' | 'success' | 'warning' | 'error';
+  accent?: boolean;
+  suffix?: string;
+  prefix?: string;
+  trend?: number;
+  trendLabel?: string;
+  subValue?: string;
+}
+
 @Component({
   selector: 'app-alumnos-list-content',
   standalone: true,
@@ -83,100 +101,49 @@ interface ExpedienteStatus {
     TagModule,
     TooltipModule,
     IconComponent,
-    KpiCardComponent,
+    KpiCardVariantComponent,
     ActionKpiCardComponent,
     DrawerComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    SectionHeroComponent,
   ],
   template: `
     <div class="flex flex-col gap-8">
-      <!-- Header Seccional -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-text-primary m-0">Alumnos</h1>
-          <p class="text-text-muted m-0">Listado de alumnos de la escuela</p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <!-- RF-054: Envío masivo de enlace Zoom -->
-          <button
-            pButton
-            label="Enviar enlace Zoom"
-            class="p-button-outlined p-button-secondary"
-            (click)="enviarEnlaceZoom()"
-          >
-            <app-icon name="video" [size]="16" class="mr-2" />
-          </button>
-          <!-- RF-054: Registrar asistencia Zoom -->
-          <button
-            pButton
-            label="Registrar asistencia"
-            class="p-button-outlined p-button-secondary"
-            (click)="registrarAsistenciaZoom()"
-          >
-            <app-icon name="check-circle" [size]="16" class="mr-2" />
-          </button>
-          <!-- RF-105: Ir a Historial Ex-Alumnos -->
-          <button
-            pButton
-            label="Historial Ex-Alumnos"
-            class="p-button-outlined p-button-secondary"
-            [routerLink]="[basePath() + '/ex-alumnos']"
-          >
-            <app-icon name="archive" [size]="16" class="mr-2" />
-          </button>
-          <!-- Ver Pre-inscritos -->
-          <button
-            pButton
-            label="Ver Pre-inscritos"
-            class="p-button-outlined p-button-secondary"
-          >
-            <app-icon name="users" [size]="16" class="mr-2" />
-          </button>
-          <!-- Nueva Matrícula -->
-          <button
-            pButton
-            label="Nueva Matrícula"
-            class="p-button-primary shadow-sm"
-            [routerLink]="[basePath() + '/matricula']"
-          >
-            <app-icon name="plus" [size]="16" class="mr-2" />
-          </button>
-        </div>
-      </div>
+      <app-section-hero
+        title="Alumnos"
+        subtitle="Listado de alumnos de la escuela"
+        [chips]="heroChips()"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
+      />
 
-      <!-- KPIs Grilla -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" #bentoGrid appBentoGridLayout>
-        @if (loading()) {
-          <app-skeleton-block height="120px" />
-          <app-skeleton-block height="120px" />
-          <app-skeleton-block height="120px" />
-          <app-skeleton-block height="120px" />
-        } @else {
-          <app-kpi-card
-            label="Total Alumnos"
-            [value]="totalAlumnos()"
-            icon="users"
-            size="md"
-          />
-          <app-kpi-card
-            label="Activos"
-            [value]="activos()"
-            icon="user-check"
-            size="md"
-            color="success"
-            class="relative"
-          >
-            <span class="indicator-live absolute top-4 right-4"></span>
-          </app-kpi-card>
-          <app-kpi-card
-            label="Con deuda"
-            [value]="conDeuda()"
-            icon="alert-circle"
-            size="md"
-            color="warning"
-          />
+      <!-- KPIs — bento-grid--four-equal: 4 celdas iguales que ocupan todo el ancho (sin espacio vacío a la derecha) -->
+      <section
+        class="bento-grid bento-grid--four-equal"
+        appBentoGridLayout
+        #bentoGrid
+        aria-label="Métricas de alumnos"
+      >
+        @for (kpi of alumnosKpis(); track kpi.id) {
+          <div class="bento-square">
+            <app-kpi-card-variant
+              [label]="kpi.label"
+              [value]="kpi.value"
+              [suffix]="kpi.suffix ?? ''"
+              [prefix]="kpi.prefix ?? ''"
+              [trend]="kpi.trend"
+              [trendLabel]="kpi.trendLabel ?? ''"
+              [subValue]="kpi.subValue ?? ''"
+              [accent]="kpi.accent ?? false"
+              [icon]="kpi.icon"
+              [color]="kpi.color"
+              [loading]="loading()"
+            />
+          </div>
+        }
+        <div class="bento-square">
           <app-action-kpi-card
             label="Por Vencer"
             [value]="alumnosPorVencer.length"
@@ -184,28 +151,38 @@ interface ExpedienteStatus {
             size="md"
             color="error"
             [pulse]="true"
-            (click)="isDrawerOpen.set(true)"
+            [loading]="loading()"
+            (click)="openPorVencerDrawer()"
           >
-            <div footer class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors">
+            <div
+              footer
+              class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors"
+            >
               <span>Ver detalles</span>
               <app-icon name="arrow-right" [size]="12" />
             </div>
           </app-action-kpi-card>
-        }
-      </div>
+        </div>
+      </section>
 
       <!-- Filtros y Tabla -->
       <div class="card p-0 overflow-hidden shadow-sm" #tableCard>
         <!-- Toolbar de la tabla -->
-        <div class="p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4 bg-bg-surface">
+        <div
+          class="p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface"
+        >
           <div class="flex flex-wrap items-center gap-3">
             <span class="p-input-icon-left w-full md:w-80 relative">
-              <app-icon name="search" [size]="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10" />
+              <app-icon
+                name="search"
+                [size]="16"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10"
+              />
               <input
                 pInputText
                 type="text"
                 placeholder="Buscar por nombre, RUT o Nº Expediente..."
-                class="w-full pl-10 h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-primary-500 bg-bg-base"
+                class="w-full pl-10 h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
                 [(ngModel)]="searchTerm"
               />
             </span>
@@ -230,11 +207,7 @@ interface ExpedienteStatus {
             ></p-select>
           </div>
           <div class="flex items-center gap-2">
-            <button
-              pButton
-              label="Exportar"
-              class="p-button-outlined p-button-sm h-10"
-            >
+            <button pButton label="Exportar" class="p-button-outlined p-button-sm h-10">
               <app-icon name="file-text" [size]="14" class="mr-2" />
             </button>
             <button
@@ -251,12 +224,49 @@ interface ExpedienteStatus {
 
         <!-- Tabla -->
         @if (loading()) {
-          <div class="p-4 space-y-4">
-            <app-skeleton-block height="40px" />
-            <app-skeleton-block height="40px" />
-            <app-skeleton-block height="40px" />
-            <app-skeleton-block height="40px" />
-            <app-skeleton-block height="40px" />
+          <div class="p-4 space-y-0">
+            <!-- Header skeleton -->
+            <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+              <app-skeleton-block variant="text" width="15%" height="11px" />
+              <app-skeleton-block variant="text" width="9%" height="11px" />
+              <app-skeleton-block variant="text" width="9%" height="11px" />
+              <app-skeleton-block variant="text" width="9%" height="11px" />
+              <app-skeleton-block variant="text" width="11%" height="11px" />
+              <app-skeleton-block variant="text" width="7%" height="11px" />
+              <app-skeleton-block variant="text" width="9%" height="11px" />
+            </div>
+            <!-- Row skeletons -->
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                <div class="flex items-center gap-3 w-[15%]">
+                  <app-skeleton-block variant="circle" width="36px" height="36px" />
+                  <div class="flex flex-col gap-1.5 flex-1">
+                    <app-skeleton-block variant="text" width="75%" height="12px" />
+                    <app-skeleton-block variant="text" width="55%" height="10px" />
+                  </div>
+                </div>
+                <app-skeleton-block variant="text" width="9%" height="12px" />
+                <app-skeleton-block variant="text" width="9%" height="12px" />
+                <app-skeleton-block variant="rect" width="64px" height="20px" />
+                <app-skeleton-block variant="text" width="11%" height="12px" />
+                <app-skeleton-block variant="rect" width="56px" height="20px" />
+                <app-skeleton-block variant="rect" width="72px" height="20px" />
+                <div class="flex items-center gap-1 ml-auto">
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                </div>
+              </div>
+            }
+            <!-- Pagination skeleton -->
+            <div class="flex items-center justify-between pt-3">
+              <app-skeleton-block variant="text" width="210px" height="12px" />
+              <div class="flex gap-1">
+                <app-skeleton-block variant="rect" width="32px" height="32px" />
+                <app-skeleton-block variant="rect" width="32px" height="32px" />
+                <app-skeleton-block variant="rect" width="32px" height="32px" />
+              </div>
+            </div>
           </div>
         } @else {
           <p-table
@@ -269,7 +279,7 @@ interface ExpedienteStatus {
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
           >
             <ng-template pTemplate="header">
-              <tr class="bg-bg-subtle/50 text-text-muted uppercase text-[10px] tracking-wider">
+              <tr class="bg-subtle text-text-muted uppercase text-xs tracking-wider">
                 <th class="pl-6 py-4">Alumno</th>
                 <th>RUT</th>
                 <th>Nº Exp.</th>
@@ -281,15 +291,19 @@ interface ExpedienteStatus {
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-alumno>
-              <tr class="hover:bg-bg-subtle/30 transition-colors border-b border-border-subtle/50">
+              <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
                 <!-- Alumno -->
                 <td class="pl-6 py-4">
                   <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-full bg-bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase">
+                    <div
+                      class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                    >
                       {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                     </div>
                     <div class="flex flex-col">
-                      <span class="font-bold text-sm text-text-primary">{{ alumno.nombre }} {{ alumno.apellido }}</span>
+                      <span class="font-bold text-sm text-text-primary"
+                        >{{ alumno.nombre }} {{ alumno.apellido }}</span
+                      >
                       <span class="text-xs text-text-muted">{{ alumno.email }}</span>
                     </div>
                   </div>
@@ -300,7 +314,9 @@ interface ExpedienteStatus {
                 <td class="text-xs text-text-muted font-mono">{{ alumno.nroExpediente }}</td>
                 <!-- Curso -->
                 <td>
-                  <span class="text-xs px-2 py-0.5 rounded-full bg-bg-elevated border border-border-subtle text-text-secondary">
+                  <span
+                    class="text-xs px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-text-secondary"
+                  >
                     {{ alumno.cursa }}
                   </span>
                 </td>
@@ -311,7 +327,7 @@ interface ExpedienteStatus {
                   <p-tag
                     [value]="alumno.status"
                     [severity]="getStatusSeverity(alumno.status)"
-                    styleClass="text-[10px] font-bold px-2 py-0.5"
+                    styleClass="text-xs font-bold px-2 py-0.5"
                   ></p-tag>
                 </td>
                 <!-- RF-085: Expediente (Completo/Parcial/Pendiente) -->
@@ -320,8 +336,17 @@ interface ExpedienteStatus {
                   <p-tag
                     [value]="exp.label + ' · ' + exp.count"
                     [severity]="exp.severity"
-                    styleClass="text-[10px] font-bold px-2 py-0.5"
-                    [pTooltip]="'CI: ' + (alumno.expediente.ci ? '✓' : '✗') + ' | Foto: ' + (alumno.expediente.foto ? '✓' : '✗') + ' | Médico: ' + (alumno.expediente.medico ? '✓' : '✗') + ' | SEMEP: ' + (alumno.expediente.semep ? '✓' : '✗')"
+                    styleClass="text-xs font-bold px-2 py-0.5"
+                    [pTooltip]="
+                      'CI: ' +
+                      (alumno.expediente.ci ? 'Sí' : 'No') +
+                      ' | Foto: ' +
+                      (alumno.expediente.foto ? 'Sí' : 'No') +
+                      ' | Médico: ' +
+                      (alumno.expediente.medico ? 'Sí' : 'No') +
+                      ' | SEMEP: ' +
+                      (alumno.expediente.semep ? 'Sí' : 'No')
+                    "
                   ></p-tag>
                 </td>
                 <!-- Acciones -->
@@ -349,7 +374,7 @@ interface ExpedienteStatus {
                     <!-- RF-086: Exportar Ficha PDF -->
                     <button
                       pButton
-                      class="p-button-rounded p-button-text p-button-info p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
                       pTooltip="Exportar Ficha PDF"
                       (click)="exportarFicha(alumno.id)"
                     >
@@ -388,21 +413,35 @@ interface ExpedienteStatus {
     >
       <div class="flex flex-col gap-4 p-1">
         @for (item of alumnosPorVencer; track item.id) {
-          <div class="card p-3 flex items-center justify-between hover:bg-bg-subtle/20 transition-all border-l-4 border-l-error">
+          <div
+            class="card p-3 flex items-center justify-between hover:bg-subtle transition-all border-l-4 border-l-error"
+          >
             <div class="flex flex-col gap-0.5">
-              <span class="font-bold text-sm text-text-primary">{{ item.nombre }} {{ item.apellido }}</span>
-              <span class="text-xs text-text-muted font-mono">{{ item.cursa }} — {{ item.nroExpediente }}</span>
+              <span class="font-bold text-sm text-text-primary"
+                >{{ item.nombre }} {{ item.apellido }}</span
+              >
+              <span class="text-xs text-text-muted font-mono"
+                >{{ item.cursa }} — {{ item.nroExpediente }}</span
+              >
               <span class="text-xs text-error font-medium">Vence: {{ item.vencimiento }}</span>
             </div>
-            <button pButton class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center" pTooltip="Contactar">
+            <button
+              pButton
+              class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center"
+              pTooltip="Contactar"
+            >
               <app-icon name="message-circle" [size]="18" />
             </button>
           </div>
         }
       </div>
       <div footer class="w-full flex gap-2">
-        <button pButton label="Descargar Reporte Mora" class="p-button-outlined p-button-secondary w-full">
-           <app-icon name="download" [size]="16" class="mr-2" />
+        <button
+          pButton
+          label="Descargar Reporte Mora"
+          class="p-button-outlined p-button-secondary w-full"
+        >
+          <app-icon name="download" [size]="16" class="mr-2" />
         </button>
       </div>
     </app-drawer>
@@ -415,6 +454,64 @@ export class AlumnosListContentComponent {
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
+
+  readonly heroChips = computed((): SectionHeroChip[] => [
+    { label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' },
+  ]);
+
+  readonly heroActions = computed((): SectionHeroAction[] => {
+    const path = this.basePath();
+    return [
+      { id: 'enviar-zoom', label: 'Enviar enlace Zoom', icon: 'video', primary: false },
+      {
+        id: 'registrar-asistencia',
+        label: 'Registrar asistencia',
+        icon: 'check-circle',
+        primary: false,
+      },
+      {
+        id: 'historial',
+        label: 'Historial Ex-Alumnos',
+        icon: 'archive',
+        primary: false,
+        route: `${path}/ex-alumnos`,
+      },
+      { id: 'preinscritos', label: 'Ver Pre-inscritos', icon: 'users', primary: false },
+      {
+        id: 'nueva-matricula',
+        label: 'Nueva Matrícula',
+        icon: 'plus',
+        primary: true,
+        route: `${path}/matricula`,
+      },
+    ];
+  });
+
+  /** KPIs estáticos para la grilla (Total, Activos, Con deuda). Misma forma que Dashboard. */
+  readonly alumnosKpis = computed((): AlumnoKpiItem[] => [
+    {
+      id: 'total',
+      label: 'Total Alumnos',
+      value: this.totalAlumnos(),
+      icon: 'users',
+      color: 'default',
+      accent: true,
+    },
+    {
+      id: 'activos',
+      label: 'Activos',
+      value: this.activos(),
+      icon: 'user-check',
+      color: 'success',
+    },
+    {
+      id: 'deuda',
+      label: 'Con deuda',
+      value: this.conDeuda(),
+      icon: 'alert-circle',
+      color: 'warning',
+    },
+  ]);
 
   searchTerm = '';
   selectedCurso: string | null = null;
@@ -609,11 +706,9 @@ export class AlumnosListContentComponent {
         a.rut.includes(term) ||
         a.nroExpediente.toLowerCase().includes(term);
 
-      const matchCurso =
-        !this.selectedCurso || a.cursa === this.selectedCurso;
+      const matchCurso = !this.selectedCurso || a.cursa === this.selectedCurso;
 
-      const matchEstado =
-        !this.selectedEstado || a.status === this.selectedEstado;
+      const matchEstado = !this.selectedEstado || a.status === this.selectedEstado;
 
       const matchExpediente = (() => {
         if (!this.selectedExpediente) return true;
@@ -647,7 +742,9 @@ export class AlumnosListContentComponent {
     return { label: 'Parcial', severity: 'warn', count };
   }
 
-  getStatusSeverity(status: string): 'success' | 'secondary' | 'info' | 'danger' | 'warn' | undefined {
+  getStatusSeverity(
+    status: string,
+  ): 'success' | 'secondary' | 'info' | 'danger' | 'warn' | undefined {
     switch (status) {
       case 'Activo':
         return 'success';
@@ -676,19 +773,39 @@ export class AlumnosListContentComponent {
     this.selectedExpediente = null;
   }
 
+  openPorVencerDrawer(): void {
+    if (!this.loading()) this.isDrawerOpen.set(true);
+  }
+
+  handleHeroAction(actionId: string): void {
+    switch (actionId) {
+      case 'enviar-zoom':
+        this.enviarEnlaceZoom();
+        break;
+      case 'registrar-asistencia':
+        this.registrarAsistenciaZoom();
+        break;
+      case 'preinscritos':
+        // TODO: navegar o abrir vista Pre-inscritos
+        break;
+      default:
+        break;
+    }
+  }
+
   // RF-054
   enviarEnlaceZoom(): void {
     const confirmacion = confirm(
-      '📹 Enviar Enlace de Zoom — Clase Teórica\n\n' +
-      'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
-      '¿Confirmar envío masivo?'
+      'Enviar Enlace de Zoom — Clase Teórica\n\n' +
+        'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
+        '¿Confirmar envío masivo?',
     );
     if (confirmacion) {
       alert(
-        '✓ Enlaces enviados exitosamente\n\n' +
-        '• Correos enviados a alumnos activos\n' +
-        '• Enlace: https://zoom.us/j/123456789\n\n' +
-        '[Mockup — RF-054]'
+        'Enlaces enviados exitosamente\n\n' +
+          '- Correos enviados a alumnos activos\n' +
+          '- Enlace: https://zoom.us/j/123456789\n\n' +
+          '[Mockup — RF-054]',
       );
     }
   }
@@ -696,17 +813,19 @@ export class AlumnosListContentComponent {
   // RF-054
   registrarAsistenciaZoom(): void {
     alert(
-      '📋 Registrar Asistencia — Clase Teórica Zoom\n\n' +
-      'Pasos para registrar asistencia:\n' +
-      '1. Descarga el reporte de asistencia desde Zoom\n' +
-      '2. Revisa la lista de nombres/correos de asistentes\n' +
-      '3. Marca manualmente quiénes asistieron\n\n' +
-      '[Mockup — RF-054]'
+      'Registrar Asistencia — Clase Teórica Zoom\n\n' +
+        'Pasos para registrar asistencia:\n' +
+        '1. Descarga el reporte de asistencia desde Zoom\n' +
+        '2. Revisa la lista de nombres/correos de asistentes\n' +
+        '3. Marca manualmente quienes asistieron\n\n' +
+        '[Mockup — RF-054]',
     );
   }
 
   // RF-086
   exportarFicha(id: string): void {
-    alert(`📄 Exportando Ficha de Matrícula (${id})...\n\nSe generará un PDF con los datos del alumno y el contrato firmado.\n\n[Mockup — RF-086]`);
+    alert(
+      `Exportando Ficha de Matricula (${id})...\n\nSe generara un PDF con los datos del alumno y el contrato firmado.\n\n[Mockup — RF-086]`,
+    );
   }
 }

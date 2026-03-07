@@ -26,6 +26,11 @@ export interface SignedContractUpload {
   /** Size in bytes */
   fileSize: number | null;
   errorMessage: string | null;
+  // Metadata for digital signature
+  signatureHash?: string | null;
+  signedAt?: string | null;
+  signerName?: string | null;
+  ipAddress?: string | null;
 }
 
 export const CONTRACT_ACCEPTED_FORMATS = '.pdf,.jpg,.png';
@@ -36,7 +41,7 @@ export const CONTRACT_MAX_SIZE_MB = 10;
 export interface EnrollmentContractData {
   studentSummary: StudentSummaryBanner;
   contractGeneration: ContractGeneration;
-  signedUpload: SignedContractUpload;
-  /** Upload is required to advance to step 6 */
+  signedContract: SignedContractUpload | null;
+  /** Upload or signature is required to advance to step 6 */
   canAdvance: boolean;
 }

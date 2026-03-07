@@ -65,7 +65,7 @@ const ADMIN_NAV: NavGroup[] = [
     items: [
       { label: 'Base de Alumnos', icon: 'users', routerLink: '/app/admin/alumnos' },
       { label: 'Certificados', icon: 'award', routerLink: '/app/admin/certificacion' },
-      { label: 'Servicios Especiales', icon: 'settings_pro', routerLink: '/app/admin/servicios-especiales' },
+      { label: 'Servicios Especiales', icon: 'settings', routerLink: '/app/admin/servicios-especiales' },
     ],
   },
   {

@@ -71,7 +71,7 @@ import { LayoutDrawerFacadeService } from "@core/services/ui/layout-drawer.facad
         <!-- Shifting container for main content and drawer -->
         <div class="flex flex-1 min-w-0 overflow-hidden">
           <main
-            class="flex-1 overflow-y-auto p-6"
+            class="shell-content flex-1 overflow-y-auto p-6"
             style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"

@@ -1,393 +1,674 @@
-import { ChangeDetectionStrategy, Component, computed, inject, model, signal, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  isDevMode,
+  signal,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { StepperModule } from 'primeng/stepper';
-import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
-import { DatePickerModule } from 'primeng/datepicker';
-import { CheckboxModule } from 'primeng/checkbox';
-import { ButtonModule } from 'primeng/button';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { TextareaModule } from 'primeng/textarea';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { StepperModule } from 'primeng/stepper';
+import { ButtonModule } from 'primeng/button';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { EnrollmentFacade } from '@core/facades/enrollment.facade';
+import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
+import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
 
-/**
- * Wizard "Nueva Matrícula" — 6 pasos
- * RF-006/007/010/062/063/082/083
- *
- * SCOPE: Solo UI/UX presentacional con datos hardcodeados.
- * No inyecta Facades ni Services.
- */
+// Models
+import type { EnrollmentWizardStep } from '@core/models/ui/enrollment-wizard.model';
+import type { EnrollmentPersonalData } from '@core/models/ui/enrollment-personal-data.model';
+import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assignment.model';
+import type {
+  EnrollmentDocumentsData,
+  DocumentType,
+} from '@core/models/ui/enrollment-documents.model';
+import type { EnrollmentPaymentData } from '@core/models/ui/enrollment-payment.model';
+import type {
+  EnrollmentContractData,
+  ContractStatus,
+  SignedContractUpload,
+} from '@core/models/ui/enrollment-contract.model';
+import type { EnrollmentConfirmationData } from '@core/models/ui/enrollment-confirmation.model';
+
+// Step Components (Shared)
+import { PersonalDataComponent } from '@shared/components/matricula-steps/personal-data/personal-data.component';
+import { AssignmentComponent } from '@shared/components/matricula-steps/assignment/assignment.component';
+import { DocumentsComponent } from '@shared/components/matricula-steps/documents/documents.component';
+import { PaymentComponent } from '@shared/components/matricula-steps/payment/payment.component';
+import { ContractComponent } from '@shared/components/matricula-steps/contract/contract.component';
+import { ConfirmationComponent } from '@shared/components/matricula-steps/confirmation/confirmation.component';
+
+const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
+  rut: '',
+  firstNames: '',
+  lastNames: '',
+  email: '',
+  phone: '',
+  birthDate: '',
+  gender: 'M',
+  address: '',
+  regionCode: '16',
+  communeValue: 'chillan',
+  courseCategory: 'non-professional',
+  courseType: 'class_b',
+  singularCourseCode: null,
+  senceCode: null,
+  currentLicense: null,
+  licenseDate: null,
+  validationA2A4: false,
+  historicalPromotionId: null,
+  validationBook: null,
+  courses: [],
+};
+
+const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
+
+// ── DEV MOCK — eliminar cuando haya datos reales en la BD ────────────────────
+const DEV_SUMMARY = {
+  initials: 'DV',
+  fullName: 'Dev Usuario (Mock)',
+  courseLabel: 'Clase B (Mock)',
+};
+const DEV_INSTRUCTORS = [
+  { id: 1, name: 'Carlos Muñoz López', vehicleDescription: 'Toyota Corolla 2022', plate: 'ABCD12' },
+  { id: 2, name: 'Ana Pérez Silva', vehicleDescription: 'Hyundai Elantra 2021', plate: 'EFGH34' },
+];
+const DEV_PRICING = {
+  courseLabel: 'Clase B (Mock)',
+  practicalClassesIncluded: 18,
+  basePrice: 450000,
+  isDeposit: false,
+  amountDue: 450000,
+};
+
+/** Genera una grilla de horarios mock para las próximas 4 semanas. */
+function generateDevScheduleGrid() {
+  const today = new Date();
+  const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + daysUntilMonday);
+
+  const DAY_LABELS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE'];
+  const TIME_SLOTS = [
+    { start: '08:00', end: '08:45' },
+    { start: '09:00', end: '09:45' },
+    { start: '10:00', end: '10:45' },
+    { start: '11:00', end: '11:45' },
+    { start: '14:00', end: '14:45' },
+    { start: '15:00', end: '15:45' },
+    { start: '16:00', end: '16:45' },
+  ];
+  // occupied[semana][día][slots] → varía por semana para simular disponibilidad real
+  const OCCUPIED: Record<number, Record<number, number[]>> = {
+    0: { 0: [1, 4], 2: [3], 4: [5] },
+    1: { 1: [0, 2], 3: [1, 5], 4: [3] },
+    2: { 0: [4, 6], 2: [0, 1], 3: [5] },
+    3: { 0: [2], 1: [4, 6], 4: [0, 3] },
+  };
+
+  const days: { date: string; label: string; dayOfWeek: string }[] = [];
+  const slots: { id: string; date: string; startTime: string; endTime: string; status: string }[] =
+    [];
+
+  for (let w = 0; w < 4; w++) {
+    for (let d = 0; d < 5; d++) {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + w * 7 + d);
+      const dateStr = day.toISOString().split('T')[0];
+      days.push({
+        date: dateStr,
+        label: String(day.getDate()).padStart(2, '0'),
+        dayOfWeek: DAY_LABELS[d],
+      });
+
+      TIME_SLOTS.forEach(({ start, end }, i) => {
+        slots.push({
+          id: `dev-${dateStr}-${start.replace(':', '')}`,
+          date: dateStr,
+          startTime: start,
+          endTime: end,
+          status: OCCUPIED[w]?.[d]?.includes(i) ? 'occupied' : 'available',
+        });
+      });
+    }
+  }
+
+  const endDate = new Date(monday);
+  endDate.setDate(monday.getDate() + 25); // último viernes de la semana 4
+
+  return {
+    week: {
+      startDate: monday.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      label: 'Próximas 4 semanas (Mock)',
+      days,
+    },
+    timeRows: TIME_SLOTS.map((t) => t.start),
+    slots,
+  };
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Component({
   selector: 'app-secretaria-matricula',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     FormsModule,
     StepperModule,
-    InputTextModule,
-    SelectModule,
-    DatePickerModule,
-    CheckboxModule,
     ButtonModule,
-    InputNumberModule,
-    TextareaModule,
     IconComponent,
-    AlertCardComponent,
+    PersonalDataComponent,
+    AssignmentComponent,
+    DocumentsComponent,
+    PaymentComponent,
+    ContractComponent,
+    ConfirmationComponent,
   ],
   styleUrls: ['./secretaria-matricula.component.scss'],
   templateUrl: './secretaria-matricula.component.html',
 })
 export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly auth = inject(AuthFacade);
+  readonly enrollment = inject(EnrollmentFacade);
+  readonly docs = inject(EnrollmentDocumentsFacade);
+  readonly payment = inject(EnrollmentPaymentFacade);
 
-  // ── Stepper ────────────────────────────────────────────────
-  readonly activeStep = model(0);
+  // ── activeStep (0-indexed para p-stepper, derivado del facade 1-based) ───
+  readonly activeStep = computed(() => this.enrollment.currentStep() - 1);
 
+  // DEV MOCK — eliminar cuando haya datos reales en la BD
+  readonly isDevMode = isDevMode();
+
+  constructor() {
+    effect(() => {
+      const step = this.enrollment.currentStep();
+      const pd = this.enrollment.personalData();
+      const branchId = this.auth.currentUser()?.branchId;
+
+      // Paso 2: carga instructores al entrar (Clase B)
+      if (step === 2 && pd?.courseCategory === 'non-professional' && branchId != null) {
+        this.enrollment.loadInstructors(branchId);
+      }
+
+      // Paso 4: recalcula pricing (reactivo a cambio de paymentMode)
+      if (step === 4 && pd) {
+        const course = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
+        const paymentMode = this.enrollment.paymentMode();
+        if (course) {
+          const SESSION_MIN = 45;
+          const totalSessions = course.practicalHours
+            ? Math.round((course.practicalHours * 60) / SESSION_MIN)
+            : 18;
+          this.payment.computePricing({
+            courseLabel: course.label,
+            basePrice: course.basePrice,
+            practicalClassesIncluded: totalSessions,
+            isDeposit: paymentMode === 'deposit',
+          });
+        }
+      }
+    });
+  }
+
+  // ── Estado de guardado (spinner en botones Next) ──────────────────────────
+  private readonly _isSaving = signal(false);
+  readonly isSaving = this._isSaving.asReadonly();
+
+  // ── Estado local del formulario paso 1 (datos no persistidos aún) ────────
+  private readonly _step1Form = signal<EnrollmentPersonalData>(DEFAULT_PERSONAL_DATA);
+
+  // ── Estado local del contrato (generación + firma) ────────────────────────
+  private readonly _contractPdfUrl = signal<string | null>(null);
+  private readonly _contractStatus = signal<ContractStatus>('pending');
+  /** Almacena el objeto completo de firma (digital o archivo físico). */
+  private readonly _signedContractUpload = signal<SignedContractUpload | null>(null);
+
+  // ── Datos computados por paso (desde facades) ─────────────────────────────
+
+  readonly step1Data = computed<EnrollmentPersonalData>(() => ({
+    ...(this.enrollment.personalData() ?? this._step1Form()),
+    courses: this.enrollment.courseOptions(),
+  }));
+
+  readonly step2Data = computed<EnrollmentAssignmentData>(() => {
+    const pd = this.enrollment.personalData();
+    const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
+    const slotIds = this.enrollment.selectedSlotIds();
+    const paymentMode = this.enrollment.paymentMode();
+    const instructors = this.enrollment.instructors();
+    const grid = this.enrollment.scheduleGrid();
+    const instructorId = this.enrollment.selectedInstructorId();
+
+    // Derivar sesiones desde practical_hours del curso (45 min/sesión, class_b_sessions.duration_min)
+    const SESSION_MIN = 45;
+    const selectedCourse = this.enrollment.courseOptions().find((c) => c.type === pd?.courseType);
+    const totalSessions = selectedCourse?.practicalHours
+      ? Math.round((selectedCourse.practicalHours * 60) / SESSION_MIN)
+      : 18; // fallback hasta que el curso esté en BD
+    const requiredCount = paymentMode === 'deposit' ? Math.ceil(totalSessions / 2) : totalSessions;
+
+    // DEV MOCK — eliminar cuando haya datos reales en la BD
+    const devSummary = !pd && this.isDevMode ? DEV_SUMMARY : summary;
+    const devInstructors =
+      instructors.length === 0 && this.isDevMode ? DEV_INSTRUCTORS : instructors;
+    const devGrid =
+      !grid && this.isDevMode && !!instructorId ? (generateDevScheduleGrid() as any) : grid;
+
+    return {
+      view:
+        pd?.courseCategory === 'professional'
+          ? 'professional'
+          : pd?.courseType === 'singular'
+            ? 'singular'
+            : 'class-b',
+      studentSummary: devSummary,
+      paymentMode,
+      instructorId,
+      instructors: devInstructors,
+      scheduleGrid: devGrid,
+      scheduleLoading: this.enrollment.isLoading(),
+      slotSelection: {
+        selectedSlotIds: slotIds,
+        requiredCount,
+        currentCount: slotIds.length,
+        isComplete: slotIds.length >= requiredCount,
+      },
+      promotionId: this.enrollment.selectedPromotionCourseId(),
+      promotionGroups: this.enrollment.promotionGroups(),
+    };
+  });
+
+  readonly step3Data = computed<EnrollmentDocumentsData>(() => {
+    const pd = this.enrollment.personalData();
+    const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
+    const view = pd?.courseCategory === 'professional' ? 'professional' : 'class-b';
+    // DEV MOCK — eliminar cuando haya datos reales en la BD
+    const devSummary = !pd && this.isDevMode ? DEV_SUMMARY : summary;
+    return {
+      view,
+      studentSummary: devSummary,
+      isMinor: pd ? this.calcAge(pd.birthDate) < 18 : false,
+      photoTab: this.docs.photoTab(),
+      cameraState: this.docs.cameraState(),
+      carnetPhoto: this.docs.carnetPhoto(),
+      uploadedDocuments: this.docs.documents(),
+      requiredDocuments:
+        view === 'professional'
+          ? this.docs.getRequirements('professional', pd ? this.calcAge(pd.birthDate) < 18 : false)
+          : [],
+      hvcValidation: this.docs.hvcValidation(),
+      notarialAuthorization: this.docs.documents().get('autorizacion_notarial') ?? null,
+    };
+  });
+
+  readonly step4Data = computed<EnrollmentPaymentData>(() => {
+    const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
+    const pd = this.enrollment.personalData();
+    const pricing = this.payment.pricing();
+    // DEV MOCK — eliminar cuando haya datos reales en la BD
+    const devSummary = !pd && this.isDevMode ? DEV_SUMMARY : summary;
+    const devPricing = !pricing && this.isDevMode ? DEV_PRICING : pricing;
+    const usingDevPricing = !pricing && this.isDevMode;
+    return {
+      studentSummary: devSummary,
+      pricing: devPricing ?? {
+        courseLabel: summary.courseLabel,
+        practicalClassesIncluded: 18,
+        basePrice: 0,
+        isDeposit: false,
+        amountDue: 0,
+      },
+      discount: this.payment.discount(),
+      totalToPay: usingDevPricing ? DEV_PRICING.basePrice : this.payment.totalToPay(),
+      paymentMethod: this.payment.paymentMethod(),
+      availableDiscounts: this.payment.availableDiscounts(),
+      selectedDiscountId: this.payment.selectedDiscountId(),
+      isSingularCourse: pd?.courseType === 'singular',
+      singularAlert: { visible: false, message: '' },
+      canAdvance: usingDevPricing
+        ? !!this.payment.paymentMethod()
+        : this.payment.canConfirmPayment(),
+    };
+  });
+
+  readonly step5Data = computed<EnrollmentContractData>(() => ({
+    studentSummary: this.enrollment.studentSummary() ?? EMPTY_SUMMARY,
+    contractGeneration: {
+      status: this._contractStatus(),
+      pdfUrl: this._contractPdfUrl(),
+      generatedAt: null,
+      errorMessage: this.enrollment.error() ?? null,
+    },
+    signedContract: this._signedContractUpload(),
+    // Habilita "Continuar" cuando hay archivo listo para subir o la BD ya confirmó
+    canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
+  }));
+
+  readonly step6Data = computed<EnrollmentConfirmationData>(() => {
+    const pd = this.enrollment.personalData();
+    const summary = this.enrollment.studentSummary();
+    const paymentMethod = this.payment.paymentMethod();
+    const category = pd?.courseCategory ?? 'non-professional';
+    return {
+      enrollmentNumber: this.enrollment.enrollmentNumber() ?? '—',
+      courseCategory: category,
+      student: {
+        fullName: summary?.fullName ?? '—',
+        rut: pd?.rut ?? '—',
+        email: pd?.email ?? '—',
+        phone: pd?.phone ?? '—',
+      },
+      course: {
+        courseLabel: summary?.courseLabel ?? '—',
+        paymentMethodLabel: this.paymentMethodLabel(paymentMethod),
+        paymentMethod: paymentMethod ?? 'efectivo',
+        enrollmentDate: new Date().toISOString(),
+        discountAmount: this.payment.discount().amount ?? 0,
+        totalPaid: this.payment.totalToPay(),
+      },
+      nextStepsVariant: category === 'singular' ? 'singular' : 'regular',
+      nextSteps:
+        category === 'non-professional'
+          ? [
+              {
+                text: 'Se ha enviado una copia del contrato al email del alumno.',
+                highlights: ['contrato', 'email'],
+              },
+              {
+                text: 'El alumno puede comenzar sus clases teóricas desde hoy.',
+                highlights: ['clases teóricas'],
+              },
+              {
+                text: 'La primera clase práctica está agendada según el horario acordado.',
+                highlights: ['clase práctica'],
+              },
+            ]
+          : category === 'professional'
+            ? [
+                {
+                  text: 'Se ha enviado la confirmación de matrícula al email del alumno.',
+                  highlights: ['confirmación', 'email'],
+                },
+                {
+                  text: 'El alumno debe asistir a las clases según el calendario de la promoción.',
+                  highlights: ['clases', 'promoción'],
+                },
+                {
+                  text: 'Se requiere un mínimo de asistencia para rendir el examen final.',
+                  highlights: ['asistencia', 'examen final'],
+                },
+              ]
+            : [
+                {
+                  text: 'El servicio ha sido registrado correctamente.',
+                  highlights: ['servicio'],
+                },
+                {
+                  text: 'El alumno recibirá la confirmación en su correo electrónico.',
+                  highlights: ['confirmación', 'correo'],
+                },
+              ],
+      pendingDocuments: {
+        visible: !this.enrollment.docsComplete(),
+        message: 'Hay documentos pendientes de aprobación.',
+      },
+    };
+  });
+
+  // ── Computed UI ───────────────────────────────────────────────────────────
   readonly stepperClass = computed(
     () => `stepper-premium stepper-premium--step-${this.activeStep() + 1}`,
   );
 
-  /** Etiqueta del paso actual para el indicador de progreso */
   readonly progressLabel = computed(() => {
-    const labels = ['Datos Personales', 'Adscripción', 'Documentos', 'Pago', 'Contrato', 'Confirmación'];
+    const labels = [
+      'Datos Personales',
+      'Asignación',
+      'Documentos',
+      'Pago',
+      'Contrato',
+      'Confirmación',
+    ];
     return labels[this.activeStep()] ?? '';
   });
 
-  // ── Paso 1: Datos Personales ───────────────────────────────
-  readonly rut = model('');
-  readonly nombres = model('');
-  readonly apellidos = model('');
-  readonly email = model('');
-  readonly telefono = model('');
-  readonly fechaNacimiento = model<Date | null>(null);
-  readonly sexo = model('M');
-  readonly direccion = model('');
-  readonly region = model('16');
-  readonly comuna = model('chillan');
-
-  readonly sexoOptions = [
-    { label: 'Masculino', value: 'M' },
-    { label: 'Femenino', value: 'F' },
-  ];
-
-  readonly regionOptions = [
-    { label: 'Ñuble', value: '16' },
-    { label: 'Biobío', value: '08' },
-    { label: 'Metropolitana', value: '13' },
-  ];
-
-  readonly comunaOptions = [
-    { label: 'Chillán', value: 'chillan' },
-    { label: 'Chillán Viejo', value: 'chillan-viejo' },
-    { label: 'San Carlos', value: 'san-carlos' },
-  ];
-
-  readonly edadAlumno = computed(() => {
-    const fecha = this.fechaNacimiento();
-    if (!fecha) return null;
-    const hoy = new Date();
-    return Math.floor((hoy.getTime() - fecha.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-  });
-
-  readonly edadAlerta = computed<'block' | 'menor' | 'ok' | null>(() => {
-    const edad = this.edadAlumno();
-    if (edad === null) return null;
-    if (edad < 17) return 'block';
-    if (edad === 17) return 'menor';
-    return 'ok';
-  });
-
-  readonly esMenor = computed(() => this.edadAlerta() === 'menor');
-
-  // ── Paso 2: Adscripción ────────────────────────────────────
-  readonly categoriaCurso = model<'no-profesional' | 'profesional' | 'singular'>('no-profesional');
-  readonly tipoCurso = model('clase_b');
-  readonly codigoSence = model('');
-
-  // -- Requisitos Profesionales (RF-062, RF-063) --
-  readonly fechaObtencionClaseB = model<Date | null>(null);
-  readonly tieneLicenciaProfesionalPrevia = model<'ninguna' | 'a2' | 'a4'>('ninguna');
-  readonly fechaObtencionLicenciaPrevia = model<Date | null>(null);
-
-  readonly antiguedadClaseB = computed(() => {
-    const fecha = this.fechaObtencionClaseB();
-    if (!fecha) return 0;
-    const hoy = new Date();
-    return Math.floor((hoy.getTime() - fecha.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-  });
-
-  readonly antiguedadProfesionalPrevia = computed(() => {
-    const fecha = this.fechaObtencionLicenciaPrevia();
-    if (!fecha) return 0;
-    const hoy = new Date();
-    return Math.floor((hoy.getTime() - fecha.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-  });
-
-  /** Validación RF-062: > 20 años y > 2 años Clase B para A2 o A4 */
-  readonly errorA2A4 = computed(() => {
-    const tipo = this.tipoCurso();
-    if (tipo !== 'profesional_a2' && tipo !== 'profesional_a4') return null;
-
-    const edad = this.edadAlumno() ?? 0;
-    const antiguedad = this.antiguedadClaseB();
-
-    if (edad < 20) return 'la-edad';
-    if (this.fechaObtencionClaseB() && antiguedad < 2) return 'la-antiguedad';
-    if (!this.fechaObtencionClaseB()) return 'falta-fecha';
-    return null;
-  });
-
-  /** Validación RF-063: > 2 años con A2 o A4 para A3 o A5 */
-  readonly errorA3A5 = computed(() => {
-    const tipo = this.tipoCurso();
-    if (tipo !== 'profesional_a3' && tipo !== 'profesional_a5') return null;
-
-    const previa = this.tieneLicenciaProfesionalPrevia();
-    const antiguedad = this.antiguedadProfesionalPrevia();
-
-    if (previa === 'ninguna') return 'falta-previa';
-    if (this.fechaObtencionLicenciaPrevia() && antiguedad < 2) return 'la-antiguedad';
-    if (!this.fechaObtencionLicenciaPrevia()) return 'falta-fecha';
-    return null;
-  });
-
-  readonly bloqueoInscripcionProfesional = computed(() => {
-    const errA2A4 = this.errorA2A4();
-    const errA3A5 = this.errorA3A5();
-
-    if (errA2A4 === 'la-edad' || errA2A4 === 'la-antiguedad') return true;
-    if (errA3A5 === 'la-antiguedad') return true;
-    return false;
-  });
-
-  readonly esProfesional = computed(() => this.categoriaCurso() === 'profesional');
-
-
-  readonly cursosDisponibles = computed(() => {
-    const cat = this.categoriaCurso();
-    if (cat === 'profesional') {
-      return [
-        { value: 'profesional_a2', label: 'Profesional A2', desc: 'Transporte público' },
-        { value: 'profesional_a3', label: 'Profesional A3', desc: 'Vehículos pesados' },
-        { value: 'profesional_a4', label: 'Profesional A4', desc: 'Transporte remunerado' },
-        { value: 'profesional_a5', label: 'Profesional A5', desc: 'Vehículos articulados' },
-      ];
-    }
-    if (cat === 'singular') {
-      return [{ value: 'singular', label: 'Curso Singular', desc: 'Personalizado' }];
-    }
-    return [
-      { value: 'clase_b', label: 'Clase B', desc: 'Vehículos particulares' },
-      { value: 'clase_b_sence', label: 'Clase B + SENCE', desc: 'Con código SENCE' },
-    ];
-  });
-
-  readonly esSence = computed(() => this.tipoCurso() === 'clase_b_sence');
-
-  readonly senceOptions = [
-    { label: '12345678-9 — Conducción Clase B', value: '12345678-9' },
-    { label: '87654321-0 — Conducción defensiva', value: '87654321-0' },
-    { label: '11223344-5 — Clase B inicial', value: '11223344-5' },
-  ];
-
-  readonly cursoResumen = computed(() => {
-    const tipo = this.tipoCurso();
-    const labels: Record<string, { tipo: string; duracion: string; practicas: string; teoricas: string; valor: number }> = {
-      clase_b: { tipo: 'Clase B', duracion: '8 semanas', practicas: '18 horas', teoricas: '12 horas', valor: 280000 },
-      clase_b_sence: { tipo: 'Clase B + SENCE', duracion: '8 semanas', practicas: '18 horas', teoricas: '12 horas', valor: 280000 },
-      profesional_a2: { tipo: 'Profesional A2', duracion: '12 semanas', practicas: '24 horas', teoricas: '20 horas', valor: 450000 },
-      profesional_a3: { tipo: 'Profesional A3', duracion: '12 semanas', practicas: '24 horas', teoricas: '20 horas', valor: 450000 },
-      profesional_a4: { tipo: 'Profesional A4', duracion: '10 semanas', practicas: '20 horas', teoricas: '16 horas', valor: 380000 },
-      profesional_a5: { tipo: 'Profesional A5', duracion: '14 semanas', practicas: '28 horas', teoricas: '24 horas', valor: 520000 },
-      singular: { tipo: 'Singular', duracion: 'Variable', practicas: 'Variable', teoricas: 'Variable', valor: 200000 },
-    };
-    return labels[tipo] ?? labels['clase_b'];
-  });
-
-  // ── Paso 3: Documentos ─────────────────────────────────────
-  readonly fotoSubida = signal(false);
-  readonly fotoPreviewUrl = signal<string | null>(null);
-  readonly fotoTab = signal<'camara' | 'subir'>('subir');
-  readonly autorizacionSubida = signal(false);
-  readonly hojaVidaSubida = signal(false);
-  readonly hvcFechaEmision = signal<Date | null>(null);
-  readonly cedulaSubida = signal(false);
-  readonly licenciaSubida = signal(false);
-  readonly certMedicoSubido = signal(false);
-  readonly examPsicologicoSubido = signal(false);
-  readonly certSemepSubido = signal(false);
-
-  readonly hvcMasDe30Dias = computed(() => {
-    const fecha = this.hvcFechaEmision();
-    if (!fecha) return false;
-    const dias = Math.floor((new Date().getTime() - fecha.getTime()) / 86400000);
-    return dias > 30;
-  });
-
-  // ── Paso 4: Pago ───────────────────────────────────────────
-  readonly tieneDescuento = model(false);
-  readonly montoDescuento = model<number>(0);
-  readonly motivoDescuento = model('');
-  readonly metodoPago = model('efectivo');
-
-  readonly precioBase = computed(() => this.cursoResumen().valor);
-
-  readonly totalPagar = computed(() => {
-    const base = this.precioBase();
-    const desc = this.tieneDescuento() ? (this.montoDescuento() || 0) : 0;
-    return Math.max(base - desc, 0);
-  });
-
-  // ── Paso 5: Contrato ───────────────────────────────────────
-  readonly checkTerminos = model(false);
-  readonly checkDatos = model(false);
-  readonly checkReglamento = model(false);
-  readonly firmaNombre = model('');
-  readonly contratoFirmado = signal(false);
-  readonly firmaTimestamp = signal('');
-
-  readonly puedeFiremar = computed(
-    () => this.checkTerminos() && this.checkDatos() && this.checkReglamento()
-      && this.firmaNombre().trim().length >= 5
-      && !this.contratoFirmado(),
-  );
-
-  // ── Paso 6: Confirmación ───────────────────────────────────
-  readonly matriculaNumero = `2026-${String(Math.floor(Math.random() * 1000) + 200).padStart(4, '0')}`;
-
-  readonly nombreCompleto = computed(
-    () => [this.nombres(), this.apellidos()].filter(Boolean).join(' ') || 'Alumno',
-  );
-
   ngOnInit(): void {
     this.setupDrawerActions();
+    this.initWizard();
   }
 
   ngOnDestroy(): void {
     this.layoutDrawer.setActions([]);
   }
 
+  private initWizard(): void {
+    const branchId = this.auth.currentUser()?.branchId ?? 1;
+    this.enrollment.reset();
+    this.docs.reset();
+    this.payment.reset();
+    this._step1Form.set(DEFAULT_PERSONAL_DATA);
+    this.enrollment.loadCourses(branchId);
+  }
+
   private setupDrawerActions(): void {
     this.layoutDrawer.setActions([
-      {
-        label: 'Ayuda',
-        icon: 'help-circle',
-        callback: () => {
-          console.log('Mostrar ayuda contextual');
-        }
-      },
-      {
-        label: 'Reiniciar',
-        icon: 'rotate-ccw',
-        callback: () => {
-          this.activeStep.set(0);
-        }
-      }
+      { label: 'Ayuda', icon: 'help-circle', callback: () => console.log('Ayuda') },
+      { label: 'Reiniciar', icon: 'rotate-ccw', callback: () => this.resetWizard() },
     ]);
   }
 
-  // ── Acciones ───────────────────────────────────────────────
-  nextStep(): void {
-    const current = this.activeStep();
-    if (current < 5) this.activeStep.set(current + 1);
+  private resetWizard(): void {
+    this.enrollment.reset();
+    this.docs.reset();
+    this.payment.reset();
+    this._step1Form.set(DEFAULT_PERSONAL_DATA);
+    this._contractPdfUrl.set(null);
+    this._contractStatus.set('pending');
+    this._signedContractUpload.set(null);
   }
 
-  prevStep(): void {
-    const current = this.activeStep();
-    if (current > 0) this.activeStep.set(current - 1);
-  }
-
-  goToStep(step: number | undefined): void {
+  // ── Navegación via stepper PrimeNG ────────────────────────────────────────
+  onStepperChange(step: number | null | undefined): void {
     if (step == null) return;
-    if (step <= this.activeStep()) {
-      this.activeStep.set(step);
+    const target = Math.min(Math.max(step + 1, 1), 6) as EnrollmentWizardStep;
+    this.enrollment.goToStep(target);
+  }
+
+  // ── Paso 1: Datos personales ──────────────────────────────────────────────
+  onStep1DataChange(data: EnrollmentPersonalData): void {
+    this._step1Form.set(data);
+  }
+
+  async onStep1Next(): Promise<void> {
+    this._isSaving.set(true);
+    try {
+      const branchId = this.auth.currentUser()?.branchId ?? 1;
+      const ok = await this.enrollment.savePersonalData(this._step1Form(), branchId);
+      if (ok) {
+        const category = this._step1Form().courseCategory;
+        if (category === 'non-professional') {
+          await this.enrollment.loadInstructors(branchId);
+        } else if (category === 'professional') {
+          await this.enrollment.loadPromotions(branchId, category);
+        }
+      }
+    } finally {
+      this._isSaving.set(false);
     }
   }
 
-  selectCategoria(cat: 'no-profesional' | 'profesional' | 'singular'): void {
-    this.categoriaCurso.set(cat);
-    const cursos = this.cursosDisponibles();
-    if (cursos.length > 0) {
-      this.tipoCurso.set(cursos[0].value);
+  // ── Paso 2: Asignación ────────────────────────────────────────────────────
+  onStep2DataChange(data: EnrollmentAssignmentData): void {
+    const instructorChanged =
+      data.instructorId != null && data.instructorId !== this.enrollment.selectedInstructorId();
+
+    if (instructorChanged) {
+      // loadScheduleGrid resetea _selectedSlotIds internamente — no llamar setSelectedSlots
+      this.enrollment.loadScheduleGrid(data.instructorId!);
+      return;
+    }
+
+    if (data.paymentMode && data.paymentMode !== this.enrollment.paymentMode()) {
+      this.enrollment.setPaymentMode(data.paymentMode);
+    }
+    if (data.promotionId && data.promotionId !== this.enrollment.selectedPromotionCourseId()) {
+      this.enrollment.selectPromotion(data.promotionId);
+    }
+    this.enrollment.setSelectedSlots(data.slotSelection.selectedSlotIds);
+  }
+
+  async onStep2Next(): Promise<void> {
+    const s2 = this.step2Data();
+    // Guard: Clase B requiere selección completa de slots antes de persistir
+    if (s2.view === 'class-b' && !s2.slotSelection.isComplete) return;
+    this._isSaving.set(true);
+    try {
+      await this.enrollment.saveAssignment();
+    } finally {
+      this._isSaving.set(false);
     }
   }
 
-  selectCurso(value: string): void {
-    this.tipoCurso.set(value);
-  }
-
-  /** Mapea el valor del curso a su ícono Lucide */
-  cursoIcon(value: string): string {
-    const icons: Record<string, string> = {
-      clase_b: 'car',
-      clase_b_sence: 'award',
-      profesional_a2: 'truck',
-      profesional_a3: 'truck',
-      profesional_a4: 'truck',
-      profesional_a5: 'truck',
-      singular: 'star',
-    };
-    return icons[value] ?? 'car';
-  }
-
-  selectMetodoPago(value: string): void {
-    this.metodoPago.set(value);
-  }
-
-  onFotoFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const file = input?.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.fotoPreviewUrl.set(e.target?.result as string);
-      this.fotoSubida.set(true);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  resetFoto(): void {
-    this.fotoSubida.set(false);
-    this.fotoPreviewUrl.set(null);
-  }
-
-  onDocumentFileChange(field: 'autorizacion' | 'hojaVida' | 'cedula' | 'licencia' | 'certMedico' | 'examPsicologico' | 'certSemep', event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const hasFile = (input?.files?.length ?? 0) > 0;
-    switch (field) {
-      case 'autorizacion': this.autorizacionSubida.set(hasFile); break;
-      case 'hojaVida': this.hojaVidaSubida.set(hasFile); break;
-      case 'cedula': this.cedulaSubida.set(hasFile); break;
-      case 'licencia': this.licenciaSubida.set(hasFile); break;
-      case 'certMedico': this.certMedicoSubido.set(hasFile); break;
-      case 'examPsicologico': this.examPsicologicoSubido.set(hasFile); break;
-      case 'certSemep': this.certSemepSubido.set(hasFile); break;
+  // ── Paso 3: Documentos ────────────────────────────────────────────────────
+  async onDocFileSelected(event: { type: string; file: File }): Promise<void> {
+    const { enrollmentId } = this.enrollment.draft();
+    if (!enrollmentId) return;
+    if (event.type === 'id_photo') {
+      const dataUrl = await this.fileToDataUrl(event.file);
+      await this.docs.uploadCarnetPhoto(dataUrl, event.file.name, enrollmentId);
+    } else {
+      await this.docs.uploadDocument(event.type as DocumentType, event.file, enrollmentId);
     }
   }
 
-  firmarContrato(): void {
-    if (!this.puedeFiremar()) return;
-    const now = new Date();
-    const ts = now.toLocaleString('es-CL', { dateStyle: 'full', timeStyle: 'medium' });
-    this.firmaTimestamp.set(`Firmado por "${this.firmaNombre().trim()}" el ${ts}`);
-    this.contratoFirmado.set(true);
+  async onStep3Next(): Promise<void> {
+    this._isSaving.set(true);
+    try {
+      const { enrollmentId } = this.enrollment.draft();
+      if (enrollmentId) await this.docs.markDocsComplete(enrollmentId, true);
+      // Carga descuentos disponibles para el paso 4 (fire-and-forget)
+      const pd = this.enrollment.personalData();
+      if (pd) void this.payment.loadAvailableDiscounts(pd.courseType);
+      this.enrollment.goToStep(4);
+    } finally {
+      this._isSaving.set(false);
+    }
   }
 
-  formatCLP(value: number): string {
-    return '$' + value.toLocaleString('es-CL');
+  private fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 
-  get metodoPagoLabel(): string {
+  // ── Paso 4: Pago ──────────────────────────────────────────────────────────
+  onStep4DataChange(data: EnrollmentPaymentData): void {
+    if (data.paymentMethod) this.payment.setPaymentMethod(data.paymentMethod);
+
+    // Descuento predefinido: rutar al facade (calcula monto automáticamente)
+    const newId = data.selectedDiscountId;
+    const currentId = this.payment.selectedDiscountId();
+    if (newId !== currentId) {
+      if (newId === null) {
+        this.payment.clearDiscount();
+      } else {
+        this.payment.applyPredefinedDiscount(newId);
+      }
+    } else if (!newId) {
+      // Descuento manual: el dumb component ya calculó el monto
+      this.payment.setDiscount(data.discount);
+    }
+  }
+
+  async onStep4Next(): Promise<void> {
+    if (!this.step4Data().canAdvance) return;
+    this._isSaving.set(true);
+    try {
+      const { enrollmentId, userId } = this.enrollment.draft();
+      const ok = await this.payment.recordPayment(enrollmentId, userId);
+      if (ok) this.enrollment.goToStep(5);
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  // ── Paso 5: Contrato ──────────────────────────────────────────────────────
+  async onGenerateContract(): Promise<void> {
+    this._contractStatus.set('generating');
+    const url = await this.enrollment.generateContract();
+    this._contractPdfUrl.set(url);
+    this._contractStatus.set(url ? 'generated' : 'error');
+  }
+
+  onStep5DataChange(data: EnrollmentContractData): void {
+    if (data.signedContract) this._signedContractUpload.set(data.signedContract);
+  }
+
+  async onStep5Next(): Promise<void> {
+    const upload = this._signedContractUpload();
+    if (!upload?.file) return;
+    this._isSaving.set(true);
+    try {
+      await this.enrollment.uploadSignedContract(upload.file);
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  // ── Paso 6: Confirmación + cierre ────────────────────────────────────────
+  async finishWizard(): Promise<void> {
+    if (this.activeStep() === 5) {
+      this._isSaving.set(true);
+      try {
+        await this.enrollment.confirmEnrollment();
+      } finally {
+        this._isSaving.set(false);
+      }
+    }
+    this.layoutDrawer.close();
+  }
+
+  onDownloadReceipt(): void {
+    // TODO: abrir URL del comprobante de pago cuando esté disponible vía EnrollmentPaymentFacade
+  }
+
+  onDownloadContract(): void {
+    // TODO: abrir URL del contrato PDF cuando esté disponible vía EnrollmentFacade
+  }
+
+  // DEV MOCK — eliminar cuando haya datos reales en la BD
+  devGoToStep(step: number): void {
+    this.enrollment.goToStep(step as EnrollmentWizardStep);
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  private calcAge(birthDate: string): number {
+    if (!birthDate) return 25;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  }
+
+  private paymentMethodLabel(method: string | null): string {
     const labels: Record<string, string> = {
       efectivo: 'Efectivo',
-      transferencia: 'Transferencia Bancaria',
-      tarjeta: 'Débito/Crédito',
-      pendiente: 'Pago pendiente',
+      transferencia: 'Transferencia',
+      tarjeta: 'Tarjeta',
+      pendiente: 'Pendiente',
     };
-    return labels[this.metodoPago()] ?? this.metodoPago();
+    return method ? (labels[method] ?? method) : '—';
   }
 }

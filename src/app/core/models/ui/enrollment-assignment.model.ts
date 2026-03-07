@@ -102,8 +102,12 @@ export interface EnrollmentAssignmentData {
   // Class B fields
   paymentMode: PaymentMode | null;
   instructorId: number | null;
+  instructors: InstructorOption[];
+  scheduleGrid: ScheduleGrid | null;
+  scheduleLoading: boolean;
   slotSelection: SlotSelection;
   // Professional fields
   promotionId: number | null;
+  promotionGroups: PromotionGroup[];
   // Singular has no extra fields (informational only)
 }

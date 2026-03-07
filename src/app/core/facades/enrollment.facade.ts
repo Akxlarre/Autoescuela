@@ -7,6 +7,8 @@ import type { Course } from '@core/models/dto/course.model';
 import type {
   EnrollmentPersonalData,
   CourseCategory,
+  CourseType,
+  CourseOption,
   SenceCodeOption,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type {
@@ -124,6 +126,9 @@ export class EnrollmentFacade {
   // ── UI ──
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly courseOptions = computed<CourseOption[]>(() =>
+    this._courses().map((c) => this.mapCourseToOption(c)),
+  );
 
   // ── Computed: Student summary banner (Steps 2-6) ──
   readonly studentSummary = computed<StudentSummaryBanner | null>(() => {
@@ -419,7 +424,7 @@ export class EnrollmentFacade {
         `id,
          users!inner(first_names, paternal_last_name),
          vehicle_assignments!inner(
-           vehicles!inner(brand, model, plate)
+           vehicles!inner(brand, model, license_plate)
          )`,
       )
       .eq('active', true)
@@ -435,7 +440,7 @@ export class EnrollmentFacade {
       name: `${row.users.first_names} ${row.users.paternal_last_name}`,
       vehicleDescription:
         `${row.vehicle_assignments[0]?.vehicles?.brand ?? ''} ${row.vehicle_assignments[0]?.vehicles?.model ?? ''}`.trim(),
-      plate: row.vehicle_assignments[0]?.vehicles?.plate ?? '',
+      plate: row.vehicle_assignments[0]?.vehicles?.license_plate ?? '',
     }));
 
     this._instructors.set(options);
@@ -448,27 +453,36 @@ export class EnrollmentFacade {
   async loadScheduleGrid(instructorId: number): Promise<void> {
     this._selectedInstructorId.set(instructorId);
     this._selectedSlotIds.set([]);
+    this._scheduleGrid.set(null);
+    this._isLoading.set(true);
+    this._error.set(null);
 
-    const { data, error } = await this.supabase.client
-      .from('v_class_b_schedule_availability')
-      .select('*')
-      .eq('instructor_id', instructorId)
-      .order('slot_date')
-      .order('slot_start');
+    try {
+      const { data, error } = await this.supabase.client
+        .from('v_class_b_schedule_availability')
+        .select('*')
+        .eq('instructor_id', instructorId)
+        .order('slot_start', { ascending: true });
 
-    if (error) {
-      this._error.set('Error al cargar disponibilidad: ' + error.message);
-      return;
+      if (error) {
+        this._error.set('Error al cargar disponibilidad: ' + error.message);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        this._scheduleGrid.set(null);
+        return;
+      }
+
+      this._scheduleGrid.set(this.buildScheduleGrid(data));
+    } finally {
+      this._isLoading.set(false);
     }
+  }
 
-    if (!data || data.length === 0) {
-      this._scheduleGrid.set(null);
-      return;
-    }
-
-    // Transform raw view data into ScheduleGrid
-    const grid = this.buildScheduleGrid(data);
-    this._scheduleGrid.set(grid);
+  /** Establece los slots seleccionados directamente (sincronización desde el contenedor). */
+  setSelectedSlots(slotIds: string[]): void {
+    this._selectedSlotIds.set(slotIds);
   }
 
   /** Selecciona/deselecciona un slot de horario. */
@@ -594,8 +608,9 @@ export class EnrollmentFacade {
 
         // Parse slot IDs into session records
         const sessions = slots.map((slotId) => {
-          const [date, time] = slotId.split('T');
-          const scheduledAt = `${date}T${time}`;
+          // slotId format: "2024-01-15T09:00" — agregar segundos para timestamptz válido
+          const scheduledAt =
+            slotId.includes(':') && slotId.split(':').length === 2 ? `${slotId}:00` : slotId;
           return {
             enrollment_id: draft.enrollmentId,
             instructor_id: instructorId,
@@ -754,6 +769,58 @@ export class EnrollmentFacade {
       return true;
     } catch (e) {
       this._error.set('Error inesperado al subir contrato firmado');
+      return false;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  /**
+   * Registra la firma digital del contrato (sin archivo físico).
+   * Actualiza digital_contracts + enrollments.contract_accepted y avanza al paso 6.
+   */
+  async markContractSigned(meta: {
+    signerName: string | null;
+    signatureHash: string | null;
+    signedAt: string | null;
+  }): Promise<boolean> {
+    const draft = this._draft();
+    if (!draft.enrollmentId || !draft.studentId) return false;
+
+    this._isLoading.set(true);
+    this._error.set(null);
+
+    try {
+      const { error: contractError } = await this.supabase.client.from('digital_contracts').upsert(
+        {
+          enrollment_id: draft.enrollmentId,
+          student_id: draft.studentId,
+          accepted_at: meta.signedAt ?? new Date().toISOString(),
+        },
+        { onConflict: 'enrollment_id' },
+      );
+
+      if (contractError) {
+        this._error.set('Error al registrar firma: ' + contractError.message);
+        return false;
+      }
+
+      const { error: updateError } = await this.supabase.client
+        .from('enrollments')
+        .update({ contract_accepted: true, updated_at: new Date().toISOString() })
+        .eq('id', draft.enrollmentId);
+
+      if (updateError) {
+        this._error.set('Error al actualizar matrícula: ' + updateError.message);
+        return false;
+      }
+
+      await this.refreshEnrollment();
+      this.updateStepStatus(5, 'completed');
+      this.goToStep(6);
+      return true;
+    } catch {
+      this._error.set('Error inesperado al registrar firma');
       return false;
     } finally {
       this._isLoading.set(false);
@@ -1070,6 +1137,64 @@ export class EnrollmentFacade {
     return expiry.toISOString();
   }
 
+  private mapCourseToOption(course: Course): CourseOption {
+    const lc = course.license_class ?? '';
+    const isSence =
+      course.code?.toUpperCase().includes('SENCE') ||
+      course.name?.toUpperCase().includes('SENCE') ||
+      course.type?.includes('sence');
+
+    let type: CourseType;
+    if (lc === 'B') {
+      type = isSence ? 'class_b_sence' : 'class_b';
+    } else if (lc === 'A2') {
+      type = 'professional_a2';
+    } else if (lc === 'A3') {
+      type = 'professional_a3';
+    } else if (lc === 'A4') {
+      type = 'professional_a4';
+    } else if (lc === 'A5') {
+      type = 'professional_a5';
+    } else {
+      type = 'singular';
+    }
+
+    const category: CourseCategory =
+      lc === 'B' ? 'non-professional' : type === 'singular' ? 'singular' : 'professional';
+
+    const iconMap: Record<string, string> = {
+      class_b: 'car',
+      class_b_sence: 'briefcase',
+      professional_a2: 'car',
+      professional_a3: 'truck',
+      professional_a4: 'bus',
+      professional_a5: 'settings',
+      singular: 'star',
+    };
+
+    const colorMap: Record<string, CourseOption['color']> = {
+      class_b: 'brand',
+      class_b_sence: 'info',
+      professional_a2: 'warning',
+      professional_a3: 'warning',
+      professional_a4: 'warning',
+      professional_a5: 'warning',
+      singular: 'default',
+    };
+
+    return {
+      id: course.id,
+      type,
+      category,
+      label: course.name,
+      icon: iconMap[type] ?? 'book',
+      color: colorMap[type] ?? 'brand',
+      basePrice: course.base_price ?? 0,
+      durationWeeks: course.duration_weeks ?? null,
+      practicalHours: course.practical_hours ?? null,
+    };
+  }
+
   private courseTypeToLicenseClass(courseType: string): string {
     const map: Record<string, string> = {
       class_b: 'B',
@@ -1119,12 +1244,26 @@ export class EnrollmentFacade {
     this._steps.update((steps) => steps.map((s) => (s.step === step ? { ...s, status } : s)));
   }
 
+  /** Deriva fecha ISO (YYYY-MM-DD) desde un timestamp. */
+  private slotDateFromStart(slotStart: string | null | undefined): string {
+    if (!slotStart) return '';
+    const s = String(slotStart);
+    return s.includes('T') ? s.split('T')[0]! : s.slice(0, 10);
+  }
+
+  /** Deriva hora HH:MM desde un timestamp. */
+  private slotTimeFromTs(ts: string | null | undefined): string {
+    if (!ts) return '';
+    const d = new Date(ts);
+    return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+  }
+
   private buildScheduleGrid(rawSlots: any[]): ScheduleGrid {
-    // Extract unique dates and build week structure
-    const dates = [...new Set(rawSlots.map((s) => s.slot_date))].sort();
+    // Vista expone slot_start/slot_end (timestamptz); no slot_date
+    const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
     const days: WeekDay[] = dates.map((d) => {
-      const date = new Date(d);
+      const date = new Date(d + 'T12:00:00Z');
       const dayFormatter = new Intl.DateTimeFormat('es', { weekday: 'short' });
       const labelFormatter = new Intl.DateTimeFormat('es', {
         day: 'numeric',
@@ -1138,23 +1277,26 @@ export class EnrollmentFacade {
     });
 
     const week: WeekRange = {
-      startDate: dates[0],
-      endDate: dates[dates.length - 1],
+      startDate: dates[0] ?? '',
+      endDate: dates[dates.length - 1] ?? '',
       label: `${days[0]?.label ?? ''} – ${days[days.length - 1]?.label ?? ''}`,
       days,
     };
 
-    // Extract unique time rows
-    const timeRows = [...new Set(rawSlots.map((s) => s.slot_start as string))].sort();
+    const timeRows = [...new Set(rawSlots.map((s) => this.slotTimeFromTs(s.slot_start)))].sort();
 
-    // Build slots
-    const slots: TimeSlot[] = rawSlots.map((s) => ({
-      id: `${s.slot_date}T${s.slot_start}`,
-      date: s.slot_date,
-      startTime: s.slot_start,
-      endTime: s.slot_end,
-      status: 'available' as const,
-    }));
+    const slots: TimeSlot[] = rawSlots.map((s) => {
+      const date = this.slotDateFromStart(s.slot_start);
+      const startTime = this.slotTimeFromTs(s.slot_start);
+      const endTime = this.slotTimeFromTs(s.slot_end);
+      return {
+        id: `${date}T${startTime}`,
+        date,
+        startTime,
+        endTime,
+        status: 'available' as const,
+      };
+    });
 
     return { week, timeRows, slots };
   }

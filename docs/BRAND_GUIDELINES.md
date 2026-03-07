@@ -68,5 +68,6 @@ transiciones de página (View Transitions API), que son del navegador.
 
 - **Tokens del design system**: `styles/tokens/_variables.scss`
 - **Layout patterns**: `_bento-grid.README.md`, `_page-shell.README.md`
+- **Section Hero (cabecera de sección)**: `docs/SECTION-HERO-PATTERN.md`
 - **View Transitions**: `_view-transitions.README.md`
 - **Índice completo**: `indices/STYLES.md`

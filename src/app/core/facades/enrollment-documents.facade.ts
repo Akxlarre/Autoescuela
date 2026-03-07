@@ -343,11 +343,11 @@ export class EnrollmentDocumentsFacade {
         });
       }
 
-      // Restore carnet photo if exists
+      // Restore carnet photo if exists (canonical CarnetPhoto: capturedDataUrl)
       if (doc.type === 'id_photo') {
         this._carnetPhoto.set({
           source: 'upload',
-          dataUrl: doc.storage_url,
+          capturedDataUrl: doc.storage_url,
           fileName: doc.file_name,
         });
       }

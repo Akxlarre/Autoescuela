@@ -43,6 +43,18 @@ export interface SingularCourseOption {
   price: number;
 }
 
+export interface CourseOption {
+  id: number;
+  type: CourseType;
+  category: CourseCategory;
+  label: string;
+  icon: string;
+  color: 'brand' | 'info' | 'warning' | 'default';
+  basePrice: number;
+  durationWeeks: number | null;
+  practicalHours: number | null;
+}
+
 export interface SenceCodeOption {
   code: string;
   label: string;
@@ -76,6 +88,8 @@ export interface EnrollmentPersonalData {
   validationA2A4: boolean;
   historicalPromotionId: string | null;
   validationBook: ValidationBook | null;
+  // Display options (populated by smart component, not persisted)
+  courses: CourseOption[];
 }
 
 export interface AgeValidation {

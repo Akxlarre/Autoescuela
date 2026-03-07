@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardComponent } from '@shared/components/kpi-card/kpi-card.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
@@ -50,6 +52,7 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
     IconComponent,
     KpiCardVariantComponent,
     AlertCardComponent,
+    SectionHeroComponent,
   ],
   template: `
     <!-- ═══════════════════════════════════════════════════════════════
@@ -57,65 +60,15 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
          [appBentoGridLayout] habilita FLIP animation en reflows
     ════════════════════════════════════════════════════════════════ -->
     <section class="bento-grid" appBentoGridLayout aria-label="Panel de control">
-      <!-- ── HERO — Frosted Split ──────────────────────────── -->
+      <!-- ── HERO — Section Hero reutilizable ──────────────────────────── -->
       @if (hero()) {
-        <div
-          class="bento-hero bento-card p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
-          appCardHover
-        >
-          <!-- Contenido Principal -->
-          <div class="flex flex-col gap-4">
-            <div>
-              <p class="text-sm text-text-muted m-0">{{ hero()?.date }}</p>
-              <h1 class="text-2xl font-bold text-text-primary m-0 mt-1">
-                ¡Bienvenido, {{ hero()?.userName }}!
-              </h1>
-            </div>
-
-            <div class="flex flex-wrap items-center gap-3">
-              <span
-                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md w-fit text-sm font-medium"
-                style="background: var(--bg-subtle); color: var(--text-primary)"
-              >
-                <app-icon name="book-open" [size]="14" />
-                <span>{{ hero()?.classesToday }} clases programadas</span>
-              </span>
-              @if (hero()?.activeAlerts) {
-                <span
-                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md w-fit text-sm font-medium"
-                  style="background: var(--state-error-bg); color: var(--state-error)"
-                >
-                  <app-icon name="alert-triangle" [size]="14" />
-                  <span>{{ hero()?.activeAlerts }} alertas urgentes</span>
-                </span>
-              }
-            </div>
-          </div>
-
-          <!-- Acciones Rápidas -->
-          <div class="flex flex-wrap items-center gap-3">
-            @for (action of quickActions(); track action.id; let idx = $index) {
-              <button
-                class="flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm cursor-pointer transition-all duration-150 border font-medium"
-                [class.bg-[var(--color-primary)]]="idx === 0"
-                [class.text-[var(--color-primary-text)]]="idx === 0"
-                [class.border-transparent]="idx === 0"
-                [class.hover:bg-[var(--color-primary-hover)]]="idx === 0"
-                [class.bg-transparent]="idx !== 0"
-                [class.text-[var(--text-primary)]]="idx !== 0"
-                [class.border-[var(--border-subtle)]]="idx !== 0"
-                [class.hover:bg-[var(--bg-subtle)]]="idx !== 0"
-                [attr.data-llm-action]="action.llmAction"
-                (click)="handleQuickAction(action.id)"
-              >
-                @if (action.icon) {
-                  <app-icon [name]="action.icon" [size]="16" />
-                }
-                {{ action.label }}
-              </button>
-            }
-          </div>
-        </div>
+        <app-section-hero
+          [title]="heroSectionTitle()"
+          [contextLine]="heroContextLine()"
+          [chips]="heroChips()"
+          [actions]="heroActions()"
+          (actionClick)="handleQuickAction($event)"
+        />
       }
 
       <!-- ── KPIs — 4 métricas en celdas square ──────────────────────
@@ -236,6 +189,29 @@ export class DashboardComponent {
   readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
   readonly alerts = computed(() => this.dashboardFacade.data()?.alerts ?? []);
+
+  readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
+  readonly heroContextLine = computed(() => this.hero()?.date ?? '');
+  readonly heroChips = computed((): SectionHeroChip[] => {
+    const h = this.hero();
+    if (!h) return [];
+    const chips: SectionHeroChip[] = [
+      { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
+    ];
+    if (h.activeAlerts) {
+      chips.push({ label: `${h.activeAlerts} alertas urgentes`, icon: 'alert-triangle', style: 'error' });
+    }
+    return chips;
+  });
+  readonly heroActions = computed((): SectionHeroAction[] =>
+    this.quickActions().map((a, i) => ({
+      id: a.id,
+      label: a.label,
+      icon: a.icon,
+      primary: i === 0,
+      route: undefined,
+    }))
+  );
   constructor() {
     // Iniciar la carga de datos del dashboard al construir el componente
     this.dashboardFacade.loadDashboardData();

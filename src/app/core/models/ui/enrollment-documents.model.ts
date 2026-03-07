@@ -12,7 +12,7 @@ export type CameraState = 'idle' | 'active' | 'captured';
 
 export interface CarnetPhoto {
   source: PhotoSource;
-  dataUrl: string;
+  capturedDataUrl: string;
   fileName: string;
 }
 
@@ -98,6 +98,7 @@ export interface EnrollmentDocumentsData {
   carnetPhoto: CarnetPhoto | null;
   // Professional documents (only when view === 'professional')
   uploadedDocuments: Map<DocumentType, UploadedDocument>;
+  requiredDocuments: DocumentRequirement[];
   hvcValidation: HvcValidation | null;
   // Minor authorization (only when isMinor === true)
   notarialAuthorization: UploadedDocument | null;

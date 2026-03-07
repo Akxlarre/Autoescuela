@@ -50,9 +50,13 @@ $bp-lg: 1024px;
     grid-auto-flow: dense;
     gap: var(--bento-gap-mobile);
     padding: var(--bento-pad-mobile);
+    /* Altura por contenido: evita que el grid estire y las filas repartan espacio vacío */
+    height: fit-content;
+    align-self: start;
 
     /* Premium UX: suaviza los saltos de tracks del grid cuando cambia el breakpoint */
-    transition: grid-template-columns 0.45s cubic-bezier(0.25, 1, 0.5, 1),
+    transition:
+      grid-template-columns 0.45s cubic-bezier(0.25, 1, 0.5, 1),
       gap 0.45s cubic-bezier(0.25, 1, 0.5, 1),
       padding 0.45s cubic-bezier(0.25, 1, 0.5, 1);
 
@@ -134,7 +138,6 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.proportions {
-
   /* Square: celda cuadrada estándar */
   .bento-square,
   .bento-1x1 {
@@ -189,22 +192,54 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.placement {
+  /* Modificador: 4 celdas iguales en una fila (ej. KPIs Alumnos). Debe ir después de proportions para sobrescribir span de .bento-square. */
+  .bento-grid.bento-grid--four-equal {
+    --bento-cols-mobile: 1;
+    --bento-cols-sm: 2;
+    --bento-cols-md: 4;
+    --bento-cols-lg: 4;
+    /* Sin padding propio: el contenedor padre (page-content) ya provee el gutter */
+    --bento-pad-mobile: 0;
+    --bento-pad-sm: 0;
+    --bento-pad-md: 0;
+    --bento-pad-lg: 0;
+
+    & > .bento-square {
+      grid-column: span 1;
+    }
+
+    @container layoutmain (min-width: #{$bp-sm}) {
+      & > .bento-square {
+        grid-column: span 1;
+      }
+    }
+    @container layoutmain (min-width: #{$bp-md}) {
+      & > .bento-square {
+        grid-column: span 1;
+      }
+    }
+    @container layoutmain (min-width: #{$bp-lg}) {
+      & > .bento-square {
+        grid-column: span 1;
+      }
+    }
+  }
 
   @container layoutmain (min-width: #{$bp-md}) {
     @for $i from 1 through 8 {
-      [data-col-span-md="#{$i}"] {
+      [data-col-span-md='#{$i}'] {
         grid-column: span $i;
       }
     }
 
     @for $i from 1 through 7 {
-      [data-col-start-md="#{$i}"] {
+      [data-col-start-md='#{$i}'] {
         grid-column-start: $i;
       }
     }
 
     @for $i from 1 through 4 {
-      [data-row-span-md="#{$i}"] {
+      [data-row-span-md='#{$i}'] {
         grid-row: span $i;
       }
     }
@@ -212,31 +247,31 @@ $bp-lg: 1024px;
 
   @container layoutmain (min-width: #{$bp-lg}) {
     @for $i from 1 through 12 {
-      [data-col-span="#{$i}"] {
+      [data-col-span='#{$i}'] {
         grid-column: span $i;
       }
     }
 
     @for $i from 1 through 11 {
-      [data-col-start="#{$i}"] {
+      [data-col-start='#{$i}'] {
         grid-column-start: $i;
       }
     }
 
     @for $i from 1 through 4 {
-      [data-row-span="#{$i}"] {
+      [data-row-span='#{$i}'] {
         grid-row: span $i;
       }
     }
 
     /* Dashboard: Actividad (izq) + Alertas (der) — forzar 50/50 y misma altura en desktop.
        Selector directo para que no sea pisado por auto-placement ni por otras reglas. */
-    .bento-grid>.bento-activity-lg {
+    .bento-grid > .bento-activity-lg {
       grid-column: 1 / span 6;
       grid-row: span 2;
     }
 
-    .bento-grid>.bento-alerts-lg {
+    .bento-grid > .bento-alerts-lg {
       grid-column: 7 / span 6;
       grid-row: span 2;
     }
@@ -250,7 +285,6 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.components {
-
   .bento-card {
     position: relative;
     overflow: hidden;
@@ -274,7 +308,7 @@ $bp-lg: 1024px;
     padding: 0;
   }
 
-  .bento-card--flush>.bento-card__body {
+  .bento-card--flush > .bento-card__body {
     padding: var(--space-5);
   }
 
@@ -308,7 +342,6 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.components {
-
   .bento-media {
     position: relative;
     width: 100%;
@@ -357,10 +390,29 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-
   .bento-grid,
   .bento-grid * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* ── VARIANTE WIZARD (altura fija, para drawers/panels) ─────────────
+   Hace que el grid llene el 100% del contenedor sin scroll externo.
+   Celdas en una sola fila a partir de md (768px).
+   Usar junto a container-name: layoutmain en el padre.
+   ─────────────────────────────────────────────────────────────────── */
+@layer bento.placement {
+  .bento-grid--wizard {
+    height: 100%;
+    align-self: stretch;
+    grid-template-rows: 1fr;
+    grid-auto-rows: 1fr;
+
+    @container layoutmain (min-width: #{$bp-md}) {
+      > * {
+        grid-row: 1;
+      }
+    }
   }
 }

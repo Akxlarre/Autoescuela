@@ -11,7 +11,7 @@
 | `students` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
 | `courses` | M1 - Usuarios | `id`, `code` | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
-| `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R | ✅ Definida |
+| `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |
 | `login_attempts` | M1 - Usuarios | `id`, `email` | `user_id` | Admin: R | ✅ Definida |
 | `notifications` | M2 - Notif. | `id`, `recipient_id` | `recipient_id` | Admin: CRUD, Sec: CRUD, Inst: R (self), Stu: R (self) | ✅ Definida |
 | `notification_templates` | M2 - Notif. | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R | ✅ Definida |
@@ -64,7 +64,7 @@
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
 | `document_templates` | M6 - Matrí. | `id`, `name` | `updated_by` | Admin: CRUD, Sec: R, Stu: R, Inst: R | ✅ Definida |
-| `vehicles` | M7 - Flota | `id`, `plate` | `branch_id` | Admin: CRUD, Sec: CRUD, Inst: R | ✅ Definida |
+| `vehicles` | M7 - Flota | `id`, `license_plate` (UNIQUE NOT NULL) | `branch_id` | Admin: CRUD, Sec: CRUD, Inst: R | ✅ Definida |
 | `vehicle_documents` | M7 - Flota | `id`, `type` | `vehicle_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `maintenance_records` | M7 - Flota | `id`, `type` | `vehicle_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `secretary_observations` | M8 - Admin | `id`, `type` | `created_by`, `seen_by` | Admin: Read/Resolve/Del, Sec: Create/Read | ✅ Definida |
