@@ -40,7 +40,8 @@
                 >
               </div>
               <p class="text-xs text-text-secondary leading-relaxed">
-                Pago completo — reservas las <strong class="text-text-primary">18 clases</strong>
+                Pago completo — reservas las
+                <strong class="text-text-primary">{{ data().totalSessions }} clases</strong>
                 prácticas desde hoy.
               </p>
             </label>
@@ -68,7 +69,8 @@
               </div>
               <p class="text-xs text-text-secondary leading-relaxed">
                 Abono inicial — reservas las primeras
-                <strong class="text-text-primary">9 clases</strong> (50% del curso).
+                <strong class="text-text-primary">{{ data().totalSessions / 2 }} clases</strong>
+                (50% del curso).
               </p>
             </label>
           </div>
@@ -141,9 +143,13 @@
                 <p class="text-xs text-text-muted mt-0.5">
                   Selecciona los horarios de tus sesiones en las próximas semanas
                 </p>
+                <p class="text-xs text-text-secondary mt-1 flex items-center gap-1">
+                  <app-icon name="info" [size]="12" class="text-text-muted shrink-0" />
+                  Solo puedes seleccionar una clase por día.
+                </p>
               </div>
               <span
-                class="shrink-0 text-xs font-black px-2.5 py-1 rounded-lg transition-colors"
+                class="shrink-0 text-sm font-black px-3 py-1.5 rounded-lg transition-colors"
                 [class.bg-brand]="data().slotSelection.isComplete"
                 [class.text-surface]="data().slotSelection.isComplete"
                 [class.bg-state-warning-bg]="!data().slotSelection.isComplete"
@@ -201,7 +207,7 @@
                     <button
                       type="button"
                       (click)="selectDay(i)"
-                      class="flex-1 min-w-[80px] py-3 px-2 border-b-2 text-center transition-all hover:bg-bg-subtle"
+                      class="flex-1 min-w-20 py-3 px-2 border-b-2 text-center transition-all hover:bg-bg-subtle"
                       [class.border-brand]="selectedDayIndex() === i"
                       [class.bg-surface]="selectedDayIndex() === i"
                       [class.text-brand]="selectedDayIndex() === i"

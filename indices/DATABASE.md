@@ -83,7 +83,7 @@
 | `v_student_progress_b` | M4 - Acad. B | Progreso prácticas (0-12) + % asistencia teórica por matrícula Clase B | Admin, Sec, Inst (propias), Stu (propia) |
 | `v_professional_attendance` | M5 - Prof. | Semáforo `green`/`yellow`/`red` de asistencia por matrícula profesional (RF-070) | Admin, Sec, Stu (propia) |
 | `v_dms_student_documents` | M6 - Matrí. | Documentos del alumno unificados (`student_documents` + `digital_contracts`) | Admin, Sec, Stu (propios) |
-| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min disponibles** por instructor+vehículo en las próximas 4 semanas. Filtra por `available_days`/`available_from`/`available_until` y excluye solapamientos reales de instructor y vehículo. Usar para agenda de matrícula (RF-046). | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
+| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Filtra por `available_days`/`available_from`/`available_until`. NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
 
 > **Nota `v_class_b_schedule_availability`:** El rol `student` no puede ver `instructors` ni `vehicles` según sus policies actuales, por lo que la vista devuelve vacío si la consulta un alumno. Si se requiere self-service de selección de horario, implementar un RPC `SECURITY DEFINER` específico.
 

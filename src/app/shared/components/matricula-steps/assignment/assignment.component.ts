@@ -24,17 +24,31 @@ export class AssignmentComponent {
     this.dataChange.emit({ ...this.data(), [field]: value });
   }
 
-  /** Selecciona o deselecciona un slot de horario de forma inmutable. */
+  /** Selecciona o deselecciona un slot de horario de forma inmutable. Max 1 por día. */
   selectSlot(slotId: string): void {
     const current = this.data();
     const oldIds = current.slotSelection.selectedSlotIds;
     const index = oldIds.indexOf(slotId);
-    const newIds =
-      index > -1
-        ? oldIds.filter((_, i) => i !== index)
-        : oldIds.length < current.slotSelection.requiredCount
-          ? [...oldIds, slotId]
-          : oldIds;
+
+    let newIds: string[];
+    if (index > -1) {
+      // Deseleccionar
+      newIds = oldIds.filter((_, i) => i !== index);
+    } else if (oldIds.length < current.slotSelection.requiredCount) {
+      // Verificar que no haya otro slot seleccionado en el mismo día
+      const slotDate = current.scheduleGrid?.slots.find((s) => s.id === slotId)?.date;
+      if (slotDate) {
+        const hasSameDay = oldIds.some((id) => {
+          const s = current.scheduleGrid?.slots.find((sl) => sl.id === id);
+          return s?.date === slotDate;
+        });
+        if (hasSameDay) return;
+      }
+      newIds = [...oldIds, slotId];
+    } else {
+      newIds = oldIds;
+    }
+
     const newCount = newIds.length;
     this.dataChange.emit({
       ...current,
@@ -81,8 +95,20 @@ export class AssignmentComponent {
   });
 
   isSlotSelectable(slotId: string): boolean {
-    const sel = this.data().slotSelection;
-    return sel.selectedSlotIds.includes(slotId) || sel.currentCount < sel.requiredCount;
+    const current = this.data();
+    const sel = current.slotSelection;
+    if (sel.selectedSlotIds.includes(slotId)) return true;
+    if (sel.currentCount >= sel.requiredCount) return false;
+    // Max 1 class per day — disable if another slot on the same date is already selected
+    const slotDate = current.scheduleGrid?.slots.find((s) => s.id === slotId)?.date;
+    if (slotDate) {
+      const hasSameDay = sel.selectedSlotIds.some((id) => {
+        const s = current.scheduleGrid?.slots.find((sl) => sl.id === id);
+        return s?.date === slotDate;
+      });
+      if (hasSameDay) return false;
+    }
+    return true;
   }
 
   selectDay(index: number): void {

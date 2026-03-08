@@ -70,7 +70,8 @@ export interface HistoricalPromotion {
 export interface EnrollmentPersonalData {
   rut: string;
   firstNames: string;
-  lastNames: string;
+  paternalLastName: string;
+  maternalLastName: string;
   email: string;
   phone: string;
   birthDate: string;

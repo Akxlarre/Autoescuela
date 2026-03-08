@@ -54,7 +54,7 @@
 
           <!-- Área de Captura/Upload -->
           <div
-            class="min-h-[200px] flex flex-col items-center justify-center border-2 border-dashed border-border-default rounded-xl bg-surface p-6"
+            class="min-h-50 flex flex-col items-center justify-center border-2 border-dashed border-border-default rounded-xl bg-surface p-6"
           >
             @if (activePhotoTab() === 'camera') {
               @if (!data().carnetPhoto?.capturedDataUrl) {
@@ -106,7 +106,7 @@
                   #carnetFileInput
                   accept="image/*"
                   class="hidden"
-                  (change)="onFileChange($event, 'carnet')"
+                  (change)="onFileChange($event, 'id_photo')"
                 />
                 <button
                   type="button"

@@ -15,6 +15,7 @@ import type {
   CourseOption,
   AgeAlertStatus,
 } from '@core/models/ui/enrollment-personal-data.model';
+import { formatRut, validateRut } from '@core/utils/rut.utils';
 
 interface CategoryMeta {
   value: CourseCategory;
@@ -77,7 +78,7 @@ export class PersonalDataComponent {
 
   // ── Validation signals ────────────────────────────────────────────────────
 
-  readonly rutValid = computed(() => this.validateRut(this.data().rut));
+  readonly rutValid = computed(() => validateRut(this.data().rut));
 
   readonly ageStatus = computed((): AgeAlertStatus => {
     const age = this.calcAge(this.data().birthDate);
@@ -104,7 +105,7 @@ export class PersonalDataComponent {
       this.rutValid() &&
       this.ageStatus() !== 'under-17' &&
       d.firstNames.trim().length >= 2 &&
-      d.lastNames.trim().length >= 2 &&
+      d.paternalLastName.trim().length >= 2 &&
       d.email.includes('@') &&
       d.phone.trim().length >= 8 &&
       d.birthDate.length > 0 &&
@@ -129,6 +130,27 @@ export class PersonalDataComponent {
     });
   }
 
+  onRutKeydown(event: KeyboardEvent): void {
+    const allowed = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'];
+    if (allowed.includes(event.key)) return;
+    if (event.ctrlKey || event.metaKey) return; // allow Ctrl+A/C/V/X
+    if (/^\d$/.test(event.key)) return;
+    if (event.key === 'k' || event.key === 'K') return;
+    event.preventDefault();
+  }
+
+  onRutPaste(event: ClipboardEvent): void {
+    event.preventDefault();
+    const pasted = event.clipboardData?.getData('text') ?? '';
+    const formatted = formatRut(pasted);
+    this.dataChange.emit({ ...this.data(), rut: formatted });
+  }
+
+  onRutInput(raw: string): void {
+    const formatted = formatRut(raw);
+    this.dataChange.emit({ ...this.data(), rut: formatted });
+  }
+
   emitField<K extends keyof EnrollmentPersonalData>(
     field: K,
     value: EnrollmentPersonalData[K],
@@ -146,24 +168,6 @@ export class PersonalDataComponent {
   }
 
   // ── Private helpers ───────────────────────────────────────────────────────
-
-  private validateRut(rut: string): boolean {
-    if (!rut || rut.length < 3) return false;
-    const cleaned = rut.replace(/\./g, '').replace(/-/g, '');
-    if (cleaned.length < 2) return false;
-    const body = cleaned.slice(0, -1);
-    if (!/^\d+$/.test(body)) return false;
-    const dv = cleaned.slice(-1).toUpperCase();
-    let sum = 0;
-    let multiplier = 2;
-    for (let i = body.length - 1; i >= 0; i--) {
-      sum += parseInt(body[i], 10) * multiplier;
-      multiplier = multiplier === 7 ? 2 : multiplier + 1;
-    }
-    const rem = sum % 11;
-    const expected = rem === 0 ? '0' : rem === 1 ? 'K' : String(11 - rem);
-    return dv === expected;
-  }
 
   private calcAge(birthDate: string): number | null {
     if (!birthDate) return null;

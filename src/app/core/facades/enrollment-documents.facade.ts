@@ -159,6 +159,13 @@ export class EnrollmentDocumentsFacade {
         return false;
       }
 
+      // Update local state so the UI reflects the uploaded photo immediately
+      this._carnetPhoto.set({
+        source: 'upload',
+        capturedDataUrl: publicUrl,
+        fileName: fileName,
+      });
+
       return true;
     } catch {
       this._error.set('Error inesperado al subir foto carnet');

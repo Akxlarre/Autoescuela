@@ -4,7 +4,6 @@ import {
   computed,
   effect,
   inject,
-  isDevMode,
   signal,
   OnInit,
   OnDestroy,
@@ -46,7 +45,8 @@ import { ConfirmationComponent } from '@shared/components/matricula-steps/confir
 const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   rut: '',
   firstNames: '',
-  lastNames: '',
+  paternalLastName: '',
+  maternalLastName: '',
   email: '',
   phone: '',
   birthDate: '',
@@ -67,92 +67,6 @@ const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
 };
 
 const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
-
-// ── DEV MOCK — eliminar cuando haya datos reales en la BD ────────────────────
-const DEV_SUMMARY = {
-  initials: 'DV',
-  fullName: 'Dev Usuario (Mock)',
-  courseLabel: 'Clase B (Mock)',
-};
-const DEV_INSTRUCTORS = [
-  { id: 1, name: 'Carlos Muñoz López', vehicleDescription: 'Toyota Corolla 2022', plate: 'ABCD12' },
-  { id: 2, name: 'Ana Pérez Silva', vehicleDescription: 'Hyundai Elantra 2021', plate: 'EFGH34' },
-];
-const DEV_PRICING = {
-  courseLabel: 'Clase B (Mock)',
-  practicalClassesIncluded: 18,
-  basePrice: 450000,
-  isDeposit: false,
-  amountDue: 450000,
-};
-
-/** Genera una grilla de horarios mock para las próximas 4 semanas. */
-function generateDevScheduleGrid() {
-  const today = new Date();
-  const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + daysUntilMonday);
-
-  const DAY_LABELS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE'];
-  const TIME_SLOTS = [
-    { start: '08:00', end: '08:45' },
-    { start: '09:00', end: '09:45' },
-    { start: '10:00', end: '10:45' },
-    { start: '11:00', end: '11:45' },
-    { start: '14:00', end: '14:45' },
-    { start: '15:00', end: '15:45' },
-    { start: '16:00', end: '16:45' },
-  ];
-  // occupied[semana][día][slots] → varía por semana para simular disponibilidad real
-  const OCCUPIED: Record<number, Record<number, number[]>> = {
-    0: { 0: [1, 4], 2: [3], 4: [5] },
-    1: { 1: [0, 2], 3: [1, 5], 4: [3] },
-    2: { 0: [4, 6], 2: [0, 1], 3: [5] },
-    3: { 0: [2], 1: [4, 6], 4: [0, 3] },
-  };
-
-  const days: { date: string; label: string; dayOfWeek: string }[] = [];
-  const slots: { id: string; date: string; startTime: string; endTime: string; status: string }[] =
-    [];
-
-  for (let w = 0; w < 4; w++) {
-    for (let d = 0; d < 5; d++) {
-      const day = new Date(monday);
-      day.setDate(monday.getDate() + w * 7 + d);
-      const dateStr = day.toISOString().split('T')[0];
-      days.push({
-        date: dateStr,
-        label: String(day.getDate()).padStart(2, '0'),
-        dayOfWeek: DAY_LABELS[d],
-      });
-
-      TIME_SLOTS.forEach(({ start, end }, i) => {
-        slots.push({
-          id: `dev-${dateStr}-${start.replace(':', '')}`,
-          date: dateStr,
-          startTime: start,
-          endTime: end,
-          status: OCCUPIED[w]?.[d]?.includes(i) ? 'occupied' : 'available',
-        });
-      });
-    }
-  }
-
-  const endDate = new Date(monday);
-  endDate.setDate(monday.getDate() + 25); // último viernes de la semana 4
-
-  return {
-    week: {
-      startDate: monday.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      label: 'Próximas 4 semanas (Mock)',
-      days,
-    },
-    timeRows: TIME_SLOTS.map((t) => t.start),
-    slots,
-  };
-}
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Component({
   selector: 'app-secretaria-matricula',
@@ -183,9 +97,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   // ── activeStep (0-indexed para p-stepper, derivado del facade 1-based) ───
   readonly activeStep = computed(() => this.enrollment.currentStep() - 1);
 
-  // DEV MOCK — eliminar cuando haya datos reales en la BD
-  readonly isDevMode = isDevMode();
-
   constructor() {
     effect(() => {
       const step = this.enrollment.currentStep();
@@ -205,7 +116,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
           const SESSION_MIN = 45;
           const totalSessions = course.practicalHours
             ? Math.round((course.practicalHours * 60) / SESSION_MIN)
-            : 18;
+            : 12;
           this.payment.computePricing({
             courseLabel: course.label,
             basePrice: course.basePrice,
@@ -251,15 +162,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const selectedCourse = this.enrollment.courseOptions().find((c) => c.type === pd?.courseType);
     const totalSessions = selectedCourse?.practicalHours
       ? Math.round((selectedCourse.practicalHours * 60) / SESSION_MIN)
-      : 18; // fallback hasta que el curso esté en BD
+      : 12; // fallback hasta que el curso esté en BD
     const requiredCount = paymentMode === 'deposit' ? Math.ceil(totalSessions / 2) : totalSessions;
-
-    // DEV MOCK — eliminar cuando haya datos reales en la BD
-    const devSummary = !pd && this.isDevMode ? DEV_SUMMARY : summary;
-    const devInstructors =
-      instructors.length === 0 && this.isDevMode ? DEV_INSTRUCTORS : instructors;
-    const devGrid =
-      !grid && this.isDevMode && !!instructorId ? (generateDevScheduleGrid() as any) : grid;
 
     return {
       view:
@@ -268,11 +172,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
           : pd?.courseType === 'singular'
             ? 'singular'
             : 'class-b',
-      studentSummary: devSummary,
+      studentSummary: summary,
       paymentMode,
+      totalSessions,
       instructorId,
-      instructors: devInstructors,
-      scheduleGrid: devGrid,
+      instructors,
+      scheduleGrid: grid,
       scheduleLoading: this.enrollment.isLoading(),
       slotSelection: {
         selectedSlotIds: slotIds,
@@ -289,11 +194,9 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const pd = this.enrollment.personalData();
     const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
     const view = pd?.courseCategory === 'professional' ? 'professional' : 'class-b';
-    // DEV MOCK — eliminar cuando haya datos reales en la BD
-    const devSummary = !pd && this.isDevMode ? DEV_SUMMARY : summary;
     return {
       view,
-      studentSummary: devSummary,
+      studentSummary: summary,
       isMinor: pd ? this.calcAge(pd.birthDate) < 18 : false,
       photoTab: this.docs.photoTab(),
       cameraState: this.docs.cameraState(),
@@ -312,29 +215,23 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
     const pd = this.enrollment.personalData();
     const pricing = this.payment.pricing();
-    // DEV MOCK — eliminar cuando haya datos reales en la BD
-    const devSummary = !pd && this.isDevMode ? DEV_SUMMARY : summary;
-    const devPricing = !pricing && this.isDevMode ? DEV_PRICING : pricing;
-    const usingDevPricing = !pricing && this.isDevMode;
     return {
-      studentSummary: devSummary,
-      pricing: devPricing ?? {
+      studentSummary: summary,
+      pricing: pricing ?? {
         courseLabel: summary.courseLabel,
-        practicalClassesIncluded: 18,
+        practicalClassesIncluded: 12,
         basePrice: 0,
         isDeposit: false,
         amountDue: 0,
       },
       discount: this.payment.discount(),
-      totalToPay: usingDevPricing ? DEV_PRICING.basePrice : this.payment.totalToPay(),
+      totalToPay: this.payment.totalToPay(),
       paymentMethod: this.payment.paymentMethod(),
       availableDiscounts: this.payment.availableDiscounts(),
       selectedDiscountId: this.payment.selectedDiscountId(),
       isSingularCourse: pd?.courseType === 'singular',
       singularAlert: { visible: false, message: '' },
-      canAdvance: usingDevPricing
-        ? !!this.payment.paymentMethod()
-        : this.payment.canConfirmPayment(),
+      canAdvance: this.payment.canConfirmPayment(),
     };
   });
 
@@ -644,11 +541,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   onDownloadContract(): void {
     // TODO: abrir URL del contrato PDF cuando esté disponible vía EnrollmentFacade
-  }
-
-  // DEV MOCK — eliminar cuando haya datos reales en la BD
-  devGoToStep(step: number): void {
-    this.enrollment.goToStep(step as EnrollmentWizardStep);
   }
 
   // ── Utils ─────────────────────────────────────────────────────────────────

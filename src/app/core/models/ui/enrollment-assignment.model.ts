@@ -101,6 +101,7 @@ export interface EnrollmentAssignmentData {
   studentSummary: StudentSummaryBanner;
   // Class B fields
   paymentMode: PaymentMode | null;
+  totalSessions: number;
   instructorId: number | null;
   instructors: InstructorOption[];
   scheduleGrid: ScheduleGrid | null;

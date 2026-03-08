@@ -205,7 +205,7 @@ export class EnrollmentPaymentFacade {
       const paymentRecord = {
         enrollment_id: enrollmentId,
         type: 'enrollment',
-        total_amount: isPending ? 0 : total,
+        total_amount: total,
         cash_amount: method === 'efectivo' ? total : 0,
         transfer_amount: method === 'transferencia' ? total : 0,
         card_amount: method === 'tarjeta' ? total : 0,

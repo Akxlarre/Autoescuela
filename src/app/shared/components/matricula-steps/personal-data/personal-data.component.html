@@ -18,8 +18,11 @@
               name="rut"
               type="text"
               [ngModel]="data().rut"
-              (ngModelChange)="emitField('rut', $event)"
+              (ngModelChange)="onRutInput($event)"
+              (keydown)="onRutKeydown($event)"
+              (paste)="onRutPaste($event)"
               placeholder="12.345.678-9"
+              maxlength="12"
               data-llm-description="Chilean RUT number of the student"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
               [class.border-state-error]="data().rut.length > 0 && !rutValid()"
@@ -57,7 +60,7 @@
         </div>
 
         <!-- Nombres y Apellidos -->
-        <div class="grid md:grid-cols-2 gap-4">
+        <div class="grid md:grid-cols-3 gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-text-secondary" for="firstNames">
               Nombres <span class="text-state-error">*</span>
@@ -79,23 +82,37 @@
             />
           </div>
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-secondary" for="lastNames">
-              Apellidos <span class="text-state-error">*</span>
+            <label class="text-sm font-medium text-text-secondary" for="paternalLastName">
+              Apellido Paterno <span class="text-state-error">*</span>
             </label>
             <input
-              id="lastNames"
-              name="lastNames"
+              id="paternalLastName"
+              name="paternalLastName"
               type="text"
-              [ngModel]="data().lastNames"
-              (ngModelChange)="emitField('lastNames', $event)"
-              placeholder="González Pérez"
+              [ngModel]="data().paternalLastName"
+              (ngModelChange)="emitField('paternalLastName', $event)"
+              placeholder="González"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
               [class.border-state-error]="
-                data().lastNames.length > 0 && data().lastNames.trim().length < 2
+                data().paternalLastName.length > 0 && data().paternalLastName.trim().length < 2
               "
               [class.border-border-default]="
-                !(data().lastNames.length > 0 && data().lastNames.trim().length < 2)
+                !(data().paternalLastName.length > 0 && data().paternalLastName.trim().length < 2)
               "
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="maternalLastName">
+              Apellido Materno
+            </label>
+            <input
+              id="maternalLastName"
+              name="maternalLastName"
+              type="text"
+              [ngModel]="data().maternalLastName"
+              (ngModelChange)="emitField('maternalLastName', $event)"
+              placeholder="Pérez"
+              class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
           </div>
         </div>

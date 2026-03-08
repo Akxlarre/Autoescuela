@@ -3,6 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
+import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import type { Course } from '@core/models/dto/course.model';
 import type {
   EnrollmentPersonalData,
@@ -14,6 +15,7 @@ import type {
 import type {
   InstructorOption,
   ScheduleGrid,
+  SlotStatus,
   TimeSlot,
   WeekDay,
   WeekRange,
@@ -84,6 +86,17 @@ export class EnrollmentFacade {
   private readonly _promotionGroups = signal<PromotionGroup[]>([]);
   private readonly _selectedPromotionCourseId = signal<number | null>(null);
 
+  // Número de sesiones requeridas según modalidad de pago y horas del curso
+  private readonly _requiredSlotCount = computed<number>(() => {
+    const pd = this._personalData();
+    const mode = this._paymentMode();
+    if (!pd || pd.courseCategory !== 'non-professional') return 0;
+    const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
+    const course = this._courses().find((c) => c.license_class === licenseClass);
+    const total = course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
+    return mode === 'deposit' ? Math.ceil(total / 2) : total;
+  });
+
   // ── Enrollment record ──
   private readonly _enrollment = signal<Enrollment | null>(null);
 
@@ -134,7 +147,7 @@ export class EnrollmentFacade {
   readonly studentSummary = computed<StudentSummaryBanner | null>(() => {
     const pd = this._personalData();
     if (!pd) return null;
-    const fullName = `${pd.firstNames} ${pd.lastNames}`;
+    const fullName = `${pd.firstNames} ${pd.paternalLastName} ${pd.maternalLastName}`.trim();
     const initials = fullName
       .split(' ')
       .filter(Boolean)
@@ -276,7 +289,8 @@ export class EnrollmentFacade {
    */
   async findUserByRut(rut: string): Promise<{
     firstNames: string;
-    lastNames: string;
+    paternalLastName: string;
+    maternalLastName: string;
     email: string;
     phone: string;
     birthDate: string | null;
@@ -290,7 +304,7 @@ export class EnrollmentFacade {
     const { data: user, error } = await this.supabase.client
       .from('users')
       .select('id, first_names, paternal_last_name, maternal_last_name, email, phone')
-      .eq('rut', rut)
+      .eq('rut', normalizeRutForStorage(rut))
       .maybeSingle();
 
     if (error || !user) return null;
@@ -305,7 +319,8 @@ export class EnrollmentFacade {
 
     return {
       firstNames: user.first_names,
-      lastNames: `${user.paternal_last_name} ${user.maternal_last_name}`.trim(),
+      paternalLastName: user.paternal_last_name,
+      maternalLastName: user.maternal_last_name,
       email: user.email,
       phone: user.phone ?? '',
       birthDate: student?.birth_date ?? null,
@@ -384,7 +399,7 @@ export class EnrollmentFacade {
             docs_complete: false,
             contract_accepted: false,
             certificate_enabled: false,
-            registration_channel: 'office',
+            registration_channel: 'in_person',
           })
           .select('*')
           .single();
@@ -428,7 +443,9 @@ export class EnrollmentFacade {
          )`,
       )
       .eq('active', true)
-      .eq('users.branch_id', branchId);
+      .eq('users.branch_id', branchId)
+      // Solo la asignación activa (end_date IS NULL); excluye historial de vehículos
+      .is('vehicle_assignments.end_date', null);
 
     if (error) {
       this._error.set('Error al cargar instructores: ' + error.message);
@@ -520,10 +537,10 @@ export class EnrollmentFacade {
          enrolled_students,
          status,
          courses!inner(code, name, license_class),
-         professional_promotions!inner(code, name, status, branch_id)`,
+         professional_promotions!promotion_id(code, name, status, branch_id)`,
       )
       .eq('professional_promotions.branch_id', branchId)
-      .eq('professional_promotions.status', 'open')
+      .in('professional_promotions.status', ['planned', 'in_progress'])
       .eq('status', 'active');
 
     if (error) {
@@ -600,26 +617,22 @@ export class EnrollmentFacade {
           .from('vehicle_assignments')
           .select('vehicle_id')
           .eq('instructor_id', instructorId)
-          .eq('active', true)
+          .is('end_date', null)
           .limit(1)
           .single();
 
         const vehicleId = assignment?.vehicle_id ?? null;
 
-        // Parse slot IDs into session records
-        const sessions = slots.map((slotId) => {
-          // slotId format: "2024-01-15T09:00" — agregar segundos para timestamptz válido
-          const scheduledAt =
-            slotId.includes(':') && slotId.split(':').length === 2 ? `${slotId}:00` : slotId;
-          return {
-            enrollment_id: draft.enrollmentId,
-            instructor_id: instructorId,
-            vehicle_id: vehicleId,
-            scheduled_at: scheduledAt,
-            duration_min: 45,
-            status: 'reserved',
-          };
-        });
+        // slotId = TIMESTAMPTZ original de v_class_b_schedule_availability
+        // (ej: "2026-03-10T12:00:00+00:00") — se persiste directamente sin transformación
+        const sessions = slots.map((slotId) => ({
+          enrollment_id: draft.enrollmentId,
+          instructor_id: instructorId,
+          vehicle_id: vehicleId,
+          scheduled_at: slotId,
+          duration_min: 45,
+          status: 'reserved',
+        }));
 
         // Delete previous reserved sessions for this enrollment
         await this.supabase.client
@@ -948,14 +961,13 @@ export class EnrollmentFacade {
   // ══════════════════════════════════════════════════════════════════════════════
 
   private async upsertUser(data: EnrollmentPersonalData, branchId: number): Promise<number | null> {
-    const [paternalLast, ...maternalParts] = data.lastNames.split(' ');
-    const maternalLast = maternalParts.join(' ') || '';
+    const normalizedRut = normalizeRutForStorage(data.rut);
 
     // Try to find existing user by RUT
     const { data: existing } = await this.supabase.client
       .from('users')
       .select('id')
-      .eq('rut', data.rut)
+      .eq('rut', normalizedRut)
       .maybeSingle();
 
     if (existing) {
@@ -964,8 +976,8 @@ export class EnrollmentFacade {
         .from('users')
         .update({
           first_names: data.firstNames,
-          paternal_last_name: paternalLast,
-          maternal_last_name: maternalLast,
+          paternal_last_name: data.paternalLastName,
+          maternal_last_name: data.maternalLastName,
           email: data.email,
           phone: data.phone,
           branch_id: branchId,
@@ -990,10 +1002,10 @@ export class EnrollmentFacade {
     const { data: newUser, error } = await this.supabase.client
       .from('users')
       .insert({
-        rut: data.rut,
+        rut: normalizedRut,
         first_names: data.firstNames,
-        paternal_last_name: paternalLast,
-        maternal_last_name: maternalLast,
+        paternal_last_name: data.paternalLastName,
+        maternal_last_name: data.maternalLastName,
         email: data.email,
         phone: data.phone,
         role_id: studentRole?.id ?? null,
@@ -1224,10 +1236,12 @@ export class EnrollmentFacade {
     if (!pd) return false;
 
     if (pd.courseCategory === 'non-professional') {
+      const required = this._requiredSlotCount();
       return (
         this._selectedInstructorId() !== null &&
-        this._selectedSlotIds().length > 0 &&
-        this._paymentMode() !== null
+        this._paymentMode() !== null &&
+        required > 0 &&
+        this._selectedSlotIds().length >= required
       );
     }
     if (pd.courseCategory === 'professional') {
@@ -1244,18 +1258,22 @@ export class EnrollmentFacade {
     this._steps.update((steps) => steps.map((s) => (s.step === step ? { ...s, status } : s)));
   }
 
-  /** Deriva fecha ISO (YYYY-MM-DD) desde un timestamp. */
+  /** Deriva fecha ISO (YYYY-MM-DD) desde un timestamp, en hora local Santiago. */
   private slotDateFromStart(slotStart: string | null | undefined): string {
     if (!slotStart) return '';
-    const s = String(slotStart);
-    return s.includes('T') ? s.split('T')[0]! : s.slice(0, 10);
+    // en-CA produce YYYY-MM-DD; timeZone asegura fecha local chilena, no UTC del servidor
+    return new Date(slotStart).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
   }
 
-  /** Deriva hora HH:MM desde un timestamp. */
+  /** Deriva hora HH:MM desde un timestamp, en hora local Santiago. */
   private slotTimeFromTs(ts: string | null | undefined): string {
     if (!ts) return '';
-    const d = new Date(ts);
-    return `${d.getUTCHours().toString().padStart(2, '0')}:${d.getUTCMinutes().toString().padStart(2, '0')}`;
+    return new Date(ts).toLocaleTimeString('en-GB', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
   }
 
   private buildScheduleGrid(rawSlots: any[]): ScheduleGrid {
@@ -1290,11 +1308,13 @@ export class EnrollmentFacade {
       const startTime = this.slotTimeFromTs(s.slot_start);
       const endTime = this.slotTimeFromTs(s.slot_end);
       return {
-        id: `${date}T${startTime}`,
+        // ID = TIMESTAMPTZ original de la vista; permite persistirlo directamente
+        // en class_b_sessions.scheduled_at sin reconstrucción ni pérdida de zona
+        id: String(s.slot_start),
         date,
         startTime,
         endTime,
-        status: 'available' as const,
+        status: (s.slot_status === 'occupied' ? 'occupied' : 'available') as SlotStatus,
       };
     });
 
