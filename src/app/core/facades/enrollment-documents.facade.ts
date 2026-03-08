@@ -125,7 +125,8 @@ export class EnrollmentDocumentsFacade {
     try {
       // Convert data URL to Blob
       const blob = this.dataUrlToBlob(dataUrl);
-      const filePath = `students/${enrollmentId}/id_photo_${fileName}`;
+      // Fixed path so storage upsert always overwrites the same object.
+      const filePath = `students/${enrollmentId}/id_photo`;
 
       // Upload to storage
       const { error: uploadError } = await this.supabase.client.storage

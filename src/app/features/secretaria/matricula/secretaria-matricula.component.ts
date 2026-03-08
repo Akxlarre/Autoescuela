@@ -283,7 +283,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
                 highlights: ['clases teóricas'],
               },
               {
-                text: 'La primera clase práctica está agendada según el horario acordado.',
+                text: 'Las clase prácticas están agendadas según el horario acordado.',
                 highlights: ['clase práctica'],
               },
             ]

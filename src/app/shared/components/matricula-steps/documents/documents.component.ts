@@ -18,7 +18,7 @@ export class DocumentsComponent {
   next = output<void>();
   back = output<void>();
 
-  activePhotoTab = signal<'camera' | 'upload'>('camera');
+  activePhotoTab = signal<'camera' | 'upload'>('upload');
 
   setPhotoTab(tab: 'camera' | 'upload'): void {
     this.activePhotoTab.set(tab);

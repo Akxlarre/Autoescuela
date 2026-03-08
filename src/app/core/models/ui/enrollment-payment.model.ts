@@ -26,7 +26,7 @@ export const PAYMENT_METHODS: PaymentMethodOption[] = [
     value: 'pendiente',
     label: 'Dejar pago pendiente',
     icon: 'clock',
-    description: 'Cobrar después (RF-010: payment_status = pending)',
+    description: 'Cobrar después',
   },
 ];
 

@@ -11,7 +11,7 @@
 //   })
 //
 // Respuesta exitosa: { pdfUrl: "https://...storage.../contracts/42/Contrato_..." }
-// @ts-nocheck 
+// @ts-nocheck
 
 // Setup type definitions for built-in Supabase Runtime APIs
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
@@ -133,9 +133,8 @@ Deno.serve(async (req: Request) => {
     // Flatten nested relations
     const data = flattenEnrollment(enrollment);
 
-    // 4. Generate PDF content (HTML → PDF via built-in rendering)
-    const html = buildContractHtml(data);
-    const pdfBytes = await renderHtmlToPdf(html);
+    // 4. Generate structured PDF directly from enrollment data
+    const pdfBytes = buildStructuredPdf(data);
 
     // 5. Build filename and upload to Storage
     const studentName = sanitizeFilename(
@@ -265,299 +264,276 @@ async function computeHash(data: Uint8Array): Promise<string> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PDF Generation
+// PDF Generation — Structured layout with proper WinAnsi encoding
 // ══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Renders HTML to a PDF using a simple approach:
- * - In production Supabase Edge, we use a lightweight HTML-to-PDF solution
- * - Falls back to returning the HTML wrapped as a minimal PDF if no renderer available
- *
- * NOTE: For production, consider using:
- * - Deno-compatible pdf-lib or jsPDF for programmatic PDF
- * - An external PDF rendering service (e.g., Puppeteer via Cloud Run)
- *
- * This implementation uses a text-based PDF builder for zero external deps.
+ * Converts a character to its WinAnsi (Latin-1) octal escape for PDF strings.
+ * Characters U+00A0–U+00FF map directly to their codepoint (same as Latin-1).
+ * This fixes the accented characters bug (ñ, é, á, etc. were showing as "?").
  */
-async function renderHtmlToPdf(html: string): Promise<Uint8Array> {
-  // Use a minimal PDF builder to avoid external dependencies in Edge Runtime.
-  // This produces a valid PDF with the contract text content.
-  const pdf = buildMinimalPdf(html);
-  return pdf;
+function escapePdfWinAnsi(str: string): string {
+  let out = '';
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    if (c === 92)
+      out += '\\\\'; // backslash
+    else if (c === 40)
+      out += '\\('; // (
+    else if (c === 41)
+      out += '\\)'; // )
+    else if (c >= 32 && c <= 126)
+      out += str[i]; // printable ASCII
+    else if (c >= 160 && c <= 255) out += `\\${c.toString(8).padStart(3, '0')}`; // Latin-1 → WinAnsi octal
+    // else: skip unsupported chars
+  }
+  return out;
+}
+
+function wrapTextToLines(text: string, maxChars: number): string[] {
+  const result: string[] = [];
+  const words = text.trim().split(/\s+/);
+  let line = '';
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (candidate.length > maxChars) {
+      if (line) result.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) result.push(line);
+  return result;
 }
 
 /**
- * Builds a minimal valid PDF 1.4 document with the contract text.
- * No external dependencies required. Produces a readable, printable PDF.
+ * Assembles a PDF 1.4 document from page content streams.
+ * Uses two fonts: F1=Helvetica, F2=Helvetica-Bold.
+ * Object layout: 1=Catalog, 2=Pages, 3=F1, 4=F2, then pairs (stream+page) per page.
  */
-function buildMinimalPdf(html: string): Uint8Array {
-  // Extract text content from HTML (strip tags for the PDF text layer)
-  const textContent = html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, '\n')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+function assemblePdf(pageStreams: string[], W: number, H: number): Uint8Array {
+  const fixedObjs: string[] = [
+    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj`,
+    ``, // pages — filled below
+    `3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj`,
+    `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj`,
+  ];
 
-  // Split into lines that fit within page width (~80 chars per line)
-  const lines = wrapText(textContent, 85);
+  const pageObjs: string[] = [];
+  const pageIds: number[] = [];
 
-  // PDF constants
-  const pageWidth = 595; // A4 width in points
-  const pageHeight = 842; // A4 height in points
-  const margin = 50;
-  const fontSize = 10;
-  const lineHeight = 14;
-  const linesPerPage = Math.floor((pageHeight - 2 * margin) / lineHeight);
-
-  // Split lines into pages
-  const pages: string[][] = [];
-  for (let i = 0; i < lines.length; i += linesPerPage) {
-    pages.push(lines.slice(i, i + linesPerPage));
-  }
-  if (pages.length === 0) pages.push(['(Contrato vacio)']);
-
-  // Build PDF objects
-  const objects: string[] = [];
-  let objectCount = 0;
-
-  const addObject = (content: string): number => {
-    objectCount++;
-    objects.push(content);
-    return objectCount;
-  };
-
-  // Obj 1: Catalog
-  addObject('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj');
-
-  // Obj 2: Pages (placeholder, updated later)
-  const pagesObjIndex = addObject(''); // placeholder
-
-  // Obj 3: Font
-  addObject(
-    '3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj',
-  );
-
-  // Generate page objects
-  const pageObjIds: number[] = [];
-  for (const pageLines of pages) {
-    // Content stream
-    let stream = `BT\n/F1 ${fontSize} Tf\n`;
-    let y = pageHeight - margin;
-    for (const line of pageLines) {
-      stream += `1 0 0 1 ${margin} ${y} Tm\n(${escapePdfString(line)}) Tj\n`;
-      y -= lineHeight;
-    }
-    stream += 'ET';
-
-    const streamObj = addObject(
-      `${objectCount + 1} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj`,
+  for (let i = 0; i < pageStreams.length; i++) {
+    const stream = pageStreams[i];
+    const contentId = 5 + i * 2;
+    const pageId = 6 + i * 2;
+    pageObjs.push(
+      `${contentId} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj`,
     );
-
-    // Page object
-    const pageObj = addObject(
-      `${objectCount + 1} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Contents ${streamObj} 0 R /Resources << /Font << /F1 3 0 R >> >> >>\nendobj`,
+    pageObjs.push(
+      `${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Contents ${contentId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>\nendobj`,
     );
-    pageObjIds.push(pageObj);
+    pageIds.push(pageId);
   }
 
-  // Update Pages object (obj 2)
-  const kidsStr = pageObjIds.map((id) => `${id} 0 R`).join(' ');
-  objects[1] = `2 0 obj\n<< /Type /Pages /Kids [${kidsStr}] /Count ${pageObjIds.length} >>\nendobj`;
+  fixedObjs[1] = `2 0 obj\n<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>\nendobj`;
 
-  // Build final PDF
-  let pdf = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+  const allObjs = [...fixedObjs, ...pageObjs];
+  const totalObjs = allObjs.length; // 4 fixed + 2 per page
+
+  let pdf = '%PDF-1.4\n';
   const offsets: number[] = [];
-
-  for (const obj of objects) {
+  for (const obj of allObjs) {
     offsets.push(pdf.length);
     pdf += obj + '\n';
   }
 
-  // Cross-reference table
-  const xrefOffset = pdf.length;
-  pdf += `xref\n0 ${objectCount + 1}\n`;
+  const xrefPos = pdf.length;
+  pdf += `xref\n0 ${totalObjs + 1}\n`; // +1 for free-list head at obj 0
   pdf += '0000000000 65535 f \n';
-  for (const offset of offsets) {
-    pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
+  for (const off of offsets) {
+    pdf += `${off.toString().padStart(10, '0')} 00000 n \n`;
   }
-
-  // Trailer
-  pdf += `trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\n`;
-  pdf += `startxref\n${xrefOffset}\n%%EOF\n`;
+  pdf += `trailer\n<< /Size ${totalObjs + 1} /Root 1 0 R >>\n`;
+  pdf += `startxref\n${xrefPos}\n%%EOF\n`;
 
   return new TextEncoder().encode(pdf);
 }
 
-function wrapText(text: string, maxWidth: number): string[] {
-  const result: string[] = [];
-  for (const paragraph of text.split('\n')) {
-    if (paragraph.trim() === '') {
-      result.push('');
-      continue;
-    }
-    const words = paragraph.split(/\s+/);
-    let currentLine = '';
-    for (const word of words) {
-      if (currentLine.length + word.length + 1 > maxWidth) {
-        result.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = currentLine ? `${currentLine} ${word}` : word;
-      }
-    }
-    if (currentLine) result.push(currentLine);
-  }
-  return result;
-}
-
-function escapePdfString(str: string): string {
-  return str
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)')
-    .replace(/[^\x20-\x7E]/g, '?'); // Replace non-ASCII for Type1 font compat
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Contract HTML Template
-// ══════════════════════════════════════════════════════════════════════════════
-
-function buildContractHtml(data: EnrollmentData): string {
+/**
+ * Builds a structured, well-formatted contract PDF directly from enrollment data.
+ * Sections, labels/values, clauses, and signature blocks are rendered with
+ * proper coordinates and fonts — no HTML parsing required.
+ */
+function buildStructuredPdf(data: EnrollmentData): Uint8Array {
   const u = data.student.user;
-  const fullName = `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name ?? ''}`.trim();
+  const fullName =
+    `${u.first_names} ${u.paternal_last_name}${u.maternal_last_name ? ' ' + u.maternal_last_name : ''}`.trim();
   const today = formatDate(new Date().toISOString());
   const enrollmentDate = formatDate(data.created_at);
   const netPrice = (data.base_price ?? 0) - data.discount;
 
-  return `
-<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><title>Contrato de Matricula</title>
-<style>
-  body { font-family: Helvetica, Arial, sans-serif; font-size: 11px; line-height: 1.5; color: #1a1a1a; max-width: 700px; margin: 0 auto; padding: 40px; }
-  h1 { text-align: center; font-size: 16px; margin-bottom: 4px; }
-  h2 { text-align: center; font-size: 12px; font-weight: normal; color: #555; margin-top: 0; }
-  .section { margin: 20px 0; }
-  .section-title { font-weight: bold; font-size: 12px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px; }
-  table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-  td { padding: 4px 8px; vertical-align: top; }
-  td.label { font-weight: bold; width: 35%; color: #333; }
-  .clause { margin: 12px 0; text-align: justify; }
-  .clause strong { display: block; margin-bottom: 4px; }
-  .signatures { margin-top: 60px; display: flex; justify-content: space-between; }
-  .sig-block { text-align: center; width: 45%; }
-  .sig-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 4px; }
-</style>
-</head>
-<body>
+  const W = 595,
+    H = 842;
+  const ML = 55,
+    MR = 55,
+    MB = 65;
+  const valueX = ML + 165; // label column ends, value column starts
 
-<h1>CONTRATO DE PRESTACION DE SERVICIOS EDUCACIONALES</h1>
-<h2>${data.branch.name}</h2>
+  // ── Rendering state ──
+  const pages: string[] = [];
+  let ops = '';
+  let y = H - 55;
 
-<div class="section">
-  <div class="section-title">I. IDENTIFICACION DE LAS PARTES</div>
-  <table>
-    <tr><td class="label">Escuela:</td><td>${data.branch.name}</td></tr>
-    <tr><td class="label">Direccion:</td><td>${data.branch.address ?? '—'}</td></tr>
-  </table>
-  <table>
-    <tr><td class="label">Alumno/a:</td><td>${fullName}</td></tr>
-    <tr><td class="label">RUT:</td><td>${u.rut}</td></tr>
-    <tr><td class="label">Fecha de nacimiento:</td><td>${formatDate(data.student.birth_date)}</td></tr>
-    <tr><td class="label">Domicilio:</td><td>${data.student.address ?? '—'}, ${data.student.district ?? ''}, ${data.student.region ?? ''}</td></tr>
-    <tr><td class="label">Correo electronico:</td><td>${u.email}</td></tr>
-    <tr><td class="label">Telefono:</td><td>${u.phone ?? '—'}</td></tr>
-  </table>
-</div>
+  const NP = () => {
+    pages.push(ops);
+    ops = '';
+    y = H - 55;
+  };
+  const need = (h: number) => {
+    if (y - h < MB) NP();
+  };
 
-<div class="section">
-  <div class="section-title">II. CURSO CONTRATADO</div>
-  <table>
-    <tr><td class="label">Curso:</td><td>${data.course.name}</td></tr>
-    <tr><td class="label">Clase de licencia:</td><td>${data.course.license_class}</td></tr>
-    <tr><td class="label">Duracion:</td><td>${data.course.duration_weeks ? data.course.duration_weeks + ' semanas' : '—'}</td></tr>
-    <tr><td class="label">Horas practicas:</td><td>${data.course.practical_hours ?? '—'}h</td></tr>
-    <tr><td class="label">Horas teoricas:</td><td>${data.course.theory_hours ?? '—'}h</td></tr>
-    <tr><td class="label">Fecha de matricula:</td><td>${enrollmentDate}</td></tr>
-    ${data.number ? `<tr><td class="label">N. de matricula:</td><td>${data.number}</td></tr>` : ''}
-  </table>
-</div>
+  // Draw text at absolute position (PDF y=0 is bottom of page)
+  const T = (x: number, yp: number, text: string, f: 'F1' | 'F2', size: number) => {
+    ops += `BT /${f} ${size} Tf ${x} ${Math.round(yp)} Td (${escapePdfWinAnsi(text)}) Tj ET\n`;
+  };
 
-<div class="section">
-  <div class="section-title">III. CONDICIONES ECONOMICAS</div>
-  <table>
-    <tr><td class="label">Valor del curso:</td><td>${formatCurrency(data.base_price)}</td></tr>
-    ${data.discount > 0 ? `<tr><td class="label">Descuento:</td><td>-${formatCurrency(data.discount)}</td></tr>` : ''}
-    <tr><td class="label">Total a pagar:</td><td><strong>${formatCurrency(netPrice)}</strong></td></tr>
-  </table>
-</div>
+  // Horizontal line
+  const HL = (yp: number, lw = 0.4, x1 = ML, x2 = W - MR) => {
+    ops += `${lw} w ${x1} ${Math.round(yp)} m ${x2} ${Math.round(yp)} l S\n`;
+  };
 
-<div class="section">
-  <div class="section-title">IV. CLAUSULAS GENERALES</div>
+  // Section header: bold title + underline
+  const section = (num: string, title: string) => {
+    need(38);
+    y -= 14;
+    T(ML, y, `${num}. ${title}`, 'F2', 11);
+    y -= 6;
+    HL(y, 0.6);
+    y -= 16;
+  };
 
-  <div class="clause">
-    <strong>PRIMERA: Objeto del contrato.</strong>
-    La Escuela se compromete a impartir al Alumno/a el curso de conduccion indicado en la seccion II,
-    de acuerdo con los programas aprobados por el Ministerio de Transportes y Telecomunicaciones,
-    proporcionando los medios materiales y humanos necesarios para su correcto desarrollo.
-  </div>
+  // Two-column data row: bold label on left, regular value on right
+  const row = (label: string, value: string) => {
+    need(16);
+    T(ML, y, label, 'F2', 10);
+    T(valueX, y, value, 'F1', 10);
+    y -= 15;
+  };
 
-  <div class="clause">
-    <strong>SEGUNDA: Obligaciones del alumno/a.</strong>
-    El/la alumno/a se obliga a: (a) asistir a las clases teoricas y practicas programadas;
-    (b) respetar los horarios acordados, comunicando con al menos 24 horas de anticipacion
-    cualquier cambio; (c) cumplir con las normas internas de la escuela y las instrucciones
-    del personal docente; (d) pagar el valor del curso en los terminos pactados.
-  </div>
+  // Clause: bold title line + wrapped body text
+  const clause = (title: string, body: string) => {
+    const LH = 14;
+    need(LH * 2 + 4);
+    T(ML, y, title, 'F2', 10);
+    y -= LH;
+    for (const line of wrapTextToLines(body, 90)) {
+      need(LH);
+      T(ML, y, line, 'F1', 10);
+      y -= LH;
+    }
+    y -= 5;
+  };
 
-  <div class="clause">
-    <strong>TERCERA: Asistencia y reprogramacion.</strong>
-    Las clases no asistidas sin aviso previo de 24 horas se consideraran realizadas.
-    La escuela podra reprogramar clases por motivos de fuerza mayor, notificando
-    al alumno/a con la mayor antelacion posible.
-  </div>
+  // ── TITLE BLOCK ──
+  T(ML, y, 'CONTRATO DE PRESTACION DE SERVICIOS EDUCACIONALES', 'F2', 12);
+  y -= 17;
+  T(ML, y, data.branch.name.toUpperCase(), 'F1', 11);
+  y -= 7;
+  HL(y, 1.0);
+  y -= 18;
 
-  <div class="clause">
-    <strong>CUARTA: Politica de devolucion.</strong>
-    En caso de desistimiento voluntario del alumno/a, la escuela reembolsara
-    el valor proporcional a las clases no realizadas, descontando un 10% por
-    concepto de gastos administrativos, siempre que la solicitud se realice
-    con al menos 7 dias habiles de anticipacion.
-  </div>
+  // ── SECTION I: IDENTIFICACION ──
+  section('I', 'IDENTIFICACION DE LAS PARTES');
 
-  <div class="clause">
-    <strong>QUINTA: Proteccion de datos personales.</strong>
-    Los datos personales del alumno/a seran tratados conforme a la Ley N. 19.628
-    sobre proteccion de la vida privada, exclusivamente para fines educativos
-    y administrativos vinculados a este contrato.
-  </div>
+  T(ML, y, 'Escuela', 'F2', 10);
+  y -= 13;
+  row('Nombre:', data.branch.name);
+  row('Direcci\xF3n:', data.branch.address ?? '\u2014');
+  y -= 6;
 
-  <div class="clause">
-    <strong>SEXTA: Vigencia.</strong>
-    Este contrato rige desde la fecha de firma y se mantendra vigente
-    hasta la finalizacion del curso contratado o hasta que se resuelva
-    por alguna de las causales previstas en las clausulas anteriores.
-  </div>
-</div>
+  T(ML, y, 'Alumno/a', 'F2', 10);
+  y -= 13;
+  row('Nombre completo:', fullName);
+  row('RUT:', u.rut);
+  row('Fecha de nacimiento:', formatDate(data.student.birth_date));
+  const address = [data.student.address, data.student.district, data.student.region]
+    .filter(Boolean)
+    .join(', ');
+  row('Domicilio:', address || '\u2014');
+  row('Correo electr\xF3nico:', u.email);
+  row('Tel\xE9fono:', u.phone ?? '\u2014');
 
-<div class="section">
-  <div class="section-title">V. FIRMAS</div>
-  <p>En ${data.branch.address ?? 'la ciudad'}, a ${today}.</p>
+  // ── SECTION II: CURSO ──
+  section('II', 'CURSO CONTRATADO');
+  row('Curso:', data.course.name);
+  row('Clase de licencia:', data.course.license_class);
+  row(
+    'Duraci\xF3n:',
+    data.course.duration_weeks ? `${data.course.duration_weeks} semanas` : '\u2014',
+  );
+  row(
+    'Horas pr\xE1cticas:',
+    data.course.practical_hours != null ? `${data.course.practical_hours} h` : '\u2014',
+  );
+  row(
+    'Horas te\xF3ricas:',
+    data.course.theory_hours != null ? `${data.course.theory_hours} h` : '\u2014',
+  );
+  row('Fecha de matr\xEDcula:', enrollmentDate);
+  if (data.number) row('N\xFA de matr\xEDcula:', data.number);
 
-  <div class="signatures">
-    <div class="sig-block">
-      <div class="sig-line">Representante de la Escuela</div>
-    </div>
-    <div class="sig-block">
-      <div class="sig-line">${fullName}<br/>RUT: ${u.rut}</div>
-    </div>
-  </div>
-</div>
+  // ── SECTION III: CONDICIONES ECONOMICAS ──
+  section('III', 'CONDICIONES ECONOMICAS');
+  row('Valor del curso:', formatCurrency(data.base_price));
+  if (data.discount > 0) row('Descuento:', `-${formatCurrency(data.discount)}`);
+  row('Total a pagar:', formatCurrency(netPrice));
 
-</body>
-</html>`;
+  // ── SECTION IV: CLAUSULAS ──
+  section('IV', 'CLAUSULAS GENERALES');
+
+  clause(
+    'PRIMERA: Objeto del contrato.',
+    'La Escuela se compromete a impartir al Alumno/a el curso de conducci\xF3n indicado en la secci\xF3n II, de acuerdo con los programas aprobados por el Ministerio de Transportes y Telecomunicaciones, proporcionando los medios materiales y humanos necesarios para su correcto desarrollo.',
+  );
+  clause(
+    'SEGUNDA: Obligaciones del alumno/a.',
+    'El/la alumno/a se obliga a: (a) asistir a las clases te\xF3ricas y pr\xE1cticas programadas; (b) respetar los horarios acordados, comunicando con al menos 24 horas de anticipaci\xF3n cualquier cambio; (c) cumplir con las normas internas de la escuela y las instrucciones del personal docente; (d) pagar el valor del curso en los t\xE9rminos pactados.',
+  );
+  clause(
+    'TERCERA: Asistencia y reprogramaci\xF3n.',
+    'Las clases no asistidas sin aviso previo de 24 horas se considerar\xE1n realizadas. La escuela podr\xE1 reprogramar clases por motivos de fuerza mayor, notificando al alumno/a con la mayor antelaci\xF3n posible.',
+  );
+  clause(
+    'CUARTA: Pol\xEDtica de devoluci\xF3n.',
+    'En caso de desistimiento voluntario del alumno/a, la escuela reembolsar\xE1 el valor proporcional a las clases no realizadas, descontando un 10% por concepto de gastos administrativos, siempre que la solicitud se realice con al menos 7 d\xEDas h\xE1biles de anticipaci\xF3n.',
+  );
+  clause(
+    'QUINTA: Protecci\xF3n de datos personales.',
+    'Los datos personales del alumno/a ser\xE1n tratados conforme a la Ley N\xBA 19.628 sobre protecci\xF3n de la vida privada, exclusivamente para fines educativos y administrativos vinculados a este contrato.',
+  );
+  clause(
+    'SEXTA: Vigencia.',
+    'Este contrato rige desde la fecha de firma y se mantendr\xE1 vigente hasta la finalizaci\xF3n del curso contratado o hasta que se resuelva por alguna de las causales previstas en las cl\xE1usulas anteriores.',
+  );
+
+  // ── SECTION V: FIRMAS ──
+  section('V', 'FIRMAS');
+  T(ML, y, `En ${data.branch.address ?? 'la ciudad'}, a ${today}.`, 'F1', 10);
+  y -= 55;
+
+  need(40);
+  const col2X = ML + 260;
+  HL(y, 0.5, ML, ML + 180);
+  HL(y, 0.5, col2X, col2X + 180);
+  y -= 13;
+  T(ML, y, 'Representante de la Escuela', 'F1', 9);
+  T(col2X, y, fullName, 'F1', 9);
+  y -= 12;
+  T(ML, y, data.branch.name, 'F1', 9);
+  T(col2X, y, `RUT: ${u.rut}`, 'F1', 9);
+
+  pages.push(ops); // commit last page
+  return assemblePdf(pages, W, H);
 }

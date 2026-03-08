@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -54,6 +55,7 @@ interface EnrollmentDraft {
 @Injectable({ providedIn: 'root' })
 export class EnrollmentFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)
@@ -235,11 +237,10 @@ export class EnrollmentFacade {
   // ══════════════════════════════════════════════════════════════════════════════
 
   /** Carga el catálogo de cursos activos para la sucursal del usuario. */
-  async loadCourses(branchId: number): Promise<void> {
+  async loadCourses(_branchId?: number): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('courses')
       .select('*')
-      .eq('branch_id', branchId)
       .eq('active', true)
       .order('name');
 
@@ -861,11 +862,13 @@ export class EnrollmentFacade {
       if (!enrollmentNumber) return null;
 
       // Update enrollment to active
+      const registeredBy = this.auth.currentUser()?.dbId ?? null;
       const { error } = await this.supabase.client
         .from('enrollments')
         .update({
           number: enrollmentNumber,
           status: 'active',
+          registered_by: registeredBy,
           expires_at: null,
           updated_at: new Date().toISOString(),
         })
@@ -1085,12 +1088,10 @@ export class EnrollmentFacade {
 
   private async resolveCourseId(
     data: EnrollmentPersonalData,
-    branchId: number,
+    _branchId: number,
   ): Promise<number | null> {
     const licenseClass = this.courseTypeToLicenseClass(data.courseType);
-    const course = this._courses().find(
-      (c) => c.license_class === licenseClass && c.branch_id === branchId,
-    );
+    const course = this._courses().find((c) => c.license_class === licenseClass);
 
     if (!course) {
       this._error.set(`No se encontró un curso activo para la clase ${licenseClass}`);
@@ -1116,16 +1117,12 @@ export class EnrollmentFacade {
   }
 
   private async generateEnrollmentNumber(): Promise<string | null> {
-    const year = new Date().getFullYear();
-    const prefix = `${year}-`;
-
-    // Get the highest existing number for this year
+    // Get the enrollment with the highest id that already has a number assigned
     const { data, error } = await this.supabase.client
       .from('enrollments')
       .select('number')
-      .like('number', `${prefix}%`)
       .not('number', 'is', null)
-      .order('number', { ascending: false })
+      .order('id', { ascending: false })
       .limit(1)
       .maybeSingle();
 
@@ -1136,11 +1133,13 @@ export class EnrollmentFacade {
 
     let nextSeq = 1;
     if (data?.number) {
-      const currentSeq = parseInt(data.number.split('-')[1], 10);
-      nextSeq = currentSeq + 1;
+      const parsed = parseInt(data.number, 10);
+      if (!isNaN(parsed)) nextSeq = parsed + 1;
     }
 
-    return `${prefix}${nextSeq.toString().padStart(4, '0')}`;
+    // 4 digits up to 9999, 5 digits from 10000 onward
+    const digits = nextSeq >= 10000 ? 5 : 4;
+    return nextSeq.toString().padStart(digits, '0');
   }
 
   private getDraftExpiry(): string {

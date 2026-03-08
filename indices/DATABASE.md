@@ -9,7 +9,7 @@
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida |
 | `students` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
-| `courses` | M1 - Usuarios | `id`, `code` | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
+| `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks` | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |
 | `login_attempts` | M1 - Usuarios | `id`, `email` | `user_id` | Admin: R | ✅ Definida |
@@ -59,7 +59,7 @@
 | `template_blocks` | M5 - Prof. | `id`, `template_id`| `template_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `professional_pre_registrations`| M6 - Matrí. | `id`, `temp_user_id` | `temp_user_id`, `converted_enrollment_id` | Admin: CRUD, Sec: CRUD, Stu: R (suyas) | ✅ Definida |
 | `enrollments` | M6 - Matrí. | `id`, `number` | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
-| `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by` | Admin: CRUD, Sec: CRUD, Stu: CR (self) | ✅ Definida |
+| `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by`; **UNIQUE(`enrollment_id`,`type`)** | Admin: CRUD, Sec: CRUD, Stu: CR (self) | ✅ Definida |
 | `digital_contracts` | M6 - Matrí. | `id`, `content_hash` | `enrollment_id`, `student_id` | Admin: CRUD, Sec: CRUD, Stu: CR (self) | ✅ Definida |
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `school_documents` | M6 - Matrí. | `id`, `type` | `branch_id`, `uploaded_by` | Admin: CRUD, Sec: CR | ✅ Definida |
@@ -83,7 +83,7 @@
 | `v_student_progress_b` | M4 - Acad. B | Progreso prácticas (0-12) + % asistencia teórica por matrícula Clase B | Admin, Sec, Inst (propias), Stu (propia) |
 | `v_professional_attendance` | M5 - Prof. | Semáforo `green`/`yellow`/`red` de asistencia por matrícula profesional (RF-070) | Admin, Sec, Stu (propia) |
 | `v_dms_student_documents` | M6 - Matrí. | Documentos del alumno unificados (`student_documents` + `digital_contracts`) | Admin, Sec, Stu (propios) |
-| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Filtra por `available_days`/`available_from`/`available_until`. NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
+| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Horarios derivados de `courses.schedule_days`/`schedule_blocks` (horario operativo de la autoescuela, compartido por todos los instructores). NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
 
 > **Nota `v_class_b_schedule_availability`:** El rol `student` no puede ver `instructors` ni `vehicles` según sus policies actuales, por lo que la vista devuelve vacío si la consulta un alumno. Si se requiere self-service de selección de horario, implementar un RPC `SECURITY DEFINER` específico.
 

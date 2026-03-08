@@ -92,31 +92,56 @@
             }
 
             @if (activePhotoTab() === 'upload') {
-              <div class="text-center space-y-3">
-                <div
-                  class="w-16 h-16 bg-bg-base rounded-full flex items-center justify-center mx-auto mb-2 text-text-muted/30"
-                >
-                  <app-icon name="image" [size]="32" />
+              @if (data().carnetPhoto?.capturedDataUrl) {
+                <div class="relative group">
+                  <img
+                    [src]="data().carnetPhoto?.capturedDataUrl"
+                    class="w-40 h-40 object-cover rounded-xl border-4 border-surface shadow-lg"
+                    alt="Foto carnet"
+                  />
+                  <input
+                    type="file"
+                    #carnetReplaceInput
+                    accept="image/*"
+                    class="hidden"
+                    (change)="onFileChange($event, 'id_photo')"
+                  />
+                  <button
+                    type="button"
+                    (click)="carnetReplaceInput.click()"
+                    class="mt-3 px-3 py-1.5 bg-surface border border-border-default text-text-secondary text-xs font-medium rounded-lg hover:bg-bg-base transition-all flex items-center gap-1.5 mx-auto"
+                  >
+                    <app-icon name="refresh-cw" [size]="12" />
+                    Cambiar foto
+                  </button>
                 </div>
-                <p class="text-sm text-text-secondary font-medium">
-                  Selecciona o arrastra una foto
-                </p>
-                <input
-                  type="file"
-                  #carnetFileInput
-                  accept="image/*"
-                  class="hidden"
-                  (change)="onFileChange($event, 'id_photo')"
-                />
-                <button
-                  type="button"
-                  (click)="carnetFileInput.click()"
-                  class="px-4 py-2 bg-surface border border-border-default text-text-primary text-xs font-bold rounded-lg hover:bg-bg-base transition-all"
-                >
-                  Elegir Archivo
-                </button>
-                <p class="text-xs text-text-muted">JPG, PNG · Máx 2MB</p>
-              </div>
+              } @else {
+                <div class="text-center space-y-3">
+                  <div
+                    class="w-16 h-16 bg-bg-base rounded-full flex items-center justify-center mx-auto mb-2 text-text-muted/30"
+                  >
+                    <app-icon name="image" [size]="32" />
+                  </div>
+                  <p class="text-sm text-text-secondary font-medium">
+                    Selecciona o arrastra una foto
+                  </p>
+                  <input
+                    type="file"
+                    #carnetFileInput
+                    accept="image/*"
+                    class="hidden"
+                    (change)="onFileChange($event, 'id_photo')"
+                  />
+                  <button
+                    type="button"
+                    (click)="carnetFileInput.click()"
+                    class="px-4 py-2 bg-surface border border-border-default text-text-primary text-xs font-bold rounded-lg hover:bg-bg-base transition-all"
+                  >
+                    Elegir Archivo
+                  </button>
+                  <p class="text-xs text-text-muted">JPG, PNG · Máx 2MB</p>
+                </div>
+              }
             }
           </div>
         </div>
