@@ -1,0 +1,37 @@
+<div class="flex flex-col gap-1.5">
+  <label class="text-sm font-medium text-text-secondary" [for]="id()">
+    {{ label() }}
+    @if (required()) {
+      <span class="text-state-error">*</span>
+    }
+  </label>
+
+  <input
+    [id]="id()"
+    [name]="id()"
+    type="email"
+    [ngModel]="value()"
+    (ngModelChange)="valueChange.emit($event)"
+    [placeholder]="placeholder()"
+    autocomplete="email"
+    data-llm-description="Email address input field with real-time format validation"
+    class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+    [class.border-state-error]="isDirty() && !isValid()"
+    [class.border-state-success]="isDirty() && isValid()"
+    [class.border-border-default]="!isDirty()"
+  />
+
+  @if (isDirty() && !isValid()) {
+    <p class="text-xs text-state-error flex items-center gap-1">
+      <app-icon name="alert-circle" [size]="12" />
+      Correo inválido — verifica que tenga el formato correcto (ej: usuario&#64;dominio.cl)
+    </p>
+  } @else if (isDirty() && isValid()) {
+    <p class="text-xs text-state-success flex items-center gap-1">
+      <app-icon name="check-circle" [size]="12" />
+      Correo válido
+    </p>
+  } @else {
+    <p class="text-xs text-text-muted italic">Formato: usuario&#64;dominio.cl</p>
+  }
+</div>

@@ -8,7 +8,7 @@
 | `branches` | M1 - Usuarios | `id`, `slug` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida |
-| `students` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
+| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
 | `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks` | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |
@@ -58,7 +58,7 @@
 | `professional_schedule_templates`| M5 - Prof.| `id`, `name` | Ninguna | Admin: CRUD, Sec: R | ✅ Definida |
 | `template_blocks` | M5 - Prof. | `id`, `template_id`| `template_id` | Admin: CRUD, Sec: R | ✅ Definida |
 | `professional_pre_registrations`| M6 - Matrí. | `id`, `temp_user_id` | `temp_user_id`, `converted_enrollment_id` | Admin: CRUD, Sec: CRUD, Stu: R (suyas) | ✅ Definida |
-| `enrollments` | M6 - Matrí. | `id`, `number` | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
+| `enrollments` | M6 - Matrí. | `id`, `number`, `current_step` (1-6), `payment_mode` ('total'\|'deposit') | `student_id`, `course_id`, `branch_id`, `sence_code_id`, `promotion_course_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
 | `student_documents` | M6 - Matrí. | `id`, `type` | `enrollment_id`, `reviewed_by`; **UNIQUE(`enrollment_id`,`type`)** | Admin: CRUD, Sec: CRUD, Stu: CR (self) | ✅ Definida |
 | `digital_contracts` | M6 - Matrí. | `id`, `content_hash` | `enrollment_id`, `student_id` | Admin: CRUD, Sec: CRUD, Stu: CR (self) | ✅ Definida |
 | `certificate_issuance_log` | M6 - Matrí. | `id`, `action` | `certificate_id`, `user_id` | Admin: CRUD, Sec: R | ✅ Definida |
@@ -92,3 +92,9 @@
 | Función | Ubicación | Invocación | Descripción |
 |---------|-----------|------------|-------------|
 | `generate-contract-pdf` | `supabase/functions/generate-contract-pdf/index.ts` | `supabase.functions.invoke('generate-contract-pdf', { body: { enrollment_id } })` | Genera PDF de contrato de matrícula (RF-083). Lee enrollment+student+course+branch, construye HTML con cláusulas legales, renderiza a PDF (builder interno sin deps externas), sube a Storage bucket `documents` path `contracts/{id}/`, upsert en `digital_contracts` con content_hash SHA-256. Retorna `{ pdfUrl }`. Usa `SUPABASE_SERVICE_ROLE_KEY` (admin). |
+
+## Funciones SQL
+
+| Función | Migración | Programación | Descripción |
+|---------|-----------|--------------|-------------|
+| `cleanup_expired_drafts()` | `20260308160000_enrollment_draft_resilience.sql` | pg_cron: `0 3 * * *` (diario 3AM UTC) | Limpia enrollments en `status='draft'` con `expires_at < NOW()`. Borra en cascada manual: `class_b_sessions` (reserved), `discount_applications`, `payments`, `student_documents`, `digital_contracts`, y finalmente `enrollments`. Retorna conteo de enrollments eliminados. |

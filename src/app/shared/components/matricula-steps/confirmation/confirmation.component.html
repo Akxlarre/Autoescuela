@@ -1,11 +1,10 @@
 <div class="max-w-2xl mx-auto text-center space-y-8 py-12">
   <!-- Ícono de Éxito Animado -->
   <div class="relative inline-block">
+    <div class="absolute inset-0 bg-success rounded-full blur-2xl opacity-30 animate-pulse"></div>
     <div
-      class="absolute inset-0 bg-state-success rounded-full blur-2xl opacity-20 animate-pulse"
-    ></div>
-    <div
-      class="relative w-24 h-24 bg-state-success rounded-full flex items-center justify-center shadow-xl shadow-state-success/20 border-4 border-surface"
+      class="relative w-24 h-24 bg-success rounded-full flex items-center justify-center shadow-xl shadow-success/30 border-4 border-surface"
+      style="background-color: var(--state-success)"
     >
       <app-icon name="check" [size]="40" class="text-surface" />
     </div>
@@ -62,9 +61,7 @@
             Curso Matriculado
           </p>
           <p class="text-lg font-bold text-text-primary">{{ data().course.courseLabel }}</p>
-          <p class="text-sm text-text-secondary">
-            {{ data().courseCategory }} • Modalidad Presencial
-          </p>
+          <p class="text-sm text-text-secondary">Modalidad Presencial</p>
         </div>
       </div>
 
@@ -88,14 +85,14 @@
     <div class="p-6 bg-black flex flex-col sm:flex-row gap-3">
       <button
         (click)="downloadReceipt.emit()"
-        class="flex-1 h-12 bg-surface/10 hover:bg-surface/20 text-surface text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 border border-surface/10"
+        class="flex-1 h-12 bg-surface/10 hover:bg-surface/20 text-surface text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 border border-surface/10 cursor-pointer"
       >
         <app-icon name="file-text" [size]="16" />
         Comprobante de Pago
       </button>
       <button
         (click)="downloadContract.emit()"
-        class="flex-1 h-12 bg-surface/10 hover:bg-surface/20 text-surface text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 border border-surface/10"
+        class="flex-1 h-12 bg-surface/10 hover:bg-surface/20 text-surface text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 border border-surface/10 cursor-pointer"
       >
         <app-icon name="shield-check" [size]="16" />
         Contrato Firmado
@@ -115,10 +112,10 @@
 
   <button
     (click)="onFinish()"
-    data-llm-action="finish-enrollment"
-    class="w-full h-14 bg-text-primary text-surface text-lg font-black rounded-2xl hover:bg-black shadow-xl shadow-text-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-display"
+    data-llm-action="new-enrollment"
+    class="w-full h-14 bg-text-primary text-surface text-lg font-black rounded-2xl hover:bg-black shadow-xl shadow-text-primary/10 active:scale-[0.98] transition-all flex items-center justify-center gap-3 uppercase tracking-widest font-display cursor-pointer"
   >
-    Finalizar Proceso
-    <app-icon name="arrow-right" [size]="20" />
+    Volver al Inicio
+    <app-icon name="home" [size]="20" />
   </button>
 </div>

@@ -2,6 +2,8 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
+import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -12,6 +14,7 @@ import type {
   CourseType,
   CourseOption,
   SenceCodeOption,
+  CurrentLicenseType,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type {
   InstructorOption,
@@ -31,6 +34,7 @@ import type {
   SidebarSummary,
   CourseSummary,
   Requirement,
+  DraftSummary,
 } from '@core/models/ui/enrollment-wizard.model';
 import { ENROLLMENT_STEPS } from '@core/models/ui/enrollment-wizard.model';
 
@@ -56,6 +60,8 @@ interface EnrollmentDraft {
 export class EnrollmentFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly docsFacade = inject(EnrollmentDocumentsFacade);
+  private readonly paymentFacade = inject(EnrollmentPaymentFacade);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)
@@ -67,6 +73,9 @@ export class EnrollmentFacade {
     studentId: null,
     userId: null,
   });
+
+  // ── Active drafts (pending enrollments for draft list view) ──
+  private readonly _activeDrafts = signal<DraftSummary[]>([]);
 
   // ── Wizard state ──
   private readonly _currentStep = signal<EnrollmentWizardStep>(1);
@@ -101,6 +110,7 @@ export class EnrollmentFacade {
 
   // ── Enrollment record ──
   private readonly _enrollment = signal<Enrollment | null>(null);
+  private readonly _contractFileUrl = signal<string | null>(null);
 
   // ── UI state ──
   private readonly _isLoading = signal(false);
@@ -112,6 +122,7 @@ export class EnrollmentFacade {
 
   // ── Draft ──
   readonly draft = this._draft.asReadonly();
+  readonly activeDrafts = this._activeDrafts.asReadonly();
 
   // ── Wizard ──
   readonly currentStep = this._currentStep.asReadonly();
@@ -137,6 +148,7 @@ export class EnrollmentFacade {
   readonly docsComplete = computed(() => this._enrollment()?.docs_complete ?? false);
   readonly contractAccepted = computed(() => this._enrollment()?.contract_accepted ?? false);
   readonly paymentStatus = computed(() => this._enrollment()?.payment_status ?? null);
+  readonly contractFileUrl = this._contractFileUrl.asReadonly();
 
   // ── UI ──
   readonly isLoading = this._isLoading.asReadonly();
@@ -297,8 +309,6 @@ export class EnrollmentFacade {
     birthDate: string | null;
     gender: string | null;
     address: string | null;
-    regionCode: string | null;
-    communeValue: string | null;
     currentLicense: string | null;
     licenseDate: string | null;
   } | null> {
@@ -312,9 +322,7 @@ export class EnrollmentFacade {
 
     const { data: student } = await this.supabase.client
       .from('students')
-      .select(
-        'birth_date, gender, address, region, district, current_license_class, license_obtained_date',
-      )
+      .select('birth_date, gender, address, current_license_class, license_obtained_date')
       .eq('user_id', user.id)
       .maybeSingle();
 
@@ -327,8 +335,6 @@ export class EnrollmentFacade {
       birthDate: student?.birth_date ?? null,
       gender: student?.gender ?? null,
       address: student?.address ?? null,
-      regionCode: student?.region ?? null,
-      communeValue: student?.district ?? null,
       currentLicense: student?.current_license_class ?? null,
       licenseDate: student?.license_obtained_date ?? null,
     };
@@ -468,9 +474,11 @@ export class EnrollmentFacade {
    * Carga la grilla de horarios disponibles desde la vista
    * `v_class_b_schedule_availability` para un instructor específico.
    */
-  async loadScheduleGrid(instructorId: number): Promise<void> {
+  async loadScheduleGrid(instructorId: number, preserveSlots = false): Promise<void> {
     this._selectedInstructorId.set(instructorId);
-    this._selectedSlotIds.set([]);
+    if (!preserveSlots) {
+      this._selectedSlotIds.set([]);
+    }
     this._scheduleGrid.set(null);
     this._isLoading.set(true);
     this._error.set(null);
@@ -651,6 +659,15 @@ export class EnrollmentFacade {
           this._error.set('Error al reservar horarios: ' + sessionsError.message);
           return false;
         }
+
+        // Persistir modalidad de pago en enrollment para poder rehidratarla en drafts
+        await this.supabase.client
+          .from('enrollments')
+          .update({
+            payment_mode: this._paymentMode() ?? 'total',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', draft.enrollmentId);
       } else if (pd.courseCategory === 'professional') {
         // Save promotion_course_id for professional
         const promotionCourseId = this._selectedPromotionCourseId();
@@ -745,6 +762,8 @@ export class EnrollmentFacade {
       const {
         data: { publicUrl },
       } = this.supabase.client.storage.from('documents').getPublicUrl(filePath);
+
+      this._contractFileUrl.set(publicUrl);
 
       // Upsert digital_contracts record
       const { error: contractError } = await this.supabase.client.from('digital_contracts').upsert(
@@ -902,10 +921,20 @@ export class EnrollmentFacade {
   // 4. WIZARD NAVIGATION
   // ══════════════════════════════════════════════════════════════════════════════
 
-  /** Navega a un step específico (solo si es ≤ current + 1). */
+  /** Navega a un step específico y persiste en BD (fire-and-forget). */
   goToStep(step: EnrollmentWizardStep): void {
     this._currentStep.set(step);
     this.updateStepStatus(step, 'active');
+
+    // Persistir current_step en BD (fire-and-forget, no bloquea UI)
+    const enrollmentId = this._draft().enrollmentId;
+    if (enrollmentId) {
+      this.supabase.client
+        .from('enrollments')
+        .update({ current_step: step, updated_at: new Date().toISOString() })
+        .eq('id', enrollmentId)
+        .then();
+    }
   }
 
   /** Retrocede un step. */
@@ -915,6 +944,262 @@ export class EnrollmentFacade {
       this.goToStep((current - 1) as EnrollmentWizardStep);
     }
   }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // 4b. DRAFT RECOVERY — Detección, reanudación y descarte de borradores
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Carga los borradores activos (no expirados) para la sucursal dada.
+   * Retorna DraftSummary[] con info suficiente para la lista de selección.
+   */
+  async loadActiveDrafts(branchId: number): Promise<DraftSummary[]> {
+    this._error.set(null);
+
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select(
+        `id, current_step, created_at, expires_at,
+         students!inner(
+           id,
+           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
+         ),
+         courses!inner(name)`,
+      )
+      .eq('status', 'draft')
+      .eq('branch_id', branchId)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      this._error.set('Error al cargar borradores: ' + error.message);
+      this._activeDrafts.set([]);
+      return [];
+    }
+
+    const stepLabels: Record<number, string> = {
+      1: 'Datos personales',
+      2: 'Asignación',
+      3: 'Documentos',
+      4: 'Pago',
+      5: 'Contrato',
+      6: 'Confirmación',
+    };
+
+    const drafts: DraftSummary[] = (data ?? []).map((row: any) => {
+      const user = row.students?.users;
+      const fullName = user
+        ? `${user.first_names} ${user.paternal_last_name} ${user.maternal_last_name ?? ''}`.trim()
+        : 'Sin nombre';
+
+      return {
+        enrollmentId: row.id,
+        studentName: fullName,
+        studentRut: user?.rut ?? '',
+        courseLabel: row.courses?.name ?? '',
+        currentStep: row.current_step as EnrollmentWizardStep,
+        stepLabel: stepLabels[row.current_step] ?? `Paso ${row.current_step}`,
+        createdAt: row.created_at,
+        expiresAt: row.expires_at,
+      };
+    });
+
+    this._activeDrafts.set(drafts);
+    return drafts;
+  }
+
+  /**
+   * Reanuda un borrador existente: rehidrata los 3 facades desde la BD.
+   * Carga datos personales, asignación, documentos, pagos y contrato según el paso.
+   */
+  async resumeDraft(enrollmentId: number): Promise<boolean> {
+    this._isLoading.set(true);
+    this._error.set(null);
+
+    try {
+      // 1. Cargar el enrollment completo
+      const { data: enrollment, error: enrollError } = await this.supabase.client
+        .from('enrollments')
+        .select('*')
+        .eq('id', enrollmentId)
+        .single();
+
+      if (enrollError || !enrollment) {
+        this._error.set('Error al cargar borrador: ' + (enrollError?.message ?? 'No encontrado'));
+        return false;
+      }
+
+      this._enrollment.set(enrollment);
+
+      // 2. Cargar student + user para reconstruir personalData
+      const { data: student } = await this.supabase.client
+        .from('students')
+        .select(
+          `id, birth_date, gender, address, is_minor, current_license_class, license_obtained_date,
+           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone)`,
+        )
+        .eq('id', enrollment.student_id)
+        .single();
+
+      if (!student) {
+        this._error.set('Error al cargar datos del alumno');
+        return false;
+      }
+
+      const user = (student as any).users;
+
+      // 3. Cargar cursos para resolver courseType
+      await this.loadCourses();
+      const course = this._courses().find((c) => c.id === enrollment.course_id);
+
+      if (!course) {
+        this._error.set('No se encontró el curso asociado al borrador');
+        return false;
+      }
+
+      // 4. Reconstruir personalData desde BD
+      const courseOption = this.mapCourseToOption(course);
+      const personalData: EnrollmentPersonalData = {
+        rut: user.rut ?? '',
+        firstNames: user.first_names ?? '',
+        paternalLastName: user.paternal_last_name ?? '',
+        maternalLastName: user.maternal_last_name ?? '',
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+        birthDate: student.birth_date ?? '',
+        gender: student.gender ?? '',
+        address: student.address ?? '',
+        courseCategory: courseOption.category,
+        courseType: courseOption.type,
+        singularCourseCode: null,
+        senceCode: null,
+        currentLicense: (student.current_license_class as CurrentLicenseType) ?? null,
+        licenseDate: student.license_obtained_date ?? null,
+        validationA2A4: false,
+        validationBook: null,
+        historicalPromotionId: null,
+        courses: this._courses().map((c) => this.mapCourseToOption(c)),
+      };
+
+      this._personalData.set(personalData);
+      this._draft.set({
+        enrollmentId: enrollment.id,
+        studentId: student.id,
+        userId: user.id,
+      });
+
+      // 5. Rehidratar step 2 (asignación) si el paso es >= 2
+      const currentStep = enrollment.current_step as EnrollmentWizardStep;
+
+      // Restaurar payment_mode (guardado en paso 2)
+      if (enrollment.payment_mode) {
+        this._paymentMode.set(enrollment.payment_mode as PaymentMode);
+      }
+
+      if (currentStep >= 2 && courseOption.category === 'non-professional') {
+        // Cargar sesiones reservadas para reconstruir slots seleccionados
+        const { data: sessions } = await this.supabase.client
+          .from('class_b_sessions')
+          .select('scheduled_at, instructor_id')
+          .eq('enrollment_id', enrollmentId)
+          .eq('status', 'reserved');
+
+        if (sessions && sessions.length > 0) {
+          const instructorId = sessions[0].instructor_id;
+          this._selectedInstructorId.set(instructorId);
+          this._selectedSlotIds.set(sessions.map((s: any) => String(s.scheduled_at)));
+        }
+      } else if (currentStep >= 2 && courseOption.category === 'professional') {
+        if (enrollment.promotion_course_id) {
+          this._selectedPromotionCourseId.set(enrollment.promotion_course_id);
+        }
+      }
+
+      // 6. Rehidratar step 3 (documentos) si el paso es >= 3
+      if (currentStep >= 3) {
+        await this.docsFacade.loadDocuments(enrollmentId);
+      }
+
+      // 7. Rehidratar step 4 (pago) si el paso es >= 4
+      if (currentStep >= 4) {
+        await this.paymentFacade.rehydrateFromEnrollment(enrollmentId);
+      }
+
+      // 8. Setear step actual y marcar pasos anteriores como completed
+      for (let s = 1; s < currentStep; s++) {
+        this.updateStepStatus(s as EnrollmentWizardStep, 'completed');
+      }
+      this._currentStep.set(currentStep);
+      this.updateStepStatus(currentStep, 'active');
+
+      // Limpiar la lista de drafts (ya se eligió uno)
+      this._activeDrafts.set([]);
+
+      return true;
+    } catch {
+      this._error.set('Error inesperado al reanudar borrador');
+      return false;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  /**
+   * Descarta un borrador: elimina todos los datos asociados y el enrollment.
+   * Actualiza la lista de drafts activos.
+   */
+  async discardDraft(enrollmentId: number): Promise<boolean> {
+    this._isLoading.set(true);
+    this._error.set(null);
+
+    try {
+      // Eliminar datos asociados en orden (respetando FKs)
+      await this.supabase.client
+        .from('class_b_sessions')
+        .delete()
+        .eq('enrollment_id', enrollmentId)
+        .eq('status', 'reserved');
+
+      await this.supabase.client
+        .from('discount_applications')
+        .delete()
+        .eq('enrollment_id', enrollmentId);
+
+      await this.supabase.client.from('payments').delete().eq('enrollment_id', enrollmentId);
+
+      await this.supabase.client
+        .from('student_documents')
+        .delete()
+        .eq('enrollment_id', enrollmentId);
+
+      await this.supabase.client
+        .from('digital_contracts')
+        .delete()
+        .eq('enrollment_id', enrollmentId);
+
+      const { error } = await this.supabase.client
+        .from('enrollments')
+        .delete()
+        .eq('id', enrollmentId);
+
+      if (error) {
+        this._error.set('Error al descartar borrador: ' + error.message);
+        return false;
+      }
+
+      // Actualizar lista local de drafts
+      this._activeDrafts.update((drafts) => drafts.filter((d) => d.enrollmentId !== enrollmentId));
+
+      return true;
+    } catch {
+      this._error.set('Error inesperado al descartar borrador');
+      return false;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
 
   /** Resetea todo el estado del wizard para una nueva matrícula. */
   reset(): void {
@@ -934,6 +1219,7 @@ export class EnrollmentFacade {
     this._promotionGroups.set([]);
     this._selectedPromotionCourseId.set(null);
     this._enrollment.set(null);
+    this._contractFileUrl.set(null);
     this._isLoading.set(false);
     this._error.set(null);
   }
@@ -965,6 +1251,32 @@ export class EnrollmentFacade {
 
   private async upsertUser(data: EnrollmentPersonalData, branchId: number): Promise<number | null> {
     const normalizedRut = normalizeRutForStorage(data.rut);
+    const updatePayload: Record<string, unknown> = {
+      first_names: data.firstNames || undefined,
+      paternal_last_name: data.paternalLastName || undefined,
+      maternal_last_name: data.maternalLastName || undefined,
+      branch_id: branchId,
+      updated_at: new Date().toISOString(),
+    };
+    // Only include email/phone if non-empty — prevents accidental overwrites with empty strings.
+    if (data.email) updatePayload['email'] = data.email;
+    if (data.phone) updatePayload['phone'] = data.phone;
+
+    // If we already have a userId (resuming a draft), skip the RUT lookup and update directly.
+    // This avoids a 409 conflict when RLS prevents the SELECT from returning the existing row.
+    const knownUserId = this._draft().userId;
+    if (knownUserId) {
+      const { error } = await this.supabase.client
+        .from('users')
+        .update(updatePayload)
+        .eq('id', knownUserId);
+
+      if (error) {
+        this._error.set('Error al actualizar usuario: ' + error.message);
+        return null;
+      }
+      return knownUserId;
+    }
 
     // Try to find existing user by RUT
     const { data: existing } = await this.supabase.client
@@ -977,15 +1289,7 @@ export class EnrollmentFacade {
       // Update existing user
       const { error } = await this.supabase.client
         .from('users')
-        .update({
-          first_names: data.firstNames,
-          paternal_last_name: data.paternalLastName,
-          maternal_last_name: data.maternalLastName,
-          email: data.email,
-          phone: data.phone,
-          branch_id: branchId,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', existing.id);
 
       if (error) {
@@ -1030,28 +1334,42 @@ export class EnrollmentFacade {
     data: EnrollmentPersonalData,
     userId: number,
   ): Promise<number | null> {
+    const isMinor = this.calculateAge(data.birthDate) < 18;
+    const updatePayload = {
+      birth_date: data.birthDate || null,
+      gender: data.gender || null,
+      address: data.address || null,
+      is_minor: isMinor,
+      current_license_class: data.currentLicense || null,
+      license_obtained_date: data.licenseDate || null,
+      status: 'active',
+    };
+
+    // If we already have a studentId (resuming a draft), update directly by id.
+    const knownStudentId = this._draft().studentId;
+    if (knownStudentId) {
+      const { error } = await this.supabase.client
+        .from('students')
+        .update(updatePayload)
+        .eq('id', knownStudentId);
+
+      if (error) {
+        this._error.set('Error al actualizar alumno: ' + error.message);
+        return null;
+      }
+      return knownStudentId;
+    }
+
     const { data: existing } = await this.supabase.client
       .from('students')
       .select('id')
       .eq('user_id', userId)
       .maybeSingle();
 
-    const isMinor = this.calculateAge(data.birthDate) < 18;
-
     if (existing) {
       const { error } = await this.supabase.client
         .from('students')
-        .update({
-          birth_date: data.birthDate,
-          gender: data.gender,
-          address: data.address,
-          region: data.regionCode,
-          district: data.communeValue,
-          is_minor: isMinor,
-          current_license_class: data.currentLicense,
-          license_obtained_date: data.licenseDate,
-          status: 'active',
-        })
+        .update(updatePayload)
         .eq('id', existing.id);
 
       if (error) {
@@ -1065,15 +1383,13 @@ export class EnrollmentFacade {
       .from('students')
       .insert({
         user_id: userId,
-        birth_date: data.birthDate,
-        gender: data.gender,
-        address: data.address,
-        region: data.regionCode,
-        district: data.communeValue,
+        birth_date: data.birthDate || null,
+        gender: data.gender || null,
+        address: data.address || null,
         is_minor: isMinor,
         has_notarial_auth: false,
-        current_license_class: data.currentLicense,
-        license_obtained_date: data.licenseDate,
+        current_license_class: data.currentLicense || null,
+        license_obtained_date: data.licenseDate || null,
         status: 'active',
       })
       .select('id')

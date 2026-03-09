@@ -35,8 +35,6 @@ interface EnrollmentData {
   student: {
     birth_date: string | null;
     address: string | null;
-    region: string | null;
-    district: string | null;
     user: {
       rut: string;
       first_names: string;
@@ -96,8 +94,6 @@ Deno.serve(async (req: Request) => {
         students!inner (
           birth_date,
           address,
-          region,
-          district,
           users!inner (
             rut,
             first_names,
@@ -207,8 +203,6 @@ function flattenEnrollment(raw: any): EnrollmentData {
     student: {
       birth_date: raw.students.birth_date,
       address: raw.students.address,
-      region: raw.students.region,
-      district: raw.students.district,
       user: {
         rut: raw.students.users.rut,
         first_names: raw.students.users.first_names,
@@ -458,10 +452,7 @@ function buildStructuredPdf(data: EnrollmentData): Uint8Array {
   row('Nombre completo:', fullName);
   row('RUT:', u.rut);
   row('Fecha de nacimiento:', formatDate(data.student.birth_date));
-  const address = [data.student.address, data.student.district, data.student.region]
-    .filter(Boolean)
-    .join(', ');
-  row('Domicilio:', address || '\u2014');
+  row('Domicilio:', data.student.address || '\u2014');
   row('Correo electr\xF3nico:', u.email);
   row('Tel\xE9fono:', u.phone ?? '\u2014');
 

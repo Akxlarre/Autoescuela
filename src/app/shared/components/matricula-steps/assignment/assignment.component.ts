@@ -1,17 +1,19 @@
 import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { EnrollmentAssignmentData, WeekDay } from '@core/models/ui/enrollment-assignment.model';
 
 @Component({
   selector: 'app-assignment-step',
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, AsyncBtnComponent],
   templateUrl: './assignment.component.html',
   styleUrl: './assignment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AssignmentComponent {
   data = input.required<EnrollmentAssignmentData>();
+  loading = input<boolean>(false);
   dataChange = output<EnrollmentAssignmentData>();
   next = output<void>();
   back = output<void>();

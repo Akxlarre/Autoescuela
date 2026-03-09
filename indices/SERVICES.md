@@ -16,7 +16,7 @@ Servicios estructurales compartidos que proveen funcionalidades base, autenticac
 | `NotificationsService` | Estado signal de notificaciones en-app con filtros y `unreadCount` computed | `core/services/notifications.service.ts` | — | ✅ Estable |
 | `SearchPanelService` | Estado signal del panel de búsqueda global (open/close/toggle) para `[appSearchShortcut]` | `core/services/search-panel.service.ts` | — | ✅ Estable |
 | `BreadcrumbService` | Breadcrumb reactivo; consume `NavGroup[]` de `MenuConfigService` vía `buildFromGroups(url, groups)`; deriva trail desde grupos y sus items | `core/services/breadcrumb.service.ts` | Router, MenuConfigService | ✅ Estable |
-| `ConfirmModalService` | Modal de confirmación imperativo con patrón `confirm() → Promise<boolean>`; sin dependencia de PrimeNG | `core/services/confirm-modal.service.ts` | — | ✅ Estable |
+| `ConfirmModalService` | Modal de confirmación imperativo con patrón `confirm(ConfirmConfig) → Promise<boolean>`; sin dependencia de PrimeNG. Severidades: `danger\|warn\|success\|info\|secondary`. Renderizado global en `AppShellComponent`. Usado por `enrollmentDraftGuard` y `SecretariaMatriculaComponent`. | `core/services/ui/confirm-modal.service.ts` | — | ✅ Estable |
 | `ModalOverlayService` | Teleporta modales al overlay container (z-index > topbar) | `core/services/modal-overlay.service.ts` | — | ✅ Estable |
 
 ## 1b. Pure Utilities (Functional Core)

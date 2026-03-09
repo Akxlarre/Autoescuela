@@ -201,6 +201,18 @@ export class EnrollmentPaymentFacade {
       const isPending = method === 'pendiente';
       const paymentStatus = isPending ? 'pending' : 'paid';
 
+      // 0. Delete previous enrollment payment records (idempotencia: back-button safe)
+      await this.supabase.client
+        .from('discount_applications')
+        .delete()
+        .eq('enrollment_id', enrollmentId);
+
+      await this.supabase.client
+        .from('payments')
+        .delete()
+        .eq('enrollment_id', enrollmentId)
+        .eq('type', 'enrollment');
+
       // 1. Insert payment record
       const paymentRecord = {
         enrollment_id: enrollmentId,
@@ -276,6 +288,82 @@ export class EnrollmentPaymentFacade {
       return false;
     } finally {
       this._isProcessing.set(false);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // 3b. REHYDRATION — Reconstruir estado desde BD (draft recovery)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Rehidrata el estado de pago desde un enrollment existente en la BD.
+   * Carga el payment record y discount_applications para reconstruir los signals.
+   */
+  async rehydrateFromEnrollment(enrollmentId: number): Promise<void> {
+    this._error.set(null);
+
+    // Cargar enrollment para pricing data
+    const { data: enrollment } = await this.supabase.client
+      .from('enrollments')
+      .select(
+        'base_price, discount, total_paid, pending_balance, payment_status, payment_mode, courses!inner(name, practical_hours)',
+      )
+      .eq('id', enrollmentId)
+      .single();
+
+    if (!enrollment) return;
+
+    const course = (enrollment as any).courses;
+    // payment_mode es la fuente canónica (persiste desde paso 2 antes de registrar pago).
+    // payment_status === 'partial' es el fallback para drafts previos a esta migración.
+    const isDeposit =
+      (enrollment as any).payment_mode === 'deposit' || enrollment.payment_status === 'partial';
+    const basePrice = enrollment.base_price ?? 0;
+    const amountDue = isDeposit ? Math.round(basePrice / 2) : basePrice;
+    const practicalClasses = course?.practical_hours
+      ? Math.round((course.practical_hours * 60) / 45)
+      : 0;
+
+    this._pricing.set({
+      courseLabel: course?.name ?? '',
+      basePrice,
+      practicalClassesIncluded: practicalClasses,
+      isDeposit,
+      amountDue,
+    });
+
+    // Cargar payment record
+    const { data: payment } = await this.supabase.client
+      .from('payments')
+      .select('*')
+      .eq('enrollment_id', enrollmentId)
+      .eq('type', 'enrollment')
+      .maybeSingle();
+
+    if (payment) {
+      // Determinar método de pago desde los montos
+      let method: PaymentMethod = 'pendiente';
+      if (payment.cash_amount > 0) method = 'efectivo';
+      else if (payment.transfer_amount > 0) method = 'transferencia';
+      else if (payment.card_amount > 0) method = 'tarjeta';
+      else if (payment.status === 'pending') method = 'pendiente';
+      this._paymentMethod.set(method);
+    }
+
+    // Cargar discount application
+    const { data: discApp } = await this.supabase.client
+      .from('discount_applications')
+      .select('discount_id, discount_amount, discounts!inner(name)')
+      .eq('enrollment_id', enrollmentId)
+      .maybeSingle();
+
+    if (discApp) {
+      this._selectedDiscountId.set(discApp.discount_id);
+      this._discount.set({
+        enabled: true,
+        amount: discApp.discount_amount,
+        reason: (discApp as any).discounts?.name ?? '',
+      });
     }
   }
 

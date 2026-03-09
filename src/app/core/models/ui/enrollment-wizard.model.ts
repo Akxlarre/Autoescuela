@@ -36,6 +36,18 @@ export interface EnrollmentWizardState {
   canAdvance: boolean;
 }
 
+/** Summary of a pending draft enrollment for the draft list view. */
+export interface DraftSummary {
+  enrollmentId: number;
+  studentName: string;
+  studentRut: string;
+  courseLabel: string;
+  currentStep: EnrollmentWizardStep;
+  stepLabel: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
 export const ENROLLMENT_STEPS: StepConfig[] = [
   { step: 1, label: 'Personal data', status: 'active' },
   { step: 2, label: 'Assignment', status: 'pending' },

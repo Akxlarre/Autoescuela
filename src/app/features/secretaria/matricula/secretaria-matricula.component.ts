@@ -8,11 +8,13 @@ import {
   OnInit,
   OnDestroy,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { EnrollmentFacade } from '@core/facades/enrollment.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
@@ -41,6 +43,7 @@ import { DocumentsComponent } from '@shared/components/matricula-steps/documents
 import { PaymentComponent } from '@shared/components/matricula-steps/payment/payment.component';
 import { ContractComponent } from '@shared/components/matricula-steps/contract/contract.component';
 import { ConfirmationComponent } from '@shared/components/matricula-steps/confirmation/confirmation.component';
+import { DraftListComponent } from '@shared/components/matricula-steps/draft-list/draft-list.component';
 
 const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   rut: '',
@@ -52,8 +55,6 @@ const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   birthDate: '',
   gender: 'M',
   address: '',
-  regionCode: '16',
-  communeValue: 'chillan',
   courseCategory: 'non-professional',
   courseType: 'class_b',
   singularCourseCode: null,
@@ -83,12 +84,15 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     PaymentComponent,
     ContractComponent,
     ConfirmationComponent,
+    DraftListComponent,
   ],
   styleUrls: ['./secretaria-matricula.component.scss'],
   templateUrl: './secretaria-matricula.component.html',
 })
 export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthFacade);
   readonly enrollment = inject(EnrollmentFacade);
   readonly docs = inject(EnrollmentDocumentsFacade);
@@ -106,6 +110,11 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       // Paso 2: carga instructores al entrar (Clase B)
       if (step === 2 && pd?.courseCategory === 'non-professional' && branchId != null) {
         this.enrollment.loadInstructors(branchId);
+        // Draft resume: instructor ya seleccionado pero grilla no cargada → cargar sin resetear slots
+        const instructorId = this.enrollment.selectedInstructorId();
+        if (instructorId != null && this.enrollment.scheduleGrid() == null) {
+          void this.enrollment.loadScheduleGrid(instructorId, true);
+        }
       }
 
       // Paso 4: recalcula pricing (reactivo a cambio de paymentMode)
@@ -128,9 +137,16 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     });
   }
 
+  // ── Vista: 'draft-list' muestra borradores pendientes, 'wizard' el stepper ──
+  private readonly _viewMode = signal<'loading' | 'draft-list' | 'wizard'>('loading');
+  readonly viewMode = this._viewMode.asReadonly();
+
   // ── Estado de guardado (spinner en botones Next) ──────────────────────────
   private readonly _isSaving = signal(false);
   readonly isSaving = this._isSaving.asReadonly();
+
+  // ── Lightbox (imagen a pantalla completa, elevado al nivel del wizard) ────
+  readonly lightboxUrl = signal<string | null>(null);
 
   // ── Estado local del formulario paso 1 (datos no persistidos aún) ────────
   private readonly _step1Form = signal<EnrollmentPersonalData>(DEFAULT_PERSONAL_DATA);
@@ -144,7 +160,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   // ── Datos computados por paso (desde facades) ─────────────────────────────
 
   readonly step1Data = computed<EnrollmentPersonalData>(() => ({
-    ...(this.enrollment.personalData() ?? this._step1Form()),
+    ...this._step1Form(),
     courses: this.enrollment.courseOptions(),
   }));
 
@@ -283,7 +299,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
                 highlights: ['clases teóricas'],
               },
               {
-                text: 'Las clase prácticas están agendadas según el horario acordado.',
+                text: 'Las clases prácticas están agendadas según el horario acordado.',
                 highlights: ['clase práctica'],
               },
             ]
@@ -345,13 +361,75 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this.layoutDrawer.setActions([]);
   }
 
-  private initWizard(): void {
+  private async initWizard(): Promise<void> {
     const branchId = this.auth.currentUser()?.branchId ?? 1;
+    this._viewMode.set('loading');
+
+    // Verificar si hay borradores pendientes antes de iniciar wizard limpio
+    const drafts = await this.enrollment.loadActiveDrafts(branchId);
+
+    if (drafts.length > 0) {
+      this._viewMode.set('draft-list');
+      return;
+    }
+
+    // Sin borradores → iniciar wizard limpio
+    this.startFreshWizard(branchId);
+  }
+
+  /** Inicia el wizard desde cero (sin borrador). */
+  private startFreshWizard(branchId?: number): void {
+    const branch = branchId ?? this.auth.currentUser()?.branchId ?? 1;
     this.enrollment.reset();
     this.docs.reset();
     this.payment.reset();
     this._step1Form.set(DEFAULT_PERSONAL_DATA);
-    this.enrollment.loadCourses(branchId);
+    this._contractPdfUrl.set(null);
+    this._contractStatus.set('pending');
+    this._signedContractUpload.set(null);
+    this.enrollment.loadCourses(branch);
+    this._viewMode.set('wizard');
+  }
+
+  /** Reanuda un borrador existente desde la lista de drafts. */
+  async onResumeDraft(enrollmentId: number): Promise<void> {
+    this._viewMode.set('loading');
+    const ok = await this.enrollment.resumeDraft(enrollmentId);
+    if (ok) {
+      // Cargar cursos para que los computed funcionen correctamente
+      const branchId = this.auth.currentUser()?.branchId ?? 1;
+      await this.enrollment.loadCourses(branchId);
+      // Sincronizar _step1Form con los datos del draft para que onStep1Next
+      // envíe los datos correctos si el usuario navega de vuelta al paso 1.
+      const pd = this.enrollment.personalData();
+      if (pd) this._step1Form.set(pd);
+      this._viewMode.set('wizard');
+    } else {
+      // Fallback: volver a la lista de drafts
+      this._viewMode.set('draft-list');
+    }
+  }
+
+  /** Descarta un borrador tras confirmación y actualiza la vista. */
+  async onDiscardDraft(enrollmentId: number): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: '¿Descartar matrícula?',
+      message: 'Se eliminarán todos los datos del borrador. Esta acción no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Sí, descartar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    await this.enrollment.discardDraft(enrollmentId);
+    if (this.enrollment.activeDrafts().length === 0) {
+      this.startFreshWizard();
+    }
+  }
+
+  /** Desde la lista de drafts, el usuario elige empezar una matrícula nueva. */
+  onStartNewFromDraftList(): void {
+    this.startFreshWizard();
   }
 
   private setupDrawerActions(): void {
@@ -362,13 +440,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   private resetWizard(): void {
-    this.enrollment.reset();
-    this.docs.reset();
-    this.payment.reset();
-    this._step1Form.set(DEFAULT_PERSONAL_DATA);
-    this._contractPdfUrl.set(null);
-    this._contractStatus.set('pending');
-    this._signedContractUpload.set(null);
+    this.startFreshWizard();
   }
 
   // ── Navegación via stepper PrimeNG ────────────────────────────────────────
@@ -513,26 +585,29 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   async onStep5Next(): Promise<void> {
     const upload = this._signedContractUpload();
-    if (!upload?.file) return;
     this._isSaving.set(true);
     try {
-      await this.enrollment.uploadSignedContract(upload.file);
+      if (upload?.file) {
+        const uploaded = await this.enrollment.uploadSignedContract(upload.file);
+        if (uploaded) {
+          await this.enrollment.confirmEnrollment();
+        }
+      } else if (this.enrollment.contractAccepted()) {
+        // Re-entry: contract already accepted in a prior session — skip upload
+        await this.enrollment.confirmEnrollment();
+      }
     } finally {
       this._isSaving.set(false);
     }
   }
 
   // ── Paso 6: Confirmación + cierre ────────────────────────────────────────
-  async finishWizard(): Promise<void> {
-    if (this.activeStep() === 5) {
-      this._isSaving.set(true);
-      try {
-        await this.enrollment.confirmEnrollment();
-      } finally {
-        this._isSaving.set(false);
-      }
-    }
+  finishWizard(): void {
+    const role = this.auth.currentUser()?.role ?? 'secretaria';
+    const dashboard = role === 'admin' ? '/app/admin/dashboard' : '/app/secretaria/dashboard';
+    this.enrollment.reset();
     this.layoutDrawer.close();
+    this.router.navigate([dashboard]);
   }
 
   onDownloadReceipt(): void {
@@ -540,7 +615,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   onDownloadContract(): void {
-    // TODO: abrir URL del contrato PDF cuando esté disponible vía EnrollmentFacade
+    const url = this.enrollment.contractFileUrl();
+    if (url) window.open(url, '_blank');
   }
 
   // ── Utils ─────────────────────────────────────────────────────────────────

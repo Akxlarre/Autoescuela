@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import {
   EnrollmentContractData,
   SignedContractUpload,
@@ -11,13 +12,14 @@ import {
 @Component({
   selector: 'app-contract-step',
   standalone: true,
-  imports: [DatePipe, IconComponent],
+  imports: [DatePipe, IconComponent, AsyncBtnComponent],
   templateUrl: './contract.component.html',
   styleUrl: './contract.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ContractComponent {
   data = input.required<EnrollmentContractData>();
+  loading = input<boolean>(false);
   dataChange = output<EnrollmentContractData>();
   generateContract = output<void>();
   next = output<void>();

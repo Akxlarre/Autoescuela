@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, output, signal } from '@angu
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import {
   EnrollmentPaymentData,
   PAYMENT_METHODS,
@@ -10,7 +11,7 @@ import {
 
 @Component({
   selector: 'app-payment-step',
-  imports: [FormsModule, CurrencyPipe, IconComponent],
+  imports: [FormsModule, CurrencyPipe, IconComponent, AsyncBtnComponent],
   templateUrl: './payment.component.html',
   styleUrl: './payment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -18,6 +19,7 @@ import {
 export class PaymentComponent {
   readonly paymentMethodOptions = PAYMENT_METHODS;
   data = input.required<EnrollmentPaymentData>();
+  loading = input<boolean>(false);
   dataChange = output<EnrollmentPaymentData>();
   next = output<void>();
   back = output<void>();

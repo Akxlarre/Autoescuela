@@ -14,6 +14,7 @@ import {
   ArrowRight,
   BarChart2,
   CheckCircle,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -99,6 +100,8 @@ import {
   Folder,
   Wrench,
   Ban,
+  Home,
+  ZoomIn,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -170,6 +173,7 @@ export const appConfig: ApplicationConfig = {
         ArrowRight,
         BarChart2,
         CheckCircle,
+        ChevronDown,
         ChevronLeft,
         ChevronRight,
         Download,
@@ -252,7 +256,9 @@ export const appConfig: ApplicationConfig = {
         Video,
         Ban,
         Folder,
+        Home,
         Wrench,
+        ZoomIn,
       }),
     ),
   ],

@@ -381,24 +381,22 @@
       <button
         type="button"
         (click)="onBack()"
-        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2"
+        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
       >
         <app-icon name="arrow-left" [size]="14" />
         Volver
       </button>
-      <button
-        type="button"
-        (click)="onNext()"
-        data-llm-action="submit-assignment"
+      <app-async-btn
+        label="Continuar a Documentos"
+        icon="arrow-right"
+        [loading]="loading()"
         [disabled]="
           data().view === 'class-b' &&
           (!data().slotSelection.isComplete || data().paymentMode === null)
         "
-        class="px-8 py-2.5 bg-text-primary text-surface text-sm font-semibold rounded-lg hover:bg-black shadow-sm active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
-      >
-        Continuar a Documentos
-        <app-icon name="arrow-right" [size]="14" />
-      </button>
+        (click)="onNext()"
+        data-llm-action="submit-assignment"
+      />
     </div>
   </div>
 </div>

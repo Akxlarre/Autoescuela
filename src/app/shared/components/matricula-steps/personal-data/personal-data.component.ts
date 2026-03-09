@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type {
   EnrollmentPersonalData,
   CourseCategory,
@@ -16,6 +17,8 @@ import type {
   AgeAlertStatus,
 } from '@core/models/ui/enrollment-personal-data.model';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
+import { validateEmail } from '@core/utils/email.utils';
+import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 
 interface CategoryMeta {
   value: CourseCategory;
@@ -26,13 +29,14 @@ interface CategoryMeta {
 
 @Component({
   selector: 'app-personal-data-step',
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, AsyncBtnComponent, EmailInputComponent],
   templateUrl: './personal-data.component.html',
   styleUrl: './personal-data.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PersonalDataComponent {
   data = input.required<EnrollmentPersonalData>();
+  loading = input<boolean>(false);
   dataChange = output<EnrollmentPersonalData>();
   next = output<void>();
   cancel = output<void>();
@@ -79,6 +83,7 @@ export class PersonalDataComponent {
   // ── Validation signals ────────────────────────────────────────────────────
 
   readonly rutValid = computed(() => validateRut(this.data().rut));
+  readonly emailValid = computed(() => validateEmail(this.data().email));
 
   readonly ageStatus = computed((): AgeAlertStatus => {
     const age = this.calcAge(this.data().birthDate);
@@ -106,7 +111,7 @@ export class PersonalDataComponent {
       this.ageStatus() !== 'under-17' &&
       d.firstNames.trim().length >= 2 &&
       d.paternalLastName.trim().length >= 2 &&
-      d.email.includes('@') &&
+      this.emailValid() &&
       d.phone.trim().length >= 8 &&
       d.birthDate.length > 0 &&
       courseIsValid

@@ -26,17 +26,6 @@ export type ValidationBook = 'book_1' | 'book_2';
 
 export type AgeAlertStatus = 'ok' | 'under-17' | 'requires-authorization' | 'none';
 
-export interface RegionOption {
-  code: string;
-  name: string;
-}
-
-export interface CommuneOption {
-  value: string;
-  label: string;
-  regionCode: string;
-}
-
 export interface SingularCourseOption {
   code: SingularCourseCode;
   name: string;
@@ -77,8 +66,6 @@ export interface EnrollmentPersonalData {
   birthDate: string;
   gender: Gender;
   address: string;
-  regionCode: string;
-  communeValue: string;
   courseCategory: CourseCategory;
   courseType: CourseType;
   singularCourseCode: SingularCourseCode | null;

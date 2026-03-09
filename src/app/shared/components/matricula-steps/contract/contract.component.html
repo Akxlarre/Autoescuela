@@ -18,7 +18,7 @@
       <!-- ── Indicador de proceso (3 pasos) ── -->
       <div class="flex items-start gap-0">
         <!-- Paso 1: Generar -->
-        <div class="flex flex-col items-center gap-1.5 min-w-[80px]">
+        <div class="flex flex-col items-center gap-1.5 min-w-20">
           <div
             class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
             [class.bg-state-success]="data().contractGeneration.status === 'generated'"
@@ -36,13 +36,13 @@
         </div>
 
         <div
-          class="flex-1 h-px mt-[18px]"
+          class="flex-1 h-px mt-4.5"
           [class.bg-state-success]="data().contractGeneration.status === 'generated'"
           [class.bg-border-default]="data().contractGeneration.status !== 'generated'"
         ></div>
 
         <!-- Paso 2: Imprimir y Firmar -->
-        <div class="flex flex-col items-center gap-1.5 min-w-[80px]">
+        <div class="flex flex-col items-center gap-1.5 min-w-20">
           <div
             class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
             [class.bg-brand]="
@@ -66,13 +66,13 @@
         </div>
 
         <div
-          class="flex-1 h-px mt-[18px]"
+          class="flex-1 h-px mt-4.5"
           [class.bg-state-success]="!!data().signedContract"
           [class.bg-border-default]="!data().signedContract"
         ></div>
 
         <!-- Paso 3: Subir -->
-        <div class="flex flex-col items-center gap-1.5 min-w-[80px]">
+        <div class="flex flex-col items-center gap-1.5 min-w-20">
           <div
             class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
             [class.bg-state-success]="!!data().signedContract"
@@ -135,21 +135,14 @@
             Descargar PDF
           </a>
         } @else {
-          <button
-            type="button"
+          <app-async-btn
+            label="Generar PDF"
+            icon="file-text"
+            loadingLabel="Generando..."
+            [loading]="data().contractGeneration.status === 'generating'"
             (click)="onGenerateContract()"
-            [disabled]="data().contractGeneration.status === 'generating'"
             data-llm-action="generate-contract-pdf"
-            class="shrink-0 px-4 py-2 bg-text-primary text-surface text-xs font-bold rounded-lg hover:bg-black transition-all flex items-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-          >
-            @if (data().contractGeneration.status === 'generating') {
-              <app-icon name="loader" [size]="14" />
-              Generando...
-            } @else {
-              <app-icon name="file-text" [size]="14" />
-              Generar PDF
-            }
-          </button>
+          />
         }
       </div>
 
@@ -283,21 +276,19 @@
       <button
         type="button"
         (click)="onBack()"
-        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2"
+        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
       >
         <app-icon name="arrow-left" [size]="14" />
         Volver
       </button>
-      <button
-        type="button"
-        (click)="onNext()"
+      <app-async-btn
+        label="Confirmar y Finalizar"
+        icon="check-circle"
+        [loading]="loading()"
         [disabled]="!data().canAdvance"
+        (click)="onNext()"
         data-llm-action="submit-contract"
-        class="px-8 py-2.5 bg-text-primary text-surface text-sm font-semibold rounded-lg hover:bg-black shadow-sm active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
-      >
-        Confirmar y Finalizar
-        <app-icon name="check-circle" [size]="14" />
-      </button>
+      />
     </div>
   </div>
 </div>
