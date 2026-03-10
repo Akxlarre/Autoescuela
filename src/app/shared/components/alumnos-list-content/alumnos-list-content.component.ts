@@ -32,6 +32,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 
@@ -91,6 +92,7 @@ interface AlumnoKpiItem {
     EmptyStateComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    AnimateInDirective,
     SectionHeroComponent,
   ],
   template: `
@@ -203,7 +205,7 @@ interface AlumnoKpiItem {
 
         <!-- Tabla -->
         @if (isLoading()) {
-          <div class="viewport-content bg-surface">
+          <div class="viewport-content bg-surface" appAnimateIn>
             <!-- VISTA 1: TABLA SKELETON (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze p-4 space-y-0">
               <!-- Header skeleton -->
@@ -300,7 +302,7 @@ interface AlumnoKpiItem {
           </div>
         } @else {
           <!-- Contenido principal interactivo -->
-          <div class="viewport-content bg-surface">
+          <div class="viewport-content bg-surface" appAnimateIn>
             <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze">
               <p-table
@@ -697,7 +699,10 @@ export class AlumnosListContentComponent {
   expedienteOpciones = ['Completo', 'Parcial', 'Pendiente'];
 
   constructor() {
+    // 1. Initial page load animation
     afterNextRender(() => {
+      // Stagger only the KPIs on load; the main table card 
+      // is handled by the View Transitions API (vt-page-in)
       if (this.bentoGrid()) {
         setTimeout(() => {
           this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
