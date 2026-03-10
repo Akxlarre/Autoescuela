@@ -5,7 +5,8 @@
       "Bash(python3:*)",
       "Bash(ng build:*)",
       "Bash(ls:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(ng serve)"
     ]
   }
 }
