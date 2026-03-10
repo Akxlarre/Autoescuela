@@ -3,11 +3,12 @@ import {
   Component,
   computed,
   input,
+  output,
   signal,
+  effect,
   inject,
   viewChild,
   ElementRef,
-  afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -37,33 +38,12 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 // Services
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
-interface Expediente {
-  ci: boolean;
-  foto: boolean;
-  medico: boolean;
-  semep: boolean;
-}
-
-interface Alumno {
-  id: string;
-  nombre: string;
-  apellido: string;
-  rut: string;
-  email: string;
-  celular: string;
-  sucursal: string;
-  comuna: string;
-  nroExpediente: string;
-  fechaIngreso: string;
-  status: 'Activo' | 'Finalizado' | 'Retirado' | 'Pre-inscrito';
-  cursa: string;
-  pago_por_pagar: number;
-  pago_total: number;
-  exp_teorico: 'pendiente' | 'aprobado' | 'reprobado';
-  exp_practico: 'pendiente' | 'aprobado' | 'reprobado';
-  expediente: Expediente;
-  vencimiento?: string;
-}
+// Models
+import type {
+  AlumnoTableRow,
+  AlumnoExpediente,
+  AlumnoStatus,
+} from '@core/models/ui/alumno-table-row.model';
 
 interface ExpedienteStatus {
   label: 'Completo' | 'Parcial' | 'Pendiente';
@@ -139,19 +119,19 @@ interface AlumnoKpiItem {
               [accent]="kpi.accent ?? false"
               [icon]="kpi.icon"
               [color]="kpi.color"
-              [loading]="loading()"
+              [loading]="isLoading()"
             />
           </div>
         }
         <div class="bento-square">
           <app-action-kpi-card
             label="Por Vencer"
-            [value]="alumnosPorVencer.length"
+            [value]="alumnosPorVencer().length"
             icon="alert-triangle"
             size="md"
             color="error"
             [pulse]="true"
-            [loading]="loading()"
+            [loading]="isLoading()"
             (click)="openPorVencerDrawer()"
           >
             <div
@@ -214,7 +194,7 @@ interface AlumnoKpiItem {
               pButton
               label="Actualizar"
               class="p-button-outlined p-button-sm h-10"
-              [loading]="loading()"
+              [loading]="isLoading()"
               (click)="refresh()"
             >
               <app-icon name="refresh-cw" [size]="14" class="mr-2" />
@@ -223,7 +203,7 @@ interface AlumnoKpiItem {
         </div>
 
         <!-- Tabla -->
-        @if (loading()) {
+        @if (isLoading()) {
           <div class="p-4 space-y-0">
             <!-- Header skeleton -->
             <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
@@ -412,7 +392,7 @@ interface AlumnoKpiItem {
       [hasFooter]="true"
     >
       <div class="flex flex-col gap-4 p-1">
-        @for (item of alumnosPorVencer; track item.id) {
+        @for (item of alumnosPorVencer(); track item.id) {
           <div
             class="card p-3 flex items-center justify-between hover:bg-subtle transition-all border-l-4 border-l-error"
           >
@@ -449,9 +429,16 @@ interface AlumnoKpiItem {
   styles: [],
 })
 export class AlumnosListContentComponent {
+  // ── Inputs ──────────────────────────────────────────────────────────────
   readonly basePath = input.required<string>();
-  readonly loading = signal(true);
+  readonly alumnos = input<AlumnoTableRow[]>([]);
+  readonly isLoading = input(false);
+  readonly alumnosPorVencer = input<AlumnoTableRow[]>([]);
 
+  // ── Outputs ─────────────────────────────────────────────────────────────
+  readonly refreshRequested = output<void>();
+
+  // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -520,184 +507,29 @@ export class AlumnosListContentComponent {
   isDrawerOpen = signal(false);
 
   cursos = ['Clase B', 'Clase B + SENCE', 'Clase A2', 'Profesional'];
-  estados = ['Activo', 'Finalizado', 'Retirado', 'Pre-inscrito'];
+  estados = [
+    'Activo',
+    'Finalizado',
+    'Retirado',
+    'Pre-inscrito',
+    'Pendiente Pago',
+    'Docs Pendientes',
+    'Inactivo',
+  ];
   expedienteOpciones = ['Completo', 'Parcial', 'Pendiente'];
 
-  private readonly alumnosMock: Alumno[] = [
-    {
-      id: '1',
-      nombre: 'María',
-      apellido: 'González Pérez',
-      rut: '18.234.567-8',
-      email: 'maria@email.cl',
-      celular: '+56 9 8765 4321',
-      sucursal: 'Santiago Centro',
-      comuna: 'Santiago',
-      nroExpediente: 'EXP-2026-0001',
-      fechaIngreso: '2026-02-01',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 45000,
-      pago_total: 180000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: true, semep: false },
-    },
-    {
-      id: '2',
-      nombre: 'Juan Pablo',
-      apellido: 'Rojas',
-      rut: '19.456.789-0',
-      email: 'juan@email.cl',
-      celular: '+56 9 7654 3210',
-      sucursal: 'Providencia',
-      comuna: 'Providencia',
-      nroExpediente: 'EXP-2026-0002',
-      fechaIngreso: '2026-02-01',
-      status: 'Pre-inscrito',
-      cursa: 'Clase B',
-      pago_por_pagar: 180000,
-      pago_total: 180000,
-      exp_teorico: 'pendiente',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: false, semep: false },
-    },
-    {
-      id: '3',
-      nombre: 'Ana',
-      apellido: 'Martínez Silva',
-      rut: '17.890.123-4',
-      email: 'ana@email.cl',
-      celular: '+56 9 6543 2109',
-      sucursal: 'Las Condes',
-      comuna: 'Las Condes',
-      nroExpediente: 'EXP-2026-0003',
-      fechaIngreso: '2026-01-30',
-      status: 'Pre-inscrito',
-      cursa: 'Clase B',
-      pago_por_pagar: 180000,
-      pago_total: 180000,
-      exp_teorico: 'pendiente',
-      exp_practico: 'pendiente',
-      expediente: { ci: false, foto: false, medico: false, semep: false },
-    },
-    {
-      id: '4',
-      nombre: 'Carlos',
-      apellido: 'Fernández',
-      rut: '20.123.456-7',
-      email: 'carlos@email.cl',
-      celular: '+56 9 5432 1098',
-      sucursal: 'Santiago Centro',
-      comuna: 'Estación Central',
-      nroExpediente: 'EXP-2026-0004',
-      fechaIngreso: '2026-01-28',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 0,
-      pago_total: 180000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'aprobado',
-      expediente: { ci: true, foto: true, medico: true, semep: true },
-    },
-    {
-      id: '5',
-      nombre: 'Sofía',
-      apellido: 'Vargas López',
-      rut: '18.567.890-1',
-      email: 'sofia@email.cl',
-      celular: '+56 9 4321 0987',
-      sucursal: 'Providencia',
-      comuna: 'Providencia',
-      nroExpediente: 'EXP-2026-0005',
-      fechaIngreso: '2026-01-25',
-      status: 'Retirado',
-      cursa: 'Clase B',
-      pago_por_pagar: 60000,
-      pago_total: 180000,
-      exp_teorico: 'reprobado',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: false, medico: false, semep: false },
-    },
-    {
-      id: '6',
-      nombre: 'Roberto',
-      apellido: 'Muñoz',
-      rut: '18.901.234-5',
-      email: 'r.munoz@email.cl',
-      celular: '+56 9 5555 4444',
-      sucursal: 'Las Condes',
-      comuna: 'Las Condes',
-      nroExpediente: 'EXP-2026-0006',
-      fechaIngreso: '2026-01-20',
-      status: 'Finalizado',
-      cursa: 'Clase A2',
-      pago_por_pagar: 0,
-      pago_total: 250000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'aprobado',
-      expediente: { ci: true, foto: true, medico: true, semep: true },
-    },
-  ];
-
-  alumnosPorVencer: Alumno[] = [
-    {
-      id: '7',
-      nombre: 'Juan',
-      apellido: 'Pérez',
-      rut: '12.345.678-9',
-      email: 'juan.perez@email.com',
-      celular: '+56 9 1234 5678',
-      sucursal: 'Santiago Centro',
-      comuna: 'Santiago',
-      nroExpediente: 'EXP-2026-0007',
-      fechaIngreso: '2025-10-01',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 50000,
-      pago_total: 180000,
-      exp_teorico: 'aprobado',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: false, semep: false },
-      vencimiento: 'Hoy',
-    },
-    {
-      id: '8',
-      nombre: 'Lucía',
-      apellido: 'Vera',
-      rut: '19.444.555-6',
-      email: 'lucia@email.cl',
-      celular: '+56 9 2222 1111',
-      sucursal: 'Providencia',
-      comuna: 'Providencia',
-      nroExpediente: 'EXP-2026-0008',
-      fechaIngreso: '2025-11-15',
-      status: 'Activo',
-      cursa: 'Clase B',
-      pago_por_pagar: 35000,
-      pago_total: 180000,
-      exp_teorico: 'pendiente',
-      exp_practico: 'pendiente',
-      expediente: { ci: true, foto: true, medico: true, semep: false },
-      vencimiento: 'En 2 días',
-    },
-  ];
-
   constructor() {
-    afterNextRender(() => {
-      setTimeout(() => {
-        this.loading.set(false);
+    effect(() => {
+      if (!this.isLoading() && this.bentoGrid()) {
         setTimeout(() => {
-          if (this.bentoGrid()) {
-            this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
-          }
+          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
         }, 100);
-      }, 1200);
+      }
     });
   }
 
-  filteredAlumnos(): Alumno[] {
-    return this.alumnosMock.filter((a) => {
+  filteredAlumnos(): AlumnoTableRow[] {
+    return this.alumnos().filter((a) => {
       const term = this.searchTerm.toLowerCase();
       const matchSearch =
         !term ||
@@ -707,9 +539,7 @@ export class AlumnosListContentComponent {
         a.nroExpediente.toLowerCase().includes(term);
 
       const matchCurso = !this.selectedCurso || a.cursa === this.selectedCurso;
-
       const matchEstado = !this.selectedEstado || a.status === this.selectedEstado;
-
       const matchExpediente = (() => {
         if (!this.selectedExpediente) return true;
         const exp = this.getExpedienteStatus(a.expediente);
@@ -721,18 +551,18 @@ export class AlumnosListContentComponent {
   }
 
   totalAlumnos(): number {
-    return this.alumnosMock.length;
+    return this.alumnos().length;
   }
 
   activos(): number {
-    return this.alumnosMock.filter((a) => a.status === 'Activo').length;
+    return this.alumnos().filter((a) => a.status === 'Activo').length;
   }
 
   conDeuda(): number {
-    return this.alumnosMock.filter((a) => a.pago_por_pagar > 0).length;
+    return this.alumnos().filter((a) => a.pago_por_pagar > 0).length;
   }
 
-  getExpedienteStatus(exp: Expediente): ExpedienteStatus {
+  getExpedienteStatus(exp: AlumnoExpediente): ExpedienteStatus {
     const docs = [exp.ci, exp.foto, exp.medico, exp.semep];
     const ok = docs.filter(Boolean).length;
     const total = docs.length;
@@ -743,7 +573,7 @@ export class AlumnosListContentComponent {
   }
 
   getStatusSeverity(
-    status: string,
+    status: AlumnoStatus | string,
   ): 'success' | 'secondary' | 'info' | 'danger' | 'warn' | undefined {
     switch (status) {
       case 'Activo':
@@ -754,16 +584,19 @@ export class AlumnosListContentComponent {
         return 'danger';
       case 'Pre-inscrito':
         return 'warn';
+      case 'Pendiente Pago':
+        return 'warn';
+      case 'Docs Pendientes':
+        return 'info';
+      case 'Inactivo':
+        return 'secondary';
       default:
         return 'secondary';
     }
   }
 
   refresh(): void {
-    this.loading.set(true);
-    setTimeout(() => {
-      this.loading.set(false);
-    }, 1000);
+    this.refreshRequested.emit();
   }
 
   resetFilters(): void {
@@ -774,7 +607,7 @@ export class AlumnosListContentComponent {
   }
 
   openPorVencerDrawer(): void {
-    if (!this.loading()) this.isDrawerOpen.set(true);
+    if (!this.isLoading()) this.isDrawerOpen.set(true);
   }
 
   handleHeroAction(actionId: string): void {
