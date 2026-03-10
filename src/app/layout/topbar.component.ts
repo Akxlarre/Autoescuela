@@ -57,17 +57,18 @@ import { Button } from 'primeng/button';
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->
-      <p-button
-        class="!flex lg:!hidden shrink-0"
-        [text]="true"
-        [rounded]="true"
-        severity="secondary"
-        ariaLabel="Abrir menú de navegación"
-        data-llm-action="toggle-mobile-sidebar"
-        (onClick)="layout.toggleSidebar()"
-      >
-        <app-icon name="menu" [size]="20" />
-      </p-button>
+      <div class="toolbar-actions !flex lg:!hidden shrink-0 items-center">
+        <p-button
+          [text]="true"
+          [rounded]="true"
+          severity="secondary"
+          ariaLabel="Abrir menú de navegación"
+          data-llm-action="toggle-mobile-sidebar"
+          (onClick)="layout.toggleSidebar()"
+        >
+          <app-icon name="menu" [size]="18" />
+        </p-button>
+      </div>
 
       <!-- Título de sección / breadcrumb -->
       <div class="flex-1 min-w-0 flex items-center overflow-hidden whitespace-nowrap text-sm font-medium text-text-secondary" aria-label="Sección actual">

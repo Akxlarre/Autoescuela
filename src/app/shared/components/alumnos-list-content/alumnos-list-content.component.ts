@@ -9,6 +9,7 @@ import {
   inject,
   viewChild,
   ElementRef,
+  afterNextRender,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -26,7 +27,6 @@ import { TooltipModule } from 'primeng/tooltip';
 import { IconComponent } from '../icon/icon.component';
 import { KpiCardVariantComponent } from '../kpi-card/kpi-card-variant.component';
 import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
-import { DrawerComponent } from '../drawer/drawer.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 
@@ -37,6 +37,11 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 
 // Services
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+
+// Features
+import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
+import { AlumnosPorVencerDrawerComponent } from '../alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component';
 
 // Models
 import type {
@@ -83,14 +88,13 @@ interface AlumnoKpiItem {
     IconComponent,
     KpiCardVariantComponent,
     ActionKpiCardComponent,
-    DrawerComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     SectionHeroComponent,
   ],
   template: `
-    <div class="flex flex-col gap-8">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de alumnos">
       <app-section-hero
         title="Alumnos"
         subtitle="Listado de alumnos de la escuela"
@@ -99,13 +103,7 @@ interface AlumnoKpiItem {
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- KPIs — bento-grid--four-equal: 4 celdas iguales que ocupan todo el ancho (sin espacio vacío a la derecha) -->
-      <section
-        class="bento-grid bento-grid--four-equal"
-        appBentoGridLayout
-        #bentoGrid
-        aria-label="Métricas de alumnos"
-      >
+      <!-- KPIs — usando el mismo patrón que el Dashboard -->
         @for (kpi of alumnosKpis(); track kpi.id) {
           <div class="bento-square">
             <app-kpi-card-variant
@@ -143,50 +141,51 @@ interface AlumnoKpiItem {
             </div>
           </app-action-kpi-card>
         </div>
-      </section>
+      <!-- (End FAQs/KPIs) -->
 
-      <!-- Filtros y Tabla -->
-      <div class="card p-0 overflow-hidden shadow-sm" #tableCard>
+      <!-- Filtros y Tabla (Dual-Viewport) -->
+      <div class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container" #tableCard>
         <!-- Toolbar de la tabla -->
-        <div
-          class="p-4 border-b border-border-subtle flex flex-col md:flex-row md:items-center justify-between gap-4 bg-surface"
-        >
-          <div class="flex flex-wrap items-center gap-3">
-            <span class="p-input-icon-left w-full md:w-80 relative">
+        <div class="toolbar-wrapper">
+          <div class="toolbar-filters">
+            <div class="toolbar-search">
               <app-icon
                 name="search"
                 [size]="16"
-                class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10 pointer-events-none"
               />
               <input
                 pInputText
                 type="text"
                 placeholder="Buscar por nombre, RUT o Nº Expediente..."
-                class="w-full pl-10 h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
+                class="w-full !pl-10 h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
                 [(ngModel)]="searchTerm"
               />
-            </span>
-            <p-select
-              [options]="cursos"
-              [(ngModel)]="selectedCurso"
-              placeholder="Todos los cursos"
-              class="w-full md:w-48 h-10"
-            ></p-select>
-            <p-select
-              [options]="estados"
-              [(ngModel)]="selectedEstado"
-              placeholder="Todos los estados"
-              class="w-full md:w-44 h-10"
-            ></p-select>
-            <!-- RF-085: Filtro por expediente -->
-            <p-select
-              [options]="expedienteOpciones"
-              [(ngModel)]="selectedExpediente"
-              placeholder="Expediente: Todos"
-              class="w-full md:w-44 h-10"
-            ></p-select>
+            </div>
+            
+            <div class="toolbar-dropdowns">
+              <p-select
+                [options]="cursos"
+                [(ngModel)]="selectedCurso"
+                placeholder="Todos los cursos"
+                styleClass="w-full h-10"
+              ></p-select>
+              <p-select
+                [options]="estados"
+                [(ngModel)]="selectedEstado"
+                placeholder="Todos los estados"
+                styleClass="w-full h-10"
+              ></p-select>
+              <p-select
+                [options]="expedienteOpciones"
+                [(ngModel)]="selectedExpediente"
+                placeholder="Expediente: Todos"
+                styleClass="w-full h-10 toolbar-dropdown--full"
+              ></p-select>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
+
+          <div class="toolbar-actions">
             <button pButton label="Exportar" class="p-button-outlined p-button-sm h-10">
               <app-icon name="file-text" [size]="14" class="mr-2" />
             </button>
@@ -204,52 +203,107 @@ interface AlumnoKpiItem {
 
         <!-- Tabla -->
         @if (isLoading()) {
-          <div class="p-4 space-y-0">
-            <!-- Header skeleton -->
-            <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
-              <app-skeleton-block variant="text" width="15%" height="11px" />
-              <app-skeleton-block variant="text" width="9%" height="11px" />
-              <app-skeleton-block variant="text" width="9%" height="11px" />
-              <app-skeleton-block variant="text" width="9%" height="11px" />
-              <app-skeleton-block variant="text" width="11%" height="11px" />
-              <app-skeleton-block variant="text" width="7%" height="11px" />
-              <app-skeleton-block variant="text" width="9%" height="11px" />
-            </div>
-            <!-- Row skeletons -->
-            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+          <div class="viewport-content bg-surface">
+            <!-- VISTA 1: TABLA SKELETON (Oculta cuando se comprime) -->
+            <div class="desktop-view hide-on-squeeze p-4 space-y-0">
+              <!-- Header skeleton -->
               <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
-                <div class="flex items-center gap-3 w-[15%]">
-                  <app-skeleton-block variant="circle" width="36px" height="36px" />
-                  <div class="flex flex-col gap-1.5 flex-1">
-                    <app-skeleton-block variant="text" width="75%" height="12px" />
-                    <app-skeleton-block variant="text" width="55%" height="10px" />
+                <app-skeleton-block variant="text" width="15%" height="11px" />
+                <app-skeleton-block variant="text" width="9%" height="11px" />
+                <app-skeleton-block variant="text" width="9%" height="11px" />
+                <app-skeleton-block variant="text" width="9%" height="11px" />
+                <app-skeleton-block variant="text" width="11%" height="11px" />
+                <app-skeleton-block variant="text" width="7%" height="11px" />
+                <app-skeleton-block variant="text" width="9%" height="11px" />
+              </div>
+              <!-- Row skeletons -->
+              @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+                <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                  <div class="flex items-center gap-3 w-[15%]">
+                    <app-skeleton-block variant="circle" width="36px" height="36px" />
+                    <div class="flex flex-col gap-1.5 flex-1">
+                      <app-skeleton-block variant="text" width="75%" height="12px" />
+                      <app-skeleton-block variant="text" width="55%" height="10px" />
+                    </div>
+                  </div>
+                  <app-skeleton-block variant="text" width="9%" height="12px" />
+                  <app-skeleton-block variant="text" width="9%" height="12px" />
+                  <app-skeleton-block variant="rect" width="64px" height="20px" />
+                  <app-skeleton-block variant="text" width="11%" height="12px" />
+                  <app-skeleton-block variant="rect" width="56px" height="20px" />
+                  <app-skeleton-block variant="rect" width="72px" height="20px" />
+                  <div class="flex items-center gap-1 ml-auto">
+                    <app-skeleton-block variant="circle" width="28px" height="28px" />
+                    <app-skeleton-block variant="circle" width="28px" height="28px" />
+                    <app-skeleton-block variant="circle" width="28px" height="28px" />
                   </div>
                 </div>
-                <app-skeleton-block variant="text" width="9%" height="12px" />
-                <app-skeleton-block variant="text" width="9%" height="12px" />
-                <app-skeleton-block variant="rect" width="64px" height="20px" />
-                <app-skeleton-block variant="text" width="11%" height="12px" />
-                <app-skeleton-block variant="rect" width="56px" height="20px" />
-                <app-skeleton-block variant="rect" width="72px" height="20px" />
-                <div class="flex items-center gap-1 ml-auto">
-                  <app-skeleton-block variant="circle" width="28px" height="28px" />
-                  <app-skeleton-block variant="circle" width="28px" height="28px" />
-                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+              }
+              <!-- Pagination skeleton -->
+              <div class="flex items-center justify-between pt-3">
+                <app-skeleton-block variant="text" width="210px" height="12px" />
+                <div class="flex gap-1">
+                  <app-skeleton-block variant="rect" width="32px" height="32px" />
+                  <app-skeleton-block variant="rect" width="32px" height="32px" />
+                  <app-skeleton-block variant="rect" width="32px" height="32px" />
                 </div>
               </div>
-            }
-            <!-- Pagination skeleton -->
-            <div class="flex items-center justify-between pt-3">
-              <app-skeleton-block variant="text" width="210px" height="12px" />
-              <div class="flex gap-1">
-                <app-skeleton-block variant="rect" width="32px" height="32px" />
-                <app-skeleton-block variant="rect" width="32px" height="32px" />
-                <app-skeleton-block variant="rect" width="32px" height="32px" />
+            </div>
+
+            <!-- VISTA 2: TARJETAS SKELETON (Visible cuando se comprime o móvil) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (card of [1, 2, 3, 4, 5, 6]; track card) {
+                  <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm">
+                    <!-- Header -->
+                    <div class="p-4 border-b border-border-subtle flex items-start justify-between gap-3">
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <app-skeleton-block variant="circle" width="40px" height="40px" class="shrink-0" />
+                        <div class="flex flex-col gap-2 w-full">
+                          <app-skeleton-block variant="text" width="80%" height="12px" />
+                          <app-skeleton-block variant="text" width="60%" height="10px" />
+                        </div>
+                      </div>
+                      <app-skeleton-block variant="rect" width="48px" height="20px" class="shrink-0" />
+                    </div>
+                    
+                    <!-- Body -->
+                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 bg-surface">
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="40%" height="10px" />
+                        <app-skeleton-block variant="text" width="80%" height="12px" />
+                      </div>
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="60%" height="10px" />
+                        <app-skeleton-block variant="rect" width="70px" height="20px" />
+                      </div>
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="45%" height="10px" />
+                        <app-skeleton-block variant="text" width="65%" height="12px" />
+                      </div>
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="50%" height="10px" />
+                        <app-skeleton-block variant="text" width="70%" height="12px" />
+                      </div>
+                    </div>
+
+                    <!-- Footer Actions -->
+                    <div class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-1">
+                      <app-skeleton-block variant="circle" width="32px" height="32px" />
+                      <app-skeleton-block variant="circle" width="32px" height="32px" />
+                      <app-skeleton-block variant="circle" width="32px" height="32px" />
+                    </div>
+                  </div>
+                }
               </div>
             </div>
           </div>
         } @else {
-          <p-table
+          <!-- Contenido principal interactivo -->
+          <div class="viewport-content bg-surface">
+            <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
+            <div class="desktop-view hide-on-squeeze">
+              <p-table
             [value]="filteredAlumnos()"
             [rows]="10"
             [paginator]="true"
@@ -259,7 +313,7 @@ interface AlumnoKpiItem {
             currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
           >
             <ng-template pTemplate="header">
-              <tr class="bg-subtle text-text-muted uppercase text-xs tracking-wider">
+              <tr class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left">
                 <th class="pl-6 py-4">Alumno</th>
                 <th>RUT</th>
                 <th>Nº Exp.</th>
@@ -316,7 +370,7 @@ interface AlumnoKpiItem {
                   <p-tag
                     [value]="exp.label + ' · ' + exp.count"
                     [severity]="exp.severity"
-                    styleClass="text-xs font-bold px-2 py-0.5"
+                    styleClass="text-xs font-bold px-2 py-0.5 bg-transparent border border-current"
                     [pTooltip]="
                       'CI: ' +
                       (alumno.expediente.ci ? 'Sí' : 'No') +
@@ -331,11 +385,11 @@ interface AlumnoKpiItem {
                 </td>
                 <!-- Acciones -->
                 <td class="pr-6 text-right">
-                  <div class="flex items-center justify-end gap-1">
+                  <div class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all">
                     <!-- Ver Ficha -->
                     <button
                       pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                       pTooltip="Ver ficha"
                       [routerLink]="[basePath() + '/alumnos/' + alumno.id + '/ficha']"
                     >
@@ -344,7 +398,7 @@ interface AlumnoKpiItem {
                     <!-- Certificado -->
                     <button
                       pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                       pTooltip="Certificado"
                       [routerLink]="[basePath() + '/certificados']"
                       [queryParams]="{ alumno: alumno.id }"
@@ -354,7 +408,7 @@ interface AlumnoKpiItem {
                     <!-- RF-086: Exportar Ficha PDF -->
                     <button
                       pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                       pTooltip="Exportar Ficha PDF"
                       (click)="exportarFicha(alumno.id)"
                     >
@@ -379,54 +433,178 @@ interface AlumnoKpiItem {
               </tr>
             </ng-template>
           </p-table>
-        }
-      </div>
-    </div>
+        </div>
 
-    <!-- Drawer: Alumnos por Vencer -->
-    <app-drawer
-      [isOpen]="isDrawerOpen()"
-      (closed)="isDrawerOpen.set(false)"
-      title="Alumnos con Cuotas por Vencer"
-      icon="alert-triangle"
-      [hasFooter]="true"
-    >
-      <div class="flex flex-col gap-4 p-1">
-        @for (item of alumnosPorVencer(); track item.id) {
-          <div
-            class="card p-3 flex items-center justify-between hover:bg-subtle transition-all border-l-4 border-l-error"
-          >
-            <div class="flex flex-col gap-0.5">
-              <span class="font-bold text-sm text-text-primary"
-                >{{ item.nombre }} {{ item.apellido }}</span
-              >
-              <span class="text-xs text-text-muted font-mono"
-                >{{ item.cursa }} — {{ item.nroExpediente }}</span
-              >
-              <span class="text-xs text-error font-medium">Vence: {{ item.vencimiento }}</span>
-            </div>
-            <button
-              pButton
-              class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center"
-              pTooltip="Contactar"
-            >
-              <app-icon name="message-circle" [size]="18" />
-            </button>
-          </div>
-        }
+        <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
+        <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              @for (alumno of filteredAlumnos(); track alumno.id) {
+                <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300">
+                  <!-- Header -->
+                  <div class="p-4 border-b border-border-subtle flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                       <div class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase">
+                         {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
+                       </div>
+                       <div class="flex flex-col min-w-0">
+                         <span class="font-bold text-sm text-text-primary truncate">{{ alumno.nombre }} {{ alumno.apellido }}</span>
+                         <span class="text-xs text-text-muted truncate">{{ alumno.email }}</span>
+                       </div>
+                    </div>
+                    <p-tag [value]="alumno.status" [severity]="getStatusSeverity(alumno.status)" styleClass="text-[10px] font-bold px-2 py-0.5 shrink-0"></p-tag>
+                  </div>
+                  
+                  <!-- Body -->
+                  <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
+                     <div class="flex flex-col">
+                       <span class="text-[11px] text-text-muted mb-0.5">RUT</span>
+                       <span class="font-medium text-text-secondary font-mono text-xs">{{ alumno.rut }}</span>
+                     </div>
+                     <div class="flex flex-col">
+                       <span class="text-[11px] text-text-muted mb-0.5">Expediente</span>
+                       @let exp = getExpedienteStatus(alumno.expediente);
+                       <div class="flex items-center">
+                         <p-tag [value]="exp.label + ' · ' + exp.count" [severity]="exp.severity" styleClass="text-[10px] font-bold px-1.5 py-0.5 bg-transparent border border-current"></p-tag>
+                       </div>
+                     </div>
+                     <div class="flex flex-col">
+                       <span class="text-[11px] text-text-muted mb-0.5">Curso</span>
+                       <span class="font-medium text-text-secondary text-xs truncate">{{ alumno.cursa }}</span>
+                     </div>
+                     <div class="flex flex-col">
+                       <span class="text-[11px] text-text-muted mb-0.5">Ingreso</span>
+                       <span class="font-medium text-text-secondary text-xs">{{ alumno.fechaIngreso }}</span>
+                     </div>
+                  </div>
+
+                  <!-- Footer Actions -->
+                  <div class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5">
+                     <button pButton class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all" pTooltip="Ver ficha" [routerLink]="[basePath() + '/alumnos/' + alumno.id + '/ficha']">
+                       <app-icon name="eye" [size]="16" />
+                     </button>
+                     <button pButton class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all" pTooltip="Certificado" [routerLink]="[basePath() + '/certificados']" [queryParams]="{ alumno: alumno.id }">
+                       <app-icon name="award" [size]="16" />
+                     </button>
+                     <button pButton class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all" pTooltip="Exportar Ficha PDF" (click)="exportarFicha(alumno.id)">
+                       <app-icon name="download" [size]="16" />
+                     </button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="col-span-full py-8">
+                  <app-empty-state
+                    icon="search"
+                    message="No se encontraron alumnos"
+                    subtitle="Intenta ajustar los criterios de búsqueda o filtros."
+                    actionLabel="Limpiar filtros"
+                    actionIcon="refresh-cw"
+                    (action)="resetFilters()"
+                  />
+                </div>
+              }
+           </div>
+        </div>
       </div>
-      <div footer class="w-full flex gap-2">
-        <button
-          pButton
-          label="Descargar Reporte Mora"
-          class="p-button-outlined p-button-secondary w-full"
-        >
-          <app-icon name="download" [size]="16" class="mr-2" />
-        </button>
-      </div>
-    </app-drawer>
+      }
+    </div>
   `,
-  styles: [],
+  styles: [
+    `
+      /* Container Queries para Dual-Viewport Render */
+      .dual-viewport-container {
+        container-type: inline-size;
+        container-name: listContainer;
+      }
+
+      /* Por defecto (Pantallas grandes): Mostramos tabla, ocultamos tarjetas */
+      .show-on-squeeze {
+        display: none;
+      }
+
+      @container listContainer (max-width: 900px) {
+        .hide-on-squeeze {
+          display: none !important;
+        }
+        .show-on-squeeze {
+          display: block !important;
+        }
+      }
+
+      /* --- Toolbar Container Queries --- */
+      .toolbar-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-subtle);
+        background-color: var(--surface);
+      }
+      .toolbar-filters {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+      }
+      .toolbar-search {
+        width: 100%;
+        position: relative;
+      }
+      .toolbar-dropdowns {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.75rem;
+        width: 100%;
+      }
+      /* Selector complejo porque PrimeNG injecta clases inner */
+      ::ng-deep .toolbar-dropdown--full {
+        grid-column: span 2;
+      }
+      .toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+      }
+      .toolbar-actions button {
+        flex: 1;
+        justify-content: center;
+      }
+      
+      @container listContainer (min-width: 900px) {
+        .toolbar-wrapper {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .toolbar-filters {
+          flex-direction: row;
+          align-items: center;
+          flex-wrap: wrap;
+          width: auto;
+          flex: 1;
+        }
+        .toolbar-search {
+          width: 20rem; /* equiv md:w-80 */
+        }
+        .toolbar-dropdowns {
+          display: flex;
+          width: auto;
+        }
+        ::ng-deep .toolbar-dropdowns p-select {
+          min-width: 11rem;
+        }
+        ::ng-deep .toolbar-dropdown--full {
+          grid-column: auto;
+        }
+        .toolbar-actions {
+          width: auto;
+        }
+        .toolbar-actions button {
+          flex: none;
+        }
+      }
+    `,
+  ],
 })
 export class AlumnosListContentComponent {
   // ── Inputs ──────────────────────────────────────────────────────────────
@@ -440,6 +618,7 @@ export class AlumnosListContentComponent {
 
   // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly heroChips = computed((): SectionHeroChip[] => [
@@ -469,7 +648,6 @@ export class AlumnosListContentComponent {
         label: 'Nueva Matrícula',
         icon: 'plus',
         primary: true,
-        route: `${path}/matricula`,
       },
     ];
   });
@@ -519,11 +697,11 @@ export class AlumnosListContentComponent {
   expedienteOpciones = ['Completo', 'Parcial', 'Pendiente'];
 
   constructor() {
-    effect(() => {
-      if (!this.isLoading() && this.bentoGrid()) {
+    afterNextRender(() => {
+      if (this.bentoGrid()) {
         setTimeout(() => {
           this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
-        }, 100);
+        }, 50);
       }
     });
   }
@@ -607,7 +785,13 @@ export class AlumnosListContentComponent {
   }
 
   openPorVencerDrawer(): void {
-    if (!this.isLoading()) this.isDrawerOpen.set(true);
+    if (!this.isLoading()) {
+      this.layoutDrawer.open(
+        AlumnosPorVencerDrawerComponent,
+        'Alumnos con Cuotas por Vencer',
+        'alert-triangle'
+      );
+    }
   }
 
   handleHeroAction(actionId: string): void {
@@ -621,6 +805,9 @@ export class AlumnosListContentComponent {
       case 'preinscritos':
         // TODO: navegar o abrir vista Pre-inscritos
         break;
+      case 'nueva-matricula':
+        this.openNuevaMatriculaDrawer();
+        break;
       default:
         break;
     }
@@ -630,28 +817,32 @@ export class AlumnosListContentComponent {
   enviarEnlaceZoom(): void {
     const confirmacion = confirm(
       'Enviar Enlace de Zoom — Clase Teórica\n\n' +
-        'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
-        '¿Confirmar envío masivo?',
+      'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
+      '¿Confirmar envío masivo?',
     );
     if (confirmacion) {
       alert(
         'Enlaces enviados exitosamente\n\n' +
-          '- Correos enviados a alumnos activos\n' +
-          '- Enlace: https://zoom.us/j/123456789\n\n' +
-          '[Mockup — RF-054]',
+        '- Correos enviados a alumnos activos\n' +
+        '- Enlace: https://zoom.us/j/123456789\n\n' +
+        '[Mockup — RF-054]',
       );
     }
+  }
+
+  openNuevaMatriculaDrawer(): void {
+    this.layoutDrawer.open(SecretariaMatriculaComponent, 'Nueva Matrícula', 'plus');
   }
 
   // RF-054
   registrarAsistenciaZoom(): void {
     alert(
       'Registrar Asistencia — Clase Teórica Zoom\n\n' +
-        'Pasos para registrar asistencia:\n' +
-        '1. Descarga el reporte de asistencia desde Zoom\n' +
-        '2. Revisa la lista de nombres/correos de asistentes\n' +
-        '3. Marca manualmente quienes asistieron\n\n' +
-        '[Mockup — RF-054]',
+      'Pasos para registrar asistencia:\n' +
+      '1. Descarga el reporte de asistencia desde Zoom\n' +
+      '2. Revisa la lista de nombres/correos de asistentes\n' +
+      '3. Marca manualmente quienes asistieron\n\n' +
+      '[Mockup — RF-054]',
     );
   }
 

@@ -25,7 +25,7 @@ $bp-lg: 1024px;
 @layer bento.grid {
   .bento-grid {
     /* ── Tokens (scoped al contenedor) ── */
-    --bento-cols-mobile: 1;
+    --bento-cols-mobile: 2;
     --bento-cols-sm: 4;
     --bento-cols-md: 8;
     --bento-cols-lg: 12;
@@ -107,8 +107,8 @@ $bp-lg: 1024px;
    └──────────────────────────────────────────────────┘
    ─────────────────────────────────────────────────── */
 
-@mixin bento-cell($sm, $md, $lg, $rows: 1) {
-  grid-column: span var(--bento-cols-mobile);
+@mixin bento-cell($sm, $md, $lg, $rows: 1, $mob: var(--bento-cols-mobile)) {
+  grid-column: span $mob;
 
   @if $rows >1 {
     grid-row: span $rows;
@@ -138,10 +138,11 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.proportions {
+
   /* Square: celda cuadrada estándar */
   .bento-square,
   .bento-1x1 {
-    @include bento-cell(2, 2, 3);
+    @include bento-cell(2, 2, 3, 1, 1);
   }
 
   /* Wide: proporción 2:1 horizontal */
@@ -192,9 +193,10 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.placement {
+
   /* Modificador: 4 celdas iguales en una fila (ej. KPIs Alumnos). Debe ir después de proportions para sobrescribir span de .bento-square. */
   .bento-grid.bento-grid--four-equal {
-    --bento-cols-mobile: 1;
+    --bento-cols-mobile: 2;
     --bento-cols-sm: 2;
     --bento-cols-md: 4;
     --bento-cols-lg: 4;
@@ -204,22 +206,24 @@ $bp-lg: 1024px;
     --bento-pad-md: 0;
     --bento-pad-lg: 0;
 
-    & > .bento-square {
+    &>.bento-square {
       grid-column: span 1;
     }
 
     @container layoutmain (min-width: #{$bp-sm}) {
-      & > .bento-square {
+      &>.bento-square {
         grid-column: span 1;
       }
     }
+
     @container layoutmain (min-width: #{$bp-md}) {
-      & > .bento-square {
+      &>.bento-square {
         grid-column: span 1;
       }
     }
+
     @container layoutmain (min-width: #{$bp-lg}) {
-      & > .bento-square {
+      &>.bento-square {
         grid-column: span 1;
       }
     }
@@ -266,12 +270,12 @@ $bp-lg: 1024px;
 
     /* Dashboard: Actividad (izq) + Alertas (der) — forzar 50/50 y misma altura en desktop.
        Selector directo para que no sea pisado por auto-placement ni por otras reglas. */
-    .bento-grid > .bento-activity-lg {
+    .bento-grid>.bento-activity-lg {
       grid-column: 1 / span 6;
       grid-row: span 2;
     }
 
-    .bento-grid > .bento-alerts-lg {
+    .bento-grid>.bento-alerts-lg {
       grid-column: 7 / span 6;
       grid-row: span 2;
     }
@@ -308,7 +312,7 @@ $bp-lg: 1024px;
     padding: 0;
   }
 
-  .bento-card--flush > .bento-card__body {
+  .bento-card--flush>.bento-card__body {
     padding: var(--space-5);
   }
 
@@ -390,6 +394,7 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+
   .bento-grid,
   .bento-grid * {
     transition: none !important;
@@ -410,7 +415,7 @@ $bp-lg: 1024px;
     grid-auto-rows: 1fr;
 
     @container layoutmain (min-width: #{$bp-md}) {
-      > * {
+      >* {
         grid-row: 1;
       }
     }

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, afterNextRender, ElementRef, viewChild } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
@@ -10,6 +10,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -59,7 +60,7 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
          BENTO GRID — contenedor principal del dashboard
          [appBentoGridLayout] habilita FLIP animation en reflows
     ════════════════════════════════════════════════════════════════ -->
-    <section class="bento-grid" appBentoGridLayout aria-label="Panel de control">
+    <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de control">
       <!-- ── HERO — Section Hero reutilizable ──────────────────────────── -->
       @if (hero()) {
         <app-section-hero
@@ -177,6 +178,8 @@ export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Estado ────────────────────────────────────────────────────────────────
 
@@ -215,6 +218,14 @@ export class DashboardComponent {
   constructor() {
     // Iniciar la carga de datos del dashboard al construir el componente
     this.dashboardFacade.loadDashboardData();
+
+    afterNextRender(() => {
+      if (this.bentoGrid()) {
+        setTimeout(() => {
+          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
+        }, 50);
+      }
+    });
   }
 
   handleQuickAction(actionId: string) {
@@ -227,6 +238,4 @@ export class DashboardComponent {
     this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
   }
 
-  // Animaciones GSAP deshabilitadas temporalmente — causaban contenido invisible
-  // (opacity: 0) cuando había race conditions. Reactivar cuando el flujo sea estable.
 }

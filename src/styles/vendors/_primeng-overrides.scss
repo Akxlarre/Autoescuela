@@ -587,6 +587,51 @@ app-main-layout p-toast.p-toast-top-center,
   font-size: var(--text-sm);
 }
 
+/* Select (Dropdown) Centering Fix & Premium Overlay */
+.p-select {
+  align-items: center;
+}
+
+.p-select .p-select-label {
+  display: flex !important;
+  align-items: center;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  height: 100%;
+}
+
+/* Premium Dropdown Options Overlay */
+.p-select-panel {
+  padding: var(--space-1) !important;
+}
+
+.p-select-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 !important;
+}
+
+.p-select-option {
+  border-radius: var(--radius-md) !important;
+  padding: var(--space-2) var(--space-3) !important;
+  margin: 0 !important;
+  transition: all var(--motion-duration-fast) var(--motion-ease-standard) !important;
+}
+
+/* El estado "focus" al navegar con teclado o hover suave */
+.p-select-option:not(.p-select-option-selected):hover,
+.p-select-option.p-select-option-focus:not(.p-select-option-selected) {
+  background-color: var(--bg-elevated) !important;
+  color: var(--text-primary) !important;
+}
+
+/* El estado seleccionado con highlight de color brand */
+.p-select-option.p-select-option-selected {
+  background-color: var(--color-primary-muted) !important;
+  color: var(--ds-brand) !important;
+  font-weight: var(--font-medium) !important;
+}
 /* DatePicker — trigger (dropdown button) e input */
 .p-datepicker,
 .p-datepicker.p-inputwrapper {
@@ -890,10 +935,19 @@ i.pi {
     color: var(--text-secondary) !important;
   }
 
-  .p-select-option.p-select-option-focus,
+  /* Hover & Focus (Not selected) */
+  .p-select-option:not(.p-select-option-selected):hover,
+  .p-select-option.p-select-option-focus:not(.p-select-option-selected),
   .p-select-item.p-select-item-focus {
     background-color: var(--bg-elevated) !important;
     color: var(--text-primary) !important;
+  }
+
+  /* Selected state */
+  .p-select-option.p-select-option-selected {
+    background-color: var(--color-primary-muted) !important;
+    color: var(--ds-brand) !important;
+    font-weight: var(--font-medium) !important;
   }
 
   /* p-dialog — contenido y overlay */

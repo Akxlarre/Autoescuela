@@ -46,7 +46,7 @@ interface RawUser {
 interface RawStudent {
   id: number;
   status: string | null;
-  district: string | null;
+  address: string | null;
   users: RawUser;
   enrollments: RawEnrollment[];
 }
@@ -92,7 +92,7 @@ export class AdminAlumnosFacade {
           `
           id,
           status,
-          district,
+          address,
           users!inner(
             id,
             rut,
@@ -166,7 +166,7 @@ export class AdminAlumnosFacade {
       email: u.email,
       celular: u.phone ?? '',
       sucursal: u.branch_id ? `Sucursal ${u.branch_id}` : '',
-      comuna: s.district ?? '',
+      comuna: s.address ?? '',
       nroExpediente: enrollment?.number ?? '—',
       fechaIngreso: enrollment ? enrollment.created_at.slice(0, 10) : '—',
       status: this.deriveStatus(enrollment, s.status),
