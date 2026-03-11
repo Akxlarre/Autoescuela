@@ -106,47 +106,50 @@ interface AlumnoKpiItem {
       />
 
       <!-- KPIs — usando el mismo patrón que el Dashboard -->
-        @for (kpi of alumnosKpis(); track kpi.id) {
-          <div class="bento-square">
-            <app-kpi-card-variant
-              [label]="kpi.label"
-              [value]="kpi.value"
-              [suffix]="kpi.suffix ?? ''"
-              [prefix]="kpi.prefix ?? ''"
-              [trend]="kpi.trend"
-              [trendLabel]="kpi.trendLabel ?? ''"
-              [subValue]="kpi.subValue ?? ''"
-              [accent]="kpi.accent ?? false"
-              [icon]="kpi.icon"
-              [color]="kpi.color"
-              [loading]="isLoading()"
-            />
-          </div>
-        }
+      @for (kpi of alumnosKpis(); track kpi.id) {
         <div class="bento-square">
-          <app-action-kpi-card
-            label="Por Vencer"
-            [value]="alumnosPorVencer().length"
-            icon="alert-triangle"
-            size="md"
-            color="error"
-            [pulse]="true"
+          <app-kpi-card-variant
+            [label]="kpi.label"
+            [value]="kpi.value"
+            [suffix]="kpi.suffix ?? ''"
+            [prefix]="kpi.prefix ?? ''"
+            [trend]="kpi.trend"
+            [trendLabel]="kpi.trendLabel ?? ''"
+            [subValue]="kpi.subValue ?? ''"
+            [accent]="kpi.accent ?? false"
+            [icon]="kpi.icon"
+            [color]="kpi.color"
             [loading]="isLoading()"
-            (click)="openPorVencerDrawer()"
-          >
-            <div
-              footer
-              class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors"
-            >
-              <span>Ver detalles</span>
-              <app-icon name="arrow-right" [size]="12" />
-            </div>
-          </app-action-kpi-card>
+          />
         </div>
+      }
+      <div class="bento-square">
+        <app-action-kpi-card
+          label="Por Vencer"
+          [value]="alumnosPorVencer().length"
+          icon="alert-triangle"
+          size="md"
+          color="error"
+          [pulse]="true"
+          [loading]="isLoading()"
+          (click)="openPorVencerDrawer()"
+        >
+          <div
+            footer
+            class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors"
+          >
+            <span>Ver detalles</span>
+            <app-icon name="arrow-right" [size]="12" />
+          </div>
+        </app-action-kpi-card>
+      </div>
       <!-- (End FAQs/KPIs) -->
 
       <!-- Filtros y Tabla (Dual-Viewport) -->
-      <div class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container" #tableCard>
+      <div
+        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
+        #tableCard
+      >
         <!-- Toolbar de la tabla -->
         <div class="toolbar-wrapper">
           <div class="toolbar-filters">
@@ -164,7 +167,7 @@ interface AlumnoKpiItem {
                 [(ngModel)]="searchTerm"
               />
             </div>
-            
+
             <div class="toolbar-dropdowns">
               <p-select
                 [options]="cursos"
@@ -256,19 +259,33 @@ interface AlumnoKpiItem {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 @for (card of [1, 2, 3, 4, 5, 6]; track card) {
-                  <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm">
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm"
+                  >
                     <!-- Header -->
-                    <div class="p-4 border-b border-border-subtle flex items-start justify-between gap-3">
+                    <div
+                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
+                    >
                       <div class="flex items-center gap-3 min-w-0 flex-1">
-                        <app-skeleton-block variant="circle" width="40px" height="40px" class="shrink-0" />
+                        <app-skeleton-block
+                          variant="circle"
+                          width="40px"
+                          height="40px"
+                          class="shrink-0"
+                        />
                         <div class="flex flex-col gap-2 w-full">
                           <app-skeleton-block variant="text" width="80%" height="12px" />
                           <app-skeleton-block variant="text" width="60%" height="10px" />
                         </div>
                       </div>
-                      <app-skeleton-block variant="rect" width="48px" height="20px" class="shrink-0" />
+                      <app-skeleton-block
+                        variant="rect"
+                        width="48px"
+                        height="20px"
+                        class="shrink-0"
+                      />
                     </div>
-                    
+
                     <!-- Body -->
                     <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 bg-surface">
                       <div class="flex flex-col gap-1.5">
@@ -290,7 +307,9 @@ interface AlumnoKpiItem {
                     </div>
 
                     <!-- Footer Actions -->
-                    <div class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-1">
+                    <div
+                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-1"
+                    >
                       <app-skeleton-block variant="circle" width="32px" height="32px" />
                       <app-skeleton-block variant="circle" width="32px" height="32px" />
                       <app-skeleton-block variant="circle" width="32px" height="32px" />
@@ -306,208 +325,255 @@ interface AlumnoKpiItem {
             <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
             <div class="desktop-view hide-on-squeeze">
               <p-table
-            [value]="filteredAlumnos()"
-            [rows]="10"
-            [paginator]="true"
-            responsiveLayout="scroll"
-            styleClass="p-datatable-sm p-datatable-striped"
-            [showCurrentPageReport]="true"
-            currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
-          >
-            <ng-template pTemplate="header">
-              <tr class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left">
-                <th class="pl-6 py-4">Alumno</th>
-                <th>RUT</th>
-                <th>Nº Exp.</th>
-                <th>Curso</th>
-                <th>Fecha Ingreso</th>
-                <th>Estado</th>
-                <th>Expediente</th>
-                <th class="pr-6 text-right">Acciones</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-alumno>
-              <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
-                <!-- Alumno -->
-                <td class="pl-6 py-4">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
-                    >
-                      {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
-                    </div>
-                    <div class="flex flex-col">
-                      <span class="font-bold text-sm text-text-primary"
-                        >{{ alumno.nombre }} {{ alumno.apellido }}</span
-                      >
-                      <span class="text-xs text-text-muted">{{ alumno.email }}</span>
-                    </div>
-                  </div>
-                </td>
-                <!-- RUT -->
-                <td class="text-xs font-medium text-text-secondary font-mono">{{ alumno.rut }}</td>
-                <!-- Nº Expediente -->
-                <td class="text-xs text-text-muted font-mono">{{ alumno.nroExpediente }}</td>
-                <!-- Curso -->
-                <td>
-                  <span
-                    class="text-xs px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-text-secondary"
+                [value]="filteredAlumnos()"
+                [rows]="10"
+                [paginator]="true"
+                responsiveLayout="scroll"
+                styleClass="p-datatable-sm p-datatable-striped"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
+              >
+                <ng-template pTemplate="header">
+                  <tr
+                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
                   >
-                    {{ alumno.cursa }}
-                  </span>
-                </td>
-                <!-- Fecha Ingreso -->
-                <td class="text-xs text-text-secondary">{{ alumno.fechaIngreso }}</td>
-                <!-- Estado -->
-                <td>
-                  <p-tag
-                    [value]="alumno.status"
-                    [severity]="getStatusSeverity(alumno.status)"
-                    styleClass="text-xs font-bold px-2 py-0.5"
-                  ></p-tag>
-                </td>
-                <!-- RF-085: Expediente (Completo/Parcial/Pendiente) -->
-                <td>
-                  @let exp = getExpedienteStatus(alumno.expediente);
-                  <p-tag
-                    [value]="exp.label + ' · ' + exp.count"
-                    [severity]="exp.severity"
-                    styleClass="text-xs font-bold px-2 py-0.5 bg-transparent border border-current"
-                    [pTooltip]="
-                      'CI: ' +
-                      (alumno.expediente.ci ? 'Sí' : 'No') +
-                      ' | Foto: ' +
-                      (alumno.expediente.foto ? 'Sí' : 'No') +
-                      ' | Médico: ' +
-                      (alumno.expediente.medico ? 'Sí' : 'No') +
-                      ' | SEMEP: ' +
-                      (alumno.expediente.semep ? 'Sí' : 'No')
-                    "
-                  ></p-tag>
-                </td>
-                <!-- Acciones -->
-                <td class="pr-6 text-right">
-                  <div class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all">
-                    <!-- Ver Ficha -->
-                    <button
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                      pTooltip="Ver ficha"
-                      [routerLink]="[basePath() + '/alumnos/' + alumno.id + '/ficha']"
-                    >
-                      <app-icon name="eye" [size]="16" />
-                    </button>
-                    <!-- Certificado -->
-                    <button
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                      pTooltip="Certificado"
-                      [routerLink]="[basePath() + '/certificados']"
-                      [queryParams]="{ alumno: alumno.id }"
-                    >
-                      <app-icon name="award" [size]="16" />
-                    </button>
-                    <!-- RF-086: Exportar Ficha PDF -->
-                    <button
-                      pButton
-                      class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                      pTooltip="Exportar Ficha PDF"
-                      (click)="exportarFicha(alumno.id)"
-                    >
-                      <app-icon name="download" [size]="16" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="8" class="p-0">
-                  <app-empty-state
-                    icon="search"
-                    message="No se encontraron alumnos"
-                    subtitle="Intenta ajustar los criterios de búsqueda o filtros."
-                    actionLabel="Limpiar filtros"
-                    actionIcon="refresh-cw"
-                    (action)="resetFilters()"
-                  />
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </div>
+                    <th class="pl-6 py-4">Alumno</th>
+                    <th>RUT</th>
+                    <th>Nº Exp.</th>
+                    <th>Curso</th>
+                    <th>Fecha Ingreso</th>
+                    <th>Estado</th>
+                    <th>Expediente</th>
+                    <th class="pr-6 text-right">Acciones</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-alumno>
+                  <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
+                    <!-- Alumno -->
+                    <td class="pl-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                        >
+                          {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="font-bold text-sm text-text-primary"
+                            >{{ alumno.nombre }} {{ alumno.apellido }}</span
+                          >
+                          <span class="text-xs text-text-muted">{{ alumno.email }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <!-- RUT -->
+                    <td class="text-xs font-medium text-text-secondary font-mono">
+                      {{ alumno.rut }}
+                    </td>
+                    <!-- Nº Expediente -->
+                    <td class="text-xs text-text-muted font-mono">{{ alumno.nroExpediente }}</td>
+                    <!-- Curso -->
+                    <td>
+                      <span
+                        class="text-xs px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-text-secondary"
+                      >
+                        {{ alumno.cursa }}
+                      </span>
+                    </td>
+                    <!-- Fecha Ingreso -->
+                    <td class="text-xs text-text-secondary">{{ alumno.fechaIngreso }}</td>
+                    <!-- Estado -->
+                    <td>
+                      <p-tag
+                        [value]="alumno.status"
+                        [severity]="getStatusSeverity(alumno.status)"
+                        styleClass="text-xs font-bold px-2 py-0.5"
+                      ></p-tag>
+                    </td>
+                    <!-- RF-085: Expediente (Completo/Parcial/Pendiente) -->
+                    <td>
+                      @let exp = getExpedienteStatus(alumno.expediente);
+                      <p-tag
+                        [value]="exp.label + ' · ' + exp.count"
+                        [severity]="exp.severity"
+                        styleClass="text-xs font-bold px-2 py-0.5 bg-transparent border border-current"
+                        [pTooltip]="
+                          'CI: ' +
+                          (alumno.expediente.ci ? 'Sí' : 'No') +
+                          ' | Foto: ' +
+                          (alumno.expediente.foto ? 'Sí' : 'No') +
+                          ' | Médico: ' +
+                          (alumno.expediente.medico ? 'Sí' : 'No') +
+                          ' | SEMEP: ' +
+                          (alumno.expediente.semep ? 'Sí' : 'No')
+                        "
+                      ></p-tag>
+                    </td>
+                    <!-- Acciones -->
+                    <td class="pr-6 text-right">
+                      <div
+                        class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all"
+                      >
+                        <!-- Ver Ficha -->
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                          pTooltip="Ver ficha"
+                          [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                        >
+                          <app-icon name="eye" [size]="16" />
+                        </button>
+                        <!-- Certificado -->
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                          pTooltip="Certificado"
+                          [routerLink]="[basePath() + '/certificados']"
+                          [queryParams]="{ alumno: alumno.id }"
+                        >
+                          <app-icon name="award" [size]="16" />
+                        </button>
+                        <!-- RF-086: Exportar Ficha PDF -->
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                          pTooltip="Exportar Ficha PDF"
+                          (click)="exportarFicha(alumno.id)"
+                        >
+                          <app-icon name="download" [size]="16" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="8" class="p-0">
+                      <app-empty-state
+                        icon="search"
+                        message="No se encontraron alumnos"
+                        subtitle="Intenta ajustar los criterios de búsqueda o filtros."
+                        actionLabel="Limpiar filtros"
+                        actionIcon="refresh-cw"
+                        (action)="resetFilters()"
+                      />
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
 
-        <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
-        <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
-           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              @for (alumno of filteredAlumnos(); track alumno.id) {
-                <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300">
-                  <!-- Header -->
-                  <div class="p-4 border-b border-border-subtle flex items-start justify-between gap-3">
-                    <div class="flex items-center gap-3 min-w-0">
-                       <div class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase">
-                         {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
-                       </div>
-                       <div class="flex flex-col min-w-0">
-                         <span class="font-bold text-sm text-text-primary truncate">{{ alumno.nombre }} {{ alumno.apellido }}</span>
-                         <span class="text-xs text-text-muted truncate">{{ alumno.email }}</span>
-                       </div>
+            <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                @for (alumno of filteredAlumnos(); track alumno.id) {
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300"
+                  >
+                    <!-- Header -->
+                    <div
+                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
+                    >
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div
+                          class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
+                        >
+                          {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                          <span class="font-bold text-sm text-text-primary truncate"
+                            >{{ alumno.nombre }} {{ alumno.apellido }}</span
+                          >
+                          <span class="text-xs text-text-muted truncate">{{ alumno.email }}</span>
+                        </div>
+                      </div>
+                      <p-tag
+                        [value]="alumno.status"
+                        [severity]="getStatusSeverity(alumno.status)"
+                        styleClass="text-[10px] font-bold px-2 py-0.5 shrink-0"
+                      ></p-tag>
                     </div>
-                    <p-tag [value]="alumno.status" [severity]="getStatusSeverity(alumno.status)" styleClass="text-[10px] font-bold px-2 py-0.5 shrink-0"></p-tag>
-                  </div>
-                  
-                  <!-- Body -->
-                  <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
-                     <div class="flex flex-col">
-                       <span class="text-[11px] text-text-muted mb-0.5">RUT</span>
-                       <span class="font-medium text-text-secondary font-mono text-xs">{{ alumno.rut }}</span>
-                     </div>
-                     <div class="flex flex-col">
-                       <span class="text-[11px] text-text-muted mb-0.5">Expediente</span>
-                       @let exp = getExpedienteStatus(alumno.expediente);
-                       <div class="flex items-center">
-                         <p-tag [value]="exp.label + ' · ' + exp.count" [severity]="exp.severity" styleClass="text-[10px] font-bold px-1.5 py-0.5 bg-transparent border border-current"></p-tag>
-                       </div>
-                     </div>
-                     <div class="flex flex-col">
-                       <span class="text-[11px] text-text-muted mb-0.5">Curso</span>
-                       <span class="font-medium text-text-secondary text-xs truncate">{{ alumno.cursa }}</span>
-                     </div>
-                     <div class="flex flex-col">
-                       <span class="text-[11px] text-text-muted mb-0.5">Ingreso</span>
-                       <span class="font-medium text-text-secondary text-xs">{{ alumno.fechaIngreso }}</span>
-                     </div>
-                  </div>
 
-                  <!-- Footer Actions -->
-                  <div class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5">
-                     <button pButton class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all" pTooltip="Ver ficha" [routerLink]="[basePath() + '/alumnos/' + alumno.id + '/ficha']">
-                       <app-icon name="eye" [size]="16" />
-                     </button>
-                     <button pButton class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all" pTooltip="Certificado" [routerLink]="[basePath() + '/certificados']" [queryParams]="{ alumno: alumno.id }">
-                       <app-icon name="award" [size]="16" />
-                     </button>
-                     <button pButton class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all" pTooltip="Exportar Ficha PDF" (click)="exportarFicha(alumno.id)">
-                       <app-icon name="download" [size]="16" />
-                     </button>
+                    <!-- Body -->
+                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
+                      <div class="flex flex-col">
+                        <span class="text-[11px] text-text-muted mb-0.5">RUT</span>
+                        <span class="font-medium text-text-secondary font-mono text-xs">{{
+                          alumno.rut
+                        }}</span>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-[11px] text-text-muted mb-0.5">Expediente</span>
+                        @let exp = getExpedienteStatus(alumno.expediente);
+                        <div class="flex items-center">
+                          <p-tag
+                            [value]="exp.label + ' · ' + exp.count"
+                            [severity]="exp.severity"
+                            styleClass="text-[10px] font-bold px-1.5 py-0.5 bg-transparent border border-current"
+                          ></p-tag>
+                        </div>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-[11px] text-text-muted mb-0.5">Curso</span>
+                        <span class="font-medium text-text-secondary text-xs truncate">{{
+                          alumno.cursa
+                        }}</span>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-[11px] text-text-muted mb-0.5">Ingreso</span>
+                        <span class="font-medium text-text-secondary text-xs">{{
+                          alumno.fechaIngreso
+                        }}</span>
+                      </div>
+                    </div>
+
+                    <!-- Footer Actions -->
+                    <div
+                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
+                    >
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                        pTooltip="Ver ficha"
+                        [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                      >
+                        <app-icon name="eye" [size]="16" />
+                      </button>
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                        pTooltip="Certificado"
+                        [routerLink]="[basePath() + '/certificados']"
+                        [queryParams]="{ alumno: alumno.id }"
+                      >
+                        <app-icon name="award" [size]="16" />
+                      </button>
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                        pTooltip="Exportar Ficha PDF"
+                        (click)="exportarFicha(alumno.id)"
+                      >
+                        <app-icon name="download" [size]="16" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              } @empty {
-                <div class="col-span-full py-8">
-                  <app-empty-state
-                    icon="search"
-                    message="No se encontraron alumnos"
-                    subtitle="Intenta ajustar los criterios de búsqueda o filtros."
-                    actionLabel="Limpiar filtros"
-                    actionIcon="refresh-cw"
-                    (action)="resetFilters()"
-                  />
-                </div>
-              }
-           </div>
-        </div>
+                } @empty {
+                  <div class="col-span-full py-8">
+                    <app-empty-state
+                      icon="search"
+                      message="No se encontraron alumnos"
+                      subtitle="Intenta ajustar los criterios de búsqueda o filtros."
+                      actionLabel="Limpiar filtros"
+                      actionIcon="refresh-cw"
+                      (action)="resetFilters()"
+                    />
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
       </div>
-      }
     </div>
   `,
   styles: [
@@ -571,7 +637,7 @@ interface AlumnoKpiItem {
         flex: 1;
         justify-content: center;
       }
-      
+
       @container listContainer (min-width: 900px) {
         .toolbar-wrapper {
           flex-direction: row;
@@ -701,7 +767,7 @@ export class AlumnosListContentComponent {
   constructor() {
     // 1. Initial page load animation
     afterNextRender(() => {
-      // Stagger only the KPIs on load; the main table card 
+      // Stagger only the KPIs on load; the main table card
       // is handled by the View Transitions API (vt-page-in)
       if (this.bentoGrid()) {
         setTimeout(() => {
@@ -794,7 +860,7 @@ export class AlumnosListContentComponent {
       this.layoutDrawer.open(
         AlumnosPorVencerDrawerComponent,
         'Alumnos con Cuotas por Vencer',
-        'alert-triangle'
+        'alert-triangle',
       );
     }
   }
@@ -822,15 +888,15 @@ export class AlumnosListContentComponent {
   enviarEnlaceZoom(): void {
     const confirmacion = confirm(
       'Enviar Enlace de Zoom — Clase Teórica\n\n' +
-      'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
-      '¿Confirmar envío masivo?',
+        'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
+        '¿Confirmar envío masivo?',
     );
     if (confirmacion) {
       alert(
         'Enlaces enviados exitosamente\n\n' +
-        '- Correos enviados a alumnos activos\n' +
-        '- Enlace: https://zoom.us/j/123456789\n\n' +
-        '[Mockup — RF-054]',
+          '- Correos enviados a alumnos activos\n' +
+          '- Enlace: https://zoom.us/j/123456789\n\n' +
+          '[Mockup — RF-054]',
       );
     }
   }
@@ -843,11 +909,11 @@ export class AlumnosListContentComponent {
   registrarAsistenciaZoom(): void {
     alert(
       'Registrar Asistencia — Clase Teórica Zoom\n\n' +
-      'Pasos para registrar asistencia:\n' +
-      '1. Descarga el reporte de asistencia desde Zoom\n' +
-      '2. Revisa la lista de nombres/correos de asistentes\n' +
-      '3. Marca manualmente quienes asistieron\n\n' +
-      '[Mockup — RF-054]',
+        'Pasos para registrar asistencia:\n' +
+        '1. Descarga el reporte de asistencia desde Zoom\n' +
+        '2. Revisa la lista de nombres/correos de asistentes\n' +
+        '3. Marca manualmente quienes asistieron\n\n' +
+        '[Mockup — RF-054]',
     );
   }
 

@@ -1,13 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
-
-interface InasistenciaItem {
-  fecha: string;
-  tipo: string;
-  motivo: string;
-  estado: 'Justificada' | 'Injustificada';
-}
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 
 interface PagoItem {
   fecha: string;
@@ -31,513 +33,537 @@ interface ClasePracticaRow {
 @Component({
   selector: 'app-admin-alumno-detalle',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IconComponent],
+  imports: [RouterLink, IconComponent, SkeletonBlockComponent],
   template: `
     <div class="p-6 max-w-7xl mx-auto flex flex-col gap-6">
-      <!-- ── Breadcrumbs ── -->
-      <nav class="flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
-        <a routerLink="/app/admin/dashboard" class="breadcrumb-link" data-llm-nav="inicio">
-          Inicio
-        </a>
-        <span class="text-muted">/</span>
-        <a routerLink="/app/admin/alumnos" class="breadcrumb-link" data-llm-nav="alumnos">
-          Alumnos
-        </a>
-        <span class="text-muted">/</span>
-        <span style="color: var(--text-secondary)">Ficha de {{ alumno().nombre }}</span>
-      </nav>
-
-      <!-- ── Header ── -->
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div class="flex flex-col gap-1">
-          <h1 class="text-3xl font-bold" style="color: var(--text-primary)">
-            {{ alumno().nombre }}
-          </h1>
-          <p class="text-sm font-medium" style="color: var(--ds-brand)">
-            {{ alumno().curso }} · {{ alumno().sede }} · Matrícula {{ alumno().matricula }}
-          </p>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <button
-            class="btn-outline flex items-center gap-2"
-            data-llm-action="generar-carnet"
-            aria-label="Generar carnet del alumno"
-          >
-            <app-icon name="credit-card" [size]="15" />
-            Generar Carnet
-          </button>
-          <button
-            class="btn-outline flex items-center gap-2"
-            disabled
-            data-llm-action="generar-certificado"
-            aria-label="Generar certificado (requiere completar clases)"
-            style="opacity: 0.5; cursor: not-allowed"
-          >
-            <app-icon name="clock" [size]="15" />
-            Generar Certificado ({{ practicas().completadas }}/{{ practicas().requeridas }})
-          </button>
-          <button
-            class="btn-outline flex items-center gap-2"
-            data-llm-action="editar-alumno"
-            aria-label="Editar datos del alumno"
-          >
-            <app-icon name="pencil" [size]="15" />
-            Editar
-          </button>
-        </div>
-      </div>
-
-      <!-- ── 3-column Grid ── -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Card 1: Info Personal -->
-        <div class="card p-5 flex flex-col gap-4">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex items-center justify-center rounded-full shrink-0"
-              style="
-                width: 52px; height: 52px;
-                background: var(--bg-elevated);
-                border: 1px solid var(--border-default);
-                color: var(--text-muted);
-              "
-              aria-hidden="true"
-            >
-              <app-icon name="user" [size]="24" />
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="font-semibold text-sm" style="color: var(--text-primary)">
-                {{ alumno().nombre }}
-              </span>
-              <span class="text-sm" style="color: var(--text-secondary)">{{ alumno().rut }}</span>
-              <span class="text-xs" style="color: var(--ds-brand)">
-                Matrícula {{ alumno().matricula }}
-              </span>
-            </div>
-          </div>
-
-          <hr style="border-color: var(--border-subtle)" />
-
-          <div class="flex flex-col gap-3">
-            <p class="info-label">INFORMACIÓN PERSONAL</p>
-            <div class="flex flex-col gap-0.5">
-              <span class="info-field-label">EMAIL</span>
-              <span class="info-field-value">{{ alumno().email }}</span>
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="info-field-label">TELÉFONO</span>
-              <span class="info-field-value">{{ alumno().telefono }}</span>
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="info-field-label">FECHA DE INGRESO</span>
-              <span class="info-field-value">{{ alumno().fechaIngreso }}</span>
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="info-field-label">INSTRUCTOR ASIGNADO</span>
-              <span class="info-field-value flex items-center gap-1.5">
-                <app-icon name="user" [size]="13" />
-                {{ alumno().instructor }}
-              </span>
-            </div>
-            <div class="flex flex-col gap-0.5">
-              <span class="info-field-label">ESTADO</span>
-              <span class="badge-activo">{{ alumno().estado }}</span>
-            </div>
+      <!-- ── Estado de Carga ── -->
+      @if (facade.isLoading()) {
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="220px" height="14px" />
+          <app-skeleton-block variant="text" width="340px" height="36px" />
+          <app-skeleton-block variant="text" width="260px" height="16px" />
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            <app-skeleton-block variant="rect" width="100%" height="260px" />
+            <app-skeleton-block variant="rect" width="100%" height="260px" />
+            <app-skeleton-block variant="rect" width="100%" height="260px" />
           </div>
         </div>
 
-        <!-- Card 2: Clases Prácticas -->
-        <div class="card p-5 flex flex-col gap-4">
-          <div class="flex items-start justify-between">
-            <div class="flex flex-col gap-0.5">
-              <span class="text-base font-semibold" style="color: var(--text-primary)">
-                Clases Prácticas
-              </span>
-              <span class="text-xs" style="color: var(--ds-brand)">
-                De {{ practicas().requeridas }} clases requeridas
-              </span>
-            </div>
-            <span
-              class="kpi-value"
-              style="color: var(--ds-brand); font-size: 2rem"
-              aria-label="{{ porcentajePracticas() }}% completado"
-            >
-              {{ porcentajePracticas() }}%
-            </span>
-          </div>
-          <div
-            class="progress-track"
-            role="progressbar"
-            [attr.aria-valuenow]="practicas().completadas"
-            [attr.aria-valuemax]="practicas().requeridas"
-            aria-label="Progreso clases prácticas"
-          >
-            <div class="progress-fill-brand" [style.width.%]="porcentajePracticas()">
-              <span class="progress-label-inline">
-                {{ practicas().completadas }}/{{ practicas().requeridas }}
-              </span>
-            </div>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span style="color: var(--ds-brand)">{{ practicas().completadas }} completadas</span>
-            <span style="color: var(--text-muted)">{{ restantesPracticas() }} restantes</span>
-          </div>
-        </div>
-
-        <!-- Card 3: Clases Teóricas -->
-        <div class="card p-5 flex flex-col gap-4">
-          <div class="flex items-start justify-between">
-            <div class="flex flex-col gap-0.5">
-              <span class="text-base font-semibold" style="color: var(--text-primary)">
-                Clases Teóricas
-              </span>
-              <span class="text-xs" style="color: var(--state-success)">
-                De {{ teoricas().requeridas }} clases requeridas
-              </span>
-            </div>
-            <span
-              class="kpi-value"
-              style="color: var(--state-success); font-size: 2rem"
-              aria-label="{{ porcentajeTeoricas() }}% completado"
-            >
-              {{ porcentajeTeoricas() }}%
-            </span>
-          </div>
-          <div
-            class="progress-track"
-            role="progressbar"
-            [attr.aria-valuenow]="teoricas().asistidas"
-            [attr.aria-valuemax]="teoricas().requeridas"
-            aria-label="Progreso clases teóricas"
-          >
-            <div class="progress-fill-success" [style.width.%]="porcentajeTeoricas()">
-              <span class="progress-label-inline">
-                {{ teoricas().asistidas }}/{{ teoricas().requeridas }}
-              </span>
-            </div>
-          </div>
-          <div class="flex items-center justify-between text-sm">
-            <span style="color: var(--state-success)">{{ teoricas().asistidas }} asistidas</span>
-            <span style="color: var(--text-muted)">{{ restantesTeoricas() }} restantes</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Sección Inasistencias ── -->
-      <div class="inasistencias-container p-4 flex flex-col gap-3 rounded-xl">
-        <div class="flex items-center gap-3">
-          <div
-            class="flex items-center justify-center rounded-lg shrink-0"
-            style="
-              width: 36px; height: 36px;
-              background: var(--state-warning-bg);
-              border: 1px solid var(--state-warning-border);
-              color: var(--state-warning);
-            "
-            aria-hidden="true"
-          >
-            <app-icon name="triangle-alert" [size]="18" />
-          </div>
-          <span class="font-semibold text-sm" style="color: var(--text-primary)">
-            Inasistencias Registradas
-          </span>
-        </div>
-        <div class="flex flex-col gap-2">
-          @for (item of inasistencias(); track item.fecha) {
-            <div
-              class="flex items-center justify-between p-3 rounded-lg"
-              style="background: var(--bg-surface); border: 1px solid var(--border-default)"
-            >
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-medium" style="color: var(--text-primary)">
-                  {{ item.fecha }}
-                </span>
-                <span class="text-xs" style="color: var(--ds-brand)">
-                  {{ item.tipo }} · {{ item.motivo }}
-                </span>
-              </div>
-              <span
-                class="text-xs font-medium px-2 py-1 rounded-full"
-                [class.badge-justificada]="item.estado === 'Justificada'"
-                [class.badge-injustificada]="item.estado === 'Injustificada'"
-              >
-                {{ item.estado }}
-              </span>
-            </div>
-          } @empty {
-            <p class="text-sm text-center py-2" style="color: var(--text-muted)">
-              Sin inasistencias registradas
-            </p>
-          }
-        </div>
-        <button
-          class="text-sm font-medium self-start"
-          style="color: var(--ds-brand); background: none; border: none; cursor: pointer; padding: 0"
-          data-llm-action="registrar-inasistencia"
-          aria-label="Registrar nueva inasistencia"
-        >
-          + Registrar nueva inasistencia
-        </button>
-      </div>
-
-      <!-- ── Ficha Técnica — Clases Prácticas ── -->
-      <div class="card overflow-hidden">
-        <!-- Cabecera -->
-        <div class="flex items-start justify-between gap-4 p-5 pb-4">
-          <div class="flex flex-col gap-0.5">
-            <h2 class="text-base font-semibold" style="color: var(--text-primary)">
-              Ficha Técnica - Clases Prácticas
-            </h2>
-            <p class="text-xs" style="color: var(--ds-brand)">
-              Registro detallado de las {{ practicas().requeridas }} clases prácticas
-            </p>
-          </div>
-          <button
-            class="btn-outline flex items-center gap-2 shrink-0"
-            data-llm-action="imprimir-ficha"
-            aria-label="Imprimir ficha técnica de clases prácticas"
-          >
-            <app-icon name="printer" [size]="14" />
-            Imprimir Ficha
-          </button>
-        </div>
-
-        <!-- Tabla -->
-        <div class="overflow-x-auto">
-          <table class="tabla-ficha w-full" aria-label="Registro de clases prácticas">
-            <thead>
-              <tr>
-                <th scope="col">N°</th>
-                <th scope="col">Fecha</th>
-                <th scope="col">Hora</th>
-                <th scope="col">Instructor</th>
-                <th scope="col" class="text-right">Km Inicio</th>
-                <th scope="col" class="text-right">Km Fin</th>
-                <th scope="col">Observaciones</th>
-                <th scope="col" class="text-center">Firmas</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (clase of clasesPracticas(); track clase.numero) {
-                <tr [class.fila-pendiente]="!clase.completada">
-                  <td class="font-semibold" style="color: var(--text-primary)">
-                    Clase {{ clase.numero }}
-                  </td>
-                  <td>
-                    @if (clase.fecha) {
-                      {{ clase.fecha }}
-                    } @else {
-                      <span class="dato-vacio">-</span>
-                    }
-                  </td>
-                  <td>
-                    @if (clase.hora) {
-                      {{ clase.hora }}
-                    } @else {
-                      <span class="dato-vacio">-</span>
-                    }
-                  </td>
-                  <td>
-                    @if (clase.instructor) {
-                      <span style="color: var(--ds-brand)">{{ clase.instructor }}</span>
-                    } @else {
-                      <span class="dato-vacio">-</span>
-                    }
-                  </td>
-                  <td class="text-right">
-                    @if (clase.kmInicio !== null) {
-                      {{ clase.kmInicio.toLocaleString('es-CL') }}
-                    } @else {
-                      <span class="dato-vacio">-</span>
-                    }
-                  </td>
-                  <td class="text-right">
-                    @if (clase.kmFin !== null) {
-                      {{ clase.kmFin.toLocaleString('es-CL') }}
-                    } @else {
-                      <span class="dato-vacio">-</span>
-                    }
-                  </td>
-                  <td>
-                    @if (clase.observaciones) {
-                      <span style="color: var(--text-secondary)">{{ clase.observaciones }}</span>
-                    } @else {
-                      <span class="dato-vacio">Pendiente</span>
-                    }
-                  </td>
-                  <td>
-                    <div class="flex items-center justify-center gap-1.5">
-                      <!-- Firma Alumno -->
-                      <span
-                        class="firma-dot"
-                        [class.firma-alumno]="clase.completada"
-                        [class.firma-pendiente]="!clase.completada"
-                        [attr.aria-label]="
-                          clase.completada ? 'Alumno firmó' : 'Firma alumno pendiente'
-                        "
-                        title="{{ clase.completada ? 'Alumno' : 'Pendiente' }}"
-                      >
-                        @if (clase.completada) {
-                          <app-icon name="check" [size]="10" color="#fff" />
-                        }
-                      </span>
-                      <!-- Firma Instructor -->
-                      <span
-                        class="firma-dot"
-                        [class.firma-instructor]="clase.completada"
-                        [class.firma-pendiente]="!clase.completada"
-                        [attr.aria-label]="
-                          clase.completada ? 'Instructor firmó' : 'Firma instructor pendiente'
-                        "
-                        title="{{ clase.completada ? 'Instructor' : 'Pendiente' }}"
-                      >
-                        @if (clase.completada) {
-                          <app-icon name="check" [size]="10" color="#fff" />
-                        }
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Footer / Leyenda -->
+        <!-- ── Estado de Error ── -->
+      } @else if (facade.error()) {
         <div
-          class="flex items-center gap-4 px-5 py-3 flex-wrap"
-          style="border-top: 1px solid var(--border-subtle)"
+          class="card p-5 flex items-start gap-3"
+          style="border-left: 3px solid var(--state-error)"
         >
-          <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-secondary)">
-            <span
-              class="firma-dot firma-alumno"
-              style="width:12px;height:12px"
-              aria-hidden="true"
-            ></span>
-            Alumno
-          </span>
-          <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-secondary)">
-            <span
-              class="firma-dot firma-instructor"
-              style="width:12px;height:12px"
-              aria-hidden="true"
-            ></span>
-            Instructor
-          </span>
-          <span class="text-xs" style="color: var(--text-muted)">
-            · Las firmas se registran al finalizar cada clase
-          </span>
-        </div>
-      </div>
-
-      <!-- ── Historial de Pagos ── -->
-      <div class="card overflow-hidden">
-        <!-- Cabecera -->
-        <div class="flex items-start justify-between gap-4 p-5 pb-4">
-          <div class="flex flex-col gap-0.5">
-            <h2 class="text-base font-semibold" style="color: var(--text-primary)">
-              Historial de Pagos
-            </h2>
-            <p class="text-xs" style="color: var(--ds-brand)">
-              Registro de cuotas y pagos del alumno
+          <app-icon
+            name="circle-alert"
+            [size]="18"
+            style="color: var(--state-error); flex-shrink: 0; margin-top: 2px"
+          />
+          <div class="flex flex-col gap-1">
+            <p class="font-semibold text-sm" style="color: var(--text-primary)">
+              Error al cargar la ficha
             </p>
-          </div>
-          <!-- Resumen financiero -->
-          <div class="flex items-center gap-6 shrink-0">
-            <div class="flex flex-col items-end gap-0.5">
-              <span class="text-xs font-medium" style="color: var(--text-muted)">Total pagado</span>
-              <span class="text-lg font-bold" style="color: var(--state-success)">
-                \${{ totalPagado().toLocaleString('es-CL') }}
-              </span>
-            </div>
-            <div class="flex flex-col items-end gap-0.5">
-              <span class="text-xs font-medium" style="color: var(--text-muted)"
-                >Saldo pendiente</span
-              >
-              <span class="text-lg font-bold" style="color: var(--state-warning)">
-                \${{ saldoPendiente().toLocaleString('es-CL') }}
-              </span>
-            </div>
+            <p class="text-sm" style="color: var(--text-secondary)">{{ facade.error() }}</p>
           </div>
         </div>
-
-        <!-- Tabla -->
-        <div class="overflow-x-auto">
-          <table class="tabla-ficha w-full" aria-label="Historial de pagos del alumno">
-            <thead>
-              <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Concepto</th>
-                <th scope="col" class="text-right">Monto</th>
-                <th scope="col">Método</th>
-                <th scope="col" class="text-right">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (pago of pagos(); track pago.concepto) {
-                <tr>
-                  <td style="color: var(--text-secondary)">{{ pago.fecha }}</td>
-                  <td class="font-semibold" style="color: var(--text-primary)">
-                    {{ pago.concepto }}
-                  </td>
-                  <td class="text-right font-medium" style="color: var(--text-primary)">
-                    \${{ pago.monto.toLocaleString('es-CL') }}
-                  </td>
-                  <td style="color: var(--text-secondary)">
-                    @if (pago.metodo) {
-                      {{ pago.metodo }}
-                    } @else {
-                      <span class="dato-vacio">—</span>
-                    }
-                  </td>
-                  <td class="text-right">
-                    <span
-                      class="text-xs font-medium px-3 py-1 rounded-full"
-                      [class.badge-pagado]="pago.estado === 'Pagado'"
-                      [class.badge-pendiente-pago]="pago.estado === 'Pendiente'"
-                    >
-                      {{ pago.estado }}
-                    </span>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Footer -->
-        <div
-          class="flex items-center justify-between gap-4 px-5 py-3 flex-wrap"
-          style="border-top: 1px solid var(--border-subtle)"
-        >
-          <span class="text-xs" style="color: var(--ds-brand)">
-            {{ pagosRegistrados() }} pagos registrados · {{ pagosPendientes() }} pendiente(s)
-          </span>
-          <a
-            routerLink="/app/admin/pagos"
-            class="breadcrumb-link text-xs font-medium"
-            data-llm-nav="modulo-pagos"
-          >
-            Ver en módulo de pagos →
-          </a>
-        </div>
-      </div>
-
-      <!-- ── Volver al Listado ── -->
-      <div class="pb-2">
         <a
           routerLink="/app/admin/alumnos"
           class="breadcrumb-link inline-flex items-center gap-2 text-sm font-medium"
-          data-llm-nav="volver-listado"
-          aria-label="Volver al listado de alumnos"
         >
           <app-icon name="arrow-left" [size]="15" />
           Volver al Listado
         </a>
-      </div>
+
+        <!-- ── Vista Principal ── -->
+      } @else if (facade.alumno(); as alumno) {
+        <!-- Breadcrumbs -->
+        <nav class="flex items-center gap-1.5 text-sm" aria-label="Breadcrumb">
+          <a routerLink="/app/admin/dashboard" class="breadcrumb-link" data-llm-nav="inicio"
+            >Inicio</a
+          >
+          <span style="color: var(--text-muted)">/</span>
+          <a routerLink="/app/admin/alumnos" class="breadcrumb-link" data-llm-nav="alumnos"
+            >Alumnos</a
+          >
+          <span style="color: var(--text-muted)">/</span>
+          <span style="color: var(--text-secondary)">Ficha de {{ alumno.nombre }}</span>
+        </nav>
+
+        <!-- Header -->
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div class="flex flex-col gap-1">
+            <h1 class="text-3xl font-bold" style="color: var(--text-primary)">
+              {{ alumno.nombre }}
+            </h1>
+            <p class="text-sm font-medium" style="color: var(--ds-brand)">
+              {{ alumno.curso }} · Matrícula {{ alumno.matricula }}
+            </p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button
+              class="btn-outline flex items-center gap-2"
+              data-llm-action="generar-carnet"
+              aria-label="Generar carnet del alumno"
+            >
+              <app-icon name="credit-card" [size]="15" />
+              Generar Carnet
+            </button>
+            <button
+              class="btn-outline flex items-center gap-2"
+              disabled
+              data-llm-action="generar-certificado"
+              aria-label="Generar certificado (requiere completar clases)"
+              style="opacity: 0.5; cursor: not-allowed"
+            >
+              <app-icon name="clock" [size]="15" />
+              Generar Certificado ({{ facade.progresoPractico().completadas }}/{{
+                facade.progresoPractico().requeridas
+              }})
+            </button>
+            <button
+              class="btn-outline flex items-center gap-2"
+              data-llm-action="editar-alumno"
+              aria-label="Editar datos del alumno"
+            >
+              <app-icon name="pencil" [size]="15" />
+              Editar
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-column Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Card 1: Info Personal -->
+          <div class="card p-5 flex flex-col gap-4">
+            <div class="flex items-center gap-3">
+              <div
+                class="flex items-center justify-center rounded-full shrink-0"
+                style="width:52px;height:52px;background:var(--bg-elevated);border:1px solid var(--border-default);color:var(--text-muted)"
+                aria-hidden="true"
+              >
+                <app-icon name="user" [size]="24" />
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="font-semibold text-sm" style="color: var(--text-primary)">{{
+                  alumno.nombre
+                }}</span>
+                <span class="text-sm" style="color: var(--text-secondary)">{{ alumno.rut }}</span>
+                <span class="text-xs" style="color: var(--ds-brand)"
+                  >Matrícula {{ alumno.matricula }}</span
+                >
+              </div>
+            </div>
+
+            <hr style="border-color: var(--border-subtle)" />
+
+            <div class="flex flex-col gap-3">
+              <p class="info-label">INFORMACIÓN PERSONAL</p>
+              <div class="flex flex-col gap-0.5">
+                <span class="info-field-label">EMAIL</span>
+                <span class="info-field-value">{{ alumno.email }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="info-field-label">TELÉFONO</span>
+                <span class="info-field-value">{{ alumno.telefono }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="info-field-label">FECHA DE INGRESO</span>
+                <span class="info-field-value">{{ alumno.fechaIngreso }}</span>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <span class="info-field-label">ESTADO</span>
+                <span class="badge-activo">{{ alumno.estado }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Clases Prácticas -->
+          <div class="card p-5 flex flex-col gap-4">
+            <div class="flex items-start justify-between">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-base font-semibold" style="color: var(--text-primary)"
+                  >Clases Prácticas</span
+                >
+                <span class="text-xs" style="color: var(--ds-brand)">
+                  De {{ facade.progresoPractico().requeridas }} clases requeridas
+                </span>
+              </div>
+              <span
+                class="kpi-value"
+                style="color: var(--ds-brand); font-size: 2rem"
+                [attr.aria-label]="facade.porcentajePracticas() + '% completado'"
+              >
+                {{ facade.porcentajePracticas() }}%
+              </span>
+            </div>
+            <div
+              class="progress-track"
+              role="progressbar"
+              [attr.aria-valuenow]="facade.progresoPractico().completadas"
+              [attr.aria-valuemax]="facade.progresoPractico().requeridas"
+              aria-label="Progreso clases prácticas"
+            >
+              <div class="progress-fill-brand" [style.width.%]="facade.porcentajePracticas()">
+                <span class="progress-label-inline">
+                  {{ facade.progresoPractico().completadas }}/{{
+                    facade.progresoPractico().requeridas
+                  }}
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span style="color: var(--ds-brand)"
+                >{{ facade.progresoPractico().completadas }} completadas</span
+              >
+              <span style="color: var(--text-muted)">{{ restantesPracticas() }} restantes</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Clases Teóricas -->
+          <div class="card p-5 flex flex-col gap-4">
+            <div class="flex items-start justify-between">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-base font-semibold" style="color: var(--text-primary)"
+                  >Clases Teóricas</span
+                >
+                <span class="text-xs" style="color: var(--state-success)">
+                  De {{ facade.progresoTeorico().requeridas }} clases requeridas
+                </span>
+              </div>
+              <span
+                class="kpi-value"
+                style="color: var(--state-success); font-size: 2rem"
+                [attr.aria-label]="facade.porcentajeTeoricas() + '% completado'"
+              >
+                {{ facade.porcentajeTeoricas() }}%
+              </span>
+            </div>
+            <div
+              class="progress-track"
+              role="progressbar"
+              [attr.aria-valuenow]="facade.progresoTeorico().completadas"
+              [attr.aria-valuemax]="facade.progresoTeorico().requeridas"
+              aria-label="Progreso clases teóricas"
+            >
+              <div class="progress-fill-success" [style.width.%]="facade.porcentajeTeoricas()">
+                <span class="progress-label-inline">
+                  {{ facade.progresoTeorico().completadas }}/{{
+                    facade.progresoTeorico().requeridas
+                  }}
+                </span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <span style="color: var(--state-success)"
+                >{{ facade.progresoTeorico().completadas }} asistidas</span
+              >
+              <span style="color: var(--text-muted)">{{ restantesTeoricas() }} restantes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección Inasistencias -->
+        <div class="inasistencias-container p-4 flex flex-col gap-3 rounded-xl">
+          <div class="flex items-center gap-3">
+            <div
+              class="flex items-center justify-center rounded-lg shrink-0"
+              style="width:36px;height:36px;background:var(--state-warning-bg);border:1px solid var(--state-warning-border);color:var(--state-warning)"
+              aria-hidden="true"
+            >
+              <app-icon name="triangle-alert" [size]="18" />
+            </div>
+            <span class="font-semibold text-sm" style="color: var(--text-primary)">
+              Inasistencias Registradas
+            </span>
+          </div>
+          <div class="flex flex-col gap-2">
+            @for (item of facade.inasistencias(); track item.fecha + item.tipo) {
+              <div
+                class="flex items-center justify-between p-3 rounded-lg"
+                style="background: var(--bg-surface); border: 1px solid var(--border-default)"
+              >
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-sm font-medium" style="color: var(--text-primary)">{{
+                    item.fecha
+                  }}</span>
+                  <span class="text-xs" style="color: var(--ds-brand)">
+                    {{ item.tipo }}
+                    @if (item.motivo) {
+                      · {{ item.motivo }}
+                    }
+                  </span>
+                </div>
+                <span
+                  class="text-xs font-medium px-2 py-1 rounded-full"
+                  [class.badge-justificada]="item.estado === 'Justificada'"
+                  [class.badge-injustificada]="item.estado === 'Injustificada'"
+                >
+                  {{ item.estado }}
+                </span>
+              </div>
+            } @empty {
+              <p class="text-sm text-center py-2" style="color: var(--text-muted)">
+                Sin inasistencias registradas
+              </p>
+            }
+          </div>
+          <button
+            class="text-sm font-medium self-start"
+            style="color: var(--ds-brand); background: none; border: none; cursor: pointer; padding: 0"
+            data-llm-action="registrar-inasistencia"
+            aria-label="Registrar nueva inasistencia"
+          >
+            + Registrar nueva inasistencia
+          </button>
+        </div>
+
+        <!-- ── Ficha Técnica — Clases Prácticas (mock — pendiente BD) ── -->
+        <div class="card overflow-hidden">
+          <div class="flex items-start justify-between gap-4 p-5 pb-4">
+            <div class="flex flex-col gap-0.5">
+              <h2 class="text-base font-semibold" style="color: var(--text-primary)">
+                Ficha Técnica - Clases Prácticas
+              </h2>
+              <p class="text-xs" style="color: var(--ds-brand)">
+                Registro detallado de las {{ facade.progresoPractico().requeridas }} clases
+                prácticas
+              </p>
+            </div>
+            <button
+              class="btn-outline flex items-center gap-2 shrink-0"
+              data-llm-action="imprimir-ficha"
+              aria-label="Imprimir ficha técnica"
+            >
+              <app-icon name="printer" [size]="14" />
+              Imprimir Ficha
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="tabla-ficha w-full" aria-label="Registro de clases prácticas">
+              <thead>
+                <tr>
+                  <th scope="col">N°</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Hora</th>
+                  <th scope="col">Instructor</th>
+                  <th scope="col" class="text-right">Km Inicio</th>
+                  <th scope="col" class="text-right">Km Fin</th>
+                  <th scope="col">Observaciones</th>
+                  <th scope="col" class="text-center">Firmas</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (clase of clasesPracticas(); track clase.numero) {
+                  <tr [class.fila-pendiente]="!clase.completada">
+                    <td class="font-semibold" style="color: var(--text-primary)">
+                      Clase {{ clase.numero }}
+                    </td>
+                    <td>
+                      @if (clase.fecha) {
+                        {{ clase.fecha }}
+                      } @else {
+                        <span class="dato-vacio">-</span>
+                      }
+                    </td>
+                    <td>
+                      @if (clase.hora) {
+                        {{ clase.hora }}
+                      } @else {
+                        <span class="dato-vacio">-</span>
+                      }
+                    </td>
+                    <td>
+                      @if (clase.instructor) {
+                        <span style="color: var(--ds-brand)">{{ clase.instructor }}</span>
+                      } @else {
+                        <span class="dato-vacio">-</span>
+                      }
+                    </td>
+                    <td class="text-right">
+                      @if (clase.kmInicio !== null) {
+                        {{ clase.kmInicio.toLocaleString('es-CL') }}
+                      } @else {
+                        <span class="dato-vacio">-</span>
+                      }
+                    </td>
+                    <td class="text-right">
+                      @if (clase.kmFin !== null) {
+                        {{ clase.kmFin.toLocaleString('es-CL') }}
+                      } @else {
+                        <span class="dato-vacio">-</span>
+                      }
+                    </td>
+                    <td>
+                      @if (clase.observaciones) {
+                        <span style="color: var(--text-secondary)">{{ clase.observaciones }}</span>
+                      } @else {
+                        <span class="dato-vacio">Pendiente</span>
+                      }
+                    </td>
+                    <td>
+                      <div class="flex items-center justify-center gap-1.5">
+                        <span
+                          class="firma-dot"
+                          [class.firma-alumno]="clase.completada"
+                          [class.firma-pendiente]="!clase.completada"
+                          [attr.aria-label]="clase.completada ? 'Alumno firmó' : 'Firma pendiente'"
+                        >
+                          @if (clase.completada) {
+                            <app-icon name="check" [size]="10" color="#fff" />
+                          }
+                        </span>
+                        <span
+                          class="firma-dot"
+                          [class.firma-instructor]="clase.completada"
+                          [class.firma-pendiente]="!clase.completada"
+                          [attr.aria-label]="
+                            clase.completada ? 'Instructor firmó' : 'Firma pendiente'
+                          "
+                        >
+                          @if (clase.completada) {
+                            <app-icon name="check" [size]="10" color="#fff" />
+                          }
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div
+            class="flex items-center gap-4 px-5 py-3 flex-wrap"
+            style="border-top: 1px solid var(--border-subtle)"
+          >
+            <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-secondary)">
+              <span
+                class="firma-dot firma-alumno"
+                style="width:12px;height:12px"
+                aria-hidden="true"
+              ></span>
+              Alumno
+            </span>
+            <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-secondary)">
+              <span
+                class="firma-dot firma-instructor"
+                style="width:12px;height:12px"
+                aria-hidden="true"
+              ></span>
+              Instructor
+            </span>
+            <span class="text-xs" style="color: var(--text-muted)"
+              >· Las firmas se registran al finalizar cada clase</span
+            >
+          </div>
+        </div>
+
+        <!-- ── Historial de Pagos (mock — pendiente BD) ── -->
+        <div class="card overflow-hidden">
+          <div class="flex items-start justify-between gap-4 p-5 pb-4">
+            <div class="flex flex-col gap-0.5">
+              <h2 class="text-base font-semibold" style="color: var(--text-primary)">
+                Historial de Pagos
+              </h2>
+              <p class="text-xs" style="color: var(--ds-brand)">
+                Registro de cuotas y pagos del alumno
+              </p>
+            </div>
+            <div class="flex items-center gap-6 shrink-0">
+              <div class="flex flex-col items-end gap-0.5">
+                <span class="text-xs font-medium" style="color: var(--text-muted)"
+                  >Total pagado</span
+                >
+                <span class="text-lg font-bold" style="color: var(--state-success)">
+                  \${{ totalPagado().toLocaleString('es-CL') }}
+                </span>
+              </div>
+              <div class="flex flex-col items-end gap-0.5">
+                <span class="text-xs font-medium" style="color: var(--text-muted)"
+                  >Saldo pendiente</span
+                >
+                <span class="text-lg font-bold" style="color: var(--state-warning)">
+                  \${{ saldoPendiente().toLocaleString('es-CL') }}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="tabla-ficha w-full" aria-label="Historial de pagos del alumno">
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Concepto</th>
+                  <th scope="col" class="text-right">Monto</th>
+                  <th scope="col">Método</th>
+                  <th scope="col" class="text-right">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (pago of pagos(); track pago.concepto) {
+                  <tr>
+                    <td style="color: var(--text-secondary)">{{ pago.fecha }}</td>
+                    <td class="font-semibold" style="color: var(--text-primary)">
+                      {{ pago.concepto }}
+                    </td>
+                    <td class="text-right font-medium" style="color: var(--text-primary)">
+                      \${{ pago.monto.toLocaleString('es-CL') }}
+                    </td>
+                    <td style="color: var(--text-secondary)">
+                      @if (pago.metodo) {
+                        {{ pago.metodo }}
+                      } @else {
+                        <span class="dato-vacio">—</span>
+                      }
+                    </td>
+                    <td class="text-right">
+                      <span
+                        class="text-xs font-medium px-3 py-1 rounded-full"
+                        [class.badge-pagado]="pago.estado === 'Pagado'"
+                        [class.badge-pendiente-pago]="pago.estado === 'Pendiente'"
+                      >
+                        {{ pago.estado }}
+                      </span>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div
+            class="flex items-center justify-between gap-4 px-5 py-3 flex-wrap"
+            style="border-top: 1px solid var(--border-subtle)"
+          >
+            <span class="text-xs" style="color: var(--ds-brand)">
+              {{ pagosRegistrados() }} pagos registrados · {{ pagosPendientes() }} pendiente(s)
+            </span>
+            <a
+              routerLink="/app/admin/pagos"
+              class="breadcrumb-link text-xs font-medium"
+              data-llm-nav="modulo-pagos"
+            >
+              Ver en módulo de pagos →
+            </a>
+          </div>
+        </div>
+
+        <!-- Volver al Listado -->
+        <div class="pb-2">
+          <a
+            routerLink="/app/admin/alumnos"
+            class="breadcrumb-link inline-flex items-center gap-2 text-sm font-medium"
+            data-llm-nav="volver-listado"
+            aria-label="Volver al listado de alumnos"
+          >
+            <app-icon name="arrow-left" [size]="15" />
+            Volver al Listado
+          </a>
+        </div>
+      }
+      <!-- fin @else if alumno -->
     </div>
   `,
   styles: `
-    /* ── Breadcrumbs ── */
     .breadcrumb-link {
       color: var(--ds-brand);
       text-decoration: none;
@@ -547,7 +573,6 @@ interface ClasePracticaRow {
       opacity: 0.75;
     }
 
-    /* ── Info Personal ── */
     .info-label {
       font-size: var(--text-xs);
       font-weight: var(--font-bold);
@@ -565,7 +590,6 @@ interface ClasePracticaRow {
       color: var(--text-primary);
     }
 
-    /* ── Badges ── */
     .badge-activo {
       display: inline-flex;
       align-items: center;
@@ -578,18 +602,7 @@ interface ClasePracticaRow {
       border: 1px solid var(--state-success-border);
       width: fit-content;
     }
-    .badge-justificada {
-      color: var(--state-info);
-      background: var(--state-info-bg);
-      border: 1px solid var(--state-info-border);
-    }
-    .badge-injustificada {
-      color: var(--state-error);
-      background: var(--state-error-bg);
-      border: 1px solid var(--state-error-border);
-    }
 
-    /* ── Barras de progreso ── */
     .progress-track {
       width: 100%;
       height: 20px;
@@ -626,13 +639,22 @@ interface ClasePracticaRow {
       white-space: nowrap;
     }
 
-    /* ── Inasistencias ── */
     .inasistencias-container {
       background: var(--state-warning-bg);
       border: 1px solid var(--state-warning-border);
     }
 
-    /* ── Botón outline ── */
+    .badge-justificada {
+      color: var(--state-info);
+      background: var(--state-info-bg);
+      border: 1px solid var(--state-info-border);
+    }
+    .badge-injustificada {
+      color: var(--state-error);
+      background: var(--state-error-bg);
+      border: 1px solid var(--state-error-border);
+    }
+
     .btn-outline {
       padding: 6px 14px;
       border-radius: var(--radius-md);
@@ -648,7 +670,6 @@ interface ClasePracticaRow {
       background: var(--bg-elevated);
     }
 
-    /* ── Tabla ficha técnica ── */
     .tabla-ficha {
       border-collapse: collapse;
       font-size: var(--text-sm);
@@ -675,16 +696,13 @@ interface ClasePracticaRow {
     .tabla-ficha tbody tr:hover td {
       background: var(--bg-elevated);
     }
-
     .fila-pendiente td {
       color: var(--text-muted);
     }
-
     .dato-vacio {
       color: var(--text-muted);
     }
 
-    /* ── Firmas ── */
     .firma-dot {
       display: inline-flex;
       align-items: center;
@@ -703,7 +721,6 @@ interface ClasePracticaRow {
       background: var(--bg-subtle);
     }
 
-    /* ── Badges de pago ── */
     .badge-pagado {
       color: var(--state-success);
       background: var(--state-success-bg);
@@ -716,28 +733,11 @@ interface ClasePracticaRow {
     }
   `,
 })
-export class AdminAlumnoDetalleComponent {
-  // ── Mock data (reemplazar con Facade al integrar Supabase) ──
-  protected readonly alumno = signal({
-    nombre: 'María González Pérez',
-    rut: '18.234.567-8',
-    matricula: '#3454',
-    curso: 'Clase B',
-    sede: 'Autoescuela Chillán',
-    email: 'maria@email.cl',
-    telefono: '+56 9 8765 4321',
-    fechaIngreso: '2026-02-01',
-    instructor: 'Carlos Rojas',
-    estado: 'Activo',
-  });
+export class AdminAlumnoDetalleComponent implements OnInit {
+  protected readonly facade = inject(AdminAlumnoDetalleFacade);
+  private readonly route = inject(ActivatedRoute);
 
-  protected readonly practicas = signal({ completadas: 8, requeridas: 12 });
-  protected readonly teoricas = signal({ asistidas: 6, requeridas: 8 });
-
-  protected readonly inasistencias = signal<InasistenciaItem[]>([
-    { fecha: '2026-01-20', tipo: 'Práctica', motivo: 'Enfermedad', estado: 'Justificada' },
-  ]);
-
+  // ── Mock data: Ficha Técnica (pendiente integrar BD — Part 2) ──
   protected readonly clasesPracticas = signal<ClasePracticaRow[]>([
     {
       numero: 1,
@@ -861,25 +861,7 @@ export class AdminAlumnoDetalleComponent {
     },
   ]);
 
-  // ── Computed ──
-  protected readonly porcentajePracticas = computed(() => {
-    const p = this.practicas();
-    return Math.round((p.completadas / p.requeridas) * 100);
-  });
-
-  protected readonly porcentajeTeoricas = computed(() => {
-    const t = this.teoricas();
-    return Math.round((t.asistidas / t.requeridas) * 100);
-  });
-
-  protected readonly restantesPracticas = computed(
-    () => this.practicas().requeridas - this.practicas().completadas,
-  );
-
-  protected readonly restantesTeoricas = computed(
-    () => this.teoricas().requeridas - this.teoricas().asistidas,
-  );
-
+  // ── Mock data: Pagos (pendiente integrar BD — Part 3) ──
   protected readonly pagos = signal<PagoItem[]>([
     {
       fecha: '2026-01-15',
@@ -911,16 +893,26 @@ export class AdminAlumnoDetalleComponent {
     },
   ]);
 
+  // ── Computed: derivados del facade ──────────────────────────────────────────
+  protected readonly restantesPracticas = computed(
+    () => this.facade.progresoPractico().requeridas - this.facade.progresoPractico().completadas,
+  );
+
+  protected readonly restantesTeoricas = computed(
+    () => this.facade.progresoTeorico().requeridas - this.facade.progresoTeorico().completadas,
+  );
+
+  // ── Computed: mock pagos ────────────────────────────────────────────────────
   protected readonly totalPagado = computed(() =>
     this.pagos()
       .filter((p) => p.estado === 'Pagado')
-      .reduce((sum, p) => sum + p.monto, 0),
+      .reduce((s, p) => s + p.monto, 0),
   );
 
   protected readonly saldoPendiente = computed(() =>
     this.pagos()
       .filter((p) => p.estado === 'Pendiente')
-      .reduce((sum, p) => sum + p.monto, 0),
+      .reduce((s, p) => s + p.monto, 0),
   );
 
   protected readonly pagosRegistrados = computed(
@@ -930,4 +922,12 @@ export class AdminAlumnoDetalleComponent {
   protected readonly pagosPendientes = computed(
     () => this.pagos().filter((p) => p.estado === 'Pendiente').length,
   );
+
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id && !isNaN(Number(id))) {
+      this.facade.loadDetalle(Number(id));
+    }
+  }
 }
