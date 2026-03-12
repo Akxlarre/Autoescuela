@@ -4,6 +4,7 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   OnInit,
   OnDestroy,
@@ -101,13 +102,26 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   // ── activeStep (0-indexed para p-stepper, derivado del facade 1-based) ───
   readonly activeStep = computed(() => this.enrollment.currentStep() - 1);
 
+  // ── Sede activa — secretaria: anclada a la suya; admin: seleccionable ────
+  // linkedSignal inicializa desde currentUser() y permite override manual (.set)
+  private readonly _activeBranchId = linkedSignal<number>(
+    () => this.auth.currentUser()?.branchId ?? 1,
+  );
+  readonly activeBranchId = this._activeBranchId.asReadonly();
+
+  /** Solo expone sedes al admin (para el selector). Secretarias reciben []. */
+  readonly adminBranches = computed(() => {
+    const user = this.auth.currentUser();
+    return user?.role === 'admin' ? this.enrollment.branches() : [];
+  });
+
   constructor() {
     effect(() => {
       const step = this.enrollment.currentStep();
       const pd = this.enrollment.personalData();
-      const branchId = this.auth.currentUser()?.branchId;
 
       // Paso 2: carga instructores al entrar (Clase B)
+      const branchId = this._activeBranchId();
       if (step === 2 && pd?.courseCategory === 'non-professional' && branchId != null) {
         this.enrollment.loadInstructors(branchId);
         // Draft resume: instructor ya seleccionado pero grilla no cargada → cargar sin resetear slots
@@ -130,7 +144,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
             courseLabel: course.label,
             basePrice: course.basePrice,
             practicalClassesIncluded: totalSessions,
-            isDeposit: paymentMode === 'deposit',
+            isDeposit: paymentMode === 'partial',
           });
         }
       }
@@ -179,7 +193,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const totalSessions = selectedCourse?.practicalHours
       ? Math.round((selectedCourse.practicalHours * 60) / SESSION_MIN)
       : 12; // fallback hasta que el curso esté en BD
-    const requiredCount = paymentMode === 'deposit' ? Math.ceil(totalSessions / 2) : totalSessions;
+    const requiredCount = paymentMode === 'partial' ? Math.ceil(totalSessions / 2) : totalSessions;
 
     return {
       view:
@@ -362,11 +376,15 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   private async initWizard(): Promise<void> {
-    const branchId = this.auth.currentUser()?.branchId ?? 1;
     this._viewMode.set('loading');
 
+    // Esperar a que el usuario esté resuelto antes de leer su rol o branchId.
+    await this.auth.whenReady;
+
+    const branchId = this._activeBranchId();
+
     // Verificar si hay borradores pendientes antes de iniciar wizard limpio
-    const drafts = await this.enrollment.loadActiveDrafts(branchId);
+    const drafts = await this.enrollment.loadActiveDrafts();
 
     if (drafts.length > 0) {
       this._viewMode.set('draft-list');
@@ -374,12 +392,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     }
 
     // Sin borradores → iniciar wizard limpio
-    this.startFreshWizard(branchId);
+    await this.startFreshWizard(branchId);
   }
 
   /** Inicia el wizard desde cero (sin borrador). */
-  private startFreshWizard(branchId?: number): void {
-    const branch = branchId ?? this.auth.currentUser()?.branchId ?? 1;
+  private async startFreshWizard(branchId?: number): Promise<void> {
+    const branch = branchId ?? this._activeBranchId();
     this.enrollment.reset();
     this.docs.reset();
     this.payment.reset();
@@ -387,7 +405,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this._contractPdfUrl.set(null);
     this._contractStatus.set('pending');
     this._signedContractUpload.set(null);
-    this.enrollment.loadCourses(branch);
+    await this.enrollment.loadBranches();
+    await this.enrollment.loadCourses(branch);
     this._viewMode.set('wizard');
   }
 
@@ -397,7 +416,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const ok = await this.enrollment.resumeDraft(enrollmentId);
     if (ok) {
       // Cargar cursos para que los computed funcionen correctamente
-      const branchId = this.auth.currentUser()?.branchId ?? 1;
+      const branchId = this._activeBranchId();
       await this.enrollment.loadCourses(branchId);
       // Sincronizar _step1Form con los datos del draft para que onStep1Next
       // envíe los datos correctos si el usuario navega de vuelta al paso 1.
@@ -423,13 +442,13 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
     await this.enrollment.discardDraft(enrollmentId);
     if (this.enrollment.activeDrafts().length === 0) {
-      this.startFreshWizard();
+      await this.startFreshWizard();
     }
   }
 
   /** Desde la lista de drafts, el usuario elige empezar una matrícula nueva. */
   onStartNewFromDraftList(): void {
-    this.startFreshWizard();
+    void this.startFreshWizard();
   }
 
   private setupDrawerActions(): void {
@@ -440,7 +459,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   private resetWizard(): void {
-    this.startFreshWizard();
+    void this.startFreshWizard();
   }
 
   // ── Navegación via stepper PrimeNG ────────────────────────────────────────
@@ -451,6 +470,14 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   // ── Paso 1: Datos personales ──────────────────────────────────────────────
+
+  /** Admin: cambia de sede, recarga cursos y reinicia selección de curso. */
+  async onBranchChange(branchId: number): Promise<void> {
+    this._activeBranchId.set(branchId);
+    this._step1Form.set(DEFAULT_PERSONAL_DATA);
+    await this.enrollment.loadCourses(branchId);
+  }
+
   onStep1DataChange(data: EnrollmentPersonalData): void {
     this._step1Form.set(data);
   }
@@ -458,7 +485,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   async onStep1Next(): Promise<void> {
     this._isSaving.set(true);
     try {
-      const branchId = this.auth.currentUser()?.branchId ?? 1;
+      const branchId = this._activeBranchId();
       const ok = await this.enrollment.savePersonalData(this._step1Form(), branchId);
       if (ok) {
         const category = this._step1Form().courseCategory;

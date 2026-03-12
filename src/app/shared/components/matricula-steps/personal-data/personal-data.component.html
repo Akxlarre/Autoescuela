@@ -1,10 +1,20 @@
 <div class="flex flex-col gap-6">
   <div>
     <div class="bg-surface rounded-2xl border border-border-default shadow-sm p-6">
-      <h2 class="text-xl font-semibold text-text-primary mb-6 flex items-center gap-2">
-        <app-icon name="user" [size]="20" class="text-brand" />
-        Paso 1: Datos personales
-      </h2>
+      <div class="flex items-start justify-between mb-6">
+        <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
+          <app-icon name="user" [size]="20" class="text-brand" />
+          Paso 1: Datos personales
+        </h2>
+        @if (branches().length > 0) {
+          <app-branch-selector
+            [branches]="branches()"
+            [selectedBranchId]="selectedBranchId()"
+            (branchChange)="branchChange.emit($event)"
+            data-llm-description="Branch selector for admin: choose which school to enroll the student in"
+          />
+        }
+      </div>
 
       <form class="space-y-6">
         <!-- RUT y Sexo -->

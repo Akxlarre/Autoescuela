@@ -10,7 +10,7 @@ export interface StudentSummaryBanner {
 
 // ─── Payment Mode (Class B only) ───
 
-export type PaymentMode = 'full' | 'deposit';
+export type PaymentMode = 'total' | 'partial';
 
 export interface PaymentModeOption {
   value: PaymentMode;
@@ -74,6 +74,7 @@ export type PromotionStatus = 'open' | 'finished';
 export interface PromotionOption {
   id: number;
   label: string;
+  code: string | null;
   courseCode: string;
   enrolledCount: number;
   maxCapacity: number;

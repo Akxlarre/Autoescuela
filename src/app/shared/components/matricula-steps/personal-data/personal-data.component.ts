@@ -4,18 +4,19 @@ import {
   input,
   output,
   computed,
-  signal,
-  effect,
+  linkedSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { BranchSelectorComponent } from '@shared/components/branch-selector/branch-selector.component';
 import type {
   EnrollmentPersonalData,
   CourseCategory,
   CourseOption,
   AgeAlertStatus,
 } from '@core/models/ui/enrollment-personal-data.model';
+import type { BranchOption } from '@core/models/ui/branch.model';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
@@ -29,7 +30,13 @@ interface CategoryMeta {
 
 @Component({
   selector: 'app-personal-data-step',
-  imports: [FormsModule, IconComponent, AsyncBtnComponent, EmailInputComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    AsyncBtnComponent,
+    EmailInputComponent,
+    BranchSelectorComponent,
+  ],
   templateUrl: './personal-data.component.html',
   styleUrl: './personal-data.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,13 +44,20 @@ interface CategoryMeta {
 export class PersonalDataComponent {
   data = input.required<EnrollmentPersonalData>();
   loading = input<boolean>(false);
+  hiddenCategories = input<CourseCategory[]>([]);
+  /** Sedes disponibles. Array vacío = modo secretaria (oculta el selector). */
+  branches = input<BranchOption[]>([]);
+  selectedBranchId = input<number | null>(null);
   dataChange = output<EnrollmentPersonalData>();
   next = output<void>();
   cancel = output<void>();
+  branchChange = output<number>();
 
   // ── Category selection (local UI state) ───────────────────────────────────
 
-  readonly selectedCategory = signal<CourseCategory | null>(null);
+  readonly selectedCategory = linkedSignal<CourseCategory | null>(
+    () => this.data().courseCategory ?? null,
+  );
 
   readonly categories: CategoryMeta[] = [
     {
@@ -61,24 +75,17 @@ export class PersonalDataComponent {
     { value: 'singular', label: 'Singular', description: 'Cursos especiales', icon: 'star' },
   ];
 
-  /** Siempre muestra las 3 categorías; el nivel 2 informa si no hay cursos disponibles. */
-  readonly availableCategories = computed<CategoryMeta[]>(() => this.categories);
+  /** Oculta categorías prohibidas para el rol/sucursal del usuario (decidido en el smart component). */
+  readonly availableCategories = computed<CategoryMeta[]>(() => {
+    const hidden = new Set(this.hiddenCategories());
+    return this.categories.filter((c) => !hidden.has(c.value));
+  });
 
   readonly filteredCourses = computed<CourseOption[]>(() => {
     const cat = this.selectedCategory();
     if (!cat) return [];
     return this.data().courses.filter((c) => c.category === cat);
   });
-
-  constructor() {
-    // Inicializa selectedCategory desde los datos al cargar (re-edición o default)
-    effect(() => {
-      const cat = this.data().courseCategory;
-      if (cat && !this.selectedCategory()) {
-        this.selectedCategory.set(cat);
-      }
-    });
-  }
 
   // ── Validation signals ────────────────────────────────────────────────────
 

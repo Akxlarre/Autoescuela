@@ -55,6 +55,8 @@ export class DocumentsComponent {
     if (!file) return;
     if (docType === 'id_photo') this.isUploadingPhoto.set(true);
     this.fileSelected.emit({ type: docType, file });
+    // Reset so the same file can be selected again (e.g. re-upload after error)
+    input.value = '';
   }
 
   openLightbox(url: string): void {

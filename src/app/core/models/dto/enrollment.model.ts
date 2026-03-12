@@ -17,7 +17,8 @@ export interface Enrollment {
   contract_accepted: boolean;
   certificate_enabled: boolean;
   current_step: number;
-  payment_mode?: 'total' | 'deposit' | null;
+  payment_mode?: 'total' | 'partial' | null;
+  license_group?: 'class_b' | 'professional' | null;
   registration_channel?: string | null;
   registered_by?: number | null;
   created_at: string;

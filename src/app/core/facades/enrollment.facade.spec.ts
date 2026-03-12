@@ -171,14 +171,14 @@ describe('EnrollmentFacade', () => {
   // ── Payment Mode ──
 
   describe('Payment Mode', () => {
-    it('should set payment mode to full', () => {
-      facade.setPaymentMode('full');
-      expect(facade.paymentMode()).toBe('full');
+    it('should set payment mode to total', () => {
+      facade.setPaymentMode('total');
+      expect(facade.paymentMode()).toBe('total');
     });
 
-    it('should set payment mode to deposit', () => {
-      facade.setPaymentMode('deposit');
-      expect(facade.paymentMode()).toBe('deposit');
+    it('should set payment mode to partial', () => {
+      facade.setPaymentMode('partial');
+      expect(facade.paymentMode()).toBe('partial');
     });
   });
 

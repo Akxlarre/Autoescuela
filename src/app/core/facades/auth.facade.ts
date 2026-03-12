@@ -97,9 +97,8 @@ export class AuthFacade {
     const roleMap: Record<string, string> = {
       secretary: 'secretaria',
       student: 'alumno',
-      teacher: 'instructor',
-      speaker: 'relator',
-      administrator: 'admin',
+      instructor: 'instructor',
+      admin: 'admin',
     };
 
     if (roleMap[roleName]) {

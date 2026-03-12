@@ -8,6 +8,7 @@ import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import type { Course } from '@core/models/dto/course.model';
+import type { BranchOption } from '@core/models/ui/branch.model';
 import type {
   EnrollmentPersonalData,
   CourseCategory,
@@ -82,6 +83,9 @@ export class EnrollmentFacade {
   private readonly _steps = signal<StepConfig[]>(structuredClone(ENROLLMENT_STEPS));
   private readonly _isSubmitting = signal(false);
 
+  // ── Sedes disponibles (admin: todas; secretaria: solo la suya) ──
+  private readonly _branches = signal<BranchOption[]>([]);
+
   // ── Step 1: Personal data ──
   private readonly _personalData = signal<EnrollmentPersonalData | null>(null);
   private readonly _courses = signal<Course[]>([]); // Interno — nunca se expone a la UI
@@ -105,7 +109,7 @@ export class EnrollmentFacade {
     const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
     const course = this._courses().find((c) => c.license_class === licenseClass);
     const total = course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
-    return mode === 'deposit' ? Math.ceil(total / 2) : total;
+    return mode === 'partial' ? Math.ceil(total / 2) : total;
   });
 
   // ── Enrollment record ──
@@ -119,6 +123,9 @@ export class EnrollmentFacade {
   // ══════════════════════════════════════════════════════════════════════════════
   // 2. ESTADO EXPUESTO (Público, solo lectura)
   // ══════════════════════════════════════════════════════════════════════════════
+
+  // ── Branches ──
+  readonly branches = this._branches.asReadonly();
 
   // ── Draft ──
   readonly draft = this._draft.asReadonly();
@@ -156,6 +163,15 @@ export class EnrollmentFacade {
   readonly courseOptions = computed<CourseOption[]>(() =>
     this._courses().map((c) => this.mapCourseToOption(c)),
   );
+
+  /** Categorías ocultas: se oculta cualquier categoría sin cursos cargados.
+   *  Singular siempre visible (cursos de tipo "otros" no tienen license_class). */
+  readonly hiddenCourseCategories = computed<CourseCategory[]>(() => {
+    const courses = this.courseOptions();
+    const available = new Set(courses.map((c) => c.category));
+    const checked: CourseCategory[] = ['non-professional', 'professional'];
+    return checked.filter((cat) => !available.has(cat));
+  });
 
   // ── Computed: Student summary banner (Steps 2-6) ──
   readonly studentSummary = computed<StudentSummaryBanner | null>(() => {
@@ -248,18 +264,40 @@ export class EnrollmentFacade {
   // 3. MÉTODOS DE ACCIÓN — Step 1 (Datos personales)
   // ══════════════════════════════════════════════════════════════════════════════
 
-  /** Carga el catálogo de cursos activos para la sucursal del usuario. */
-  async loadCourses(_branchId?: number): Promise<void> {
+  /** Carga las sedes disponibles desde la BD (para que el admin pueda elegir). */
+  async loadBranches(): Promise<void> {
     const { data, error } = await this.supabase.client
-      .from('courses')
-      .select('*')
-      .eq('active', true)
-      .order('name');
+      .from('branches')
+      .select('id, name, slug')
+      .order('id');
+
+    if (error) {
+      this._error.set('Error al cargar sedes: ' + error.message);
+      return;
+    }
+
+    this._branches.set(data ?? []);
+  }
+
+  /** Carga el catálogo de cursos activos para la sucursal del usuario. */
+  async loadCourses(branchId?: number): Promise<void> {
+    const user = this.auth.currentUser();
+    const effectiveBranchId = branchId ?? user?.branchId;
+
+    let query = this.supabase.client.from('courses').select('*').eq('active', true).order('name');
+
+    // Filtrar por sede: cada secretaria solo ve los cursos de su propia sede
+    if (effectiveBranchId) {
+      query = query.eq('branch_id', effectiveBranchId) as typeof query;
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       this._error.set('Error al cargar cursos: ' + error.message);
       return;
     }
+
     this._courses.set(data ?? []);
   }
 
@@ -538,16 +576,20 @@ export class EnrollmentFacade {
     const pd = this._personalData();
     if (!pd) return;
 
+    const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
+
     const { data, error } = await this.supabase.client
       .from('promotion_courses')
       .select(
         `id,
+         code,
          max_students,
          enrolled_students,
          status,
          courses!inner(code, name, license_class),
          professional_promotions!promotion_id(code, name, status, branch_id)`,
       )
+      .eq('courses.license_class', licenseClass)
       .eq('professional_promotions.branch_id', branchId)
       .in('professional_promotions.status', ['planned', 'in_progress'])
       .eq('status', 'active');
@@ -557,16 +599,27 @@ export class EnrollmentFacade {
       return;
     }
 
+    // Orden canónico de clases profesionales
+    const licenseOrder: Record<string, number> = { A2: 1, A3: 2, A4: 3, A5: 4 };
+
+    // Ordenar filas crudas por license_class antes de agrupar
+    const sorted = (data ?? []).slice().sort((a, b) => {
+      const lcA = licenseOrder[(a.courses as any)?.license_class?.toUpperCase()] ?? 99;
+      const lcB = licenseOrder[(b.courses as any)?.license_class?.toUpperCase()] ?? 99;
+      return lcA - lcB;
+    });
+
     // Group by promotion
     const groupMap = new Map<string, PromotionOption[]>();
-    for (const row of data ?? []) {
+    for (const row of sorted) {
       const promo = row.professional_promotions as any;
       const course = row.courses as any;
-      const groupKey = `${promo.code} – ${promo.name}`;
+      const groupKey = `${promo.name} – ${promo.code}`;
 
       const option: PromotionOption = {
         id: row.id,
-        label: `${course.name} (${course.code})`,
+        code: (row as any).code ?? null,
+        label: course.name,
         courseCode: course.code,
         enrolledCount: row.enrolled_students,
         maxCapacity: row.max_students,
@@ -747,7 +800,10 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
-      const filePath = `contracts/${draft.enrollmentId}/${file.name}`;
+      // Use a fixed key (without file.name) to avoid invalid characters (spaces, accents).
+      // The original file name is preserved in the DB record (file_name column).
+      const ext = file.name.split('.').pop() ?? 'pdf';
+      const filePath = `contracts/${draft.enrollmentId}/contract.${ext}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await this.supabase.client.storage
@@ -953,7 +1009,7 @@ export class EnrollmentFacade {
    * Carga los borradores activos (no expirados) para la sucursal dada.
    * Retorna DraftSummary[] con info suficiente para la lista de selección.
    */
-  async loadActiveDrafts(branchId: number): Promise<DraftSummary[]> {
+  async loadActiveDrafts(): Promise<DraftSummary[]> {
     this._error.set(null);
 
     const { data, error } = await this.supabase.client
@@ -967,7 +1023,6 @@ export class EnrollmentFacade {
          courses!inner(name)`,
       )
       .eq('status', 'draft')
-      .eq('branch_id', branchId)
       .gt('expires_at', new Date().toISOString())
       .order('created_at', { ascending: false });
 
@@ -1030,6 +1085,13 @@ export class EnrollmentFacade {
       }
 
       this._enrollment.set(enrollment);
+
+      // 1b. Extender expires_at 24h desde ahora para evitar que el draft
+      //     expire durante una sesión activa de reanudación.
+      await this.supabase.client
+        .from('enrollments')
+        .update({ expires_at: this.getDraftExpiry() })
+        .eq('id', enrollmentId);
 
       // 2. Cargar student + user para reconstruir personalData
       const { data: student } = await this.supabase.client
@@ -1110,6 +1172,8 @@ export class EnrollmentFacade {
           this._selectedSlotIds.set(sessions.map((s: any) => String(s.scheduled_at)));
         }
       } else if (currentStep >= 2 && courseOption.category === 'professional') {
+        // Cargar lista de promociones para que el paso 2 tenga opciones disponibles
+        await this.loadPromotions(enrollment.branch_id, 'professional');
         if (enrollment.promotion_course_id) {
           this._selectedPromotionCourseId.set(enrollment.promotion_course_id);
         }
@@ -1153,6 +1217,17 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
+      // Eliminar carpeta completa del estudiante en storage antes de borrar registros BD
+      const folderPrefix = `students/${enrollmentId}/`;
+      const { data: storageFiles } = await this.supabase.client.storage
+        .from('documents')
+        .list(folderPrefix);
+
+      if (storageFiles && storageFiles.length > 0) {
+        const filePaths = storageFiles.map((f) => `${folderPrefix}${f.name}`);
+        await this.supabase.client.storage.from('documents').remove(filePaths);
+      }
+
       // Eliminar datos asociados en orden (respetando FKs)
       await this.supabase.client
         .from('class_b_sessions')
@@ -1209,6 +1284,7 @@ export class EnrollmentFacade {
     this._isSubmitting.set(false);
     this._personalData.set(null);
     this._courses.set([]);
+    this._branches.set([]);
     this._senceCodeMap.clear();
     this._senceOptions.set([]);
     this._instructors.set([]);
@@ -1404,13 +1480,28 @@ export class EnrollmentFacade {
 
   private async resolveCourseId(
     data: EnrollmentPersonalData,
-    _branchId: number,
+    branchId: number,
   ): Promise<number | null> {
+    // Primera opción: usar el id del CourseOption ya cargado en personalData
+    // (contiene el id real de BD, diferencia SENCE vs no-SENCE directamente)
+    const option = data.courses.find((c) => c.type === data.courseType);
+    if (option) return option.id;
+
+    // Fallback: buscar en _courses por licencia y sede
+    // Para SENCE vs no-SENCE, filtrar por si el código incluye 'sence'
     const licenseClass = this.courseTypeToLicenseClass(data.courseType);
-    const course = this._courses().find((c) => c.license_class === licenseClass);
+    const isSence = data.courseType.includes('sence');
+    const course = this._courses().find(
+      (c) =>
+        c.license_class === licenseClass &&
+        c.branch_id === branchId &&
+        (isSence
+          ? c.code?.toLowerCase().includes('sence')
+          : !c.code?.toLowerCase().includes('sence')),
+    );
 
     if (!course) {
-      this._error.set(`No se encontró un curso activo para la clase ${licenseClass}`);
+      this._error.set(`No se encontró un curso activo para la clase ${licenseClass} en esta sede`);
       return null;
     }
     return course.id;
@@ -1433,29 +1524,24 @@ export class EnrollmentFacade {
   }
 
   private async generateEnrollmentNumber(): Promise<string | null> {
-    // Get the enrollment with the highest id that already has a number assigned
-    const { data, error } = await this.supabase.client
-      .from('enrollments')
-      .select('number')
-      .not('number', 'is', null)
-      .order('id', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const courseId = this._enrollment()?.course_id;
+    if (!courseId) {
+      this._error.set('Error: no se pudo determinar el curso para la numeración');
+      return null;
+    }
+
+    // RPC que devuelve el siguiente número secuencial separado por tipo de licencia:
+    // Clase B (license_class = 'B') y Profesional (A2/A3/A4) tienen secuencias independientes.
+    const { data, error } = await this.supabase.client.rpc('get_next_enrollment_number', {
+      p_course_id: courseId,
+    });
 
     if (error) {
       this._error.set('Error al generar número de matrícula: ' + error.message);
       return null;
     }
 
-    let nextSeq = 1;
-    if (data?.number) {
-      const parsed = parseInt(data.number, 10);
-      if (!isNaN(parsed)) nextSeq = parsed + 1;
-    }
-
-    // 4 digits up to 9999, 5 digits from 10000 onward
-    const digits = nextSeq >= 10000 ? 5 : 4;
-    return nextSeq.toString().padStart(digits, '0');
+    return data as string;
   }
 
   private getDraftExpiry(): string {

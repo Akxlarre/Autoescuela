@@ -160,10 +160,12 @@ export class EnrollmentDocumentsFacade {
         return false;
       }
 
-      // Update local state so the UI reflects the uploaded photo immediately
+      // Update local state so the UI reflects the uploaded photo immediately.
+      // Append a cache-busting param so the browser always fetches the new image
+      // even when the storage path is the same (upsert replaces same key).
       this._carnetPhoto.set({
         source: 'upload',
-        capturedDataUrl: publicUrl,
+        capturedDataUrl: `${publicUrl}?t=${Date.now()}`,
         fileName: fileName,
       });
 
@@ -195,7 +197,9 @@ export class EnrollmentDocumentsFacade {
     this._error.set(null);
 
     try {
-      const filePath = `students/${enrollmentId}/${type}_${file.name}`;
+      // Path fijo por tipo (sin incluir file.name) para que upsert siempre
+      // sobreescriba el mismo objeto en storage al reemplazar un documento.
+      const filePath = `students/${enrollmentId}/${type}`;
 
       const { error: uploadError } = await this.supabase.client.storage
         .from(STORAGE_BUCKET)

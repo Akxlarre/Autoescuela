@@ -317,7 +317,7 @@ export class EnrollmentPaymentFacade {
     // payment_mode es la fuente canónica (persiste desde paso 2 antes de registrar pago).
     // payment_status === 'partial' es el fallback para drafts previos a esta migración.
     const isDeposit =
-      (enrollment as any).payment_mode === 'deposit' || enrollment.payment_status === 'partial';
+      (enrollment as any).payment_mode === 'partial' || enrollment.payment_status === 'partial';
     const basePrice = enrollment.base_price ?? 0;
     const amountDue = isDeposit ? Math.round(basePrice / 2) : basePrice;
     const practicalClasses = course?.practical_hours

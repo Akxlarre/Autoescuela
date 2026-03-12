@@ -2,11 +2,20 @@
   <div class="bg-surface rounded-2xl border border-border-default shadow-sm overflow-hidden">
     <div class="p-6 border-b border-border-subtle">
       <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
-        <app-icon name="calendar" [size]="20" class="text-brand" />
-        Paso 2: Asignación y Horarios
+        @if (data().view === 'professional') {
+          <app-icon name="users" [size]="20" class="text-brand" />
+          Paso 2: Selección de Promoción
+        } @else {
+          <app-icon name="calendar" [size]="20" class="text-brand" />
+          Paso 2: Asignación y Horarios
+        }
       </h2>
       <p class="text-sm text-text-secondary mt-1">
-        Configura la modalidad de pago y el horario de clases prácticas.
+        @if (data().view === 'professional') {
+          Asigna al alumno a una promoción grupal abierta para este curso.
+        } @else {
+          Configura la modalidad de pago y el horario de clases prácticas.
+        }
       </p>
     </div>
 
@@ -21,14 +30,14 @@
           <div class="grid sm:grid-cols-2 gap-4">
             <label
               class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
-              [class.border-brand]="data().paymentMode === 'full'"
-              [class.bg-brand-muted]="data().paymentMode === 'full'"
-              [class.border-border-default]="data().paymentMode !== 'full'"
+              [class.border-brand]="data().paymentMode === 'total'"
+              [class.bg-brand-muted]="data().paymentMode === 'total'"
+              [class.border-border-default]="data().paymentMode !== 'total'"
             >
               <input
                 type="radio"
                 name="paymentMode"
-                value="full"
+                value="total"
                 [ngModel]="data().paymentMode"
                 (ngModelChange)="emitField('paymentMode', $event)"
                 class="hidden"
@@ -48,14 +57,14 @@
 
             <label
               class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
-              [class.border-brand]="data().paymentMode === 'deposit'"
-              [class.bg-brand-muted]="data().paymentMode === 'deposit'"
-              [class.border-border-default]="data().paymentMode !== 'deposit'"
+              [class.border-brand]="data().paymentMode === 'partial'"
+              [class.bg-brand-muted]="data().paymentMode === 'partial'"
+              [class.border-border-default]="data().paymentMode !== 'partial'"
             >
               <input
                 type="radio"
                 name="paymentMode"
-                value="deposit"
+                value="partial"
                 [ngModel]="data().paymentMode"
                 (ngModelChange)="emitField('paymentMode', $event)"
                 class="hidden"
@@ -338,7 +347,7 @@
                         <div>
                           <p class="text-sm font-bold text-text-primary">{{ option.label }}</p>
                           <p class="text-xs text-text-muted font-mono">
-                            Cód: {{ option.courseCode }}
+                            Código: {{ option.code ?? option.courseCode }}
                           </p>
                         </div>
                         <div class="text-right shrink-0">
@@ -391,8 +400,9 @@
         icon="arrow-right"
         [loading]="loading()"
         [disabled]="
-          data().view === 'class-b' &&
-          (!data().slotSelection.isComplete || data().paymentMode === null)
+          (data().view === 'class-b' &&
+            (!data().slotSelection.isComplete || data().paymentMode === null)) ||
+          (data().view === 'professional' && !data().promotionId)
         "
         (click)="onNext()"
         data-llm-action="submit-assignment"

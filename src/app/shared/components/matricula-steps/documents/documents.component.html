@@ -17,15 +17,22 @@
           class="px-4 py-3 border-b border-border-default bg-bg-base flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-text-primary">Foto para Carnet alumno</span>
+            <span class="text-sm font-bold text-text-primary">Foto de rostro para Carnet</span>
             <span class="text-state-error font-bold">*</span>
           </div>
           <span class="text-xs font-medium text-text-muted uppercase tracking-tight"
-            >Frontal, fondo blanco</span
+            >Rostro completo · Frente · Fondo blanco</span
           >
         </div>
 
         <div class="p-4 space-y-4">
+          <!-- Descripción orientativa -->
+          <p class="text-xs text-text-secondary leading-relaxed">
+            Sube una fotografía del <strong class="text-text-primary">rostro del alumno</strong>, de
+            frente, con expresión neutral y fondo blanco. No se aceptan fotos con lentes de sol,
+            gorros ni filtros.
+          </p>
+
           <!-- Tabs Selector -->
           <div class="flex p-1 bg-bg-subtle rounded-lg w-fit">
             <button
@@ -203,7 +210,7 @@
                     <p class="text-sm font-bold text-text-primary">
                       {{ doc.label }}
                       @if (doc.required) {
-                        <span class="text-state-error font-bold">*</span>
+                        <span class="text-state-error font-bold">* (Obligatoria)</span>
                       }
                     </p>
                     <p class="text-xs text-text-muted uppercase tracking-tight">{{ doc.hint }}</p>
