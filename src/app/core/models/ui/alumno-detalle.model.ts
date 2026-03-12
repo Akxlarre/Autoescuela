@@ -18,10 +18,17 @@ export interface AlumnoDetalleUI {
 }
 
 export interface InasistenciaUI {
+  id: number;
+  /** Fecha formateada para mostrar (ej: "20 ene. 2026") */
   fecha: string;
-  tipo: 'Práctica' | 'Teórica';
-  motivo: string | null;
-  estado: 'Justificada' | 'Injustificada';
+  /** document_type de absence_evidence */
+  documentType: string;
+  /** Descripción / motivo detallado */
+  description: string | null;
+  /** URL del archivo adjunto (puede ser null si es simulado) */
+  fileUrl: string | null;
+  /** Estado de revisión: 'pending' | 'approved' | 'rejected' */
+  status: string;
 }
 
 export interface ProgresoUI {

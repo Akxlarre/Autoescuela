@@ -266,58 +266,103 @@ interface ClasePracticaRow {
 
         <!-- Sección Inasistencias -->
         <div class="inasistencias-container p-4 flex flex-col gap-3 rounded-xl">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex items-center justify-center rounded-lg shrink-0"
-              style="width:36px;height:36px;background:var(--state-warning-bg);border:1px solid var(--state-warning-border);color:var(--state-warning)"
-              aria-hidden="true"
-            >
-              <app-icon name="alert-triangle" [size]="18" />
-            </div>
-            <span class="font-semibold text-sm" style="color: var(--text-primary)">
-              Inasistencias Registradas
-            </span>
-          </div>
-          <div class="flex flex-col gap-2">
-            @for (item of facade.inasistencias(); track item.fecha + item.tipo) {
+          <!-- Header -->
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
               <div
-                class="flex items-center justify-between p-3 rounded-lg"
-                style="background: var(--bg-surface); border: 1px solid var(--border-default)"
+                class="flex items-center justify-center rounded-lg shrink-0"
+                style="width:36px;height:36px;background:var(--state-warning-bg);border:1px solid var(--state-warning-border);color:var(--state-warning)"
+                aria-hidden="true"
               >
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-medium" style="color: var(--text-primary)">{{
-                    item.fecha
-                  }}</span>
-                  <span class="text-xs" style="color: var(--ds-brand)">
-                    {{ item.tipo }}
-                    @if (item.motivo) {
-                      · {{ item.motivo }}
-                    }
-                  </span>
-                </div>
-                <span
-                  class="text-xs font-medium px-2 py-1 rounded-full"
-                  [class.badge-justificada]="item.estado === 'Justificada'"
-                  [class.badge-injustificada]="item.estado === 'Injustificada'"
-                >
-                  {{ item.estado }}
-                </span>
+                <app-icon name="alert-triangle" [size]="18" />
               </div>
-            } @empty {
-              <p class="text-sm text-center py-2" style="color: var(--text-muted)">
-                Sin inasistencias registradas
-              </p>
-            }
+              <span class="font-semibold text-sm" style="color: var(--text-primary)">
+                Inasistencias Registradas
+                @if (facade.inasistencias().length > 0) {
+                  <span
+                    class="ml-1.5 text-xs font-normal px-1.5 py-0.5 rounded-full"
+                    style="background: var(--state-warning-bg); color: var(--state-warning); border: 1px solid var(--state-warning-border)"
+                    >{{ facade.inasistencias().length }}</span
+                  >
+                }
+              </span>
+            </div>
+            <button
+              class="inas-btn-add"
+              (click)="drawerOpen.set(true)"
+              data-llm-action="registrar-inasistencia"
+              aria-label="Registrar nueva inasistencia"
+            >
+              <app-icon name="plus" [size]="12" />
+              Registrar
+            </button>
           </div>
-          <button
-            class="text-sm font-medium self-start"
-            style="color: var(--ds-brand); background: none; border: none; cursor: pointer; padding: 0"
-            data-llm-action="registrar-inasistencia"
-            aria-label="Registrar nueva inasistencia"
-            (click)="drawerOpen.set(true)"
-          >
-            + Registrar nueva inasistencia
-          </button>
+
+          <!-- Lista de evidencias -->
+          @if (facade.inasistencias().length > 0) {
+            <div class="flex flex-col gap-1.5" role="list" aria-label="Listado de inasistencias">
+              @for (item of facade.inasistencias(); track item.id) {
+                <div class="inas-row" role="listitem">
+                  <!-- Fecha -->
+                  <div class="inas-date-pill">
+                    <span class="inas-date-text">{{ item.fecha }}</span>
+                  </div>
+
+                  <!-- Tipo + Descripción -->
+                  <div class="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                      {{ item.documentType }}
+                    </span>
+                    @if (item.description) {
+                      <span
+                        class="text-xs truncate"
+                        style="color: var(--text-muted)"
+                        [title]="item.description"
+                        >{{ item.description }}</span
+                      >
+                    }
+                  </div>
+
+                  <!-- Status badge -->
+                  <span
+                    class="inas-badge"
+                    [class.inas-badge--pending]="item.status === 'pending'"
+                    [class.inas-badge--approved]="
+                      item.status === 'approved' || item.status === 'revisado'
+                    "
+                    [class.inas-badge--rejected]="item.status === 'rejected'"
+                  >
+                    {{ statusLabel(item.status) }}
+                  </span>
+
+                  <!-- Documento adjunto -->
+                  @if (item.fileUrl) {
+                    <a
+                      [href]="item.fileUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inas-file-btn"
+                      aria-label="Ver documento adjunto"
+                      data-llm-action="ver-documento-inasistencia"
+                    >
+                      <app-icon name="file-text" [size]="15" />
+                    </a>
+                  } @else {
+                    <span
+                      class="inas-file-btn inas-file-btn--disabled"
+                      aria-label="Sin documento adjunto"
+                    >
+                      <app-icon name="file-text" [size]="15" />
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <p class="text-sm text-center py-1" style="color: var(--text-muted)">
+              Sin inasistencias registradas
+            </p>
+          }
         </div>
 
         <!-- ── Ficha Técnica — Clases Prácticas (mock — pendiente BD) ── -->
@@ -653,15 +698,99 @@ interface ClasePracticaRow {
       border: 1px solid var(--state-warning-border);
     }
 
-    .badge-justificada {
-      color: var(--state-info);
-      background: var(--state-info-bg);
-      border: 1px solid var(--state-info-border);
+    /* ── Inasistencias: nuevo diseño ── */
+    .inas-btn-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--state-warning-border);
+      background: var(--bg-surface);
+      color: var(--state-warning);
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      cursor: pointer;
+      transition: background var(--duration-fast);
     }
-    .badge-injustificada {
+    .inas-btn-add:hover {
+      background: var(--bg-elevated);
+    }
+
+    .inas-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .inas-date-pill {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+    .inas-date-text {
+      font-size: var(--text-xs);
+      font-weight: var(--font-medium);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .inas-badge {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: var(--font-medium);
+      color: var(--text-muted);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+    }
+    .inas-badge--pending {
+      color: var(--state-warning);
+      background: var(--state-warning-bg);
+      border-color: var(--state-warning-border);
+    }
+    .inas-badge--approved {
+      color: var(--state-success);
+      background: var(--state-success-bg);
+      border-color: var(--state-success-border);
+    }
+    .inas-badge--rejected {
       color: var(--state-error);
       background: var(--state-error-bg);
-      border: 1px solid var(--state-error-border);
+      border-color: var(--state-error-border);
+    }
+
+    .inas-file-btn {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      color: var(--ds-brand);
+      text-decoration: none;
+      transition: background var(--duration-fast);
+    }
+    .inas-file-btn:hover {
+      background: var(--bg-elevated);
+    }
+    .inas-file-btn--disabled {
+      color: var(--text-muted);
+      opacity: 0.4;
+      cursor: default;
     }
 
     .btn-outline {
@@ -941,6 +1070,17 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     if (id && !isNaN(Number(id))) {
       this.facade.loadDetalle(Number(id));
     }
+  }
+
+  // ── Helpers de template ─────────────────────────────────────────────────────
+  protected statusLabel(status: string): string {
+    const map: Record<string, string> = {
+      pending: 'Pendiente',
+      approved: 'Aprobado',
+      revisado: 'Revisado',
+      rejected: 'Rechazado',
+    };
+    return map[status?.toLowerCase()] ?? status ?? 'Pendiente';
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
