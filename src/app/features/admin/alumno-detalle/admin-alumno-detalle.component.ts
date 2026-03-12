@@ -355,7 +355,17 @@ interface PagoItem {
         </div>
 
         <!-- ── Ficha Técnica — Clases Prácticas ── -->
-        <div class="card overflow-hidden">
+        <div id="ficha-tecnica-container" class="card overflow-hidden">
+          <!-- Encabezado solo visible al imprimir -->
+          <div class="only-print print-header">
+            <p class="print-title">FICHA TÉCNICA DE CLASES PRÁCTICAS</p>
+            <p class="print-subtitle">{{ facade.alumno()?.nombre }}</p>
+            <p class="print-meta">
+              RUT: {{ facade.alumno()?.rut }} &nbsp;·&nbsp; Matrícula:
+              {{ facade.alumno()?.matricula }}
+            </p>
+          </div>
+
           <div class="flex items-start justify-between gap-4 p-5 pb-4">
             <div class="flex flex-col gap-0.5">
               <h2 class="text-base font-semibold" style="color: var(--text-primary)">
@@ -367,9 +377,10 @@ interface PagoItem {
               </p>
             </div>
             <button
-              class="btn-outline flex items-center gap-2 shrink-0"
+              class="btn-outline flex items-center gap-2 shrink-0 no-print"
               data-llm-action="imprimir-ficha"
               aria-label="Imprimir ficha técnica"
+              (click)="imprimirFicha()"
             >
               <app-icon name="printer" [size]="14" />
               Imprimir Ficha
@@ -852,6 +863,82 @@ interface PagoItem {
       background: var(--bg-subtle);
     }
 
+    /* ── Print-only helpers ── */
+    .only-print {
+      display: none;
+    }
+    .no-print {
+      /* visible por defecto */
+    }
+
+    /* ── @media print ── */
+    @media print {
+      /* Ocultar todo el cuerpo excepto el contenedor de la ficha */
+      :host {
+        visibility: hidden;
+      }
+      #ficha-tecnica-container,
+      #ficha-tecnica-container * {
+        visibility: visible;
+      }
+      #ficha-tecnica-container {
+        position: fixed;
+        inset: 0;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+      }
+
+      /* Mostrar encabezado de impresión */
+      .only-print {
+        display: block !important;
+      }
+
+      /* Ocultar botón imprimir dentro del contenedor */
+      .no-print {
+        display: none !important;
+      }
+
+      /* Forzar colores reales en impresión */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+
+    @page {
+      size: auto;
+      margin: 10mm;
+    }
+
+    /* ── Encabezado de impresión ── */
+    .print-header {
+      text-align: center;
+      padding: 16px 0 12px;
+      border-bottom: 2px solid #1a1a2e;
+      margin-bottom: 12px;
+    }
+    .print-title {
+      font-size: 14pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #1a1a2e;
+      margin: 0;
+    }
+    .print-subtitle {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #1a1a2e;
+      margin: 4px 0 0;
+    }
+    .print-meta {
+      font-size: 9pt;
+      color: #555;
+      margin: 4px 0 0;
+    }
+
     .badge-pagado {
       color: var(--state-success);
       background: var(--state-success-bg);
@@ -942,6 +1029,10 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   }
 
   // ── Helpers de template ─────────────────────────────────────────────────────
+  protected imprimirFicha(): void {
+    window.print();
+  }
+
   protected statusLabel(status: string): string {
     const map: Record<string, string> = {
       pending: 'Pendiente',
