@@ -5,6 +5,8 @@
 
 export interface AlumnoDetalleUI {
   id: number;
+  /** PK de la matrícula activa — requerido para insertar en absence_evidence */
+  enrollmentId: number | null;
   nombre: string;
   rut: string;
   matricula: string;

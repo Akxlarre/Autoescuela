@@ -10,6 +10,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
+import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 
 interface PagoItem {
   fecha: string;
@@ -33,7 +34,7 @@ interface ClasePracticaRow {
 @Component({
   selector: 'app-admin-alumno-detalle',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IconComponent, SkeletonBlockComponent],
+  imports: [RouterLink, IconComponent, SkeletonBlockComponent, AdminInasistenciaDrawerComponent],
   template: `
     <div class="p-6 max-w-7xl mx-auto flex flex-col gap-6">
       <!-- ── Estado de Carga ── -->
@@ -126,7 +127,7 @@ interface ClasePracticaRow {
               data-llm-action="editar-alumno"
               aria-label="Editar datos del alumno"
             >
-              <app-icon name="pencil" [size]="15" />
+              <app-icon name="edit-3" [size]="15" />
               Editar
             </button>
           </div>
@@ -271,7 +272,7 @@ interface ClasePracticaRow {
               style="width:36px;height:36px;background:var(--state-warning-bg);border:1px solid var(--state-warning-border);color:var(--state-warning)"
               aria-hidden="true"
             >
-              <app-icon name="triangle-alert" [size]="18" />
+              <app-icon name="alert-triangle" [size]="18" />
             </div>
             <span class="font-semibold text-sm" style="color: var(--text-primary)">
               Inasistencias Registradas
@@ -313,6 +314,7 @@ interface ClasePracticaRow {
             style="color: var(--ds-brand); background: none; border: none; cursor: pointer; padding: 0"
             data-llm-action="registrar-inasistencia"
             aria-label="Registrar nueva inasistencia"
+            (click)="drawerOpen.set(true)"
           >
             + Registrar nueva inasistencia
           </button>
@@ -561,6 +563,13 @@ interface ClasePracticaRow {
         </div>
       }
       <!-- fin @else if alumno -->
+
+      <!-- ── Drawer: Registrar Inasistencia ── -->
+      <app-admin-inasistencia-drawer
+        [isOpen]="drawerOpen()"
+        (closed)="drawerOpen.set(false)"
+        (saved)="onInasistenciaGuardada()"
+      />
     </div>
   `,
   styles: `
@@ -736,6 +745,9 @@ interface ClasePracticaRow {
 export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly route = inject(ActivatedRoute);
+
+  // ── Estado del Drawer ────────────────────────────────────────────────────────
+  protected readonly drawerOpen = signal(false);
 
   // ── Mock data: Ficha Técnica (pendiente integrar BD — Part 2) ──
   protected readonly clasesPracticas = signal<ClasePracticaRow[]>([
@@ -925,6 +937,14 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id && !isNaN(Number(id))) {
+      this.facade.loadDetalle(Number(id));
+    }
+  }
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
+  protected onInasistenciaGuardada(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {
       this.facade.loadDetalle(Number(id));

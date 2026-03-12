@@ -80,7 +80,7 @@ export class AdminAlumnoDetalleFacade {
               id, rut, first_names, paternal_last_name, maternal_last_name, email, phone
             ),
             enrollments(
-              number, created_at,
+              id, number, created_at,
               courses!inner(name)
             )
           `,
@@ -117,6 +117,7 @@ export class AdminAlumnoDetalleFacade {
       };
       type CourseRow = { name: string };
       type EnrollmentRow = {
+        id: number;
         number?: string | null;
         created_at: string;
         courses?: CourseRow | CourseRow[] | null;
@@ -144,6 +145,7 @@ export class AdminAlumnoDetalleFacade {
 
       this._alumno.set({
         id: s.id,
+        enrollmentId: lastEnrollment?.id ?? null,
         nombre: `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name}`
           .replace(/\s+/g, ' ')
           .trim(),
@@ -197,6 +199,28 @@ export class AdminAlumnoDetalleFacade {
     } finally {
       this._isLoading.set(false);
     }
+  }
+
+  /**
+   * Inserta un registro en `absence_evidence` para justificar una inasistencia.
+   * Lanza un error si la operación falla — el componente llamador maneja el estado de carga.
+   */
+  async insertAbsenceEvidence(payload: {
+    enrollmentId: number;
+    documentType: string;
+    description: string;
+    fileUrl: string | null;
+    documentDate: string;
+  }): Promise<void> {
+    const { error } = await this.supabase.client.from('absence_evidence').insert({
+      enrollment_id: payload.enrollmentId,
+      document_type: payload.documentType,
+      description: payload.description,
+      file_url: payload.fileUrl,
+      document_date: payload.documentDate,
+      status: 'pending',
+    });
+    if (error) throw error;
   }
 
   // ── Helpers privados ─────────────────────────────────────────────────────────
