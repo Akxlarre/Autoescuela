@@ -20,17 +20,6 @@ interface PagoItem {
   estado: 'Pagado' | 'Pendiente';
 }
 
-interface ClasePracticaRow {
-  numero: number;
-  fecha: string | null;
-  hora: string | null;
-  instructor: string | null;
-  kmInicio: number | null;
-  kmFin: number | null;
-  observaciones: string | null;
-  completada: boolean;
-}
-
 @Component({
   selector: 'app-admin-alumno-detalle',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -365,7 +354,7 @@ interface ClasePracticaRow {
           }
         </div>
 
-        <!-- ── Ficha Técnica — Clases Prácticas (mock — pendiente BD) ── -->
+        <!-- ── Ficha Técnica — Clases Prácticas ── -->
         <div class="card overflow-hidden">
           <div class="flex items-start justify-between gap-4 p-5 pb-4">
             <div class="flex flex-col gap-0.5">
@@ -401,7 +390,7 @@ interface ClasePracticaRow {
                 </tr>
               </thead>
               <tbody>
-                @for (clase of clasesPracticas(); track clase.numero) {
+                @for (clase of facade.clasesPracticas(); track clase.numero) {
                   <tr [class.fila-pendiente]="!clase.completada">
                     <td class="font-semibold" style="color: var(--text-primary)">
                       Clase {{ clase.numero }}
@@ -452,23 +441,27 @@ interface ClasePracticaRow {
                       <div class="flex items-center justify-center gap-1.5">
                         <span
                           class="firma-dot"
-                          [class.firma-alumno]="clase.completada"
-                          [class.firma-pendiente]="!clase.completada"
-                          [attr.aria-label]="clase.completada ? 'Alumno firmó' : 'Firma pendiente'"
+                          [class.firma-alumno]="clase.alumnoFirmo"
+                          [class.firma-pendiente]="!clase.alumnoFirmo"
+                          [attr.aria-label]="
+                            clase.alumnoFirmo ? 'Alumno firmó' : 'Firma alumno pendiente'
+                          "
                         >
-                          @if (clase.completada) {
+                          @if (clase.alumnoFirmo) {
                             <app-icon name="check" [size]="10" color="#fff" />
                           }
                         </span>
                         <span
                           class="firma-dot"
-                          [class.firma-instructor]="clase.completada"
-                          [class.firma-pendiente]="!clase.completada"
+                          [class.firma-instructor]="clase.instructorFirmo"
+                          [class.firma-pendiente]="!clase.instructorFirmo"
                           [attr.aria-label]="
-                            clase.completada ? 'Instructor firmó' : 'Firma pendiente'
+                            clase.instructorFirmo
+                              ? 'Instructor firmó'
+                              : 'Firma instructor pendiente'
                           "
                         >
-                          @if (clase.completada) {
+                          @if (clase.instructorFirmo) {
                             <app-icon name="check" [size]="10" color="#fff" />
                           }
                         </span>
@@ -877,130 +870,6 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Estado del Drawer ────────────────────────────────────────────────────────
   protected readonly drawerOpen = signal(false);
-
-  // ── Mock data: Ficha Técnica (pendiente integrar BD — Part 2) ──
-  protected readonly clasesPracticas = signal<ClasePracticaRow[]>([
-    {
-      numero: 1,
-      fecha: '12-01',
-      hora: '15:50-16:35',
-      instructor: 'Carlos Rojas',
-      kmInicio: 45120,
-      kmFin: 45142,
-      observaciones: 'Primera clase, reconocimiento de controles',
-      completada: true,
-    },
-    {
-      numero: 2,
-      fecha: '13-01',
-      hora: '15:50-16:35',
-      instructor: 'Carlos Rojas',
-      kmInicio: 45142,
-      kmFin: 45165,
-      observaciones: 'Práctica de arranque y detención',
-      completada: true,
-    },
-    {
-      numero: 3,
-      fecha: '14-01',
-      hora: '15:50-16:35',
-      instructor: 'Carlos Rojas',
-      kmInicio: 45165,
-      kmFin: 45188,
-      observaciones: 'Cambios de marcha, curvas básicas',
-      completada: true,
-    },
-    {
-      numero: 4,
-      fecha: '15-01',
-      hora: '15:50-16:35',
-      instructor: 'Ana Martínez',
-      kmInicio: 45188,
-      kmFin: 45210,
-      observaciones: 'Estacionamiento paralelo',
-      completada: true,
-    },
-    {
-      numero: 5,
-      fecha: '16-01',
-      hora: '15:50-16:35',
-      instructor: 'Carlos Rojas',
-      kmInicio: 45210,
-      kmFin: 45234,
-      observaciones: 'Circulación en ciudad, señalización',
-      completada: true,
-    },
-    {
-      numero: 6,
-      fecha: '19-01',
-      hora: '15:50-16:35',
-      instructor: 'Luis Torres',
-      kmInicio: 45234,
-      kmFin: 45258,
-      observaciones: 'Rotondas y giros',
-      completada: true,
-    },
-    {
-      numero: 7,
-      fecha: '20-01',
-      hora: '15:50-16:35',
-      instructor: 'Ana Martínez',
-      kmInicio: 45258,
-      kmFin: 45280,
-      observaciones: 'Conducción defensiva',
-      completada: true,
-    },
-    {
-      numero: 8,
-      fecha: '21-01',
-      hora: '15:50-16:35',
-      instructor: 'Carlos Rojas',
-      kmInicio: 45280,
-      kmFin: 45302,
-      observaciones: 'Retroceso y maniobras',
-      completada: true,
-    },
-    {
-      numero: 9,
-      fecha: null,
-      hora: null,
-      instructor: null,
-      kmInicio: null,
-      kmFin: null,
-      observaciones: null,
-      completada: false,
-    },
-    {
-      numero: 10,
-      fecha: null,
-      hora: null,
-      instructor: null,
-      kmInicio: null,
-      kmFin: null,
-      observaciones: null,
-      completada: false,
-    },
-    {
-      numero: 11,
-      fecha: null,
-      hora: null,
-      instructor: null,
-      kmInicio: null,
-      kmFin: null,
-      observaciones: null,
-      completada: false,
-    },
-    {
-      numero: 12,
-      fecha: null,
-      hora: null,
-      instructor: null,
-      kmInicio: null,
-      kmFin: null,
-      observaciones: null,
-      completada: false,
-    },
-  ]);
 
   // ── Mock data: Pagos (pendiente integrar BD — Part 3) ──
   protected readonly pagos = signal<PagoItem[]>([
