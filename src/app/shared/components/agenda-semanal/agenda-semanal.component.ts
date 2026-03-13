@@ -3,13 +3,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   input,
   output,
   signal,
   viewChild,
-  viewChildren,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -22,6 +22,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { AgendaSlotComponent } from './agenda-slot.component';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 import type {
@@ -58,6 +59,7 @@ interface InstructorOption {
     SectionHeroComponent,
     AgendaSlotComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   host: { class: 'block' },
   template: `
@@ -86,7 +88,34 @@ interface InstructorOption {
       </section>
 
       <!-- ── Calendario ─────────────────────────────────────────────────────── -->
-      <div class="card p-0 overflow-hidden mt-2" aria-label="Calendario semanal">
+      <div
+        #calendarCard
+        class="card p-0 overflow-hidden mt-2"
+        appCardHover
+        aria-label="Calendario semanal"
+      >
+        <!-- Mobile day tabs — solo visibles debajo de 640px -->
+        @if (filteredDays().length > 0) {
+          <div class="agenda-mobile-tabs" role="tablist" aria-label="Seleccionar día">
+            @for (day of filteredDays(); track day.date; let i = $index) {
+              <button
+                class="agenda-mobile-tab"
+                [class.agenda-mobile-tab--active]="mobileDayIndex() === i"
+                [class.agenda-mobile-tab--today]="day.isToday"
+                role="tab"
+                [attr.aria-selected]="mobileDayIndex() === i"
+                [attr.aria-label]="day.label"
+                (click)="selectMobileDay(i)"
+              >
+                <span class="agenda-mobile-tab-day">{{ day.label.split(' ')[0] }}</span>
+                @if (day.isToday) {
+                  <span class="agenda-mobile-today-dot"></span>
+                }
+              </button>
+            }
+          </div>
+        }
+
         <!-- Toolbar de navegación + filtro -->
         <div class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b">
           <!-- Navegación de semana -->
@@ -147,12 +176,24 @@ interface InstructorOption {
 
         <!-- Grid del calendario -->
         @if (isLoading()) {
-          <div class="p-6 flex flex-col gap-3">
+          <div class="p-4 flex flex-col gap-2">
+            <!-- Skeleton header -->
+            <div class="flex gap-2 mb-1">
+              <app-skeleton-block variant="rect" width="64px" height="36px" />
+              @for (col of skeletonCols; track $index) {
+                <app-skeleton-block variant="rect" width="100%" height="36px" />
+              }
+            </div>
+            <!-- Skeleton rows — alternas para realismo -->
             @for (row of skeletonRows; track $index) {
               <div class="flex gap-2">
-                <app-skeleton-block variant="rect" width="60px" height="48px" />
+                <app-skeleton-block variant="rect" width="64px" height="52px" />
                 @for (col of skeletonCols; track $index) {
-                  <app-skeleton-block variant="rect" width="100%" height="48px" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="100%"
+                    [height]="$index % 3 === 0 ? '52px' : '52px'"
+                  />
                 }
               </div>
             }
@@ -166,7 +207,7 @@ interface InstructorOption {
         } @else {
           <div
             #calendarGrid
-            class="agenda-grid overflow-auto"
+            class="agenda-grid"
             [style]="gridTemplateStyle()"
             role="grid"
             [attr.aria-label]="'Grilla de horarios, semana ' + (weekData()?.weekLabel ?? '')"
@@ -216,7 +257,63 @@ interface InstructorOption {
       display: block;
     }
 
-    /* ── Toolbar ───────────────────────────────────────────────── */
+    /* ── Mobile day tabs ─────────────────────────────────────────── */
+
+    .agenda-mobile-tabs {
+      display: none;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border-bottom: 1px solid var(--color-border);
+      background: var(--bg-surface);
+      padding: 0 0.5rem;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      @media (max-width: 640px) {
+        display: flex;
+        gap: 2px;
+      }
+    }
+
+    .agenda-mobile-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition:
+        color 150ms ease,
+        border-color 150ms ease;
+      background: transparent;
+
+      &--active {
+        color: var(--ds-brand);
+        border-bottom-color: var(--ds-brand);
+        font-weight: 600;
+      }
+
+      &--today .agenda-mobile-tab-day {
+        color: var(--ds-brand);
+      }
+    }
+
+    .agenda-mobile-today-dot {
+      display: block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--ds-brand);
+    }
+
+    /* ── Toolbar ───────────────────────────────────────────────────── */
 
     .agenda-toolbar {
       background: var(--bg-surface);
@@ -277,7 +374,14 @@ interface InstructorOption {
       display: grid;
       /* grid-template-columns set via [style] binding */
       border-top: 1px solid var(--color-border);
-      min-width: 600px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+
+      @media (max-width: 640px) {
+        /* Columnas compactas en mobile para scroll horizontal fluido */
+        font-size: 0.75rem;
+      }
     }
 
     .agenda-corner {
@@ -321,7 +425,7 @@ interface InstructorOption {
 
     .agenda-time-label {
       padding: 0.375rem 0.5rem;
-      font-size: 0.65rem;
+      font-size: 0.7rem;
       font-weight: 600;
       color: var(--text-muted);
       text-align: right;
@@ -358,7 +462,7 @@ interface InstructorOption {
     }
 
     .legend-item {
-      font-size: 0.68rem;
+      font-size: 0.7rem;
       display: flex;
       align-items: center;
       gap: 5px;
@@ -420,7 +524,16 @@ export class AgendaSemanalComponent implements AfterViewInit {
   // ── ViewChildren ─────────────────────────────────────────────────────────────
 
   private readonly kpiGridRef = viewChild<ElementRef>('kpiGrid');
+  private readonly calendarCardRef = viewChild<ElementRef>('calendarCard');
   private readonly calendarGridRef = viewChild<ElementRef>('calendarGrid');
+
+  // ── Estado local ─────────────────────────────────────────────────────────────
+
+  /** Índice del día seleccionado en mobile (0 = Lun, 4 = Vie). */
+  readonly mobileDayIndex = signal(0);
+
+  /** Evita re-animar la grilla si ya fue animada en el ciclo de carga actual. */
+  private _gridAnimated = false;
 
   // ── Datos del hero ───────────────────────────────────────────────────────────
 
@@ -490,25 +603,56 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── Filas de skeleton ────────────────────────────────────────────────────────
 
-  readonly skeletonRows = Array(5).fill(0);
+  readonly skeletonRows = Array(6).fill(0);
   readonly skeletonCols = Array(5).fill(0);
+
+  // ── GSAP: animar grilla al cargar ─────────────────────────────────────────────
+
+  constructor() {
+    effect(() => {
+      if (this.isLoading()) {
+        this._gridAnimated = false;
+        return;
+      }
+      if (this.weekData() && !this._gridAnimated) {
+        this._gridAnimated = true;
+        // Doble rAF para garantizar que @if haya re-renderizado el grid
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const gridEl = this.calendarGridRef()?.nativeElement as HTMLElement | undefined;
+            if (gridEl) this.gsap.animateSkeletonToContent(gridEl);
+          });
+        });
+      }
+    });
+  }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   ngAfterViewInit(): void {
     const kpiEl = this.kpiGridRef()?.nativeElement as HTMLElement | undefined;
-    if (kpiEl) {
-      this.gsap.animateBentoGrid(kpiEl);
-    }
+    if (kpiEl) this.gsap.animateBentoGrid(kpiEl);
+
+    const cardEl = this.calendarCardRef()?.nativeElement as HTMLElement | undefined;
+    if (cardEl) this.gsap.animateHero(cardEl);
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   onHeroAction(actionId: string): void {
     if (actionId === 'schedule') {
-      // Emitir un output especial para que el Smart abra el drawer de búsqueda de alumno
       this.slotClick.emit(null as unknown as AgendaSlot);
     }
+  }
+
+  /** Selecciona el día en mobile y hace scroll suave hasta su columna en la grilla. */
+  selectMobileDay(index: number): void {
+    this.mobileDayIndex.set(index);
+    const gridEl = this.calendarGridRef()?.nativeElement as HTMLElement | undefined;
+    if (!gridEl) return;
+    // Columna 0 = time-label (64px), columnas 1-N = días
+    const colWidth = (gridEl.scrollWidth - 64) / (this.filteredDays().length || 1);
+    gridEl.scrollTo({ left: 64 + colWidth * index, behavior: 'smooth' });
   }
 
   /**

@@ -101,18 +101,35 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       background: color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface));
       border: 1px solid color-mix(in srgb, var(--ds-brand) 35%, transparent);
       color: var(--text-primary);
+      cursor: default;
+
+      &:hover {
+        background: color-mix(in srgb, var(--ds-brand) 20%, var(--bg-surface));
+        border-color: color-mix(in srgb, var(--ds-brand) 55%, transparent);
+      }
     }
 
     .slot-block--in_progress {
       background: color-mix(in srgb, var(--ds-brand) 22%, var(--bg-surface));
       border: 1px solid var(--ds-brand);
       color: var(--ds-brand);
+      cursor: default;
+
+      &:hover {
+        background: color-mix(in srgb, var(--ds-brand) 30%, var(--bg-surface));
+      }
     }
 
     .slot-block--completed {
       background: color-mix(in srgb, var(--state-success) 10%, var(--bg-surface));
       border: 1px solid color-mix(in srgb, var(--state-success) 40%, transparent);
       color: var(--state-success);
+      cursor: default;
+
+      &:hover {
+        background: color-mix(in srgb, var(--state-success) 18%, var(--bg-surface));
+        border-color: color-mix(in srgb, var(--state-success) 55%, transparent);
+      }
     }
 
     .slot-block--cancelled,
@@ -121,29 +138,31 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       border: 1px solid var(--color-border);
       color: var(--text-muted);
       opacity: 0.55;
+      cursor: default;
     }
 
     .slot-time {
       font-weight: 600;
-      font-size: 0.65rem;
+      font-size: 0.7rem;
     }
 
     .slot-student {
       font-weight: 500;
+      font-size: 0.7rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .slot-instructor {
-      font-size: 0.62rem;
+      font-size: 0.65rem;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .slot-badge {
-      font-size: 0.58rem;
+      font-size: 0.6rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.03em;
