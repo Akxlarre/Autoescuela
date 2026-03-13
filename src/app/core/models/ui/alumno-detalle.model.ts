@@ -15,6 +15,23 @@ export interface AlumnoDetalleUI {
   telefono: string;
   fechaIngreso: string;
   estado: string;
+  /** Suma de pagos confirmados (enrollments.total_paid) */
+  totalPagado: number;
+  /** Saldo aún no abonado (enrollments.pending_balance) */
+  saldoPendiente: number;
+}
+
+export interface PagoUI {
+  id: number;
+  /** Fecha formateada "DD/MM/YYYY" (ej: "15/01/2026") */
+  fecha: string;
+  /** Descripción del pago (notes o fallback genérico) */
+  concepto: string;
+  monto: number;
+  /** "Efectivo" | "Transferencia" | "Tarjeta" | null */
+  metodo: string | null;
+  /** Estado legible: "Pagado" | "Pendiente" | etc. (derivado del status de BD) */
+  estado: string;
 }
 
 export interface InasistenciaUI {

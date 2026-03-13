@@ -4,6 +4,7 @@ import type {
   AlumnoDetalleUI,
   ClasePracticaUI,
   InasistenciaUI,
+  PagoUI,
   ProgresoUI,
 } from '@core/models/ui/alumno-detalle.model';
 
@@ -23,6 +24,7 @@ export class AdminAlumnoDetalleFacade {
   private readonly _alumno = signal<AlumnoDetalleUI | null>(null);
   private readonly _inasistencias = signal<InasistenciaUI[]>([]);
   private readonly _clasesPracticas = signal<ClasePracticaUI[]>([]);
+  private readonly _historialPagos = signal<PagoUI[]>([]);
   private readonly _progresoPractico = signal<ProgresoUI>({
     completadas: 0,
     requeridas: PRACTICAS_REQUERIDAS_B,
@@ -38,6 +40,7 @@ export class AdminAlumnoDetalleFacade {
   readonly alumno = this._alumno.asReadonly();
   readonly inasistencias = this._inasistencias.asReadonly();
   readonly clasesPracticas = this._clasesPracticas.asReadonly();
+  readonly historialPagos = this._historialPagos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
   readonly progresoTeorico = this._progresoTeorico.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
@@ -65,6 +68,7 @@ export class AdminAlumnoDetalleFacade {
     this._alumno.set(null);
     this._inasistencias.set([]);
     this._clasesPracticas.set([]);
+    this._historialPagos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
     this._progresoTeorico.set({ completadas: 0, requeridas: TEORICAS_REQUERIDAS_B });
     this._error.set(null);
@@ -81,7 +85,7 @@ export class AdminAlumnoDetalleFacade {
             id, rut, first_names, paternal_last_name, maternal_last_name, email, phone
           ),
           enrollments(
-            id, number, created_at,
+            id, number, created_at, total_paid, pending_balance,
             courses!inner(name)
           )
         `,
@@ -106,6 +110,8 @@ export class AdminAlumnoDetalleFacade {
         id: number;
         number?: string | null;
         created_at: string;
+        total_paid?: number | null;
+        pending_balance?: number | null;
         courses?: CourseRow | CourseRow[] | null;
       };
 
@@ -143,6 +149,8 @@ export class AdminAlumnoDetalleFacade {
         telefono: u.phone ?? '—',
         fechaIngreso: s.created_at.slice(0, 10),
         estado: this.formatStatus(s.status),
+        totalPagado: lastEnrollment?.total_paid ?? 0,
+        saldoPendiente: lastEnrollment?.pending_balance ?? 0,
       });
 
       // ── Step 2: Queries en paralelo ──────────────────────────────────────────
@@ -153,6 +161,17 @@ export class AdminAlumnoDetalleFacade {
         description: string | null;
         file_url: string | null;
         status: string | null;
+      };
+
+      type PaymentRow = {
+        id: number;
+        payment_date: string | null;
+        status: string | null;
+        type: string | null;
+        total_amount: number | null;
+        cash_amount: number | null;
+        transfer_amount: number | null;
+        card_amount: number | null;
       };
 
       type SessionRow = {
@@ -173,42 +192,54 @@ export class AdminAlumnoDetalleFacade {
         } | null;
       };
 
-      const [practiceResult, theoryResult, evidenceResult, sessionResult] = await Promise.all([
-        // Asistencia práctica — solo status para contar presentes
-        this.supabase.client
-          .from('class_b_practice_attendance')
-          .select('status')
-          .eq('student_id', studentId),
+      const [practiceResult, theoryResult, evidenceResult, sessionResult, paymentsResult] =
+        await Promise.all([
+          // Asistencia práctica — solo status para contar presentes
+          this.supabase.client
+            .from('class_b_practice_attendance')
+            .select('status')
+            .eq('student_id', studentId),
 
-        // Asistencia teórica — solo status para contar presentes
-        this.supabase.client
-          .from('class_b_theory_attendance')
-          .select('status')
-          .eq('student_id', studentId),
+          // Asistencia teórica — solo status para contar presentes
+          this.supabase.client
+            .from('class_b_theory_attendance')
+            .select('status')
+            .eq('student_id', studentId),
 
-        // Justificaciones de inasistencia registradas
-        enrollmentId != null
-          ? this.supabase.client
-              .from('absence_evidence')
-              .select('id, document_date, document_type, description, file_url, status')
-              .eq('enrollment_id', enrollmentId)
-              .order('document_date', { ascending: false })
-          : Promise.resolve({ data: [] as EvidenceRow[], error: null }),
+          // Justificaciones de inasistencia registradas
+          enrollmentId != null
+            ? this.supabase.client
+                .from('absence_evidence')
+                .select('id, document_date, document_type, description, file_url, status')
+                .eq('enrollment_id', enrollmentId)
+                .order('document_date', { ascending: false })
+            : Promise.resolve({ data: [] as EvidenceRow[], error: null }),
 
-        // Sesiones de clase con join anidado al instructor
-        enrollmentId != null
-          ? this.supabase.client
-              .from('class_b_sessions')
-              .select(
-                `id, class_number, scheduled_at, start_time, end_time,
+          // Sesiones de clase con join anidado al instructor
+          enrollmentId != null
+            ? this.supabase.client
+                .from('class_b_sessions')
+                .select(
+                  `id, class_number, scheduled_at, start_time, end_time,
                  km_start, km_end, performance_notes, notes,
                  student_signature, instructor_signature, status,
                  instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))`,
-              )
-              .eq('enrollment_id', enrollmentId)
-              .order('class_number', { ascending: true })
-          : Promise.resolve({ data: [] as SessionRow[], error: null }),
-      ]);
+                )
+                .eq('enrollment_id', enrollmentId)
+                .order('class_number', { ascending: true })
+            : Promise.resolve({ data: [] as SessionRow[], error: null }),
+
+          // Historial de pagos
+          enrollmentId != null
+            ? this.supabase.client
+                .from('payments')
+                .select(
+                  'id, payment_date, status, type, total_amount, cash_amount, transfer_amount, card_amount',
+                )
+                .eq('enrollment_id', enrollmentId)
+                .order('payment_date', { ascending: true })
+            : Promise.resolve({ data: [] as PaymentRow[], error: null }),
+        ]);
 
       // 🔍 DEBUG — eliminar antes de producción
       console.log('[AdminAlumnoDetalleFacade] class_b_sessions →', {
@@ -216,6 +247,12 @@ export class AdminAlumnoDetalleFacade {
         data: sessionResult.data,
         error: (sessionResult as { error?: unknown }).error ?? null,
         rows: (sessionResult.data ?? []).length,
+      });
+      console.log('[AdminAlumnoDetalleFacade] payments →', {
+        enrollmentId,
+        data: paymentsResult.data,
+        error: (paymentsResult as { error?: unknown }).error ?? null,
+        rows: (paymentsResult.data ?? []).length,
       });
 
       // ── Mapeo: Progreso Práctico ──
@@ -299,6 +336,19 @@ export class AdminAlumnoDetalleFacade {
           };
         }),
       );
+
+      // ── Mapeo: Historial de Pagos ──
+      const paymentRows: PaymentRow[] = (paymentsResult.data as PaymentRow[]) ?? [];
+      this._historialPagos.set(
+        paymentRows.map((p, idx) => ({
+          id: p.id,
+          fecha: this.formatDate(p.payment_date),
+          concepto: p.type?.trim() || `Pago #${idx + 1}`,
+          monto: p.total_amount ?? 0,
+          metodo: this.derivePaymentMethod(p),
+          estado: this.formatPaymentStatus(p.status),
+        })),
+      );
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Error al cargar la ficha del alumno');
     } finally {
@@ -353,6 +403,31 @@ export class AdminAlumnoDetalleFacade {
   ): string | null {
     if (!start || !end) return null;
     return `${start.slice(0, 5)}-${end.slice(0, 5)}`;
+  }
+
+  /** Normaliza el status de BD ('paid', 'pending', etc.) a texto legible en español */
+  private formatPaymentStatus(status: string | null | undefined): string {
+    const map: Record<string, string> = {
+      paid: 'Pagado',
+      pagado: 'Pagado',
+      pending: 'Pendiente',
+      pendiente: 'Pendiente',
+      refunded: 'Reembolsado',
+      cancelled: 'Cancelado',
+    };
+    return map[status?.toLowerCase() ?? ''] ?? 'Pagado';
+  }
+
+  /** Deriva el método de pago legible a partir de los campos de monto parcial */
+  private derivePaymentMethod(p: {
+    cash_amount: number | null;
+    transfer_amount: number | null;
+    card_amount: number | null;
+  }): string | null {
+    if ((p.cash_amount ?? 0) > 0) return 'Efectivo';
+    if ((p.transfer_amount ?? 0) > 0) return 'Transferencia';
+    if ((p.card_amount ?? 0) > 0) return 'Tarjeta';
+    return null;
   }
 
   private formatStatus(status: string | null | undefined): string {

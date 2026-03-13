@@ -12,14 +12,6 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 
-interface PagoItem {
-  fecha: string;
-  concepto: string;
-  monto: number;
-  metodo: string | null;
-  estado: 'Pagado' | 'Pendiente';
-}
-
 @Component({
   selector: 'app-admin-alumno-detalle',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -509,7 +501,7 @@ interface PagoItem {
           </div>
         </div>
 
-        <!-- ── Historial de Pagos (mock — pendiente BD) ── -->
+        <!-- ── Historial de Pagos ── -->
         <div class="card overflow-hidden">
           <div class="flex items-start justify-between gap-4 p-5 pb-4">
             <div class="flex flex-col gap-0.5">
@@ -526,7 +518,7 @@ interface PagoItem {
                   >Total pagado</span
                 >
                 <span class="text-lg font-bold" style="color: var(--state-success)">
-                  \${{ totalPagado().toLocaleString('es-CL') }}
+                  \${{ alumno.totalPagado.toLocaleString('es-CL') }}
                 </span>
               </div>
               <div class="flex flex-col items-end gap-0.5">
@@ -534,7 +526,7 @@ interface PagoItem {
                   >Saldo pendiente</span
                 >
                 <span class="text-lg font-bold" style="color: var(--state-warning)">
-                  \${{ saldoPendiente().toLocaleString('es-CL') }}
+                  \${{ alumno.saldoPendiente.toLocaleString('es-CL') }}
                 </span>
               </div>
             </div>
@@ -551,7 +543,7 @@ interface PagoItem {
                 </tr>
               </thead>
               <tbody>
-                @for (pago of pagos(); track pago.concepto) {
+                @for (pago of facade.historialPagos(); track pago.id) {
                   <tr>
                     <td style="color: var(--text-secondary)">{{ pago.fecha }}</td>
                     <td class="font-semibold" style="color: var(--text-primary)">
@@ -577,6 +569,12 @@ interface PagoItem {
                       </span>
                     </td>
                   </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="text-center py-6" style="color: var(--text-muted)">
+                      Sin pagos registrados
+                    </td>
+                  </tr>
                 }
               </tbody>
             </table>
@@ -585,8 +583,8 @@ interface PagoItem {
             class="flex items-center justify-between gap-4 px-5 py-3 flex-wrap"
             style="border-top: 1px solid var(--border-subtle)"
           >
-            <span class="text-xs" style="color: var(--ds-brand)">
-              {{ pagosRegistrados() }} pagos registrados · {{ pagosPendientes() }} pendiente(s)
+            <span class="text-xs" style="color: var(--text-secondary)">
+              {{ facade.historialPagos().length }} pago(s) registrado(s)
             </span>
             <a
               routerLink="/app/admin/pagos"
@@ -958,38 +956,6 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   // ── Estado del Drawer ────────────────────────────────────────────────────────
   protected readonly drawerOpen = signal(false);
 
-  // ── Mock data: Pagos (pendiente integrar BD — Part 3) ──
-  protected readonly pagos = signal<PagoItem[]>([
-    {
-      fecha: '2026-01-15',
-      concepto: 'Matrícula',
-      monto: 50000,
-      metodo: 'Efectivo',
-      estado: 'Pagado',
-    },
-    {
-      fecha: '2026-01-20',
-      concepto: 'Cuota 1 de 3',
-      monto: 100000,
-      metodo: 'Transferencia',
-      estado: 'Pagado',
-    },
-    {
-      fecha: '2026-02-05',
-      concepto: 'Cuota 2 de 3',
-      monto: 100000,
-      metodo: 'Efectivo',
-      estado: 'Pagado',
-    },
-    {
-      fecha: '2026-02-20',
-      concepto: 'Cuota 3 de 3',
-      monto: 100000,
-      metodo: null,
-      estado: 'Pendiente',
-    },
-  ]);
-
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
     () => this.facade.progresoPractico().requeridas - this.facade.progresoPractico().completadas,
@@ -997,27 +963,6 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   protected readonly restantesTeoricas = computed(
     () => this.facade.progresoTeorico().requeridas - this.facade.progresoTeorico().completadas,
-  );
-
-  // ── Computed: mock pagos ────────────────────────────────────────────────────
-  protected readonly totalPagado = computed(() =>
-    this.pagos()
-      .filter((p) => p.estado === 'Pagado')
-      .reduce((s, p) => s + p.monto, 0),
-  );
-
-  protected readonly saldoPendiente = computed(() =>
-    this.pagos()
-      .filter((p) => p.estado === 'Pendiente')
-      .reduce((s, p) => s + p.monto, 0),
-  );
-
-  protected readonly pagosRegistrados = computed(
-    () => this.pagos().filter((p) => p.estado === 'Pagado').length,
-  );
-
-  protected readonly pagosPendientes = computed(
-    () => this.pagos().filter((p) => p.estado === 'Pendiente').length,
   );
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
