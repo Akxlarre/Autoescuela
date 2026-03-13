@@ -102,6 +102,9 @@ import {
   Ban,
   Home,
   ZoomIn,
+  // ── Agenda Semanal ──
+  CalendarDays,
+  CalendarClock,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -259,6 +262,9 @@ export const appConfig: ApplicationConfig = {
         Home,
         Wrench,
         ZoomIn,
+        // Agenda Semanal
+        CalendarDays,
+        CalendarClock,
       }),
     ),
   ],

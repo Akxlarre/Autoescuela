@@ -1,32 +1,43 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+
+import { AgendaSemanalComponent } from '@shared/components/agenda-semanal/agenda-semanal.component';
+import { AgendaFacade } from '@core/facades/agenda.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AgendaScheduleDrawerComponent } from '@features/agenda/agenda-schedule-drawer.component';
+import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
 @Component({
   selector: 'app-secretaria-agenda',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [AgendaSemanalComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Agenda</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /secretaria/agenda</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/secretaria/agenda.astro
-        </code>
-      </div>
-    </div>
+    <app-agenda-semanal
+      [weekData]="facade.weekData()"
+      [filteredDays]="facade.filteredDays()"
+      [timeRows]="facade.timeRows()"
+      [isLoading]="facade.isLoading()"
+      [isCurrentWeek]="facade.isCurrentWeek()"
+      [instructors]="facade.instructors()"
+      [selectedInstructorId]="facade.selectedInstructorId()"
+      (weekNext)="facade.goToNextWeek()"
+      (weekPrev)="facade.goToPrevWeek()"
+      (weekToday)="facade.goToToday()"
+      (instructorFilterChange)="facade.setInstructorFilter($event)"
+      (slotClick)="onSlotClick($event)"
+    />
   `,
 })
-export class SecretariaAgendaComponent {}
+export class SecretariaAgendaComponent implements OnInit {
+  protected readonly facade = inject(AgendaFacade);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
+
+  ngOnInit(): void {
+    this.facade.initialize();
+  }
+
+  onSlotClick(slot: AgendaSlot): void {
+    if (!slot) return;
+    this.facade.setSelectedSlot(slot);
+    this.drawer.open(AgendaScheduleDrawerComponent, 'Agendar clase', 'calendar-days');
+  }
+}
