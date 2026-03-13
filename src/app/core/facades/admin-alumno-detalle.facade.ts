@@ -98,6 +98,7 @@ export class AdminAlumnoDetalleFacade {
       // ── Mapeo: Info Personal ──
       // Supabase devuelve los joins como arrays — extraemos el primer elemento con cast explícito
       type UserRow = {
+        id: number;
         rut: string;
         first_names: string;
         paternal_last_name: string;
@@ -138,10 +139,14 @@ export class AdminAlumnoDetalleFacade {
 
       this._alumno.set({
         id: s.id,
+        userId: u.id,
         enrollmentId,
         nombre: `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name}`
           .replace(/\s+/g, ' ')
           .trim(),
+        firstName: u.first_names,
+        paternalLastName: u.paternal_last_name,
+        maternalLastName: u.maternal_last_name,
         rut: u.rut,
         matricula: lastEnrollment?.number ? `#${lastEnrollment.number}` : '—',
         curso: courseName ?? '—',
@@ -375,6 +380,33 @@ export class AdminAlumnoDetalleFacade {
       document_date: payload.documentDate,
       status: 'pending',
     });
+    if (error) throw error;
+  }
+
+  /**
+   * Actualiza los datos personales del alumno en la tabla `users`.
+   * Lanza un error si la operación falla — el drawer llamador maneja el estado.
+   */
+  async actualizarPerfilAlumno(
+    userId: number,
+    data: {
+      first_names: string;
+      paternal_last_name: string;
+      maternal_last_name: string;
+      email: string;
+      phone: string;
+    },
+  ): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('users')
+      .update({
+        first_names: data.first_names.trim(),
+        paternal_last_name: data.paternal_last_name.trim(),
+        maternal_last_name: data.maternal_last_name.trim(),
+        email: data.email.trim(),
+        phone: data.phone.trim() || null,
+      })
+      .eq('id', userId);
     if (error) throw error;
   }
 

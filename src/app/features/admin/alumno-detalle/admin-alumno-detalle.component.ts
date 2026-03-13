@@ -11,11 +11,18 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
+import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 
 @Component({
   selector: 'app-admin-alumno-detalle',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IconComponent, SkeletonBlockComponent, AdminInasistenciaDrawerComponent],
+  imports: [
+    RouterLink,
+    IconComponent,
+    SkeletonBlockComponent,
+    AdminInasistenciaDrawerComponent,
+    AdminEditarPerfilDrawerComponent,
+  ],
   template: `
     <div class="p-6 max-w-7xl mx-auto flex flex-col gap-6">
       <!-- ── Estado de Carga ── -->
@@ -105,6 +112,7 @@ import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-in
             </button>
             <button
               class="btn-outline flex items-center gap-2"
+              (click)="editDrawerOpen.set(true)"
               data-llm-action="editar-alumno"
               aria-label="Editar datos del alumno"
             >
@@ -617,6 +625,13 @@ import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-in
         (closed)="drawerOpen.set(false)"
         (saved)="onInasistenciaGuardada()"
       />
+
+      <!-- ── Drawer: Editar Perfil ── -->
+      <app-admin-editar-perfil-drawer
+        [isOpen]="editDrawerOpen()"
+        (closed)="editDrawerOpen.set(false)"
+        (saved)="onPerfilActualizado()"
+      />
     </div>
   `,
   styles: `
@@ -953,8 +968,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly route = inject(ActivatedRoute);
 
-  // ── Estado del Drawer ────────────────────────────────────────────────────────
+  // ── Estado de Drawers ────────────────────────────────────────────────────────
   protected readonly drawerOpen = signal(false);
+  protected readonly editDrawerOpen = signal(false);
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -990,6 +1006,13 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   protected onInasistenciaGuardada(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id && !isNaN(Number(id))) {
+      this.facade.loadDetalle(Number(id));
+    }
+  }
+
+  protected onPerfilActualizado(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {
       this.facade.loadDetalle(Number(id));

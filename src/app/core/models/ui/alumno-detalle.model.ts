@@ -5,9 +5,16 @@
 
 export interface AlumnoDetalleUI {
   id: number;
+  /** PK de la fila en tabla `users` — requerido para .update() al editar perfil */
+  userId: number;
   /** PK de la matrícula activa — requerido para insertar en absence_evidence */
   enrollmentId: number | null;
+  /** Nombre completo para mostrar */
   nombre: string;
+  /** Campos individuales para pre-rellenar el formulario de edición */
+  firstName: string;
+  paternalLastName: string;
+  maternalLastName: string;
   rut: string;
   matricula: string;
   curso: string;
