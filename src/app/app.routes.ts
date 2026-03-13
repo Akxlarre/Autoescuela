@@ -90,6 +90,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'ex-alumnos',
+            loadComponent: () =>
+              import('./features/admin/alumnos/ex-alumnos/admin-ex-alumnos.component').then(
+                (m) => m.AdminExAlumnosComponent,
+              ),
+          },
+          {
             path: 'agenda',
             loadComponent: () =>
               import('./features/admin/agenda/admin-agenda.component').then(
