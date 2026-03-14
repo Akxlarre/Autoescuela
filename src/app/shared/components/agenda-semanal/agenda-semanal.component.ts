@@ -23,6 +23,7 @@ import { AgendaSlotComponent } from './agenda-slot.component';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 import type {
@@ -37,6 +38,17 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 interface InstructorOption {
   label: string;
   value: number | null;
+}
+
+/** Resumen condensado de una celda (master view). */
+interface CellSummary {
+  available: number;
+  scheduled: number;
+  completed: number;
+  inProgress: number;
+  noShow: number;
+  total: number;
+  instructors: string[];
 }
 
 /**
@@ -60,37 +72,38 @@ interface InstructorOption {
     AgendaSlotComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    AnimateInDirective,
   ],
   host: { class: 'block' },
   template: `
-    <div class="page-content">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Agenda semanal">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         contextLine="Gestión de horarios"
         title="Agenda Semanal"
+        variant="compact"
         [subtitle]="weekSubtitle()"
         [actions]="heroActions"
         (actionClick)="onHeroAction($event)"
       />
 
       <!-- ── KPIs ──────────────────────────────────────────────────────────── -->
-      <section #kpiGrid class="bento-grid" appBentoGridLayout aria-label="Métricas de la semana">
-        @for (kpi of kpiCards(); track kpi.id) {
+      @for (kpi of kpiCards(); track kpi.id) {
+        <div class="bento-square">
           <app-kpi-card-variant
-            class="bento-square"
             [value]="kpi.value"
             [label]="kpi.label"
             [icon]="kpi.icon"
             [color]="kpi.color"
             [loading]="isLoading()"
           />
-        }
-      </section>
+        </div>
+      }
 
       <!-- ── Calendario ─────────────────────────────────────────────────────── -->
       <div
         #calendarCard
-        class="card p-0 overflow-hidden mt-2"
+        class="bento-banner card p-0 overflow-hidden"
         appCardHover
         aria-label="Calendario semanal"
       >
@@ -228,15 +241,85 @@ interface InstructorOption {
             <!-- Filas de tiempo -->
             @for (time of timeRows(); track time) {
               <!-- Etiqueta de hora -->
-              <div class="agenda-time-label" role="rowheader">{{ time }}</div>
+              <div
+                class="agenda-time-label"
+                [class.agenda-time-label--now]="nowTimeRow() === time"
+                role="rowheader"
+              >
+                {{ time }}
+              </div>
 
               <!-- Celdas por día -->
               @for (day of filteredDays(); track day.date) {
-                <div class="agenda-cell" role="gridcell" [attr.aria-label]="day.label + ' ' + time">
-                  @for (slot of getCell(day, time); track slot.id) {
-                    <app-agenda-slot [slot]="slot" (slotClicked)="slotClick.emit($event)" />
-                  }
-                </div>
+                @if (isMasterView()) {
+                  <!-- MASTER VIEW: Vista condensada con indicadores -->
+                  <div
+                    class="agenda-cell cell-condensed"
+                    [class.agenda-cell--now]="nowTimeRow() === time"
+                    role="gridcell"
+                    [attr.aria-label]="
+                      day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
+                    "
+                    [class.cell-condensed--expanded]="expandedCellKey() === cellKey(day.date, time)"
+                    (click)="toggleCell(day.date, time)"
+                  >
+                    @if (expandedCellKey() === cellKey(day.date, time)) {
+                      <!-- Expandido: slots individuales -->
+                      <div class="cell-expanded-content" appAnimateIn>
+                        @for (slot of getCell(day, time); track slot.id) {
+                          <app-agenda-slot
+                            [slot]="slot"
+                            [compact]="true"
+                            (slotClicked)="slotClick.emit($event)"
+                          />
+                        }
+                        <button
+                          class="cell-collapse-btn"
+                          (click)="toggleCell(day.date, time); $event.stopPropagation()"
+                          aria-label="Colapsar celda"
+                        >
+                          <app-icon name="chevron-up" [size]="10" />
+                        </button>
+                      </div>
+                    } @else {
+                      <!-- Condensado: pills de disponibilidad -->
+                      @if (getCellSummary(day, time).total > 0) {
+                        <div class="cell-pills">
+                          @if (getCellSummary(day, time).available > 0) {
+                            <span class="cell-pill cell-pill--available">
+                              {{ getCellSummary(day, time).available }}
+                              libre{{ getCellSummary(day, time).available !== 1 ? 's' : '' }}
+                            </span>
+                          }
+                          @if (occupiedCount(getCellSummary(day, time)) > 0) {
+                            <span class="cell-pill cell-pill--occupied">
+                              {{ occupiedCount(getCellSummary(day, time)) }} ocup.
+                            </span>
+                          }
+                        </div>
+                        <span class="cell-expand-hint">
+                          <app-icon name="chevron-down" [size]="10" />
+                        </span>
+                      }
+                    }
+                  </div>
+                } @else {
+                  <!-- FILTERED VIEW: Vista detallada con slots compactos -->
+                  <div
+                    class="agenda-cell"
+                    [class.agenda-cell--now]="nowTimeRow() === time"
+                    role="gridcell"
+                    [attr.aria-label]="day.label + ' ' + time"
+                  >
+                    @for (slot of getCell(day, time); track slot.id) {
+                      <app-agenda-slot
+                        [slot]="slot"
+                        [compact]="true"
+                        (slotClicked)="slotClick.emit($event)"
+                      />
+                    }
+                  </div>
+                }
               }
             }
           </div>
@@ -245,8 +328,9 @@ interface InstructorOption {
           <div class="agenda-legend flex items-center gap-4 px-4 py-2 border-t">
             <div class="legend-item legend-item--available">Disponible</div>
             <div class="legend-item legend-item--scheduled">Agendada</div>
+            <div class="legend-item legend-item--in-progress">En progreso</div>
             <div class="legend-item legend-item--completed">Completada</div>
-            <div class="legend-item legend-item--no_show">No asistió</div>
+            <div class="legend-item legend-item--no-show">No asistió</div>
           </div>
         }
       </div>
@@ -424,9 +508,9 @@ interface InstructorOption {
     }
 
     .agenda-time-label {
-      padding: 0.375rem 0.5rem;
-      font-size: 0.7rem;
-      font-weight: 600;
+      padding: 6px 8px 0;
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
       color: var(--text-muted);
       text-align: right;
       background: var(--bg-surface);
@@ -435,22 +519,135 @@ interface InstructorOption {
       position: sticky;
       left: 0;
       z-index: 1;
-      min-height: 52px;
+      min-height: 56px;
       display: flex;
       align-items: flex-start;
       justify-content: flex-end;
-      padding-top: 6px;
     }
 
     .agenda-cell {
       background: var(--bg-base);
       border-right: 1px solid var(--color-border);
       border-bottom: 1px solid var(--color-border);
-      padding: 2px;
-      min-height: 52px;
+      padding: 3px;
+      min-height: 56px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
+    }
+
+    /* ── Indicador "ahora" ───────────────────────────────── */
+
+    .agenda-time-label--now {
+      color: var(--state-error);
+      font-weight: var(--font-bold);
+
+      /* Punto rojo antes de la hora */
+      &::before {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--state-error);
+        margin: 0 4px 0 auto;
+        flex-shrink: 0;
+        align-self: center;
+      }
+    }
+
+    .agenda-cell--now {
+      border-top: 2px solid var(--state-error);
+    }
+
+    /* ── Celdas condensadas (Master View) ─────────────────── */
+
+    .cell-condensed {
+      cursor: pointer;
+      transition: background var(--duration-instant) var(--ease-standard);
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 4px;
+
+      &:hover {
+        background: color-mix(in srgb, var(--ds-brand) 5%, var(--bg-base));
+
+        .cell-expand-hint {
+          opacity: 1;
+        }
+      }
+
+      &--expanded {
+        cursor: default;
+        align-items: stretch;
+        justify-content: flex-start;
+        text-align: left;
+        background: color-mix(in srgb, var(--ds-brand) 3%, var(--bg-base));
+      }
+    }
+
+    .cell-expanded-content {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: 100%;
+    }
+
+    /* ── Pills de disponibilidad ───────────────────────────── */
+
+    .cell-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      justify-content: center;
+    }
+
+    .cell-pill {
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      padding: 2px 7px;
+      border-radius: var(--radius-full);
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+
+    .cell-pill--available {
+      background: color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface));
+      color: var(--ds-brand);
+      border: 1px solid color-mix(in srgb, var(--ds-brand) 35%, transparent);
+    }
+
+    .cell-pill--occupied {
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .cell-expand-hint {
+      display: flex;
+      justify-content: center;
+      color: var(--text-disabled);
+      opacity: 0;
+      transition: opacity var(--duration-instant) var(--ease-standard);
+    }
+
+    .cell-collapse-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      margin-top: 2px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+
+      &:hover {
+        color: var(--ds-brand);
+        background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
+      }
     }
 
     /* ── Leyenda ─────────────────────────────────────────────── */
@@ -462,7 +659,7 @@ interface InstructorOption {
     }
 
     .legend-item {
-      font-size: 0.7rem;
+      font-size: var(--text-xs);
       display: flex;
       align-items: center;
       gap: 5px;
@@ -471,31 +668,35 @@ interface InstructorOption {
       &::before {
         content: '';
         display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 2px;
+        width: 12px;
+        height: 12px;
+        border-radius: var(--radius-sm);
         flex-shrink: 0;
       }
 
       &--available::before {
-        border: 1px dashed var(--color-border);
+        border: 1.5px dashed var(--border-strong);
         background: transparent;
       }
 
       &--scheduled::before {
-        background: color-mix(in srgb, var(--ds-brand) 15%, var(--bg-surface));
-        border: 1px solid color-mix(in srgb, var(--ds-brand) 40%, transparent);
+        background: color-mix(in srgb, var(--ds-brand) 14%, var(--bg-surface));
+        border: 1.5px solid color-mix(in srgb, var(--ds-brand) 55%, transparent);
+      }
+
+      &--in-progress::before {
+        background: var(--ds-brand);
+        border: 1.5px solid var(--color-primary-hover);
       }
 
       &--completed::before {
-        background: color-mix(in srgb, var(--state-success) 15%, var(--bg-surface));
-        border: 1px solid color-mix(in srgb, var(--state-success) 40%, transparent);
+        background: color-mix(in srgb, var(--state-success) 14%, var(--bg-surface));
+        border: 1.5px solid color-mix(in srgb, var(--state-success) 50%, transparent);
       }
 
-      &--no_show::before {
-        background: var(--bg-surface);
-        border: 1px solid var(--color-border);
-        opacity: 0.5;
+      &--no-show::before {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border-subtle);
       }
     }
   `,
@@ -532,14 +733,37 @@ export class AgendaSemanalComponent implements AfterViewInit {
   /** Índice del día seleccionado en mobile (0 = Lun, 4 = Vie). */
   readonly mobileDayIndex = signal(0);
 
+  /** Clave de la celda expandida en master view (null = todas condensadas). */
+  readonly expandedCellKey = signal<string | null>(null);
+
+  /** True cuando no hay filtro de instructor → vista de todos. */
+  readonly isMasterView = computed(() => this.selectedInstructorId() === null);
+
+  /**
+   * Fila de hora más cercana a la hora actual (HH:MM) — para el indicador "ahora".
+   * Null si la hora actual está fuera del rango de timeRows.
+   */
+  readonly nowTimeRow = computed<string | null>(() => {
+    if (!this.isCurrentWeek()) return null;
+    const rows = this.timeRows();
+    if (!rows.length) return null;
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    // Encuentra la fila cuyo inicio ≤ ahora < inicio + 45min
+    for (const row of rows) {
+      const [h, m] = row.split(':').map(Number);
+      const rowStart = h * 60 + m;
+      if (nowMinutes >= rowStart && nowMinutes < rowStart + 45) return row;
+    }
+    return null;
+  });
+
   /** Evita re-animar la grilla si ya fue animada en el ciclo de carga actual. */
   private _gridAnimated = false;
 
   // ── Datos del hero ───────────────────────────────────────────────────────────
 
-  readonly heroActions: SectionHeroAction[] = [
-    { id: 'schedule', label: 'Agendar clase', icon: 'plus', primary: true },
-  ];
+  readonly heroActions: SectionHeroAction[] = [];
 
   readonly weekSubtitle = computed(() => {
     const data = this.weekData();
@@ -661,5 +885,61 @@ export class AgendaSemanalComponent implements AfterViewInit {
    */
   getCell(day: AgendaDayColumn, time: string): AgendaSlot[] {
     return day.slots.filter((s) => s.startTime === time);
+  }
+
+  // ── Master View: condensed cells ──────────────────────────────────────────
+
+  /** Genera clave única para expandir/colapsar celdas. */
+  cellKey(date: string, time: string): string {
+    return `${date}__${time}`;
+  }
+
+  /** Toggle expandir/colapsar una celda en master view. */
+  toggleCell(date: string, time: string): void {
+    const key = this.cellKey(date, time);
+    this.expandedCellKey.set(this.expandedCellKey() === key ? null : key);
+  }
+
+  /** Resumen de estados de los slots en una celda (para la vista condensada). */
+  getCellSummary(day: AgendaDayColumn, time: string): CellSummary {
+    const slots = this.getCell(day, time);
+    const summary: CellSummary = {
+      available: 0,
+      scheduled: 0,
+      completed: 0,
+      inProgress: 0,
+      noShow: 0,
+      total: slots.length,
+      instructors: [],
+    };
+    const instructorSet = new Set<string>();
+    for (const s of slots) {
+      switch (s.status) {
+        case 'available':
+          summary.available++;
+          break;
+        case 'scheduled':
+          summary.scheduled++;
+          break;
+        case 'completed':
+          summary.completed++;
+          break;
+        case 'in_progress':
+          summary.inProgress++;
+          break;
+        case 'no_show':
+        case 'cancelled':
+          summary.noShow++;
+          break;
+      }
+      if (s.instructorName) instructorSet.add(s.instructorName);
+    }
+    summary.instructors = [...instructorSet];
+    return summary;
+  }
+
+  /** Retorna el total de slots ocupados (scheduled + in_progress + completed). */
+  occupiedCount(summary: CellSummary): number {
+    return summary.scheduled + summary.inProgress + summary.completed;
   }
 }

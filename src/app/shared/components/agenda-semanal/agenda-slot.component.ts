@@ -33,31 +33,35 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       @switch (slot().status) {
         @case ('available') {
           <div class="flex items-center gap-1">
-            <app-icon name="plus" [size]="10" />
+            <app-icon name="plus" [size]="12" />
             <span class="slot-time">{{ slot().startTime }}</span>
           </div>
-          <span class="slot-instructor">{{ slot().instructorName }}</span>
+          @if (!compact()) {
+            <span class="slot-instructor">{{ slot().instructorName }}</span>
+          }
         }
         @case ('scheduled') {
-          <span class="slot-time">{{ slot().startTime }}</span>
+          <span class="slot-time">{{ slot().startTime }} – {{ slot().endTime }}</span>
           <span class="slot-student">{{ slot().studentName }}</span>
-          @if (slot().classNumber) {
+          @if (slot().classNumber && !compact()) {
             <span class="slot-badge">Clase {{ slot().classNumber }}</span>
           }
         }
         @case ('in_progress') {
           <div class="flex items-center gap-1">
-            <app-icon name="play-circle" [size]="10" />
-            <span class="slot-time">{{ slot().startTime }}</span>
+            <app-icon name="play-circle" [size]="12" />
+            <span class="slot-time">{{ slot().startTime }} – {{ slot().endTime }}</span>
           </div>
           <span class="slot-student">{{ slot().studentName }}</span>
         }
         @case ('completed') {
           <div class="flex items-center gap-1">
-            <app-icon name="check-circle" [size]="10" />
-            <span class="slot-time">{{ slot().startTime }}</span>
+            <app-icon name="check-circle" [size]="12" />
+            <span class="slot-time">{{ slot().startTime }} – {{ slot().endTime }}</span>
           </div>
-          <span class="slot-student">{{ slot().studentName }}</span>
+          @if (!compact()) {
+            <span class="slot-student">{{ slot().studentName }}</span>
+          }
         }
         @case ('no_show') {
           <span class="slot-time line-through">{{ slot().startTime }}</span>
@@ -71,110 +75,153 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       display: block;
     }
 
+    /* ── Base ─────────────────────────────────────────────── */
+
     .slot-block {
-      border-radius: var(--radius-sm, 6px);
-      padding: 3px 6px;
-      font-size: 0.68rem;
-      line-height: 1.3;
-      min-height: 40px;
+      border-radius: var(--radius-sm);
+      padding: 4px 7px;
+      font-size: var(--text-xs);
+      line-height: var(--leading-snug);
+      min-height: 48px;
       display: flex;
       flex-direction: column;
-      gap: 1px;
+      gap: 2px;
       transition:
-        background 120ms ease,
-        border-color 120ms ease;
+        background var(--duration-instant) var(--ease-standard),
+        border-color var(--duration-instant) var(--ease-standard),
+        box-shadow var(--duration-instant) var(--ease-standard);
     }
 
+    /* ── Available — affordance clara: espacio invitado a ocupar ── */
+
     .slot-block--available {
-      border: 1px dashed var(--color-border-strong, var(--color-border));
-      background: transparent;
+      border: 1.5px dashed var(--border-strong);
+      background: var(--bg-base);
       color: var(--text-muted);
+      position: relative;
 
       &:hover {
+        border-style: solid;
         border-color: var(--ds-brand);
-        background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
+        background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface));
         color: var(--ds-brand);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--ds-brand) 15%, transparent);
       }
     }
 
+    /* ── Scheduled — el estado principal, debe destacar ── */
+
     .slot-block--scheduled {
-      background: color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface));
-      border: 1px solid color-mix(in srgb, var(--ds-brand) 35%, transparent);
+      background: color-mix(in srgb, var(--ds-brand) 14%, var(--bg-surface));
+      border: 1.5px solid color-mix(in srgb, var(--ds-brand) 55%, transparent);
+      border-left: 3px solid var(--ds-brand);
       color: var(--text-primary);
       cursor: default;
 
       &:hover {
         background: color-mix(in srgb, var(--ds-brand) 20%, var(--bg-surface));
-        border-color: color-mix(in srgb, var(--ds-brand) 55%, transparent);
       }
     }
+
+    /* ── In progress — más prominente: fondo sólido brand ── */
 
     .slot-block--in_progress {
-      background: color-mix(in srgb, var(--ds-brand) 22%, var(--bg-surface));
-      border: 1px solid var(--ds-brand);
-      color: var(--ds-brand);
+      background: var(--ds-brand);
+      border: 1.5px solid var(--color-primary-hover);
+      color: var(--color-primary-text);
       cursor: default;
 
+      .slot-time,
+      .slot-student {
+        color: var(--color-primary-text);
+        opacity: 0.95;
+      }
+
       &:hover {
-        background: color-mix(in srgb, var(--ds-brand) 30%, var(--bg-surface));
+        background: var(--color-primary-hover);
       }
     }
+
+    /* ── Completed — éxito sutil pero legible ── */
 
     .slot-block--completed {
-      background: color-mix(in srgb, var(--state-success) 10%, var(--bg-surface));
-      border: 1px solid color-mix(in srgb, var(--state-success) 40%, transparent);
-      color: var(--state-success);
+      background: color-mix(in srgb, var(--state-success) 14%, var(--bg-surface));
+      border: 1.5px solid color-mix(in srgb, var(--state-success) 50%, transparent);
+      border-left: 3px solid var(--state-success);
+      color: var(--text-secondary);
       cursor: default;
 
+      .slot-time {
+        color: var(--state-success);
+      }
+
       &:hover {
-        background: color-mix(in srgb, var(--state-success) 18%, var(--bg-surface));
-        border-color: color-mix(in srgb, var(--state-success) 55%, transparent);
+        background: color-mix(in srgb, var(--state-success) 20%, var(--bg-surface));
       }
     }
+
+    /* ── Compact — reduce layout sin bajar contraste ── */
+
+    .slot-block--compact {
+      min-height: 32px;
+      padding: 3px 7px;
+
+      /* No opacity: mantiene contraste WCAG */
+    }
+
+    /* ── Cancelled / No show ── */
 
     .slot-block--cancelled,
     .slot-block--no_show {
-      background: var(--bg-surface);
-      border: 1px solid var(--color-border);
-      color: var(--text-muted);
-      opacity: 0.55;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-disabled);
       cursor: default;
     }
 
+    /* ── Texto ── */
+
     .slot-time {
-      font-weight: 600;
-      font-size: 0.7rem;
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      color: inherit;
     }
 
     .slot-student {
-      font-weight: 500;
-      font-size: 0.7rem;
+      font-size: var(--text-xs);
+      font-weight: var(--font-medium);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .slot-instructor {
-      font-size: 0.65rem;
+      font-size: var(--text-xs);
+      color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .slot-badge {
-      font-size: 0.6rem;
-      font-weight: 600;
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
       text-transform: uppercase;
-      letter-spacing: 0.03em;
-      opacity: 0.75;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
     }
   `,
 })
 export class AgendaSlotComponent {
   slot = input.required<AgendaSlot>();
+  /** Modo compacto: oculta nombre instructor en available (contexto ya lo indica). */
+  compact = input(false);
   slotClicked = output<AgendaSlot>();
 
-  statusClass = computed(() => `slot-block slot-block--${this.slot().status}`);
+  statusClass = computed(() => {
+    const base = `slot-block slot-block--${this.slot().status}`;
+    return this.compact() ? `${base} slot-block--compact` : base;
+  });
 
   ariaLabel = computed(() => {
     const s = this.slot();
