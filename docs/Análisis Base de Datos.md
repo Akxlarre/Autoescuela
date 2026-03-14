@@ -1698,18 +1698,13 @@ Sistema Escuela de Conductores — Análisis de Base de Datos — Pág. 31
 `FOR EACH ROW WHEN (NEW.status = 'completed' AND NEW.class_number = 12)`   
 `EXECUTE FUNCTION verify_class_b_certificate_enablement();` 
 
-`-- T8: RF-037 Bloquear edición de payments cuando cash_closings.closed = true`   
-`CREATE TRIGGER trg_block_payments_closed_cash`   
-`BEFORE UPDATE OR DELETE ON payments`   
-`FOR EACH ROW EXECUTE FUNCTION verify_cash_not_closed();` 
-
-`-- T9: Gatillo RF-093 Profesional: 30 días cumplidos + asistencia OK + notas` ≥ `4.0 + saldo = 0 --` → `actualizar enrollments.certificate_enabled = true` 
+`-- T8: Gatillo RF-093 Profesional: 30 días cumplidos + asistencia OK + notas` ≥ `4.0 + saldo = 0 --` → `actualizar enrollments.certificate_enabled = true` 
 
 `CREATE TRIGGER trg_enable_certificate_prof`   
 `AFTER INSERT OR UPDATE ON professional_final_records`   
 `FOR EACH ROW EXECUTE FUNCTION verify_professional_certificate_enablement();` 
 
-`-- T10: Al insertar un promotion_courses con template_id definido, generar automáticamente -- todas las professional_theory_sessions y professional_practice_sessions del período de 30 días. -- Lee los template_blocks de la plantilla asignada y calcula las fechas reales a partir -- de professional_promotions.start_date.` 
+`-- T9: Al insertar un promotion_courses con template_id definido, generar automáticamente -- todas las professional_theory_sessions y professional_practice_sessions del período de 30 días. -- Lee los template_blocks de la plantilla asignada y calcula las fechas reales a partir -- de professional_promotions.start_date.` 
 
 `-- Fórmula de fecha: start_date + (week_number-1)*7 dias + (day_of_week-1) dias CREATE TRIGGER trg_generate_professional_course_sessions` 
 
@@ -1717,7 +1712,7 @@ Sistema Escuela de Conductores — Análisis de Base de Datos — Pág. 31
 `FOR EACH ROW WHEN (NEW.template_id IS NOT NULL)`   
 `EXECUTE FUNCTION generate_sessions_from_template();` 
 
-`-- T11: Validaciones de matrícula que requieren JOIN a courses`   
+`-- T10: Validaciones de matrícula que requieren JOIN a courses`   
 `-- - class_b no puede tener promotion_course_id (no aplica a Clase B)`   
 `-- - draft solo permitido en class_b`   
 `-- - professional: promotion_course_id puede ser NULL (asignación diferida) o con valor (asignación  directa)` 
@@ -1755,7 +1750,7 @@ Sistema Escuela de Conductores — Análisis de Base de Datos — Pág. 32
  `BEFORE INSERT OR UPDATE ON enrollments`   
  `FOR EACH ROW EXECUTE FUNCTION trg_enrollment_validation_fn();` 
 
-`-- T12: Al transitar professional_promotions a 'finished',`   
+`-- T11: Al transitar professional_promotions a 'finished',`   
 `-- actualizar class_book.status` → `'in_review' y calcular closes_at = end_date + 7 días. -- Un CRON job diario verifica si closes_at &lt; NOW() y, si nadie cerró manualmente, -- transita class_book.status` → `'closed', registra closed_at = NOW(), closed_by = NULL. CREATE TRIGGER trg_class_book_lifecycle` 
 
 `AFTER UPDATE OF status ON professional_promotions`   
@@ -2121,7 +2116,7 @@ Sistema Escuela de Conductores — Análisis de Base de Datos — Pág. 37
 Sistema Escuela de Conductores — Análisis de Base de Datos — Pág. 38   
  `class_b_sessions creadas en status 'scheduled' B) Asignación diferida: solo courses.license_class  vinculadas al draft y la secretaría asigna promotion_course_id  Slots bloqueados en v_class_b_schedule_availability desde la vista de promociones luego  Si expires_at &lt; NOW()` → `CRON job libera los slots` 
 
- `T13: impide avanzar si no hay al menos 1 sesión Profesional pasa directo a 'pending_docs'  agendada (no existe estado 'draft' en Profesional)`  ■ 
+ `T12: impide avanzar si no hay al menos 1 sesión Profesional pasa directo a 'pending_docs'  agendada (no existe estado 'draft' en Profesional)`  ■ 
 
  ■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■  ■ 
 

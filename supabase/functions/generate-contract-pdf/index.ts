@@ -55,6 +55,11 @@ interface EnrollmentData {
     name: string;
     address: string | null;
   };
+  /** Presente cuando el alumno convalida simultáneamente (A2→A4 o A5→A3). */
+  convalidation: {
+    convalidated_license: 'A4' | 'A3';
+    reduced_hours: number;
+  } | null;
 }
 
 // ─── Main handler ───
@@ -87,6 +92,7 @@ Deno.serve(async (req: Request) => {
       .select(
         `
         id,
+        student_id,
         number,
         base_price,
         discount,
@@ -126,8 +132,15 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // 3b. Fetch license_validations por separado para evitar dependencia del caché FK de PostgREST.
+    const { data: licenseValidation } = await supabase
+      .from('license_validations')
+      .select('convalidated_license, reduced_hours')
+      .eq('enrollment_id', enrollment_id)
+      .maybeSingle();
+
     // Flatten nested relations
-    const data = flattenEnrollment(enrollment);
+    const data = flattenEnrollment(enrollment, licenseValidation);
 
     // 4. Generate structured PDF directly from enrollment data
     const pdfBytes = buildStructuredPdf(data);
@@ -193,7 +206,10 @@ Deno.serve(async (req: Request) => {
 // Helper functions
 // ══════════════════════════════════════════════════════════════════════════════
 
-function flattenEnrollment(raw: any): EnrollmentData {
+function flattenEnrollment(
+  raw: any,
+  licenseValidation?: { convalidated_license: 'A4' | 'A3'; reduced_hours: number } | null,
+): EnrollmentData {
   return {
     id: raw.id,
     number: raw.number,
@@ -223,6 +239,7 @@ function flattenEnrollment(raw: any): EnrollmentData {
       name: raw.branches.name,
       address: raw.branches.address,
     },
+    convalidation: licenseValidation ?? null,
   };
 }
 
@@ -475,6 +492,18 @@ function buildStructuredPdf(data: EnrollmentData): Uint8Array {
   row('Fecha de matr\xEDcula:', enrollmentDate);
   if (data.number) row('N\xFA de matr\xEDcula:', data.number);
 
+  if (data.convalidation) {
+    y -= 4;
+    need(16);
+    T(ML, y, 'Convalidaci\xF3n simult\xE1nea', 'F2', 10);
+    y -= 15;
+    row(
+      'Licencia convalidada:',
+      `${data.convalidation.convalidated_license} (simult\xE1nea con ${data.course.license_class})`,
+    );
+    row('Horas convalidadas:', `${data.convalidation.reduced_hours} h`);
+  }
+
   // ── SECTION III: CONDICIONES ECONOMICAS ──
   section('III', 'CONDICIONES ECONOMICAS');
   row('Valor del curso:', formatCurrency(data.base_price));
@@ -508,6 +537,13 @@ function buildStructuredPdf(data: EnrollmentData): Uint8Array {
     'SEXTA: Vigencia.',
     'Este contrato rige desde la fecha de firma y se mantendr\xE1 vigente hasta la finalizaci\xF3n del curso contratado o hasta que se resuelva por alguna de las causales previstas en las cl\xE1usulas anteriores.',
   );
+
+  if (data.convalidation) {
+    clause(
+      `S\xC9PTIMA: Convalidaci\xF3n simult\xE1nea de Licencia ${data.convalidation.convalidated_license}.`,
+      `El/la alumno/a se matricula en el curso ${data.course.license_class} con convalidaci\xF3n simult\xE1nea de la Licencia ${data.convalidation.convalidated_license}, la que se cursar\xE1 dentro de la misma promoci\xF3n bajo un libro de clases independiente. Las ${data.convalidation.reduced_hours} horas convalidadas quedan cubiertas por el valor \xFAnico de esta matr\xEDcula. La apertura del libro de clases de la licencia convalidada ser\xE1 informada al alumno/a por la administraci\xF3n.`,
+    );
+  }
 
   // ── SECTION V: FIRMAS ──
   section('V', 'FIRMAS');

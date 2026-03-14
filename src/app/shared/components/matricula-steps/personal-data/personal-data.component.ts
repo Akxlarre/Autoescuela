@@ -97,6 +97,7 @@ export class PersonalDataComponent {
     if (age === null) return 'none';
     if (age < 17) return 'under-17';
     if (age < 18) return 'requires-authorization';
+    if (this.data().courseCategory === 'professional' && age < 20) return 'under-20-professional';
     return 'ok';
   });
 
@@ -113,9 +114,11 @@ export class PersonalDataComponent {
   readonly canAdvance = computed(() => {
     const d = this.data();
     const courseIsValid = this.filteredCourses().some((c) => c.type === d.courseType);
+    const age = this.ageStatus();
     return (
       this.rutValid() &&
-      this.ageStatus() !== 'under-17' &&
+      age !== 'under-17' &&
+      age !== 'under-20-professional' &&
       d.firstNames.trim().length >= 2 &&
       d.paternalLastName.trim().length >= 2 &&
       this.emailValid() &&
@@ -139,6 +142,7 @@ export class PersonalDataComponent {
       ...this.data(),
       courseType: course.type,
       courseCategory: course.category,
+      convalidatesSimultaneously: course.convalidation ?? false,
     });
   }
 

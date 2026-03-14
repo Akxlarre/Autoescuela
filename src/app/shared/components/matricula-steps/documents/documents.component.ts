@@ -36,11 +36,22 @@ export class DocumentsComponent {
   /** true mientras se espera que el Smart suba la foto y devuelva la URL */
   readonly isUploadingPhoto = signal(false);
 
+  /** Tipo de documento que se está subiendo actualmente (para spinner por fila) */
+  readonly uploadingDocType = signal<string | null>(null);
+
   constructor() {
     // Cuando llega la URL de la foto (upload completado), apaga el spinner local
     effect(() => {
       if (this.data().carnetPhoto?.capturedDataUrl) {
         this.isUploadingPhoto.set(false);
+      }
+    });
+
+    // Cuando el documento aparece en uploadedDocuments, apaga el spinner de esa fila
+    effect(() => {
+      const type = this.uploadingDocType();
+      if (type && type !== 'id_photo' && this.data().uploadedDocuments.has(type as DocumentType)) {
+        this.uploadingDocType.set(null);
       }
     });
   }
@@ -53,7 +64,11 @@ export class DocumentsComponent {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    if (docType === 'id_photo') this.isUploadingPhoto.set(true);
+    if (docType === 'id_photo') {
+      this.isUploadingPhoto.set(true);
+    } else {
+      this.uploadingDocType.set(docType);
+    }
     this.fileSelected.emit({ type: docType, file });
     // Reset so the same file can be selected again (e.g. re-upload after error)
     input.value = '';

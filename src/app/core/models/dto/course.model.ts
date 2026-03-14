@@ -10,6 +10,8 @@ export interface Course {
   license_class?: string | null;
   branch_id?: number | null;
   active: boolean;
+  /** true = curso CONV A3/A4. No seleccionable en wizard; solo contenedor de sesiones. */
+  is_convalidation?: boolean | null;
   schedule_days?: number[] | null;
   schedule_blocks?: { from: string; to: string }[] | null;
 }

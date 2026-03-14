@@ -208,6 +208,22 @@
               </div>
             </div>
           }
+
+          @if (ageStatus() === 'under-20-professional') {
+            <div
+              class="p-4 rounded-xl border-2 border-state-error-border bg-state-error-bg flex gap-3 items-start"
+            >
+              <app-icon name="ban" [size]="20" class="text-state-error mt-0.5 shrink-0" />
+              <div>
+                <p class="text-sm font-bold text-state-error">
+                  Menor de 20 años — No puede matricularse en Clase Profesional
+                </p>
+                <p class="text-xs text-text-secondary mt-1">
+                  La edad mínima para Clase Profesional (A2, A3, A4, A5) es de 20 años cumplidos.
+                </p>
+              </div>
+            </div>
+          }
         </div>
 
         <!-- Ubicación -->
@@ -285,42 +301,48 @@
                   Selecciona el curso
                 </p>
                 <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  @for (course of filteredCourses(); track course.type) {
+                  @for (
+                    course of filteredCourses();
+                    track course.type + (course.convalidation ? '_conv' : '')
+                  ) {
+                    @let isSelected =
+                      data().courseType === course.type &&
+                      data().convalidatesSimultaneously === (course.convalidation ?? false);
                     <label
                       class="group relative flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
-                      [class.border-brand]="data().courseType === course.type"
-                      [class.bg-brand-muted]="data().courseType === course.type"
-                      [class.border-border-default]="data().courseType !== course.type"
+                      [class.border-brand]="isSelected"
+                      [class.bg-brand-muted]="isSelected"
+                      [class.border-border-default]="!isSelected"
                       (click)="onCourseSelect(course)"
                     >
                       <input
                         type="radio"
                         name="courseType"
                         [value]="course.type"
-                        [checked]="data().courseType === course.type"
+                        [checked]="isSelected"
                         class="hidden"
                       />
                       <div
                         class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
-                        [class.bg-brand]="data().courseType === course.type"
-                        [class.text-surface]="data().courseType === course.type"
-                        [class.bg-bg-subtle]="data().courseType !== course.type"
-                        [class.text-text-muted]="data().courseType !== course.type"
+                        [class.bg-brand]="isSelected"
+                        [class.text-surface]="isSelected"
+                        [class.bg-bg-subtle]="!isSelected"
+                        [class.text-text-muted]="!isSelected"
                       >
                         <app-icon [name]="course.icon" [size]="16" />
                       </div>
                       <div class="flex-1 min-w-0">
                         <p
                           class="text-sm font-semibold leading-tight"
-                          [class.text-brand]="data().courseType === course.type"
-                          [class.text-text-primary]="data().courseType !== course.type"
+                          [class.text-brand]="isSelected"
+                          [class.text-text-primary]="!isSelected"
                         >
                           {{ course.label }}
                         </p>
                         <p
                           class="text-xs mt-0.5"
-                          [class.text-brand]="data().courseType === course.type"
-                          [class.text-text-muted]="data().courseType !== course.type"
+                          [class.text-brand]="isSelected"
+                          [class.text-text-muted]="!isSelected"
                         >
                           {{
                             course.category === 'non-professional'
@@ -331,7 +353,7 @@
                           }}
                         </p>
                       </div>
-                      @if (data().courseType === course.type) {
+                      @if (isSelected) {
                         <app-icon name="check-circle" [size]="14" class="text-brand shrink-0" />
                       }
                     </label>

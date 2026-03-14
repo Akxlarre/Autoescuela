@@ -111,5 +111,9 @@ export interface EnrollmentAssignmentData {
   // Professional fields
   promotionId: number | null;
   promotionGroups: PromotionGroup[];
+  /** true = alumno se matricula convalidando simultáneamente (A2+A4 o A5+A3). */
+  convalidatesSimultaneously: boolean;
+  /** Licencia que se convalida: 'A4' (cuando madre=A2) o 'A3' (cuando madre=A5). */
+  convalidatedLicense: 'A4' | 'A3' | null;
   // Singular has no extra fields (informational only)
 }

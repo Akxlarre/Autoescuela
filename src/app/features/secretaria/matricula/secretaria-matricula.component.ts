@@ -62,7 +62,7 @@ const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   senceCode: null,
   currentLicense: null,
   licenseDate: null,
-  validationA2A4: false,
+  convalidatesSimultaneously: false,
   historicalPromotionId: null,
   validationBook: null,
   courses: [],
@@ -217,6 +217,13 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       },
       promotionId: this.enrollment.selectedPromotionCourseId(),
       promotionGroups: this.enrollment.promotionGroups(),
+      convalidatesSimultaneously: pd?.convalidatesSimultaneously ?? false,
+      convalidatedLicense:
+        pd?.convalidatesSimultaneously && pd.courseType === 'professional_a2'
+          ? 'A4'
+          : pd?.convalidatesSimultaneously && pd.courseType === 'professional_a5'
+            ? 'A3'
+            : null,
     };
   });
 
@@ -331,6 +338,17 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
                   text: 'Se requiere un mínimo de asistencia para rendir el examen final.',
                   highlights: ['asistencia', 'examen final'],
                 },
+                ...(pd?.convalidatesSimultaneously
+                  ? [
+                      {
+                        text: `Convalidación ${pd.courseType === 'professional_a2' ? 'A4' : 'A3'} registrada. La administración abrirá el libro de clases correspondiente.`,
+                        highlights: [
+                          `Convalidación ${pd.courseType === 'professional_a2' ? 'A4' : 'A3'}`,
+                          'libro de clases',
+                        ],
+                      },
+                    ]
+                  : []),
               ]
             : [
                 {
@@ -633,6 +651,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const role = this.auth.currentUser()?.role ?? 'secretaria';
     const dashboard = role === 'admin' ? '/app/admin/dashboard' : '/app/secretaria/dashboard';
     this.enrollment.reset();
+    this.docs.reset();
+    this.payment.reset();
     this.layoutDrawer.close();
     this.router.navigate([dashboard]);
   }

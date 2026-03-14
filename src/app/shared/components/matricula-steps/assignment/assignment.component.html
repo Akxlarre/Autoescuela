@@ -298,6 +298,35 @@
       <!-- VISTA PROFESIONAL -->
       @if (data().view === 'professional') {
         <div class="space-y-6">
+          <!-- Banner convalidación simultánea -->
+          @if (data().convalidatesSimultaneously && data().convalidatedLicense) {
+            <div
+              class="p-4 bg-state-warning-bg border border-state-warning-border rounded-xl flex gap-3"
+              data-llm-description="convalidation enrollment alert banner"
+            >
+              <app-icon
+                name="layers"
+                [size]="20"
+                class="text-state-warning mt-0.5 shrink-0"
+                [ariaHidden]="true"
+              />
+              <div>
+                <p class="text-sm font-bold text-state-warning">
+                  Matrícula con Convalidación Simultánea
+                </p>
+                <p class="text-xs text-text-secondary leading-relaxed mt-0.5">
+                  Este alumno se matricula convalidando
+                  <strong class="text-text-primary"
+                    >Licencia {{ data().convalidatedLicense }}</strong
+                  >
+                  simultáneamente. Asigna la promoción del curso madre. La administración abrirá el
+                  libro de clases CONV&nbsp;{{ data().convalidatedLicense }} dentro de la misma
+                  promoción.
+                </p>
+              </div>
+            </div>
+          }
+
           <div class="p-4 bg-state-info-bg border border-state-info-border rounded-xl flex gap-3">
             <app-icon name="users" [size]="20" class="text-state-info mt-0.5 shrink-0" />
             <div>

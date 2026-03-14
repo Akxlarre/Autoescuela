@@ -7,6 +7,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import {
   LucideAngularModule,
   // ── Usados por el boilerplate (dashboard, kpi-card, sidebar) ──
+  Layers,
   Activity,
   AlertCircle,
   AlertTriangle,
@@ -261,6 +262,7 @@ export const appConfig: ApplicationConfig = {
         Ban,
         Folder,
         Home,
+        Layers,
         Wrench,
         ZoomIn,
       }),

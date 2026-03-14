@@ -343,6 +343,10 @@ export class EnrollmentDocumentsFacade {
     const docs = (data ?? []) as StudentDocument[];
     this._persistedDocs.set(docs);
 
+    // Reset carnet photo before rebuilding — prevents stale photo from a prior
+    // enrollment session persisting when the resumed draft has no id_photo yet.
+    this._carnetPhoto.set(null);
+
     // Rebuild local document map from persisted records
     const docMap = new Map<DocumentType, UploadedDocument>();
     for (const doc of docs) {

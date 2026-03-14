@@ -24,7 +24,12 @@ export type CurrentLicenseType = 'B' | 'A2' | 'A3' | 'A4' | 'A5' | 'none';
 
 export type ValidationBook = 'book_1' | 'book_2';
 
-export type AgeAlertStatus = 'ok' | 'under-17' | 'requires-authorization' | 'none';
+export type AgeAlertStatus =
+  | 'ok'
+  | 'under-17'
+  | 'requires-authorization'
+  | 'under-20-professional'
+  | 'none';
 
 export interface SingularCourseOption {
   code: SingularCourseCode;
@@ -42,6 +47,8 @@ export interface CourseOption {
   basePrice: number;
   durationWeeks: number | null;
   practicalHours: number | null;
+  /** true = opción visual de convalidación simultánea (A2 conv. A4 / A5 conv. A3). */
+  convalidation?: boolean;
 }
 
 export interface SenceCodeOption {
@@ -73,7 +80,8 @@ export interface EnrollmentPersonalData {
   // Professional fields (only when courseCategory === 'professional')
   currentLicense: CurrentLicenseType | null;
   licenseDate: string | null;
-  validationA2A4: boolean;
+  /** true = el alumno se matricula en A2 convalidando A4, o en A5 convalidando A3. */
+  convalidatesSimultaneously: boolean;
   historicalPromotionId: string | null;
   validationBook: ValidationBook | null;
   // Display options (populated by smart component, not persisted)

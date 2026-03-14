@@ -237,9 +237,32 @@
                   <button
                     type="button"
                     (click)="fileInput.click()"
-                    class="cursor-pointer w-9 h-9 flex items-center justify-center rounded-lg bg-bg-subtle text-text-secondary hover:bg-bg-base transition-all"
+                    [disabled]="uploadingDocType() === doc.type"
+                    data-llm-action="upload-document"
+                    class="cursor-pointer px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    [class.bg-surface]="!isUploaded(doc.type)"
+                    [class.border-border-default]="!isUploaded(doc.type)"
+                    [class.text-text-primary]="!isUploaded(doc.type)"
+                    [class.hover:bg-bg-base]="
+                      !isUploaded(doc.type) && uploadingDocType() !== doc.type
+                    "
+                    [class.bg-bg-subtle]="isUploaded(doc.type)"
+                    [class.border-border-subtle]="isUploaded(doc.type)"
+                    [class.text-text-secondary]="isUploaded(doc.type)"
+                    [class.hover:bg-bg-base]="
+                      isUploaded(doc.type) && uploadingDocType() !== doc.type
+                    "
                   >
-                    <app-icon name="upload" [size]="16" />
+                    @if (uploadingDocType() === doc.type) {
+                      <app-icon name="loader" [size]="14" class="animate-spin" />
+                      Subiendo...
+                    } @else if (isUploaded(doc.type)) {
+                      <app-icon name="refresh-cw" [size]="14" />
+                      Cambiar archivo
+                    } @else {
+                      <app-icon name="upload" [size]="14" />
+                      Subir archivo
+                    }
                   </button>
                 </div>
               </div>

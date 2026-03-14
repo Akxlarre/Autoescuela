@@ -160,9 +160,19 @@ export class EnrollmentFacade {
   // ── UI ──
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
-  readonly courseOptions = computed<CourseOption[]>(() =>
-    this._courses().map((c) => this.mapCourseToOption(c)),
-  );
+  readonly courseOptions = computed<CourseOption[]>(() => {
+    const result: CourseOption[] = [];
+    for (const course of this._courses()) {
+      const opt = this.mapCourseToOption(course);
+      result.push(opt);
+      if (opt.type === 'professional_a2') {
+        result.push({ ...opt, label: 'Profesional A2 conv. A4', convalidation: true });
+      } else if (opt.type === 'professional_a5') {
+        result.push({ ...opt, label: 'Profesional A5 conv. A3', convalidation: true });
+      }
+    }
+    return result;
+  });
 
   /** Categorías ocultas: se oculta cualquier categoría sin cursos cargados.
    *  Singular siempre visible (cursos de tipo "otros" no tienen license_class). */
@@ -187,10 +197,14 @@ export class EnrollmentFacade {
     const course = this._courses().find(
       (c) => c.license_class === this.courseTypeToLicenseClass(pd.courseType),
     );
+    const baseName = course?.name ?? pd.courseType;
+    const convSuffix = pd.convalidatesSimultaneously
+      ? ` + conv. ${pd.courseType === 'professional_a2' ? 'A4' : 'A3'}`
+      : '';
     return {
       initials,
       fullName,
-      courseLabel: course?.name ?? pd.courseType,
+      courseLabel: baseName + convSuffix,
     };
   });
 
@@ -284,7 +298,14 @@ export class EnrollmentFacade {
     const user = this.auth.currentUser();
     const effectiveBranchId = branchId ?? user?.branchId;
 
-    let query = this.supabase.client.from('courses').select('*').eq('active', true).order('name');
+    let query = this.supabase.client
+      .from('courses')
+      .select('*')
+      .eq('active', true)
+      // Excluir cursos CONV (is_convalidation=true): no son seleccionables en el wizard.
+      // Son contenedores de sesiones internos; se crean en promotion_courses por la administración.
+      .or('is_convalidation.is.null,is_convalidation.eq.false')
+      .order('name');
 
     // Filtrar por sede: cada secretaria solo ve los cursos de su propia sede
     if (effectiveBranchId) {
@@ -409,14 +430,16 @@ export class EnrollmentFacade {
       const existingDraft = await this.findExistingDraft(studentId, courseId);
 
       let enrollmentId: number;
+      const course = this._courses().find((c) => c.id === courseId);
       if (existingDraft) {
-        // Update existing draft
+        // Update existing draft (base_price incluido para corregir posibles drafts con valor incorrecto)
         enrollmentId = existingDraft.id;
         const { error } = await this.supabase.client
           .from('enrollments')
           .update({
             branch_id: branchId,
             sence_code_id: senceCodeId,
+            base_price: course?.base_price ?? existingDraft.base_price,
             expires_at: this.getDraftExpiry(),
             updated_at: new Date().toISOString(),
           })
@@ -428,7 +451,6 @@ export class EnrollmentFacade {
         }
       } else {
         // Create new draft enrollment
-        const course = this._courses().find((c) => c.id === courseId);
         const { data: newEnrollment, error } = await this.supabase.client
           .from('enrollments')
           .insert({
@@ -460,6 +482,38 @@ export class EnrollmentFacade {
       // 6. Update local state
       this._draft.set({ enrollmentId, studentId, userId });
       this._personalData.set(data);
+
+      // 7. Sincronizar license_validations con la elección de convalidación.
+      // Se hace aquí (Step 1) para que el contrato (Step 5) y la restauración
+      // de drafts puedan leer el registro sin esperar a confirmEnrollment().
+      if (data.courseCategory === 'professional') {
+        if (data.convalidatesSimultaneously) {
+          const convalidatedLicense = data.courseType === 'professional_a2' ? 'A4' : 'A3';
+          const { error: lvError } = await this.supabase.client.from('license_validations').upsert(
+            {
+              enrollment_id: enrollmentId,
+              convalidated_license: convalidatedLicense,
+              convalidation_promotion_course_id: null,
+              reduced_hours: 60,
+            },
+            { onConflict: 'enrollment_id' },
+          );
+          if (lvError) {
+            this._error.set(
+              `Error al registrar convalidación ${convalidatedLicense}: ${lvError.message}`,
+            );
+            return false;
+          }
+        } else {
+          // El usuario desmarcó la convalidación (o retrocedió y cambió el curso):
+          // eliminar cualquier registro previo para este enrollment.
+          await this.supabase.client
+            .from('license_validations')
+            .delete()
+            .eq('enrollment_id', enrollmentId);
+        }
+      }
+
       this.updateStepStatus(1, 'completed');
       this.goToStep(2);
 
@@ -614,6 +668,8 @@ export class EnrollmentFacade {
     for (const row of sorted) {
       const promo = row.professional_promotions as any;
       const course = row.courses as any;
+      // LEFT JOIN: si la promoción no coincide con branch/status, PostgREST devuelve null
+      if (!promo) continue;
       const groupKey = `${promo.name} – ${promo.code}`;
 
       const option: PromotionOption = {
@@ -1137,11 +1193,23 @@ export class EnrollmentFacade {
         senceCode: null,
         currentLicense: (student.current_license_class as CurrentLicenseType) ?? null,
         licenseDate: student.license_obtained_date ?? null,
-        validationA2A4: false,
+        convalidatesSimultaneously: false, // se actualiza abajo si existe registro
         validationBook: null,
         historicalPromotionId: null,
         courses: this._courses().map((c) => this.mapCourseToOption(c)),
       };
+
+      // 4b. Restaurar convalidatesSimultaneously desde license_validations
+      if (courseOption.category === 'professional') {
+        const { data: lv } = await this.supabase.client
+          .from('license_validations')
+          .select('convalidated_license')
+          .eq('enrollment_id', enrollment.id)
+          .maybeSingle();
+        if (lv) {
+          personalData.convalidatesSimultaneously = true;
+        }
+      }
 
       this._personalData.set(personalData);
       this._draft.set({
