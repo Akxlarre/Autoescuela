@@ -256,6 +256,7 @@ interface CellSummary {
                   <div
                     class="agenda-cell cell-condensed"
                     [class.agenda-cell--now]="nowTimeRow() === time"
+                    [class.agenda-cell--today]="day.isToday"
                     role="gridcell"
                     [attr.aria-label]="
                       day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
@@ -308,6 +309,7 @@ interface CellSummary {
                   <div
                     class="agenda-cell"
                     [class.agenda-cell--now]="nowTimeRow() === time"
+                    [class.agenda-cell--today]="day.isToday"
                     role="gridcell"
                     [attr.aria-label]="day.label + ' ' + time"
                   >
@@ -526,7 +528,7 @@ interface CellSummary {
     }
 
     .agenda-cell {
-      background: var(--bg-base);
+      background: var(--bg-surface);
       border-right: 1px solid var(--color-border);
       border-bottom: 1px solid var(--color-border);
       padding: 3px;
@@ -534,6 +536,12 @@ interface CellSummary {
       display: flex;
       flex-direction: column;
       gap: 3px;
+    }
+
+    /* ── Columna "hoy" — tint sutil en celdas ─────────────── */
+
+    .agenda-cell--today {
+      background: color-mix(in srgb, var(--ds-brand) 4%, var(--bg-surface));
     }
 
     /* ── Indicador "ahora" ───────────────────────────────── */
@@ -583,7 +591,7 @@ interface CellSummary {
         align-items: stretch;
         justify-content: flex-start;
         text-align: left;
-        background: color-mix(in srgb, var(--ds-brand) 3%, var(--bg-base));
+        background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
       }
     }
 

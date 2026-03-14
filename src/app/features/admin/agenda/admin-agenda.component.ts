@@ -4,6 +4,7 @@ import { AgendaSemanalComponent } from '@shared/components/agenda-semanal/agenda
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AgendaScheduleDrawerComponent } from '@features/agenda/agenda-schedule-drawer.component';
+import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
 import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
 @Component({
@@ -36,8 +37,13 @@ export class AdminAgendaComponent implements OnInit {
   }
 
   onSlotClick(slot: AgendaSlot): void {
-    if (!slot) return; // hero action "Agendar clase" sin slot específico
+    if (!slot) return;
     this.facade.setSelectedSlot(slot);
-    this.drawer.open(AgendaScheduleDrawerComponent, 'Agendar clase', 'calendar-days');
+    if (slot.status === 'available') {
+      this.drawer.open(AgendaScheduleDrawerComponent, 'Agendar clase', 'calendar-days');
+    } else {
+      const title = slot.studentName ? `Clase: ${slot.studentName}` : 'Detalle de clase';
+      this.drawer.open(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
+    }
   }
 }

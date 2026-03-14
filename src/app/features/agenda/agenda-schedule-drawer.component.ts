@@ -33,22 +33,34 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
   template: `
     <div class="flex flex-col gap-5 p-1">
       <!-- Slot seleccionado (solo lectura) -->
-      @if (slot()) {
-        <div class="card card-tinted p-4 flex flex-col gap-2">
-          <span class="kpi-label">Horario seleccionado</span>
-          <div class="flex items-center gap-2 mt-1">
-            <app-icon name="clock" [size]="15" />
-            <span class="text-sm font-semibold text-text-primary">
-              {{ slot()!.startTime }} – {{ slot()!.endTime }}
-            </span>
+      @if (slot(); as s) {
+        <div class="slot-hero card p-0 overflow-hidden">
+          <!-- Franja de disponibilidad -->
+          <div class="slot-hero-badge">
+            <app-icon name="check-circle" [size]="12" />
+            <span>Cupo disponible</span>
           </div>
-          <div class="flex items-center gap-2">
-            <app-icon name="user" [size]="14" />
-            <span class="text-sm text-text-secondary">{{ slot()!.instructorName }}</span>
+          <!-- Horario -->
+          <div class="slot-hero-body">
+            <span class="kpi-label">Horario seleccionado</span>
+            <div class="slot-hero-time">{{ s.startTime }} – {{ s.endTime }}</div>
           </div>
-          <div class="flex items-center gap-2">
-            <app-icon name="car" [size]="14" />
-            <span class="text-sm text-text-secondary">{{ slot()!.vehiclePlate }}</span>
+          <!-- Instructor + Vehículo -->
+          <div class="slot-hero-meta">
+            <div class="slot-meta-row" style="border-bottom: 1px solid var(--color-border)">
+              <div class="slot-meta-icon"><app-icon name="user" [size]="14" /></div>
+              <div class="slot-meta-body">
+                <span class="slot-meta-label">Instructor</span>
+                <span class="slot-meta-value">{{ s.instructorName }}</span>
+              </div>
+            </div>
+            <div class="slot-meta-row">
+              <div class="slot-meta-icon"><app-icon name="car" [size]="14" /></div>
+              <div class="slot-meta-body">
+                <span class="slot-meta-label">Vehículo</span>
+                <span class="slot-meta-value">{{ s.vehiclePlate }}</span>
+              </div>
+            </div>
           </div>
         </div>
       }
@@ -133,6 +145,82 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
         </button>
       </div>
     </div>
+  `,
+  styles: `
+    /* ── Slot hero card ── */
+
+    .slot-hero {
+      border-radius: var(--radius-lg);
+    }
+
+    .slot-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0.75rem 0.75rem 0;
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      color: var(--state-success);
+      background: color-mix(in srgb, var(--state-success) 12%, var(--bg-surface));
+      align-self: flex-start;
+    }
+
+    .slot-hero-body {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0.5rem 1rem 0.75rem;
+    }
+
+    .slot-hero-time {
+      font-size: 1.5rem;
+      font-weight: var(--font-bold);
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .slot-hero-meta {
+      border-top: 1px solid var(--color-border);
+    }
+
+    .slot-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 1rem;
+    }
+
+    .slot-meta-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .slot-meta-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .slot-meta-label {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+    }
+
+    .slot-meta-value {
+      font-size: 0.875rem;
+      font-weight: var(--font-semibold);
+      color: var(--text-primary);
+    }
   `,
 })
 export class AgendaScheduleDrawerComponent implements OnInit {
