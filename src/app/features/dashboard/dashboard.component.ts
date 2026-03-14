@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject, afterNextRender, ElementRef, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  afterNextRender,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
@@ -10,6 +18,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
+import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
@@ -202,7 +211,11 @@ export class DashboardComponent {
       { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
     ];
     if (h.activeAlerts) {
-      chips.push({ label: `${h.activeAlerts} alertas urgentes`, icon: 'alert-triangle', style: 'error' });
+      chips.push({
+        label: `${h.activeAlerts} alertas urgentes`,
+        icon: 'alert-triangle',
+        style: 'error',
+      });
     }
     return chips;
   });
@@ -213,7 +226,7 @@ export class DashboardComponent {
       icon: a.icon,
       primary: i === 0,
       route: undefined,
-    }))
+    })),
   );
   constructor() {
     // Iniciar la carga de datos del dashboard al construir el componente
@@ -228,14 +241,11 @@ export class DashboardComponent {
     });
   }
 
-  handleQuickAction(actionId: string) {
+  handleQuickAction(actionId: string): void {
     if (actionId === 'qa1') {
-      this.openNuevaMatriculaDrawer();
+      this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
+    } else if (actionId === 'qa2') {
+      this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
     }
   }
-
-  openNuevaMatriculaDrawer(): void {
-    this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
-  }
-
 }
