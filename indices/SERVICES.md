@@ -18,6 +18,8 @@ Servicios estructurales compartidos que proveen funcionalidades base, autenticac
 | `BreadcrumbService` | Breadcrumb reactivo; consume `NavGroup[]` de `MenuConfigService` vía `buildFromGroups(url, groups)`; deriva trail desde grupos y sus items | `core/services/breadcrumb.service.ts` | Router, MenuConfigService | ✅ Estable |
 | `ConfirmModalService` | Modal de confirmación imperativo con patrón `confirm(ConfirmConfig) → Promise<boolean>`; sin dependencia de PrimeNG. Severidades: `danger\|warn\|success\|info\|secondary`. Renderizado global en `AppShellComponent`. Usado por `enrollmentDraftGuard` y `SecretariaMatriculaComponent`. | `core/services/ui/confirm-modal.service.ts` | — | ✅ Estable |
 | `ModalOverlayService` | Teleporta modales al overlay container (z-index > topbar) | `core/services/modal-overlay.service.ts` | — | ✅ Estable |
+| `LayoutDrawerService` | Orquesta el drawer arquitectónico del AppShell. Estado via signal. **Navegación en pila:** `open()` (raíz, limpia historial), `push()` (sub-vista sin cerrar panel), `back()` (restaura anterior o cierra), `close()` (cierra + limpia historial). `canGoBack` computed. `clear()` limpia componente post-animación GSAP. | `core/services/ui/layout-drawer.service.ts` | — | ✅ Estable |
+| `LayoutDrawerFacadeService` | Interfaz pública para componentes UI hacia `LayoutDrawerService`. Expone: `isOpen`, `component`, `title`, `icon`, `actions`, `canGoBack`. Métodos: `open()`, `push()`, `back()`, `close()`, `setActions()`. | `core/services/ui/layout-drawer.facade.service.ts` | LayoutDrawerService | ✅ Estable |
 
 ## 1b. Pure Utilities (Functional Core)
 Funciones puras sin estado ni inyección de Angular. Testeables sin framework.
