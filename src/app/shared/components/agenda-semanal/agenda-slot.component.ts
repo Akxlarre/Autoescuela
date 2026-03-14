@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
@@ -16,9 +16,10 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
   imports: [IconComponent],
   host: {
     class: 'block',
-    '[class.cursor-pointer]': 'slot().status === "available"',
-    '[attr.role]': 'slot().status === "available" ? "button" : null',
-    '[attr.tabindex]': 'slot().status === "available" ? "0" : null',
+    '[class.cursor-pointer]': 'isInteractive()',
+    '[attr.role]': 'isInteractive() ? "button" : null',
+    '[attr.tabindex]': 'isInteractive() ? "0" : null',
+    '[attr.aria-expanded]': 'isOccupied() ? expanded() : null',
     '[attr.aria-label]': 'ariaLabel()',
     '(click)': 'handleClick()',
     '(keydown.enter)': 'handleClick()',
@@ -67,6 +68,26 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
           <span class="slot-time line-through">{{ slot().startTime }}</span>
           <span class="slot-student line-through">{{ slot().studentName }}</span>
         }
+      }
+
+      <!-- Panel de detalle (solo slots ocupados, al hacer clic) -->
+      @if (expanded() && isOccupied()) {
+        <div class="slot-detail">
+          <div class="slot-detail-row">
+            <app-icon name="user" [size]="10" />
+            <span>{{ slot().instructorName }}</span>
+          </div>
+          <div class="slot-detail-row">
+            <app-icon name="car" [size]="10" />
+            <span>{{ slot().vehiclePlate }}</span>
+          </div>
+          @if (slot().classNumber) {
+            <div class="slot-detail-row">
+              <app-icon name="hash" [size]="10" />
+              <span>Clase {{ slot().classNumber }}</span>
+            </div>
+          }
+        </div>
       }
     </div>
   `,
@@ -169,6 +190,14 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       /* No opacity: mantiene contraste WCAG */
     }
 
+    /* ── Expanded — detalle visible, leve elevación ── */
+
+    .slot-block--expanded {
+      box-shadow: var(--shadow-md);
+      z-index: 1;
+      position: relative;
+    }
+
     /* ── Cancelled / No show ── */
 
     .slot-block--cancelled,
@@ -210,30 +239,78 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       letter-spacing: 0.04em;
       color: var(--text-muted);
     }
+
+    /* ── Panel de detalle expandible ── */
+
+    .slot-detail {
+      margin-top: 4px;
+      padding-top: 4px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .slot-detail-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    /* Detalle sobre fondo sólido brand (in_progress) */
+    .slot-block--in_progress .slot-detail {
+      border-top-color: color-mix(in srgb, var(--color-primary-text) 25%, transparent);
+    }
+
+    .slot-block--in_progress .slot-detail-row {
+      color: color-mix(in srgb, var(--color-primary-text) 80%, transparent);
+    }
   `,
 })
 export class AgendaSlotComponent {
   slot = input.required<AgendaSlot>();
-  /** Modo compacto: oculta nombre instructor en available (contexto ya lo indica). */
+  /** Modo compacto: oculta nombre instructor en available. */
   compact = input(false);
   slotClicked = output<AgendaSlot>();
 
-  statusClass = computed(() => {
-    const base = `slot-block slot-block--${this.slot().status}`;
-    return this.compact() ? `${base} slot-block--compact` : base;
+  /** Detalle expandido al hacer clic en slots ocupados. */
+  readonly expanded = signal(false);
+
+  readonly isOccupied = computed(() => {
+    const s = this.slot().status;
+    return s === 'scheduled' || s === 'in_progress' || s === 'completed' || s === 'no_show';
   });
 
-  ariaLabel = computed(() => {
+  readonly isInteractive = computed(() => this.slot().status === 'available' || this.isOccupied());
+
+  readonly statusClass = computed(() => {
+    const base = `slot-block slot-block--${this.slot().status}`;
+    const withCompact = this.compact() ? `${base} slot-block--compact` : base;
+    return this.expanded() ? `${withCompact} slot-block--expanded` : withCompact;
+  });
+
+  readonly ariaLabel = computed(() => {
     const s = this.slot();
     if (s.status === 'available') {
       return `Slot disponible ${s.startTime} — ${s.instructorName}. Clic para agendar.`;
     }
-    return `${s.studentName ?? 'Clase'} ${s.startTime} — ${s.instructorName}`;
+    return `${s.studentName ?? 'Clase'} ${s.startTime} — ${s.instructorName}. Clic para ${this.expanded() ? 'cerrar' : 'ver'} detalle.`;
   });
 
   handleClick(): void {
     if (this.slot().status === 'available') {
       this.slotClicked.emit(this.slot());
+    } else if (this.isOccupied()) {
+      this.expanded.update((v) => !v);
     }
   }
 }
