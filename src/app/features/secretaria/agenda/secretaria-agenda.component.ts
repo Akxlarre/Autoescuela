@@ -20,6 +20,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       [isCurrentWeek]="facade.isCurrentWeek()"
       [instructors]="facade.instructors()"
       [selectedInstructorId]="facade.selectedInstructorId()"
+      [showHero]="!drawer.isOpen()"
       [showKpis]="!drawer.isOpen()"
       (weekNext)="facade.goToNextWeek()"
       (weekPrev)="facade.goToPrevWeek()"

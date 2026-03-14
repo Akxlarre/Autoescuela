@@ -78,14 +78,16 @@ interface CellSummary {
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Agenda semanal">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        contextLine="Gestión de horarios"
-        title="Agenda Semanal"
-        variant="compact"
-        [subtitle]="weekSubtitle()"
-        [actions]="heroActions"
-        (actionClick)="onHeroAction($event)"
-      />
+      @if (showHero()) {
+        <app-section-hero
+          contextLine="Gestión de horarios"
+          title="Agenda Semanal"
+          variant="compact"
+          [subtitle]="weekSubtitle()"
+          [actions]="heroActions"
+          (actionClick)="onHeroAction($event)"
+        />
+      }
 
       <!-- ── KPIs ──────────────────────────────────────────────────────────── -->
       @if (showKpis()) {
@@ -725,6 +727,8 @@ export class AgendaSemanalComponent implements AfterViewInit {
   selectedInstructorId = input<number | null>(null);
   /** Ocultar KPIs cuando la agenda se renderiza dentro de un drawer. */
   showKpis = input(true);
+  /** Ocultar hero cuando la agenda se renderiza dentro de un drawer. */
+  showHero = input(true);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
