@@ -88,16 +88,18 @@ interface CellSummary {
       />
 
       <!-- ── KPIs ──────────────────────────────────────────────────────────── -->
-      @for (kpi of kpiCards(); track kpi.id) {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            [value]="kpi.value"
-            [label]="kpi.label"
-            [icon]="kpi.icon"
-            [color]="kpi.color"
-            [loading]="isLoading()"
-          />
-        </div>
+      @if (showKpis()) {
+        @for (kpi of kpiCards(); track kpi.id) {
+          <div class="bento-square">
+            <app-kpi-card-variant
+              [value]="kpi.value"
+              [label]="kpi.label"
+              [icon]="kpi.icon"
+              [color]="kpi.color"
+              [loading]="isLoading()"
+            />
+          </div>
+        }
       }
 
       <!-- ── Calendario ─────────────────────────────────────────────────────── -->
@@ -721,6 +723,8 @@ export class AgendaSemanalComponent implements AfterViewInit {
   isCurrentWeek = input(false);
   instructors = input<AgendaInstructorFilter[]>([]);
   selectedInstructorId = input<number | null>(null);
+  /** Ocultar KPIs cuando la agenda se renderiza dentro de un drawer. */
+  showKpis = input(true);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 

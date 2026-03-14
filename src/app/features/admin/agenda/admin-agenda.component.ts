@@ -20,6 +20,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       [isCurrentWeek]="facade.isCurrentWeek()"
       [instructors]="facade.instructors()"
       [selectedInstructorId]="facade.selectedInstructorId()"
+      [showKpis]="!drawer.isOpen()"
       (weekNext)="facade.goToNextWeek()"
       (weekPrev)="facade.goToPrevWeek()"
       (weekToday)="facade.goToToday()"
@@ -30,7 +31,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
 })
 export class AdminAgendaComponent implements OnInit {
   protected readonly facade = inject(AgendaFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);
+  protected readonly drawer = inject(LayoutDrawerFacadeService);
 
   ngOnInit(): void {
     this.facade.initialize();
