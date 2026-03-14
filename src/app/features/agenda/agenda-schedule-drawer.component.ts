@@ -271,12 +271,12 @@ export class AgendaScheduleDrawerComponent implements OnInit {
     );
 
     if (ok) {
-      this.drawer.close();
+      this.drawer.back();
     }
   }
 
   cancel(): void {
     this.facade.setSelectedSlot(null);
-    this.drawer.close();
+    this.drawer.back();
   }
 }

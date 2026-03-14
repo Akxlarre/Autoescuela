@@ -253,6 +253,6 @@ export class AgendaSlotDetailDrawerComponent {
 
   close(): void {
     this.facade.setSelectedSlot(null);
-    this.drawer.close();
+    this.drawer.back();
   }
 }

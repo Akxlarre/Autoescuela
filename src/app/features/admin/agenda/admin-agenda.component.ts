@@ -40,10 +40,10 @@ export class AdminAgendaComponent implements OnInit {
     if (!slot) return;
     this.facade.setSelectedSlot(slot);
     if (slot.status === 'available') {
-      this.drawer.open(AgendaScheduleDrawerComponent, 'Agendar clase', 'calendar-days');
+      this.drawer.push(AgendaScheduleDrawerComponent, 'Agendar clase', 'calendar-days');
     } else {
       const title = slot.studentName ? `Clase: ${slot.studentName}` : 'Detalle de clase';
-      this.drawer.open(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
+      this.drawer.push(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
     }
   }
 }
