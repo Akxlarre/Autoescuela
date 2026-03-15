@@ -81,28 +81,28 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
         </div>
 
         <!-- Valor principal — animado por GSAP al montar -->
-        <p class="flex items-baseline gap-1 m-0">
+        <p class="flex items-baseline gap-1 m-0 truncate">
           @if (prefix()) {
-            <span class="text-3xl font-bold" style="color: var(--text-primary)">
+            <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
               {{ prefix() }}
             </span>
           }
           <span
             #valueEl
-            class="text-4xl font-bold"
+            class="text-3xl md:text-4xl font-bold"
             [class.text-error]="color() === 'error'"
             [style.color]="color() === 'error' ? 'var(--state-error)' : 'var(--text-primary)'"
             >{{ value() }}</span
           >
           @if (suffix()) {
-            <span class="text-3xl font-bold" style="color: var(--text-primary)">
+            <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
               {{ suffix() }}
             </span>
           }
         </p>
 
         <!-- Slot para footer o contenido adicional (ej: "Ver detalles") -->
-        <div class="mt-auto">
+        <div class="mt-auto pointer-events-none">
           <ng-content select="[footer]"></ng-content>
         </div>
       }

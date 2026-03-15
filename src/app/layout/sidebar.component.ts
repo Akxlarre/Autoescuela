@@ -60,6 +60,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 class="flex items-center gap-3 rounded-md px-4 py-2.5 text-sm font-medium text-text-secondary no-underline transition-[var(--transition-color)] hover:bg-brand-muted hover:text-brand"
                 [attr.aria-label]="item.label"
                 [attr.data-llm-nav]="item.routerLink"
+                (click)="layout.closeSidebar()"
               >
                 <app-icon [name]="item.icon" [size]="16" />
                 <span>{{ item.label }}</span>

@@ -26,6 +26,14 @@
 }
 
 /* ── 1. ROOT — Sidebar y topbar estáticos ─────────────────── */
+::view-transition-group(root) {
+  z-index: 10;
+}
+
+::view-transition-group(main-content) {
+  z-index: 1;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;

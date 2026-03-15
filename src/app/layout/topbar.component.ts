@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutService } from '@core/services/ui/layout.service';
-import { NotificationsService } from '@core/services/infrastructure/notifications.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
 import { ThemeService } from '@core/services/ui/theme.service';
 import { UserRole } from '@core/models/ui/user.model';
@@ -26,7 +26,7 @@ import { Button } from 'primeng/button';
 /**
  * TopbarComponent — barra superior de la aplicación.
  *
- * Smart component: inyecta LayoutService, AuthFacade, NotificationsService,
+ * Smart component: inyecta LayoutService, AuthFacade, NotificationsFacade,
  * SearchPanelFacadeService, ThemeService, GsapAnimationsService y RoleService.
  *
  * Responsabilidades de animación:
@@ -57,20 +57,24 @@ import { Button } from 'primeng/button';
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->
-      <p-button
-        class="!flex lg:!hidden shrink-0"
-        [text]="true"
-        [rounded]="true"
-        severity="secondary"
-        ariaLabel="Abrir menú de navegación"
-        data-llm-action="toggle-mobile-sidebar"
-        (onClick)="layout.toggleSidebar()"
-      >
-        <app-icon name="menu" [size]="20" />
-      </p-button>
+      <div class="toolbar-actions !flex lg:!hidden shrink-0 items-center">
+        <p-button
+          [text]="true"
+          [rounded]="true"
+          severity="secondary"
+          ariaLabel="Abrir menú de navegación"
+          data-llm-action="toggle-mobile-sidebar"
+          (onClick)="layout.toggleSidebar()"
+        >
+          <app-icon name="menu" [size]="18" />
+        </p-button>
+      </div>
 
       <!-- Título de sección / breadcrumb -->
-      <div class="flex-1 min-w-0 flex items-center overflow-hidden whitespace-nowrap text-sm font-medium text-text-secondary" aria-label="Sección actual">
+      <div
+        class="flex-1 min-w-0 flex items-center overflow-hidden whitespace-nowrap text-sm font-medium text-text-secondary"
+        aria-label="Sección actual"
+      >
         <!-- TODO: conectar BreadcrumbService o título de la ruta activa -->
       </div>
 
@@ -80,8 +84,6 @@ import { Button } from 'primeng/button';
         role="toolbar"
         aria-label="Acciones globales"
       >
-
-
         <!-- Búsqueda — wrapper con click-outside -->
         <div
           #searchWrapper
@@ -199,7 +201,7 @@ import { Button } from 'primeng/button';
 export class TopbarComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly auth = inject(AuthFacade);
-  protected readonly notifications = inject(NotificationsService);
+  protected readonly notifications = inject(NotificationsFacade);
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly theme = inject(ThemeService);
 

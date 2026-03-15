@@ -75,16 +75,33 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
         </div>
 
         <div class="flex items-center gap-1 shrink-0">
+          <!-- Botón volver (visible cuando hay historial de navegación) -->
+          @if (canGoBack()) {
+            <button
+              appPressFeedback
+              (click)="back()"
+              class="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium"
+              style="color: var(--text-secondary);"
+              onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
+              onmouseout="this.style.color='var(--text-secondary)'; this.style.backgroundColor='transparent';"
+              aria-label="Volver"
+              data-llm-action="drawer-back"
+            >
+              <app-icon name="arrow-left" [size]="16" />
+              <span class="hidden sm:inline">Volver</span>
+            </button>
+          }
+
           <!-- Acciones Dinámicas -->
           @for (action of actions(); track action.label) {
             <button
-               appPressFeedback
-               (click)="action.callback()"
-               class="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium"
-               style="color: var(--text-muted);"
-               onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
-               onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
-               [attr.data-llm-action]="action.llmAction"
+              appPressFeedback
+              (click)="action.callback()"
+              class="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium"
+              style="color: var(--text-muted);"
+              onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
+              onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
+              [attr.data-llm-action]="action.llmAction"
             >
               <app-icon [name]="action.icon" [size]="16" />
               <span class="hidden sm:inline">{{ action.label }}</span>
@@ -126,6 +143,7 @@ export class LayoutDrawerComponent implements OnDestroy {
   readonly title = this.layoutDrawer.title;
   readonly icon = this.layoutDrawer.icon;
   readonly actions = this.layoutDrawer.actions;
+  readonly canGoBack = this.layoutDrawer.canGoBack;
 
   private isCurrentlyVisible = false;
 
@@ -139,12 +157,16 @@ export class LayoutDrawerComponent implements OnDestroy {
 
         // Un tick para que Angular procese el NgComponentOutlet antes de animar
         setTimeout(() => {
-          const backdropEl = this.el.nativeElement.querySelector('[data-drawer-backdrop]') as HTMLElement;
+          const backdropEl = this.el.nativeElement.querySelector(
+            '[data-drawer-backdrop]',
+          ) as HTMLElement;
           this.gsapService.animateLayoutDrawerEnter(this.el.nativeElement, backdropEl ?? null);
         }, 0);
       } else if (!open && this.isCurrentlyVisible) {
         this.isCurrentlyVisible = false;
-        const backdropEl = this.el.nativeElement.querySelector('[data-drawer-backdrop]') as HTMLElement;
+        const backdropEl = this.el.nativeElement.querySelector(
+          '[data-drawer-backdrop]',
+        ) as HTMLElement;
         this.gsapService.animateLayoutDrawerLeave(this.el.nativeElement, backdropEl ?? null, () => {
           this.layoutDrawer.clear();
           this.cdr.markForCheck();
@@ -156,6 +178,10 @@ export class LayoutDrawerComponent implements OnDestroy {
   ngOnDestroy(): void {
     // Garantizar que el body scroll se restaure si el componente se destruye
     document.body.style.overflow = '';
+  }
+
+  back(): void {
+    this.layoutDrawer.back();
   }
 
   close(): void {

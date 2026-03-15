@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  afterNextRender,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
@@ -8,8 +16,11 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
+import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
+import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -59,7 +70,7 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
          BENTO GRID — contenedor principal del dashboard
          [appBentoGridLayout] habilita FLIP animation en reflows
     ════════════════════════════════════════════════════════════════ -->
-    <section class="bento-grid" appBentoGridLayout aria-label="Panel de control">
+    <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de control">
       <!-- ── HERO — Section Hero reutilizable ──────────────────────────── -->
       @if (hero()) {
         <app-section-hero
@@ -176,7 +187,10 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
 export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
+  private readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Estado ────────────────────────────────────────────────────────────────
 
@@ -188,7 +202,7 @@ export class DashboardComponent {
   readonly kpis = computed(() => this.dashboardFacade.data()?.kpis ?? []);
   readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
-  readonly alerts = computed(() => this.dashboardFacade.data()?.alerts ?? []);
+  readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
 
   readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
   readonly heroContextLine = computed(() => this.hero()?.date ?? '');
@@ -198,8 +212,13 @@ export class DashboardComponent {
     const chips: SectionHeroChip[] = [
       { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
     ];
-    if (h.activeAlerts) {
-      chips.push({ label: `${h.activeAlerts} alertas urgentes`, icon: 'alert-triangle', style: 'error' });
+    const alertCount = this.dashboardAlertsFacade.alertCount();
+    if (alertCount > 0) {
+      chips.push({
+        label: `${alertCount} alertas urgentes`,
+        icon: 'alert-triangle',
+        style: 'error',
+      });
     }
     return chips;
   });
@@ -210,23 +229,27 @@ export class DashboardComponent {
       icon: a.icon,
       primary: i === 0,
       route: undefined,
-    }))
+    })),
   );
   constructor() {
     // Iniciar la carga de datos del dashboard al construir el componente
     this.dashboardFacade.loadDashboardData();
+    this.dashboardAlertsFacade.loadAlerts();
+
+    afterNextRender(() => {
+      if (this.bentoGrid()) {
+        setTimeout(() => {
+          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
+        }, 50);
+      }
+    });
   }
 
-  handleQuickAction(actionId: string) {
+  handleQuickAction(actionId: string): void {
     if (actionId === 'qa1') {
-      this.openNuevaMatriculaDrawer();
+      this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
+    } else if (actionId === 'qa2') {
+      this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
     }
   }
-
-  openNuevaMatriculaDrawer(): void {
-    this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
-  }
-
-  // Animaciones GSAP deshabilitadas temporalmente — causaban contenido invisible
-  // (opacity: 0) cuando había race conditions. Reactivar cuando el flujo sea estable.
 }

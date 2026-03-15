@@ -13,29 +13,42 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
   selector: 'app-section-hero',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'bento-hero block min-h-0' },
+  host: {
+    class: 'block min-h-0',
+    '[class.bento-hero]': 'variant() === "full"',
+    '[class.bento-banner]': 'variant() === "compact"',
+  },
   imports: [CardHoverDirective, IconComponent, RouterLink],
   template: `
     <div
-      class="bento-card h-full min-h-0 p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6"
+      class="bento-card h-full min-h-0 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300"
+      [class.p-6]="variant() === 'full'"
+      [class.md:p-8]="variant() === 'full'"
+      [class.p-4]="variant() === 'compact'"
+      [class.md:p-5]="variant() === 'compact'"
       appCardHover
       role="region"
       [attr.aria-label]="title()"
     >
       <!-- Contenido principal: jerarquía premium (tokens + .kpi-label / font-display) -->
       <div class="flex flex-col gap-3 min-w-0 flex-1">
-        <div class="min-w-0 flex flex-col gap-2">
+        <div class="min-w-0 flex flex-col gap-1">
           @if (contextLine()) {
             <p class="kpi-label m-0 break-words">{{ contextLine() }}</p>
           }
           <h1
-            class="font-display text-2xl md:text-3xl font-bold leading-tight text-text-primary tracking-tight m-0"
-            [class.mt-2]="contextLine()"
+            class="font-display font-bold leading-tight text-text-primary tracking-tight m-0"
+            [class.text-2xl]="variant() === 'full'"
+            [class.md:text-3xl]="variant() === 'full'"
+            [class.text-xl]="variant() === 'compact'"
+            [class.md:text-2xl]="variant() === 'compact'"
+            [class.mt-2]="contextLine() && variant() === 'full'"
+            [class.mt-1]="contextLine() && variant() === 'compact'"
           >
             {{ title() }}
           </h1>
           @if (subtitle()) {
-            <p class="text-sm text-text-secondary leading-relaxed m-0 mt-2">{{ subtitle() }}</p>
+            <p class="text-sm text-text-secondary leading-relaxed m-0" [class.mt-2]="variant() === 'full'" [class.mt-1]="variant() === 'compact'">{{ subtitle() }}</p>
           }
         </div>
 
@@ -108,6 +121,7 @@ export class SectionHeroComponent {
   readonly subtitle = input<string>('');
   readonly chips = input<SectionHeroChip[]>([]);
   readonly actions = input.required<SectionHeroAction[]>();
+  readonly variant = input<'full' | 'compact'>('full');
 
   readonly actionClick = output<string>();
 
