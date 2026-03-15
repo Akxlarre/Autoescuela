@@ -16,6 +16,7 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
+import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
@@ -186,6 +187,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
+  private readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
@@ -200,7 +202,7 @@ export class DashboardComponent {
   readonly kpis = computed(() => this.dashboardFacade.data()?.kpis ?? []);
   readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
-  readonly alerts = computed(() => this.dashboardFacade.data()?.alerts ?? []);
+  readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
 
   readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
   readonly heroContextLine = computed(() => this.hero()?.date ?? '');
@@ -210,9 +212,10 @@ export class DashboardComponent {
     const chips: SectionHeroChip[] = [
       { label: `${h.classesToday} clases programadas`, icon: 'book-open', style: 'default' },
     ];
-    if (h.activeAlerts) {
+    const alertCount = this.dashboardAlertsFacade.alertCount();
+    if (alertCount > 0) {
       chips.push({
-        label: `${h.activeAlerts} alertas urgentes`,
+        label: `${alertCount} alertas urgentes`,
         icon: 'alert-triangle',
         style: 'error',
       });
@@ -231,6 +234,7 @@ export class DashboardComponent {
   constructor() {
     // Iniciar la carga de datos del dashboard al construir el componente
     this.dashboardFacade.loadDashboardData();
+    this.dashboardAlertsFacade.loadAlerts();
 
     afterNextRender(() => {
       if (this.bentoGrid()) {

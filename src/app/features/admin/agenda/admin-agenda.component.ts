@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 
 import { AgendaSemanalComponent } from '@shared/components/agenda-semanal/agenda-semanal.component';
 import { AgendaFacade } from '@core/facades/agenda.facade';
@@ -20,8 +20,8 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       [isCurrentWeek]="facade.isCurrentWeek()"
       [instructors]="facade.instructors()"
       [selectedInstructorId]="facade.selectedInstructorId()"
-      [showHero]="!drawer.isOpen()"
-      [showKpis]="!drawer.isOpen()"
+      [showHero]="!drawer.component()"
+      [showKpis]="!drawer.component()"
       (weekNext)="facade.goToNextWeek()"
       (weekPrev)="facade.goToPrevWeek()"
       (weekToday)="facade.goToToday()"
@@ -33,9 +33,11 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
 export class AdminAgendaComponent implements OnInit {
   protected readonly facade = inject(AgendaFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
     this.facade.initialize();
+    this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
   onSlotClick(slot: AgendaSlot): void {

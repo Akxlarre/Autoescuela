@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
 import type {
@@ -11,6 +12,8 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 
+import { toISODate, to24hTime, buildDayLabel, capitalize } from '@core/utils/date.utils';
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getMondayOfCurrentWeek(): string {
@@ -19,42 +22,25 @@ function getMondayOfCurrentWeek(): string {
   const diff = day === 0 ? -6 : 1 - day;
   const monday = new Date(today);
   monday.setDate(today.getDate() + diff);
-  return monday.toLocaleDateString('en-CA'); // YYYY-MM-DD local
+  return toISODate(monday);
 }
 
 function addDays(dateStr: string, days: number): string {
   const date = new Date(dateStr + 'T12:00:00');
   date.setDate(date.getDate() + days);
-  return date.toLocaleDateString('en-CA');
+  return toISODate(date);
 }
 
 function tsToTime(ts: string): string {
-  return new Date(ts).toLocaleTimeString('en-GB', {
-    timeZone: 'America/Santiago',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  return to24hTime(ts);
 }
 
 function tsToDate(ts: string): string {
-  return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
-}
-
-function buildDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  const dayName = d.toLocaleDateString('es', { weekday: 'short' });
-  const dayNum = d.toLocaleDateString('es', { day: 'numeric' });
-  const month = d.toLocaleDateString('es', { month: 'short' });
-  return `${capitalize(dayName)} ${dayNum} ${month}`;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return toISODate(ts);
 }
 
 function isToday(dateStr: string): boolean {
-  return dateStr === new Date().toLocaleDateString('en-CA');
+  return dateStr === toISODate(new Date());
 }
 
 // ─── Tipos internos crudos (respuesta de Supabase) ──────────────────────────
@@ -119,6 +105,12 @@ export class AgendaFacade {
   private instructorMap = new Map<number, string>();
   private vehicleMap = new Map<number, string>();
 
+  /** SWR: evita re-fetch completo con skeleton en re-visitas */
+  private _initialized = false;
+
+  /** Realtime: canal de suscripción a cambios en class_b_sessions */
+  private realtimeChannel: RealtimeChannel | null = null;
+
   // ── Estado público (readonly) ──────────────────────────────────────────────
 
   readonly weekStart = this._weekStart.asReadonly();
@@ -156,34 +148,74 @@ export class AgendaFacade {
   // ── Acciones ───────────────────────────────────────────────────────────────
 
   /**
-   * Carga instructores, vehículos y la semana actual.
+   * Inicializa el Facade con patrón SWR + Realtime.
+   *
+   * - Primera llamada: skeleton → fetch → render → subscribe Realtime
+   * - Re-visitas: render cacheado → refetch silencioso → Realtime sigue activo
+   *
    * Llamar desde el Smart component en ngOnInit.
    */
   async initialize(): Promise<void> {
+    if (this._initialized) {
+      // SWR: datos cacheados ya visibles, refrescar en background
+      this.refreshSilently();
+      this.ensureRealtime();
+      return;
+    }
+    this._initialized = true;
     await Promise.all([this.loadLookupMaps(), this.loadInstructors()]);
     await this.loadWeek();
+    this.subscribeRealtime();
   }
 
+  /**
+   * Limpia el canal Realtime. Llamar desde DestroyRef del Smart component.
+   * NO resetea datos (_weekData) para que SWR funcione en re-visitas.
+   */
+  dispose(): void {
+    this.disposeRealtime();
+  }
+
+  /**
+   * Carga la semana actual CON skeleton (para primera carga y navegación de semana).
+   */
   async loadWeek(): Promise<void> {
     this._isLoading.set(true);
     this._error.set(null);
     try {
-      const weekStart = this._weekStart();
-      const weekEnd = addDays(weekStart, 4); // Viernes
-      const rangeStart = `${weekStart}T00:00:00Z`;
-      const rangeEnd = `${addDays(weekStart, 7)}T06:00:00Z`; // Siguiente lunes 06:00 UTC
-
-      const [slotsResult, sessionsResult] = await Promise.all([
-        this.fetchAvailableSlots(rangeStart, rangeEnd),
-        this.fetchSessions(rangeStart, rangeEnd),
-      ]);
-
-      this._weekData.set(this.buildWeekData(weekStart, weekEnd, slotsResult, sessionsResult));
+      await this.fetchWeekData();
     } catch {
       this._error.set('Error al cargar la agenda. Intenta de nuevo.');
     } finally {
       this._isLoading.set(false);
     }
+  }
+
+  /**
+   * Refresca datos de la semana SIN skeleton.
+   * Usado por: SWR re-entry, Realtime events, post-action refresh.
+   */
+  private async refreshSilently(): Promise<void> {
+    try {
+      await this.fetchWeekData();
+    } catch {
+      // Fail silencioso — datos stale siguen visibles
+    }
+  }
+
+  /** Fetch compartido: obtiene y setea weekData sin tocar isLoading. */
+  private async fetchWeekData(): Promise<void> {
+    const weekStart = this._weekStart();
+    const weekEnd = addDays(weekStart, 4);
+    const rangeStart = `${weekStart}T00:00:00Z`;
+    const rangeEnd = `${addDays(weekStart, 7)}T06:00:00Z`;
+
+    const [slotsResult, sessionsResult] = await Promise.all([
+      this.fetchAvailableSlots(rangeStart, rangeEnd),
+      this.fetchSessions(rangeStart, rangeEnd),
+    ]);
+
+    this._weekData.set(this.buildWeekData(weekStart, weekEnd, slotsResult, sessionsResult));
   }
 
   goToNextWeek(): void {
@@ -224,7 +256,7 @@ export class AgendaFacade {
           students!inner (
             users!inner ( first_names, paternal_last_name )
           ),
-          class_b_sessions ( id, status )
+          class_b_sessions ( id, stel atus )
         `,
         )
         .eq('status', 'active')
@@ -291,7 +323,7 @@ export class AgendaFacade {
       }
 
       this._selectedSlot.set(null);
-      await this.loadWeek();
+      await this.refreshSilently();
       await this.loadAgendableStudents();
       return true;
     } finally {
@@ -306,7 +338,38 @@ export class AgendaFacade {
       .eq('id', sessionId);
 
     if (!error) {
-      await this.loadWeek();
+      await this.refreshSilently();
+    }
+  }
+
+  // ── Realtime ─────────────────────────────────────────────────────────────
+
+  /**
+   * Suscribe al canal Realtime de `class_b_sessions`.
+   * Cualquier INSERT/UPDATE/DELETE dispara un refresh silencioso.
+   * Idempotente: dispone el canal previo si existe.
+   */
+  private subscribeRealtime(): void {
+    this.disposeRealtime();
+    this.realtimeChannel = this.supabase.client
+      .channel('agenda-sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'class_b_sessions' }, () =>
+        this.refreshSilently(),
+      )
+      .subscribe();
+  }
+
+  /** Garantiza que Realtime está activo (para SWR re-entry). */
+  private ensureRealtime(): void {
+    if (!this.realtimeChannel) {
+      this.subscribeRealtime();
+    }
+  }
+
+  private disposeRealtime(): void {
+    if (this.realtimeChannel) {
+      this.supabase.client.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
     }
   }
 

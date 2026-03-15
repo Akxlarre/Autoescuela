@@ -7,6 +7,7 @@ import type {
   PagoUI,
   ProgresoUI,
 } from '@core/models/ui/alumno-detalle.model';
+import { toISODate, formatChileanDate } from '@core/utils/date.utils';
 
 /** Status de la BD que representa asistencia */
 const STATUS_PRESENTE = 'presente';
@@ -414,9 +415,7 @@ export class AdminAlumnoDetalleFacade {
 
   /** Formato largo para inasistencias (ej: "20 ene. 2026") */
   private formatDate(dateStr: string | null | undefined): string {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' });
+    return formatChileanDate(dateStr);
   }
 
   /** Formato "DD-MM" para la columna Fecha de la Ficha Técnica (ej: "12-01") */

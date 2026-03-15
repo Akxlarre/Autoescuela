@@ -193,26 +193,31 @@ interface CellSummary {
 
         <!-- Grid del calendario -->
         @if (isLoading()) {
-          <div class="p-4 flex flex-col gap-2">
-            <!-- Skeleton header -->
-            <div class="flex gap-2 mb-1">
-              <app-skeleton-block variant="rect" width="64px" height="36px" />
-              @for (col of skeletonCols; track $index) {
-                <app-skeleton-block variant="rect" width="100%" height="36px" />
-              }
-            </div>
-            <!-- Skeleton rows — alternas para realismo -->
-            @for (row of skeletonRows; track $index) {
-              <div class="flex gap-2">
-                <app-skeleton-block variant="rect" width="64px" height="52px" />
-                @for (col of skeletonCols; track $index) {
-                  <app-skeleton-block
-                    variant="rect"
-                    width="100%"
-                    [height]="$index % 3 === 0 ? '52px' : '52px'"
-                  />
-                }
+          <div
+            class="agenda-grid"
+            style="grid-template-columns: 64px repeat(5, minmax(100px, 1fr))"
+            aria-hidden="true"
+          >
+            <!-- Skeleton: corner + day headers -->
+            <div class="agenda-corner"></div>
+            @for (col of skeletonCols; track col) {
+              <div class="agenda-day-header flex items-center justify-center">
+                <app-skeleton-block variant="text" width="56px" />
               </div>
+            }
+
+            <!-- Skeleton: time rows -->
+            @for (row of skeletonRows; track row) {
+              <div class="agenda-time-label">
+                <app-skeleton-block variant="text" width="32px" />
+              </div>
+              @for (col of skeletonCols; track col) {
+                <div class="agenda-cell">
+                  @if ((row + col) % 3 !== 0) {
+                    <app-skeleton-block variant="rect" width="85%" height="20px" />
+                  }
+                </div>
+              }
             }
           </div>
         } @else if (!weekData() || timeRows().length === 0) {
@@ -843,8 +848,8 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── Filas de skeleton ────────────────────────────────────────────────────────
 
-  readonly skeletonRows = Array(6).fill(0);
-  readonly skeletonCols = Array(5).fill(0);
+  readonly skeletonRows = Array.from({ length: 7 }, (_, i) => i);
+  readonly skeletonCols = Array.from({ length: 5 }, (_, i) => i);
 
   // ── GSAP: animar grilla al cargar ─────────────────────────────────────────────
 
