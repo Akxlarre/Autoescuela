@@ -7,6 +7,7 @@ import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
+import { toISODate, to24hTime } from '@core/utils/date.utils';
 import type { Course } from '@core/models/dto/course.model';
 import type {
   EnrollmentPersonalData,
@@ -1576,19 +1577,13 @@ export class EnrollmentFacade {
   /** Deriva fecha ISO (YYYY-MM-DD) desde un timestamp, en hora local Santiago. */
   private slotDateFromStart(slotStart: string | null | undefined): string {
     if (!slotStart) return '';
-    // en-CA produce YYYY-MM-DD; timeZone asegura fecha local chilena, no UTC del servidor
-    return new Date(slotStart).toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+    return toISODate(slotStart);
   }
 
   /** Deriva hora HH:MM desde un timestamp, en hora local Santiago. */
   private slotTimeFromTs(ts: string | null | undefined): string {
     if (!ts) return '';
-    return new Date(ts).toLocaleTimeString('en-GB', {
-      timeZone: 'America/Santiago',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    return to24hTime(ts);
   }
 
   private buildScheduleGrid(rawSlots: any[]): ScheduleGrid {

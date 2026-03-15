@@ -11,6 +11,8 @@ import { SidebarComponent } from './sidebar.component';
 import { TopbarComponent } from './topbar.component';
 import { LayoutDrawerComponent } from './layout-drawer.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 /**
  * AppShellComponent — layout principal de rutas protegidas.
@@ -162,6 +164,8 @@ export class AppShellComponent {
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly confirmModal = inject(ConfirmModalService);
+  private readonly notificationsFacade = inject(NotificationsFacade);
+  private readonly auth = inject(AuthFacade);
 
   constructor() {
     // Premium Feel: Si abrimos el layout drawer global y estamos en pantallas
@@ -170,6 +174,16 @@ export class AppShellComponent {
       const isDrawerOpen = this.layoutDrawer.isOpen();
       if (isDrawerOpen && window.innerWidth <= 1280) {
         this.layout.closeSidebar();
+      }
+    });
+
+    // Inicializar notificaciones persistentes + Realtime
+    this.notificationsFacade.initialize();
+
+    // Dispose al logout
+    effect(() => {
+      if (!this.auth.isAuthenticated()) {
+        this.notificationsFacade.dispose();
       }
     });
   }

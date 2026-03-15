@@ -70,7 +70,7 @@ export class DashboardFacade {
         classesToday: 18,
         practicalClasses: 12,
         theoreticalClasses: 6,
-        activeAlerts: 2,
+        activeAlerts: 0,
       },
       kpis: [
         {
@@ -148,20 +148,7 @@ export class DashboardFacade {
           iconColor: 'var(--state-error)', // text-state-error
         },
       ],
-      alerts: [
-        {
-          id: 'al1',
-          title: '3 Documentos vencidos',
-          description: 'Vehículos requieren atención',
-          severity: 'error',
-        },
-        {
-          id: 'al2',
-          title: '12 Pagos pendientes',
-          description: 'Revisar cuentas por cobrar',
-          severity: 'warning',
-        },
-      ],
+      alerts: [],
       quickActions: [
         {
           id: 'qa1',

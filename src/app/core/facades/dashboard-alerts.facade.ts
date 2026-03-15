@@ -1,0 +1,137 @@
+import { Injectable, inject, signal, computed } from '@angular/core';
+
+import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import type { AlertModel } from '@core/models/ui/dashboard.model';
+
+/**
+ * DashboardAlertsFacade — Capa 3 del sistema de notificaciones.
+ *
+ * Alertas computadas en tiempo real desde el estado de la BD.
+ * A diferencia de las notificaciones (historial), las alertas son
+ * estado vivo: queries que reflejan condiciones actuales.
+ *
+ * Queries paralelas:
+ * 1. Documentos de vehículos vencidos/por vencer
+ * 2. Pagos pendientes de matrículas activas
+ */
+@Injectable({ providedIn: 'root' })
+export class DashboardAlertsFacade {
+  private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
+
+  // ── 1. ESTADO PRIVADO ──────────────────────────────────────────────────────
+  private _activeAlerts = signal<AlertModel[]>([]);
+  private _isLoading = signal(false);
+  private _error = signal<string | null>(null);
+
+  // ── 2. ESTADO PÚBLICO (readonly) ───────────────────────────────────────────
+  readonly activeAlerts = this._activeAlerts.asReadonly();
+  readonly isLoading = this._isLoading.asReadonly();
+  readonly error = this._error.asReadonly();
+  readonly alertCount = computed(() => this._activeAlerts().length);
+
+  // ── 3. MÉTODOS DE ACCIÓN ───────────────────────────────────────────────────
+
+  /**
+   * Carga alertas computadas desde queries paralelas.
+   */
+  async loadAlerts(): Promise<void> {
+    this._isLoading.set(true);
+    this._error.set(null);
+
+    try {
+      const alerts = await Promise.all([this.checkExpiredDocuments(), this.checkPendingPayments()]);
+
+      this._activeAlerts.set(alerts.flat());
+    } catch (err) {
+      console.error('[DashboardAlertsFacade] loadAlerts error:', err);
+      this._error.set('Error al cargar alertas');
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  // ── Queries privadas ───────────────────────────────────────────────────────
+
+  /**
+   * Query 1: Documentos de vehículos vencidos o por vencer.
+   * Lee `alert_config` para obtener `advance_days`, luego consulta `vehicle_documents`.
+   */
+  private async checkExpiredDocuments(): Promise<AlertModel[]> {
+    const alerts: AlertModel[] = [];
+
+    // Obtener configuración de anticipación de alertas
+    const { data: configs } = await this.supabase.client
+      .from('alert_config')
+      .select('alert_type, advance_days')
+      .eq('active', true);
+
+    const advanceDays =
+      configs?.find((c: any) => c.alert_type === 'document_expiry')?.advance_days ?? 30;
+
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+
+    // Documentos ya vencidos
+    const { count: expiredCount } = await this.supabase.client
+      .from('vehicle_documents')
+      .select('id', { count: 'exact', head: true })
+      .lt('expiry_date', todayStr);
+
+    if (expiredCount && expiredCount > 0) {
+      alerts.push({
+        id: 'alert-docs-expired',
+        title: `${expiredCount} Documento${expiredCount > 1 ? 's' : ''} vencido${expiredCount > 1 ? 's' : ''}`,
+        description: 'Vehículos requieren atención inmediata',
+        severity: 'error',
+      });
+    }
+
+    // Documentos por vencer (dentro de advance_days)
+    const futureDate = new Date(today);
+    futureDate.setDate(futureDate.getDate() + advanceDays);
+    const futureDateStr = futureDate.toISOString().split('T')[0];
+
+    const { count: soonCount } = await this.supabase.client
+      .from('vehicle_documents')
+      .select('id', { count: 'exact', head: true })
+      .gte('expiry_date', todayStr)
+      .lte('expiry_date', futureDateStr);
+
+    if (soonCount && soonCount > 0) {
+      alerts.push({
+        id: 'alert-docs-expiring',
+        title: `${soonCount} Documento${soonCount > 1 ? 's' : ''} por vencer`,
+        description: `Vencen en los próximos ${advanceDays} días`,
+        severity: 'warning',
+      });
+    }
+
+    return alerts;
+  }
+
+  /**
+   * Query 2: Matrículas activas con saldo pendiente.
+   */
+  private async checkPendingPayments(): Promise<AlertModel[]> {
+    const { count } = await this.supabase.client
+      .from('enrollments')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .gt('pending_balance', 0);
+
+    if (count && count > 0) {
+      return [
+        {
+          id: 'alert-pending-payments',
+          title: `${count} Pago${count > 1 ? 's' : ''} pendiente${count > 1 ? 's' : ''}`,
+          description: 'Revisar cuentas por cobrar',
+          severity: 'warning',
+        },
+      ];
+    }
+
+    return [];
+  }
+}

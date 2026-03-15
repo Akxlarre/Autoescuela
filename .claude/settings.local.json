@@ -10,7 +10,9 @@
       "Bash(npx tsc:*)",
       "Skill(design-system)",
       "Skill(sync-indices)",
-      "Bash(npx ng:*)"
+      "Bash(npx ng:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)"
     ]
   }
 }

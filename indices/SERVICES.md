@@ -13,11 +13,13 @@ Servicios estructurales compartidos que proveen funcionalidades base, autenticac
 | `LayoutService` | Estado responsive del sidebar drawer en mobile (`sidebarOpen` signal) | `core/services/layout.service.ts` | — | ✅ Estable |
 | `RoleService` | Dev role switcher — signal `currentRole` (`UserRole`), persiste en sessionStorage. Expone `setRole()`. Para usar en layout y topbar. Se elimina cuando el login sea real. | `core/services/role.service.ts` | — | ✅ Estable |
 | `MenuConfigService` | Navegación por rol — `menuItems = computed<NavGroup[]>()` según `RoleService.currentRole()`. Interfaces: `NavItem { label, icon, routerLink, badge? }` / `NavGroup { group, items }`. 5 navs: admin (7 grupos), secretaria (4), instructor (2), alumno (3), relator (1). | `core/services/menu-config.service.ts` | RoleService | ✅ Estable |
-| `NotificationsService` | Estado signal de notificaciones en-app con filtros y `unreadCount` computed | `core/services/notifications.service.ts` | — | ✅ Estable |
+| `ToastService` | Capa 1 de notificaciones: wrapper delgado sobre PrimeNG `MessageService` para toasts efímeros. Métodos: `success()`, `error()` (6s), `warning()`, `info()`. Consumido por `NotificationsFacade` y otros facades. | `core/services/ui/toast.service.ts` | MessageService (PrimeNG) | ✅ Estable |
 | `SearchPanelService` | Estado signal del panel de búsqueda global (open/close/toggle) para `[appSearchShortcut]` | `core/services/search-panel.service.ts` | — | ✅ Estable |
 | `BreadcrumbService` | Breadcrumb reactivo; consume `NavGroup[]` de `MenuConfigService` vía `buildFromGroups(url, groups)`; deriva trail desde grupos y sus items | `core/services/breadcrumb.service.ts` | Router, MenuConfigService | ✅ Estable |
 | `ConfirmModalService` | Modal de confirmación imperativo con patrón `confirm(ConfirmConfig) → Promise<boolean>`; sin dependencia de PrimeNG. Severidades: `danger\|warn\|success\|info\|secondary`. Renderizado global en `AppShellComponent`. Usado por `enrollmentDraftGuard` y `SecretariaMatriculaComponent`. | `core/services/ui/confirm-modal.service.ts` | — | ✅ Estable |
 | `ModalOverlayService` | Teleporta modales al overlay container (z-index > topbar) | `core/services/modal-overlay.service.ts` | — | ✅ Estable |
+| `LayoutDrawerService` | Orquesta el drawer arquitectónico del AppShell. Estado via signal. **Navegación en pila:** `open()` (raíz, limpia historial), `push()` (sub-vista sin cerrar panel), `back()` (restaura anterior o cierra), `close()` (cierra + limpia historial). `canGoBack` computed. `clear()` limpia componente post-animación GSAP. | `core/services/ui/layout-drawer.service.ts` | — | ✅ Estable |
+| `LayoutDrawerFacadeService` | Interfaz pública para componentes UI hacia `LayoutDrawerService`. Expone: `isOpen`, `component`, `title`, `icon`, `actions`, `canGoBack`. Métodos: `open()`, `push()`, `back()`, `close()`, `setActions()`. | `core/services/ui/layout-drawer.facade.service.ts` | LayoutDrawerService | ✅ Estable |
 
 ## 1b. Pure Utilities (Functional Core)
 Funciones puras sin estado ni inyección de Angular. Testeables sin framework.
@@ -25,6 +27,7 @@ Funciones puras sin estado ni inyección de Angular. Testeables sin framework.
 | Utilidad | Funciones exportadas | Ubicación (File Path) | Usada por | Estado |
 |----------|---------------------|-----------------------|-----------|--------|
 | `rut.utils` | `cleanRut()`, `formatRut()`, `normalizeRutForStorage()`, `validateRut()` | `core/utils/rut.utils.ts` | `PersonalDataComponent`, `EnrollmentFacade` | ✅ Estable |
+| `notification.utils` | `mapReferenceToNotificationType(referenceType)`, `mapNotificationDtoToUi(dto)` — Mapeo DTO→UI para notificaciones. `reference_type` → `NotificationType` (document_expiry→warning, payment→info, class_b/professional_session→success). | `core/utils/notification.utils.ts` | `NotificationsFacade` | ✅ Estable |
 
 ## 2. Facades & Feature-Specific State
 Servicios que median entre la UI (`features/`) y las APIs de datos (`SupabaseService`/`HttpClient`). Manejan el estado del dominio (`toSignal()`).

@@ -39,6 +39,8 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 @.claude/rules/facades.md
 @.claude/rules/visual-system.md
 @.claude/rules/testing-tdd.md
+@.claude/rules/notifications.md
+@.claude/rules/swr-pattern.md
 @.claude/rules/ai-readability.md
 
 ## Referencias

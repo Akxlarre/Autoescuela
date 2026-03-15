@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Download,
   LayoutDashboard,
   Plus,
@@ -102,6 +103,9 @@ import {
   Ban,
   Home,
   ZoomIn,
+  // ── Agenda Semanal ──
+  CalendarDays,
+  CalendarClock,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -176,6 +180,7 @@ export const appConfig: ApplicationConfig = {
         ChevronDown,
         ChevronLeft,
         ChevronRight,
+        ChevronUp,
         Download,
         LayoutDashboard,
         Plus,
@@ -259,6 +264,9 @@ export const appConfig: ApplicationConfig = {
         Home,
         Wrench,
         ZoomIn,
+        // Agenda Semanal
+        CalendarDays,
+        CalendarClock,
       }),
     ),
   ],
