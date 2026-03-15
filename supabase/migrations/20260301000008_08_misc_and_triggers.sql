@@ -454,32 +454,7 @@ CREATE TRIGGER trg_enable_certificate_b
   EXECUTE FUNCTION verify_class_b_certificate_enablement();
 
 -- ============================================================================
--- T8: RF-037 Bloquear edición de payments cuando cash_closings.closed = true
--- ============================================================================
-CREATE OR REPLACE FUNCTION verify_cash_not_closed()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_is_closed BOOLEAN;
-BEGIN
-  SELECT closed INTO v_is_closed
-  FROM public.cash_closings
-  WHERE branch_id = (SELECT branch_id FROM public.enrollments WHERE id = OLD.enrollment_id)
-    AND date = OLD.payment_date;
-
-  IF v_is_closed = true THEN
-    RAISE EXCEPTION 'No se puede modificar un pago cuya caja ya fue cerrada (RF-037)';
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SET search_path = '';
-
-CREATE TRIGGER trg_block_payments_closed_cash
-  BEFORE UPDATE OR DELETE ON payments
-  FOR EACH ROW EXECUTE FUNCTION verify_cash_not_closed();
-
--- ============================================================================
--- T9: Gatillo RF-093 Profesional: certificado habilitado si cumple todo
+-- T8: Gatillo RF-093 Profesional: certificado habilitado si cumple todo
 -- ============================================================================
 CREATE OR REPLACE FUNCTION verify_professional_certificate_enablement()
 RETURNS TRIGGER AS $$
@@ -507,7 +482,7 @@ CREATE TRIGGER trg_enable_certificate_prof
   FOR EACH ROW EXECUTE FUNCTION verify_professional_certificate_enablement();
 
 -- ============================================================================
--- T10: Generar sesiones automáticamente desde plantilla de horario
+-- T9: Generar sesiones automáticamente desde plantilla de horario
 -- ============================================================================
 CREATE OR REPLACE FUNCTION generate_sessions_from_template()
 RETURNS TRIGGER AS $$
@@ -551,7 +526,7 @@ CREATE TRIGGER trg_generate_professional_course_sessions
   EXECUTE FUNCTION generate_sessions_from_template();
 
 -- ============================================================================
--- T11: Validaciones de matrícula que requieren JOIN a courses
+-- T10: Validaciones de matrícula que requieren JOIN a courses
 -- ============================================================================
 CREATE OR REPLACE FUNCTION trg_enrollment_validation_fn()
 RETURNS TRIGGER AS $$
@@ -589,7 +564,7 @@ CREATE TRIGGER trg_enrollment_validation
   FOR EACH ROW EXECUTE FUNCTION trg_enrollment_validation_fn();
 
 -- ============================================================================
--- T12: Al transitar promoción a 'finished' → class_book a 'in_review'
+-- T11: Al transitar promoción a 'finished' → class_book a 'in_review'
 -- ============================================================================
 CREATE OR REPLACE FUNCTION update_class_book_to_in_review()
 RETURNS TRIGGER AS $$
@@ -613,7 +588,7 @@ CREATE TRIGGER trg_class_book_lifecycle
   EXECUTE FUNCTION update_class_book_to_in_review();
 
 -- ============================================================================
--- T13: Validación draft → pending_docs: debe tener al menos 1 sesión agendada
+-- T12: Validación draft → pending_docs: debe tener al menos 1 sesión agendada
 -- ============================================================================
 CREATE OR REPLACE FUNCTION trg_draft_to_pending_validation_fn()
 RETURNS TRIGGER AS $$

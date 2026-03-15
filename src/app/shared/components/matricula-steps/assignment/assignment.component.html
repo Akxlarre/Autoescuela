@@ -1,0 +1,441 @@
+<div class="space-y-6">
+  <div class="bg-surface rounded-2xl border border-border-default shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-border-subtle">
+      <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
+        @if (data().view === 'professional') {
+          <app-icon name="users" [size]="20" class="text-brand" />
+          Paso 2: Selección de Promoción
+        } @else {
+          <app-icon name="calendar" [size]="20" class="text-brand" />
+          Paso 2: Asignación y Horarios
+        }
+      </h2>
+      <p class="text-sm text-text-secondary mt-1">
+        @if (data().view === 'professional') {
+          Asigna al alumno a una promoción grupal abierta para este curso.
+        } @else {
+          Configura la modalidad de pago y el horario de clases prácticas.
+        }
+      </p>
+    </div>
+
+    <div class="p-6 space-y-8">
+      <!-- VISTA CLASE B -->
+      @if (data().view === 'class-b') {
+        <!-- 1. Modalidad de Pago -->
+        <div class="space-y-4">
+          <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
+            >1. Modalidad de Pago</label
+          >
+          <div class="grid sm:grid-cols-2 gap-4">
+            <label
+              class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
+              [class.border-brand]="data().paymentMode === 'total'"
+              [class.bg-brand-muted]="data().paymentMode === 'total'"
+              [class.border-border-default]="data().paymentMode !== 'total'"
+            >
+              <input
+                type="radio"
+                name="paymentMode"
+                value="total"
+                [ngModel]="data().paymentMode"
+                (ngModelChange)="emitField('paymentMode', $event)"
+                class="hidden"
+              />
+              <div class="flex justify-between items-start mb-2">
+                <span class="text-sm font-bold text-text-primary">Total Adelantado</span>
+                <span class="px-2 py-0.5 bg-brand/10 text-brand text-xs font-bold rounded-full"
+                  >RECOMENDADO</span
+                >
+              </div>
+              <p class="text-xs text-text-secondary leading-relaxed">
+                Pago completo — reservas las
+                <strong class="text-text-primary">{{ data().totalSessions }} clases</strong>
+                prácticas desde hoy.
+              </p>
+            </label>
+
+            <label
+              class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
+              [class.border-brand]="data().paymentMode === 'partial'"
+              [class.bg-brand-muted]="data().paymentMode === 'partial'"
+              [class.border-border-default]="data().paymentMode !== 'partial'"
+            >
+              <input
+                type="radio"
+                name="paymentMode"
+                value="partial"
+                [ngModel]="data().paymentMode"
+                (ngModelChange)="emitField('paymentMode', $event)"
+                class="hidden"
+              />
+              <div class="flex justify-between items-start mb-2">
+                <span class="text-sm font-bold text-text-primary">Pago Parcial</span>
+                <span
+                  class="px-2 py-0.5 bg-bg-subtle text-text-secondary text-xs font-bold rounded-full"
+                  >FLEXIBLE</span
+                >
+              </div>
+              <p class="text-xs text-text-secondary leading-relaxed">
+                Abono inicial — reservas las primeras
+                <strong class="text-text-primary">{{ data().totalSessions / 2 }} clases</strong>
+                (50% del curso).
+              </p>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Instructor -->
+        <div class="space-y-4">
+          <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
+            >2. Instructor</label
+          >
+
+          @if (data().instructors.length === 0) {
+            <div
+              class="p-6 bg-bg-base border border-border-default rounded-xl flex flex-col items-center gap-2 text-center"
+            >
+              <app-icon name="user-x" [size]="24" class="text-text-muted" />
+              <p class="text-sm text-text-muted">
+                No hay instructores disponibles en este momento.
+              </p>
+            </div>
+          } @else {
+            <div class="grid sm:grid-cols-2 gap-3">
+              @for (instructor of data().instructors; track instructor.id) {
+                <button
+                  type="button"
+                  (click)="emitField('instructorId', instructor.id)"
+                  class="flex items-center gap-3 p-4 border-2 rounded-xl transition-all text-left hover:border-brand/40"
+                  [class.border-brand]="data().instructorId === instructor.id"
+                  [class.bg-brand-muted]="data().instructorId === instructor.id"
+                  [class.border-border-default]="data().instructorId !== instructor.id"
+                >
+                  <div
+                    class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
+                    [class.bg-brand]="data().instructorId === instructor.id"
+                    [class.text-surface]="data().instructorId === instructor.id"
+                    [class.bg-bg-subtle]="data().instructorId !== instructor.id"
+                    [class.text-text-muted]="data().instructorId !== instructor.id"
+                  >
+                    <app-icon name="user" [size]="18" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p
+                      class="text-sm font-bold truncate"
+                      [class.text-brand]="data().instructorId === instructor.id"
+                      [class.text-text-primary]="data().instructorId !== instructor.id"
+                    >
+                      {{ instructor.name }}
+                    </p>
+                    <p class="text-xs text-text-muted truncate">
+                      {{ instructor.vehicleDescription }} · {{ instructor.plate }}
+                    </p>
+                  </div>
+                  @if (data().instructorId === instructor.id) {
+                    <app-icon name="check-circle" [size]="16" class="text-brand shrink-0" />
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+
+        <!-- 3. Horarios — visible solo cuando instructor + modalidad seleccionados -->
+        @if (data().instructorId && data().paymentMode) {
+          <div class="space-y-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
+                  3. Elige tus {{ data().slotSelection.requiredCount }} Clases Prácticas
+                </label>
+                <p class="text-xs text-text-muted mt-0.5">
+                  Selecciona los horarios de tus sesiones en las próximas semanas
+                </p>
+                <p class="text-xs text-text-secondary mt-1 flex items-center gap-1">
+                  <app-icon name="info" [size]="12" class="text-text-muted shrink-0" />
+                  Solo puedes seleccionar una clase por día.
+                </p>
+              </div>
+              <span
+                class="shrink-0 text-sm font-black px-3 py-1.5 rounded-lg transition-colors"
+                [class.bg-brand]="data().slotSelection.isComplete"
+                [class.text-surface]="data().slotSelection.isComplete"
+                [class.bg-state-warning-bg]="!data().slotSelection.isComplete"
+                [class.text-state-warning]="!data().slotSelection.isComplete"
+              >
+                {{ data().slotSelection.currentCount }} / {{ data().slotSelection.requiredCount }}
+              </span>
+            </div>
+
+            @if (data().scheduleLoading) {
+              <div
+                class="h-48 bg-bg-base border border-border-default rounded-2xl flex items-center justify-center gap-2 text-text-muted"
+              >
+                <app-icon name="loader" [size]="16" />
+                <span class="text-sm">Cargando disponibilidad...</span>
+              </div>
+            } @else if (!data().scheduleGrid || daysFromGrid().length === 0) {
+              <div
+                class="p-8 bg-bg-base border border-border-default rounded-2xl flex flex-col items-center gap-2 text-center"
+              >
+                <app-icon name="calendar-x" [size]="28" class="text-text-muted" />
+                <p class="text-sm font-bold text-text-primary">Sin disponibilidad</p>
+                <p class="text-xs text-text-muted">
+                  Este instructor no tiene horarios disponibles en las próximas semanas.
+                </p>
+              </div>
+            } @else {
+              <div class="bg-bg-base rounded-2xl border border-border-default overflow-hidden">
+                <!-- Navegación de Semanas -->
+                <div
+                  class="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle bg-bg-elevated"
+                >
+                  <button
+                    type="button"
+                    (click)="prevWeek()"
+                    [disabled]="!hasPrevWeek()"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <app-icon name="chevron-left" [size]="16" class="text-text-secondary" />
+                  </button>
+                  <span class="text-xs font-bold text-text-secondary">{{ weekIndicator() }}</span>
+                  <button
+                    type="button"
+                    (click)="nextWeek()"
+                    [disabled]="!hasNextWeek()"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <app-icon name="chevron-right" [size]="16" class="text-text-secondary" />
+                  </button>
+                </div>
+
+                <!-- Tabs de Días (semana actual) -->
+                <div class="flex overflow-x-auto border-b border-border-subtle bg-bg-elevated">
+                  @for (day of currentWeekDays(); track day.date; let i = $index) {
+                    <button
+                      type="button"
+                      (click)="selectDay(i)"
+                      class="flex-1 min-w-20 py-3 px-2 border-b-2 text-center transition-all hover:bg-bg-subtle"
+                      [class.border-brand]="selectedDayIndex() === i"
+                      [class.bg-surface]="selectedDayIndex() === i"
+                      [class.text-brand]="selectedDayIndex() === i"
+                      [class.border-transparent]="selectedDayIndex() !== i"
+                      [class.text-text-secondary]="selectedDayIndex() !== i"
+                    >
+                      <p class="text-xs font-bold uppercase">{{ day.dayOfWeek }}</p>
+                      <p class="text-lg font-black font-display">{{ day.label }}</p>
+                    </button>
+                  }
+                </div>
+
+                <!-- Grid de Slots -->
+                <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+                  @for (slot of slotsForDay(); track slot.id) {
+                    @if (slot.status === 'occupied') {
+                      <div
+                        class="p-3 border border-border-default rounded-lg bg-bg-subtle opacity-50 flex items-center justify-center gap-1.5 cursor-not-allowed"
+                      >
+                        <app-icon name="x" [size]="11" class="text-text-muted" />
+                        <span class="text-xs text-text-muted font-medium"
+                          >{{ slot.startTime }} – {{ slot.endTime }}</span
+                        >
+                      </div>
+                    } @else {
+                      <button
+                        type="button"
+                        (click)="selectSlot(slot.id)"
+                        [disabled]="!isSlotSelectable(slot.id)"
+                        class="p-3 border rounded-lg text-xs font-medium transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed"
+                        [class.bg-brand]="data().slotSelection.selectedSlotIds.includes(slot.id)"
+                        [class.text-surface]="
+                          data().slotSelection.selectedSlotIds.includes(slot.id)
+                        "
+                        [class.border-brand]="
+                          data().slotSelection.selectedSlotIds.includes(slot.id)
+                        "
+                        [class.bg-surface]="!data().slotSelection.selectedSlotIds.includes(slot.id)"
+                        [class.text-text-primary]="
+                          !data().slotSelection.selectedSlotIds.includes(slot.id)
+                        "
+                        [class.border-border-default]="
+                          !data().slotSelection.selectedSlotIds.includes(slot.id)
+                        "
+                      >
+                        {{ slot.startTime }} – {{ slot.endTime }}
+                      </button>
+                    }
+                  } @empty {
+                    <p class="col-span-full text-center text-xs text-text-muted py-6 italic">
+                      Sin horarios disponibles para este día
+                    </p>
+                  }
+                </div>
+
+                <!-- Leyenda -->
+                <div class="px-4 pb-4 flex items-center gap-4 text-xs text-text-muted flex-wrap">
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded bg-brand inline-block"></span>
+                    Seleccionado
+                  </span>
+                  <span class="flex items-center gap-1.5">
+                    <span
+                      class="w-3 h-3 rounded border border-border-default bg-surface inline-block"
+                    ></span>
+                    Disponible
+                  </span>
+                  <span class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded bg-bg-subtle opacity-50 inline-block"></span>
+                    Ocupado
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      }
+
+      <!-- VISTA PROFESIONAL -->
+      @if (data().view === 'professional') {
+        <div class="space-y-6">
+          <!-- Banner convalidación simultánea -->
+          @if (data().convalidatesSimultaneously && data().convalidatedLicense) {
+            <div
+              class="p-4 bg-state-warning-bg border border-state-warning-border rounded-xl flex gap-3"
+              data-llm-description="convalidation enrollment alert banner"
+            >
+              <app-icon
+                name="layers"
+                [size]="20"
+                class="text-state-warning mt-0.5 shrink-0"
+                [ariaHidden]="true"
+              />
+              <div>
+                <p class="text-sm font-bold text-state-warning">
+                  Matrícula con Convalidación Simultánea
+                </p>
+                <p class="text-xs text-text-secondary leading-relaxed mt-0.5">
+                  Este alumno se matricula convalidando
+                  <strong class="text-text-primary"
+                    >Licencia {{ data().convalidatedLicense }}</strong
+                  >
+                  simultáneamente. Asigna la promoción del curso madre. La administración abrirá el
+                  libro de clases CONV&nbsp;{{ data().convalidatedLicense }} dentro de la misma
+                  promoción.
+                </p>
+              </div>
+            </div>
+          }
+
+          <div class="p-4 bg-state-info-bg border border-state-info-border rounded-xl flex gap-3">
+            <app-icon name="users" [size]="20" class="text-state-info mt-0.5 shrink-0" />
+            <div>
+              <p class="text-sm font-bold text-state-info">Cursos Profesionales: Promociones</p>
+              <p class="text-xs text-text-secondary leading-relaxed">
+                Los cursos profesionales se dictan en promociones grupales (cohortes). Selecciona
+                una promoción abierta para este curso.
+              </p>
+            </div>
+          </div>
+
+          @if (data().promotionGroups.length === 0) {
+            <div
+              class="p-8 bg-bg-base border border-border-default rounded-xl flex flex-col items-center gap-2 text-center"
+            >
+              <app-icon name="calendar-x" [size]="28" class="text-text-muted" />
+              <p class="text-sm font-bold text-text-primary">Sin promociones abiertas</p>
+              <p class="text-xs text-text-muted">
+                No hay promociones disponibles para este curso en este momento.
+              </p>
+            </div>
+          } @else {
+            <div class="space-y-6">
+              @for (group of data().promotionGroups; track group.label) {
+                <div class="space-y-3">
+                  <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
+                    {{ group.label }}
+                  </label>
+                  <div class="space-y-2">
+                    @for (option of group.options; track option.id) {
+                      <label
+                        class="flex items-center justify-between p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
+                        [class.border-brand]="data().promotionId === option.id"
+                        [class.bg-brand-muted]="data().promotionId === option.id"
+                        [class.border-border-default]="data().promotionId !== option.id"
+                        [class.opacity-50]="option.status === 'finished'"
+                        [class.pointer-events-none]="option.status === 'finished'"
+                      >
+                        <input
+                          type="radio"
+                          name="promotion"
+                          [value]="option.id"
+                          [ngModel]="data().promotionId"
+                          (ngModelChange)="emitField('promotionId', $event)"
+                          class="hidden"
+                        />
+                        <div>
+                          <p class="text-sm font-bold text-text-primary">{{ option.label }}</p>
+                          <p class="text-xs text-text-muted font-mono">
+                            Código: {{ option.code ?? option.courseCode }}
+                          </p>
+                        </div>
+                        <div class="text-right shrink-0">
+                          <p class="text-xs font-bold text-brand">
+                            {{ option.enrolledCount }} / {{ option.maxCapacity }} cupos
+                          </p>
+                          <p class="text-xs text-text-muted uppercase tracking-tight">
+                            {{ option.status === 'open' ? 'DISPONIBLE' : 'CERRADA' }}
+                          </p>
+                        </div>
+                      </label>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- VISTA SINGULAR -->
+      @if (data().view === 'singular') {
+        <div class="text-center py-12 px-6">
+          <div
+            class="w-16 h-16 bg-bg-subtle rounded-full flex items-center justify-center mx-auto mb-4"
+          >
+            <app-icon name="check" [size]="24" class="text-text-muted" />
+          </div>
+          <h3 class="text-lg font-bold text-text-primary">Curso Singular</h3>
+          <p class="text-sm text-text-secondary mt-2 max-w-sm mx-auto">
+            Este tipo de curso no requiere asignación de instructor o reserva de horario en este
+            paso. Se coordinará internamente tras la confirmación.
+          </p>
+        </div>
+      }
+    </div>
+
+    <!-- Acciones Inferiores -->
+    <div class="p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
+      <button
+        type="button"
+        (click)="onBack()"
+        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+      >
+        <app-icon name="arrow-left" [size]="14" />
+        Volver
+      </button>
+      <app-async-btn
+        label="Continuar a Documentos"
+        icon="arrow-right"
+        [loading]="loading()"
+        [disabled]="
+          (data().view === 'class-b' &&
+            (!data().slotSelection.isComplete || data().paymentMode === null)) ||
+          (data().view === 'professional' && !data().promotionId)
+        "
+        (click)="onNext()"
+        data-llm-action="submit-assignment"
+      />
+    </div>
+  </div>
+</div>

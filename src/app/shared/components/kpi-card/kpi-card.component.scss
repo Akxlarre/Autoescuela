@@ -1,23 +1,6 @@
-// ── Fix transparencia: .card + .card-tinted + .card-accent ───────────────
-// Ninguna de estas clases tiene regla global en el proyecto — se definen aquí.
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
-  padding: var(--card-padding);
-}
-
-// Fondo con tinte de marca muy sutil usando --gradient-subtle del DS
-// (sky 6% → 2%, se adapta automáticamente a dark mode)
-.card-tinted {
-  background: var(--gradient-subtle), var(--card-bg);
-}
-
-// Borde superior de marca — usa --accent-border-width (3px) del DS
-.card-accent {
-  border-top: var(--accent-border-width) solid var(--ds-brand);
-}
+// ── .card, .card-tinted, .card-accent ────────────────────────────────────
+// Ahora definidas globalmente en _variables.scss.
+// Este archivo solo contiene estilos específicos del componente KPI.
 
 // ── Chip de ícono ─────────────────────────────────────────────────────────
 // Cuadrado redondeado con fondo semántico — ancla visual del KPI.

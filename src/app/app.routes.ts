@@ -4,6 +4,7 @@ import { firstLoginGuard } from '@core/guards/first-login.guard';
 import { guestGuard } from '@core/guards/guest.guard';
 import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
+import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
 
 /**
  * Rutas de la aplicación, estructuradas por portal de rol.
@@ -50,6 +51,15 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/acceso-denegado/acceso-denegado.component').then(
         (m) => m.AccesoDenegadoComponent,
+      ),
+  },
+
+  // Matrícula pública — sin autenticación, sin AppShell
+  {
+    path: 'inscripcion',
+    loadComponent: () =>
+      import('./features/public-enrollment/public-enrollment.component').then(
+        (m) => m.PublicEnrollmentComponent,
       ),
   },
 
@@ -101,11 +111,14 @@ export const routes: Routes = [
               import('./features/admin/matricula/admin-matricula.component').then(
                 (m) => m.AdminMatriculaComponent,
               ),
+            canDeactivate: [enrollmentDraftGuard],
           },
           {
             path: 'pagos',
             loadComponent: () =>
-              import('./features/admin/pagos/admin-pagos.component').then((m) => m.AdminPagosComponent),
+              import('./features/admin/pagos/admin-pagos.component').then(
+                (m) => m.AdminPagosComponent,
+              ),
           },
           {
             path: 'contabilidad/reportes',
@@ -138,7 +151,9 @@ export const routes: Routes = [
           {
             path: 'flota',
             loadComponent: () =>
-              import('./features/admin/flota/admin-flota.component').then((m) => m.AdminFlotaComponent),
+              import('./features/admin/flota/admin-flota.component').then(
+                (m) => m.AdminFlotaComponent,
+              ),
           },
           {
             path: 'instructores',
@@ -303,6 +318,7 @@ export const routes: Routes = [
               import('./features/secretaria/matricula/secretaria-matricula.component').then(
                 (m) => m.SecretariaMatriculaComponent,
               ),
+            canDeactivate: [enrollmentDraftGuard],
           },
           {
             path: 'pagos',

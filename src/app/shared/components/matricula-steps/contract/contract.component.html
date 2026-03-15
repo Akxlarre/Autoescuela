@@ -1,0 +1,294 @@
+<div class="max-w-4xl mx-auto space-y-6">
+  <div
+    class="bg-surface rounded-2xl border border-border-default shadow-sm overflow-hidden text-text-primary"
+  >
+    <!-- Cabecera -->
+    <div class="p-6 border-b border-border-subtle bg-bg-base/50">
+      <h2 class="text-xl font-semibold flex items-center gap-2">
+        <app-icon name="file-signature" [size]="20" class="text-brand" />
+        Paso 5: Firma del Contrato
+      </h2>
+      <p class="text-sm text-text-secondary mt-1">
+        Genera el PDF, imprímelo, fírmalo físicamente con el alumno y luego sube el documento
+        escaneado.
+      </p>
+    </div>
+
+    <div class="p-6 space-y-8">
+      <!-- ── Indicador de proceso (3 pasos) ── -->
+      <div class="flex items-start gap-0">
+        <!-- Paso 1: Generar -->
+        <div class="flex flex-col items-center gap-1.5 min-w-20">
+          <div
+            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+            [class.bg-state-success]="data().contractGeneration.status === 'generated'"
+            [class.text-surface]="data().contractGeneration.status === 'generated'"
+            [class.bg-brand]="data().contractGeneration.status !== 'generated'"
+            [class.text-surface]="data().contractGeneration.status !== 'generated'"
+          >
+            @if (data().contractGeneration.status === 'generated') {
+              <app-icon name="check" [size]="16" />
+            } @else {
+              1
+            }
+          </div>
+          <span class="text-xs text-center text-text-muted leading-tight">Generar PDF</span>
+        </div>
+
+        <div
+          class="flex-1 h-px mt-4.5"
+          [class.bg-state-success]="data().contractGeneration.status === 'generated'"
+          [class.bg-border-default]="data().contractGeneration.status !== 'generated'"
+        ></div>
+
+        <!-- Paso 2: Imprimir y Firmar -->
+        <div class="flex flex-col items-center gap-1.5 min-w-20">
+          <div
+            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+            [class.bg-brand]="
+              data().contractGeneration.status === 'generated' && !data().signedContract
+            "
+            [class.text-surface]="
+              data().contractGeneration.status === 'generated' && !data().signedContract
+            "
+            [class.bg-state-success]="!!data().signedContract"
+            [class.text-surface]="!!data().signedContract"
+            [class.bg-bg-subtle]="data().contractGeneration.status !== 'generated'"
+            [class.text-text-muted]="data().contractGeneration.status !== 'generated'"
+          >
+            @if (data().signedContract) {
+              <app-icon name="check" [size]="16" />
+            } @else {
+              2
+            }
+          </div>
+          <span class="text-xs text-center text-text-muted leading-tight">Imprimir y Firmar</span>
+        </div>
+
+        <div
+          class="flex-1 h-px mt-4.5"
+          [class.bg-state-success]="!!data().signedContract"
+          [class.bg-border-default]="!data().signedContract"
+        ></div>
+
+        <!-- Paso 3: Subir -->
+        <div class="flex flex-col items-center gap-1.5 min-w-20">
+          <div
+            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+            [class.bg-state-success]="!!data().signedContract"
+            [class.text-surface]="!!data().signedContract"
+            [class.bg-bg-subtle]="!data().signedContract"
+            [class.text-text-muted]="!data().signedContract"
+          >
+            @if (data().signedContract) {
+              <app-icon name="check" [size]="16" />
+            } @else {
+              3
+            }
+          </div>
+          <span class="text-xs text-center text-text-muted leading-tight">Subir Escaneado</span>
+        </div>
+      </div>
+
+      <!-- ── A: Generar PDF ── -->
+      <div
+        class="p-4 bg-bg-base border border-border-default rounded-xl flex items-center justify-between gap-4"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+            [class.bg-state-success-bg]="data().contractGeneration.status === 'generated'"
+            [class.bg-bg-subtle]="data().contractGeneration.status !== 'generated'"
+          >
+            <app-icon
+              name="file-text"
+              [size]="20"
+              [class.text-state-success]="data().contractGeneration.status === 'generated'"
+              [class.text-text-muted]="data().contractGeneration.status !== 'generated'"
+            />
+          </div>
+          <div>
+            <p class="text-sm font-bold text-text-primary">Contrato de Matrícula PDF</p>
+            <p class="text-xs text-text-muted">
+              @if (data().contractGeneration.status === 'generating') {
+                Generando documento...
+              } @else if (data().contractGeneration.status === 'generated') {
+                PDF generado — descárgalo e imprímelo para la firma física
+              } @else if (data().contractGeneration.status === 'error') {
+                {{ data().contractGeneration.errorMessage ?? 'Error al generar el contrato' }}
+              } @else {
+                Genera el PDF del contrato para imprimir y firmar
+              }
+            </p>
+          </div>
+        </div>
+
+        @if (data().contractGeneration.status === 'generated' && data().contractGeneration.pdfUrl) {
+          <a
+            [href]="data().contractGeneration.pdfUrl"
+            target="_blank"
+            rel="noopener"
+            data-llm-action="download-contract-pdf"
+            class="shrink-0 px-4 py-2 bg-state-success-bg text-state-success text-xs font-bold rounded-lg flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <app-icon name="download" [size]="14" />
+            Descargar PDF
+          </a>
+        } @else {
+          <app-async-btn
+            label="Generar PDF"
+            icon="file-text"
+            loadingLabel="Generando..."
+            [loading]="data().contractGeneration.status === 'generating'"
+            (click)="onGenerateContract()"
+            data-llm-action="generate-contract-pdf"
+          />
+        }
+      </div>
+
+      <!-- ── Vista previa del contrato (referencia) ── -->
+      <div
+        class="bg-bg-base border border-border-default rounded-xl p-6 h-64 overflow-y-auto prose prose-sm max-w-none shadow-inner scrollbar-thin"
+      >
+        <h3 class="text-center font-bold text-text-primary uppercase font-display text-sm">
+          Contrato de Prestación de Servicios de Enseñanza de Conducción
+        </h3>
+        <p class="text-xs text-justify leading-relaxed text-text-secondary">
+          En Chillán, a {{ data().contractGeneration.generatedAt | date: 'dd/MM/yyyy' }}, entre
+          <strong class="text-text-primary">ESCUELA DE CONDUCTORES CHILLÁN</strong>, en adelante
+          "La Escuela", y el alumno individualizado en el Paso 1, en adelante "El Alumno", se
+          conviene el siguiente contrato:
+        </p>
+        <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
+          Primera: Objeto del Contrato
+        </p>
+        <p class="text-xs text-justify leading-relaxed text-text-secondary">
+          La Escuela se obliga a impartir a El Alumno un curso de conducción correspondiente a la
+          clase seleccionada, comprometiéndose a entregar los conocimientos teóricos y prácticos
+          necesarios de acuerdo a la normativa vigente del Ministerio de Transportes y
+          Telecomunicaciones.
+        </p>
+        <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
+          Segunda: Obligaciones del Alumno
+        </p>
+        <p class="text-xs text-justify leading-relaxed text-text-secondary">
+          El Alumno se obliga a asistir puntualmente a las clases programadas. La inasistencia no
+          avisada con al menos 24 horas de anticipación facultará a La Escuela a dar por realizada
+          la clase sin derecho a recuperación. Asimismo, El Alumno debe mantener un comportamiento
+          respetuoso con los instructores y cuidar el material y vehículos de enseñanza.
+        </p>
+        <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
+          Tercera: Vigencia y Devoluciones
+        </p>
+        <p class="text-xs text-justify leading-relaxed text-text-secondary">
+          El presente contrato tiene una vigencia de 90 días corridos a contar de esta fecha. Una
+          vez iniciado el curso o transcurridos 10 días desde la firma, no se realizarán
+          devoluciones de dinero bajo ninguna circunstancia, salvo fuerza mayor debidamente
+          acreditada.
+        </p>
+        <p class="mt-6 italic text-xs text-text-muted text-center">
+          — Vista previa. El PDF descargable es el documento oficial. —
+        </p>
+      </div>
+
+      <!-- ── B+C: Instrucciones + Subida (solo cuando PDF generado) ── -->
+      @if (data().contractGeneration.status === 'generated') {
+        <!-- Instrucciones -->
+        <div
+          class="bg-state-info-bg border border-state-info-border rounded-xl p-4 flex gap-3 text-state-info"
+        >
+          <app-icon name="printer" [size]="20" class="mt-0.5 shrink-0" />
+          <div class="space-y-1">
+            <p class="text-sm font-bold">Firma física requerida</p>
+            <ol class="text-xs space-y-1 list-decimal pl-4 opacity-90 text-text-secondary">
+              <li>Imprime el contrato descargado (2 copias, una para cada parte).</li>
+              <li>El alumno firma ambas copias con su nombre completo y RUT.</li>
+              <li>Escanea o fotografía la copia firmada (PDF, JPG o PNG).</li>
+              <li>Sube el archivo escaneado en la sección de abajo.</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Subida del contrato firmado -->
+        <div class="space-y-3">
+          <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
+            Subir Contrato Firmado
+          </label>
+
+          @if (!data().signedContract) {
+            <label
+              class="block cursor-pointer group"
+              data-llm-description="file upload area for physically signed contract scan"
+            >
+              <input
+                type="file"
+                class="sr-only"
+                [accept]="acceptedFormats"
+                (change)="onFileSelected($event)"
+                data-llm-action="upload-signed-contract"
+              />
+              <div
+                class="border-2 border-dashed border-border-default rounded-xl p-8 text-center transition-all group-hover:border-brand group-hover:bg-brand-muted"
+              >
+                <app-icon
+                  name="upload-cloud"
+                  [size]="36"
+                  class="mx-auto text-text-muted mb-3 group-hover:text-brand transition-colors"
+                />
+                <p class="text-sm font-bold text-text-primary">
+                  Haz clic para seleccionar el archivo
+                </p>
+                <p class="text-xs text-text-muted mt-1">
+                  PDF, JPG o PNG · Máximo {{ maxSizeMb }} MB
+                </p>
+              </div>
+            </label>
+          } @else {
+            <!-- Archivo seleccionado -->
+            <div
+              class="flex items-center justify-between p-4 bg-state-success-bg border border-state-success-border rounded-xl"
+            >
+              <div class="flex items-center gap-3">
+                <app-icon name="file-check" [size]="20" class="text-state-success shrink-0" />
+                <div>
+                  <p class="text-sm font-bold text-state-success">Archivo seleccionado</p>
+                  <p class="text-xs text-state-success/70">
+                    {{ data().signedContract?.fileName }}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                (click)="clearUpload()"
+                aria-label="Eliminar archivo seleccionado"
+                class="w-8 h-8 rounded-lg bg-state-error/10 text-state-error flex items-center justify-center hover:bg-state-error/20 transition-colors"
+              >
+                <app-icon name="x" [size]="14" />
+              </button>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Acciones Inferiores -->
+    <div class="p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
+      <button
+        type="button"
+        (click)="onBack()"
+        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+      >
+        <app-icon name="arrow-left" [size]="14" />
+        Volver
+      </button>
+      <app-async-btn
+        label="Confirmar y Finalizar"
+        icon="check-circle"
+        [loading]="loading()"
+        [disabled]="!data().canAdvance"
+        (click)="onNext()"
+        data-llm-action="submit-contract"
+      />
+    </div>
+  </div>
+</div>

@@ -1,14 +1,16 @@
-import { Component, ChangeDetectionStrategy, inject, effect } from "@angular/core";
-import { RouterOutlet } from "@angular/router";
+import { Component, ChangeDetectionStrategy, inject, effect } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
-import { LayoutService } from "@core/services/ui/layout.service";
-import { SearchPanelFacadeService } from "@core/services/ui/search-panel.service";
-import { SearchPanelComponent } from "@shared/components/search-panel/search-panel.component";
-import { AnimateInDirective } from "@core/directives/animate-in.directive";
-import { SidebarComponent } from "./sidebar.component";
-import { TopbarComponent } from "./topbar.component";
-import { LayoutDrawerComponent } from "./layout-drawer.component";
-import { LayoutDrawerFacadeService } from "@core/services/ui/layout-drawer.facade.service";
+import { LayoutService } from '@core/services/ui/layout.service';
+import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { SearchPanelComponent } from '@shared/components/search-panel/search-panel.component';
+import { IconComponent } from '@shared/components/icon/icon.component';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { SidebarComponent } from './sidebar.component';
+import { TopbarComponent } from './topbar.component';
+import { LayoutDrawerComponent } from './layout-drawer.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 
 /**
  * AppShellComponent — layout principal de rutas protegidas.
@@ -27,25 +29,94 @@ import { LayoutDrawerFacadeService } from "@core/services/ui/layout-drawer.facad
  * ```
  */
 @Component({
-  selector: "app-shell",
+  selector: 'app-shell',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent, SearchPanelComponent, AnimateInDirective, LayoutDrawerComponent],
+  imports: [
+    RouterOutlet,
+    SidebarComponent,
+    TopbarComponent,
+    SearchPanelComponent,
+    AnimateInDirective,
+    LayoutDrawerComponent,
+    IconComponent,
+  ],
   template: `
     <!-- Panel de búsqueda — fuera del grid para evitar que overflow:hidden lo recorte -->
     @if (search.isOpen()) {
-      <app-search-panel
-        appAnimateIn
-        class="search-panel-overlay"
-        (closed)="search.close()"
-      />
+      <app-search-panel appAnimateIn class="search-panel-overlay" (closed)="search.close()" />
+    }
+
+    <!-- Modal de confirmación global (usado por guards y servicios imperativos) -->
+    @if (confirmModal.isOpen()) {
+      <div
+        class="fixed inset-0 z-70 flex items-center justify-center bg-(--overlay-backdrop)"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-modal-title"
+      >
+        <div class="surface-glass rounded-2xl p-8 max-w-sm w-full mx-4 space-y-6">
+          <div class="flex items-start gap-4">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              [class.bg-state-warning-bg]="confirmModal.config()?.severity === 'warn'"
+              [class.bg-state-error-bg]="confirmModal.config()?.severity === 'danger'"
+              [class.bg-brand-muted]="
+                confirmModal.config()?.severity === 'secondary' || !confirmModal.config()?.severity
+              "
+            >
+              <app-icon
+                [name]="
+                  confirmModal.config()?.severity === 'danger' ? 'alert-circle' : 'alert-triangle'
+                "
+                [size]="20"
+                [class.text-state-warning]="confirmModal.config()?.severity === 'warn'"
+                [class.text-state-error]="confirmModal.config()?.severity === 'danger'"
+                [class.text-brand]="
+                  confirmModal.config()?.severity === 'secondary' ||
+                  !confirmModal.config()?.severity
+                "
+              />
+            </div>
+            <div class="space-y-1">
+              <h3
+                id="confirm-modal-title"
+                class="font-bold text-text-primary text-lg leading-tight"
+              >
+                {{ confirmModal.config()?.title }}
+              </h3>
+              <p class="text-sm text-text-secondary leading-relaxed">
+                {{ confirmModal.config()?.message }}
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 justify-end">
+            <button
+              type="button"
+              class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-secondary-radius) border border-(--btn-secondary-border) bg-(--btn-secondary-bg) px-5 py-2 text-sm font-semibold text-(--btn-secondary-text) transition-colors hover:bg-(--btn-secondary-bg-hover)"
+              (click)="confirmModal.cancel()"
+              data-llm-action="confirm-modal-cancel"
+            >
+              {{ confirmModal.config()?.cancelLabel }}
+            </button>
+            <button
+              type="button"
+              class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-5 py-2 text-sm font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-colors hover:bg-(--btn-primary-bg-hover) hover:shadow-(--btn-primary-shadow-hover) active:scale-(--btn-press-scale-value)"
+              (click)="confirmModal.accept()"
+              data-llm-action="confirm-modal-accept"
+            >
+              {{ confirmModal.config()?.confirmLabel }}
+            </button>
+          </div>
+        </div>
+      </div>
     }
 
     <!-- Backdrop mobile drawer -->
     @if (layout.sidebarOpen()) {
       <div
         #backdropEl
-        class="fixed inset-0 z-[49] cursor-pointer bg-[var(--overlay-backdrop)] lg:hidden"
+        class="fixed inset-0 z-49 cursor-pointer bg-(--overlay-backdrop) lg:hidden"
         role="presentation"
         aria-hidden="true"
         data-llm-action="close-mobile-sidebar"
@@ -54,24 +125,24 @@ import { LayoutDrawerFacadeService } from "@core/services/ui/layout-drawer.facad
     }
 
     <div
-      class="shell-container grid h-[100dvh] grid-cols-1 overflow-hidden bg-base lg:grid-cols-[auto_1fr]"
+      class="shell-container grid h-dvh grid-cols-1 overflow-hidden bg-base lg:grid-cols-[auto_1fr]"
     >
       <!-- Sidebar -->
       <app-sidebar
         #sidebarEl
-        class="fixed inset-y-0 start-0 z-50 w-[240px] max-h-[100dvh] -translate-x-full transition-transform duration-normal ease-standard lg:static lg:translate-x-0"
+        class="fixed inset-y-0 inset-s-0 z-50 w-60 max-h-dvh -translate-x-full transition-transform duration-normal ease-standard lg:static lg:translate-x-0"
         [class.translate-x-0]="layout.sidebarOpen()"
       />
 
       <!-- Main Column: topbar + (content area + drawer) -->
-      <div class="flex flex-col min-w-0 bg-[var(--bg-canvas)] overflow-hidden">
+      <div class="flex flex-col min-w-0 bg-(--bg-canvas) overflow-hidden">
         <!-- Topbar spans full width of the main column -->
         <app-topbar />
 
         <!-- Shifting container for main content and drawer -->
         <div class="flex flex-1 min-w-0 overflow-hidden">
           <main
-            class="flex-1 overflow-y-auto p-6"
+            class="shell-content flex-1 overflow-y-auto p-6"
             style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"
@@ -90,6 +161,7 @@ export class AppShellComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly confirmModal = inject(ConfirmModalService);
 
   constructor() {
     // Premium Feel: Si abrimos el layout drawer global y estamos en pantallas

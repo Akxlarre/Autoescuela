@@ -34,7 +34,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   imports: [LoginCardComponent, IconComponent],
   template: `
     <div
-      class="relative flex min-h-[100dvh] flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
+      class="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
     >
       <!-- Orbs decorativos — backdrop para el efecto glass de la card -->
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
@@ -47,7 +47,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           style="background: color-mix(in srgb, var(--color-primary-dark) 14%, transparent)"
         ></div>
         <div
-          class="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
+          class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
           style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent)"
         ></div>
       </div>
@@ -55,7 +55,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       <!-- Card de autenticación — wrapper ref para animación GSAP.
            w-full + max-w fija el ancho del wrapper independientemente
            del contenido interior (alertas, campos) — evita reflow horizontal. -->
-      <div #cardRef class="w-full max-w-[440px]">
+      <div #cardRef class="w-full max-w-110">
         <app-login-card
           [mode]="mode()"
           [loading]="loading()"
@@ -69,7 +69,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       <!-- ── Recordatorio de credenciales de prueba ─────────────────── -->
       @if (devMode) {
         <div
-          class="w-full max-w-[440px] rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-[11px] text-text-muted shadow-sm"
+          class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-[11px] text-text-muted shadow-sm"
           aria-label="Credenciales de prueba disponibles"
         >
           <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
@@ -79,6 +79,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">
             <span>admin@test.com</span>
             <span>secretaria@test.com</span>
+            <span>secretaria2@test.com</span>
             <span>alumno@test.com</span>
             <span>instructor@test.com</span>
           </div>

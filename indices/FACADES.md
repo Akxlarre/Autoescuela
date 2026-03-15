@@ -3,12 +3,15 @@
 Este índice mantiene el registro de todas las Fachadas (Facades) del sistema.
 Los Facades son el **único punto de entrada** permitido para que la UI interactúe con el dominio (base de datos) y su estado global.
 
-## 📁 Facades Activos (`core/facades/` o `core/services/`)
+## 📁 Facades Activos (`core/facades/`)
 
 | Facade | Archivo | Responsabilidad (Dominio) |
 |---|---|---|
-| `AuthFacade` | `auth.facade.ts` | Maneja el estado de la sesión del usuario actual, login, logout y persistencia con Supabase Auth. |
-| `DashboardFacade` | `dashboard.facade.ts` | Orquesta la carga de las métricas principales (KPIs), actividad reciente y alertas para la pantalla de inicio. |
+| `AuthFacade` | `core/facades/auth.facade.ts` | Maneja el estado de la sesión del usuario actual, login, logout y persistencia con Supabase Auth. |
+| `DashboardFacade` | `core/facades/dashboard.facade.ts` | Orquesta la carga de las métricas principales (KPIs), actividad reciente y alertas para la pantalla de inicio. |
+| `EnrollmentFacade` | `core/facades/enrollment.facade.ts` | Orquestador principal del wizard de matrícula (6 pasos). Draft progresivo con expiración 24h, **draft recovery**: `loadActiveDrafts(branchId)` lista borradores pendientes como `DraftSummary[]`, `resumeDraft(enrollmentId)` rehidrata los 3 facades desde BD, `discardDraft(enrollmentId)` elimina borrador y datos asociados. `goToStep()` persiste `current_step` en BD (fire-and-forget). Maneja: upsert user+student (Step 1), instructores/slots/promociones (Step 2), generación y upload de contrato (Step 5), confirmación con número secuencial (Step 6). 16+ signals privados, computed `canAdvance`, `studentSummary`, `sidebarSummary`. |
+| `EnrollmentDocumentsFacade` | `core/facades/enrollment-documents.facade.ts` | Step 3 del wizard de matrícula: documentos y storage. Upload foto carnet (cámara/archivo), documentos profesionales (HVC, cédula, licencia), autorización notarial para menores. Validación antigüedad HVC (RF-082.3, max 30 días). Persistencia en Supabase Storage bucket `documents` + tabla `student_documents`. Computed `uploadedCount`, `allRequiredUploaded()`. Carga docs existentes para re-edición de drafts. |
+| `EnrollmentPaymentFacade` | `core/facades/enrollment-payment.facade.ts` | Step 4 del wizard de matrícula: pagos y descuentos. `computePricing()` calcula desglose (base price, deposit 50%, amount due). `loadAvailableDiscounts()` carga descuentos activos desde tabla `discounts`. `applyPredefinedDiscount()` calcula monto (porcentaje o fijo). `recordPayment()` **idempotente** (delete-before-insert) inserta en `payments`, registra en `discount_applications` si aplica, actualiza `enrollments` (payment_status, total_paid, pending_balance, discount). `rehydrateFromEnrollment(enrollmentId)` reconstruye estado de pago desde BD (draft recovery). Computed `totalToPay`, `canConfirmPayment`. |
 
 > **Nota para los Agentes**:
 > - NO inyectes repositorios o `SupabaseService` en la UI. Inyecta el Facade correspondiente.

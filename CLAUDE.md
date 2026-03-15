@@ -24,7 +24,7 @@ Detalle completo: `docs/HOOKS-SYSTEM.md`
 
 Para cada solicitud que implique escribir código o ensamblar UI:
 
-1. **DESCUBRIR:** Revisa `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md` y `indices/DATABASE.md`. ¿Ya existe algo que resuelva parcial o totalmente el problema? Úsalo. **En Claude Code, el Discovery Gate te bloqueará si no lo haces.**
+1. **DESCUBRIR:** Revisa `indices/COMPONENTS.md`, `indices/FACADES.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md` y `indices/DATABASE.md`. ¿Ya existe algo que resuelva parcial o totalmente el problema? Úsalo. **En Claude Code, el Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR:** Define qué vas a tocar sin violar las reglas de Arquitectura y UI (ver abajo).
 3. **EJECUTAR:** Escribe el código. Prioriza reutilizar. Los hooks validarán cada escritura en tiempo real.
 4. **VALIDAR:** Corre `npm run lint:arch` para una auditoría completa.

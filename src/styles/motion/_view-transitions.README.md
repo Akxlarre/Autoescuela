@@ -8,12 +8,31 @@ Transiciones visuales para navegación usando la [View Transitions API](https://
 
 Sidebar y topbar permanecen **estáticos**. Solo el área `main-content` anima:
 
-- **Salida** (`vt-page-out`): fade-out + translateY(-6px) en 180ms
-- **Entrada** (`vt-page-in`): fade-in + translateY(+8px) en 280ms
+- **Salida** (`vt-page-out`): fade-out + translateY(-10px) + scale(0.98) en 200ms
+- **Entrada** (`vt-page-in`): fade-in + translateY(+12px) + scale(0.99→1) en 320ms con 60ms delay
 
-Asimetría intencional: salida rápida, entrada suave.
+Asimetría: salida ágil, entrada más visible con ligero retraso y sensación de profundidad.
 
 **No requiere código adicional** — funciona automáticamente con cada navegación de ruta.
+
+### Variante: crossfade suave (`vt-main-fade`)
+
+Para una transición más minimalista (solo opacidad, sin movimiento ni scale), añade la clase al root al arranque o cuando quieras cambiar de estilo:
+
+```ts
+document.documentElement.classList.add('vt-main-fade');
+```
+
+Para volver al estilo por defecto (slide + scale):
+
+```ts
+document.documentElement.classList.remove('vt-main-fade');
+```
+
+| Estilo        | Clase en `<html>`   | Efecto                          |
+|---------------|---------------------|---------------------------------|
+| **Por defecto** | ninguna             | slide vertical + scale suave     |
+| **Variante**    | `vt-main-fade`      | crossfade (opacity only)         |
 
 ### Login → App (transición cinematic)
 
@@ -57,13 +76,14 @@ Esto provee un cambio suave de 220ms sin complejidad adicional.
 | `view-transition-name` | `app-shell.component.ts` → `.shell-content` | Identifica el área animable |
 | `withViewTransitions()` | `app.config.ts` | Activa la API para navegación |
 | `onViewTransitionCreated` | `app.config.ts` | Discrimina login↔app vs navegación normal |
+| Variante crossfade | `html.vt-main-fade` | Opcional: transición solo opacidad (sin slide/scale) |
 
 ## Tokens
 
 | Variable | Default | Uso |
 |---|---|---|
-| `--duration-page-out` | `180ms` | Duración salida intra-app |
-| `--duration-page-in` | `280ms` | Duración entrada intra-app |
+| `--duration-page-out` | `200ms` | Duración salida intra-app |
+| `--duration-page-in` | `320ms` | Duración entrada intra-app (con 60ms delay) |
 | `--duration-login-out` | `250ms` | Duración salida login↔app |
 | `--duration-login-in` | `400ms` | Duración entrada login↔app |
 | `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | Easing de salida |

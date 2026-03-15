@@ -1,0 +1,388 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <div class="bg-surface rounded-2xl border border-border-default shadow-sm p-6">
+      <div class="flex items-start justify-between mb-6">
+        <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
+          <app-icon name="user" [size]="20" class="text-brand" />
+          Paso 1: Datos personales
+        </h2>
+        @if (branches().length > 0) {
+          <app-branch-selector
+            [branches]="branches()"
+            [selectedBranchId]="selectedBranchId()"
+            (branchChange)="branchChange.emit($event)"
+            data-llm-description="Branch selector for admin: choose which school to enroll the student in"
+          />
+        }
+      </div>
+
+      <form class="space-y-6">
+        <!-- RUT y Sexo -->
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="rut">
+              RUT del alumno <span class="text-state-error">*</span>
+            </label>
+            <input
+              id="rut"
+              name="rut"
+              type="text"
+              [ngModel]="data().rut"
+              (ngModelChange)="onRutInput($event)"
+              (keydown)="onRutKeydown($event)"
+              (paste)="onRutPaste($event)"
+              placeholder="12.345.678-9"
+              maxlength="12"
+              data-llm-description="Chilean RUT number of the student"
+              class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              [class.border-state-error]="data().rut.length > 0 && !rutValid()"
+              [class.border-state-success]="rutValid()"
+              [class.border-border-default]="!data().rut.length"
+            />
+            @if (data().rut.length > 0 && !rutValid()) {
+              <p class="text-xs text-state-error flex items-center gap-1">
+                <app-icon name="alert-circle" [size]="12" />
+                RUT inválido — verifica el dígito verificador
+              </p>
+            } @else if (rutValid()) {
+              <p class="text-xs text-state-success flex items-center gap-1">
+                <app-icon name="check-circle" [size]="12" />
+                RUT válido
+              </p>
+            } @else {
+              <p class="text-xs text-text-muted italic">Formato: 12.345.678-9</p>
+            }
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="gender">Sexo</label>
+            <div class="relative">
+              <select
+                id="gender"
+                name="gender"
+                [ngModel]="data().gender"
+                (ngModelChange)="emitField('gender', $event)"
+                class="w-full h-11 pl-4 pr-10 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all appearance-none"
+              >
+                <option value="M">Masculino</option>
+                <option value="F">Femenino</option>
+              </select>
+              <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                <app-icon name="chevron-down" [size]="16" class="text-text-muted" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Nombres y Apellidos -->
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="firstNames">
+              Nombres <span class="text-state-error">*</span>
+            </label>
+            <input
+              id="firstNames"
+              name="firstNames"
+              type="text"
+              [ngModel]="data().firstNames"
+              (ngModelChange)="emitField('firstNames', $event)"
+              placeholder="Juan Pablo"
+              class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              [class.border-state-error]="
+                data().firstNames.length > 0 && data().firstNames.trim().length < 2
+              "
+              [class.border-border-default]="
+                !(data().firstNames.length > 0 && data().firstNames.trim().length < 2)
+              "
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="paternalLastName">
+              Apellido Paterno <span class="text-state-error">*</span>
+            </label>
+            <input
+              id="paternalLastName"
+              name="paternalLastName"
+              type="text"
+              [ngModel]="data().paternalLastName"
+              (ngModelChange)="emitField('paternalLastName', $event)"
+              placeholder="González"
+              class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+              [class.border-state-error]="
+                data().paternalLastName.length > 0 && data().paternalLastName.trim().length < 2
+              "
+              [class.border-border-default]="
+                !(data().paternalLastName.length > 0 && data().paternalLastName.trim().length < 2)
+              "
+            />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="maternalLastName">
+              Apellido Materno
+            </label>
+            <input
+              id="maternalLastName"
+              name="maternalLastName"
+              type="text"
+              [ngModel]="data().maternalLastName"
+              (ngModelChange)="emitField('maternalLastName', $event)"
+              placeholder="Pérez"
+              class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <!-- Fecha de nacimiento, Email y Teléfono -->
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="birthDate">
+              Fecha de nacimiento <span class="text-state-error">*</span>
+            </label>
+            <input
+              id="birthDate"
+              name="birthDate"
+              type="date"
+              [ngModel]="data().birthDate"
+              (ngModelChange)="emitField('birthDate', $event)"
+              class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+            />
+          </div>
+          <app-email-input
+            [value]="data().email"
+            label="Email"
+            [required]="true"
+            placeholder="alumno@ejemplo.cl"
+            (valueChange)="emitField('email', $event)"
+          />
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary" for="phone">
+              Teléfono / WhatsApp <span class="text-state-error">*</span>
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              [ngModel]="data().phone"
+              (ngModelChange)="emitField('phone', $event)"
+              placeholder="+56 9 1234 5678"
+              class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <!-- Alertas de edad -->
+        <div class="space-y-3">
+          @if (ageStatus() === 'under-17') {
+            <div
+              class="p-4 rounded-xl border-2 border-state-error-border bg-state-error-bg flex gap-3 items-start"
+            >
+              <app-icon name="ban" [size]="20" class="text-state-error mt-0.5 shrink-0" />
+              <div>
+                <p class="text-sm font-bold text-state-error">
+                  Menor de 17 años — No se puede matricular
+                </p>
+                <p class="text-xs text-text-secondary mt-1">
+                  La edad mínima para ingresar a una escuela de conductores es de 17 años cumplidos.
+                </p>
+              </div>
+            </div>
+          }
+
+          @if (ageStatus() === 'requires-authorization') {
+            <div
+              class="p-4 rounded-xl border-2 border-state-warning-border bg-state-warning-bg flex gap-3 items-start"
+            >
+              <app-icon
+                name="alert-triangle"
+                [size]="20"
+                class="text-state-warning mt-0.5 shrink-0"
+              />
+              <div>
+                <p class="text-sm font-bold text-state-warning">
+                  Alumno de 17 años — Requiere Autorización Notarial
+                </p>
+                <p class="text-xs text-text-secondary mt-1">
+                  Se deberá adjuntar Autorización Notarial firmada por el apoderado en el paso de
+                  Documentación.
+                </p>
+              </div>
+            </div>
+          }
+
+          @if (ageStatus() === 'under-20-professional') {
+            <div
+              class="p-4 rounded-xl border-2 border-state-error-border bg-state-error-bg flex gap-3 items-start"
+            >
+              <app-icon name="ban" [size]="20" class="text-state-error mt-0.5 shrink-0" />
+              <div>
+                <p class="text-sm font-bold text-state-error">
+                  Menor de 20 años — No puede matricularse en Clase Profesional
+                </p>
+                <p class="text-xs text-text-secondary mt-1">
+                  La edad mínima para Clase Profesional (A2, A3, A4, A5) es de 20 años cumplidos.
+                </p>
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Ubicación -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-sm font-medium text-text-secondary" for="address">Dirección</label>
+          <input
+            id="address"
+            name="address"
+            type="text"
+            [ngModel]="data().address"
+            (ngModelChange)="emitField('address', $event)"
+            placeholder="Calle Ejemplo 123, Depto 45"
+            class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+          />
+        </div>
+
+        <!-- Selección de Curso — 2 niveles: Categoría → Curso específico -->
+        <div class="space-y-4 pt-4 border-t border-border-subtle">
+          <!-- Nivel 1: Tipo de licencia -->
+          <div>
+            <p class="text-sm font-bold text-text-primary uppercase tracking-wide mb-3">
+              Tipo de Licencia
+            </p>
+            <div class="grid grid-cols-3 gap-3">
+              @for (cat of availableCategories(); track cat.value) {
+                <button
+                  type="button"
+                  class="flex flex-col items-center gap-2 p-4 border-2 rounded-xl transition-all hover:border-brand/40 active:scale-95"
+                  [class.border-brand]="selectedCategory() === cat.value"
+                  [class.bg-brand-muted]="selectedCategory() === cat.value"
+                  [class.border-border-default]="selectedCategory() !== cat.value"
+                  (click)="onCategorySelect(cat.value)"
+                >
+                  <div
+                    class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
+                    [class.bg-brand]="selectedCategory() === cat.value"
+                    [class.text-surface]="selectedCategory() === cat.value"
+                    [class.bg-bg-subtle]="selectedCategory() !== cat.value"
+                    [class.text-text-muted]="selectedCategory() !== cat.value"
+                  >
+                    <app-icon [name]="cat.icon" [size]="20" />
+                  </div>
+                  <div class="text-center">
+                    <p
+                      class="text-sm font-semibold leading-tight"
+                      [class.text-brand]="selectedCategory() === cat.value"
+                      [class.text-text-primary]="selectedCategory() !== cat.value"
+                    >
+                      {{ cat.label }}
+                    </p>
+                    <p class="text-xs text-text-muted mt-0.5">{{ cat.description }}</p>
+                  </div>
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Nivel 2: Cursos filtrados por categoría seleccionada -->
+          @if (selectedCategory()) {
+            @if (data().courses.length === 0) {
+              <div class="flex items-center justify-center gap-2 py-6 text-text-muted">
+                <app-icon name="loader" [size]="16" />
+                <span class="text-sm">Cargando cursos disponibles...</span>
+              </div>
+            } @else if (filteredCourses().length === 0) {
+              <div
+                class="flex items-center gap-2 py-4 px-4 rounded-xl bg-bg-subtle text-text-muted"
+              >
+                <app-icon name="info" [size]="16" class="shrink-0" />
+                <span class="text-sm">No hay cursos disponibles en esta categoría</span>
+              </div>
+            } @else {
+              <div class="space-y-2">
+                <p class="text-xs font-medium text-text-muted uppercase tracking-wide">
+                  Selecciona el curso
+                </p>
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  @for (
+                    course of filteredCourses();
+                    track course.type + (course.convalidation ? '_conv' : '')
+                  ) {
+                    @let isSelected =
+                      data().courseType === course.type &&
+                      data().convalidatesSimultaneously === (course.convalidation ?? false);
+                    <label
+                      class="group relative flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
+                      [class.border-brand]="isSelected"
+                      [class.bg-brand-muted]="isSelected"
+                      [class.border-border-default]="!isSelected"
+                      (click)="onCourseSelect(course)"
+                    >
+                      <input
+                        type="radio"
+                        name="courseType"
+                        [value]="course.type"
+                        [checked]="isSelected"
+                        class="hidden"
+                      />
+                      <div
+                        class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+                        [class.bg-brand]="isSelected"
+                        [class.text-surface]="isSelected"
+                        [class.bg-bg-subtle]="!isSelected"
+                        [class.text-text-muted]="!isSelected"
+                      >
+                        <app-icon [name]="course.icon" [size]="16" />
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p
+                          class="text-sm font-semibold leading-tight"
+                          [class.text-brand]="isSelected"
+                          [class.text-text-primary]="!isSelected"
+                        >
+                          {{ course.label }}
+                        </p>
+                        <p
+                          class="text-xs mt-0.5"
+                          [class.text-brand]="isSelected"
+                          [class.text-text-muted]="!isSelected"
+                        >
+                          {{
+                            course.category === 'non-professional'
+                              ? 'Particular'
+                              : course.category === 'professional'
+                                ? 'Profesional'
+                                : 'Especializado'
+                          }}
+                        </p>
+                      </div>
+                      @if (isSelected) {
+                        <app-icon name="check-circle" [size]="14" class="text-brand shrink-0" />
+                      }
+                    </label>
+                  }
+                </div>
+              </div>
+            }
+          }
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex items-center justify-between pt-6 border-t border-border-subtle">
+          <button
+            type="button"
+            (click)="onCancel()"
+            class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <app-async-btn
+            label="Guardar y Continuar"
+            icon="arrow-right"
+            [loading]="loading()"
+            [disabled]="!canAdvance()"
+            (click)="onNext()"
+            data-llm-action="submit-personal-data"
+          />
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

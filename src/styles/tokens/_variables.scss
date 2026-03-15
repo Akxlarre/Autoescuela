@@ -104,9 +104,9 @@
   --duration-normal: 300ms;
   --duration-slow: 450ms;
   --duration-slower: 600ms;
-  --duration-page-out: 180ms;
-  --duration-page-in: 280ms;
-  /* Asimetría intencional: salida rápida, entrada suave */
+  --duration-page-out: 200ms;
+  --duration-page-in: 320ms;
+  /* Asimetría: salida ágil, entrada más visible y suave */
   --duration-login-out: 250ms;
   --duration-login-in: 400ms;
   /* Login → App: transición más dramática que la navegación intra-app */
@@ -209,9 +209,11 @@
   /* Gradientes */
   --gradient-primary: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
   --gradient-hero: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
-  --gradient-subtle: linear-gradient(135deg,
-      rgba(14, 165, 233, 0.06) 0%,
-      rgba(14, 165, 233, 0.02) 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    rgba(14, 165, 233, 0.06) 0%,
+    rgba(14, 165, 233, 0.02) 100%
+  );
 
   /* Aliases semánticos — separación: acción ≠ texto */
   --action-primary: var(--ds-brand);
@@ -409,9 +411,11 @@
 
   --gradient-primary: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
   --gradient-hero: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #a78bfa 100%);
-  --gradient-subtle: linear-gradient(135deg,
-      rgba(56, 189, 248, 0.12) 0%,
-      rgba(56, 189, 248, 0.04) 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.12) 0%,
+    rgba(56, 189, 248, 0.04) 100%
+  );
 
   --action-primary: var(--ds-brand);
   --action-primary-hover: var(--color-primary-hover);
@@ -655,9 +659,31 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .indicator-live::after,
   .badge-pulse {
     animation: none;
   }
+}
+
+/* ── Cards — Clases globales de tarjeta ────────────────────────
+   Usadas en toda la app (stubs, wrappers de tabla, drawers).
+   .card         → base con fondo, borde, radio y sombra
+   .card-tinted  → gradiente sutil de marca sobre card-bg
+   .card-accent  → borde superior con ds-brand (1 por sección)
+   ─────────────────────────────────────────────────────────── */
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: var(--card-padding);
+}
+
+.card-tinted {
+  background: var(--gradient-subtle), var(--card-bg);
+}
+
+.card-accent {
+  border-top: var(--accent-border-width) solid var(--ds-brand);
 }
