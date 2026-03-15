@@ -683,6 +683,7 @@ export class AlumnosListContentComponent {
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
+  readonly claseOnlineAction = output<'zoom' | 'asistencia'>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
@@ -886,19 +887,7 @@ export class AlumnosListContentComponent {
 
   // RF-054
   enviarEnlaceZoom(): void {
-    const confirmacion = confirm(
-      'Enviar Enlace de Zoom — Clase Teórica\n\n' +
-        'Esta acción enviará un correo con el enlace de Zoom a todos los alumnos activos de Clase B.\n\n' +
-        '¿Confirmar envío masivo?',
-    );
-    if (confirmacion) {
-      alert(
-        'Enlaces enviados exitosamente\n\n' +
-          '- Correos enviados a alumnos activos\n' +
-          '- Enlace: https://zoom.us/j/123456789\n\n' +
-          '[Mockup — RF-054]',
-      );
-    }
+    this.claseOnlineAction.emit('zoom');
   }
 
   openNuevaMatriculaDrawer(): void {
@@ -907,14 +896,7 @@ export class AlumnosListContentComponent {
 
   // RF-054
   registrarAsistenciaZoom(): void {
-    alert(
-      'Registrar Asistencia — Clase Teórica Zoom\n\n' +
-        'Pasos para registrar asistencia:\n' +
-        '1. Descarga el reporte de asistencia desde Zoom\n' +
-        '2. Revisa la lista de nombres/correos de asistentes\n' +
-        '3. Marca manualmente quienes asistieron\n\n' +
-        '[Mockup — RF-054]',
-    );
+    this.claseOnlineAction.emit('asistencia');
   }
 
   // RF-086
