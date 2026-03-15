@@ -54,6 +54,15 @@ export const routes: Routes = [
       ),
   },
 
+  // Matrícula pública — sin autenticación, sin AppShell
+  {
+    path: 'inscripcion',
+    loadComponent: () =>
+      import('./features/public-enrollment/public-enrollment.component').then(
+        (m) => m.PublicEnrollmentComponent,
+      ),
+  },
+
   // Rutas protegidas — envueltas en el layout AppShell
   {
     path: 'app',

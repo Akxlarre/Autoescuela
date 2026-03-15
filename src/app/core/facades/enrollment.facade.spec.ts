@@ -1,4 +1,4 @@
-/* import { vi } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { EnrollmentFacade } from './enrollment.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
@@ -26,6 +26,16 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
 }
 
 function createMockSupabaseService() {
+  let channelCallback: (() => void) | null = null;
+
+  const mockChannel = {
+    on: vi.fn().mockImplementation((_event: string, _opts: any, cb: () => void) => {
+      channelCallback = cb;
+      return mockChannel;
+    }),
+    subscribe: vi.fn().mockReturnThis(),
+  };
+
   const mockBuilder = createMockQueryBuilder();
 
   return {
@@ -44,8 +54,12 @@ function createMockSupabaseService() {
           .fn()
           .mockResolvedValue({ data: { pdfUrl: 'https://example.com/contract.pdf' }, error: null }),
       },
+      channel: vi.fn().mockReturnValue(mockChannel),
+      removeChannel: vi.fn(),
     },
     _mockBuilder: mockBuilder,
+    _mockChannel: mockChannel,
+    _getChannelCallback: () => channelCallback,
   };
 }
 
@@ -61,6 +75,11 @@ describe('EnrollmentFacade', () => {
     });
 
     facade = TestBed.inject(EnrollmentFacade);
+  });
+
+  afterEach(() => {
+    facade.reset();
+    vi.restoreAllMocks();
   });
 
   // ── Initialization ──
@@ -286,5 +305,144 @@ describe('EnrollmentFacade', () => {
       expect(result).toBeNull();
     });
   });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // REALTIME — Schedule subscription tests
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('Realtime Schedule Subscription', () => {
+    const INSTRUCTOR_ID = 5;
+
+    const mockSlots = [
+      {
+        instructor_id: INSTRUCTOR_ID,
+        vehicle_id: 1,
+        slot_start: '2026-03-16T09:00:00-03:00',
+        slot_end: '2026-03-16T09:45:00-03:00',
+        slot_status: 'available',
+      },
+      {
+        instructor_id: INSTRUCTOR_ID,
+        vehicle_id: 1,
+        slot_start: '2026-03-16T09:45:00-03:00',
+        slot_end: '2026-03-16T10:30:00-03:00',
+        slot_status: 'available',
+      },
+    ];
+
+    function setupScheduleQuery(data: any[] = mockSlots, error: any = null) {
+      const builder = createMockQueryBuilder();
+      builder.order = vi.fn().mockResolvedValue({ data, error });
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+    }
+
+    it('should create a realtime channel when loadScheduleGrid is called', async () => {
+      setupScheduleQuery();
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+      expect(mockSupabase.client.channel).toHaveBeenCalledWith(
+        `schedule-instructor-${INSTRUCTOR_ID}`,
+      );
+      expect(mockSupabase._mockChannel.on).toHaveBeenCalledWith(
+        'postgres_changes',
+        expect.objectContaining({
+          event: '*',
+          schema: 'public',
+          table: 'class_b_sessions',
+          filter: `instructor_id=eq.${INSTRUCTOR_ID}`,
+        }),
+        expect.any(Function),
+      );
+      expect(mockSupabase._mockChannel.subscribe).toHaveBeenCalled();
+    });
+
+    it('should remove previous channel when switching instructor', async () => {
+      setupScheduleQuery();
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+      await facade.loadScheduleGrid(INSTRUCTOR_ID + 1);
+
+      expect(mockSupabase.client.removeChannel).toHaveBeenCalledTimes(1);
+      expect(mockSupabase.client.channel).toHaveBeenCalledWith(
+        `schedule-instructor-${INSTRUCTOR_ID + 1}`,
+      );
+    });
+
+    it('should unsubscribe from channel on reset', async () => {
+      setupScheduleQuery();
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+      facade.reset();
+
+      expect(mockSupabase.client.removeChannel).toHaveBeenCalled();
+    });
+
+    it('should debounce realtime events and re-query the view', async () => {
+      vi.useFakeTimers();
+      setupScheduleQuery();
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+      // Simulate realtime event
+      const callback = mockSupabase._getChannelCallback();
+      expect(callback).not.toBeNull();
+
+      // Reset mock to track re-query
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: mockSlots, error: null }),
+      });
+
+      // Fire 3 rapid events — should debounce to 1 re-query
+      callback!();
+      callback!();
+      callback!();
+
+      // Before debounce period: no re-query
+      expect(mockSupabase.client.from).not.toHaveBeenCalled();
+
+      // After debounce period
+      await vi.advanceTimersByTimeAsync(350);
+
+      expect(mockSupabase.client.from).toHaveBeenCalledTimes(1);
+      expect(mockSupabase.client.from).toHaveBeenCalledWith('v_class_b_schedule_availability');
+
+      vi.useRealTimers();
+    });
+
+    it('should auto-deselect slots that become occupied after realtime update', async () => {
+      vi.useFakeTimers();
+      setupScheduleQuery();
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+      // Select a slot
+      facade.toggleSlot('2026-03-16T09:00:00-03:00');
+      expect(facade.selectedSlotIds()).toContain('2026-03-16T09:00:00-03:00');
+
+      // Simulate the slot becoming occupied in the re-query
+      const occupiedSlots = mockSlots.map((s) =>
+        s.slot_start === '2026-03-16T09:00:00-03:00' ? { ...s, slot_status: 'occupied' } : s,
+      );
+
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: occupiedSlots, error: null }),
+      });
+
+      // Fire realtime event
+      const callback = mockSupabase._getChannelCallback();
+      callback!();
+
+      await vi.advanceTimersByTimeAsync(350);
+
+      // The selected slot should be auto-deselected
+      expect(facade.selectedSlotIds()).not.toContain('2026-03-16T09:00:00-03:00');
+
+      vi.useRealTimers();
+    });
+  });
 });
- */

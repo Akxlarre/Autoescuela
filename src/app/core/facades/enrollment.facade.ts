@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -119,6 +120,10 @@ export class EnrollmentFacade {
   // ── UI state ──
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+
+  // ── Realtime ──
+  private _scheduleChannel: RealtimeChannel | null = null;
+  private _realtimeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 2. ESTADO EXPUESTO (Público, solo lectura)
@@ -593,6 +598,7 @@ export class EnrollmentFacade {
       }
 
       this._scheduleGrid.set(this.buildScheduleGrid(data));
+      this.subscribeToScheduleChanges(instructorId);
     } finally {
       this._isLoading.set(false);
     }
@@ -1343,9 +1349,78 @@ export class EnrollmentFacade {
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // REALTIME — Suscripción a cambios en class_b_sessions
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Suscribe al canal Realtime de `class_b_sessions` filtrado por instructor.
+   * Cada INSERT/UPDATE/DELETE dispara un re-query debounced de la vista.
+   */
+  private subscribeToScheduleChanges(instructorId: number): void {
+    this.unsubscribeFromScheduleChanges();
+
+    this._scheduleChannel = this.supabase.client
+      .channel(`schedule-instructor-${instructorId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'class_b_sessions',
+          filter: `instructor_id=eq.${instructorId}`,
+        },
+        () => this.handleScheduleChange(instructorId),
+      )
+      .subscribe();
+  }
+
+  /**
+   * Re-query debounced de la vista de disponibilidad.
+   * Preserva slots seleccionados que sigan disponibles y auto-deselecciona los ocupados.
+   */
+  private handleScheduleChange(instructorId: number): void {
+    if (this._realtimeDebounceTimer) clearTimeout(this._realtimeDebounceTimer);
+
+    this._realtimeDebounceTimer = setTimeout(async () => {
+      const currentSelected = this._selectedSlotIds();
+
+      const { data, error } = await this.supabase.client
+        .from('v_class_b_schedule_availability')
+        .select('*')
+        .eq('instructor_id', instructorId)
+        .order('slot_start', { ascending: true });
+
+      if (error || !data || data.length === 0) return;
+
+      const newGrid = this.buildScheduleGrid(data);
+      this._scheduleGrid.set(newGrid);
+
+      // Auto-deseleccionar slots que pasaron a occupied
+      const availableIds = new Set(
+        newGrid.slots.filter((s) => s.status === 'available').map((s) => s.id),
+      );
+      const validSelections = currentSelected.filter((id) => availableIds.has(id));
+      if (validSelections.length !== currentSelected.length) {
+        this._selectedSlotIds.set(validSelections);
+      }
+    }, 300);
+  }
+
+  /** Limpia el canal Realtime y el timer de debounce. */
+  private unsubscribeFromScheduleChanges(): void {
+    if (this._realtimeDebounceTimer) {
+      clearTimeout(this._realtimeDebounceTimer);
+      this._realtimeDebounceTimer = null;
+    }
+    if (this._scheduleChannel) {
+      this.supabase.client.removeChannel(this._scheduleChannel);
+      this._scheduleChannel = null;
+    }
+  }
 
   /** Resetea todo el estado del wizard para una nueva matrícula. */
   reset(): void {
+    this.unsubscribeFromScheduleChanges();
     this._draft.set({ enrollmentId: null, studentId: null, userId: null });
     this._currentStep.set(1);
     this._steps.set(structuredClone(ENROLLMENT_STEPS));

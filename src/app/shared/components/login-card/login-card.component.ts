@@ -35,7 +35,7 @@ export interface LoginFormData {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   template: `
-    <div class="surface-glass w-full max-w-[440px] rounded-2xl p-10">
+    <div class="surface-glass w-full max-w-110 rounded-2xl p-10">
       <!-- Logo / Brand -->
       <div class="mb-8 text-center">
         <div
@@ -77,7 +77,7 @@ export interface LoginFormData {
       -->
       <div #errorMsgRef style="overflow: hidden">
         <div
-          class="flex items-center gap-2 rounded-md border border-[var(--state-error-border)] bg-[var(--state-error-bg)] px-4 py-3 text-sm text-error"
+          class="flex items-center gap-2 rounded-md border border-(--state-error-border) bg-(--state-error-bg) px-4 py-3 text-sm text-error"
           role="alert"
           [attr.aria-live]="errorMsg() ? 'assertive' : null"
         >
@@ -88,7 +88,7 @@ export interface LoginFormData {
 
       <div #successMsgRef style="overflow: hidden">
         <div
-          class="flex items-center gap-2 rounded-md border border-[var(--state-success-border)] bg-[var(--state-success-bg)] px-4 py-3 text-sm text-success"
+          class="flex items-center gap-2 rounded-md border border-(--state-success-border) bg-(--state-success-bg) px-4 py-3 text-sm text-success"
           role="status"
         >
           <app-icon name="check" [size]="14" />
@@ -111,7 +111,7 @@ export interface LoginFormData {
             id="lc-email"
             type="email"
             data-llm-description="User email address for authentication"
-            class="w-full box-border rounded-[var(--input-radius)] border border-[var(--input-border-default)] bg-[var(--input-bg)] px-[var(--input-padding-x)] py-[var(--input-padding-y)] font-body text-base text-[var(--input-text)] outline-none transition-[var(--transition-input)] placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:shadow-[var(--input-shadow-focus-neutral)]"
+            class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
             placeholder="tu@correo.com"
             [(ngModel)]="email"
             name="email"
@@ -133,7 +133,7 @@ export interface LoginFormData {
               id="lc-password"
               type="password"
               data-llm-description="User password for authentication"
-              class="w-full box-border rounded-[var(--input-radius)] border border-[var(--input-border-default)] bg-[var(--input-bg)] px-[var(--input-padding-x)] py-[var(--input-padding-y)] font-body text-base text-[var(--input-text)] outline-none transition-[var(--transition-input)] placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:shadow-[var(--input-shadow-focus-neutral)]"
+              class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
               placeholder="••••••••"
               [(ngModel)]="password"
               name="password"
@@ -147,7 +147,7 @@ export interface LoginFormData {
         <button
           type="submit"
           data-llm-action="submit-auth-form"
-          class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--btn-primary-radius)] border-none bg-[var(--btn-primary-bg)] px-[var(--btn-primary-padding-x)] py-[var(--btn-primary-padding-y)] font-body text-base font-semibold text-[var(--btn-primary-text)] shadow-[var(--btn-primary-shadow)] transition-[var(--transition-btn)] hover:enabled:bg-[var(--btn-primary-bg-hover)] hover:enabled:shadow-[var(--btn-primary-shadow-hover)] active:enabled:scale-[var(--btn-press-scale-value)] disabled:cursor-not-allowed disabled:opacity-70"
+          class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-(--btn-primary-padding-x) py-(--btn-primary-padding-y) font-body font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-(--transition-btn) hover:enabled:bg-(--btn-primary-bg-hover) hover:enabled:shadow-(--btn-primary-shadow-hover) active:enabled:scale-(--btn-press-scale-value) disabled:cursor-not-allowed disabled:opacity-70"
           [disabled]="loading()"
         >
           @if (loading()) {
@@ -172,7 +172,7 @@ export interface LoginFormData {
           @case ('login') {
             <button
               type="button"
-              class="cursor-pointer border-none bg-transparent p-0 font-body text-sm text-brand transition-[var(--transition-color)] hover:text-brand-hover"
+              class="cursor-pointer border-none bg-transparent p-0 font-body text-sm text-brand transition-(--transition-color) hover:text-brand-hover"
               data-llm-action="switch-to-password-reset-mode"
               (click)="modeChange.emit('reset')"
             >
@@ -182,7 +182,7 @@ export interface LoginFormData {
           @case ('reset') {
             <button
               type="button"
-              class="cursor-pointer border-none bg-transparent p-0 font-body text-sm text-brand transition-[var(--transition-color)] hover:text-brand-hover"
+              class="cursor-pointer border-none bg-transparent p-0 font-body text-sm text-brand transition-(--transition-color) hover:text-brand-hover"
               data-llm-action="switch-to-login-mode"
               (click)="modeChange.emit('login')"
             >

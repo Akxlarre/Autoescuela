@@ -33,7 +33,7 @@
 | `vehicle_assignments` | M4 - Acad. B | `id`, `vehicle_id` | `instructor_id`, `vehicle_id`, `assigned_by` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
 | `instructor_replacements` | M4 - Acad. B | `id`, `date` | `absent_instructor_id`, `replacement_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructor_monthly_hours` | M4 - Acad. B | `id`, `period` | `instructor_id` | Admin: CRUD, Sec: R, Inst: R (self) | ✅ Definida |
-| `class_b_sessions` | M4 - Acad. B | `id`, `scheduled_at`, `duration_min` (DEFAULT 45) | `enrollment_id`, `instructor_id`, `vehicle_id`, `original_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
+| `class_b_sessions` | M4 - Acad. B | `id`, `scheduled_at`, `duration_min` (DEFAULT 45) | `enrollment_id`, `instructor_id`, `vehicle_id`, `original_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida · **Realtime habilitado** (`20260315100000`): publicada en `supabase_realtime` para actualización en vivo de slots de agenda durante matrícula. |
 | `class_b_theory_sessions` | M4 - Acad. B | `id`, `scheduled_at` | `branch_id`, `instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R | ✅ Definida |
 | `class_b_theory_attendance` | M4 - Acad. B | `id`, `session_id` | `theory_session_b_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
 | `class_b_practice_attendance` | M4 - Acad. B | `id`, `session_id` | `class_b_session_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
@@ -92,6 +92,7 @@
 | Función | Ubicación | Invocación | Descripción |
 |---------|-----------|------------|-------------|
 | `generate-contract-pdf` | `supabase/functions/generate-contract-pdf/index.ts` | `supabase.functions.invoke('generate-contract-pdf', { body: { enrollment_id } })` | Genera PDF de contrato de matrícula (RF-083). Lee enrollment+student+course+branch, construye HTML con cláusulas legales, renderiza a PDF (builder interno sin deps externas), sube a Storage bucket `documents` path `contracts/{id}/`, upsert en `digital_contracts` con content_hash SHA-256. Retorna `{ pdfUrl }`. Usa `SUPABASE_SERVICE_ROLE_KEY` (admin). |
+| `public-enrollment` | `supabase/functions/public-enrollment/index.ts` | `supabase.functions.invoke('public-enrollment', { body: { action: '...' } })` | Matrícula pública (sin auth). Actions: `load-instructors` (instructores con vehículo activo por sede), `load-schedule` (disponibilidad horaria via `v_class_b_schedule_availability`), `submit-clase-b` (crea user/student/enrollment/sessions), `submit-pre-inscription` (crea user + `professional_pre_registrations`). Usa `SERVICE_ROLE_KEY` para bypass RLS. |
 
 ## Funciones SQL
 
@@ -102,6 +103,13 @@
 | `auth_can_enroll_course_type(p_course_id INT)` | `20260310100000_enrollment_branch_course_restriction.sql` | Usada en RLS de `enrollments` (INSERT/UPDATE) | Restringe el tipo de curso según rol y sucursal: admin → sin límite; secretary branch 2 (Conductores Chillán) → todo; secretary branch 1 (Autoescuela Chillán) → solo `class_b` y `singular` (no `professional`). |
 | `get_next_enrollment_number(p_course_id INT)` | `20260311100000_class_b_courses_branch2_and_enrollment_number_fix.sql` (actualiza `20260310110000`) | Llamada desde `EnrollmentFacade.confirmEnrollment()` vía RPC | Devuelve el siguiente número secuencial de matrícula **separado por (sede × tipo de licencia)**: Clase B Autoescuela Chillán, Clase B Conductores Chillán y Profesional tienen contadores independientes. Los drafts sin confirmar (`status = 'draft'`) no consumen número. Formato: 4 dígitos (0001–9999), 5 desde 10000. `SECURITY DEFINER`. |
 | `set_enrollment_license_group()` | `20260312100000_fix_enrollment_number_unique_constraint.sql` | Trigger `BEFORE INSERT` en `enrollments` | Popula `enrollments.license_group` automáticamente a partir de `courses.license_class` del curso asociado. Evita que el consumidor tenga que calcularlo manualmente. |
+
+## Migraciones RLS adicionales
+
+| Migración | Descripción |
+|-----------|-------------|
+| `20260314100000_public_enrollment_anon_rls.sql` | Policies SELECT anónimas para `branches` (todas) y `courses` (activas, no convalidación) para la vista de matrícula pública. |
+| `20260315100000_enable_realtime_class_b_sessions.sql` | Habilita Supabase Realtime en `class_b_sessions` (`ALTER PUBLICATION supabase_realtime ADD TABLE`). Permite que secretarias/admin reciban actualizaciones en vivo de slots ocupados durante matrícula. |
 
 ## Storage Buckets
 

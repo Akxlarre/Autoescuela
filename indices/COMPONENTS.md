@@ -38,6 +38,14 @@
 | `app-search-panel` | Dropdown / Buscador global | Sin inputs. outputs: `queryChange` (string), `closed` (void). Dumb: query es estado local (`signal`). Autofocus al montar. Escape emite `closed`. Entrada animada con `[appAnimateIn]`. | `shared/components/search-panel/search-panel.component.ts` | ✅ Estable |
 | `app-user-panel` | Dropdown / Panel | `user` (User, req) — outputs: `action` (string), `logout` (void). Dumb: sin servicios. Menú desplegable para opciones de usuario desde TopbarComponent animado con `[appAnimateIn]`. | `shared/components/user-panel/user-panel.component.ts` | ✅ Estable |
 
+## Moléculas — Matrícula Pública
+*Componentes del wizard de matrícula pública (sin auth).*
+
+| Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
+|------------|----------------|-------------------|-----------|--------|
+| `app-branch-course-selector` | Dumb / Matrícula | `branches` (BranchOption[], req). Outputs: `branchSelect` (BranchOption), `flowSelect` (PublicFlowType), `confirm` (void). Two-phase selection: branch cards then flow type cards. Branch 1: only Clase B. Branch 2: Clase B + Profesional. Auto-selects flow when only one option. | `shared/components/matricula-steps/branch-course-selector/branch-course-selector.component.ts` | ✅ Estable |
+| `app-public-confirmation` | Dumb / Matrícula | `type` (PublicConfirmationType, req: 'class_b' \| 'pre-inscription'), `enrollmentNumber` (string\|null), `message` (string\|null). Shows success state with next steps, different content per type. | `shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts` | ✅ Estable |
+
 ## Organismos (Organisms)
 *Secciones complejas y autónomas compuestas por moléculas y átomos.*
 
@@ -78,6 +86,7 @@
 |-------------------|-----------|-----------------------|-----------|--------|
 | `/app/admin/dashboard` — `DashboardComponent` | Dashboard principal (referencia canónica del DS). Usa `app-section-hero` (bento-hero), `app-kpi-card-variant` x4, actividad reciente y alertas. Hero con acciones rápidas (abre wizard matrícula vía `LayoutDrawerFacadeService`). | `DashboardFacade`, `LayoutDrawerFacadeService` | `features/dashboard/dashboard.component.ts` | ✅ Estable |
 | `/login` — `LoginComponent` | Login y reset de contraseña. Orbs decorativos + `surface-glass` card. Entrada con `GsapAnimationsService.animateHero()`. Botón dev `isDevMode()`. | `AuthFacade`, `GsapAnimationsService` | `features/auth/login/login.component.ts` | ✅ Estable |
+| `/inscripcion` — `PublicEnrollmentComponent` | Public enrollment wizard (no auth). Orbs + glass card layout like login. Progress dots. Switches steps via @switch on facade.currentStep(). Two flows: Clase B (7 steps) and Professional pre-inscription (4 steps). | `PublicEnrollmentFacade`, `GsapAnimationsService` | `features/public-enrollment/public-enrollment.component.ts` | ✅ Estable |
 | `/**` — `NotFoundComponent` | Página 404 | — | `features/not-found/not-found.component.ts` | ✅ Estable |
 | **— PORTAL ADMIN (24 stubs) —** | | | | |
 | `/app/admin/alumnos` | **Base de Alumnos** — Implementación calco del mockup. Reutiliza `AlumnosListContentComponent`. | — | `features/admin/alumnos/admin-alumnos.component.ts` | ✅ UI Ready |
