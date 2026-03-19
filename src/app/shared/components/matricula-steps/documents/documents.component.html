@@ -3,7 +3,7 @@
     <div class="p-6 border-b border-border-subtle">
       <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
         <app-icon name="upload" [size]="20" class="text-brand" />
-        Paso 3: Documentación
+        Paso {{ stepNumber() }}: Documentación
       </h2>
       <p class="text-sm text-text-secondary mt-1">
         Sube los documentos requeridos para completar el expediente del alumno.
@@ -321,7 +321,7 @@
           </p>
         }
         <app-async-btn
-          label="Continuar a Pago"
+          label="Continuar"
           icon="arrow-right"
           [loading]="loading()"
           [disabled]="!allRequiredUploaded()"

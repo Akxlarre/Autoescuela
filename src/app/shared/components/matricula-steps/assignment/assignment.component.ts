@@ -2,11 +2,12 @@ import { Component, ChangeDetectionStrategy, input, output, signal, computed } f
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EnrollmentAssignmentData, WeekDay } from '@core/models/ui/enrollment-assignment.model';
 
 @Component({
   selector: 'app-assignment-step',
-  imports: [FormsModule, IconComponent, AsyncBtnComponent],
+  imports: [FormsModule, IconComponent, AsyncBtnComponent, SkeletonBlockComponent],
   templateUrl: './assignment.component.html',
   styleUrl: './assignment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -14,6 +15,10 @@ import { EnrollmentAssignmentData, WeekDay } from '@core/models/ui/enrollment-as
 export class AssignmentComponent {
   data = input.required<EnrollmentAssignmentData>();
   loading = input<boolean>(false);
+  /** Número de paso a mostrar en el encabezado (default: 2 para flujo admin). */
+  stepNumber = input<number>(2);
+  /** Oculta la sección de modalidad de pago (cuando ya fue elegida en un paso previo). */
+  hidePaymentMode = input<boolean>(false);
   dataChange = output<EnrollmentAssignmentData>();
   next = output<void>();
   back = output<void>();

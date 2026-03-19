@@ -5,11 +5,13 @@ import {
   computed,
   signal,
   effect,
+  untracked,
   afterNextRender,
   viewChild,
   ElementRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CurrencyPipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { PublicEnrollmentFacade } from '@core/facades/public-enrollment.facade';
@@ -72,6 +74,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    CurrencyPipe,
     IconComponent,
     SkeletonBlockComponent,
     BranchCourseSelectorComponent,
@@ -163,235 +166,397 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
             </div>
           }
 
-          @switch (facade.currentStep()) {
-            <!-- ═══ Step: Branch & Flow Selection ═══ -->
-            @case ('branch') {
-              @if (facade.isLoading() && facade.branches().length === 0) {
-                <div class="space-y-6">
-                  <div>
-                    <app-skeleton-block variant="text" width="40%" height="24px" />
-                    <div class="mt-2">
-                      <app-skeleton-block variant="text" width="75%" height="16px" />
+          <!-- ═══ Draft restore banner ═══ -->
+          @if (facade.hasDraftToRestore()) {
+            <div class="space-y-6">
+              <div class="flex items-start gap-4">
+                <div
+                  class="w-12 h-12 rounded-xl bg-brand-muted flex items-center justify-center shrink-0"
+                >
+                  <app-icon name="file-clock" [size]="22" />
+                </div>
+                <div>
+                  <h2 class="text-lg font-semibold text-primary mb-1">
+                    Tienes una solicitud en curso
+                  </h2>
+                  <p class="text-sm text-secondary">
+                    Encontramos una matrícula que iniciaste anteriormente. ¿Deseas retomar donde lo
+                    dejaste?
+                  </p>
+                </div>
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  class="btn-primary flex-1 px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer flex items-center justify-center gap-2"
+                  data-llm-action="restore-enrollment-draft"
+                  (click)="onRestoreDraft()"
+                >
+                  <app-icon name="rotate-ccw" [size]="16" color="white" />
+                  Retomar solicitud
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 px-6 py-2.5 rounded-lg border border-border text-sm font-medium text-secondary hover:text-primary hover:border-(--ds-brand) transition-colors cursor-pointer"
+                  data-llm-action="discard-enrollment-draft"
+                  (click)="onDiscardDraft()"
+                >
+                  Empezar de nuevo
+                </button>
+              </div>
+            </div>
+          } @else {
+            @switch (facade.currentStep()) {
+              <!-- ═══ Step: Branch & Flow Selection ═══ -->
+              @case ('branch') {
+                @if (facade.branches().length === 0) {
+                  <div class="space-y-6">
+                    <div>
+                      <app-skeleton-block variant="text" width="40%" height="24px" />
+                      <div class="mt-2">
+                        <app-skeleton-block variant="text" width="75%" height="16px" />
+                      </div>
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                      <app-skeleton-block variant="rect" width="100%" height="180px" />
+                      <app-skeleton-block variant="rect" width="100%" height="180px" />
                     </div>
                   </div>
-                  <div class="grid sm:grid-cols-2 gap-4">
-                    <app-skeleton-block variant="rect" width="100%" height="180px" />
-                    <app-skeleton-block variant="rect" width="100%" height="180px" />
-                  </div>
-                </div>
-              } @else {
-                <app-branch-course-selector
-                  [branches]="facade.branches()"
-                  [coursePricing]="facade.branchCoursePricing()"
-                  (branchSelect)="onBranchSelect($event)"
-                  (flowSelect)="onFlowSelect($event)"
-                  (confirm)="facade.confirmBranchSelection()"
+                } @else {
+                  <app-branch-course-selector
+                    [branches]="facade.branches()"
+                    [coursePricing]="facade.branchCoursePricing()"
+                    (branchSelect)="onBranchSelect($event)"
+                    (flowSelect)="onFlowSelect($event)"
+                    (confirm)="facade.confirmBranchSelection()"
+                  />
+                }
+              }
+
+              <!-- ═══ Step: Personal Data ═══ -->
+              @case ('personal-data') {
+                <app-personal-data-step
+                  [data]="step1Data()"
+                  [branches]="[]"
+                  [selectedBranchId]="facade.selectedBranch()?.id ?? null"
+                  [hiddenCategories]="effectiveHiddenCategories()"
+                  (dataChange)="onPersonalDataChange($event)"
+                  (next)="onPersonalDataNext()"
+                  (cancel)="facade.goBack()"
                 />
               }
-            }
 
-            <!-- ═══ Step: Personal Data ═══ -->
-            @case ('personal-data') {
-              <app-personal-data-step
-                [data]="step1Data()"
-                [branches]="[]"
-                [selectedBranchId]="facade.selectedBranch()?.id ?? null"
-                [hiddenCategories]="effectiveHiddenCategories()"
-                (dataChange)="onPersonalDataChange($event)"
-                (next)="onPersonalDataNext()"
-                (cancel)="facade.goBack()"
-              />
-            }
+              <!-- ═══ Step: Payment Mode (Clase B) ═══ -->
+              @case ('payment-mode') {
+                <div class="space-y-6">
+                  <div>
+                    <h2 class="text-lg font-semibold text-primary mb-2">Modalidad de pago</h2>
+                    <p class="text-sm text-secondary mb-6">
+                      Selecciona cómo deseas pagar tu matrícula. Esto determina la cantidad de
+                      clases prácticas que se agendarán inicialmente.
+                    </p>
+                  </div>
 
-            <!-- ═══ Step: Payment Mode (Clase B) ═══ -->
-            @case ('payment-mode') {
-              <div class="space-y-6">
-                <div>
-                  <h2 class="text-lg font-semibold text-primary mb-2">Modalidad de pago</h2>
-                  <p class="text-sm text-secondary mb-6">
-                    Selecciona cómo deseas pagar tu matrícula. Esto determina la cantidad de clases
-                    prácticas que se agendarán inicialmente.
-                  </p>
-                </div>
+                  <div class="grid sm:grid-cols-2 gap-4">
+                    @for (option of paymentModeOptions(); track option.value) {
+                      <button
+                        type="button"
+                        class="group relative flex flex-col p-5 rounded-xl border-2 text-left transition-all cursor-pointer
+                               hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                        [class.border-[var(--ds-brand)]]="facade.paymentMode() === option.value"
+                        [class.bg-brand-muted]="facade.paymentMode() === option.value"
+                        [class.shadow-sm]="facade.paymentMode() === option.value"
+                        [class.border-border]="facade.paymentMode() !== option.value"
+                        [class.bg-surface]="facade.paymentMode() !== option.value"
+                        data-llm-action="select-payment-mode"
+                        (click)="facade.setPaymentMode(option.value)"
+                      >
+                        <div class="flex items-center gap-3 mb-2">
+                          <app-icon [name]="option.icon" [size]="20" color="var(--ds-brand)" />
+                          <p class="text-base font-bold" style="color: var(--text-primary)">
+                            {{ option.label }}
+                          </p>
+                        </div>
+                        <p class="text-xs text-secondary">{{ option.description }}</p>
+                        <div class="mt-4 pt-3 border-t border-border flex items-baseline gap-1.5">
+                          <span class="text-2xl font-bold" style="color: var(--text-primary)">
+                            {{ option.sessions }}
+                          </span>
+                          <span class="text-xs text-secondary">clases prácticas</span>
+                        </div>
+                      </button>
+                    }
+                  </div>
 
-                <div class="grid sm:grid-cols-2 gap-4">
-                  @for (option of paymentModeOptions(); track option.value) {
+                  <div class="flex justify-between pt-4">
                     <button
                       type="button"
-                      class="group relative flex flex-col p-5 rounded-xl border-2 text-left transition-all cursor-pointer
-                             hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                      [class.border-[var(--ds-brand)]]="facade.paymentMode() === option.value"
-                      [class.bg-brand-muted]="facade.paymentMode() === option.value"
-                      [class.shadow-sm]="facade.paymentMode() === option.value"
-                      [class.border-border]="facade.paymentMode() !== option.value"
-                      [class.bg-surface]="facade.paymentMode() !== option.value"
-                      data-llm-action="select-payment-mode"
-                      (click)="facade.setPaymentMode(option.value)"
+                      class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
+                      (click)="facade.goBack()"
                     >
-                      <div class="flex items-center gap-3 mb-2">
-                        <app-icon [name]="option.icon" [size]="20" />
-                        <p class="text-base font-bold text-primary">{{ option.label }}</p>
-                      </div>
-                      <p class="text-xs text-secondary">{{ option.description }}</p>
-                      <div class="mt-3 flex items-center gap-2">
-                        <span
-                          class="text-xs px-2 py-0.5 rounded-full bg-surface-elevated text-secondary font-medium"
+                      <app-icon name="arrow-left" [size]="16" />
+                      Volver
+                    </button>
+                    @if (facade.paymentMode()) {
+                      <button
+                        type="button"
+                        class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer"
+                        data-llm-action="confirm-payment-mode"
+                        (click)="onPaymentModeConfirm()"
+                      >
+                        Continuar
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- ═══ Step: Schedule / Instructor (Clase B) ═══ -->
+              @case ('schedule') {
+                <app-assignment-step
+                  [data]="step2Data()"
+                  [loading]="facade.isLoading()"
+                  [hidePaymentMode]="true"
+                  [stepNumber]="4"
+                  (dataChange)="onAssignmentDataChange($event)"
+                  (next)="onScheduleNext()"
+                  (back)="facade.goBack()"
+                />
+              }
+
+              <!-- ═══ Step: Documents (Clase B — only carnet photo) ═══ -->
+              @case ('documents') {
+                <app-documents-step
+                  [data]="step3Data()"
+                  [loading]="false"
+                  [stepNumber]="5"
+                  (fileSelected)="onFileSelected($event)"
+                  (lightboxOpen)="onLightboxOpen($event)"
+                  (next)="facade.confirmDocuments()"
+                  (back)="facade.goBack()"
+                />
+              }
+
+              <!-- ═══ Step: Contract (Clase B) ═══ -->
+              @case ('contract') {
+                <app-contract-step
+                  [data]="step5Data()"
+                  [loading]="facade.isLoading()"
+                  [stepNumber]="6"
+                  [isPublic]="true"
+                  (generateContract)="onGenerateContract()"
+                  (next)="onContractNext()"
+                  (back)="facade.goBack()"
+                />
+              }
+
+              <!-- ═══ Step: Payment — stub Transbank ═══ -->
+              @case ('payment') {
+                <div class="space-y-6">
+                  <div>
+                    <h2 class="text-lg font-semibold text-primary mb-2">Proceder al pago</h2>
+                    <p class="text-sm text-secondary">
+                      Revisa el resumen de tu matrícula antes de continuar.
+                    </p>
+                  </div>
+
+                  <!-- Resumen -->
+                  @if (facade.studentSummary(); as summary) {
+                    <div class="card p-4 space-y-3">
+                      <!-- Alumno -->
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-10 h-10 rounded-full bg-brand-muted flex items-center justify-center text-sm font-bold text-primary shrink-0"
                         >
-                          {{ option.sessions }} clases prácticas
+                          {{ summary.initials }}
+                        </div>
+                        <div>
+                          <p class="text-sm font-semibold text-primary">{{ summary.fullName }}</p>
+                          <p class="text-xs text-secondary">{{ summary.courseLabel }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Sede -->
+                      @if (facade.selectedBranch(); as branch) {
+                        <div class="flex items-start gap-2 border-t border-border pt-3">
+                          <app-icon
+                            name="map-pin"
+                            [size]="14"
+                            class="text-secondary mt-0.5 shrink-0"
+                          />
+                          <div>
+                            <p class="text-sm text-primary font-medium">{{ branch.name }}</p>
+                            @if (branch.address) {
+                              <p class="text-xs text-secondary">{{ branch.address }}</p>
+                            }
+                          </div>
+                        </div>
+                      }
+
+                      <div
+                        class="flex items-center justify-between text-sm border-t border-border pt-3"
+                      >
+                        <span class="text-secondary">Modalidad de pago</span>
+                        <span class="font-medium text-primary">
+                          {{ facade.paymentMode() === 'partial' ? 'Abono (50%)' : 'Pago total' }}
                         </span>
                       </div>
-                    </button>
-                  }
-                </div>
+                      <div class="flex items-center justify-between text-sm">
+                        <span class="text-secondary">Clases prácticas agendadas</span>
+                        <span class="font-medium text-primary">
+                          {{ facade.selectedSlotIds().length }}
+                        </span>
+                      </div>
 
-                <!-- Navigation -->
-                <div class="flex justify-between pt-4">
-                  <button
-                    type="button"
-                    class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
-                    (click)="facade.goBack()"
-                  >
-                    <app-icon name="arrow-left" [size]="16" />
-                    Volver
-                  </button>
-                  @if (facade.paymentMode()) {
+                      <!-- Monto a pagar -->
+                      <div class="flex items-center justify-between border-t border-border pt-3">
+                        <span class="text-sm font-semibold text-primary">Total a pagar ahora</span>
+                        <span class="text-lg font-bold text-primary">
+                          {{
+                            facade.paymentAmount()
+                              | currency: 'CLP' : 'symbol-narrow' : '1.0-0' : 'es-CL'
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                  }
+
+                  <!-- Aviso Webpay -->
+                  <div class="flex items-start gap-3 rounded-lg bg-surface p-4 text-sm">
+                    <app-icon name="info" [size]="18" color="var(--ds-brand)" />
+                    <p class="text-secondary">
+                      Serás redirigido a
+                      <strong class="text-primary">Webpay</strong> para completar el pago de forma
+                      segura. El agendamiento quedará confirmado una vez procesado el pago.
+                    </p>
+                  </div>
+
+                  <!-- Navigation -->
+                  <div class="flex justify-between pt-4">
                     <button
                       type="button"
-                      class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer"
-                      data-llm-action="confirm-payment-mode"
-                      (click)="onPaymentModeConfirm()"
+                      class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
+                      [disabled]="facade.isSubmitting()"
+                      (click)="facade.goBack()"
                     >
-                      Continuar
+                      <app-icon name="arrow-left" [size]="16" />
+                      Volver
                     </button>
-                  }
-                </div>
-              </div>
-            }
-
-            <!-- ═══ Step: Schedule / Instructor (Clase B) ═══ -->
-            @case ('schedule') {
-              <app-assignment-step
-                [data]="step2Data()"
-                [loading]="facade.isLoading()"
-                (dataChange)="onAssignmentDataChange($event)"
-                (next)="onScheduleNext()"
-                (back)="facade.goBack()"
-              />
-            }
-
-            <!-- ═══ Step: Documents (Clase B — only carnet photo) ═══ -->
-            @case ('documents') {
-              <app-documents-step
-                [data]="step3Data()"
-                [loading]="false"
-                (fileSelected)="onFileSelected($event)"
-                (next)="facade.confirmDocuments()"
-                (back)="facade.goBack()"
-              />
-            }
-
-            <!-- ═══ Step: Contract (Clase B) ═══ -->
-            @case ('contract') {
-              <app-contract-step
-                [data]="step5Data()"
-                [loading]="facade.isLoading()"
-                (dataChange)="onContractDataChange($event)"
-                (generateContract)="onGenerateContract()"
-                (next)="onContractNext()"
-                (back)="facade.goBack()"
-              />
-            }
-
-            <!-- ═══ Step: Course Selection (Professional) ═══ -->
-            @case ('course-selection') {
-              <div class="space-y-6">
-                <div>
-                  <h2 class="text-lg font-semibold text-primary mb-2">
-                    Selecciona tu curso profesional
-                  </h2>
-                  <p class="text-sm text-secondary mb-6">
-                    Elige la clase de licencia profesional a la que deseas inscribirte.
-                  </p>
-                </div>
-
-                <div class="grid gap-3">
-                  @for (course of professionalCourses(); track course.type) {
                     <button
                       type="button"
-                      class="flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all cursor-pointer
-                             hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                      [class.border-[var(--ds-brand)]]="
-                        facade.selectedCourseType() === course.type &&
-                        facade.convalidatesSimultaneously() === course.convalidation
-                      "
-                      [class.bg-brand-muted]="
-                        facade.selectedCourseType() === course.type &&
-                        facade.convalidatesSimultaneously() === course.convalidation
-                      "
-                      [class.border-border]="
-                        facade.selectedCourseType() !== course.type ||
-                        facade.convalidatesSimultaneously() !== course.convalidation
-                      "
-                      [class.bg-surface]="
-                        facade.selectedCourseType() !== course.type ||
-                        facade.convalidatesSimultaneously() !== course.convalidation
-                      "
-                      data-llm-action="select-professional-course"
-                      (click)="facade.selectProfessionalCourse(course.type, course.convalidation)"
+                      class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer flex items-center gap-2 disabled:opacity-60"
+                      [disabled]="facade.isSubmitting()"
+                      data-llm-action="proceed-to-payment"
+                      (click)="onPaymentProceed()"
                     >
-                      <div
-                        class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-brand-muted"
+                      @if (facade.isSubmitting()) {
+                        <app-icon
+                          name="loader-circle"
+                          [size]="16"
+                          color="white"
+                          class="animate-spin"
+                        />
+                        Procesando...
+                      } @else {
+                        <app-icon name="credit-card" [size]="16" color="white" />
+                        Proceder al pago
+                      }
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <!-- ═══ Step: Course Selection (Professional) ═══ -->
+              @case ('course-selection') {
+                <div class="space-y-6">
+                  <div>
+                    <h2 class="text-lg font-semibold text-primary mb-2">
+                      Selecciona tu curso profesional
+                    </h2>
+                    <p class="text-sm text-secondary mb-6">
+                      Elige la clase de licencia profesional a la que deseas inscribirte.
+                    </p>
+                  </div>
+
+                  <div class="grid gap-3">
+                    @for (course of professionalCourses(); track course.type) {
+                      <button
+                        type="button"
+                        class="flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all cursor-pointer
+                               hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                        [class.border-[var(--ds-brand)]]="
+                          facade.selectedCourseType() === course.type &&
+                          facade.convalidatesSimultaneously() === course.convalidation
+                        "
+                        [class.bg-brand-muted]="
+                          facade.selectedCourseType() === course.type &&
+                          facade.convalidatesSimultaneously() === course.convalidation
+                        "
+                        [class.border-border]="
+                          facade.selectedCourseType() !== course.type ||
+                          facade.convalidatesSimultaneously() !== course.convalidation
+                        "
+                        [class.bg-surface]="
+                          facade.selectedCourseType() !== course.type ||
+                          facade.convalidatesSimultaneously() !== course.convalidation
+                        "
+                        data-llm-action="select-professional-course"
+                        (click)="facade.selectProfessionalCourse(course.type, course.convalidation)"
                       >
-                        <app-icon [name]="course.icon" [size]="20" />
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold text-primary">{{ course.label }}</p>
-                        <p class="text-xs text-secondary">{{ course.description }}</p>
-                      </div>
-                    </button>
-                  }
-                </div>
+                        <div
+                          class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-brand-muted"
+                        >
+                          <app-icon [name]="course.icon" [size]="20" />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-bold text-primary">{{ course.label }}</p>
+                          <p class="text-xs text-secondary">{{ course.description }}</p>
+                        </div>
+                      </button>
+                    }
+                  </div>
 
-                <!-- Navigation -->
-                <div class="flex justify-between pt-4">
-                  <button
-                    type="button"
-                    class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
-                    (click)="facade.goBack()"
-                  >
-                    <app-icon name="arrow-left" [size]="16" />
-                    Volver
-                  </button>
-                  @if (facade.selectedCourseType()) {
+                  <div class="flex justify-between pt-4">
                     <button
                       type="button"
-                      class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer"
-                      data-llm-action="confirm-course-selection"
-                      (click)="onCourseSelectionConfirm()"
+                      class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
+                      (click)="facade.goBack()"
                     >
-                      Enviar pre-inscripción
+                      <app-icon name="arrow-left" [size]="16" />
+                      Volver
                     </button>
-                  }
+                    @if (facade.selectedCourseType()) {
+                      <button
+                        type="button"
+                        class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer"
+                        data-llm-action="confirm-course-selection"
+                        (click)="onCourseSelectionConfirm()"
+                      >
+                        Enviar pre-inscripción
+                      </button>
+                    }
+                  </div>
                 </div>
-              </div>
-            }
+              }
 
-            <!-- ═══ Confirmation (Clase B) ═══ -->
-            @case ('confirmation') {
-              <app-public-confirmation
-                type="class_b"
-                [enrollmentNumber]="facade.result()?.enrollmentNumber ?? null"
-                [message]="facade.result()?.message ?? null"
-              />
-            }
+              <!-- ═══ Confirmation (Clase B) ═══ -->
+              @case ('confirmation') {
+                <app-public-confirmation
+                  type="class_b"
+                  [enrollmentNumber]="facade.result()?.enrollmentNumber ?? null"
+                  [message]="facade.result()?.message ?? null"
+                />
+              }
 
-            <!-- ═══ Pre-Confirmation (Professional) ═══ -->
-            @case ('pre-confirmation') {
-              <app-public-confirmation
-                type="pre-inscription"
-                [enrollmentNumber]="null"
-                [message]="facade.result()?.message ?? null"
-              />
+              <!-- ═══ Pre-Confirmation (Professional) ═══ -->
+              @case ('pre-confirmation') {
+                <app-public-confirmation
+                  type="pre-inscription"
+                  [enrollmentNumber]="null"
+                  [message]="facade.result()?.message ?? null"
+                />
+              }
             }
           }
         </div>
@@ -401,6 +566,32 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
       <p class="relative z-10 mt-8 text-xs text-muted text-center">
         Escuela de Conductores Chillán — Matrícula Online
       </p>
+
+      <!-- Lightbox overlay -->
+      @if (_lightboxUrl()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Vista ampliada de foto"
+          (click)="onLightboxOpen(null)"
+        >
+          <button
+            type="button"
+            class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Cerrar vista ampliada"
+            (click)="onLightboxOpen(null)"
+          >
+            <app-icon name="x" [size]="20" color="white" />
+          </button>
+          <img
+            [src]="_lightboxUrl()"
+            class="max-h-[85dvh] max-w-full rounded-2xl shadow-2xl object-contain"
+            alt="Foto carnet ampliada"
+            (click)="$event.stopPropagation()"
+          />
+        </div>
+      }
     </div>
   `,
   host: { style: 'display: contents;' },
@@ -415,23 +606,33 @@ export class PublicEnrollmentComponent {
   private readonly _contractStatus = signal<ContractStatus>('pending');
   private readonly _contractPdfUrl = signal<string | null>(null);
   private readonly _signedContractUpload = signal<SignedContractUpload | null>(null);
+  readonly _lightboxUrl = signal<string | null>(null);
 
   constructor() {
-    // Load branches on init
     afterNextRender(() => {
-      this.facade.reset();
+      // Siempre cargar branches (necesario con o sin draft)
       void this.facade.loadBranches();
+
+      // Solo resetear si no hay un borrador que ofrecer al usuario
+      if (!this.facade.hasDraftToRestore()) {
+        this.facade.reset();
+      }
 
       const el = this.headerRef()?.nativeElement;
       if (el) this.gsap.animateHero(el);
     });
 
-    // Auto-load instructors when entering schedule step
+    // Auto-load instructors when entering schedule step.
+    // If there's a pre-selected instructor (draft restore) and no grid, load it preserving slots.
     effect(() => {
       const step = this.facade.currentStep();
       const branch = this.facade.selectedBranch();
       if (step === 'schedule' && branch) {
         void this.facade.loadInstructors(branch.id);
+        const selectedId = untracked(() => this.facade.selectedInstructorId());
+        if (selectedId && !untracked(() => this.facade.scheduleGrid())) {
+          void this.facade.loadScheduleGrid(selectedId, true);
+        }
       }
     });
   }
@@ -443,8 +644,6 @@ export class PublicEnrollmentComponent {
   readonly step1Data = computed<EnrollmentPersonalData>(() => {
     const form = this._step1Form();
     const flow = this.facade.flowType();
-    // Override category/type based on selected flow so the personal-data step
-    // pre-selects the correct category and hides the irrelevant one.
     const courseCategory =
       flow === 'professional' ? 'professional' : form.courseCategory || 'non-professional';
     const courseType =
@@ -461,7 +660,6 @@ export class PublicEnrollmentComponent {
   });
 
   readonly step2Data = computed<EnrollmentAssignmentData>(() => {
-    const pd = this.facade.personalData();
     const summary = this.facade.studentSummary() ?? EMPTY_SUMMARY;
     const slotIds = this.facade.selectedSlotIds();
     const paymentMode = this.facade.paymentMode();
@@ -491,13 +689,16 @@ export class PublicEnrollmentComponent {
 
   readonly step3Data = computed<EnrollmentDocumentsData>(() => {
     const summary = this.facade.studentSummary() ?? EMPTY_SUMMARY;
+    const photoUrl = this.facade.carnetPhotoUrl();
     return {
       view: 'class-b' as const,
       studentSummary: summary,
       isMinor: false,
       photoTab: 'upload' as const,
       cameraState: 'idle' as const,
-      carnetPhoto: null,
+      carnetPhoto: photoUrl
+        ? { source: 'upload' as const, capturedDataUrl: photoUrl, fileName: 'foto-carnet.jpg' }
+        : null,
       uploadedDocuments: new Map(),
       requiredDocuments: [],
       hvcValidation: null,
@@ -517,7 +718,6 @@ export class PublicEnrollmentComponent {
     canAdvance: !!this._signedContractUpload()?.file,
   }));
 
-  /** Hides the opposite category based on the selected flow, plus always hides singular. */
   readonly effectiveHiddenCategories = computed<CourseCategory[]>(() => {
     const base = this.facade.hiddenCourseCategories();
     const flow = this.facade.flowType();
@@ -534,9 +734,8 @@ export class PublicEnrollmentComponent {
       this.facade.currentStep() === 'pre-confirmation',
   );
 
-  /** Payment mode options derived from facade state. */
   readonly paymentModeOptions = computed(() => {
-    const total = this.facade.requiredSlotCount() || 12;
+    const total = this.facade.basePracticalSlotCount() || 12;
     return [
       {
         value: 'total' as PaymentMode,
@@ -555,7 +754,6 @@ export class PublicEnrollmentComponent {
     ];
   });
 
-  /** Professional course options for the course-selection step. */
   readonly professionalCourses = computed(() => {
     const courses = this.facade.courseOptions();
     const professional = courses.filter((c) => c.category === 'professional');
@@ -646,23 +844,27 @@ export class PublicEnrollmentComponent {
   }
 
   onAssignmentDataChange(data: EnrollmentAssignmentData): void {
-    // Sync instructor selection
     if (data.instructorId !== this.facade.selectedInstructorId()) {
       if (data.instructorId != null) {
         void this.facade.loadScheduleGrid(data.instructorId);
       }
+      // Don't restore old slot IDs — loadScheduleGrid already cleared them.
+      return;
     }
-    // Sync slot selection
     this.facade.setSelectedSlots(data.slotSelection.selectedSlotIds);
   }
 
-  onScheduleNext(): void {
-    this.facade.confirmSchedule();
+  async onScheduleNext(): Promise<void> {
+    await this.facade.confirmSchedule();
+  }
+
+  onLightboxOpen(url: string | null): void {
+    this._lightboxUrl.set(url);
   }
 
   onFileSelected(event: { type: string; file: File }): void {
-    if (event.type === 'carnet_photo') {
-      this.facade.setCarnetPhoto(event.file);
+    if (event.type === 'id_photo') {
+      void this.facade.uploadCarnetPhoto(event.file);
     }
   }
 
@@ -676,21 +878,34 @@ export class PublicEnrollmentComponent {
   }
 
   onGenerateContract(): void {
-    // TBD: Call Edge Function to generate contract PDF
     this._contractStatus.set('generating');
-    // For now, mark as generated immediately (placeholder)
+    // TBD: llamar Edge Function para generar PDF de contrato
     setTimeout(() => this._contractStatus.set('generated'), 1000);
   }
 
-  async onContractNext(): Promise<void> {
+  /** Confirma contrato y avanza al paso de pago (no envía aún). */
+  onContractNext(): void {
     this.facade.confirmContract();
-    // Submit the complete enrollment
-    await this.facade.submitClaseBEnrollment();
+  }
+
+  /** Inicia el pago. Actualmente envía directamente; con Transbank redirigirá a Webpay. */
+  async onPaymentProceed(): Promise<void> {
+    await this.facade.initiatePayment();
   }
 
   async onCourseSelectionConfirm(): Promise<void> {
     this.facade.confirmCourseSelection();
-    // Submit the pre-inscription
     await this.facade.submitPreInscription();
+  }
+
+  /** Restaura el borrador guardado y retoma el wizard desde el paso guardado. */
+  onRestoreDraft(): void {
+    this.facade.restoreDraft();
+  }
+
+  /** Descarta el borrador y comienza el wizard desde cero. */
+  onDiscardDraft(): void {
+    this.facade.discardDraft();
+    this.facade.reset();
   }
 }

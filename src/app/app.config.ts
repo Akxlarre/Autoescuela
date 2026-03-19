@@ -109,6 +109,11 @@ import {
   // ── Agenda Semanal ──
   CalendarDays,
   CalendarClock,
+  // ── Matrícula pública ──
+  Wallet,
+  FileClock,
+  MapPin,
+  LoaderCircle,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -273,6 +278,11 @@ export const appConfig: ApplicationConfig = {
         // Agenda Semanal
         CalendarDays,
         CalendarClock,
+        // Matrícula pública
+        Wallet,
+        FileClock,
+        MapPin,
+        LoaderCircle,
       }),
     ),
   ],

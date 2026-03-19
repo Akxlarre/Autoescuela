@@ -259,7 +259,9 @@ export class EnrollmentPaymentFacade {
       // 3. Update enrollment totals
       const discountAmount = disc.enabled && disc.amount ? disc.amount : 0;
       const totalPaid = isPending ? 0 : total;
-      const pendingBalance = isPending ? total : 0;
+      const pendingBalance = isPending
+        ? pricing.basePrice - discountAmount
+        : pricing.basePrice - discountAmount - totalPaid;
       const enrollmentPaymentStatus = isPending
         ? 'pending'
         : pricing.isDeposit

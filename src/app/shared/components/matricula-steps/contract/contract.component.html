@@ -6,91 +6,97 @@
     <div class="p-6 border-b border-border-subtle bg-bg-base/50">
       <h2 class="text-xl font-semibold flex items-center gap-2">
         <app-icon name="file-signature" [size]="20" class="text-brand" />
-        Paso 5: Firma del Contrato
+        Paso {{ stepNumber() }}: {{ isPublic() ? 'Contrato de Matrícula' : 'Firma del Contrato' }}
       </h2>
       <p class="text-sm text-text-secondary mt-1">
-        Genera el PDF, imprímelo, fírmalo físicamente con el alumno y luego sube el documento
-        escaneado.
+        @if (isPublic()) {
+          Revisa las condiciones del servicio y acepta los términos para continuar con tu matrícula.
+        } @else {
+          Genera el PDF, imprímelo, fírmalo físicamente con el alumno y luego sube el documento
+          escaneado.
+        }
       </p>
     </div>
 
     <div class="p-6 space-y-8">
-      <!-- ── Indicador de proceso (3 pasos) ── -->
-      <div class="flex items-start gap-0">
-        <!-- Paso 1: Generar -->
-        <div class="flex flex-col items-center gap-1.5 min-w-20">
+      <!-- ── Indicador de proceso (3 pasos) — solo flujo admin/secretaria ── -->
+      @if (!isPublic()) {
+        <div class="flex items-start gap-0">
+          <!-- Paso 1: Generar -->
+          <div class="flex flex-col items-center gap-1.5 min-w-20">
+            <div
+              class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+              [class.bg-state-success]="data().contractGeneration.status === 'generated'"
+              [class.text-surface]="data().contractGeneration.status === 'generated'"
+              [class.bg-brand]="data().contractGeneration.status !== 'generated'"
+              [class.text-surface]="data().contractGeneration.status !== 'generated'"
+            >
+              @if (data().contractGeneration.status === 'generated') {
+                <app-icon name="check" [size]="16" />
+              } @else {
+                1
+              }
+            </div>
+            <span class="text-xs text-center text-text-muted leading-tight">Generar PDF</span>
+          </div>
+
           <div
-            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+            class="flex-1 h-px mt-4.5"
             [class.bg-state-success]="data().contractGeneration.status === 'generated'"
-            [class.text-surface]="data().contractGeneration.status === 'generated'"
-            [class.bg-brand]="data().contractGeneration.status !== 'generated'"
-            [class.text-surface]="data().contractGeneration.status !== 'generated'"
-          >
-            @if (data().contractGeneration.status === 'generated') {
-              <app-icon name="check" [size]="16" />
-            } @else {
-              1
-            }
+            [class.bg-border-default]="data().contractGeneration.status !== 'generated'"
+          ></div>
+
+          <!-- Paso 2: Imprimir y Firmar -->
+          <div class="flex flex-col items-center gap-1.5 min-w-20">
+            <div
+              class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+              [class.bg-brand]="
+                data().contractGeneration.status === 'generated' && !data().signedContract
+              "
+              [class.text-surface]="
+                data().contractGeneration.status === 'generated' && !data().signedContract
+              "
+              [class.bg-state-success]="!!data().signedContract"
+              [class.text-surface]="!!data().signedContract"
+              [class.bg-bg-subtle]="data().contractGeneration.status !== 'generated'"
+              [class.text-text-muted]="data().contractGeneration.status !== 'generated'"
+            >
+              @if (data().signedContract) {
+                <app-icon name="check" [size]="16" />
+              } @else {
+                2
+              }
+            </div>
+            <span class="text-xs text-center text-text-muted leading-tight">Imprimir y Firmar</span>
           </div>
-          <span class="text-xs text-center text-text-muted leading-tight">Generar PDF</span>
-        </div>
 
-        <div
-          class="flex-1 h-px mt-4.5"
-          [class.bg-state-success]="data().contractGeneration.status === 'generated'"
-          [class.bg-border-default]="data().contractGeneration.status !== 'generated'"
-        ></div>
-
-        <!-- Paso 2: Imprimir y Firmar -->
-        <div class="flex flex-col items-center gap-1.5 min-w-20">
           <div
-            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
-            [class.bg-brand]="
-              data().contractGeneration.status === 'generated' && !data().signedContract
-            "
-            [class.text-surface]="
-              data().contractGeneration.status === 'generated' && !data().signedContract
-            "
+            class="flex-1 h-px mt-4.5"
             [class.bg-state-success]="!!data().signedContract"
-            [class.text-surface]="!!data().signedContract"
-            [class.bg-bg-subtle]="data().contractGeneration.status !== 'generated'"
-            [class.text-text-muted]="data().contractGeneration.status !== 'generated'"
-          >
-            @if (data().signedContract) {
-              <app-icon name="check" [size]="16" />
-            } @else {
-              2
-            }
+            [class.bg-border-default]="!data().signedContract"
+          ></div>
+
+          <!-- Paso 3: Subir -->
+          <div class="flex flex-col items-center gap-1.5 min-w-20">
+            <div
+              class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
+              [class.bg-state-success]="!!data().signedContract"
+              [class.text-surface]="!!data().signedContract"
+              [class.bg-bg-subtle]="!data().signedContract"
+              [class.text-text-muted]="!data().signedContract"
+            >
+              @if (data().signedContract) {
+                <app-icon name="check" [size]="16" />
+              } @else {
+                3
+              }
+            </div>
+            <span class="text-xs text-center text-text-muted leading-tight">Subir Escaneado</span>
           </div>
-          <span class="text-xs text-center text-text-muted leading-tight">Imprimir y Firmar</span>
         </div>
+      }
 
-        <div
-          class="flex-1 h-px mt-4.5"
-          [class.bg-state-success]="!!data().signedContract"
-          [class.bg-border-default]="!data().signedContract"
-        ></div>
-
-        <!-- Paso 3: Subir -->
-        <div class="flex flex-col items-center gap-1.5 min-w-20">
-          <div
-            class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
-            [class.bg-state-success]="!!data().signedContract"
-            [class.text-surface]="!!data().signedContract"
-            [class.bg-bg-subtle]="!data().signedContract"
-            [class.text-text-muted]="!data().signedContract"
-          >
-            @if (data().signedContract) {
-              <app-icon name="check" [size]="16" />
-            } @else {
-              3
-            }
-          </div>
-          <span class="text-xs text-center text-text-muted leading-tight">Subir Escaneado</span>
-        </div>
-      </div>
-
-      <!-- ── A: Generar PDF ── -->
+      <!-- ── Generar / Descargar PDF ── -->
       <div
         class="p-4 bg-bg-base border border-border-default rounded-xl flex items-center justify-between gap-4"
       >
@@ -113,7 +119,11 @@
               @if (data().contractGeneration.status === 'generating') {
                 Generando documento...
               } @else if (data().contractGeneration.status === 'generated') {
-                PDF generado — descárgalo e imprímelo para la firma física
+                @if (isPublic()) {
+                  PDF listo — puedes descargarlo para tus registros
+                } @else {
+                  PDF generado — descárgalo e imprímelo para la firma física
+                }
               } @else if (data().contractGeneration.status === 'error') {
                 {{ data().contractGeneration.errorMessage ?? 'Error al generar el contrato' }}
               } @else {
@@ -146,7 +156,7 @@
         }
       </div>
 
-      <!-- ── Vista previa del contrato (referencia) ── -->
+      <!-- ── Vista previa del contrato ── -->
       <div
         class="bg-bg-base border border-border-default rounded-xl p-6 h-64 overflow-y-auto prose prose-sm max-w-none shadow-inner scrollbar-thin"
       >
@@ -155,9 +165,9 @@
         </h3>
         <p class="text-xs text-justify leading-relaxed text-text-secondary">
           En Chillán, a {{ data().contractGeneration.generatedAt | date: 'dd/MM/yyyy' }}, entre
-          <strong class="text-text-primary">ESCUELA DE CONDUCTORES CHILLÁN</strong>, en adelante
-          "La Escuela", y el alumno individualizado en el Paso 1, en adelante "El Alumno", se
-          conviene el siguiente contrato:
+          <strong class="text-text-primary">ESCUELA DE CONDUCTORES CHILLÁN</strong>, en adelante "La
+          Escuela", y el alumno individualizado en el Paso 1, en adelante "El Alumno", se conviene
+          el siguiente contrato:
         </p>
         <p class="text-xs font-bold text-text-primary mt-4 uppercase tracking-tighter">
           Primera: Objeto del Contrato
@@ -191,9 +201,8 @@
         </p>
       </div>
 
-      <!-- ── B+C: Instrucciones + Subida (solo cuando PDF generado) ── -->
-      @if (data().contractGeneration.status === 'generated') {
-        <!-- Instrucciones -->
+      <!-- ── Admin: Instrucciones + Subida (solo cuando PDF generado) ── -->
+      @if (!isPublic() && data().contractGeneration.status === 'generated') {
         <div
           class="bg-state-info-bg border border-state-info-border rounded-xl p-4 flex gap-3 text-state-info"
         >
@@ -209,7 +218,6 @@
           </div>
         </div>
 
-        <!-- Subida del contrato firmado -->
         <div class="space-y-3">
           <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
             Subir Contrato Firmado
@@ -244,7 +252,6 @@
               </div>
             </label>
           } @else {
-            <!-- Archivo seleccionado -->
             <div
               class="flex items-center justify-between p-4 bg-state-success-bg border border-state-success-border rounded-xl"
             >
@@ -252,9 +259,7 @@
                 <app-icon name="file-check" [size]="20" class="text-state-success shrink-0" />
                 <div>
                   <p class="text-sm font-bold text-state-success">Archivo seleccionado</p>
-                  <p class="text-xs text-state-success/70">
-                    {{ data().signedContract?.fileName }}
-                  </p>
+                  <p class="text-xs text-state-success/70">{{ data().signedContract?.fileName }}</p>
                 </div>
               </div>
               <button
@@ -269,6 +274,28 @@
           }
         </div>
       }
+
+      <!-- ── Público: Aceptación de términos ── -->
+      @if (isPublic()) {
+        <label
+          class="flex items-start gap-3 cursor-pointer group"
+          data-llm-description="terms acceptance checkbox for public enrollment contract"
+        >
+          <input
+            type="checkbox"
+            class="mt-0.5 shrink-0 w-4 h-4 accent-brand cursor-pointer"
+            [checked]="_termsAccepted()"
+            (change)="_termsAccepted.set($any($event.target).checked)"
+            data-llm-action="accept-contract-terms"
+          />
+          <span
+            class="text-sm text-text-secondary leading-relaxed group-hover:text-text-primary transition-colors"
+          >
+            He leído y acepto los términos y condiciones del contrato de matrícula de la
+            <strong class="text-text-primary">Escuela de Conductores Chillán</strong>.
+          </span>
+        </label>
+      }
     </div>
 
     <!-- Acciones Inferiores -->
@@ -282,10 +309,10 @@
         Volver
       </button>
       <app-async-btn
-        label="Confirmar y Finalizar"
-        icon="check-circle"
+        [label]="isPublic() ? 'Continuar al Pago' : 'Confirmar y Finalizar'"
+        [icon]="isPublic() ? 'arrow-right' : 'check-circle'"
         [loading]="loading()"
-        [disabled]="!data().canAdvance"
+        [disabled]="!canProceed()"
         (click)="onNext()"
         data-llm-action="submit-contract"
       />

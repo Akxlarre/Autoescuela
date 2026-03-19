@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
@@ -20,10 +20,18 @@ import {
 export class ContractComponent {
   data = input.required<EnrollmentContractData>();
   loading = input<boolean>(false);
+  stepNumber = input<number>(5);
+  /** Modo matrícula pública: solo muestra el contrato para leer/descargar y aceptar con checkbox. Sin upload. */
+  isPublic = input<boolean>(false);
   dataChange = output<EnrollmentContractData>();
   generateContract = output<void>();
   next = output<void>();
   back = output<void>();
+
+  readonly _termsAccepted = signal<boolean>(false);
+  readonly canProceed = computed(() =>
+    this.isPublic() ? this._termsAccepted() : this.data().canAdvance,
+  );
 
   readonly acceptedFormats = CONTRACT_ACCEPTED_FORMATS;
   readonly maxSizeMb = CONTRACT_MAX_SIZE_MB;
