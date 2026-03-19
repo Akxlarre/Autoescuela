@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -19,6 +20,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatCLP, toISODate } from '@core/utils/date.utils';
+import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 
 /** Validador a nivel de FormGroup: suma de canales debe igualar total_amount. */
 function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | null {
@@ -35,8 +37,12 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
 /**
  * RegistrarPagoDrawerComponent — Panel lateral para registrar un pago.
  *
- * Smart component (features/): inyecta PagosFacade para llamar a
- * registrarNuevoPago() y actualizar los Signals reactivos de la vista.
+ * **Modo Contextual** (enrollmentId !== null): abierto desde la tabla de deudores.
+ *   El alumno ya está preseleccionado — se muestra su info en una card de solo lectura.
+ *
+ * **Modo Global** (enrollmentId === null): abierto desde el botón "+ Registrar Pago".
+ *   El usuario debe seleccionar el alumno desde un <select> que itera facade.alumnosConDeuda().
+ *   Si el alumno no tiene matrícula activa con saldo, el pago se registra sin vínculo.
  *
  * Inputs:  isOpen (req), enrollmentId, alumnoNombre, saldoPendiente, pagadoActual
  * Outputs: closed, saved
@@ -54,36 +60,106 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
       [hasFooter]="true"
       (closed)="onCancel()"
     >
-      <!-- ── Info del alumno (solo si hay enrollment vinculado) ─────────────── -->
-      @if (alumnoNombre()) {
-        <div class="alumno-info-card">
-          <div class="flex flex-col gap-0.5">
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--ds-brand)"
-            >
-              Alumno
-            </span>
-            <span class="text-sm font-semibold" style="color: var(--text-primary)">
-              {{ alumnoNombre() }}
-            </span>
-          </div>
-          <div class="flex flex-col gap-0.5 text-right">
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Saldo Pendiente
-            </span>
-            <span class="text-base font-bold" style="color: var(--state-warning)">
-              {{ clp(saldoPendiente()) }}
-            </span>
-          </div>
-        </div>
-      }
-
-      <!-- ── Formulario ─────────────────────────────────────────────────────── -->
       <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
+        <!-- ── MODO GLOBAL: selector de alumno ────────────────────────────── -->
+        @if (modoGlobal()) {
+          <div class="flex flex-col gap-1.5">
+            <label for="pago-enrollment" class="field-label">
+              ALUMNO / MATRÍCULA <span style="color: var(--state-error)">*</span>
+            </label>
+            @if (facade.alumnosConDeuda().length === 0) {
+              <p
+                class="text-xs py-2 px-3 rounded-lg"
+                style="
+                color: var(--text-muted);
+                background: var(--bg-surface);
+                border: 1px solid var(--border-muted);
+              "
+              >
+                No hay alumnos con saldo pendiente. El pago se registrará sin matrícula asociada.
+              </p>
+            } @else {
+              <select
+                id="pago-enrollment"
+                formControlName="enrollment_id"
+                class="field-input field-select"
+                data-llm-description="Selecciona el alumno al que se le asocia el pago"
+                [class.field-input--error]="isInvalid('enrollment_id')"
+              >
+                <option [ngValue]="null" disabled>Selecciona un alumno...</option>
+                @for (alumno of facade.alumnosConDeuda(); track alumno.enrollmentId) {
+                  <option [ngValue]="alumno.enrollmentId">
+                    {{ alumno.alumno }} — {{ alumno.rut }}
+                  </option>
+                }
+              </select>
+              @if (isInvalid('enrollment_id')) {
+                <span class="field-error">Selecciona un alumno.</span>
+              }
+            }
+
+            <!-- Info del alumno seleccionado -->
+            @if (selectedAlumno(); as alumno) {
+              <div class="alumno-info-card" style="margin-top: 4px">
+                <div class="flex flex-col gap-0.5">
+                  <span
+                    class="text-xs font-semibold uppercase tracking-wide"
+                    style="color: var(--ds-brand)"
+                  >
+                    Seleccionado
+                  </span>
+                  <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                    {{ alumno.alumno }}
+                  </span>
+                  <span class="text-xs" style="color: var(--text-muted)">{{ alumno.rut }}</span>
+                </div>
+                <div class="flex flex-col gap-0.5 text-right">
+                  <span
+                    class="text-xs font-semibold uppercase tracking-wide"
+                    style="color: var(--text-muted)"
+                  >
+                    Saldo Pendiente
+                  </span>
+                  <span class="text-base font-bold" style="color: var(--state-warning)">
+                    {{ clp(alumno.saldo) }}
+                  </span>
+                  <span class="text-xs" style="color: var(--text-muted)">
+                    Pagado: {{ clp(alumno.pagado) }}
+                  </span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ── MODO CONTEXTUAL: info del alumno preseleccionado ───────────── -->
+        @if (!modoGlobal() && alumnoNombre()) {
+          <div class="alumno-info-card">
+            <div class="flex flex-col gap-0.5">
+              <span
+                class="text-xs font-semibold uppercase tracking-wide"
+                style="color: var(--ds-brand)"
+              >
+                Alumno
+              </span>
+              <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                {{ alumnoNombre() }}
+              </span>
+            </div>
+            <div class="flex flex-col gap-0.5 text-right">
+              <span
+                class="text-xs font-semibold uppercase tracking-wide"
+                style="color: var(--text-muted)"
+              >
+                Saldo Pendiente
+              </span>
+              <span class="text-base font-bold" style="color: var(--state-warning)">
+                {{ clp(saldoPendiente()) }}
+              </span>
+            </div>
+          </div>
+        }
+
         <!-- Fecha de pago -->
         <div class="flex flex-col gap-1.5">
           <label for="pago-date" class="field-label">
@@ -336,7 +412,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
       border-radius: var(--radius-md);
       border: 1px solid var(--border-default);
       background: color-mix(in srgb, var(--ds-brand) 4%, var(--bg-base));
-      margin-bottom: 20px;
+      margin-bottom: 4px;
     }
 
     /* ── Fields ── */
@@ -478,7 +554,7 @@ export class RegistrarPagoDrawerComponent {
   readonly saved = output<void>();
 
   // ── Injections ──────────────────────────────────────────────────────────────
-  private readonly facade = inject(PagosFacade);
+  protected readonly facade = inject(PagosFacade);
   private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
@@ -487,9 +563,21 @@ export class RegistrarPagoDrawerComponent {
   protected readonly saveError = signal<string | null>(null);
   protected readonly clp = formatCLP;
 
+  /** Modo global: drawer abierto sin matrícula preseleccionada. */
+  protected readonly modoGlobal = computed(() => this.enrollmentId() === null);
+
+  /** Alumno seleccionado en modo global — lookup reactivo sobre el signal del facade. */
+  protected readonly selectedAlumno = computed<AlumnoDeudor | null>(() => {
+    if (!this.modoGlobal()) return null;
+    const eid = this.form.get('enrollment_id')?.value;
+    if (!eid) return null;
+    return this.facade.alumnosConDeuda().find((a) => a.enrollmentId === Number(eid)) ?? null;
+  });
+
   // ── Formulario reactivo ─────────────────────────────────────────────────────
   protected readonly form = this.fb.group(
     {
+      enrollment_id: [null as number | null],
       payment_date: [toISODate(new Date()), Validators.required],
       type: ['', Validators.required],
       total_amount: [null as number | null, [Validators.required, Validators.min(1)]],
@@ -503,7 +591,7 @@ export class RegistrarPagoDrawerComponent {
   );
 
   constructor() {
-    // Resetear el formulario cada vez que el drawer se abre
+    // Resetear el formulario y ajustar validators cada vez que el drawer se abre
     effect(() => {
       if (this.isOpen()) this.resetForm();
     });
@@ -556,8 +644,28 @@ export class RegistrarPagoDrawerComponent {
 
     try {
       const v = this.form.getRawValue();
+
+      // Resuelve qué enrollmentId usar según el modo
+      const enrollmentId = this.modoGlobal() ? (v.enrollment_id ?? null) : this.enrollmentId();
+
+      // Resuelve montosActuales según el modo
+      let montosActuales: { total_paid: number; pending_balance: number } | null = null;
+      if (enrollmentId !== null) {
+        if (this.modoGlobal()) {
+          const alumno = this.facade.alumnosConDeuda().find((a) => a.enrollmentId === enrollmentId);
+          if (alumno) {
+            montosActuales = { total_paid: alumno.pagado, pending_balance: alumno.saldo };
+          }
+        } else {
+          montosActuales = {
+            total_paid: this.pagadoActual(),
+            pending_balance: this.saldoPendiente(),
+          };
+        }
+      }
+
       await this.facade.registrarNuevoPago(
-        this.enrollmentId(),
+        enrollmentId,
         {
           payment_date: v.payment_date!,
           type: v.type!,
@@ -568,9 +676,7 @@ export class RegistrarPagoDrawerComponent {
           voucher_amount: v.voucher_amount ?? 0,
           document_number: v.document_number || null,
         },
-        this.enrollmentId() !== null
-          ? { total_paid: this.pagadoActual(), pending_balance: this.saldoPendiente() }
-          : null,
+        montosActuales,
       );
 
       this.toast.success('Pago registrado correctamente.');
@@ -587,7 +693,18 @@ export class RegistrarPagoDrawerComponent {
   }
 
   private resetForm(): void {
-    this.form.reset({
+    // Ajusta validators del campo enrollment_id según el modo activo
+    const eidCtrl = this.form.get('enrollment_id')!;
+    if (this.modoGlobal() && this.facade.alumnosConDeuda().length > 0) {
+      eidCtrl.setValidators(Validators.required);
+      eidCtrl.setValue(null);
+    } else {
+      eidCtrl.clearValidators();
+      eidCtrl.setValue(this.modoGlobal() ? null : this.enrollmentId());
+    }
+    eidCtrl.updateValueAndValidity();
+
+    this.form.patchValue({
       payment_date: toISODate(new Date()),
       type: '',
       total_amount: null,
@@ -597,6 +714,8 @@ export class RegistrarPagoDrawerComponent {
       voucher_amount: 0,
       document_number: '',
     });
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
     this.saveError.set(null);
   }
 }
