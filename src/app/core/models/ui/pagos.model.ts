@@ -35,3 +35,32 @@ export interface MetodoPago {
   /** Lucide icon name. */
   icono: string;
 }
+
+/** UI model para el resumen del estado de cuenta de una matrícula específica. */
+export interface EstadoCuentaResumen {
+  enrollmentId: number;
+  alumno: string;
+  rut: string;
+  email: string | null;
+  telefono: string | null;
+  curso: string;
+  basePrice: number;
+  descuento: number;
+  /** basePrice - descuento */
+  totalACurso: number;
+  totalPagado: number;
+  saldoPendiente: number;
+  paymentStatus: string | null;
+}
+
+/** UI model para una fila del historial de pagos de una matrícula específica. */
+export interface EstadoCuentaHistorialItem {
+  id: number;
+  fecha: string | null;
+  concepto: string | null;
+  metodo: string;
+  metodoIcono: string;
+  nroDocumento: string | null;
+  monto: number;
+  estado: string | null;
+}

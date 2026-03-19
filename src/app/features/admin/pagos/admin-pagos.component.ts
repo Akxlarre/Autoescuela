@@ -8,11 +8,13 @@ import {
   signal,
 } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
+import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
 /** Convierte un monto CLP a representación compacta (K / M) para KPI cards. */
@@ -182,6 +184,7 @@ const POR_PAGINA = 5;
                     class="text-xs font-medium"
                     style="color: var(--text-secondary)"
                     [attr.data-llm-action]="'view-detail-enrollment-' + alumno.enrollmentId"
+                    (click)="openDetalle(alumno.enrollmentId)"
                   >
                     Ver detalle
                   </button>
@@ -532,6 +535,7 @@ const POR_PAGINA = 5;
 })
 export class AdminPagosComponent implements OnInit {
   protected readonly facade = inject(PagosFacade);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Funciones puras expuestas al template
@@ -673,6 +677,11 @@ export class AdminPagosComponent implements OnInit {
   }
 
   // ── Drawer: abrir / guardar ───────────────────────────────────────────────────
+
+  protected openDetalle(enrollmentId: number): void {
+    this.facade.seleccionarEnrollment(enrollmentId);
+    this.drawer.push(AdminPagoDetalleDrawerComponent, 'Estado de Cuenta', 'file-text');
+  }
 
   protected openDrawer(alumno?: AlumnoDeudor): void {
     this.drawerEnrollmentId.set(alumno?.enrollmentId ?? null);

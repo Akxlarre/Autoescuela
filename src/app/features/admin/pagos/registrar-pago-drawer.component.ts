@@ -99,7 +99,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             }
 
             <!-- Info del alumno seleccionado -->
-            @if (selectedAlumno(); as alumno) {
+            @if (selectedAlumno; as alumno) {
               <div class="alumno-info-card" style="margin-top: 4px">
                 <div class="flex flex-col gap-0.5">
                   <span
@@ -566,13 +566,13 @@ export class RegistrarPagoDrawerComponent {
   /** Modo global: drawer abierto sin matrícula preseleccionada. */
   protected readonly modoGlobal = computed(() => this.enrollmentId() === null);
 
-  /** Alumno seleccionado en modo global — lookup reactivo sobre el signal del facade. */
-  protected readonly selectedAlumno = computed<AlumnoDeudor | null>(() => {
+  /** Alumno seleccionado en modo global — getter evaluado en cada CD del formulario. */
+  protected get selectedAlumno(): AlumnoDeudor | null {
     if (!this.modoGlobal()) return null;
     const eid = this.form.get('enrollment_id')?.value;
     if (!eid) return null;
     return this.facade.alumnosConDeuda().find((a) => a.enrollmentId === Number(eid)) ?? null;
-  });
+  }
 
   // ── Formulario reactivo ─────────────────────────────────────────────────────
   protected readonly form = this.fb.group(

@@ -1,6 +1,12 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import type { AlumnoDeudor, MetodoPago, PagoReciente } from '@core/models/ui/pagos.model';
+import type {
+  AlumnoDeudor,
+  EstadoCuentaHistorialItem,
+  EstadoCuentaResumen,
+  MetodoPago,
+  PagoReciente,
+} from '@core/models/ui/pagos.model';
 import { toISODate } from '@core/utils/date.utils';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
@@ -69,6 +75,12 @@ export class PagosFacade {
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
+  // ── Estado de cuenta (detalle por matrícula) ─────────────────────────────────
+  private readonly _enrollmentSeleccionado = signal<number | null>(null);
+  private readonly _estadoCuentaResumen = signal<EstadoCuentaResumen | null>(null);
+  private readonly _estadoCuentaHistorial = signal<EstadoCuentaHistorialItem[]>([]);
+  private readonly _isLoadingDetalle = signal<boolean>(false);
+
   /** SWR guard: evita re-fetch con skeleton en revisitas. */
   private _initialized = false;
 
@@ -87,6 +99,12 @@ export class PagosFacade {
   readonly error = this._error.asReadonly();
 
   readonly totalDeudores = computed(() => this._alumnosConDeuda().length);
+
+  // ── Estado de cuenta expuesto ─────────────────────────────────────────────────
+  readonly enrollmentSeleccionado = this._enrollmentSeleccionado.asReadonly();
+  readonly estadoCuentaResumen = this._estadoCuentaResumen.asReadonly();
+  readonly estadoCuentaHistorial = this._estadoCuentaHistorial.asReadonly();
+  readonly isLoadingDetalle = this._isLoadingDetalle.asReadonly();
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 3. MÉTODOS DE ACCIÓN
@@ -360,5 +378,102 @@ export class PagosFacade {
 
     // Paso 3: Refrescar todos los signals de forma silenciosa
     await this.refreshSilently();
+  }
+
+  // ── Estado de cuenta ──────────────────────────────────────────────────────────
+
+  /** Guarda el enrollment seleccionado antes de abrir el drawer de detalle. */
+  seleccionarEnrollment(enrollmentId: number): void {
+    this._enrollmentSeleccionado.set(enrollmentId);
+  }
+
+  /**
+   * Carga el resumen y el historial de pagos de una matrícula específica.
+   * Llamado por AdminPagoDetalleDrawerComponent en ngOnInit.
+   */
+  async cargarEstadoCuenta(enrollmentId: number): Promise<void> {
+    this._isLoadingDetalle.set(true);
+    try {
+      await Promise.all([
+        this.fetchEstadoCuentaResumen(enrollmentId),
+        this.fetchEstadoCuentaHistorial(enrollmentId),
+      ]);
+    } catch {
+      // Datos parciales siguen visibles si una consulta falla
+    } finally {
+      this._isLoadingDetalle.set(false);
+    }
+  }
+
+  private async fetchEstadoCuentaResumen(enrollmentId: number): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select(
+        `id, base_price, discount, total_paid, pending_balance, payment_status,
+         students!inner(users!inner(first_names, paternal_last_name, rut, email, phone)),
+         courses!inner(name)`,
+      )
+      .eq('id', enrollmentId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      this._estadoCuentaResumen.set(null);
+      return;
+    }
+
+    const user = (data as any).students?.users;
+    const base = data.base_price ?? 0;
+    const desc = data.discount ?? 0;
+
+    this._estadoCuentaResumen.set({
+      enrollmentId: data.id,
+      alumno: user ? `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim() : '—',
+      rut: user?.rut ?? '—',
+      email: user?.email ?? null,
+      telefono: user?.phone ?? null,
+      curso: (data as any).courses?.name ?? '—',
+      basePrice: base,
+      descuento: desc,
+      totalACurso: base - desc,
+      totalPagado: data.total_paid ?? 0,
+      saldoPendiente: data.pending_balance ?? 0,
+      paymentStatus: data.payment_status ?? null,
+    });
+  }
+
+  private async fetchEstadoCuentaHistorial(enrollmentId: number): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('payments')
+      .select(
+        `id, payment_date, type, total_amount,
+         transfer_amount, cash_amount, card_amount, voucher_amount,
+         document_number, status`,
+      )
+      .eq('enrollment_id', enrollmentId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    this._estadoCuentaHistorial.set(
+      (data ?? []).map((row: any) => {
+        const { metodo, icono } = resolveMetodo({
+          transfer_amount: row.transfer_amount ?? 0,
+          cash_amount: row.cash_amount ?? 0,
+          card_amount: row.card_amount ?? 0,
+          voucher_amount: row.voucher_amount ?? 0,
+        });
+        return {
+          id: row.id,
+          fecha: row.payment_date ?? null,
+          concepto: row.type ?? null,
+          metodo,
+          metodoIcono: icono,
+          nroDocumento: row.document_number ?? null,
+          monto: row.total_amount ?? 0,
+          estado: row.status ?? null,
+        };
+      }),
+    );
   }
 }
