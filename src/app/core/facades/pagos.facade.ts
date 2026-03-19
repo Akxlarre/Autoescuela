@@ -296,4 +296,69 @@ export class PagosFacade {
         .sort((a, b) => b.porcentaje - a.porcentaje),
     );
   }
+
+  // ── Registrar nuevo pago ──────────────────────────────────────────────────────
+
+  /**
+   * Registra un nuevo pago en Supabase de forma secuencial:
+   *   Paso 1 — INSERT en `payments`
+   *   Paso 2 — UPDATE en `enrollments` (total_paid, pending_balance, payment_status)
+   *   Paso 3 — refreshSilently() para actualizar todos los Signals de la UI
+   *
+   * @param enrollmentId  Matrícula relacionada; null para pagos sin matrícula.
+   * @param payload       Datos del formulario de pago.
+   * @param montosActuales Valores actuales de la matrícula (para recalcular saldos).
+   */
+  async registrarNuevoPago(
+    enrollmentId: number | null,
+    payload: {
+      payment_date: string;
+      type: string;
+      total_amount: number;
+      cash_amount: number;
+      transfer_amount: number;
+      card_amount: number;
+      voucher_amount: number;
+      document_number: string | null;
+    },
+    montosActuales: { total_paid: number; pending_balance: number } | null,
+  ): Promise<void> {
+    // Paso 1: Insertar pago
+    const { error: insertError } = await this.supabase.client.from('payments').insert({
+      enrollment_id: enrollmentId,
+      type: payload.type,
+      total_amount: payload.total_amount,
+      cash_amount: payload.cash_amount,
+      transfer_amount: payload.transfer_amount,
+      card_amount: payload.card_amount,
+      voucher_amount: payload.voucher_amount,
+      document_number: payload.document_number || null,
+      payment_date: payload.payment_date,
+      status: 'completado',
+      requires_receipt: false,
+    });
+
+    if (insertError) throw new Error(`Error al registrar pago: ${insertError.message}`);
+
+    // Paso 2: Actualizar matrícula (solo si hay enrollment vinculado)
+    if (enrollmentId !== null && montosActuales !== null) {
+      const newTotalPaid = montosActuales.total_paid + payload.total_amount;
+      const newPendingBalance = Math.max(0, montosActuales.pending_balance - payload.total_amount);
+      const newPaymentStatus = newPendingBalance <= 0 ? 'paid' : 'partial';
+
+      const { error: updateError } = await this.supabase.client
+        .from('enrollments')
+        .update({
+          total_paid: newTotalPaid,
+          pending_balance: newPendingBalance,
+          payment_status: newPaymentStatus,
+        })
+        .eq('id', enrollmentId);
+
+      if (updateError) throw new Error(`Error al actualizar matrícula: ${updateError.message}`);
+    }
+
+    // Paso 3: Refrescar todos los signals de forma silenciosa
+    await this.refreshSilently();
+  }
 }

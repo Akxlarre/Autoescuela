@@ -8,9 +8,11 @@ import {
   signal,
 } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
+import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
 /** Convierte un monto CLP a representación compacta (K / M) para KPI cards. */
@@ -27,7 +29,12 @@ const POR_PAGINA = 5;
   selector: 'app-admin-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [KpiCardVariantComponent, SkeletonBlockComponent, IconComponent],
+  imports: [
+    KpiCardVariantComponent,
+    SkeletonBlockComponent,
+    IconComponent,
+    RegistrarPagoDrawerComponent,
+  ],
   template: `
     <div class="p-6 flex flex-col gap-6">
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
@@ -43,6 +50,7 @@ const POR_PAGINA = 5;
         <button
           class="btn-primary flex items-center gap-2 shrink-0"
           data-llm-action="register-payment"
+          (click)="openDrawer()"
         >
           <app-icon name="plus" [size]="16" />
           Registrar Pago
@@ -180,6 +188,7 @@ const POR_PAGINA = 5;
                   <button
                     class="btn-primary text-xs px-3 py-1.5"
                     [attr.data-llm-action]="'register-payment-enrollment-' + alumno.enrollmentId"
+                    (click)="openDrawer(alumno)"
                   >
                     Registrar pago
                   </button>
@@ -441,6 +450,7 @@ const POR_PAGINA = 5;
             <button
               class="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-left btn-primary"
               data-llm-action="quick-register-payment"
+              (click)="openDrawer()"
             >
               <app-icon name="plus" [size]="16" />
               Registrar Pago
@@ -507,6 +517,17 @@ const POR_PAGINA = 5;
         </div>
       }
     </div>
+
+    <!-- ── Drawer: Registrar Pago ──────────────────────────────────────────── -->
+    <app-registrar-pago-drawer
+      [isOpen]="drawerOpen()"
+      [enrollmentId]="drawerEnrollmentId()"
+      [alumnoNombre]="drawerAlumnoNombre()"
+      [saldoPendiente]="drawerSaldoPendiente()"
+      [pagadoActual]="drawerPagadoActual()"
+      (closed)="drawerOpen.set(false)"
+      (saved)="onDrawerSaved()"
+    />
   `,
 })
 export class AdminPagosComponent implements OnInit {
@@ -528,6 +549,13 @@ export class AdminPagosComponent implements OnInit {
   protected readonly filtroEstado = signal('todos');
   protected readonly filtroMetodo = signal('todos');
   protected readonly paginaActual = signal(1);
+
+  // ── Estado del drawer ─────────────────────────────────────────────────────────
+  protected readonly drawerOpen = signal(false);
+  protected readonly drawerEnrollmentId = signal<number | null>(null);
+  protected readonly drawerAlumnoNombre = signal('');
+  protected readonly drawerSaldoPendiente = signal(0);
+  protected readonly drawerPagadoActual = signal(0);
 
   // ── Computed: tabla filtrada y paginada ──────────────────────────────────────
   protected readonly pagosFiltrados = computed(() => {
@@ -642,5 +670,20 @@ export class AdminPagosComponent implements OnInit {
       default:
         return estado ?? '—';
     }
+  }
+
+  // ── Drawer: abrir / guardar ───────────────────────────────────────────────────
+
+  protected openDrawer(alumno?: AlumnoDeudor): void {
+    this.drawerEnrollmentId.set(alumno?.enrollmentId ?? null);
+    this.drawerAlumnoNombre.set(alumno?.alumno ?? '');
+    this.drawerSaldoPendiente.set(alumno?.saldo ?? 0);
+    this.drawerPagadoActual.set(alumno?.pagado ?? 0);
+    this.drawerOpen.set(true);
+  }
+
+  protected onDrawerSaved(): void {
+    // PagosFacade.registrarNuevoPago() ya llama refreshSilently() internamente.
+    // Los signals se actualizan solos; no se necesita acción adicional aquí.
   }
 }
