@@ -1,7 +1,55 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
+import type { AlumnoDeudor, MetodoPago, PagoReciente } from '@core/models/ui/pagos.model';
 import { toISODate } from '@core/utils/date.utils';
+
+// ─── Helpers puros ────────────────────────────────────────────────────────────
+
+/** Determina el método de pago a partir de los montos parciales. */
+function resolveMetodo(row: {
+  transfer_amount: number;
+  cash_amount: number;
+  card_amount: number;
+  voucher_amount: number;
+}): { metodo: string; icono: string } {
+  const activos = [
+    row.transfer_amount > 0 && { metodo: 'Transferencia', icono: 'landmark' },
+    row.cash_amount > 0 && { metodo: 'Efectivo', icono: 'banknote' },
+    row.card_amount > 0 && { metodo: 'Débito/Crédito', icono: 'credit-card' },
+    row.voucher_amount > 0 && { metodo: 'WebPay', icono: 'monitor' },
+  ].filter(Boolean) as { metodo: string; icono: string }[];
+
+  if (activos.length === 0) return { metodo: '—', icono: 'dollar-sign' };
+  if (activos.length === 1) return activos[0];
+  return { metodo: 'Mixto', icono: 'dollar-sign' };
+}
+
+/** Config de métodos para el cálculo de distribución mensual. */
+const METODOS_CONFIG: { key: keyof MontosRow; metodo: string; color: string; icono: string }[] = [
+  {
+    key: 'transfer_amount',
+    metodo: 'Transferencia',
+    color: 'var(--color-primary)',
+    icono: 'landmark',
+  },
+  { key: 'cash_amount', metodo: 'Efectivo', color: 'var(--state-success)', icono: 'banknote' },
+  {
+    key: 'card_amount',
+    metodo: 'Débito/Crédito',
+    color: 'var(--color-purple)',
+    icono: 'credit-card',
+  },
+  { key: 'voucher_amount', metodo: 'WebPay', color: 'var(--state-warning)', icono: 'monitor' },
+];
+
+interface MontosRow {
+  transfer_amount: number;
+  cash_amount: number;
+  card_amount: number;
+  voucher_amount: number;
+}
+
+// ─── Facade ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
 export class PagosFacade {
@@ -16,6 +64,8 @@ export class PagosFacade {
   private readonly _boletasMes = signal<number>(0);
   private readonly _pagosPendientesTotales = signal<number>(0);
   private readonly _alumnosConDeuda = signal<AlumnoDeudor[]>([]);
+  private readonly _pagosRecientes = signal<PagoReciente[]>([]);
+  private readonly _metodosPagoMes = signal<MetodoPago[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
@@ -31,21 +81,17 @@ export class PagosFacade {
   readonly boletasMes = this._boletasMes.asReadonly();
   readonly pagosPendientesTotales = this._pagosPendientesTotales.asReadonly();
   readonly alumnosConDeuda = this._alumnosConDeuda.asReadonly();
+  readonly pagosRecientes = this._pagosRecientes.asReadonly();
+  readonly metodosPagoMes = this._metodosPagoMes.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
 
-  /** Cantidad de alumnos con saldo pendiente (computed). */
   readonly totalDeudores = computed(() => this._alumnosConDeuda().length);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 3. MÉTODOS DE ACCIÓN
   // ══════════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Inicializa el facade con patrón SWR.
-   * Primera visita: muestra skeleton + carga datos.
-   * Revisitas: datos cacheados visibles, refresca en background silencioso.
-   */
   async initialize(): Promise<void> {
     if (this._initialized) {
       this.refreshSilently();
@@ -56,7 +102,7 @@ export class PagosFacade {
     this._error.set(null);
     try {
       await this.fetchAll();
-    } catch (err) {
+    } catch {
       this._error.set('Error al cargar los datos de pagos.');
     } finally {
       this._isLoading.set(false);
@@ -77,6 +123,8 @@ export class PagosFacade {
       this.fetchBoletasMes(firstOfMonth, lastOfMonth),
       this.fetchPagosPendientes(),
       this.fetchAlumnosConDeuda(),
+      this.fetchPagosRecientes(),
+      this.fetchMetodosPagoMes(firstOfMonth, lastOfMonth),
     ]);
   }
 
@@ -88,7 +136,7 @@ export class PagosFacade {
     }
   }
 
-  // ── Queries individuales ──────────────────────────────────────────────────────
+  // ── KPI: Ingresos hoy ────────────────────────────────────────────────────────
 
   private async fetchIngresosHoy(today: string): Promise<void> {
     const { data, error } = await this.supabase.client
@@ -97,32 +145,36 @@ export class PagosFacade {
       .eq('payment_date', today);
 
     if (error) throw error;
-    const total = (data ?? []).reduce((acc, row) => acc + (row.total_amount ?? 0), 0);
-    this._ingresosHoy.set(total);
+    this._ingresosHoy.set((data ?? []).reduce((acc, r) => acc + (r.total_amount ?? 0), 0));
   }
 
-  private async fetchIngresosMes(firstOfMonth: string, lastOfMonth: string): Promise<void> {
+  // ── KPI: Ingresos mes ────────────────────────────────────────────────────────
+
+  private async fetchIngresosMes(first: string, last: string): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('payments')
       .select('total_amount')
-      .gte('payment_date', firstOfMonth)
-      .lte('payment_date', lastOfMonth);
+      .gte('payment_date', first)
+      .lte('payment_date', last);
 
     if (error) throw error;
-    const total = (data ?? []).reduce((acc, row) => acc + (row.total_amount ?? 0), 0);
-    this._ingresosMes.set(total);
+    this._ingresosMes.set((data ?? []).reduce((acc, r) => acc + (r.total_amount ?? 0), 0));
   }
 
-  private async fetchBoletasMes(firstOfMonth: string, lastOfMonth: string): Promise<void> {
+  // ── KPI: Boletas mes ─────────────────────────────────────────────────────────
+
+  private async fetchBoletasMes(first: string, last: string): Promise<void> {
     const { count, error } = await this.supabase.client
       .from('payments')
       .select('id', { count: 'exact', head: true })
-      .gte('payment_date', firstOfMonth)
-      .lte('payment_date', lastOfMonth);
+      .gte('payment_date', first)
+      .lte('payment_date', last);
 
     if (error) throw error;
     this._boletasMes.set(count ?? 0);
   }
+
+  // ── KPI: Pagos pendientes ─────────────────────────────────────────────────────
 
   private async fetchPagosPendientes(): Promise<void> {
     const { data, error } = await this.supabase.client
@@ -132,28 +184,19 @@ export class PagosFacade {
       .neq('status', 'draft');
 
     if (error) throw error;
-    const total = (data ?? []).reduce((acc, row) => acc + (row.pending_balance ?? 0), 0);
-    this._pagosPendientesTotales.set(total);
+    this._pagosPendientesTotales.set(
+      (data ?? []).reduce((acc, r) => acc + (r.pending_balance ?? 0), 0),
+    );
   }
+
+  // ── Alumnos con deuda ────────────────────────────────────────────────────────
 
   private async fetchAlumnosConDeuda(): Promise<void> {
     const { data, error } = await this.supabase.client
       .from('enrollments')
       .select(
-        `
-        id,
-        base_price,
-        discount,
-        total_paid,
-        pending_balance,
-        students!inner(
-          users!inner(
-            first_names,
-            paternal_last_name,
-            rut
-          )
-        )
-      `,
+        `id, base_price, discount, total_paid, pending_balance,
+         students!inner(users!inner(first_names, paternal_last_name, rut))`,
       )
       .gt('pending_balance', 0)
       .neq('status', 'draft')
@@ -161,19 +204,96 @@ export class PagosFacade {
 
     if (error) throw error;
 
-    const deudores: AlumnoDeudor[] = (data ?? []).map((row: any) => {
-      const user = row.students?.users;
-      const totalAPagar = (row.base_price ?? 0) - (row.discount ?? 0);
-      return {
-        enrollmentId: row.id,
-        alumno: user ? `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim() : '—',
-        rut: user?.rut ?? '—',
-        totalAPagar,
-        pagado: row.total_paid ?? 0,
-        saldo: row.pending_balance ?? 0,
-      };
-    });
+    this._alumnosConDeuda.set(
+      (data ?? []).map((row: any) => {
+        const user = row.students?.users;
+        return {
+          enrollmentId: row.id,
+          alumno: user ? `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim() : '—',
+          rut: user?.rut ?? '—',
+          totalAPagar: (row.base_price ?? 0) - (row.discount ?? 0),
+          pagado: row.total_paid ?? 0,
+          saldo: row.pending_balance ?? 0,
+        };
+      }),
+    );
+  }
 
-    this._alumnosConDeuda.set(deudores);
+  // ── Pagos recientes ───────────────────────────────────────────────────────────
+
+  private async fetchPagosRecientes(): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('payments')
+      .select(
+        `id, payment_date, type, total_amount,
+         transfer_amount, cash_amount, card_amount, voucher_amount,
+         document_number, status,
+         enrollments(
+           students(
+             users(first_names, paternal_last_name)
+           )
+         )`,
+      )
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    this._pagosRecientes.set(
+      (data ?? []).map((row: any) => {
+        const user = row.enrollments?.students?.users;
+        const { metodo, icono } = resolveMetodo({
+          transfer_amount: row.transfer_amount ?? 0,
+          cash_amount: row.cash_amount ?? 0,
+          card_amount: row.card_amount ?? 0,
+          voucher_amount: row.voucher_amount ?? 0,
+        });
+        return {
+          id: row.id,
+          fecha: row.payment_date ?? null,
+          alumno: user ? `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim() : '—',
+          concepto: row.type ?? null,
+          monto: row.total_amount ?? 0,
+          metodo,
+          metodoIcono: icono,
+          nroDocumento: row.document_number ?? null,
+          estado: row.status ?? null,
+        };
+      }),
+    );
+  }
+
+  // ── Métodos de pago del mes ───────────────────────────────────────────────────
+
+  private async fetchMetodosPagoMes(first: string, last: string): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('payments')
+      .select('transfer_amount, cash_amount, card_amount, voucher_amount')
+      .gte('payment_date', first)
+      .lte('payment_date', last);
+
+    if (error) throw error;
+
+    const rows = data ?? [];
+
+    const totals = METODOS_CONFIG.map((cfg) => ({
+      ...cfg,
+      total: rows.reduce((acc, r: any) => acc + (r[cfg.key] ?? 0), 0),
+    }));
+
+    const grandTotal = totals.reduce((acc, m) => acc + m.total, 0);
+
+    this._metodosPagoMes.set(
+      totals
+        .filter((m) => m.total > 0)
+        .map((m) => ({
+          metodo: m.metodo,
+          total: m.total,
+          porcentaje: grandTotal > 0 ? Math.round((m.total / grandTotal) * 100) : 0,
+          color: m.color,
+          icono: m.icono,
+        }))
+        .sort((a, b) => b.porcentaje - a.porcentaje),
+    );
   }
 }
