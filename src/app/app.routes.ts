@@ -164,10 +164,29 @@ export const routes: Routes = [
           },
           {
             path: 'flota',
-            loadComponent: () =>
-              import('./features/admin/flota/admin-flota.component').then(
-                (m) => m.AdminFlotaComponent,
-              ),
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./features/admin/flota/admin-flota.component').then(
+                    (m) => m.AdminFlotaComponent,
+                  ),
+              },
+              {
+                path: 'hoja-de-ruta/:id',
+                loadComponent: () =>
+                  import('./features/admin/flota/route-sheet/route-sheet.component').then(
+                    (m) => m.RouteSheetComponent,
+                  ),
+              },
+              {
+                path: ':id/mantenimientos',
+                loadComponent: () =>
+                  import('./features/admin/flota/vehicle-maintenances/vehicle-maintenances.component').then(
+                    (m) => m.VehicleMaintenancesComponent,
+                  ),
+              },
+            ],
           },
           {
             path: 'instructores',

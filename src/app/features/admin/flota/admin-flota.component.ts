@@ -1,32 +1,74 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 
+// Facades
+import { FlotaFacade } from '@core/facades/flota.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+
+// Shared Components
+import { FlotaListContentComponent } from '@shared/components/flota-list-content/flota-list-content.component';
+
+// Drawer Contents
+import { VehicleFormDrawerComponent } from './vehicle-form-drawer/vehicle-form-drawer.component';
+import { VehicleAgendaDrawerComponent } from './vehicle-agenda-drawer/vehicle-agenda-drawer.component';
+import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehicle-documents-drawer.component';
+
+/**
+ * AdminFlotaComponent — Smart Page (Admin)
+ *
+ * Wrapper delgado que inyecta FlotaFacade y delega el renderizado
+ * al componente reutilizable FlotaListContentComponent.
+ */
 @Component({
   selector: 'app-admin-flota',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [FlotaListContentComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Flota</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /admin/flota</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/admin/flota.astro
-        </code>
-      </div>
-    </div>
+    <app-flota-list-content
+      basePath="/app/admin"
+      [vehicles]="facade.filteredVehicles()"
+      [kpis]="facade.kpis()"
+      [isLoading]="facade.isLoading()"
+      (refreshRequested)="facade.init()"
+      (newVehicle)="openVehicleForm()"
+      (editVehicle)="openVehicleForm($event)"
+      (viewAgenda)="openAgenda($event)"
+      (manageDocuments)="openDocuments($event)"
+      (typeFilterChange)="facade.setTypeFilter($event)"
+      (statusFilterChange)="facade.setStatusFilter($event)"
+      (searchChange)="onLocalSearch($event)"
+    />
   `,
 })
-export class AdminFlotaComponent {}
+export class AdminFlotaComponent implements OnInit {
+  protected readonly facade = inject(FlotaFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  // Filtro local adicional si el facade no lo hace (aunque FlotaFacade suele hacerlo)
+  protected readonly localSearchTerm = signal('');
+
+  ngOnInit(): void {
+    this.facade.init();
+  }
+
+  protected onLocalSearch(term: string): void {
+    // Aquí podrías implementar búsqueda client-side si el facade no lo hace,
+    // pero FlotaFacade ya suele filtrar por señales.
+    console.log('Buscando:', term);
+  }
+
+  protected openVehicleForm(id?: number): void {
+    this.facade.selectVehicle(id ?? null);
+    this.layoutDrawer.open(VehicleFormDrawerComponent, id ? 'Editar Vehículo' : 'Nuevo Vehículo', 'car');
+  }
+
+  protected openAgenda(id: number): void {
+    this.facade.selectVehicle(id);
+    this.layoutDrawer.open(VehicleAgendaDrawerComponent, 'Agenda del Vehículo', 'calendar');
+  }
+
+  protected openDocuments(id: number): void {
+    this.facade.selectVehicle(id);
+    this.layoutDrawer.open(VehicleDocumentsDrawerComponent, 'Documentación del Vehículo', 'file-text');
+  }
+}
