@@ -15,6 +15,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
+import { RentabilidadCursosComponent } from './rentabilidad-cursos.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
 /** Convierte un monto CLP a representación compacta (K / M) para KPI cards. */
@@ -36,6 +37,7 @@ const POR_PAGINA = 5;
     SkeletonBlockComponent,
     IconComponent,
     RegistrarPagoDrawerComponent,
+    RentabilidadCursosComponent,
   ],
   template: `
     <div class="p-6 flex flex-col gap-6">
@@ -507,6 +509,11 @@ const POR_PAGINA = 5;
             </button>
           </div>
         </div>
+      </div>
+
+      <!-- ── Rentabilidad por Tipo de Curso (RF-040) ───────────────────────── -->
+      <div class="card p-6">
+        <app-rentabilidad-cursos />
       </div>
 
       <!-- Error global -->

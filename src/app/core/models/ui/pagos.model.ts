@@ -1,3 +1,14 @@
+/** UI model para una fila de la tabla Rentabilidad Estimada por Tipo de Curso (RF-040). */
+export interface RentabilidadCurso {
+  tipoCurso: string;
+  ingresos: number;
+  gastosDirectos: number;
+  margenNeto: number;
+  rentabilidadPorcentaje: number;
+  /** CSS custom property, ej: 'var(--color-primary)' */
+  colorVisual: string;
+}
+
 /** UI model para un alumno con saldo pendiente en la vista de Gestión de Pagos. */
 export interface AlumnoDeudor {
   enrollmentId: number;
