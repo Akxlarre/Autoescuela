@@ -538,17 +538,23 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleSubmitPreInscription(supabase: any, body: any) {
-  const { branchId, personalData, courseType, convalidatesSimultaneously } = body;
+  const { branchId, personalData, courseType, convalidatesSimultaneously, psychTestAnswers } = body;
 
   if (!branchId || !personalData || !courseType) {
     return errorResponse('Missing required fields for pre-inscription');
+  }
+
+  // Validar respuestas del test psicológico (81 booleanos obligatorios)
+  if (!Array.isArray(psychTestAnswers) || psychTestAnswers.length !== 81) {
+    return errorResponse('Se requieren las 81 respuestas del test psicológico');
   }
 
   try {
     // 1. Find or create user
     const userId = await findOrCreateUser(supabase, personalData, branchId);
 
-    // 2. Create pre-registration
+    // 2. Create pre-registration con respuestas del test
+    // NOTA: psych_test_result se deja NULL intencionalmente — lo determina el psicólogo.
     const { data: preReg, error: preRegError } = await supabase
       .from('professional_pre_registrations')
       .insert({
@@ -557,8 +563,13 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
         requested_license_class: courseTypeToLicenseClass(courseType),
         convalidates_simultaneously: convalidatesSimultaneously ?? false,
         registration_channel: 'online',
-        status: 'pending',
+        status: 'pending_review',
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         notes: `Pre-inscripción online — ${courseType}${convalidatesSimultaneously ? ' (con convalidación simultánea)' : ''}`,
+        psych_test_answers: psychTestAnswers,
+        psych_test_status: 'completed',
+        psych_test_completed_at: new Date().toISOString(),
+        // psych_test_result: null — el psicólogo lo actualiza manualmente desde el admin.
       })
       .select('id')
       .single();
@@ -571,7 +582,8 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
     return jsonResponse({
       success: true,
       preRegistrationId: preReg.id,
-      message: 'Tu pre-inscripción ha sido recibida. Un ejecutivo se pondrá en contacto contigo.',
+      message:
+        'Tu pre-inscripción y test psicológico han sido recibidos. Un ejecutivo se pondrá en contacto contigo.',
     });
   } catch (err) {
     console.error('submit-pre-inscription error:', err);
@@ -842,6 +854,12 @@ async function handleConfirmPayment(supabase: any, body: any) {
         .from('enrollments')
         .update({ status: 'cancelled' })
         .eq('id', attempt.enrollment_id);
+      // Liberar slots: sin esto quedan 'reserved' indefinidamente y la vista los marca como ocupados
+      await supabase
+        .from('class_b_sessions')
+        .update({ status: 'cancelled' })
+        .eq('enrollment_id', attempt.enrollment_id)
+        .eq('status', 'reserved');
       return jsonResponse({
         success: false,
         rejected: true,

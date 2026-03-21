@@ -5,6 +5,25 @@ import { PublicEnrollmentFacade } from '@core/facades/public-enrollment.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 type RetornoStatus = 'loading' | 'success' | 'rejected' | 'error';
+type RejectedReason = 'cancelled' | 'bank_rejected';
+
+function humanizeWebpayError(message: string | null): string {
+  if (!message) return 'La transacción no pudo completarse.';
+  if (/cancelaste/i.test(message)) return message;
+  // Detectar código de respuesta Webpay y reemplazar con texto amigable
+  const codeMatch = message.match(/código\s+(-?\d+)/i);
+  if (codeMatch) {
+    const code = parseInt(codeMatch[1], 10);
+    if (code === -1)
+      return 'Tu banco rechazó la transacción. Esto puede deberse a fondos insuficientes, límite de crédito alcanzado o restricciones temporales de tu tarjeta.';
+    if (code === -2) return 'La tarjeta no está habilitada para transacciones de este tipo.';
+    if (code === -3) return 'Se superó el monto máximo permitido por operación.';
+    if (code === -4) return 'La fecha de expiración ingresada no es correcta.';
+    if (code === -5) return 'El problema es de tipo cambiario. Intenta con otra tarjeta.';
+    return 'El banco rechazó la autorización del pago. Puedes intentar con otra tarjeta o contactar a tu banco.';
+  }
+  return message;
+}
 
 @Component({
   selector: 'app-public-enrollment-retorno',
@@ -151,26 +170,56 @@ type RetornoStatus = 'loading' | 'success' | 'rejected' | 'error';
             <div class="flex flex-col items-center gap-4">
               <div
                 class="w-16 h-16 rounded-full flex items-center justify-center"
-                style="background: var(--color-error-muted)"
+                [style.background]="
+                  rejectedReason() === 'cancelled'
+                    ? 'var(--color-warning-muted)'
+                    : 'var(--color-error-muted)'
+                "
               >
-                <app-icon name="x-circle" [size]="32" style="color: var(--color-error)" />
+                <app-icon
+                  [name]="rejectedReason() === 'cancelled' ? 'circle-x' : 'x-circle'"
+                  [size]="32"
+                  [style.color]="
+                    rejectedReason() === 'cancelled' ? 'var(--color-warning)' : 'var(--color-error)'
+                  "
+                />
               </div>
-              <div class="flex flex-col gap-1">
-                <h1 class="text-xl font-semibold text-primary">Pago rechazado</h1>
-                <p class="text-secondary text-sm">
-                  Tu pago no pudo ser procesado. No se realizó ningún cargo.
+
+              @if (rejectedReason() === 'cancelled') {
+                <div class="flex flex-col gap-1 text-center">
+                  <h1 class="text-xl font-semibold text-primary">Pago cancelado</h1>
+                  <p class="text-secondary text-sm">
+                    No completaste el proceso de pago en Webpay. No se realizó ningún cargo.
+                  </p>
+                </div>
+                <p class="text-secondary text-sm text-center">
+                  Puedes intentarlo de nuevo cuando quieras. Tu sesión de matrícula sigue
+                  disponible.
                 </p>
-              </div>
-              <p class="text-secondary text-sm">
-                {{ errorMessage() ?? 'Por favor intenta nuevamente o elige otro método de pago.' }}
-              </p>
+              } @else {
+                <div class="flex flex-col gap-1 text-center">
+                  <h1 class="text-xl font-semibold text-primary">Pago no autorizado</h1>
+                  <p class="text-secondary text-sm">
+                    Tu banco no autorizó esta transacción. No se realizó ningún cargo a tu cuenta.
+                  </p>
+                </div>
+                <div class="card p-4 w-full text-sm text-secondary space-y-2">
+                  <p>{{ errorMessage() }}</p>
+                  <p class="text-muted text-xs">
+                    Si el problema persiste, intenta con otra tarjeta o contacta a tu banco.
+                  </p>
+                </div>
+              }
+
               <a
                 routerLink="/inscripcion"
-                class="btn-primary mt-2"
+                class="btn-primary mt-2 w-full text-center"
                 data-llm-nav="public-enrollment-retry"
                 data-llm-action="retry-enrollment"
               >
-                Intentar nuevamente
+                {{
+                  rejectedReason() === 'cancelled' ? 'Reintentar pago' : 'Intentar con otra tarjeta'
+                }}
               </a>
             </div>
           }
@@ -212,6 +261,7 @@ export class PublicEnrollmentRetornoComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
 
   readonly status = signal<RetornoStatus>('loading');
+  readonly rejectedReason = signal<RejectedReason>('bank_rejected');
   readonly enrollmentNumber = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
@@ -233,7 +283,8 @@ export class PublicEnrollmentRetornoComponent implements OnInit {
     // Usuario canceló el pago en Webpay (Transbank envía TBK_TOKEN sin token_ws)
     if (!tokenWs && tbkToken) {
       this.status.set('rejected');
-      this.errorMessage.set('Cancelaste el pago en Webpay. Puedes intentarlo nuevamente.');
+      this.rejectedReason.set('cancelled');
+      this.errorMessage.set(null);
       return;
     }
 
@@ -264,7 +315,8 @@ export class PublicEnrollmentRetornoComponent implements OnInit {
       this.paymentMode.set(result.paymentMode ?? null);
       this.status.set('success');
     } else if (result.rejected) {
-      this.errorMessage.set(result.message ?? null);
+      this.rejectedReason.set('bank_rejected');
+      this.errorMessage.set(humanizeWebpayError(result.message ?? null));
       this.status.set('rejected');
     } else {
       this.errorMessage.set(result.message ?? null);

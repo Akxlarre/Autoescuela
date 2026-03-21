@@ -30,7 +30,8 @@ export type PublicWizardStep =
   | 'contract'
   | 'payment'
   | 'confirmation'
-  | 'course-selection'
+  | 'psych-test-intro'
+  | 'psych-test'
   | 'pre-confirmation';
 
 interface PublicStepConfig {
@@ -87,6 +88,8 @@ interface PublicEnrollmentDraft {
   selectedSlotIds: string[];
   selectedCourseType: CourseType | null;
   convalidatesSimultaneously: boolean;
+  /** Respuestas EPQ: 81 booleanos (null = sin responder). */
+  psychTestAnswers: (boolean | null)[];
   /** Ruta en Storage (bucket 'documents') de la foto temporal subida en el paso documents. */
   carnetStoragePath: string | null;
 }
@@ -151,6 +154,8 @@ export class PublicEnrollmentFacade {
   // ── Professional pre-inscription ──
   private readonly _selectedCourseType = signal<CourseType | null>(null);
   private readonly _convalidatesSimultaneously = signal(false);
+  /** Respuestas EPQ: array de 81 elementos (null = sin responder, true = Sí, false = No). */
+  private readonly _psychTestAnswers = signal<(boolean | null)[]>(Array(81).fill(null));
 
   // ── Documents ──
   /** Ruta en Storage (sin bucket) del archivo temporal subido por el usuario público. */
@@ -191,6 +196,7 @@ export class PublicEnrollmentFacade {
   readonly selectedInstructorId = this._selectedInstructorId.asReadonly();
   readonly selectedCourseType = this._selectedCourseType.asReadonly();
   readonly convalidatesSimultaneously = this._convalidatesSimultaneously.asReadonly();
+  readonly psychTestAnswers = this._psychTestAnswers.asReadonly();
   /** URL pública de la foto de carnet subida temporalmente al Storage. */
   readonly carnetPhotoUrl = computed<string | null>(() => {
     const path = this._carnetStoragePath();
@@ -282,8 +288,10 @@ export class PublicEnrollmentFacade {
         return this._signedContractFile() !== null;
       case 'payment':
         return true; // Webpay gestionará la validación
-      case 'course-selection':
-        return this._selectedCourseType() !== null;
+      case 'psych-test':
+        return this._psychTestAnswers().every((a) => a !== null);
+      case 'pre-confirmation':
+        return true;
       default:
         return false;
     }
@@ -374,10 +382,17 @@ export class PublicEnrollmentFacade {
       this._currentStep.set('payment-mode');
       this.updateStepStatus('payment-mode', 'active');
     } else {
-      this._currentStep.set('course-selection');
-      this.updateStepStatus('course-selection', 'active');
+      this._selectedCourseType.set(data.courseType);
+      this._convalidatesSimultaneously.set(data.convalidatesSimultaneously);
+      this._currentStep.set('psych-test-intro');
+      this.updateStepStatus('psych-test', 'active');
     }
     this.saveDraft();
+  }
+
+  /** Avanza de la pantalla de introducción al test psicológico al test en sí. */
+  startPsychTest(): void {
+    this._currentStep.set('psych-test');
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -737,10 +752,19 @@ export class PublicEnrollmentFacade {
     this._convalidatesSimultaneously.set(convalidation);
   }
 
-  confirmCourseSelection(): void {
-    this.updateStepStatus('course-selection', 'completed');
+  /** Actualiza las respuestas del test psicológico y persiste el draft. */
+  savePsychTestAnswers(answers: (boolean | null)[]): void {
+    this._psychTestAnswers.set(answers);
+    this.saveDraft();
+  }
+
+  /** Marca el test como completado y avanza a pre-confirmación. */
+  confirmPsychTest(): void {
+    this.updateStepStatus('psych-test', 'completed');
     this._currentStep.set('pre-confirmation');
     this.updateStepStatus('pre-confirmation', 'active');
+    this._hasDraftToRestore.set(false);
+    // No se guarda el draft: el submit ya limpió localStorage.
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -833,6 +857,7 @@ export class PublicEnrollmentFacade {
           },
           courseType,
           convalidatesSimultaneously: this._convalidatesSimultaneously(),
+          psychTestAnswers: this._psychTestAnswers(),
         },
       });
 
@@ -844,6 +869,7 @@ export class PublicEnrollmentFacade {
       const result: PublicEnrollmentResult = { success: true, message: data?.message };
       this._result.set(result);
       this.updateStepStatus('pre-confirmation', 'completed');
+      this.clearDraft();
       return result;
     } catch {
       this._error.set('Error inesperado al enviar pre-inscripción');
@@ -881,6 +907,7 @@ export class PublicEnrollmentFacade {
     this._selectedSlotIds.set([]);
     this._selectedCourseType.set(null);
     this._convalidatesSimultaneously.set(false);
+    this._psychTestAnswers.set(Array(81).fill(null));
     this._carnetStoragePath.set(null);
     this._contractPdfUrl.set(null);
     this._signedContractFile.set(null);
@@ -913,10 +940,24 @@ export class PublicEnrollmentFacade {
       'payment',
       'confirmation',
     ];
+    // psych-test-intro: pantalla intermedia entre personal-data y psych-test
+    if (current === 'psych-test-intro') {
+      this.updateStepStatus('psych-test', 'pending');
+      this._currentStep.set('personal-data');
+      this.updateStepStatus('personal-data', 'active');
+      return;
+    }
+
+    // Desde psych-test (profesional) retrocedemos a la intro, no a personal-data
+    if (current === 'psych-test' && flow === 'professional') {
+      this._currentStep.set('psych-test-intro');
+      return;
+    }
+
     const professionalOrder: PublicWizardStep[] = [
       'branch',
       'personal-data',
-      'course-selection',
+      'psych-test',
       'pre-confirmation',
     ];
 
@@ -972,13 +1013,14 @@ export class PublicEnrollmentFacade {
     this._selectedSlotIds.set(draft.selectedSlotIds);
     this._selectedCourseType.set(draft.selectedCourseType);
     this._convalidatesSimultaneously.set(draft.convalidatesSimultaneously);
+    this._psychTestAnswers.set(draft.psychTestAnswers ?? Array(81).fill(null));
     this._carnetStoragePath.set(draft.carnetStoragePath ?? null);
 
     // Restaurar paso actual y marcar anteriores como completados
     this._currentStep.set(draft.currentStep);
     const stepOrder: PublicWizardStep[] =
       draft.flowType === 'professional'
-        ? ['branch', 'personal-data', 'course-selection', 'pre-confirmation']
+        ? ['branch', 'personal-data', 'psych-test', 'pre-confirmation']
         : [
             'branch',
             'personal-data',
@@ -1043,6 +1085,7 @@ export class PublicEnrollmentFacade {
     this._selectedInstructorId.set(null);
     this._selectedCourseType.set(null);
     this._convalidatesSimultaneously.set(false);
+    this._psychTestAnswers.set(Array(81).fill(null));
     this._carnetStoragePath.set(null);
     this._contractPdfUrl.set(null);
     this._signedContractFile.set(null);
@@ -1132,7 +1175,7 @@ export class PublicEnrollmentFacade {
       this._steps.set([
         { id: 'branch', label: 'Sede', status: 'completed' },
         { id: 'personal-data', label: 'Datos personales', status: 'pending' },
-        { id: 'course-selection', label: 'Curso', status: 'pending' },
+        { id: 'psych-test', label: 'Test Psicológico', status: 'pending' },
         { id: 'pre-confirmation', label: 'Confirmación', status: 'pending' },
       ]);
     }
@@ -1199,6 +1242,7 @@ export class PublicEnrollmentFacade {
       selectedSlotIds: this._selectedSlotIds(),
       selectedCourseType: this._selectedCourseType(),
       convalidatesSimultaneously: this._convalidatesSimultaneously(),
+      psychTestAnswers: this._psychTestAnswers(),
       carnetStoragePath: this._carnetStoragePath(),
     };
 

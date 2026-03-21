@@ -45,6 +45,7 @@
 |------------|----------------|-------------------|-----------|--------|
 | `app-branch-course-selector` | Dumb / Matrícula | `branches` (BranchOption[], req). Outputs: `branchSelect` (BranchOption), `flowSelect` (PublicFlowType), `confirm` (void). Two-phase selection: branch cards then flow type cards. Branch 1: only Clase B. Branch 2: Clase B + Profesional. Auto-selects flow when only one option. | `shared/components/matricula-steps/branch-course-selector/branch-course-selector.component.ts` | ✅ Estable |
 | `app-public-confirmation` | Dumb / Matrícula | `type` (PublicConfirmationType, req: 'class_b' \| 'pre-inscription'), `enrollmentNumber` (string\|null), `message` (string\|null). Shows success state with next steps, different content per type. | `shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts` | ✅ Estable |
+| `app-psych-test` | Dumb / Matrícula | `answers` ((boolean\|null)[], req — 81 elementos EPQ). Outputs: `answersChange` ((boolean\|null)[]), `next` (void), `back` (void). Paginado: 6 páginas de ~14 preguntas SI/NO. Barra de progreso interna. Botón "Enviar test" en última página solo si todas respondidas. Estado de página interno (`currentPage` signal). | `shared/components/matricula-steps/psych-test/psych-test.component.ts` | ✅ Estable |
 
 ## Organismos (Organisms)
 *Secciones complejas y autónomas compuestas por moléculas y átomos.*

@@ -24,13 +24,13 @@ import { AssignmentComponent } from '@shared/components/matricula-steps/assignme
 import { DocumentsComponent } from '@shared/components/matricula-steps/documents/documents.component';
 import { ContractComponent } from '@shared/components/matricula-steps/contract/contract.component';
 import { PublicConfirmationComponent } from '@shared/components/matricula-steps/public-confirmation/public-confirmation.component';
+import { PsychTestComponent } from '@shared/components/matricula-steps/psych-test/psych-test.component';
 
 // Models
 import type { BranchOption } from '@core/models/ui/branch.model';
 import type {
   EnrollmentPersonalData,
   CourseCategory,
-  CourseType,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type {
   EnrollmentAssignmentData,
@@ -83,6 +83,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     DocumentsComponent,
     ContractComponent,
     PublicConfirmationComponent,
+    PsychTestComponent,
   ],
   template: `
     <div class="relative flex min-h-dvh flex-col items-center overflow-hidden bg-base px-4 py-8">
@@ -467,57 +468,65 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                 </div>
               }
 
-              <!-- ═══ Step: Course Selection (Professional) ═══ -->
-              @case ('course-selection') {
+              <!-- ═══ Step: Intro Test Psicológico (Professional) ═══ -->
+              @case ('psych-test-intro') {
                 <div class="space-y-6">
-                  <div>
-                    <h2 class="text-lg font-semibold text-primary mb-2">
-                      Selecciona tu curso profesional
-                    </h2>
-                    <p class="text-sm text-secondary mb-6">
-                      Elige la clase de licencia profesional a la que deseas inscribirte.
-                    </p>
+                  <div class="flex items-start gap-4">
+                    <div
+                      class="w-12 h-12 rounded-xl bg-brand-muted flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="brain" [size]="22" color="var(--ds-brand)" />
+                    </div>
+                    <div>
+                      <h2 class="text-lg font-semibold text-primary mb-1">Test Psicológico EPQ</h2>
+                      <p class="text-sm text-secondary">
+                        Como parte del proceso de matrícula para Clase Profesional, debes completar
+                        un cuestionario psicológico obligatorio.
+                      </p>
+                    </div>
                   </div>
 
-                  <div class="grid gap-3">
-                    @for (course of professionalCourses(); track course.type) {
-                      <button
-                        type="button"
-                        class="flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all cursor-pointer
-                               hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
-                        [class.border-[var(--ds-brand)]]="
-                          facade.selectedCourseType() === course.type &&
-                          facade.convalidatesSimultaneously() === course.convalidation
-                        "
-                        [class.bg-brand-muted]="
-                          facade.selectedCourseType() === course.type &&
-                          facade.convalidatesSimultaneously() === course.convalidation
-                        "
-                        [class.border-border]="
-                          facade.selectedCourseType() !== course.type ||
-                          facade.convalidatesSimultaneously() !== course.convalidation
-                        "
-                        [class.bg-surface]="
-                          facade.selectedCourseType() !== course.type ||
-                          facade.convalidatesSimultaneously() !== course.convalidation
-                        "
-                        data-llm-action="select-professional-course"
-                        (click)="facade.selectProfessionalCourse(course.type, course.convalidation)"
-                      >
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-brand-muted"
-                        >
-                          <app-icon [name]="course.icon" [size]="20" />
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="text-sm font-bold text-primary">{{ course.label }}</p>
-                          <p class="text-xs text-secondary">{{ course.description }}</p>
-                        </div>
-                      </button>
-                    }
+                  <div class="card p-4 space-y-3">
+                    <div class="flex items-start gap-3">
+                      <app-icon
+                        name="clipboard-list"
+                        [size]="16"
+                        color="var(--ds-brand)"
+                        class="mt-0.5 shrink-0"
+                      />
+                      <p class="text-sm text-secondary">
+                        <span class="font-medium text-primary">81 preguntas</span> de respuesta Sí /
+                        No.
+                      </p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <app-icon
+                        name="clock"
+                        [size]="16"
+                        color="var(--ds-brand)"
+                        class="mt-0.5 shrink-0"
+                      />
+                      <p class="text-sm text-secondary">
+                        Tiempo estimado:
+                        <span class="font-medium text-primary">10–15 minutos</span>. Responde con
+                        calma y sin interrupciones.
+                      </p>
+                    </div>
+                    <div class="flex items-start gap-3">
+                      <app-icon
+                        name="info"
+                        [size]="16"
+                        color="var(--ds-brand)"
+                        class="mt-0.5 shrink-0"
+                      />
+                      <p class="text-sm text-secondary">
+                        No hay respuestas correctas ni incorrectas. Responde según lo que sientes
+                        que describe mejor tu forma de ser.
+                      </p>
+                    </div>
                   </div>
 
-                  <div class="flex justify-between pt-4">
+                  <div class="flex justify-between pt-2">
                     <button
                       type="button"
                       class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
@@ -526,18 +535,28 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                       <app-icon name="arrow-left" [size]="16" />
                       Volver
                     </button>
-                    @if (facade.selectedCourseType()) {
-                      <button
-                        type="button"
-                        class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer"
-                        data-llm-action="confirm-course-selection"
-                        (click)="onCourseSelectionConfirm()"
-                      >
-                        Enviar pre-inscripción
-                      </button>
-                    }
+                    <button
+                      type="button"
+                      class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer flex items-center gap-2"
+                      data-llm-action="start-psych-test"
+                      (click)="facade.startPsychTest()"
+                    >
+                      <app-icon name="brain" [size]="16" color="white" />
+                      Comenzar test
+                    </button>
                   </div>
                 </div>
+              }
+
+              <!-- ═══ Step: Test Psicológico (Professional) ═══ -->
+              @case ('psych-test') {
+                <app-psych-test
+                  [answers]="facade.psychTestAnswers()"
+                  [loading]="facade.isSubmitting()"
+                  (answersChange)="onPsychTestAnswersChange($event)"
+                  (next)="onPsychTestNext()"
+                  (back)="facade.goBack()"
+                />
               }
 
               <!-- ═══ Confirmation (Clase B) ═══ -->
@@ -754,70 +773,6 @@ export class PublicEnrollmentComponent {
     ];
   });
 
-  readonly professionalCourses = computed(() => {
-    const courses = this.facade.courseOptions();
-    const professional = courses.filter((c) => c.category === 'professional');
-    const result: {
-      type: CourseType;
-      label: string;
-      description: string;
-      icon: string;
-      convalidation: boolean;
-    }[] = [];
-
-    for (const c of professional) {
-      if (c.type === 'professional_a2') {
-        result.push({
-          type: c.type,
-          label: 'Clase A2',
-          description: 'Taxis, vehículos de transporte de pasajeros.',
-          icon: 'car',
-          convalidation: false,
-        });
-        result.push({
-          type: c.type,
-          label: 'Clase A2 + convalidación A4',
-          description: 'A2 con convalidación simultánea de Clase A4.',
-          icon: 'car',
-          convalidation: true,
-        });
-      } else if (c.type === 'professional_a3') {
-        result.push({
-          type: c.type,
-          label: 'Clase A3',
-          description: 'Vehículos de transporte de carga.',
-          icon: 'truck',
-          convalidation: false,
-        });
-      } else if (c.type === 'professional_a4') {
-        result.push({
-          type: c.type,
-          label: 'Clase A4',
-          description: 'Transporte escolar y de trabajadores.',
-          icon: 'bus',
-          convalidation: false,
-        });
-      } else if (c.type === 'professional_a5') {
-        result.push({
-          type: c.type,
-          label: 'Clase A5',
-          description: 'Vehículos de emergencia y maquinaria especial.',
-          icon: 'settings',
-          convalidation: false,
-        });
-        result.push({
-          type: c.type,
-          label: 'Clase A5 + convalidación A3',
-          description: 'A5 con convalidación simultánea de Clase A3.',
-          icon: 'settings',
-          convalidation: true,
-        });
-      }
-    }
-
-    return result;
-  });
-
   // ══════════════════════════════════════════════════════════════════════════════
   // Event handlers
   // ══════════════════════════════════════════════════════════════════════════════
@@ -835,8 +790,7 @@ export class PublicEnrollmentComponent {
   }
 
   onPersonalDataNext(): void {
-    const form = this._step1Form();
-    this.facade.savePersonalData(form);
+    this.facade.savePersonalData(this._step1Form());
   }
 
   onPaymentModeConfirm(): void {
@@ -893,9 +847,15 @@ export class PublicEnrollmentComponent {
     await this.facade.initiatePayment();
   }
 
-  async onCourseSelectionConfirm(): Promise<void> {
-    this.facade.confirmCourseSelection();
-    await this.facade.submitPreInscription();
+  onPsychTestAnswersChange(answers: (boolean | null)[]): void {
+    this.facade.savePsychTestAnswers(answers);
+  }
+
+  async onPsychTestNext(): Promise<void> {
+    const result = await this.facade.submitPreInscription();
+    if (result.success) {
+      this.facade.confirmPsychTest();
+    }
   }
 
   /** Restaura el borrador guardado y retoma el wizard desde el paso guardado. */
