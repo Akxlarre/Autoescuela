@@ -62,6 +62,13 @@ export const routes: Routes = [
         (m) => m.PublicEnrollmentComponent,
       ),
   },
+  {
+    path: 'inscripcion/retorno',
+    loadComponent: () =>
+      import('./features/public-enrollment/retorno/public-enrollment-retorno.component').then(
+        (m) => m.PublicEnrollmentRetornoComponent,
+      ),
+  },
 
   // Rutas protegidas — envueltas en el layout AppShell
   {
