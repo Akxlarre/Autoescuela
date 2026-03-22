@@ -11,6 +11,7 @@
 | `app-icon` | Ícono (Lucide) | `name` (requerido, kebab-case), `size` (default 16), `color` (default currentColor), `ariaHidden` (default true) | `shared/components/icon/icon.component.ts` | ✅ Estable |
 | `app-email-input` | Input de email con validación | `value` (string, req), `id` (string, 'email'), `label` (string, 'Email'), `required` (boolean, false), `placeholder` (string). Output: `valueChange` (string). Muestra feedback en tiempo real: borde rojo + mensaje de error si el email es inválido, borde verde + confirmación si es válido. Usa `validateEmail()` de `core/utils/email.utils.ts`. | `shared/components/email-input/email-input.component.ts` | ✅ Estable |
 | `app-async-btn` | Botón con loading state | `label` (string, req), `icon` (string\|null, kebab-case Lucide), `loading` (boolean, false), `disabled` (boolean, false), `loadingLabel` (string, 'Procesando...'). Muestra spinner `loader` giratorio + `loadingLabel` cuando `loading=true`. Cursor pointer activo, `cursor-not-allowed` + `opacity-50` en estado disabled/loading. Usar `(click)` nativo del host. | `shared/components/async-btn/async-btn.component.ts` | ✅ Estable |
+| `app-dms-viewer-modal` | Organismo / Visor | `doc` (`DmsViewerDocument`, req) — outputs: `closed`. Visor de documentos premium (PDF e imágenes) que se renderiza globalmente en `AppShell`. | `shared/components/dms-viewer-modal/dms-viewer-modal.component.ts` | ✅ Estable |
 
 ## Moléculas (Molecules)
 *Agrupación de átomos que forman una unidad funcional simple (search bar, card preview).*
@@ -69,6 +70,8 @@
 | `app-contract-step` | Organismo / Matricula | `data` (input req): `EnrollmentContractData`. **Flujo físico:** 1) Generar PDF (Edge Fn), 2) Imprimir+firmar físicamente, 3) Subir escaneado. Indicador de 3 pasos visual. `onFileSelected()` valida tipo/tamaño. `clearUpload()` resetea. `canAdvance` = `!!signedContract.file`. Outputs: `dataChange`, `generateContract`, `next`, `back`. Sin `FormsModule` — no hay firma electrónica en UI. | `shared/components/matricula-steps/contract/contract.component.ts` | ✅ Estable |
 | `app-confirmation-step` | Organismo / Matricula | `data` (input signal) — Paso 6 del wizard de matrícula. | `shared/components/matricula-steps/confirmation/confirmation.component.ts` | ✅ Refactored (Signals/Control Flow) |
 | `app-draft-list` | Organismo / Matricula | `drafts` (input req): `DraftSummary[]` — Lista de borradores con mini-stepper (paso activo en `bg-brand`, completados en `bg-brand-muted`), botones `Retomar` (`btn-primary`) y `Descartar` (hover danger). CTA `+ Nueva matrícula` prominente abajo (ancho completo, borde dashed). Outputs: `resume` (enrollmentId), `discard` (enrollmentId — el padre maneja confirmación vía `ConfirmModalService`), `startNew` (void). | `shared/components/matricula-steps/draft-list/draft-list.component.ts` | ✅ Estable |
+| `app-dms-list-content` | Organismo / DMS (Dumb) | `basePath` (string, req), `studentsWithDocs` (`StudentWithDocsRow[]`), `recentDocs` (`DmsDocumentRow[]`), `schoolDocs` (`DmsDocumentRow[]`), `templates` (`TemplateCard[]`), `isLoading` (boolean), `isAdmin` (boolean). Outputs para upload (student, school, template), view, delete, download. 3 pestañas: Alumnos (grid alumnos con chips), Escuela (tabla docs), Plantillas (grid de cards con filtros). Handlers centralizados. | `shared/components/dms-list-content/dms-list-content.component.ts` | ✅ Estable |
+| `app-horizontal-bar-chart` | Organismo / Visualización (Dumb) | `title` (string, ''), `subtitle` (string, ''), `data` (`ChartDataGroup[]`, []). Cada item: `label`, `value` (horas), `color` (`'brand'\|'success'\|'warning'\|'error'\|'info'\|'practica'\|'teorico'\|'ensayo'\|'administrativo'` — mapeado a tokens CSS), `percent`. Renderiza barra apilada + leyenda grid responsive. **IMPORTANTE:** usar `color` semántico (NO `colorHex`). | `shared/components/horizontal-bar-chart/horizontal-bar-chart.component.ts` | ✅ Estable |
 
 ## Layout (Shell)
 *Componentes estructurales del shell de la aplicación — no son páginas enrutables.*
@@ -118,9 +121,12 @@
 | `app-vehicle-agenda-drawer` | Smart / Drawer — Agenda Diaria | `isOpen` (req), `vehicleId` — output: `closed`. Timeline vertical 08:00–18:00. Selector de fecha p-datepicker. Slots: clase (rojo), mantenimiento (amarillo), disponible (verde), vacío. | `FlotaFacade` | `features/admin/flota/vehicle-agenda-drawer/vehicle-agenda-drawer.component.ts` | ✅ Estable |
 | `app-maintenance-form-drawer` | Smart / Drawer — Registrar Mantenimiento | `isOpen` (req), `vehicleId` — outputs: `closed`, `saved`. Campos: tipo, KM, costo CLP, taller, fecha realización, fecha próximo servicio, observaciones. | `FlotaDetalleFacade` | `features/admin/flota/maintenance-form-drawer/maintenance-form-drawer.component.ts` | ✅ Estable |
 | `app-vehicle-documents-drawer` | Smart / Drawer — Documentos del Vehículo | `isOpen` (req), `vehicleId` — outputs: `closed`, `saved`. Gestiona los 4 docs: SOAP, Rev. Técnica, Permiso Circ., Seguro. Upsert en `vehicle_documents`. Muestra estado actual de docs con badges de color. | `FlotaFacade` | `features/admin/flota/vehicle-documents-drawer/vehicle-documents-drawer.component.ts` | ✅ Estable |
+| `app-dms-upload-drawer` | Smart / Drawer — Subir Documento DMS | `isOpen` (req), `uploadMode` ('student'\|'school'), `preselectedStudentId` (number\|null) — outputs: `closed`, `saved`. Drag & drop, validación file type/size. Selector de alumno reactivo si mode=student. | `features/admin/documentos/dms-upload-drawer/dms-upload-drawer.component.ts` | ✅ Estable |
+| `app-dms-template-drawer` | Smart / Drawer — Nueva Plantilla DMS | `isOpen` (req) — outputs: `closed`, `saved`. Admin-only. Carga plantillas con nombre, categoría, descripción. Detección automática de formato (PDF, DOCX, etc). | `features/admin/documentos/dms-template-drawer/dms-template-drawer.component.ts` | ✅ Estable |
 | `/app/admin/instructores` | Stub PLANO | — | `features/admin/instructores/admin-instructores.component.ts` | 🚧 Stub |
 | `/app/admin/certificacion` | Stub PLANO | — | `features/admin/certificacion/admin-certificacion.component.ts` | 🚧 Stub |
-| `/app/admin/documentos` | Stub PLANO | — | `features/admin/documentos/admin-documentos.component.ts` | 🚧 Stub |
+| `/app/admin/documentos` | **Repositorio Central (DMS)** — Smart page para admins. CRUD completo de documentos de alumnos, institucionales y plantillas. Coordina drawers y delegación a `DmsListContentComponent`. | `DmsFacade`, `ConfirmModalService` | `features/admin/documentos/admin-documentos.component.ts` | ✅ Estable |
+| `/app/admin/documentos/alumnos/:id` | **Detalle Docs Alumno** — Lista completa de documentos de un alumno específico. Breadcrumb nav, upload dedicado, delete con confirmación. | `DmsFacade`, `AuthFacade` | `features/admin/documentos/alumno-docs-detalle/admin-alumno-docs-detalle.component.ts` | ✅ Estable |
 | `/app/admin/usuarios` | Stub PLANO | — | `features/admin/usuarios/admin-usuarios.component.ts` | 🚧 Stub |
 | `/app/admin/secretarias` | Stub PLANO | — | `features/admin/secretarias/admin-secretarias.component.ts` | 🚧 Stub |
 | `/app/admin/tareas` | Stub PLANO | — | `features/admin/tareas/admin-tareas.component.ts` | 🚧 Stub |
@@ -142,7 +148,7 @@
 | `/app/secretaria/contabilidad/cuadratura` | Stub PLANO | — | `features/secretaria/contabilidad-cuadratura/secretaria-contabilidad-cuadratura.component.ts" | 🚧 Stub |
 | `/app/secretaria/contabilidad/reportes` | Stub PLANO | — | `features/secretaria/contabilidad-reportes/secretaria-contabilidad-reportes.component.ts" | 🚧 Stub |
 | `/app/secretaria/certificados` | Stub PLANO | — | `features/secretaria/certificados/secretaria-certificados.component.ts" | 🚧 Stub |
-| `/app/secretaria/documentos` | Stub PLANO | — | `features/secretaria/documentos/secretaria-documentos.component.ts" | 🚧 Stub |
+| `/app/secretaria/documentos` | **Repositorio DMS (Secretaria)** — Versión simplificada para secretaría. Solo visualización y carga de documentos de alumnos/escuela. Sin eliminación de registros ni gestión de plantillas (`isAdmin=false`). | `DmsFacade` | `features/secretaria/documentos/secretaria-documentos.component.ts" | ✅ Estable |
 | `/app/secretaria/instructores` | Stub PLANO | — | `features/secretaria/instructores/secretaria-instructores.component.ts" | 🚧 Stub |
 | `/app/secretaria/comunicaciones` | Stub PLANO | — | `features/secretaria/comunicaciones/secretaria-comunicaciones.component.ts" | 🚧 Stub |
 | `/app/secretaria/observaciones` | Stub PLANO | — | `features/secretaria/observaciones/secretaria-observaciones.component.ts" | 🚧 Stub |
@@ -156,16 +162,17 @@
 | `/app/secretaria/libro-de-clases` | Stub PLANO — mockup: `libro-de-clases.astro` (raíz) | — | `features/secretaria/libro-de-clases/secretaria-libro-de-clases.component.ts" | 🚧 Stub |
 | `/app/secretaria/ex-alumnos` | Stub PLANO | — | `features/secretaria/ex-alumnos/secretaria-ex-alumnos.component.ts" | 🚧 Stub |
 | `/app/secretaria/servicios-especiales` | Stub PLANO | — | `features/secretaria/servicios-especiales/secretaria-servicios-especiales.component.ts" | 🚧 Stub |
-| **— PORTAL INSTRUCTOR (9 stubs) —** | | | | |
-| `/app/instructor/dashboard` | Stub PLANO | — | `features/instructor/dashboard/instructor-dashboard.component.ts" | 🚧 Stub |
-| `/app/instructor/alumnos` | Stub PLANO | — | `features/instructor/alumnos/instructor-alumnos.component.ts" | 🚧 Stub |
-| `/app/instructor/clase/iniciar` | Stub PLANO | — | `features/instructor/clase/instructor-clase.component.ts" | 🚧 Stub |
-| `/app/instructor/horario` | Stub PLANO | — | `features/instructor/horario/instructor-horario.component.ts" | 🚧 Stub |
-| `/app/instructor/ensayos-teoricos` | Stub PLANO | — | `features/instructor/ensayos-teoricos/instructor-ensayos-teoricos.component.ts" | 🚧 Stub |
-| `/app/instructor/liquidacion` | Stub PLANO | — | `features/instructor/liquidacion/instructor-liquidacion.component.ts" | 🚧 Stub |
-| `/app/instructor/notificaciones` | Stub PLANO | — | `features/instructor/notificaciones/instructor-notificaciones.component.ts" | 🚧 Stub |
-| `/app/instructor/asistencia` | Stub PLANO | — | `features/instructor/asistencia/instructor-asistencia.component.ts" | 🚧 Stub |
-| `/app/instructor/ayuda` | Stub PLANO | — | `features/instructor/ayuda/instructor-ayuda.component.ts" | 🚧 Stub |
+| **— PORTAL INSTRUCTOR (11 stubs) —** | | | | |
+| `/app/instructor/dashboard` | Dashboard del instructor. 4 KPIs: Hoy, Próxima (hora texto), Completadas Mes, Horas Mes. Grid 2-col: lista clases del día + sidebar (Próximas Clases via `upcomingDays`, Accesos Rápidos, Recordatorio). | `InstructorProfileFacade`, `InstructorClasesFacade`, `InstructorHorasFacade` | `features/instructor/dashboard/instructor-dashboard.component.ts` | ✅ Estable |
+| `/app/instructor/alumnos` | Listado de alumnos asignados. 4 KPIs bento: Total, Activos, Progreso Promedio %, Por Certificar. Cards con avatar (iniciales), barra progreso, filtros búsqueda/estado. Drawer de detalle con contacto + CTA ficha. | `InstructorAlumnosFacade` | `features/instructor/alumnos/instructor-alumnos.component.ts` | ✅ Estable |
+| `/app/instructor/alumnos/:id/ficha` | Ficha técnica del alumno. **3 cards:** Info personal (RUT, email, teléfono, curso) + Clases Prácticas (% con barra de progreso) + Clases Teóricas (% con barra). Tabla con columnas: N°, Fecha, Hora, Instructor, Km Inicio, Km Fin, Observaciones, Estado, Acción. Nota informativa al pie. | `InstructorAlumnosFacade` | `features/instructor/ficha/instructor-ficha.component.ts` | ✅ Estable |
+| `/app/instructor/alumnos/:id/evaluacion/:sessionId` | Formulario de evaluación con checklist, recuadro de firma (Signature Pad) y registro de nota final / observaciones. | `InstructorClasesFacade` | `features/instructor/evaluacion/instructor-evaluacion.component.ts` | ✅ Estable |
+| `/app/instructor/clase/iniciar` | Vista para ingresar kilometraje inicial y comenzar una clase planificada. | `InstructorClasesFacade` | `features/instructor/clase/instructor-clase.component.ts` | ✅ Estable |
+| `/app/instructor/clase-detail/:id` | "Clase Activa" que se muestra mientras el instructor está conduciendo. Permite finalizar y registrar km final. | `InstructorClasesFacade` | `features/instructor/clase-detail/instructor-clase-detail.component.ts` | ✅ Estable |
+| `/app/instructor/horario` | Grilla de horario semanal que muestra las clases agendadas y disponibles (Weekly Schedule Grid). | `InstructorHorasFacade` | `features/instructor/horario/instructor-horario.component.ts` | ✅ Estable |
+| `/app/instructor/ensayos-teoricos` | Asistencia en sala a ensayos teóricos, con opciones para marcar presencia y resultado. | `InstructorAlumnosFacade` | `features/instructor/ensayos-teoricos/instructor-ensayos-teoricos.component.ts` | ✅ Estable |
+| `/app/instructor/liquidacion` | Resumen mensual, gráfico de barras horizontales (desglose de tipos de horas) y KPIs de meta mensual en hrs y CLP. | `InstructorHorasFacade` | `features/instructor/liquidacion/instructor-liquidacion.component.ts` | ✅ Estable |
+| `/app/instructor/notificaciones` | Feed de notificaciones sobre cambios de horario y tareas pendientes. | — | `features/instructor/notificaciones/instructor-notificaciones.component.ts` | ✅ Estable |
 | **— PORTAL ALUMNO (12 stubs) —** | | | | |
 | `/app/alumno/dashboard` | Stub PLANO | — | `features/alumno/dashboard/alumno-dashboard.component.ts" | 🚧 Stub |
 | `/app/alumno/clases` | Stub PLANO | — | `features/alumno/clases/alumno-clases.component.ts" | 🚧 Stub |

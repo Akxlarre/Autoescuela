@@ -30,104 +30,132 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
     AsyncBtnComponent,
     AnimateInDirective,
   ],
+  host: {
+    class: 'flex flex-col h-full',
+  },
   template: `
-    <div class="flex flex-col gap-5 p-1">
-      <!-- Slot seleccionado (solo lectura) -->
-      @if (slot(); as s) {
-        <div class="slot-hero card p-0 overflow-hidden">
-          <!-- Franja de disponibilidad -->
-          <div class="slot-hero-badge">
-            <app-icon name="check-circle" [size]="12" />
-            <span>Cupo disponible</span>
-          </div>
-          <!-- Horario -->
-          <div class="slot-hero-body">
-            <span class="kpi-label">Horario seleccionado</span>
-            <div class="slot-hero-time">{{ s.startTime }} – {{ s.endTime }}</div>
-          </div>
-          <!-- Instructor + Vehículo -->
-          <div class="slot-hero-meta">
-            <div class="slot-meta-row" style="border-bottom: 1px solid var(--color-border)">
-              <div class="slot-meta-icon"><app-icon name="user" [size]="14" /></div>
-              <div class="slot-meta-body">
-                <span class="slot-meta-label">Instructor</span>
-                <span class="slot-meta-value">{{ s.instructorName }}</span>
+    <div class="flex flex-col h-full">
+      <!-- Contenido Principal -->
+      <div class="flex-1 flex flex-col gap-6 p-1">
+        <!-- Slot seleccionado (solo lectura) -->
+        @if (slot(); as s) {
+          <div class="slot-hero card p-0 overflow-hidden" appAnimateIn>
+            <!-- Franja de disponibilidad -->
+            <div class="slot-hero-badge">
+              <app-icon name="check-circle" [size]="12" />
+              <span>Cupo disponible</span>
+            </div>
+            <!-- Horario -->
+            <div class="slot-hero-body">
+              <span class="kpi-label">Horario seleccionado</span>
+              <div class="slot-hero-time">{{ s.startTime }} – {{ s.endTime }}</div>
+            </div>
+            <!-- Instructor + Vehículo -->
+            <div class="slot-hero-meta">
+              <div class="slot-meta-row" style="border-bottom: 1px solid var(--color-border)">
+                <div class="slot-meta-icon"><app-icon name="user" [size]="14" /></div>
+                <div class="slot-meta-body">
+                  <span class="slot-meta-label">Instructor</span>
+                  <span class="slot-meta-value">{{ s.instructorName }}</span>
+                </div>
+              </div>
+              <div class="slot-meta-row">
+                <div class="slot-meta-icon"><app-icon name="car" [size]="14" /></div>
+                <div class="slot-meta-body">
+                  <span class="slot-meta-label">Vehículo</span>
+                  <span class="slot-meta-value">{{ s.vehiclePlate }}</span>
+                </div>
               </div>
             </div>
-            <div class="slot-meta-row">
-              <div class="slot-meta-icon"><app-icon name="car" [size]="14" /></div>
-              <div class="slot-meta-body">
-                <span class="slot-meta-label">Vehículo</span>
-                <span class="slot-meta-value">{{ s.vehiclePlate }}</span>
+          </div>
+        }
+
+        <!-- Selector de alumno -->
+        <div class="flex flex-col gap-2.5">
+          <label class="kpi-label" for="student-select"> Alumno a agendar </label>
+
+          @if (facade.studentsLoading()) {
+            <div class="flex flex-col gap-2">
+              <app-skeleton-block variant="rect" width="100%" height="45px" />
+              <div class="flex gap-2">
+                <app-skeleton-block variant="rect" width="60%" height="20px" />
+                <app-skeleton-block variant="rect" width="30%" height="20px" />
               </div>
             </div>
-          </div>
+          } @else if (facade.agendableStudents().length === 0) {
+            <div class="card p-4 flex items-start gap-3 bg-subtle border-none">
+              <app-icon name="info" [size]="18" class="text-text-muted mt-0.5" />
+              <p class="text-sm text-text-secondary m-0 leading-relaxed">
+                No hay alumnos con clases pendientes de agendar en esta sede.
+              </p>
+            </div>
+          } @else {
+            <p-select
+              inputId="student-select"
+              [options]="studentOptions()"
+              [(ngModel)]="selectedEnrollmentId"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Buscar alumno..."
+              [style]="{ width: '100%' }"
+              styleClass="premium-select"
+              [filter]="true"
+              filterPlaceholder="Escribe el nombre..."
+              [showClear]="true"
+              [attr.data-llm-description]="'Selector de alumno para agendar clase práctica'"
+            />
+          }
         </div>
-      }
 
-      <!-- Selector de alumno -->
-      <div class="flex flex-col gap-2">
-        <label class="kpi-label" for="student-select"> Alumno a agendar </label>
+        <!-- Detalle del alumno seleccionado -->
+        @if (selectedStudent()) {
+          <div class="card p-4 flex flex-col gap-3" appAnimateIn>
+            <div class="flex items-center gap-2">
+              <div class="w-1.5 h-1.5 rounded-full bg-brand"></div>
+              <span class="text-xs font-bold text-text-primary uppercase tracking-wider">
+                {{ selectedStudent()!.courseName }}
+              </span>
+            </div>
 
-        @if (facade.studentsLoading()) {
-          <app-skeleton-block variant="rect" width="100%" height="40px" />
-          <app-skeleton-block variant="rect" width="80%" height="40px" />
-          <app-skeleton-block variant="rect" width="90%" height="40px" />
-        } @else if (facade.agendableStudents().length === 0) {
-          <div class="card p-3 flex items-start gap-2">
-            <app-icon name="info" [size]="15" />
-            <p class="text-sm text-text-muted m-0">
-              No hay alumnos con clases pendientes de agendar en esta sede.
-            </p>
+            <div class="flex flex-col gap-2 pt-1">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-text-muted">Clases agendadas</span>
+                <span class="text-xs font-semibold text-text-primary">
+                  {{ selectedStudent()!.scheduledSessions }} de {{ selectedStudent()!.totalSessions }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-text-muted">Estado de disponibilidad</span>
+                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-surface border"
+                      [style.color]="remainingColor()"
+                      [style.borderColor]="remainingColor().replace(')', ', 0.2)')">
+                  {{ selectedStudent()!.remainingSessions }} cupos libres
+                </span>
+              </div>
+            </div>
           </div>
-        } @else {
-          <p-select
-            inputId="student-select"
-            [options]="studentOptions()"
-            [(ngModel)]="selectedEnrollmentId"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Buscar alumno..."
-            [style]="{ width: '100%' }"
-            [filter]="true"
-            filterPlaceholder="Escribe el nombre..."
-            [showClear]="true"
-            [attr.data-llm-description]="'Selector de alumno para agendar clase práctica'"
-          />
+        }
+
+        <!-- Error -->
+        @if (facade.error()) {
+          <div class="flex items-start gap-2 p-3 rounded-lg bg-[var(--state-error-bg)]/50 border border-[var(--state-error)]" style="color: var(--state-error)">
+            <app-icon name="circle-alert" [size]="16" class="mt-0.5" />
+            <p class="text-xs font-medium m-0 leading-tight">{{ facade.error() }}</p>
+          </div>
         }
       </div>
 
-      <!-- Detalle del alumno seleccionado -->
-      @if (selectedStudent()) {
-        <div class="card p-3 flex flex-col gap-2" appAnimateIn>
-          <span class="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-            {{ selectedStudent()!.courseName }}
-          </span>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-text-muted">Clases asignadas</span>
-            <span class="text-xs font-semibold text-text-primary">
-              {{ selectedStudent()!.scheduledSessions }} / {{ selectedStudent()!.totalSessions }}
-            </span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-text-muted">Cupo restante</span>
-            <span class="text-xs font-bold" [style.color]="remainingColor()">
-              {{ selectedStudent()!.remainingSessions }} clases
-            </span>
-          </div>
-        </div>
-      }
+      <!-- Acciones (Sticky Footer) -->
+      <div class="flex items-center justify-between gap-4 pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"
+           style="border-color: var(--border-subtle);">
+        <button
+          class="cancel-btn-text"
+          (click)="cancel()"
+          data-llm-action="cancel-schedule"
+        >
+          Cancelar reservación
+        </button>
 
-      <!-- Error -->
-      @if (facade.error()) {
-        <div class="flex items-center gap-2" style="color: var(--state-error)">
-          <app-icon name="alert-circle" [size]="14" />
-          <p class="text-xs m-0">{{ facade.error() }}</p>
-        </div>
-      }
-
-      <!-- Acciones -->
-      <div class="flex flex-col gap-2 pt-2 border-t">
         <app-async-btn
           label="Confirmar agendamiento"
           icon="check-circle"
@@ -136,13 +164,6 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
           (click)="confirm()"
           data-llm-action="confirm-schedule-class"
         />
-        <button
-          class="text-sm text-text-muted text-center py-2 hover:text-text-secondary cursor-pointer"
-          (click)="cancel()"
-          data-llm-action="cancel-schedule"
-        >
-          Cancelar
-        </button>
       </div>
     </div>
   `,
@@ -220,6 +241,30 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
       font-size: 0.875rem;
       font-weight: var(--font-semibold);
       color: var(--text-primary);
+    }
+
+    .cancel-btn-text {
+      padding: 0.625rem 0.5rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      cursor: pointer;
+      transition: all var(--duration-standard) var(--ease-standard);
+
+      &:hover {
+        background: var(--bg-subtle);
+        color: var(--text-secondary);
+      }
+    }
+
+    /* Custom styles for PrimeNG Select in drawer */
+    :host ::ng-deep .premium-select {
+        border-radius: var(--radius-lg) !important;
+        background: var(--bg-subtle) !important;
+        border-color: var(--border-subtle) !important;
     }
   `,
 })

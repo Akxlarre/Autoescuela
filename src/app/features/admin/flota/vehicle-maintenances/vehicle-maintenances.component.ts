@@ -239,7 +239,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
       @if (!facade.isLoading() && facade.error()) {
         <div class="bento-banner">
           <app-empty-state
-            icon="alert-circle"
+            icon="circle-alert"
             [message]="facade.error() || 'Error desconocido'"
             subtitle="Hubo un problema al cargar los datos del vehículo."
             actionLabel="Reintentar"

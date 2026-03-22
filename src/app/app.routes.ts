@@ -204,10 +204,22 @@ export const routes: Routes = [
           },
           {
             path: 'documentos',
-            loadComponent: () =>
-              import('./features/admin/documentos/admin-documentos.component').then(
-                (m) => m.AdminDocumentosComponent,
-              ),
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./features/admin/documentos/admin-documentos.component').then(
+                    (m) => m.AdminDocumentosComponent,
+                  ),
+              },
+              {
+                path: 'alumnos/:id',
+                loadComponent: () =>
+                  import('./features/admin/documentos/alumno-docs-detalle/admin-alumno-docs-detalle.component').then(
+                    (m) => m.AdminAlumnoDocsDetalleComponent,
+                  ),
+              },
+            ],
           },
           {
             path: 'usuarios',
@@ -383,10 +395,22 @@ export const routes: Routes = [
           },
           {
             path: 'documentos',
-            loadComponent: () =>
-              import('./features/secretaria/documentos/secretaria-documentos.component').then(
-                (m) => m.SecretariaDocumentosComponent,
-              ),
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./features/secretaria/documentos/secretaria-documentos.component').then(
+                    (m) => m.SecretariaDocumentosComponent,
+                  ),
+              },
+              {
+                path: 'alumnos/:id',
+                loadComponent: () =>
+                  import('./features/admin/documentos/alumno-docs-detalle/admin-alumno-docs-detalle.component').then(
+                    (m) => m.AdminAlumnoDocsDetalleComponent,
+                  ),
+              },
+            ],
           },
           {
             path: 'instructores',
@@ -492,10 +516,34 @@ export const routes: Routes = [
           },
           {
             path: 'alumnos',
-            loadComponent: () =>
-              import('./features/instructor/alumnos/instructor-alumnos.component').then(
-                (m) => m.InstructorAlumnosComponent,
-              ),
+            children: [
+              {
+                path: '',
+                loadComponent: () =>
+                  import('./features/instructor/alumnos/instructor-alumnos.component').then(
+                    (m) => m.InstructorAlumnosComponent,
+                  ),
+              },
+              {
+                path: ':id',
+                redirectTo: ':id/ficha',
+                pathMatch: 'full',
+              },
+              {
+                path: ':id/ficha',
+                loadComponent: () =>
+                  import('./features/instructor/ficha/instructor-ficha.component').then(
+                    (m) => m.InstructorFichaComponent,
+                  ),
+              },
+              {
+                path: ':id/evaluacion/:sessionId',
+                loadComponent: () =>
+                  import('./features/instructor/evaluacion/instructor-evaluacion.component').then(
+                    (m) => m.InstructorEvaluacionComponent,
+                  ),
+              },
+            ],
           },
           {
             path: 'clase/iniciar',
@@ -513,10 +561,8 @@ export const routes: Routes = [
           },
           {
             path: 'ficha/:id',
-            loadComponent: () =>
-              import('./features/instructor/ficha/instructor-ficha.component').then(
-                (m) => m.InstructorFichaComponent,
-              ),
+            redirectTo: 'alumnos/:id/ficha',
+            pathMatch: 'full',
           },
           {
             path: 'horario',
@@ -529,7 +575,7 @@ export const routes: Routes = [
             path: 'ensayos-teoricos',
             loadComponent: () =>
               import('./features/instructor/ensayos-teoricos/instructor-ensayos-teoricos.component').then(
-                (m) => m.InstructorEnsayosTeoricoComponent,
+                (m) => m.InstructorEnsayosTeoricosComponent,
               ),
           },
           {
@@ -544,20 +590,6 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/instructor/notificaciones/instructor-notificaciones.component').then(
                 (m) => m.InstructorNotificacionesComponent,
-              ),
-          },
-          {
-            path: 'asistencia',
-            loadComponent: () =>
-              import('./features/instructor/asistencia/instructor-asistencia.component').then(
-                (m) => m.InstructorAsistenciaComponent,
-              ),
-          },
-          {
-            path: 'ayuda',
-            loadComponent: () =>
-              import('./features/instructor/ayuda/instructor-ayuda.component').then(
-                (m) => m.InstructorAyudaComponent,
               ),
           },
         ],

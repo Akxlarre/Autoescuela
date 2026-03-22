@@ -62,7 +62,7 @@ interface AlumnoKpiItem {
   id: string;
   label: string;
   value: number;
-  icon: 'users' | 'user-check' | 'alert-circle';
+  icon: 'users' | 'user-check' | 'circle-alert';
   color: 'default' | 'success' | 'warning' | 'error';
   accent?: boolean;
   suffix?: string;
@@ -742,7 +742,7 @@ export class AlumnosListContentComponent {
       id: 'deuda',
       label: 'Con deuda',
       value: this.conDeuda(),
-      icon: 'alert-circle',
+      icon: 'circle-alert',
       color: 'warning',
     },
   ]);

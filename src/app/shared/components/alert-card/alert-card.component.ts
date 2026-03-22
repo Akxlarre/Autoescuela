@@ -138,10 +138,10 @@ export class AlertCardComponent {
 
   protected readonly iconName = computed<string>(() => {
     const icons: Record<AlertSeverity, string> = {
-      error:   'alert-circle',
+      error:   'circle-alert',
       warning: 'alert-triangle',
       info:    'info',
-      success: 'check-circle',
+      success: 'circle-check',
     };
     return icons[this.severity()];
   });

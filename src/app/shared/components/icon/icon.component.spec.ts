@@ -71,7 +71,7 @@ describe("IconComponent", () => {
   });
 
   it("should render with a different icon name", () => {
-    fixture.componentRef.setInput("name", "alert-circle");
+    fixture.componentRef.setInput("name", "circle-alert");
     fixture.detectChanges();
     const icon = fixture.nativeElement.querySelector("lucide-icon");
     expect(icon).toBeTruthy();

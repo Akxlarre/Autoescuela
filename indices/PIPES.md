@@ -7,6 +7,7 @@
 | Pipe | Nombre en template | Propósito | Params | Estado |
 |------|--------------------|-----------|--------|--------|
 | `RelativeTimePipe` | `relativeTime` | Convierte fecha a texto relativo ("hace 5 min", "ayer") | `locale` (default: `'es'`) | ✅ Estable |
+| `SafePipe` | `safe` | Bypassea seguridad de Angular para HTML, URL, ResourceUrl, etc. | `type` ('html'|'url'|'resourceUrl'|...) | ✅ Estable |
 
 ## Pipes Nativos de Angular (Recordatorio)
 

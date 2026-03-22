@@ -24,80 +24,81 @@ type StatusConfig = {
   selector: 'app-agenda-slot-detail-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, AnimateInDirective],
+  host: {
+    class: 'flex flex-col h-full',
+  },
   template: `
     @if (slot(); as s) {
-      <div class="detail-content" appAnimateIn>
-        <!-- ── Estado ─────────────────────────────────────────── -->
-        <div
-          class="status-pill"
-          [style.color]="statusCfg().color"
-          [style.background]="statusCfg().bgColor"
-        >
-          <app-icon [name]="statusCfg().icon" [size]="12" />
-          <span>{{ statusCfg().label }}</span>
-        </div>
-
-        <!-- ── Horario (prominente) ───────────────────────────── -->
-        <div class="card p-4 flex flex-col gap-1">
-          <span class="kpi-label">Horario de clase</span>
-          <div class="time-display">{{ s.startTime }} – {{ s.endTime }}</div>
-        </div>
-
-        <!-- ── Instructor + Vehículo ─────────────────────────── -->
-        <div class="info-card card p-0 overflow-hidden">
-          <div class="info-row border-b" style="border-bottom: 1px solid var(--color-border)">
-            <div class="info-icon">
-              <app-icon name="user" [size]="15" />
-            </div>
-            <div class="info-body">
-              <span class="info-label">Instructor</span>
-              <span class="info-value">{{ s.instructorName }}</span>
-            </div>
+      <div class="flex flex-col h-full" appAnimateIn>
+        <!-- Contenido -->
+        <div class="flex-1 flex flex-col gap-5 py-2">
+          <!-- ── Estado ─────────────────────────────────────────── -->
+          <div
+            class="status-pill"
+            [style.color]="statusCfg().color"
+            [style.background]="statusCfg().bgColor"
+          >
+            <app-icon [name]="statusCfg().icon" [size]="12" />
+            <span>{{ statusCfg().label }}</span>
           </div>
-          <div class="info-row">
-            <div class="info-icon">
-              <app-icon name="car" [size]="15" />
-            </div>
-            <div class="info-body">
-              <span class="info-label">Vehículo</span>
-              <span class="info-value">{{ s.vehiclePlate }}</span>
-            </div>
-          </div>
-        </div>
 
-        <!-- ── Alumno ────────────────────────────────────────── -->
-        @if (s.studentName) {
-          <div class="card p-4 flex flex-col gap-2">
-            <span class="kpi-label">Alumno</span>
-            <span class="student-name">{{ s.studentName }}</span>
-            @if (s.classNumber) {
-              <div class="flex items-center gap-2 mt-1">
-                <app-icon name="book-open" [size]="13" />
-                <span class="text-xs" style="color: var(--text-muted)">
-                  Clase {{ s.classNumber }}
-                </span>
+          <!-- ── Horario (prominente) ───────────────────────────── -->
+          <div class="card p-4 flex flex-col gap-1.5">
+            <span class="kpi-label">Horario de clase</span>
+            <div class="time-display">{{ s.startTime }} – {{ s.endTime }}</div>
+          </div>
+
+          <!-- ── Instructor + Vehículo ─────────────────────────── -->
+          <div class="info-card card p-0 overflow-hidden shadow-sm">
+            <div class="info-row" style="border-bottom: 1px solid var(--color-border)">
+              <div class="info-icon">
+                <app-icon name="user" [size]="15" />
               </div>
-            }
+              <div class="info-body">
+                <span class="info-label">Instructor</span>
+                <span class="info-value">{{ s.instructorName }}</span>
+              </div>
+            </div>
+            <div class="info-row">
+              <div class="info-icon">
+                <app-icon name="car" [size]="15" />
+              </div>
+              <div class="info-body">
+                <span class="info-label">Vehículo</span>
+                <span class="info-value">{{ s.vehiclePlate }}</span>
+              </div>
+            </div>
           </div>
-        }
 
-        <!-- ── Acción ────────────────────────────────────────── -->
-        <div class="pt-2" style="border-top: 1px solid var(--color-border)">
+          <!-- ── Alumno ────────────────────────────────────────── -->
+          @if (s.studentName) {
+            <div class="card p-4 flex flex-col gap-3">
+              <span class="kpi-label">Alumno asignado</span>
+              <div class="flex flex-col gap-1">
+                <span class="student-name">{{ s.studentName }}</span>
+                @if (s.classNumber) {
+                  <div class="flex items-center gap-2 mt-1">
+                    <div class="px-1.5 py-0.5 rounded bg-bg-subtle border text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                      Clase {{ s.classNumber }}
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- ── Acción (Sticky Footer) ────────────────────────── -->
+        <div class="flex justify-end pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"
+             style="border-color: var(--border-subtle);">
           <button class="close-btn" (click)="close()" data-llm-action="close-slot-detail">
-            Cerrar
+            Cerrar detalle
           </button>
         </div>
       </div>
     }
   `,
   styles: `
-    .detail-content {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      padding: 0.25rem 0;
-    }
-
     /* ── Status pill ── */
 
     .status-pill {
@@ -159,6 +160,10 @@ type StatusConfig = {
       font-weight: var(--font-medium);
     }
 
+    .info-row:first-child .info-icon {
+        color: var(--ds-brand);
+    }
+
     .info-value {
       font-size: 0.875rem;
       font-weight: var(--font-semibold);
@@ -180,20 +185,20 @@ type StatusConfig = {
     /* ── Close ── */
 
     .close-btn {
-      width: 100%;
-      padding: 0.5rem;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--color-border);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid transparent;
       background: transparent;
       color: var(--text-muted);
-      font-size: var(--text-xs);
+      font-size: var(--text-sm);
       font-weight: var(--font-medium);
       cursor: pointer;
-      transition: background var(--duration-instant) var(--ease-standard);
+      transition: all var(--duration-standard) var(--ease-standard);
 
       &:hover {
-        background: var(--bg-elevated);
+        background: var(--bg-subtle);
         color: var(--text-secondary);
+        border-color: var(--border-subtle);
       }
     }
   `,

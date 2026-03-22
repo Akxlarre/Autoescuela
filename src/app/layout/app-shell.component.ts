@@ -11,8 +11,10 @@ import { SidebarComponent } from './sidebar.component';
 import { TopbarComponent } from './topbar.component';
 import { LayoutDrawerComponent } from './layout-drawer.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms-viewer-modal.component';
 
 /**
  * AppShellComponent — layout principal de rutas protegidas.
@@ -42,11 +44,20 @@ import { AuthFacade } from '@core/facades/auth.facade';
     AnimateInDirective,
     LayoutDrawerComponent,
     IconComponent,
+    DmsViewerModalComponent,
   ],
   template: `
     <!-- Panel de búsqueda — fuera del grid para evitar que overflow:hidden lo recorte -->
     @if (search.isOpen()) {
       <app-search-panel appAnimateIn class="search-panel-overlay" (closed)="search.close()" />
+    }
+
+    <!-- Visor de documentos DMS -->
+    @if (dmsViewer.isOpen()) {
+      <app-dms-viewer-modal
+        [doc]="dmsViewer.currentDoc()!"
+        (closed)="dmsViewer.close()"
+      />
     }
 
     <!-- Modal de confirmación global (usado por guards y servicios imperativos) -->
@@ -69,7 +80,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
             >
               <app-icon
                 [name]="
-                  confirmModal.config()?.severity === 'danger' ? 'alert-circle' : 'alert-triangle'
+                  confirmModal.config()?.severity === 'danger' ? 'circle-alert' : 'alert-triangle'
                 "
                 [size]="20"
                 [class.text-state-warning]="confirmModal.config()?.severity === 'warn'"
@@ -164,6 +175,7 @@ export class AppShellComponent {
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly confirmModal = inject(ConfirmModalService);
+  protected readonly dmsViewer = inject(DmsViewerService);
   private readonly notificationsFacade = inject(NotificationsFacade);
   private readonly auth = inject(AuthFacade);
 
