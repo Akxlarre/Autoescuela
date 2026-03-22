@@ -61,6 +61,7 @@ import {
   CheckSquare,
   ClipboardCheck,
   ClipboardList,
+  ListChecks,
   Clock,
   CreditCard,
   DollarSign,
@@ -88,6 +89,7 @@ import {
   Receipt,
   RefreshCw,
   RotateCcw,
+  Send,
   Scroll,
   ShieldAlert,
   ShieldCheck,
@@ -109,6 +111,16 @@ import {
   // ── Agenda Semanal ──
   CalendarDays,
   CalendarClock,
+  // ── Matrícula pública ──
+  Wallet,
+  FileClock,
+  MapPin,
+  LoaderCircle,
+  // ── Gestión de Secretarias ──
+  AtSign,
+  IdCard,
+  Phone,
+  Save,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -224,6 +236,7 @@ export const appConfig: ApplicationConfig = {
         CheckSquare,
         ClipboardCheck,
         ClipboardList,
+        ListChecks,
         Clock,
         CreditCard,
         DollarSign,
@@ -251,6 +264,7 @@ export const appConfig: ApplicationConfig = {
         Receipt,
         RefreshCw,
         RotateCcw,
+        Send,
         Scroll,
         ShieldAlert,
         ShieldCheck,
@@ -273,6 +287,16 @@ export const appConfig: ApplicationConfig = {
         // Agenda Semanal
         CalendarDays,
         CalendarClock,
+        // Matrícula pública
+        Wallet,
+        FileClock,
+        MapPin,
+        LoaderCircle,
+        // ── Gestión de Secretarias ──
+        AtSign,
+        IdCard,
+        Phone,
+        Save,
       }),
     ),
   ],

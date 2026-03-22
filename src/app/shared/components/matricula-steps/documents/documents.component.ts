@@ -24,6 +24,7 @@ import type { DocumentType } from '@core/models/ui/enrollment-documents.model';
 export class DocumentsComponent {
   data = input.required<EnrollmentDocumentsData>();
   loading = input<boolean>(false);
+  stepNumber = input<number>(3);
   /** Emitido cuando el usuario selecciona un archivo para subir. */
   fileSelected = output<{ type: string; file: File }>();
   /** Emitido al abrir/cerrar el lightbox. null = cerrar. */
