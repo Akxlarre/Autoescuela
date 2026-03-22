@@ -20,15 +20,15 @@ import gsap from 'gsap';
   imports: [ReactiveFormsModule, IconComponent],
   template: `
     <div
-      class="relative flex min-h-[100dvh] flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
+      class="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--ds-brand) 18%, transparent)"></div>
         <div class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--color-primary-dark) 14%, transparent)"></div>
-        <div class="absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent)"></div>
+        <div class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent)"></div>
       </div>
 
-      <div #cardRef class="w-full max-w-[440px]">
+      <div #cardRef class="w-full max-w-110">
         <div class="surface-glass w-full rounded-2xl p-10">
           <div class="mb-8 text-center">
             <div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl" style="background: var(--gradient-primary); box-shadow: 0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)">
@@ -47,7 +47,7 @@ import gsap from 'gsap';
 
           <div #errorMsgRef style="overflow: hidden">
             @if (errorMsg()) {
-              <div class="flex items-center gap-2 rounded-md border border-[var(--state-error-border)] bg-[var(--state-error-bg)] px-4 py-3 text-sm text-error mb-4" role="alert">
+              <div class="flex items-center gap-2 rounded-md border border-(--state-error-border) bg-(--state-error-bg) px-4 py-3 text-sm text-error mb-4" role="alert">
                 <app-icon name="alert-triangle" [size]="14" />
                 {{ errorMsg() }}
               </div>
@@ -63,7 +63,7 @@ import gsap from 'gsap';
                 id="new-password"
                 type="password"
                 formControlName="password"
-                class="w-full box-border rounded-[var(--input-radius)] border border-[var(--input-border-default)] bg-[var(--input-bg)] px-[var(--input-padding-x)] py-[var(--input-padding-y)] font-body text-base text-[var(--input-text)] outline-none transition-[var(--transition-input)] placeholder:text-[var(--input-placeholder)] focus:border-[var(--input-border-focus)] focus:shadow-[var(--input-shadow-focus-neutral)]"
+                class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
                 placeholder="Mínimo 6 caracteres"
                 required
               />
@@ -71,7 +71,7 @@ import gsap from 'gsap';
 
             <button
               type="submit"
-              class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--btn-primary-radius)] border-none bg-[var(--btn-primary-bg)] px-[var(--btn-primary-padding-x)] py-[var(--btn-primary-padding-y)] font-body text-base font-semibold text-[var(--btn-primary-text)] shadow-[var(--btn-primary-shadow)] transition-[var(--transition-btn)] hover:enabled:bg-[var(--btn-primary-bg-hover)] hover:enabled:shadow-[var(--btn-primary-shadow-hover)] active:enabled:scale-[var(--btn-press-scale-value)] disabled:cursor-not-allowed disabled:opacity-70"
+              class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-(--btn-primary-padding-x) py-(--btn-primary-padding-y) font-body font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-(--transition-btn) hover:enabled:bg-(--btn-primary-bg-hover) hover:enabled:shadow-(--btn-primary-shadow-hover) active:enabled:scale-(--btn-press-scale-value) disabled:cursor-not-allowed disabled:opacity-70"
               [disabled]="form.invalid || loading()"
             >
               @if (loading()) {

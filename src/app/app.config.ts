@@ -116,6 +116,11 @@ import {
   FileClock,
   MapPin,
   LoaderCircle,
+  // ── Gestión de Secretarias ──
+  AtSign,
+  IdCard,
+  Phone,
+  Save,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -287,6 +292,11 @@ export const appConfig: ApplicationConfig = {
         FileClock,
         MapPin,
         LoaderCircle,
+        // ── Gestión de Secretarias ──
+        AtSign,
+        IdCard,
+        Phone,
+        Save,
       }),
     ),
   ],
