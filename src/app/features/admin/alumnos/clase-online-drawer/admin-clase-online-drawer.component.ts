@@ -57,7 +57,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
             style="background: color-mix(in srgb, var(--state-warning) 10%, transparent);"
           >
             <app-icon
-              name="alert-circle"
+              name="circle-alert"
               [size]="15"
               style="color: var(--state-warning); margin-top: 2px;"
             />
@@ -177,7 +177,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
             class="flex items-center gap-2 px-4 py-3 rounded-xl"
             style="background: color-mix(in srgb, var(--state-error) 12%, transparent);"
           >
-            <app-icon name="alert-circle" [size]="16" style="color: var(--state-error); shrink-0" />
+            <app-icon name="circle-alert" [size]="16" style="color: var(--state-error); shrink-0" />
             <span class="text-sm" style="color: var(--state-error);">{{ facade.error() }}</span>
           </div>
         }

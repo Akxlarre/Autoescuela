@@ -6,14 +6,16 @@ import Aura from '@primeng/themes/aura';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import {
   LucideAngularModule,
-  // ── Usados por el boilerplate (dashboard, kpi-card, sidebar) ──
+  // ── Icons ──
   Layers,
   Activity,
-  AlertCircle,
+  CircleAlert,
   AlertTriangle,
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   BarChart2,
+  CircleCheck,
   CheckCircle,
   ChevronDown,
   ChevronLeft,
@@ -28,15 +30,11 @@ import {
   User,
   Users,
   UserPlus,
-  // ── Shell support (topbar, login, mobile drawer) ──
   Bell,
   BellOff,
   LogOut,
   Menu,
   Search,
-  X,
-  XCircle,
-  // ── Acciones comunes ──
   Check,
   Circle,
   Edit,
@@ -44,7 +42,11 @@ import {
   Trash2,
   Moon,
   Sun,
-  // ── Autoescuela — iconos de navegación por rol ──
+  CircleX,
+  CircleHelp,
+  CirclePlay,
+  RotateCcw,
+  RefreshCw,
   Archive,
   Award,
   Banknote,
@@ -68,6 +70,7 @@ import {
   Edit3,
   Eye,
   FileCheck,
+  File,
   FilePen,
   FilePlus,
   FileSignature,
@@ -77,7 +80,6 @@ import {
   Printer,
   FolderOpen,
   GraduationCap,
-  HelpCircle,
   Image,
   Landmark,
   Loader,
@@ -85,7 +87,6 @@ import {
   MessageCircle,
   Monitor,
   PenTool,
-  PlayCircle,
   Receipt,
   RefreshCw,
   RotateCcw,
@@ -108,9 +109,33 @@ import {
   Ban,
   Home,
   ZoomIn,
-  // ── Agenda Semanal ──
   CalendarDays,
   CalendarClock,
+  Save,
+  Pencil,
+  Gauge,
+  X,
+  Loader2,
+  FileQuestion,
+  FileBadge,
+  FileCheck2,
+  ExternalLink,
+  FolderSearch,
+  SearchX,
+  MapPin,
+  Phone,
+  LifeBuoy,
+  PlayCircle,
+  HelpCircle,
+  CalendarCheck,
+  MonitorOff,
+  CheckCheck,
+  QrCode,
+  Keyboard,
+  Play,
+  Square,
+  ListChecks,
+  History,
   // ── Matrícula pública ──
   Wallet,
   FileClock,
@@ -126,12 +151,6 @@ import {
 import { routes } from './app.routes';
 import { provideCoreAuth } from '@core/auth/provide-core-auth';
 
-/**
- * Configuración principal de la aplicación.
- *
- * provideCoreAuth() ya incluye provideHttpClient(withInterceptors([authInterceptor])).
- * NO añadas provideHttpClient() por separado o se duplicará.
- */
 export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(
@@ -175,22 +194,16 @@ export const appConfig: ApplicationConfig = {
     provideCoreAuth(),
     MessageService,
     ConfirmationService,
-    /**
-     * Lucide Icons — set completo para todos los roles (46 íconos).
-     *
-     * lucide-angular 0.575 usa LucideAngularModule.pick() (no provideIcons).
-     * Para añadir más: importar de 'lucide-angular' y agregar al objeto.
-     * Referencia: https://lucide.dev/icons
-     */
     importProvidersFrom(
       LucideAngularModule.pick({
-        // Shell & boilerplate
         Activity,
-        AlertCircle,
+        CircleAlert,
         AlertTriangle,
+        AlertCircle,
         ArrowLeft,
         ArrowRight,
         BarChart2,
+        CircleCheck,
         CheckCircle,
         ChevronDown,
         ChevronLeft,
@@ -210,8 +223,6 @@ export const appConfig: ApplicationConfig = {
         LogOut,
         Menu,
         Search,
-        X,
-        XCircle,
         Check,
         Circle,
         Edit,
@@ -219,7 +230,11 @@ export const appConfig: ApplicationConfig = {
         Trash2,
         Moon,
         Sun,
-        // Autoescuela — navegación por rol
+        CircleX,
+        CircleHelp,
+        CirclePlay,
+        RotateCcw,
+        RefreshCw,
         Archive,
         Award,
         Banknote,
@@ -243,6 +258,7 @@ export const appConfig: ApplicationConfig = {
         Edit3,
         Eye,
         FileCheck,
+        File,
         FilePen,
         FilePlus,
         FileSignature,
@@ -252,7 +268,6 @@ export const appConfig: ApplicationConfig = {
         Printer,
         FolderOpen,
         GraduationCap,
-        HelpCircle,
         Image,
         Landmark,
         Loader,
@@ -260,7 +275,6 @@ export const appConfig: ApplicationConfig = {
         MessageCircle,
         Monitor,
         PenTool,
-        PlayCircle,
         Receipt,
         RefreshCw,
         RotateCcw,
@@ -278,15 +292,39 @@ export const appConfig: ApplicationConfig = {
         UserMinus,
         UserX,
         Video,
-        Ban,
         Folder,
+        FolderSearch,
+        SearchX,
+        Wrench,
+        Ban,
         Home,
         Layers,
-        Wrench,
         ZoomIn,
-        // Agenda Semanal
         CalendarDays,
         CalendarClock,
+        Save,
+        Pencil,
+        Gauge,
+        X,
+        Loader2,
+        FileQuestion,
+        FileBadge,
+        FileCheck2,
+        ExternalLink,
+        MapPin,
+        Phone,
+        LifeBuoy,
+        PlayCircle,
+        HelpCircle,
+        CalendarCheck,
+        MonitorOff,
+        CheckCheck,
+        QrCode,
+        Keyboard,
+        Play,
+        Square,
+        ListChecks,
+        History,
         // Matrícula pública
         Wallet,
         FileClock,

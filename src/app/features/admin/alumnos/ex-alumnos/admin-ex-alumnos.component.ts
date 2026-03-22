@@ -91,7 +91,7 @@ interface ComentarioMock {
         <app-kpi-card-variant
           label="CON ABONO PENDIENTE"
           [value]="facade.conAbonoPendiente()"
-          icon="alert-circle"
+          icon="circle-alert"
           color="warning"
           [accent]="true"
           [loading]="facade.isLoading()"

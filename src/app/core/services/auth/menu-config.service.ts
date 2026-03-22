@@ -65,7 +65,11 @@ const ADMIN_NAV: NavGroup[] = [
     items: [
       { label: 'Base de Alumnos', icon: 'users', routerLink: '/app/admin/alumnos' },
       { label: 'Certificados', icon: 'award', routerLink: '/app/admin/certificacion' },
-      { label: 'Servicios Especiales', icon: 'settings', routerLink: '/app/admin/servicios-especiales' },
+      {
+        label: 'Servicios Especiales',
+        icon: 'settings',
+        routerLink: '/app/admin/servicios-especiales',
+      },
     ],
   },
   {
@@ -226,7 +230,6 @@ const INSTRUCTOR_NAV: NavGroup[] = [
       { label: 'Mi Dashboard', icon: 'layout-dashboard', routerLink: '/app/instructor/dashboard' },
       { label: 'Notificaciones', icon: 'bell', routerLink: '/app/instructor/notificaciones' },
       { label: 'Iniciar Clase', icon: 'play-circle', routerLink: '/app/instructor/clase/iniciar' },
-      { label: 'Asistencia', icon: 'clipboard-check', routerLink: '/app/instructor/asistencia' },
     ],
   },
   {
@@ -241,10 +244,6 @@ const INSTRUCTOR_NAV: NavGroup[] = [
       },
       { label: 'Mis Horas', icon: 'dollar-sign', routerLink: '/app/instructor/liquidacion' },
     ],
-  },
-  {
-    group: 'Ayuda',
-    items: [{ label: 'Ayuda', icon: 'help-circle', routerLink: '/app/instructor/ayuda' }],
   },
 ];
 

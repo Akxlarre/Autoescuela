@@ -155,7 +155,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
             <div
               class="mb-6 flex items-center gap-3 rounded-lg border border-border bg-surface p-3 text-sm text-secondary"
             >
-              <app-icon name="alert-circle" [size]="18" color="var(--color-error)" />
+              <app-icon name="circle-alert" [size]="18" color="var(--color-error)" />
               <span class="flex-1">{{ facade.error() }}</span>
               <button
                 type="button"

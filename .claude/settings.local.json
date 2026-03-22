@@ -12,7 +12,9 @@
       "Skill(sync-indices)",
       "Bash(npx ng:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Bash(cat C:UsersAkxlarreDesktopmockwebsrcpagesinstructoralumnos[id]ficha.astro)",
+      "Bash(cat C:/Users/Akxlarre/Desktop/mock/web/src/pages/instructor/alumnos/[id]/ficha.astro)"
     ]
   }
 }

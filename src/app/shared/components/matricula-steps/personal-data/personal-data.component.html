@@ -41,7 +41,7 @@
             />
             @if (data().rut.length > 0 && !rutValid()) {
               <p class="text-xs text-state-error flex items-center gap-1">
-                <app-icon name="alert-circle" [size]="12" />
+                <app-icon name="circle-alert" [size]="12" />
                 RUT inválido — verifica el dígito verificador
               </p>
             } @else if (rutValid()) {

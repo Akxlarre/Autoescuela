@@ -29,7 +29,7 @@ import { LucideAngularModule } from 'lucide-angular';
  * </button>
  *
  * <!-- Ícono semántico (visible para AT) -->
- * <app-icon name="alert-circle" [size]="20" [ariaHidden]="false" ariaLabel="Error de validación" />
+ * <app-icon name="circle-alert" [size]="20" [ariaHidden]="false" ariaLabel="Error de validación" />
  *
  * PROHIBIDO:
  * ❌ Usar emojis como íconos de UI (✅, ⚠️, 🔒)

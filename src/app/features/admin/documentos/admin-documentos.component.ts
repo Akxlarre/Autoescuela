@@ -1,32 +1,134 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+} from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
+import { DmsFacade } from '@core/facades/dms.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import type { TemplateCard } from '@core/models/ui/dms.model';
 
+/**
+ * AdminDocumentosComponent — Smart Page del Módulo DMS (Admin).
+ * Admin tiene CRUD completo: subir, ver, eliminar documentos.
+ */
 @Component({
   selector: 'app-admin-documentos',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    DmsListContentComponent,
+  ],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">DMS — Documentos</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /admin/documentos</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/admin/documentos.astro
-        </code>
-      </div>
-    </div>
+    <!-- Contenido principal -->
+    <app-dms-list-content
+      basePath="/app/admin/documentos"
+      [studentsWithDocs]="facade.studentsWithDocs()"
+      [recentDocs]="facade.recentDocs()"
+      [schoolDocs]="facade.schoolDocs()"
+      [templates]="facade.templates()"
+      [isLoading]="facade.isLoading()"
+      [isAdmin]="isAdmin()"
+      (uploadStudentDoc)="openUploadStudentDrawer()"
+      (uploadSchoolDoc)="openUploadSchoolDrawer()"
+      (uploadTemplate)="facade.openTemplate()"
+      (viewStudentDocs)="onViewStudentDocs($event)"
+      (viewDocument)="onViewDocument($event.url, $event.fileName)"
+      (deleteStudentDoc)="onDeleteStudentDoc($event)"
+      (deleteSchoolDoc)="onDeleteSchoolDoc($event)"
+      (deleteTemplate)="onDeleteTemplate($event)"
+      (downloadTemplate)="onDownloadTemplate($event)"
+    />
   `,
 })
-export class AdminDocumentosComponent {}
+export class AdminDocumentosComponent implements OnInit {
+  readonly facade = inject(DmsFacade);
+  private readonly authFacade = inject(AuthFacade);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly dmsViewer = inject(DmsViewerService);
+
+  // ── Computed ──────────────────────────────────────────────────────────────
+  readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
+
+  ngOnInit(): void {
+    void this.facade.initialize();
+  }
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
+  openUploadStudentDrawer(studentId?: number): void {
+    this.facade.openUpload('student', studentId);
+  }
+
+  openUploadSchoolDrawer(): void {
+    this.facade.openUpload('school');
+  }
+
+  onViewStudentDocs(studentId: number): void {
+    void this.router.navigate(['alumnos', studentId], { relativeTo: this.route });
+  }
+
+  onViewDocument(url: string, fileName?: string): void {
+    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+  }
+
+  async onDeleteStudentDoc(payload: { id: string; source: string }): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar documento',
+      message: '¿Estás seguro de que quieres eliminar este documento? Esta acción no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+    try {
+      await this.facade.deleteStudentDocument(payload.id, payload.source as 'student_document' | 'digital_contract');
+    } catch (err) {
+      console.error('Error al eliminar documento:', err);
+    }
+  }
+
+  async onDeleteSchoolDoc(id: number): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar documento institucional',
+      message: '¿Estás seguro de que quieres eliminar este documento?',
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+    try {
+      await this.facade.deleteSchoolDocument(id);
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+    }
+  }
+
+  async onDeleteTemplate(id: number): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar plantilla',
+      message: '¿Estás seguro de que quieres eliminar esta plantilla? (desactivación suave)',
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+    try {
+      await this.facade.deleteTemplate(id);
+    } catch (err) {
+      console.error('Error al eliminar plantilla:', err);
+    }
+  }
+
+  onDownloadTemplate(template: TemplateCard): void {
+    window.open(template.fileUrl, '_blank');
+    this.facade.incrementDownload(template.id);
+  }
+}

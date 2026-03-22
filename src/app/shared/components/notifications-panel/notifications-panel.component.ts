@@ -96,7 +96,7 @@ export class NotificationsPanelComponent {
       case 'warning':
         return 'alert-triangle';
       case 'error':
-        return 'alert-circle';
+        return 'circle-alert';
       default:
         return 'info';
     }
