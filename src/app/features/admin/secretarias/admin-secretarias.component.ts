@@ -14,6 +14,8 @@ import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-
 import { AdminSecretariasVerDrawerComponent } from './admin-secretarias-ver-drawer.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -26,6 +28,7 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
     DatePipe,
     FormsModule,
     SelectModule,
+    SectionHeroComponent,
     KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -36,25 +39,14 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
   ],
   template: `
     <div class="page-wide">
-      <!-- ── Header ─────────────────────────────────────────────────────────── -->
-      <div class="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold" style="color: var(--text-primary)">
-            Gestión de Secretarias
-          </h1>
-          <p class="text-sm mt-1" style="color: var(--ds-brand)">
-            Control de acceso y gestión de personal de secretaría
-          </p>
-        </div>
-        <button
-          class="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg shrink-0"
-          style="background: var(--ds-brand); color: white; cursor: pointer; border: none;"
-          (click)="crearDrawerOpen.set(true)"
-          data-llm-action="nueva-secretaria"
-        >
-          <app-icon name="plus" [size]="16" />
-          Nueva Secretaria
-        </button>
+      <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+      <div class="mb-6">
+        <app-section-hero
+          title="Gestión de Secretarias"
+          subtitle="Control de acceso y gestión de personal de secretaría"
+          [actions]="heroActions()"
+          (actionClick)="handleHeroAction($event)"
+        />
       </div>
 
       <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
@@ -466,6 +458,15 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 })
 export class AdminSecretariasComponent implements OnInit {
   protected readonly facade = inject(SecretariasFacade);
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  protected readonly heroActions = computed((): SectionHeroAction[] => [
+    { id: 'new', label: 'Nueva Secretaria', icon: 'plus', primary: true },
+  ]);
+
+  protected handleHeroAction(actionId: string): void {
+    if (actionId === 'new') this.crearDrawerOpen.set(true);
+  }
 
   // ── Estado drawers ─────────────────────────────────────────────────────────
   protected readonly crearDrawerOpen = signal(false);

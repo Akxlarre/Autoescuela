@@ -321,6 +321,8 @@ export const appConfig: ApplicationConfig = {
         // ── Gestión de Secretarias ──
         AtSign,
         IdCard,
+        MapPin,
+        Phone,
       }),
     ),
   ],
