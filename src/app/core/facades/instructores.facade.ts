@@ -343,6 +343,7 @@ export class InstructoresFacade {
 
       this._initialized = false;
       this._vehiclesLoaded = false;
+      void this.loadVehicles();
       this.toast.success('Instructor creado', 'La cuenta ha sido creada correctamente.');
       return true;
     } catch (err: unknown) {
@@ -386,7 +387,7 @@ export class InstructoresFacade {
 
       this._initialized = false;
       this._vehiclesLoaded = false;
-      await this.refreshSilently();
+      await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       this.toast.success(
         'Instructor actualizado',
         'Los datos han sido actualizados correctamente.',

@@ -69,7 +69,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('roles ( name )')
+      .select('id, roles ( name )')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
@@ -77,6 +77,13 @@ Deno.serve(async (req: Request) => {
     if (callerRole !== 'admin') {
       return errorResponse('Solo los administradores pueden crear secretarias', 403);
     }
+
+    // Cliente con header de auditoría — propaga el user_id del caller al trigger
+    const supabaseAudit = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+    );
 
     // ── Leer body ─────────────────────────────────────────────────────────────
     const { firstNames, paternalLastName, maternalLastName, rut, email, telefono, branchId } =
@@ -125,7 +132,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUid = authData.user.id;
 
     // ── Insertar en public.users ──────────────────────────────────────────────
-    const { error: insertError } = await supabaseAdmin.from('users').insert({
+    const { error: insertError } = await supabaseAudit.from('users').insert({
       supabase_uid: supabaseUid,
       rut,
       first_names: firstNames,

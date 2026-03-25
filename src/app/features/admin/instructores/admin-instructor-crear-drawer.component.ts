@@ -104,17 +104,25 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
           id="c-rut"
           type="text"
           class="field-input"
-          [class.field-input--error]="rutTouched() && !rutValido()"
+          [class.field-input--error]="rut().length > 0 && !rutValido()"
+          [class.field-input--valid]="rutValido()"
           placeholder="12.345.678-9"
           maxlength="12"
           [ngModel]="rut()"
           (input)="onRutInput($event)"
-          (blur)="rutTouched.set(true)"
           data-llm-description="RUT chileno del instructor, formato 12.345.678-9"
           aria-required="true"
         />
-        @if (rutTouched() && !rutValido()) {
-          <span class="field-error">RUT inválido. Verifica el dígito verificador.</span>
+        @if (rut().length > 0 && !rutValido()) {
+          <span class="field-error flex items-center gap-1">
+            <app-icon name="circle-alert" [size]="12" />
+            RUT inválido. Verifica el dígito verificador.
+          </span>
+        } @else if (rutValido()) {
+          <span class="field-success flex items-center gap-1">
+            <app-icon name="check-circle" [size]="12" />
+            RUT válido
+          </span>
         }
       </div>
 
@@ -279,7 +287,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
         aria-label="Crear nuevo instructor"
       >
         @if (facade.isSubmitting()) {
-          <app-icon name="loader-circle" [size]="15" />
+          <span class="spinner"><app-icon name="loader-circle" [size]="15" /></span>
           Creando...
         } @else {
           <app-icon name="user-plus" [size]="15" />
@@ -329,6 +337,13 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
     .field-input--error {
       border-color: var(--state-error, #ef4444);
     }
+    .field-input--valid {
+      border-color: var(--state-success, #22c55e);
+    }
+    .field-success {
+      font-size: 12px;
+      color: var(--state-success, #22c55e);
+    }
 
     .field-error {
       font-size: 12px;
@@ -376,6 +391,19 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
     .submit-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .spinner {
+      display: inline-flex;
+      animation: spin 0.75s linear infinite;
     }
   `,
 })

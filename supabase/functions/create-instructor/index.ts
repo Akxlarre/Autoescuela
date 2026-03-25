@@ -100,6 +100,13 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Solo administradores y secretarias pueden crear instructores', 403);
     }
 
+    // Cliente con header de auditoría — propaga el user_id del caller al trigger
+    const supabaseAudit = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+    );
+
     // ── Leer body ─────────────────────────────────────────────────────────────
     const {
       firstNames,
@@ -169,7 +176,7 @@ Deno.serve(async (req: Request) => {
     const supabaseUid = authData.user.id;
 
     // ── Insertar en public.users ────────────────────────────────────────────
-    const { data: userRow, error: insertUserError } = await supabaseAdmin
+    const { data: userRow, error: insertUserError } = await supabaseAudit
       .from('users')
       .insert({
         supabase_uid: supabaseUid,
@@ -192,7 +199,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Insertar en public.instructors ───────────────────────────────────────
-    const { data: instructorRow, error: insertInstructorError } = await supabaseAdmin
+    const { data: instructorRow, error: insertInstructorError } = await supabaseAudit
       .from('instructors')
       .insert({
         user_id: userRow.id,

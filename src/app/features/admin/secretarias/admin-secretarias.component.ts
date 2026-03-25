@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-drawer.component';
@@ -313,7 +314,11 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
               <p class="text-xs mb-3" style="color: var(--text-muted)">
                 Revisa el historial de acciones realizadas por las secretarias del sistema.
               </p>
-              <button class="quick-action-btn" data-llm-action="ver-auditoria">
+              <button
+                class="quick-action-btn"
+                (click)="goToAuditoria()"
+                data-llm-action="ver-auditoria"
+              >
                 <app-icon name="clipboard-list" [size]="16" />
                 Ver Auditoría
               </button>
@@ -328,9 +333,9 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
       [isOpen]="crearDrawerOpen()"
       title="Nueva Secretaria"
       icon="user-plus"
-      (closed)="crearDrawerOpen.set(false)"
+      (closed)="onCrearDrawerClosed()"
     >
-      <app-admin-secretarias-crear-drawer (closed)="crearDrawerOpen.set(false)" />
+      <app-admin-secretarias-crear-drawer (closed)="onCrearDrawerClosed()" />
     </app-drawer>
 
     <!-- ── Drawer: Ver Secretaria ───────────────────────────────────────────── -->
@@ -458,6 +463,7 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 })
 export class AdminSecretariasComponent implements OnInit {
   protected readonly facade = inject(SecretariasFacade);
+  private readonly router = inject(Router);
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -564,9 +570,18 @@ export class AdminSecretariasComponent implements OnInit {
     this.verDrawerOpen.set(true);
   }
 
+  protected onCrearDrawerClosed(): void {
+    this.crearDrawerOpen.set(false);
+    this.facade.initialize();
+  }
+
   protected openEditarDrawer(sec: SecretariaTableRow): void {
     this.facade.selectSecretaria(sec);
     this.editarDrawerOpen.set(true);
+  }
+
+  protected goToAuditoria(): void {
+    void this.router.navigate(['/app/admin/auditoria']);
   }
 
   /** Desde el drawer Ver → abrir Editar sin perder la secretaria seleccionada */

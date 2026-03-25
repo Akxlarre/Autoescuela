@@ -96,6 +96,14 @@ Deno.serve(async (req: Request) => {
       return errorResponse('Solo administradores y secretarias pueden editar instructores', 403);
     }
 
+    // Cliente con header de auditoría — propaga el user_id del caller al trigger
+    // log_change() lee 'x-audit-user-id' desde request.headers (PostgREST GUC)
+    const supabaseAudit = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+    );
+
     // ── Leer body ─────────────────────────────────────────────────────────────
     const {
       instructorId,
@@ -171,7 +179,7 @@ Deno.serve(async (req: Request) => {
       userPayload['email'] = email.trim().toLowerCase();
     }
 
-    const { error: updateUserError } = await supabaseAdmin
+    const { error: updateUserError } = await supabaseAudit
       .from('users')
       .update(userPayload)
       .eq('id', userId);
@@ -183,7 +191,7 @@ Deno.serve(async (req: Request) => {
     // ── Actualizar public.instructors ────────────────────────────────────────
     const licenseStatus = computeLicenseStatus(licenseExpiry);
 
-    const { error: updateInstructorError } = await supabaseAdmin
+    const { error: updateInstructorError } = await supabaseAudit
       .from('instructors')
       .update({
         type,

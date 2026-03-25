@@ -187,6 +187,9 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             aria-required="true"
             data-llm-description="Clase de licencia del instructor"
           />
+          @if (licenseClassTouched() && !licenseClassValido()) {
+            <span class="field-error">Selecciona la clase de licencia</span>
+          }
         </div>
 
         <!-- Fecha de vencimiento -->
@@ -202,6 +205,9 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             aria-required="true"
             data-llm-description="Fecha de vencimiento de la licencia"
           />
+          @if (licenseExpiryTouched() && !licenseExpiryValido()) {
+            <span class="field-error">Selecciona la fecha de vencimiento</span>
+          }
         </div>
 
         <!-- Estado de validación (solo lectura) -->
@@ -231,6 +237,9 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             aria-required="true"
             data-llm-description="Tipo de instructor"
           />
+          @if (tipoTouched() && !tipoValido()) {
+            <span class="field-error">Selecciona el tipo de instructor</span>
+          }
         </div>
       </div>
 
@@ -253,7 +262,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
           <span class="text-xs" style="color: var(--text-muted)">
             Solo se muestran vehículos disponibles y el actualmente asignado
           </span>
-          @if (vehicleId() !== currentVehicleId) {
+          @if (vehicleId() !== currentVehicleId()) {
             <span class="text-xs" style="color: var(--text-muted)">
               Al cambiar el vehículo, se creará una nueva entrada en el historial de asignaciones.
             </span>
@@ -356,7 +365,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
           aria-label="Guardar cambios del instructor"
         >
           @if (facade.isSubmitting()) {
-            <app-icon name="loader-circle" [size]="15" />
+            <span class="spinner"><app-icon name="loader-circle" [size]="15" /></span>
             Guardando...
           } @else {
             <app-icon name="check" [size]="15" />
@@ -504,6 +513,19 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .spinner {
+      display: inline-flex;
+      animation: spin 0.75s linear infinite;
+    }
   `,
 })
 export class AdminInstructorEditarDrawerComponent implements OnInit {
@@ -525,13 +547,16 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly activo = signal(true);
 
   protected currentEmail = '';
-  protected currentVehicleId: number | null = null;
+  protected readonly currentVehicleId = signal<number | null>(null);
 
   // ── Touched ────────────────────────────────────────────────────────────────
   protected readonly nombresTouched = signal(false);
   protected readonly paternoTouched = signal(false);
   protected readonly maternoTouched = signal(false);
   protected readonly emailTouched = signal(false);
+  protected readonly licenseClassTouched = signal(false);
+  protected readonly licenseExpiryTouched = signal(false);
+  protected readonly tipoTouched = signal(false);
 
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
@@ -540,6 +565,9 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly emailValido = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim()),
   );
+  protected readonly licenseClassValido = computed(() => !!this.licenseClass());
+  protected readonly licenseExpiryValido = computed(() => !!this.licenseExpiry());
+  protected readonly tipoValido = computed(() => !!this.tipo());
 
   protected readonly licenseStatusPreview = computed(() => {
     const d = this.licenseExpiry();
@@ -564,7 +592,13 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
 
   protected readonly formValido = computed(
     () =>
-      this.nombresValido() && this.paternoValido() && this.maternoValido() && this.emailValido(),
+      this.nombresValido() &&
+      this.paternoValido() &&
+      this.maternoValido() &&
+      this.emailValido() &&
+      this.licenseClassValido() &&
+      this.licenseExpiryValido() &&
+      this.tipoValido(),
   );
 
   // ── Options ────────────────────────────────────────────────────────────────
@@ -585,7 +619,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly vehicleOptions = computed(() =>
     this.facade
       .vehicles()
-      .filter((v) => v.status === 'available' || v.id === this.currentVehicleId)
+      .filter((v) => v.status === 'available' || v.id === this.currentVehicleId())
       .map((v) => ({
         label: v.label,
         value: v.id,
@@ -635,7 +669,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         this.licenseClass.set(inst.licenseClass || null);
         this.tipo.set(inst.tipo);
         this.vehicleId.set(inst.vehicleId);
-        this.currentVehicleId = inst.vehicleId;
+        this.currentVehicleId.set(inst.vehicleId);
         this.activo.set(inst.estado === 'activo');
 
         // Parse license expiry date
@@ -663,6 +697,9 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.paternoTouched.set(true);
     this.maternoTouched.set(true);
     this.emailTouched.set(true);
+    this.licenseClassTouched.set(true);
+    this.licenseExpiryTouched.set(true);
+    this.tipoTouched.set(true);
 
     if (!this.formValido()) return;
 
@@ -684,7 +721,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       licenseExpiry: expiryStr,
       active: this.activo(),
       vehicleId: this.vehicleId(),
-      currentVehicleId: this.currentVehicleId,
+      currentVehicleId: this.currentVehicleId(),
     });
 
     if (ok) {
