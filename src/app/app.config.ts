@@ -133,6 +133,7 @@ import {
   Play,
   Square,
   History,
+  Lock,
   // ── Matrícula pública ──
   Wallet,
   FileClock,
@@ -314,6 +315,7 @@ export const appConfig: ApplicationConfig = {
         Play,
         Square,
         History,
+        Lock,
         // Matrícula pública
         Wallet,
         FileClock,

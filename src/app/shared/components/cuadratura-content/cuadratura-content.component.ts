@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { formatCLP } from '@core/utils/date.utils';
@@ -30,7 +31,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 @Component({
   selector: 'app-cuadratura-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [RouterLink, IconComponent, SkeletonBlockComponent],
   template: `
     <!-- ── Header ─────────────────────────────────────────────────────────── -->
     <div class="flex flex-wrap items-center justify-between gap-4 px-6 pt-6 pb-2">
@@ -64,15 +65,17 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         >
           {{ fechaHoy() }}
         </span>
-        <button
-          class="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg"
-          style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary)"
+        <a
+          [routerLink]="['../historial-cuadraturas']"
+          class="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg cursor-pointer"
+          style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary); text-decoration: none"
           data-llm-action="ver-historial-cuadratura"
+          data-llm-nav="historial-cuadraturas"
           aria-label="Ver historial de cierres de caja"
         >
-          <app-icon name="clock" [size]="15" />
+          <app-icon name="history" [size]="15" />
           Ver Historial
-        </button>
+        </a>
         <button
           class="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg"
           style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary)"
