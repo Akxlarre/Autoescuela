@@ -141,6 +141,8 @@ import {
   // ── Gestión de Secretarias ──
   AtSign,
   IdCard,
+  // ── Liquidaciones ──
+  ArrowRightLeft,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -323,6 +325,10 @@ export const appConfig: ApplicationConfig = {
         // ── Gestión de Secretarias ──
         AtSign,
         IdCard,
+        // ── Liquidaciones ──
+        ArrowRightLeft,
+        MapPin,
+        Phone,
       }),
     ),
   ],

@@ -170,6 +170,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'contabilidad/liquidaciones',
+            loadComponent: () =>
+              import('./features/admin/contabilidad-liquidaciones/admin-contabilidad-liquidaciones.component').then(
+                (m) => m.AdminContabilidadLiquidacionesComponent,
+              ),
+          },
+          {
             path: 'contabilidad/cursos',
             loadComponent: () =>
               import('./features/admin/contabilidad-cursos/admin-contabilidad-cursos.component').then(
@@ -405,6 +412,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/secretaria/contabilidad-historial-cuadraturas/secretaria-contabilidad-historial-cuadraturas.component').then(
                 (m) => m.SecretariaContabilidadHistorialCuadraturasComponent,
+              ),
+          },
+          {
+            path: 'contabilidad/liquidaciones',
+            loadComponent: () =>
+              import('./features/secretaria/contabilidad-liquidaciones/secretaria-contabilidad-liquidaciones.component').then(
+                (m) => m.SecretariaContabilidadLiquidacionesComponent,
               ),
           },
           {
