@@ -209,7 +209,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           aria-label="Guardar cambios de secretaria"
         >
           @if (facade.isSubmitting()) {
-            <app-icon name="loader-circle" [size]="15" />
+            <span class="spinner"><app-icon name="loader-circle" [size]="15" /></span>
             Guardando...
           } @else {
             <app-icon name="save" [size]="15" />
@@ -312,8 +312,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       padding: 9px 0;
       border-radius: var(--radius-md);
       border: none;
-      background: var(--text-primary);
-      color: var(--bg-base);
+      background: var(--ds-brand);
+      color: white;
       font-size: var(--text-sm);
       font-family: inherit;
       font-weight: 500;
@@ -326,6 +326,19 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     .submit-btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .spinner {
+      display: inline-flex;
+      animation: spin 0.75s linear infinite;
     }
   `,
 })

@@ -92,6 +92,7 @@ import {
   Scroll,
   ShieldAlert,
   ShieldCheck,
+  ShieldOff,
   Star,
   Stethoscope,
   Tag,
@@ -117,6 +118,7 @@ import {
   FileQuestion,
   FileBadge,
   FileCheck2,
+  FileSpreadsheet,
   ExternalLink,
   FolderSearch,
   SearchX,
@@ -140,6 +142,8 @@ import {
   // ── Gestión de Secretarias ──
   AtSign,
   IdCard,
+  // ── Gestión de Relatores ──
+  Mic,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -256,6 +260,7 @@ export const appConfig: ApplicationConfig = {
         FilePen,
         FilePlus,
         FileSignature,
+        FileSpreadsheet,
         FileText,
         Flag,
         FlaskConical,
@@ -274,6 +279,7 @@ export const appConfig: ApplicationConfig = {
         Scroll,
         ShieldAlert,
         ShieldCheck,
+        ShieldOff,
         Star,
         Stethoscope,
         Tag,
@@ -321,6 +327,10 @@ export const appConfig: ApplicationConfig = {
         // ── Gestión de Secretarias ──
         AtSign,
         IdCard,
+        MapPin,
+        Phone,
+        // ── Gestión de Relatores ──
+        Mic,
       }),
     ),
   ],

@@ -285,6 +285,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'clase-profesional/asistencia',
+            loadComponent: () =>
+              import('./features/admin/profesional-asistencia/admin-profesional-asistencia.component').then(
+                (m) => m.AdminProfesionalAsistenciaComponent,
+              ),
+          },
+          {
             path: 'clase-profesional/certificados',
             loadComponent: () =>
               import('./features/admin/profesional-certificados/admin-profesional-certificados.component').then(
@@ -453,6 +460,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/secretaria/profesional-promociones/secretaria-profesional-promociones.component').then(
                 (m) => m.SecretariaProfesionalPromocionesComponent,
+              ),
+          },
+          {
+            path: 'profesional/asistencia',
+            loadComponent: () =>
+              import('./features/secretaria/profesional-asistencia/secretaria-profesional-asistencia.component').then(
+                (m) => m.SecretariaProfesionalAsistenciaComponent,
               ),
           },
           {

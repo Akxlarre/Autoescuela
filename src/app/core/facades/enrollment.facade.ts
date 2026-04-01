@@ -645,7 +645,6 @@ export class EnrollmentFacade {
         `id,
          code,
          max_students,
-         enrolled_students,
          status,
          courses!inner(code, name, license_class),
          professional_promotions!promotion_id(code, name, status, branch_id)`,
@@ -658,6 +657,23 @@ export class EnrollmentFacade {
     if (error) {
       this._error.set('Error al cargar promociones: ' + error.message);
       return;
+    }
+
+    // Count enrolled students per promotion_course from enrollments table
+    const pcIds = (data ?? []).map((r) => r.id);
+    let enrolledCounts: Record<number, number> = {};
+    if (pcIds.length > 0) {
+      const { data: enrollData } = await this.supabase.client
+        .from('enrollments')
+        .select('promotion_course_id')
+        .in('promotion_course_id', pcIds)
+        .not('status', 'in', '("cancelled","draft")');
+      if (enrollData) {
+        enrolledCounts = enrollData.reduce((acc: Record<number, number>, e: any) => {
+          acc[e.promotion_course_id] = (acc[e.promotion_course_id] ?? 0) + 1;
+          return acc;
+        }, {});
+      }
     }
 
     // Orden canónico de clases profesionales
@@ -684,7 +700,7 @@ export class EnrollmentFacade {
         code: (row as any).code ?? null,
         label: course.name,
         courseCode: course.code,
-        enrolledCount: row.enrolled_students,
+        enrolledCount: enrolledCounts[row.id] ?? 0,
         maxCapacity: row.max_students,
         status: row.status === 'active' ? 'open' : 'finished',
       };

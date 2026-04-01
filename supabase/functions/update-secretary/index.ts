@@ -71,13 +71,20 @@ Deno.serve(async (req: Request) => {
 
     const { data: callerRow } = await supabaseAdmin
       .from('users')
-      .select('roles ( name )')
+      .select('id, roles ( name )')
       .eq('supabase_uid', caller.id)
       .maybeSingle();
 
     if (callerRow?.roles?.name !== 'admin') {
       return errorResponse('Solo los administradores pueden editar secretarias', 403);
     }
+
+    // Cliente con header de auditoría — propaga el user_id del caller al trigger
+    const supabaseAudit = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      { global: { headers: { 'x-audit-user-id': String(callerRow.id) } } },
+    );
 
     // ── Leer body ─────────────────────────────────────────────────────────────
     const {
@@ -149,7 +156,7 @@ Deno.serve(async (req: Request) => {
       updatePayload['email'] = email.trim().toLowerCase();
     }
 
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await supabaseAudit
       .from('users')
       .update(updatePayload)
       .eq('id', userId);
