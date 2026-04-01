@@ -142,6 +142,8 @@ import {
   // ── Gestión de Secretarias ──
   AtSign,
   IdCard,
+  // ── Gestión de Relatores ──
+  Mic,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -327,6 +329,8 @@ export const appConfig: ApplicationConfig = {
         IdCard,
         MapPin,
         Phone,
+        // ── Gestión de Relatores ──
+        Mic,
       }),
     ),
   ],

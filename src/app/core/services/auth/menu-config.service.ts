@@ -120,6 +120,11 @@ const ADMIN_NAV: NavGroup[] = [
         routerLink: '/app/admin/clase-profesional/promociones',
       },
       {
+        label: 'Clases y Asistencia',
+        icon: 'clipboard-list',
+        routerLink: '/app/admin/clase-profesional/asistencia',
+      },
+      {
         label: 'Certificados Prof.',
         icon: 'award',
         routerLink: '/app/admin/clase-profesional/certificados',
@@ -203,6 +208,11 @@ const SECRETARIA_NAV: NavGroup[] = [
         label: 'Promociones',
         icon: 'tag',
         routerLink: '/app/secretaria/profesional/promociones',
+      },
+      {
+        label: 'Clases y Asistencia',
+        icon: 'clipboard-list',
+        routerLink: '/app/secretaria/profesional/asistencia',
       },
       {
         label: 'Calificaciones',
