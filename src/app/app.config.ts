@@ -330,7 +330,6 @@ export const appConfig: ApplicationConfig = {
         Play,
         Square,
         History,
-        Lock,
         // Matrícula pública
         Wallet,
         FileClock,
