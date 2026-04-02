@@ -41,8 +41,158 @@ function formatCLP(value: number): string {
   selector: 'app-liquidaciones-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, SkeletonBlockComponent, PagoInstructorModalComponent],
+  styles: [
+    `
+      .liq-kpi-card {
+        border-radius: var(--radius-lg, 12px);
+        border: 1px solid var(--border-color);
+        background: var(--bg-surface);
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
+      }
+      .liq-kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        border-radius: var(--radius-lg, 12px) var(--radius-lg, 12px) 0 0;
+      }
+      .liq-kpi-card.accent-brand::before {
+        background: var(--ds-brand);
+      }
+      .liq-kpi-card.accent-error::before {
+        background: var(--color-error);
+      }
+      .liq-kpi-card.accent-success::before {
+        background: var(--color-success);
+      }
+
+      .liq-table th {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        padding: 10px 16px;
+        white-space: nowrap;
+      }
+      .liq-table th:first-child {
+        padding-left: 24px;
+      }
+      .liq-table td {
+        padding: 14px 16px;
+        border-top: 1px solid var(--border-color);
+        vertical-align: middle;
+      }
+      .liq-table td:first-child {
+        padding-left: 24px;
+      }
+      .liq-table tfoot td {
+        padding: 12px 16px;
+        border-top: 2px solid var(--border-color);
+        background: var(--bg-surface-elevated);
+        font-weight: 700;
+      }
+      .liq-table tr:hover td {
+        background: color-mix(in srgb, var(--ds-brand) 3%, var(--bg-surface));
+      }
+      .liq-table tfoot tr:hover td {
+        background: var(--bg-surface-elevated);
+      }
+
+      .anticipo-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--color-error) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--color-error) 25%, transparent);
+        border-radius: 6px;
+        padding: 3px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-error);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .progress-track {
+        height: 6px;
+        border-radius: 99px;
+        background: color-mix(in srgb, var(--color-success) 15%, var(--bg-surface-elevated));
+        overflow: hidden;
+      }
+      .progress-fill {
+        height: 100%;
+        border-radius: 99px;
+        background: var(--color-success);
+        transition: width 0.4s ease;
+      }
+
+      .btn-pagar {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
+        background: color-mix(in srgb, var(--color-success) 10%, var(--bg-surface));
+        color: var(--color-success);
+        cursor: pointer;
+        transition: background 0.15s;
+        white-space: nowrap;
+      }
+      .btn-pagar:hover {
+        background: color-mix(in srgb, var(--color-success) 18%, var(--bg-surface));
+      }
+
+      .btn-pagado {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-muted);
+        background: var(--bg-surface-elevated);
+        color: var(--text-secondary);
+        cursor: default;
+        white-space: nowrap;
+      }
+
+      .btn-deshacer {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 7px;
+        border: 1px solid var(--border-muted);
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          background 0.15s;
+        white-space: nowrap;
+      }
+      .btn-deshacer:hover {
+        color: var(--color-error);
+        border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
+        background: color-mix(in srgb, var(--color-error) 6%, transparent);
+      }
+    `,
+  ],
   template: `
-    <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+    <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
     <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
       <div>
         <h1 class="text-2xl font-semibold text-primary">Liquidaciones de Instructores</h1>
@@ -64,8 +214,8 @@ function formatCLP(value: number): string {
           <app-icon name="chevron-left" [size]="16" />
         </button>
         <span
-          class="text-sm font-semibold px-4 text-primary"
-          style="min-width: 140px; text-align: center"
+          class="text-sm font-semibold px-5 text-primary"
+          style="min-width: 145px; text-align: center"
         >
           {{ mesLabel() }}
         </span>
@@ -81,68 +231,112 @@ function formatCLP(value: number): string {
       </div>
     </div>
 
-    <!-- ── KPIs ─────────────────────────────────────────────────────────────── -->
-    <div class="grid grid-cols-2 gap-4 mb-6" style="grid-template-columns: repeat(4, 1fr)">
-      <!-- Total Nómina -->
-      <div class="card card-accent">
+    <!-- ── KPIs ──────────────────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-5 w-full">
+      <!-- KPI 1: Total Nómina -->
+      <div class="liq-kpi-card accent-brand">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Total Nómina</p>
+          <div
+            class="flex items-center justify-center"
+            style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--ds-brand) 12%,transparent)"
+          >
+            <app-icon name="banknote" [size]="17" color="var(--ds-brand)" />
+          </div>
+        </div>
         @if (isLoading()) {
-          <app-skeleton-block variant="text" width="60%" height="12px" />
-          <app-skeleton-block variant="text" width="80%" height="24px" class="mt-2" />
+          <app-skeleton-block variant="text" width="70%" height="28px" />
+          <app-skeleton-block variant="text" width="55%" height="12px" />
         } @else {
-          <p class="kpi-label">Total Nómina</p>
-          <p class="kpi-value" style="font-size: 1.35rem">
+          <p class="kpi-value" style="font-size:1.6rem;color:var(--ds-brand)">
             {{ formatCLP(kpis().totalNomina) }}
           </p>
+          <p class="text-xs text-muted">Suma bruta del periodo</p>
         }
       </div>
 
-      <!-- Total Anticipos -->
-      <div class="card">
+      <!-- KPI 2: Anticipos -->
+      <div class="liq-kpi-card accent-error">
+        <div class="flex items-center justify-between">
+          <p class="text-xs font-semibold text-secondary uppercase tracking-wider">
+            Anticipos a Descontar
+          </p>
+          <div
+            class="flex items-center justify-center"
+            style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--color-error) 12%,transparent)"
+          >
+            <app-icon name="trending-down" [size]="17" color="var(--color-error)" />
+          </div>
+        </div>
         @if (isLoading()) {
-          <app-skeleton-block variant="text" width="60%" height="12px" />
-          <app-skeleton-block variant="text" width="80%" height="24px" class="mt-2" />
+          <app-skeleton-block variant="text" width="70%" height="28px" />
+          <app-skeleton-block variant="text" width="55%" height="12px" />
         } @else {
-          <p class="kpi-label">Anticipos</p>
-          <p class="kpi-value" style="font-size: 1.35rem; color: var(--color-error)">
+          <p class="kpi-value" style="font-size:1.6rem;color:var(--color-error)">
+            @if (kpis().totalAnticipos > 0) {
+              -
+            }
             {{ formatCLP(kpis().totalAnticipos) }}
           </p>
+          <p class="text-xs text-muted">Total de adelantos entregados</p>
         }
       </div>
 
-      <!-- Pagados -->
-      <div class="card">
+      <!-- KPI 3: Estado Pagos -->
+      <div class="liq-kpi-card accent-success">
         @if (isLoading()) {
-          <app-skeleton-block variant="text" width="60%" height="12px" />
-          <app-skeleton-block variant="text" width="80%" height="24px" class="mt-2" />
+          <app-skeleton-block variant="text" width="100%" height="6px" />
+          <app-skeleton-block variant="text" width="60%" height="28px" />
+          <app-skeleton-block variant="text" width="80%" height="12px" />
         } @else {
-          <p class="kpi-label">Pagados</p>
-          <p class="kpi-value" style="font-size: 1.35rem; color: var(--color-success)">
+          <!-- Barra de progreso -->
+          <div class="progress-track">
+            <div class="progress-fill" [style.width.%]="progresoPagos()"></div>
+          </div>
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-semibold text-secondary uppercase tracking-wider">
+              Estado de Pagos
+            </p>
+            <div
+              class="flex items-center justify-center"
+              style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--color-success) 12%,transparent)"
+            >
+              <app-icon name="check-circle" [size]="17" color="var(--color-success)" />
+            </div>
+          </div>
+          <p class="kpi-value" style="font-size:1.6rem;color:var(--color-success)">
             {{ kpis().totalPagados }} / {{ kpis().totalInstructores }}
+            <span class="text-sm font-normal text-secondary ml-1">Pagados</span>
           </p>
-        }
-      </div>
-
-      <!-- Pendientes -->
-      <div class="card">
-        @if (isLoading()) {
-          <app-skeleton-block variant="text" width="60%" height="12px" />
-          <app-skeleton-block variant="text" width="80%" height="24px" class="mt-2" />
-        } @else {
-          <p class="kpi-label">Pendientes</p>
-          <p class="kpi-value" style="font-size: 1.35rem; color: var(--color-warning)">
-            {{ kpis().totalInstructores - kpis().totalPagados }}
-          </p>
+          <div class="flex items-center gap-4 text-xs">
+            <span style="color:var(--color-warning)" class="flex items-center gap-1 font-medium">
+              <span
+                style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"
+              ></span>
+              {{ kpis().totalInstructores - kpis().totalPagados }} Pendientes
+            </span>
+            <span style="color:var(--color-success)" class="flex items-center gap-1 font-medium">
+              <span
+                style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"
+              ></span>
+              {{ kpis().totalPagados }} Pagados
+            </span>
+          </div>
         }
       </div>
     </div>
 
-    <!-- ── Buscador ──────────────────────────────────────────────────────────── -->
-    <div class="mb-4">
+    <!-- ── Filtros ─────────────────────────────────────────────────────────────── -->
+    <div
+      class="flex flex-wrap items-center gap-3 mb-4 px-4 py-3"
+      style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px)"
+    >
+      <!-- Buscador -->
       <div
-        class="flex items-center gap-2 px-3 py-2 rounded-lg"
-        style="background: var(--bg-surface); border: 1px solid var(--border-muted); max-width: 340px"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg flex-1"
+        style="background:var(--bg-surface-elevated);border:1px solid var(--border-muted);min-width:200px;max-width:340px"
       >
-        <app-icon name="search" [size]="15" color="var(--text-muted)" />
+        <app-icon name="search" [size]="14" color="var(--text-muted)" />
         <input
           type="text"
           placeholder="Buscar instructor..."
@@ -155,185 +349,164 @@ function formatCLP(value: number): string {
         @if (query()) {
           <button
             class="cursor-pointer"
-            style="color: var(--text-muted)"
+            style="color:var(--text-muted)"
             (click)="query.set('')"
-            aria-label="Limpiar búsqueda"
+            aria-label="Limpiar"
           >
-            <app-icon name="x" [size]="13" />
+            <app-icon name="x" [size]="12" />
           </button>
         }
+      </div>
+
+      <!-- Contadores de estado -->
+      <div class="flex items-center gap-4 ml-auto">
+        <span
+          class="flex items-center gap-1.5 text-xs font-semibold"
+          style="color:var(--color-warning)"
+        >
+          <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
+          {{ contadores().pendientes }} Pendientes
+        </span>
+        <span class="flex items-center gap-1.5 text-xs font-semibold" style="color:var(--ds-brand)">
+          <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
+          {{ contadores().pagados }} Pagados
+        </span>
       </div>
     </div>
 
     <!-- ── Tabla ─────────────────────────────────────────────────────────────── -->
     <div
-      class="overflow-hidden"
-      style="border: 1px solid var(--border-color); border-radius: var(--radius-lg, 10px)"
+      style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px);overflow:hidden"
     >
       <div class="overflow-x-auto">
         <table
-          class="w-full text-sm"
+          class="w-full liq-table"
           role="table"
           aria-label="Tabla de liquidaciones de instructores"
         >
           <thead>
-            <tr
-              style="background: var(--bg-surface-elevated); border-bottom: 1px solid var(--border-color)"
-            >
-              <th class="px-4 py-3 text-left text-xs font-semibold text-secondary">Instructor</th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-secondary">Horas</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-secondary">Base Ganado</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-secondary">Anticipos</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-secondary">
-                Total a Pagar
-              </th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-secondary">Estado</th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-secondary">Acción</th>
+            <tr style="background:var(--bg-surface-elevated)">
+              <th class="text-left">Instructor</th>
+              <th class="text-right">Horas Realizadas</th>
+              <th class="text-right">Base (Ganado)</th>
+              <th class="text-right">Anticipos (Descuento)</th>
+              <th class="text-right">Total a Pagar</th>
+              <th class="text-center" style="width:180px">Acciones</th>
             </tr>
           </thead>
+
           <tbody>
             @if (isLoading()) {
               @for (i of skeletonRows; track i) {
-                <tr style="border-bottom: 1px solid var(--border-color)">
-                  <td class="px-4 py-3">
+                <tr>
+                  <td>
                     <div class="flex items-center gap-3">
-                      <app-skeleton-block variant="circle" width="36px" height="36px" />
-                      <div class="flex flex-col gap-1">
-                        <app-skeleton-block variant="text" width="120px" height="13px" />
+                      <app-skeleton-block variant="circle" width="38px" height="38px" />
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="130px" height="13px" />
                         <app-skeleton-block variant="text" width="80px" height="11px" />
                       </div>
                     </div>
                   </td>
-                  @for (j of [1, 2, 3, 4, 5, 6]; track j) {
-                    <td class="px-4 py-3">
-                      <app-skeleton-block variant="text" width="70%" height="13px" />
-                    </td>
+                  @for (j of [1, 2, 3, 4, 5]; track j) {
+                    <td><app-skeleton-block variant="text" width="75%" height="13px" /></td>
                   }
                 </tr>
               }
             } @else if (filtradas().length === 0) {
               <tr>
-                <td colspan="7" class="px-4 py-10 text-center text-sm text-muted">
+                <td colspan="6" class="py-12 text-center text-sm text-muted" style="border:none">
                   @if (query()) {
-                    No se encontraron instructores que coincidan con "{{ query() }}".
+                    No se encontraron instructores para "{{ query() }}".
                   } @else {
                     No hay instructores registrados para este período.
                   }
                 </td>
               </tr>
             } @else {
-              @for (row of filtradas(); track row.instructorId; let even = $even) {
-                <tr
-                  [style.background]="even ? 'var(--bg-surface)' : 'var(--bg-surface-elevated)'"
-                  style="border-bottom: 1px solid var(--border-color)"
-                >
-                  <!-- Instructor (avatar + nombre + rut) -->
-                  <td class="px-4 py-3">
+              @for (row of filtradas(); track row.instructorId) {
+                <tr>
+                  <!-- Instructor -->
+                  <td>
                     <div class="flex items-center gap-3">
                       <div
-                        class="flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
-                        style="
-                          width: 36px;
-                          height: 36px;
-                          border-radius: 50%;
-                          background: {{ row.avatarColor }};
-                        "
+                        class="shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                        style="width:38px;height:38px;border-radius:50%;background:{{
+                          row.avatarColor
+                        }}"
                         aria-hidden="true"
                       >
                         {{ row.initials }}
                       </div>
                       <div>
-                        <p class="font-semibold text-primary text-sm">{{ row.nombre }}</p>
-                        <p class="text-xs text-muted">{{ row.rut }}</p>
+                        <p class="text-sm font-semibold text-primary leading-tight">
+                          {{ row.nombre }}
+                        </p>
+                        <p class="text-xs text-muted mt-0.5">{{ row.rut }}</p>
                       </div>
                     </div>
                   </td>
 
                   <!-- Horas -->
-                  <td class="px-4 py-3 text-center text-primary font-semibold tabular-nums">
-                    {{ row.totalHours }}
-                    <span class="text-xs text-muted font-normal">hrs</span>
+                  <td class="text-right tabular-nums">
+                    <span class="text-sm font-semibold" style="color:var(--ds-brand)">{{
+                      row.totalHours
+                    }}</span>
+                    <span class="text-xs text-muted ml-1">hrs</span>
                   </td>
 
                   <!-- Base ganado -->
-                  <td class="px-4 py-3 text-right text-primary tabular-nums">
-                    {{ formatCLP(row.totalBaseAmount) }}
+                  <td class="text-right tabular-nums">
+                    <span class="text-sm font-semibold" style="color:var(--color-success)">
+                      {{ formatCLP(row.totalBaseAmount) }}
+                    </span>
                   </td>
 
                   <!-- Anticipos -->
-                  <td
-                    class="px-4 py-3 text-right tabular-nums font-medium"
-                    [style.color]="
-                      row.totalAdvances > 0 ? 'var(--color-error)' : 'var(--text-muted)'
-                    "
-                  >
+                  <td class="text-right">
                     @if (row.totalAdvances > 0) {
-                      - {{ formatCLP(row.totalAdvances) }}
+                      <div class="flex flex-col items-end gap-1">
+                        <span class="anticipo-box">{{ formatCLP(row.totalAdvances) }}</span>
+                        <span
+                          class="text-xs font-medium tabular-nums"
+                          style="color:var(--color-error)"
+                        >
+                          - {{ formatCLP(row.totalAdvances) }}
+                        </span>
+                      </div>
                     } @else {
-                      —
+                      <span class="text-sm text-muted">—</span>
                     }
                   </td>
 
                   <!-- Total a pagar -->
-                  <td
-                    class="px-4 py-3 text-right font-bold tabular-nums"
-                    style="color: var(--ds-brand)"
-                  >
-                    {{ formatCLP(row.finalPaymentAmount) }}
+                  <td class="text-right tabular-nums">
+                    <span class="text-sm font-bold text-primary">{{
+                      formatCLP(row.finalPaymentAmount)
+                    }}</span>
                   </td>
 
-                  <!-- Estado -->
-                  <td class="px-4 py-3 text-center">
+                  <!-- Acciones -->
+                  <td class="text-center">
                     @if (row.status === 'paid') {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
-                        style="
-                          background: color-mix(in srgb, var(--color-success) 15%, transparent);
-                          color: var(--color-success);
-                        "
-                      >
-                        <app-icon name="check-circle" [size]="12" />
-                        Pagado
-                      </span>
-                    } @else {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
-                        style="
-                          background: color-mix(in srgb, var(--color-warning) 15%, transparent);
-                          color: var(--color-warning);
-                        "
-                      >
-                        <app-icon name="clock" [size]="12" />
-                        Pendiente
-                      </span>
-                    }
-                  </td>
-
-                  <!-- Acción -->
-                  <td class="px-4 py-3 text-center">
-                    @if (row.status === 'paid') {
-                      <button
-                        class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
-                        style="
-                          background: var(--bg-surface-elevated);
-                          border: 1px solid var(--border-muted);
-                          color: var(--text-muted);
-                        "
-                        (click)="abrirDetallePago(row)"
-                        [attr.aria-label]="'Ver detalle del pago de ' + row.nombre"
-                        data-llm-action="ver-detalle-pago-instructor"
-                      >
-                        <app-icon name="eye" [size]="13" />
-                        Ver detalle
-                      </button>
+                      <div class="flex items-center justify-center gap-2">
+                        <span class="btn-pagado">
+                          <app-icon name="check-circle" [size]="13" color="var(--color-success)" />
+                          Pagado
+                        </span>
+                        <button
+                          class="btn-deshacer"
+                          (click)="onDeshacer(row)"
+                          [attr.aria-label]="'Deshacer pago de ' + row.nombre"
+                          data-llm-action="deshacer-pago-instructor"
+                        >
+                          <app-icon name="rotate-ccw" [size]="11" />
+                          Deshacer
+                        </button>
+                      </div>
                     } @else {
                       <button
-                        class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
-                        style="
-                          background: color-mix(in srgb, var(--color-success) 12%, var(--bg-surface));
-                          border: 1px solid color-mix(in srgb, var(--color-success) 30%, transparent);
-                          color: var(--color-success);
-                        "
+                        class="btn-pagar"
                         (click)="abrirModal(row)"
                         [attr.aria-label]="'Registrar pago para ' + row.nombre"
                         data-llm-action="pagar-instructor"
@@ -347,74 +520,44 @@ function formatCLP(value: number): string {
               }
             }
           </tbody>
+
+          <!-- Fila de totales -->
+          @if (!isLoading() && filtradas().length > 0) {
+            <tfoot>
+              <tr>
+                <td class="text-xs font-bold text-secondary uppercase tracking-wide">
+                  TOTALES — {{ filtradas().length }} instructores
+                </td>
+                <td class="text-right tabular-nums">
+                  <span class="text-sm font-bold" style="color:var(--ds-brand)">{{
+                    totales().horas
+                  }}</span>
+                  <span class="text-xs text-muted ml-1">hrs</span>
+                </td>
+                <td class="text-right tabular-nums">
+                  <span class="text-sm font-bold" style="color:var(--color-success)">
+                    {{ formatCLP(totales().base) }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  @if (totales().anticipos > 0) {
+                    <span class="anticipo-box">{{ formatCLP(totales().anticipos) }}</span>
+                  } @else {
+                    <span class="text-sm text-muted">—</span>
+                  }
+                </td>
+                <td class="text-right tabular-nums">
+                  <span class="text-base font-bold text-primary">{{
+                    formatCLP(totales().total)
+                  }}</span>
+                </td>
+                <td></td>
+              </tr>
+            </tfoot>
+          }
         </table>
       </div>
     </div>
-
-    <!-- ── Detalle de pago (tooltip-like) ───────────────────────────────────── -->
-    @if (rowDetalle()) {
-      <div
-        class="fixed inset-0 z-40 flex items-center justify-center p-4"
-        style="background: rgba(0,0,0,0.3)"
-        (click)="rowDetalle.set(null)"
-        aria-hidden="true"
-      >
-        <div
-          class="flex flex-col gap-3 p-5 rounded-xl"
-          style="
-            background: var(--bg-surface);
-            border: 1px solid var(--border-muted);
-            box-shadow: 0 16px 48px rgba(0,0,0,0.2);
-            min-width: 280px;
-            max-width: 360px;
-          "
-          (click)="$event.stopPropagation()"
-          role="dialog"
-          aria-label="Detalle del pago registrado"
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
-              <app-icon name="check-circle" [size]="15" color="var(--color-success)" />
-              Pago registrado
-            </h3>
-            <button
-              class="cursor-pointer"
-              style="color: var(--text-muted)"
-              (click)="rowDetalle.set(null)"
-              aria-label="Cerrar detalle"
-            >
-              <app-icon name="x" [size]="14" />
-            </button>
-          </div>
-          <div class="flex flex-col gap-2 text-sm">
-            <div class="flex justify-between">
-              <span class="text-muted">Monto pagado</span>
-              <span class="font-semibold text-primary">{{
-                formatCLP(rowDetalle()!.finalPaymentAmount)
-              }}</span>
-            </div>
-            <div class="flex justify-between">
-              <span class="text-muted">Método</span>
-              <span class="font-medium text-primary">
-                {{ rowDetalle()!.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia' }}
-              </span>
-            </div>
-            @if (rowDetalle()!.transferCode) {
-              <div class="flex justify-between">
-                <span class="text-muted">Código</span>
-                <span class="font-mono text-xs text-primary">{{ rowDetalle()!.transferCode }}</span>
-              </div>
-            }
-            @if (rowDetalle()!.paymentDate) {
-              <div class="flex justify-between">
-                <span class="text-muted">Fecha</span>
-                <span class="text-primary">{{ formatDate(rowDetalle()!.paymentDate!) }}</span>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-    }
 
     <!-- ── Modal de pago ─────────────────────────────────────────────────────── -->
     <app-pago-instructor-modal
@@ -442,11 +585,11 @@ export class LiquidacionesContentComponent {
   mesAnterior = output<void>();
   mesSiguiente = output<void>();
   pagar = output<{ row: LiquidacionRow; payload: PagoInstructorPayload }>();
+  deshacer = output<LiquidacionRow>();
 
   // ── Estado UI interno ───────────────────────────────────────────────────────
   protected readonly query = signal('');
   protected readonly rowSeleccionada = signal<LiquidacionRow | null>(null);
-  protected readonly rowDetalle = signal<LiquidacionRow | null>(null);
 
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
@@ -465,23 +608,37 @@ export class LiquidacionesContentComponent {
     );
   });
 
+  protected readonly contadores = computed(() => {
+    const rows = this.liquidaciones();
+    return {
+      pendientes: rows.filter((r) => r.status === 'pending').length,
+      pagados: rows.filter((r) => r.status === 'paid').length,
+    };
+  });
+
+  protected readonly progresoPagos = computed(() => {
+    const total = this.kpis().totalInstructores;
+    return total > 0 ? (this.kpis().totalPagados / total) * 100 : 0;
+  });
+
+  protected readonly totales = computed(() => {
+    const rows = this.filtradas();
+    return {
+      horas: rows.reduce((s, r) => s + r.totalHours, 0),
+      base: rows.reduce((s, r) => s + r.totalBaseAmount, 0),
+      anticipos: rows.reduce((s, r) => s + r.totalAdvances, 0),
+      total: rows.reduce((s, r) => s + r.finalPaymentAmount, 0),
+    };
+  });
+
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
   protected formatCLP(value: number): string {
     return formatCLP(value);
   }
 
-  protected formatDate(dateStr: string): string {
-    const [yyyy, mm, dd] = dateStr.split('-');
-    return `${dd}/${mm}/${yyyy}`;
-  }
-
   protected abrirModal(row: LiquidacionRow): void {
     this.rowSeleccionada.set(row);
-  }
-
-  protected abrirDetallePago(row: LiquidacionRow): void {
-    this.rowDetalle.set(row);
   }
 
   protected onConfirmed(payload: PagoInstructorPayload): void {
@@ -489,5 +646,9 @@ export class LiquidacionesContentComponent {
     if (!row) return;
     this.rowSeleccionada.set(null);
     this.pagar.emit({ row, payload });
+  }
+
+  protected onDeshacer(row: LiquidacionRow): void {
+    this.deshacer.emit(row);
   }
 }

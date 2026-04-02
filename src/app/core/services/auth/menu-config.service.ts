@@ -102,11 +102,6 @@ const ADMIN_NAV: NavGroup[] = [
       },
       { label: 'Anticipos', icon: 'receipt', routerLink: '/app/admin/contabilidad/anticipos' },
       {
-        label: 'Historial Cuadraturas',
-        icon: 'history',
-        routerLink: '/app/admin/contabilidad/historial-cuadraturas',
-      },
-      {
         label: 'Liquidaciones',
         icon: 'banknote',
         routerLink: '/app/admin/contabilidad/liquidaciones',
@@ -188,11 +183,6 @@ const SECRETARIA_NAV: NavGroup[] = [
         label: 'Reportes',
         icon: 'bar-chart-2',
         routerLink: '/app/secretaria/contabilidad/reportes',
-      },
-      {
-        label: 'Historial Cuadraturas',
-        icon: 'history',
-        routerLink: '/app/secretaria/contabilidad/historial-cuadraturas',
       },
       {
         label: 'Liquidaciones',

@@ -8,7 +8,7 @@ import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liqu
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LiquidacionesContentComponent],
   template: `
-    <div class="page-content">
+    <div class="page-wide">
       <app-liquidaciones-content
         [liquidaciones]="facade.liquidaciones()"
         [isLoading]="facade.isLoading()"
@@ -19,6 +19,7 @@ import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liqu
         (mesAnterior)="facade.mesAnterior()"
         (mesSiguiente)="facade.mesSiguiente()"
         (pagar)="onPagar($event)"
+        (deshacer)="facade.deshacerPago($event)"
       />
     </div>
   `,

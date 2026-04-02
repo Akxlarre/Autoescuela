@@ -279,4 +279,46 @@ export class LiquidacionesFacade {
       this._isSaving.set(false);
     }
   }
+
+  async deshacerPago(row: LiquidacionRow): Promise<boolean> {
+    if (!row.paymentId) return false;
+
+    this._isSaving.set(true);
+    this._error.set(null);
+
+    try {
+      const mes = this._mesActual();
+      const anio = this._anioActual();
+      const mm = String(mes).padStart(2, '0');
+      const lastDay = new Date(anio, mes, 0).getDate();
+
+      const { error: delErr } = await this.supabase.client
+        .from('instructor_monthly_payments')
+        .delete()
+        .eq('instructor_id', row.instructorId)
+        .eq('month', mes)
+        .eq('year', anio);
+
+      if (delErr) throw delErr;
+
+      // Reactivar anticipos del mes
+      await this.supabase.client
+        .from('instructor_advances')
+        .update({ status: 'pending' })
+        .eq('instructor_id', row.instructorId)
+        .gte('date', `${anio}-${mm}-01`)
+        .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
+
+      this.toast.success(`Pago de ${row.nombre} revertido.`);
+      await this.cargarLiquidaciones();
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al revertir el pago.';
+      this._error.set(msg);
+      this.toast.error(msg);
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
 }
