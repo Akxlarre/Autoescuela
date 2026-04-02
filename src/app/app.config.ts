@@ -330,6 +330,7 @@ export const appConfig: ApplicationConfig = {
         Play,
         Square,
         History,
+        Lock,
         // Matrícula pública
         Wallet,
         FileClock,
@@ -337,16 +338,6 @@ export const appConfig: ApplicationConfig = {
         // ── Gestión de Secretarias ──
         AtSign,
         IdCard,
-        Eraser,
-        // ── Contacto / Instructor Alumnos ──
-        Phone,
-        MapPin,
-        ArrowUpDown,
-        Hash,
-        FileX,
-        Globe,
-        // ── Gestión de Relatores ──
-        Mic,
       }),
     ),
   ],
