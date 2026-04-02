@@ -129,9 +129,8 @@ export class LiquidacionesFacade {
 
         this.supabase.client
           .from('instructor_monthly_hours')
-          .select('instructor_id, total_hours')
-          .eq('month', mes)
-          .eq('year', anio),
+          .select('instructor_id, total_equivalent')
+          .eq('period', `${anio}-${mm}`),
 
         this.supabase.client
           .from('instructor_advances')
@@ -150,7 +149,7 @@ export class LiquidacionesFacade {
 
       // Mapas de lookup O(1)
       const hoursMap = new Map<number, number>(
-        (hoursRes.data ?? []).map((h) => [h.instructor_id, h.total_hours]),
+        (hoursRes.data ?? []).map((h) => [h.instructor_id, h.total_equivalent ?? 0]),
       );
 
       const advancesMap = new Map<number, number>();
