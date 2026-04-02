@@ -8,12 +8,15 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-drawer.component';
 import { AdminSecretariasVerDrawerComponent } from './admin-secretarias-ver-drawer.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -26,6 +29,7 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
     DatePipe,
     FormsModule,
     SelectModule,
+    SectionHeroComponent,
     KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -36,25 +40,14 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
   ],
   template: `
     <div class="page-wide">
-      <!-- ── Header ─────────────────────────────────────────────────────────── -->
-      <div class="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold" style="color: var(--text-primary)">
-            Gestión de Secretarias
-          </h1>
-          <p class="text-sm mt-1" style="color: var(--ds-brand)">
-            Control de acceso y gestión de personal de secretaría
-          </p>
-        </div>
-        <button
-          class="flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-lg shrink-0"
-          style="background: var(--ds-brand); color: white; cursor: pointer; border: none;"
-          (click)="crearDrawerOpen.set(true)"
-          data-llm-action="nueva-secretaria"
-        >
-          <app-icon name="plus" [size]="16" />
-          Nueva Secretaria
-        </button>
+      <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+      <div class="mb-6">
+        <app-section-hero
+          title="Gestión de Secretarias"
+          subtitle="Control de acceso y gestión de personal de secretaría"
+          [actions]="heroActions()"
+          (actionClick)="handleHeroAction($event)"
+        />
       </div>
 
       <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
@@ -321,7 +314,11 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
               <p class="text-xs mb-3" style="color: var(--text-muted)">
                 Revisa el historial de acciones realizadas por las secretarias del sistema.
               </p>
-              <button class="quick-action-btn" data-llm-action="ver-auditoria">
+              <button
+                class="quick-action-btn"
+                (click)="goToAuditoria()"
+                data-llm-action="ver-auditoria"
+              >
                 <app-icon name="clipboard-list" [size]="16" />
                 Ver Auditoría
               </button>
@@ -336,9 +333,9 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
       [isOpen]="crearDrawerOpen()"
       title="Nueva Secretaria"
       icon="user-plus"
-      (closed)="crearDrawerOpen.set(false)"
+      (closed)="onCrearDrawerClosed()"
     >
-      <app-admin-secretarias-crear-drawer (closed)="crearDrawerOpen.set(false)" />
+      <app-admin-secretarias-crear-drawer (closed)="onCrearDrawerClosed()" />
     </app-drawer>
 
     <!-- ── Drawer: Ver Secretaria ───────────────────────────────────────────── -->
@@ -466,6 +463,16 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 })
 export class AdminSecretariasComponent implements OnInit {
   protected readonly facade = inject(SecretariasFacade);
+  private readonly router = inject(Router);
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  protected readonly heroActions = computed((): SectionHeroAction[] => [
+    { id: 'new', label: 'Nueva Secretaria', icon: 'plus', primary: true },
+  ]);
+
+  protected handleHeroAction(actionId: string): void {
+    if (actionId === 'new') this.crearDrawerOpen.set(true);
+  }
 
   // ── Estado drawers ─────────────────────────────────────────────────────────
   protected readonly crearDrawerOpen = signal(false);
@@ -563,9 +570,18 @@ export class AdminSecretariasComponent implements OnInit {
     this.verDrawerOpen.set(true);
   }
 
+  protected onCrearDrawerClosed(): void {
+    this.crearDrawerOpen.set(false);
+    this.facade.initialize();
+  }
+
   protected openEditarDrawer(sec: SecretariaTableRow): void {
     this.facade.selectSecretaria(sec);
     this.editarDrawerOpen.set(true);
+  }
+
+  protected goToAuditoria(): void {
+    void this.router.navigate(['/app/admin/auditoria']);
   }
 
   /** Desde el drawer Ver → abrir Editar sin perder la secretaria seleccionada */
