@@ -1,8 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-drawer.component';
 import { AdminSecretariasVerDrawerComponent } from './admin-secretarias-ver-drawer.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
@@ -461,9 +462,18 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
     }
   `,
 })
-export class AdminSecretariasComponent implements OnInit {
+export class AdminSecretariasComponent {
   protected readonly facade = inject(SecretariasFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
+
+  constructor() {
+    // Recarga la lista cada vez que el admin cambia de sede (o vuelve a "Todas")
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      this.facade.initialize();
+    });
+  }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -561,10 +571,6 @@ export class AdminSecretariasComponent implements OnInit {
 
   protected readonly skeletonRows = [1, 2, 3, 4];
 
-  ngOnInit(): void {
-    this.facade.initialize();
-  }
-
   protected openVerDrawer(sec: SecretariaTableRow): void {
     this.facade.selectSecretaria(sec);
     this.verDrawerOpen.set(true);
@@ -572,7 +578,6 @@ export class AdminSecretariasComponent implements OnInit {
 
   protected onCrearDrawerClosed(): void {
     this.crearDrawerOpen.set(false);
-    this.facade.initialize();
   }
 
   protected openEditarDrawer(sec: SecretariaTableRow): void {

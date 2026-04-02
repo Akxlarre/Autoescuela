@@ -56,11 +56,11 @@ import { Button } from 'primeng/button';
   template: `
     <header
       appSearchShortcut
-      class="sticky top-0 z-40 flex h-[56px] items-center gap-2 px-4 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-[var(--shadow-layout-topbar)] shrink-0"
+      class="sticky top-0 z-40 flex h-14 items-center gap-2 px-4 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-(--shadow-layout-topbar) shrink-0"
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->
-      <div class="toolbar-actions !flex lg:!hidden shrink-0 items-center">
+      <div class="toolbar-actions flex! lg:hidden! shrink-0 items-center">
         <p-button
           [text]="true"
           [rounded]="true"

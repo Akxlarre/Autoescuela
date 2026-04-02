@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 
@@ -61,12 +62,14 @@ interface SecretariaRow {
 export class SecretariasFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
   private readonly _secretarias = signal<SecretariaTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   private readonly _branches = signal<BranchOption[]>([]);
   private _branchesLoaded = false;
@@ -98,11 +101,14 @@ export class SecretariasFacade {
   }
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const currentBranchId = this.branchFacade.selectedBranchId();
+    // SWR: si ya está inicializado Y la sede no cambió, refrescar silenciosamente
+    if (this._initialized && currentBranchId === this._lastBranchId) {
       this.refreshSilently();
       return;
     }
     this._initialized = true;
+    this._lastBranchId = currentBranchId;
     this._isLoading.set(true);
     try {
       await this.fetchData();
@@ -120,7 +126,9 @@ export class SecretariasFacade {
   }
 
   private async fetchData(): Promise<void> {
-    const { data, error } = await this.supabase.client
+    const branchId = this.branchFacade.selectedBranchId();
+
+    let query = this.supabase.client
       .from('users')
       .select(
         `
@@ -140,6 +148,12 @@ export class SecretariasFacade {
       )
       .eq('roles.name', 'secretary')
       .order('first_names', { ascending: true });
+
+    if (branchId !== null) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       this._error.set(error.message);
@@ -169,8 +183,8 @@ export class SecretariasFacade {
         body: payload,
       });
       if (error) throw new Error(error.message ?? 'Error al crear secretaria');
-      this._initialized = false;
       this.toast.success('Secretaria creada', 'La cuenta ha sido creada correctamente.');
+      await this.refreshSilently();
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al crear secretaria';

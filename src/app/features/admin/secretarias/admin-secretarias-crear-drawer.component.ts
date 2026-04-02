@@ -1,8 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   output,
   signal,
@@ -10,6 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
@@ -172,10 +173,17 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           optionValue="value"
           placeholder="Seleccione sede"
           [style]="{ width: '100%', height: '40px' }"
+          [disabled]="sedeDisabled()"
           aria-required="true"
           data-llm-description="Sede de trabajo asignada a la nueva secretaria"
         />
-        @if (sedeTouched() && !sedeValida()) {
+        @if (sedeDisabled()) {
+          <span class="flex items-center gap-1 text-xs" style="color: var(--text-muted)">
+            <app-icon name="lock" [size]="11" />
+            Sede fijada por el selector de la barra superior. Cambia a "Todas las escuelas" para
+            elegir otra.
+          </span>
+        } @else if (sedeTouched() && !sedeValida()) {
           <span class="field-error">Selecciona una sede.</span>
         }
       </div>
@@ -312,8 +320,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     }
   `,
 })
-export class AdminSecretariasCrearDrawerComponent implements OnInit {
+export class AdminSecretariasCrearDrawerComponent {
   protected readonly facade = inject(SecretariasFacade);
+  private readonly branchFacade = inject(BranchFacade);
   readonly closed = output<void>();
 
   // ── Campos ─────────────────────────────────────────────────────────────────
@@ -360,9 +369,12 @@ export class AdminSecretariasCrearDrawerComponent implements OnInit {
       this.sedeValida(),
   );
 
+  // ── Sede bloqueada cuando hay branch activo en el topbar ──────────────────
+  protected readonly sedeDisabled = computed(() => this.branchFacade.selectedBranchId() !== null);
+
   // ── Opciones p-select ──────────────────────────────────────────────────────
   protected readonly sedeOptions = computed(() =>
-    this.facade.branches().map((b) => ({ label: b.name, value: b.id })),
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
   );
 
   protected get sedeIdModel(): number | null {
@@ -373,8 +385,15 @@ export class AdminSecretariasCrearDrawerComponent implements OnInit {
     this.sedeTouched.set(true);
   }
 
-  ngOnInit(): void {
-    this.facade.loadBranches();
+  constructor() {
+    // Sincroniza la sede del formulario con el branch selector del topbar
+    effect(() => {
+      const branchId = this.branchFacade.selectedBranchId();
+      if (branchId !== null) {
+        this.sedeId.set(branchId);
+        this.sedeTouched.set(true);
+      }
+    });
   }
 
   protected onRutInput(event: Event): void {
