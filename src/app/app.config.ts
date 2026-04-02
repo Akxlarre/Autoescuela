@@ -345,8 +345,6 @@ export const appConfig: ApplicationConfig = {
         Hash,
         FileX,
         Globe,
-        MapPin,
-        Phone,
         // ── Gestión de Relatores ──
         Mic,
       }),
