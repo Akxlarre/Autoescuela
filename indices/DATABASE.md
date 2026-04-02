@@ -33,7 +33,7 @@
 | `vehicle_assignments` | M4 - Acad. B | `id`, `vehicle_id` | `instructor_id`, `vehicle_id`, `assigned_by` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
 | `instructor_replacements` | M4 - Acad. B | `id`, `date` | `absent_instructor_id`, `replacement_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructor_monthly_hours` | M4 - Acad. B | `id`, `period` | `instructor_id` | Admin: CRUD, Sec: R, Inst: R (self) | ✅ Definida |
-| `class_b_sessions` | M4 - Acad. B | `id`, `scheduled_at`, `duration_min` (DEFAULT 45) | `enrollment_id`, `instructor_id`, `vehicle_id`, `original_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida · **Realtime habilitado** (`20260315100000`): publicada en `supabase_realtime` para actualización en vivo de slots de agenda durante matrícula. |
+| `class_b_sessions` | M4 - Acad. B | `id`, `scheduled_at`, `duration_min`, `evaluation_grade`, `evaluation_checklist` (JSONB) | `enrollment_id`, `instructor_id`, `vehicle_id`, `original_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida · Evaluación Checklist agregada (`20260401000100`) · **Realtime habilitado** |
 | `class_b_theory_sessions` | M4 - Acad. B | `id`, `scheduled_at` | `branch_id`, `instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R | ✅ Definida |
 | `class_b_theory_attendance` | M4 - Acad. B | `id`, `session_id` | `theory_session_b_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
 | `class_b_practice_attendance` | M4 - Acad. B | `id`, `session_id` | `class_b_session_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |

@@ -496,9 +496,28 @@ app-main-layout p-toast.p-toast-top-center,
 }
 
 /* ── Toolbar actions (topbar): neutro / hover / abierto ───────────────────────
-   Neutro: sin fondo, sin borde, sin sombra.
-   Hover: aparición de sombra.
-   Abierto: gradiente/azul, permanece hasta cerrar. */
+   Reglas de estabilidad: los botones del topbar son iconos de navegación,
+   NO CTAs. Deben ser completamente estacionarios (sin lift, sin glow, sin
+   border animator). El feedback visual se da únicamente via color del icono
+   y fondo muted cuando el panel está abierto. */
+.toolbar-actions .p-button {
+  /* Tamaño estable en todos los estados: secondary tiene border:1px del override
+     global, primary hereda border:0 de .p-button-text (PrimeNG). Al forzar
+     1px transparent aquí, ambos estados tienen idéntico box-model (44px). */
+  border: 1px solid transparent !important;
+  /* Cancelar el lift global (.p-button:hover aplica translateY(-1px)) */
+  transform: none !important;
+  /* Cancelar el glow global (.p-button:hover aplica box-shadow) */
+  box-shadow: none !important;
+  /* Limitar la transición a solo propiedades de color: evita que 'transition:all'
+     anime el border o el box-shadow cuando se cambia de severity */
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard) !important;
+  /* Sin outline en focus: los botones del toolbar no son inputs */
+  outline: none !important;
+}
+
 .toolbar-actions .p-button.p-button-secondary {
   background: transparent !important;
   border-color: transparent !important;
@@ -510,20 +529,25 @@ app-main-layout p-toast.p-toast-top-center,
   background: var(--color-primary-muted) !important;
   border-color: transparent !important;
   color: var(--ds-brand) !important;
-  box-shadow: 0 4px 12px var(--accent-glow) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
+/* El estado "abierto" (panel activo) usa el mismo fondo que hover, pero clampeado.
+   Border siempre transparente para que no exista ningun cambio de tamaño visual. */
 .toolbar-actions .p-button.p-button-primary {
-  background: var(--gradient-primary) !important;
+  background: var(--color-primary-muted) !important;
   border-color: transparent !important;
-  color: var(--color-primary-text) !important;
-  box-shadow: 0 4px 12px var(--accent-glow) !important;
+  color: var(--ds-brand) !important;
+  box-shadow: none !important;
 }
 
 .toolbar-actions .p-button.p-button-primary:hover {
-  background: var(--gradient-primary) !important;
-  filter: brightness(1.08);
-  box-shadow: 0 4px 12px var(--accent-glow) !important;
+  background: var(--color-primary-muted) !important;
+  border-color: transparent !important;
+  color: var(--ds-brand) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 /* Breadcrumb - design system tokens (global) */

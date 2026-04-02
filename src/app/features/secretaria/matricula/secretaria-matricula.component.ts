@@ -490,7 +490,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   // ── Paso 1: Datos personales ──────────────────────────────────────────────
 
   /** Admin: cambia de sede, recarga cursos y reinicia selección de curso. */
-  async onBranchChange(branchId: number): Promise<void> {
+  async onBranchChange(branchId: number | null): Promise<void> {
+    if (branchId === null) return; // En el wizard siempre se requiere una sede concreta
     this._activeBranchId.set(branchId);
     this._step1Form.set(DEFAULT_PERSONAL_DATA);
     await this.enrollment.loadCourses(branchId);

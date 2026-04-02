@@ -5,165 +5,179 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-instructor-clase',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterLink,
     LowerCasePipe,
     ReactiveFormsModule,
     TagModule,
     IconComponent,
     EmptyStateComponent,
+    AlertCardComponent,
+    SectionHeroComponent,
   ],
   template: `
-    <div class="px-6 py-6 pb-20 max-w-3xl mx-auto space-y-6">
-      <!-- Breadcrumb simple -->
-      <div class="flex items-center gap-2 text-sm text-text-muted">
-        <a
-          routerLink="/app/instructor/dashboard"
-          class="hover:text-text-primary flex items-center gap-1"
-        >
-          <app-icon name="arrow-left" [size]="14" />
-          Dashboard
-        </a>
-        <span>/</span>
-        <span class="text-text-primary font-medium">Iniciar Clase</span>
-      </div>
-
-      <div>
-        <h1 class="text-2xl font-bold text-text-primary">Iniciar Clase</h1>
-        <p class="text-sm text-text-muted mt-1">Registra el kilometraje inicial para comenzar</p>
-      </div>
+    <div class="px-4 sm:px-6 py-6 pb-20 max-w-3xl mx-auto space-y-6">
+      <app-section-hero
+        title="Iniciar Clase"
+        subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
+        variant="compact"
+        [actions]="heroActions"
+      />
 
       @if (clasesFacade.isLoading()) {
         <div class="flex justify-center p-12">
           <app-icon
             name="loader-2"
             [size]="32"
-            style="color: var(--color-primary)"
-            class="animate-spin"
+            class="text-brand animate-spin"
           />
         </div>
       } @else if (clasesFacade.error()) {
-        <div
-          class="card p-4 flex items-start gap-3"
-          style="background: var(--state-error-bg); color: var(--state-error)"
-        >
-          <app-icon name="alert-circle" [size]="20" class="mt-0.5 shrink-0" />
-          <p class="text-sm">{{ clasesFacade.error() }}</p>
-        </div>
+        <app-alert-card title="Atención" severity="error">
+          {{ clasesFacade.error() }}
+        </app-alert-card>
       } @else if (clasesFacade.selectedClass(); as cls) {
-        <!-- Resumen de Clase -->
-        <div class="card p-6">
-          <div class="flex items-center gap-4 mb-4">
-            <div
-              class="w-12 h-12 rounded-full bg-brand-muted flex flex-col items-center justify-center shrink-0"
-            >
-              <span class="text-xs font-medium text-text-muted">Práctica</span>
-              <span class="text-lg font-bold text-brand-primary">{{ cls.classNumber }}</span>
+        <!-- Resumen de Clase Estilo "Ticket" -->
+        <div class="bento-card relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full pointer-events-none -mr-8 -mt-8"></div>
+          <div class="flex items-start sm:items-center gap-4 mb-5 relative z-10">
+            <div class="w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0">
+              <span class="text-[10px] uppercase tracking-wider font-bold text-brand">Ruta</span>
+              <span class="text-xl font-display font-bold text-brand leading-none mt-0.5">{{ cls.classNumber }}</span>
             </div>
-            <div class="flex-1">
-              <h2 class="text-lg font-bold text-text-primary">{{ cls.studentName }}</h2>
+            <div class="flex-1 min-w-0">
+              <h2 class="text-xl font-display font-bold text-text-primary truncate">{{ cls.studentName }}</h2>
               <p class="text-sm text-text-muted mt-0.5">RUT: {{ cls.studentRut }}</p>
             </div>
+            <p-tag [value]="cls.statusLabel" [severity]="$any(cls.statusColor)" styleClass="hidden sm:inline-flex" />
+          </div>
+
+          <!-- P-tag para mobile (se mueve abajo en pantallas pequeñas) -->
+          <div class="mb-4 sm:hidden">
             <p-tag [value]="cls.statusLabel" [severity]="$any(cls.statusColor)" />
           </div>
 
-          <div class="grid grid-cols-2 gap-4 pt-4 border-t border-divider">
-            <div>
-              <p class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">
-                Horario Programado
-              </p>
-              <p class="text-sm text-text-primary font-medium flex items-center gap-1.5">
-                <app-icon name="clock" [size]="14" /> {{ cls.timeLabel }}
-              </p>
+          <div class="grid grid-cols-2 gap-4 pt-4 border-t border-border-default/50 relative z-10">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0">
+                <app-icon name="clock" [size]="16" class="text-text-secondary" />
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Horario</p>
+                <p class="text-sm text-text-primary font-medium">{{ cls.timeLabel }}</p>
+              </div>
             </div>
-            <div>
-              <p class="text-xs font-medium text-text-muted uppercase tracking-wider mb-1">
-                Vehículo Asignado
-              </p>
-              <p class="text-sm text-text-primary font-medium flex items-center gap-1.5">
-                <app-icon name="car" [size]="14" /> {{ cls.vehiclePlate }} ({{ cls.vehicleLabel }})
-              </p>
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0">
+                <app-icon name="car" [size]="16" class="text-text-secondary" />
+              </div>
+              <div class="min-w-0">
+                <p class="text-[10px] font-bold text-text-muted uppercase tracking-wider">Vehículo</p>
+                <p class="text-sm text-text-primary font-medium truncate">{{ cls.vehiclePlate }} <span class="text-text-muted font-normal">({{ cls.vehicleLabel }})</span></p>
+              </div>
             </div>
           </div>
         </div>
 
         @if (cls.canStart) {
-          <!-- Formulario Inicio -->
+          <!-- Formulario Inicio Premium Odometer Mode -->
           <form
             [formGroup]="startForm"
             (ngSubmit)="onStartClass(cls.sessionId)"
-            class="card p-6 flex flex-col gap-6"
+            class="flex flex-col gap-6"
           >
-            <div>
-              <h3 class="text-base font-semibold text-text-primary mb-1">Registrar Inicio</h3>
-              <p class="text-sm text-text-muted">
-                Ingresa el kilometraje actual del vehículo antes de iniciar la ruta.
-              </p>
-            </div>
-
-            <div class="space-y-1.5">
-              <label class="form-label" for="kmStart">Kilometraje Inicial (Km)</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <app-icon name="gauge" [size]="18" class="text-text-muted" />
+            <!-- Gran Tarjeta de Odómetro -->
+            <div 
+              class="bento-card p-8 sm:p-12 relative overflow-hidden transition-all duration-300 group focus-within:ring-2 focus-within:ring-brand/30 focus-within:border-brand border-2"
+              [class.border-border-default]="startForm.get('kmStart')?.valid || !startForm.get('kmStart')?.touched"
+              [class.border-error]="startForm.get('kmStart')?.invalid && startForm.get('kmStart')?.touched"
+            >
+              <div class="flex flex-col items-center justify-center relative z-10">
+                <div class="w-16 h-16 rounded-full bg-brand/10 text-brand flex items-center justify-center mb-6 shadow-sm ring-1 ring-brand/20 group-focus-within:scale-110 group-focus-within:bg-brand group-focus-within:text-white transition-all duration-500">
+                  <app-icon name="gauge" [size]="32" />
                 </div>
-                <input
-                  id="kmStart"
-                  type="number"
-                  formControlName="kmStart"
-                  class="form-control pl-10"
-                  placeholder="Ej: 45200"
-                  data-llm-description="input for initial vehicle kilometer reading"
-                  [style.borderColor]="
-                    startForm.get('kmStart')?.invalid && startForm.get('kmStart')?.touched
-                      ? 'var(--state-error)'
-                      : ''
-                  "
-                />
+                
+                <label class="text-sm font-bold text-text-secondary uppercase tracking-widest mb-2 cursor-pointer" for="kmStart">
+                  Kilometraje Actual
+                </label>
+                
+                <div class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-surface-base rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors group-focus-within:border-brand/50 group-focus-within:bg-surface-hover">
+                  <input
+                    id="kmStart"
+                    type="number"
+                    formControlName="kmStart"
+                    max="999999"
+                    class="!bg-transparent !border-none !outline-none !shadow-none !ring-0 text-5xl sm:text-7xl font-display font-black text-text-primary text-center p-0 w-32 sm:w-56 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:!bg-transparent"
+                    placeholder="0"
+                  />
+                  <span class="text-2xl sm:text-3xl font-bold text-text-muted select-none mt-2">km</span>
+                </div>
+                
+                @if (startForm.get('kmStart')?.invalid && startForm.get('kmStart')?.touched) {
+                  <div class="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-error/10 text-error text-sm font-medium animate-in fade-in slide-in-from-top-2">
+                    <app-icon name="alert-circle" [size]="14" />
+                    <span>
+                      @if (startForm.get('kmStart')?.hasError('max')) {
+                        El valor máximo es 999.999 km
+                      } @else {
+                        Ingrese un valor válido (> 0)
+                      }
+                    </span>
+                  </div>
+                } @else {
+                  <p class="text-sm text-text-muted mt-4 opacity-70">
+                    Verifique el panel del coche antes de arrancar.
+                  </p>
+                }
               </div>
-              @if (startForm.get('kmStart')?.invalid && startForm.get('kmStart')?.touched) {
-                <p class="text-xs mt-1" style="color: var(--state-error)">
-                  El kilometraje es requerido y debe ser mayor a 0.
-                </p>
-              }
             </div>
 
-            <div class="flex justify-end gap-3 pt-4 border-t border-divider">
-              <a routerLink="/app/instructor/dashboard" class="btn btn-outline">Cancelar</a>
+            <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-2">
+              <button
+                type="button"
+                (click)="goToDashboard()"
+                class="btn-secondary w-full sm:w-auto px-8"
+              >
+                Volver
+              </button>
               <button
                 type="submit"
-                class="btn btn-primary"
+                class="btn-primary w-full sm:w-auto px-8 shadow-md hover:shadow-lg transition-transform hover:-translate-y-0.5"
                 [disabled]="startForm.invalid || isSubmitting()"
                 data-llm-action="start-class"
               >
                 @if (!isSubmitting()) {
-                  <app-icon name="play" [size]="16" />
+                  <app-icon name="play" [size]="16" class="mr-1" />
                 } @else {
-                  <app-icon name="loader-2" [size]="16" class="animate-spin" />
+                  <app-icon name="loader-2" [size]="16" class="animate-spin mr-1" />
                 }
-                <span>{{ isSubmitting() ? 'Iniciando...' : 'Comenzar Clase' }}</span>
+                <span>{{ isSubmitting() ? 'Iniciando Ruta...' : 'Comenzar Clase' }}</span>
               </button>
             </div>
           </form>
         } @else {
-          <div class="card p-6 text-center">
-            <app-icon name="info" [size]="32" class="text-text-muted mx-auto mb-3 opacity-50" />
-            <h3 class="font-medium text-text-primary mb-1">
-              Esta clase no puede ser iniciada en este momento.
+          <div class="card p-10 flex flex-col justify-center items-center text-center border-dashed">
+            <div class="w-16 h-16 rounded-full bg-surface-hover flex items-center justify-center mb-4">
+              <app-icon name="lock" [size]="28" class="text-text-muted opacity-60" />
+            </div>
+            <h3 class="text-xl font-display font-bold text-text-primary mb-2">
+              Clase Bloqueada
             </h3>
-            <p class="text-sm text-text-muted mb-4">
-              La clase ya se encuentra {{ cls.statusLabel | lowercase }}.
+            <p class="text-base text-text-muted mb-6 max-w-sm">
+              Esta sesión se encuentra <strong class="text-text-primary">{{ cls.statusLabel | lowercase }}</strong>. Solo se permite iniciar clases en estado "Agendada".
             </p>
-            <a routerLink="/app/instructor/dashboard" class="btn btn-outline text-sm px-4 py-2"
-              >Volver al Dashboard</a
-            >
+            <button (click)="goToDashboard()" class="btn-primary w-full sm:w-auto px-8">
+              Volver al Dashboard
+            </button>
           </div>
         }
       } @else {
@@ -189,9 +203,19 @@ export class InstructorClaseComponent implements OnInit {
   public startForm: FormGroup;
   public isSubmitting = signal(false);
 
+  readonly heroActions: SectionHeroAction[] = [
+    {
+      id: 'back',
+      label: 'Volver',
+      icon: 'arrow-left',
+      primary: false,
+      route: '/app/instructor/dashboard'
+    }
+  ];
+
   constructor() {
     this.startForm = this.fb.group({
-      kmStart: [null, [Validators.required, Validators.min(1)]],
+      kmStart: [null, [Validators.required, Validators.min(1), Validators.max(999999)]],
     });
   }
 

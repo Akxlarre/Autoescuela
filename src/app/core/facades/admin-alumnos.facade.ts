@@ -1,5 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type {
   AlumnoTableRow,
   AlumnoExpediente,
@@ -59,6 +60,7 @@ const VENCER_THRESHOLD_DAYS = 7;
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnosFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
 
@@ -86,7 +88,9 @@ export class AdminAlumnosFacade {
     this._error.set(null);
 
     try {
-      const { data, error } = await this.supabase.client
+      const branchId = this.branchFacade.selectedBranchId();
+
+      let query = this.supabase.client
         .from('students')
         .select(
           `
@@ -125,6 +129,12 @@ export class AdminAlumnosFacade {
         `,
         )
         .order('id', { ascending: false });
+
+      if (branchId !== null) {
+        query = query.eq('users.branch_id', branchId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 

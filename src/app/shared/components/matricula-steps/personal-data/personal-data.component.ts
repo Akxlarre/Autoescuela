@@ -51,7 +51,7 @@ export class PersonalDataComponent {
   dataChange = output<EnrollmentPersonalData>();
   next = output<void>();
   cancel = output<void>();
-  branchChange = output<number>();
+  branchChange = output<number | null>();
 
   // ── Category selection (local UI state) ───────────────────────────────────
 

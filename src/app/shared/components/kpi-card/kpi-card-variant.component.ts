@@ -11,13 +11,10 @@ import {
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '../icon/icon.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
-
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
  * KpiCardVariantComponent — Variante de molécula de métrica (KPI) con subtexto estadístico.
- *
- * Ahora soporta un estado de 'loading' integrado para evitar Layout Shift.
  */
 @Component({
   selector: 'app-kpi-card-variant',
@@ -40,12 +37,10 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         </div>
         <app-skeleton-block variant="rect" width="80%" height="40px" />
         <div class="flex items-center gap-2 mt-auto pt-2">
-          <app-skeleton-block variant="rect" width="48px" height="18px" />
           <app-skeleton-block variant="text" width="40%" height="12px" />
         </div>
       } @else {
         <!-- Modo Contenido Real -->
-        <!-- Header: label (izquierda) + chip de ícono (derecha) -->
         <div class="flex items-start justify-between gap-3 mb-2">
           <span class="text-xs font-semibold" [style.color]="labelColor()">{{ label() }}</span>
           @if (icon(); as iconName) {
@@ -60,7 +55,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           }
         </div>
 
-        <!-- Valor principal — animado por GSAP al montar -->
         <p class="flex items-baseline gap-1 m-0 truncate">
           @if (prefix()) {
             <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
@@ -77,7 +71,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           }
         </p>
 
-        <!-- SubValor / Trend -->
         <div class="flex items-center gap-1 mt-auto flex-wrap pt-2">
           @if (trend() !== undefined) {
             <span
@@ -119,50 +112,36 @@ export class KpiCardVariantComponent {
   readonly color = input<'default' | 'success' | 'warning' | 'error'>('default');
   readonly loading = input<boolean>(false);
 
-  // Computed styles based on color variant
   protected readonly labelColor = computed(() => {
     switch (this.color()) {
-      case 'success':
-        return 'var(--state-success)';
-      case 'warning':
-        return 'var(--state-warning)';
-      case 'error':
-        return 'var(--state-error)';
+      case 'success': return 'var(--state-success)';
+      case 'warning': return 'var(--state-warning)';
+      case 'error': return 'var(--state-error)';
       case 'default':
-      default:
-        return 'var(--color-primary)';
+      default: return 'var(--color-primary)';
     }
   });
 
   protected readonly iconBg = computed(() => {
     switch (this.color()) {
-      case 'success':
-        return 'var(--state-success-bg, rgba(34, 197, 94, 0.1))';
-      case 'warning':
-        return 'var(--state-warning-bg, rgba(245, 158, 11, 0.1))';
-      case 'error':
-        return 'var(--state-error-bg, rgba(239, 68, 68, 0.1))';
+      case 'success': return 'rgba(34, 197, 94, 0.1)';
+      case 'warning': return 'rgba(245, 158, 11, 0.1)';
+      case 'error': return 'rgba(239, 68, 68, 0.1)';
       case 'default':
-      default:
-        return 'var(--color-primary-muted, rgba(59, 130, 246, 0.1))';
+      default: return 'rgba(14, 165, 233, 0.1)';
     }
   });
 
   protected readonly iconColorStyle = computed(() => {
     switch (this.color()) {
-      case 'success':
-        return 'var(--state-success, rgb(34, 197, 94))';
-      case 'warning':
-        return 'var(--state-warning, rgb(245, 158, 11))';
-      case 'error':
-        return 'var(--state-error, rgb(239, 68, 68))';
+      case 'success': return 'var(--state-success)';
+      case 'warning': return 'var(--state-warning)';
+      case 'error': return 'var(--state-error)';
       case 'default':
-      default:
-        return 'var(--color-primary, rgb(59, 130, 246))';
+      default: return 'var(--color-primary)';
     }
   });
 
-  // Trend calculations
   protected readonly trendIsUp = computed(() => (this.trend() ?? 0) >= 0);
   protected readonly trendIcon = computed(() =>
     this.trendIsUp() ? 'trending-up' : 'trending-down',

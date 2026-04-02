@@ -14,6 +14,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms-viewer-modal.component';
 
 /**
@@ -54,10 +55,7 @@ import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms
 
     <!-- Visor de documentos DMS -->
     @if (dmsViewer.isOpen()) {
-      <app-dms-viewer-modal
-        [doc]="dmsViewer.currentDoc()!"
-        (closed)="dmsViewer.close()"
-      />
+      <app-dms-viewer-modal [doc]="dmsViewer.currentDoc()!" (closed)="dmsViewer.close()" />
     }
 
     <!-- Modal de confirmación global (usado por guards y servicios imperativos) -->
@@ -138,24 +136,26 @@ import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms
     }
 
     <div
-      class="shell-container grid h-dvh grid-cols-1 overflow-hidden bg-base lg:grid-cols-[auto_1fr]"
+      class="shell-container flex sm:grid h-dvh w-full max-w-[100vw] overflow-hidden bg-base sm:grid-cols-1 lg:grid-cols-[auto_1fr]"
     >
       <!-- Sidebar -->
       <app-sidebar
         #sidebarEl
-        class="fixed inset-y-0 inset-s-0 z-50 w-60 max-h-dvh -translate-x-full transition-transform duration-normal ease-standard lg:static lg:translate-x-0"
+        class="fixed inset-y-0 left-0 z-50 w-60 max-w-[80vw] max-h-dvh -translate-x-full transition-transform duration-normal ease-standard lg:static lg:translate-x-0"
         [class.translate-x-0]="layout.sidebarOpen()"
       />
 
       <!-- Main Column: topbar + (content area + drawer) -->
-      <div class="flex flex-col min-w-0 bg-(--bg-canvas) overflow-hidden">
+      <div
+        class="flex flex-col flex-1 w-full max-w-[100vw] lg:max-w-none min-w-0 bg-(--bg-canvas) overflow-hidden"
+      >
         <!-- Topbar spans full width of the main column -->
         <app-topbar />
 
         <!-- Shifting container for main content and drawer -->
-        <div class="flex flex-1 min-w-0 overflow-hidden">
+        <div class="flex flex-1 min-w-0 w-full overflow-hidden relative">
           <main
-            class="shell-content flex-1 overflow-y-auto p-6"
+            class="shell-content flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 w-full max-w-full"
             style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"
@@ -178,6 +178,7 @@ export class AppShellComponent {
   protected readonly dmsViewer = inject(DmsViewerService);
   private readonly notificationsFacade = inject(NotificationsFacade);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   constructor() {
     // Premium Feel: Si abrimos el layout drawer global y estamos en pantallas
@@ -196,6 +197,13 @@ export class AppShellComponent {
     effect(() => {
       if (!this.auth.isAuthenticated()) {
         this.notificationsFacade.dispose();
+      }
+    });
+
+    // Cargar sedes una sola vez cuando el usuario admin se autentica
+    effect(() => {
+      if (this.auth.currentUser()?.role === 'admin') {
+        this.branchFacade.loadBranches();
       }
     });
   }

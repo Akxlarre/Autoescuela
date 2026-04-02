@@ -41,7 +41,8 @@ export class GsapAnimationsService {
    * Todas las celdas (incl. hero) usan la misma animación.
    * @param containerEl - Elemento contenedor del bento-grid
    */
-  animateBentoGrid(containerEl: HTMLElement): void {
+  animateBentoGrid(containerEl: HTMLElement | null | undefined): void {
+    if (!containerEl) return;
     const cells = Array.from(containerEl.children) as HTMLElement[];
 
     if (!this.shouldAnimate()) {
@@ -68,7 +69,8 @@ export class GsapAnimationsService {
    * Animación del hero card — entrada con blur + scale
    * @param el - Elemento hero
    */
-  animateHero(el: HTMLElement): void {
+  animateHero(el: HTMLElement | null | undefined): void {
+    if (!el) return;
     if (!this.shouldAnimate()) {
       gsap.set(el, { opacity: 1 });
       return;
@@ -162,8 +164,8 @@ export class GsapAnimationsService {
    * Usa tokens del design system (white-labeling).
    * @param el - Elemento card
    */
-  addCardHover(el: HTMLElement): void {
-    if (!this.shouldAnimate()) return;
+  addCardHover(el: HTMLElement | null | undefined): void {
+    if (!el || !this.shouldAnimate()) return;
 
     const getToken = (name: string): string => {
       if (typeof document === 'undefined') return '';

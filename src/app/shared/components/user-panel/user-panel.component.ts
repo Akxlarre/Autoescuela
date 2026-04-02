@@ -10,10 +10,11 @@ export interface User {
 }
 
 /**
- * UserPanelComponent — panel flotante para el menú del usuario en el sidebar.
- * 
- * Dumb component: solo input() y output().
- * Hereda animaciones de entrada del directiva appAnimateIn manejada por su wrapper.
+ * UserPanelComponent — panel flotante para el menú del usuario en el topbar.
+ *
+ * Dumb component: solo input() y output(). Sin lógica de negocio.
+ * La confirmación de logout es responsabilidad del TopbarComponent
+ * (Smart parent), que usa ConfirmModalService.
  */
 @Component({
     selector: 'app-user-panel',
@@ -65,7 +66,7 @@ export interface User {
       <ul class="user-panel__list" role="presentation">
         <li role="none">
           <button
-            class="user-panel__item text-error hover:bg-state-error-bg hover:text-error"
+            class="user-panel__item user-panel__item--danger"
             role="menuitem"
             (click)="logout.emit()"
           >

@@ -38,13 +38,12 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   template: `
     <div class="px-6 py-6 pb-20 max-w-5xl mx-auto space-y-6">
       <!-- HERO -->
-      <section class="bento-hero surface-hero rounded-xl" #heroRef>
-        <app-section-hero
-          title="Liquidación"
-          subtitle="Resumen de horas trabajadas y cálculo mensual"
-          [actions]="heroActions"
-        />
-      </section>
+      <app-section-hero
+        #heroRef
+        title="Liquidación"
+        subtitle="Resumen de horas trabajadas y cálculo mensual"
+        [actions]="heroActions"
+      />
 
       @if (facade.isLoading()) {
         <!-- KPI Skeletons -->
