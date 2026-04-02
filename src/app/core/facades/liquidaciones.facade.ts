@@ -2,7 +2,6 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
-import { toISODate } from '@core/utils/date.utils';
 import type {
   LiquidacionRow,
   LiquidacionesKpis,
@@ -141,8 +140,7 @@ export class LiquidacionesFacade {
         this.supabase.client
           .from('instructor_monthly_payments')
           .select('*')
-          .eq('month', mes)
-          .eq('year', anio),
+          .eq('period', `${anio}-${mm}`),
       ]);
 
       if (instrRes.error) throw instrRes.error;
@@ -200,11 +198,9 @@ export class LiquidacionesFacade {
             totalBaseAmount,
             totalAdvances,
             finalPaymentAmount,
-            status: payment ? 'paid' : 'pending',
+            status: payment?.payment_status === 'paid' ? 'paid' : 'pending',
             paymentId: payment?.id,
-            paymentMethod: payment?.payment_method,
-            paymentDate: payment?.payment_date,
-            transferCode: payment?.transfer_code,
+            paymentDate: payment?.paid_at ?? undefined,
           } satisfies LiquidacionRow;
         });
 
@@ -238,23 +234,18 @@ export class LiquidacionesFacade {
 
       const record = {
         instructor_id: row.instructorId,
-        month: mes,
-        year: anio,
-        total_hours: row.totalHours,
-        amount_per_hour: row.amountPerHour,
-        total_base_amount: row.totalBaseAmount,
-        total_advances: row.totalAdvances,
-        final_payment_amount: row.finalPaymentAmount,
-        payment_method: payload.paymentMethod,
-        transfer_code: payload.transferCode ?? null,
-        status: 'paid',
-        payment_date: toISODate(new Date()),
+        period: `${anio}-${mm}`,
+        base_salary: row.totalBaseAmount,
+        advances_deducted: row.totalAdvances,
+        net_payment: row.totalBaseAmount - row.totalAdvances,
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
         paid_by: user.dbId ?? null,
       };
 
       const { error: payErr } = await this.supabase.client
         .from('instructor_monthly_payments')
-        .upsert(record, { onConflict: 'instructor_id,month,year' });
+        .upsert(record, { onConflict: 'instructor_id,period' });
 
       if (payErr) throw payErr;
 
@@ -295,8 +286,7 @@ export class LiquidacionesFacade {
         .from('instructor_monthly_payments')
         .delete()
         .eq('instructor_id', row.instructorId)
-        .eq('month', mes)
-        .eq('year', anio);
+        .eq('period', `${anio}-${mm}`);
 
       if (delErr) throw delErr;
 
