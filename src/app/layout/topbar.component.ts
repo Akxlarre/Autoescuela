@@ -9,18 +9,20 @@ import {
 import { Router } from '@angular/router';
 
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
 import { ThemeService } from '@core/services/ui/theme.service';
-import { UserRole } from '@core/models/ui/user.model';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
 import { SearchShortcutDirective } from '@core/directives/search-shortcut.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { NotificationsPanelComponent } from '@shared/components/notifications-panel/notifications-panel.component';
 import { UserPanelComponent } from '@shared/components/user-panel/user-panel.component';
+import { BranchSelectorComponent } from '@shared/components/branch-selector/branch-selector.component';
 import { Button } from 'primeng/button';
 
 /**
@@ -49,6 +51,7 @@ import { Button } from 'primeng/button';
     SearchShortcutDirective,
     NotificationsPanelComponent,
     UserPanelComponent,
+    BranchSelectorComponent,
   ],
   template: `
     <header
@@ -70,12 +73,20 @@ import { Button } from 'primeng/button';
         </p-button>
       </div>
 
-      <!-- Título de sección / breadcrumb -->
+      <!-- Selector de sede (solo admin) / breadcrumb -->
       <div
-        class="flex-1 min-w-0 flex items-center overflow-hidden whitespace-nowrap text-sm font-medium text-text-secondary"
-        aria-label="Sección actual"
+        class="flex-1 min-w-0 flex items-center overflow-hidden"
+        aria-label="Contexto de sede activa"
       >
-        <!-- TODO: conectar BreadcrumbService o título de la ruta activa -->
+        @if (auth.currentUser()?.role === 'admin') {
+          <app-branch-selector
+            [branches]="branchFacade.branches()"
+            [selectedBranchId]="branchFacade.selectedBranchId()"
+            [showAllOption]="true"
+            (branchChange)="branchFacade.selectBranch($event)"
+            data-llm-description="Branch filter for admin — selects which school's data to show"
+          />
+        }
       </div>
 
       <!-- Acciones de la derecha -->
@@ -201,10 +212,12 @@ import { Button } from 'primeng/button';
 export class TopbarComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly auth = inject(AuthFacade);
+  protected readonly branchFacade = inject(BranchFacade);
   protected readonly notifications = inject(NotificationsFacade);
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly theme = inject(ThemeService);
 
+  private readonly confirmModal = inject(ConfirmModalService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly router = inject(Router);
 
@@ -242,8 +255,16 @@ export class TopbarComponent {
     console.log('[Topbar] User action:', action);
   }
 
-  onLogout(): void {
+  async onLogout(): Promise<void> {
     this.userPanelOpen.set(false);
-    this.auth.logout();
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Cerrar sesión',
+      message:
+        '¿Estás seguro de que deseas cerrar tu sesión? Se perderá cualquier cambio no guardado.',
+      severity: 'danger',
+      confirmLabel: 'Sí, salir',
+      cancelLabel: 'Cancelar',
+    });
+    if (confirmed) this.auth.logout();
   }
 }

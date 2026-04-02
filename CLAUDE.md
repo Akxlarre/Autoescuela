@@ -66,6 +66,7 @@ supabase/
 - **Prioridad de UI:** 1. Boilerplate Local (`indices/COMPONENTS.md`) -> 2. `PrimeNG` -> 3. Componentes custom desde cero.
 - **PROHIBIDO Tailwind Arbitrario:** **NUNCA** uses colores como `text-red-500` o `bg-[#ff0000]`. Siempre usa nuestros Tokens Semánticos (`var(--ds-brand)`, `text-primary`, `bg-brand-muted`).
 - **Grillas y Layout:** Este proyecto utiliza **Bento Grid**. No hagas Grids arbitrarios; utiliza nuestras reglas canónicas.
+- **Íconos (Lucide Angular):** Todo ícono nuevo `<lucide-icon name="X">` **DEBE** registrarse primero exportando e inyectando su clase en `LucideAngularModule.pick({ X })` dentro de `app.config.ts`. ¡Si no lo registras, la app fallará en runtime!
 - Lee los detalles en `docs/TECH-STACK-RULES.md` y `docs/BRAND_GUIDELINES.md`.
 
 ## Tu Auto-Mantenimiento (Autonomía)

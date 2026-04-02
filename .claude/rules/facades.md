@@ -83,6 +83,7 @@ El Facade es el **único lugar** donde se permite transformar un DTO de base de 
 
 ### Ejemplo de transformación (basado en `AuthFacade`):
 
+
 ```typescript
 import type { User as UserDto } from '@core/models/dto/user.model';   // ← DTO crudo de BD
 import type { User as UserUi } from '@core/models/ui/user.model';     // ← Modelo limpio para la UI
@@ -108,3 +109,99 @@ private async loadUserFromSession(authUser: SupabaseAuthUser): Promise<void> {
   this._currentUser.set(user);
 }
 ```
+
+## 7. Facades Multi-Sede (Branch-Scoped)
+
+Algunos Facades manejan datos que pertenecen a una sede específica (`branch_id`). Para ellos existe `BranchFacade` (`core/facades/branch.facade.ts`) como fuente única de verdad del filtro de sede activo.
+
+### Regla de implementación obligatoria
+
+Si el Facade maneja datos con scope de sede, **DEBE**:
+
+1. Inyectar `BranchFacade`
+2. Leer `this.branchFacade.selectedBranchId()` dentro de cada método `fetchData()`
+3. Aplicar el filtro condicionalmente: `null` significa "Admin ve todas" → **sin filtro**; `number` → `.eq('branch_id', branchId)`
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class AdminAlumnosFacade {
+  private supabase = inject(SupabaseService);
+  private branchFacade = inject(BranchFacade); // ← inyección obligatoria
+
+  private async fetchAlumnos(): Promise<void> {
+    const branchId = this.branchFacade.selectedBranchId();
+
+    let query = this.supabase.client
+      .from('enrollments')
+      .select('id, students!inner(users!inner(...))');
+
+    // null = Admin "Todas las escuelas" → sin filtro de sede
+    if (branchId !== null) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    const { data, error } = await query;
+    // ...
+  }
+}
+```
+
+### Reactividad: efecto en el Smart Component, NO en el Facade
+
+**PROHIBIDO** poner `effect()` dentro del Facade para auto-recargar datos al cambiar de sede.
+La reactividad es responsabilidad del Smart Component que controla el ciclo de vida:
+
+```typescript
+// ✅ CORRECTO — en el Smart Component (features/)
+export class AdminAlumnosComponent implements OnInit {
+  private facade = inject(AdminAlumnosFacade);
+  private branchFacade = inject(BranchFacade);
+
+  constructor() {
+    // Se re-ejecuta cada vez que el admin cambia de sede
+    effect(() => {
+      const _ = this.branchFacade.selectedBranchId(); // tracking
+      this.facade.loadAlumnos();
+    });
+  }
+}
+
+// ❌ INCORRECTO — effect() dentro del Facade
+@Injectable({ providedIn: 'root' })
+export class AdminAlumnosFacade {
+  constructor() {
+    effect(() => this.loadAlumnos()); // ← singleton, nunca se destruye, imposible de testear
+  }
+}
+```
+
+### Facades que DEBEN aplicar branch filter
+
+| Facade | Campo a filtrar |
+|--------|----------------|
+| `AdminAlumnosFacade` | `enrollments.branch_id` |
+| `DashboardFacade` | según las queries de KPIs |
+| `FlotaFacade` | `vehicles.branch_id` |
+| `DmsFacade` | `school_documents.branch_id` / `enrollments.branch_id` |
+| `EnrollmentFacade` | `enrollments.branch_id` |
+
+### Facades que NO aplican branch filter (tienen su propio scope)
+
+| Facade | Por qué |
+|--------|---------|
+| `InstructorAlumnosFacade` | Filtra por `instructor_id` del usuario autenticado |
+| `InstructorClasesFacade` | Filtra por `instructor_id` |
+| `NotificationsFacade` | Filtra por `recipient_id` del usuario |
+| `AuthFacade` | No aplica — es sobre el usuario actual |
+| `AgendaFacade` | Su scope ya viene determinado por instructor/semana |
+
+### Inicialización
+
+`BranchFacade.loadBranches()` debe llamarse una sola vez en `AppShellComponent.ngOnInit()`,
+después de que `AuthFacade` confirme que el usuario es admin. Las secretarias nunca necesitan
+la lista de sedes porque están ancladas a la suya via `currentUser().branchId`.
+
+### Modelo de datos
+
+Usar siempre `BranchOption` de `@core/models/ui/branch.model.ts`.
+**PROHIBIDO** redefinir una interfaz `Branch` o `BranchOption` local dentro de un Facade.

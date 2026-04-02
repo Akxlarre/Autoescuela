@@ -3,10 +3,11 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import type { BranchOption } from '@core/models/ui/branch.model';
 
 /**
- * BranchSelectorComponent — Selector de sede para el wizard de matrícula.
+ * BranchSelectorComponent — Selector de sede.
  *
- * Solo visible para el rol Admin (que puede matricular en cualquier sede).
- * Las secretarias están ancladas a su sede y nunca ven este componente.
+ * Dos modos de uso:
+ * - Wizard de matrícula (showAllOption=false): emite siempre un número de sede.
+ * - Topbar admin (showAllOption=true): añade la opción "Todas las escuelas" que emite null.
  *
  * Dumb: solo inputs/outputs, sin inyección de servicios.
  */
@@ -17,7 +18,24 @@ import type { BranchOption } from '@core/models/ui/branch.model';
   template: `
     <div class="flex flex-col gap-1">
       <p class="text-xs font-medium text-text-muted uppercase tracking-wide">Sede</p>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap">
+        @if (showAllOption()) {
+          <button
+            type="button"
+            class="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all"
+            [class.border-brand]="selectedBranchId() === null"
+            [class.bg-brand-muted]="selectedBranchId() === null"
+            [class.text-brand]="selectedBranchId() === null"
+            [class.border-border-default]="selectedBranchId() !== null"
+            [class.bg-surface]="selectedBranchId() !== null"
+            [class.text-text-secondary]="selectedBranchId() !== null"
+            (click)="branchChange.emit(null)"
+            data-llm-action="select-branch-all"
+          >
+            <app-icon name="globe" [size]="14" />
+            Todas las escuelas
+          </button>
+        }
         @for (branch of branches(); track branch.id) {
           <button
             type="button"
@@ -28,7 +46,6 @@ import type { BranchOption } from '@core/models/ui/branch.model';
             [class.border-border-default]="selectedBranchId() !== branch.id"
             [class.bg-surface]="selectedBranchId() !== branch.id"
             [class.text-text-secondary]="selectedBranchId() !== branch.id"
-            [class.hover:border-brand]="selectedBranchId() !== branch.id"
             (click)="branchChange.emit(branch.id)"
             [attr.data-llm-action]="'select-branch-' + branch.slug"
           >
@@ -43,5 +60,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 export class BranchSelectorComponent {
   branches = input.required<BranchOption[]>();
   selectedBranchId = input<number | null>(null);
-  branchChange = output<number>();
+  /** Muestra la opción "Todas las escuelas" (emite null). Usar en Topbar para admin. */
+  showAllOption = input(false);
+  branchChange = output<number | null>();
 }

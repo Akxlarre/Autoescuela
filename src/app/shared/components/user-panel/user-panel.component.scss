@@ -88,4 +88,19 @@
       color: var(--text-primary);
     }
   }
+
+  // Variante danger: rojo semántico desde el reposo
+  &--danger {
+    color: var(--state-error);
+
+    app-icon {
+      color: var(--state-error);
+    }
+
+    &:hover,
+    &:focus-visible {
+      background-color: var(--state-error-bg);
+      color: var(--state-error);
+    }
+  }
 }

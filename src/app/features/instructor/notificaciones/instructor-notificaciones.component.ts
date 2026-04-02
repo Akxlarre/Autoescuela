@@ -2,12 +2,15 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
+  OnInit,
+  computed,
   inject,
-  signal,
   viewChild,
 } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
@@ -20,14 +23,13 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   template: `
     <div class="px-6 py-6 pb-20 max-w-4xl mx-auto space-y-6">
       <!-- HERO -->
-      <section class="bento-hero surface-hero rounded-xl" #heroRef>
-        <app-section-hero
-          title="Notificaciones"
-          subtitle="Centro de alertas y mensajes importantes"
-          [actions]="heroActions"
-          (actionClick)="onHeroAction($event)"
-        />
-      </section>
+      <app-section-hero
+        #heroRef
+        title="Notificaciones"
+        subtitle="Centro de alertas y mensajes importantes"
+        [actions]="heroActions"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <div class="card p-0 overflow-hidden divide-y divide-divider">
         @if (notifications().length === 0) {
@@ -89,55 +91,32 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     </div>
   `,
 })
-export class InstructorNotificacionesComponent implements AfterViewInit {
+export class InstructorNotificacionesComponent implements OnInit, AfterViewInit {
   private gsap = inject(GsapAnimationsService);
+  private notificationsFacade = inject(NotificationsFacade);
+  private destroyRef = inject(DestroyRef);
   private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
 
   readonly heroActions: SectionHeroAction[] = [
     { id: 'mark-all-read', label: 'Marcar todas como leídas', icon: 'check-check', primary: true },
   ];
 
-  notifications = signal([
-    {
-      id: 1,
-      type: 'schedule',
-      title: 'Cambio de horario asignado',
-      message:
-        'Se ha reagendado tu clase de las 14:00 con el alumno Juan Pérez para mañana a la misma hora.',
-      time: 'Hace 1 hora',
-      unread: true,
-      actionLabel: 'Ver Horario',
-    },
-    {
-      id: 2,
-      type: 'student',
-      title: 'Evaluación pendiente',
-      message: 'No has registrado la evaluación de la clase de las 10:00 con María González.',
-      time: 'Hace 4 horas',
-      unread: true,
-      actionLabel: 'Evaluar ahora',
-    },
-    {
-      id: 3,
-      type: 'system',
-      title: 'Cierre de ciclo mensual',
-      message:
-        'Recuerda que el próximo viernes es el cierre de ciclo mensual. Revisa tu liquidación proyectada.',
-      time: 'Ayer',
-      unread: false,
-      actionLabel: 'Ver Liquidación',
-    },
-    {
-      id: 4,
-      type: 'student',
-      title: 'Alumno canceló su clase',
-      message:
-        'El alumno Pedro Díaz ha cancelado su clase práctica programada para hoy a las 16:00.',
-      time: 'Hace 2 días',
-      unread: false,
-      actionLabel: null,
-    },
-  ]);
+  readonly notifications = computed(() =>
+    this.notificationsFacade.filteredNotifications().map((n) => ({
+      id: n.id,
+      type: this.mapReferenceToType(n.referenceType),
+      title: n.title,
+      message: n.message,
+      time: this.formatRelativeTime(n.createdAt),
+      unread: !n.read,
+      actionLabel: null as string | null,
+    })),
+  );
+
+  ngOnInit() {
+    this.notificationsFacade.initialize();
+    this.destroyRef.onDestroy(() => this.notificationsFacade.dispose());
+  }
 
   ngAfterViewInit() {
     const hero = this.heroRef();
@@ -149,7 +128,7 @@ export class InstructorNotificacionesComponent implements AfterViewInit {
   }
 
   markAllRead() {
-    this.notifications.update((list) => list.map((n) => ({ ...n, unread: false })));
+    this.notificationsFacade.markAllAsRead();
   }
 
   getIconBg(type: string): string {
@@ -168,5 +147,30 @@ export class InstructorNotificacionesComponent implements AfterViewInit {
       system: 'settings',
     };
     return map[type] ?? 'bell';
+  }
+
+  private mapReferenceToType(ref?: string | null): string {
+    if (!ref) return 'system';
+    const map: Record<string, string> = {
+      class_b: 'schedule',
+      professional_session: 'schedule',
+      payment: 'system',
+      document_expiry: 'system',
+    };
+    return map[ref] ?? 'system';
+  }
+
+  private formatRelativeTime(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Ahora';
+    if (diffMin < 60) return `Hace ${diffMin} min`;
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) return `Hace ${diffHours}h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'Ayer';
+    if (diffDays < 7) return `Hace ${diffDays} días`;
+    return date.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
   }
 }

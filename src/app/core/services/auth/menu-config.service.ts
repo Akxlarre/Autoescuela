@@ -238,8 +238,6 @@ const INSTRUCTOR_NAV: NavGroup[] = [
     group: 'Mi Trabajo',
     items: [
       { label: 'Mi Dashboard', icon: 'layout-dashboard', routerLink: '/app/instructor/dashboard' },
-      { label: 'Notificaciones', icon: 'bell', routerLink: '/app/instructor/notificaciones' },
-      { label: 'Iniciar Clase', icon: 'play-circle', routerLink: '/app/instructor/clase/iniciar' },
     ],
   },
   {

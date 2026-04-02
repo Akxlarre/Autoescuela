@@ -7,6 +7,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import {
   LucideAngularModule,
   // ── Icons ──
+  Lock,
   Layers,
   Activity,
   CircleAlert,
@@ -25,6 +26,7 @@ import {
   LayoutDashboard,
   Plus,
   Settings,
+  Settings2,
   TrendingDown,
   TrendingUp,
   User,
@@ -142,6 +144,12 @@ import {
   // ── Gestión de Secretarias ──
   AtSign,
   IdCard,
+  Eraser,
+  ArrowUpDown,
+  Hash,
+  FileX,
+  // ── Branch Selector ──
+  Globe,
   // ── Gestión de Relatores ──
   Mic,
 } from 'lucide-angular';
@@ -194,6 +202,7 @@ export const appConfig: ApplicationConfig = {
     ConfirmationService,
     importProvidersFrom(
       LucideAngularModule.pick({
+        Lock,
         Activity,
         CircleAlert,
         AlertTriangle,
@@ -211,6 +220,7 @@ export const appConfig: ApplicationConfig = {
         LayoutDashboard,
         Plus,
         Settings,
+        Settings2,
         TrendingDown,
         TrendingUp,
         User,
@@ -327,6 +337,14 @@ export const appConfig: ApplicationConfig = {
         // ── Gestión de Secretarias ──
         AtSign,
         IdCard,
+        Eraser,
+        // ── Contacto / Instructor Alumnos ──
+        Phone,
+        MapPin,
+        ArrowUpDown,
+        Hash,
+        FileX,
+        Globe,
         MapPin,
         Phone,
         // ── Gestión de Relatores ──

@@ -17,6 +17,9 @@ export class InstructorAlumnosFacade {
 
   private _students = signal<InstructorStudentCard[]>([]);
   private _studentDetail = signal<InstructorStudentDetail | null>(null);
+  /** Alumno seleccionado actualmente para detalle (Drawer) */
+  private _activeStudent = signal<InstructorStudentCard | null>(null);
+  
   private _examScores = signal<ExamScoreRow[]>([]);
 
   private _isLoading = signal<boolean>(false);
@@ -27,6 +30,7 @@ export class InstructorAlumnosFacade {
 
   readonly students = this._students.asReadonly();
   readonly studentDetail = this._studentDetail.asReadonly();
+  readonly activeStudent = this._activeStudent.asReadonly();
   readonly examScores = this._examScores.asReadonly();
 
   readonly isLoading = this._isLoading.asReadonly();
@@ -52,6 +56,10 @@ export class InstructorAlumnosFacade {
     };
   });
 
+  setActiveStudent(student: InstructorStudentCard | null): void {
+    this._activeStudent.set(student);
+  }
+
   async initialize(): Promise<void> {
     if (this._initialized) {
       await this.refreshSilently();
@@ -70,37 +78,57 @@ export class InstructorAlumnosFacade {
 
     this._error.set(null);
     try {
-      // Find students whose enrollments have sessions assigned to this instructor
-      // Complex query simplified via two steps or a view for real-world scenarios.
-      // Here using a direct fetch assuming `students!inner(...)` works properly across the schema.
-      const { data, error } = await this.supabase.client
-        .from('enrollments')
-        .select(
-          `
-          id, status, courses!inner(name, code),
-          students!inner(
-            id, users!inner(first_names, paternal_last_name, rut, email, phone)
-          ),
-          class_b_sessions(id, status, scheduled_at, class_number)
-        `,
-        )
-        .in('status', ['active', 'in_progress', 'completed'])
-        // Usually we would join here to filter by instructor_id but in Supabase it's tricky without a view
-        // For now, we will fetch and filter client-side or use a specific RPC depending on BD definition.
-        // Assuming we fetch all and filter client side for brevity:
-        .not('students.users.first_names', 'is', null);
+      const { data: sessionRows, error: sessionError } = await this.supabase.client
+        .from('class_b_sessions')
+        .select('enrollment_id')
+        .eq('instructor_id', instructorId);
 
-      if (error) throw error;
+      if (sessionError) throw sessionError;
+
+      const enrollmentIds = [...new Set((sessionRows || []).map((r) => r.enrollment_id))];
+      if (enrollmentIds.length === 0) {
+        this._students.set([]);
+        return;
+      }
+
+      const [enrollmentResult, progressResult] = await Promise.all([
+        this.supabase.client
+          .from('enrollments')
+          .select(
+            `
+            id, status, courses!inner(name, code),
+            students!inner(
+              id, users!inner(first_names, paternal_last_name, rut, email, phone)
+            ),
+            class_b_sessions(id, status, scheduled_at, class_number)
+          `,
+          )
+          .in('id', enrollmentIds)
+          .in('status', ['active', 'in_progress', 'completed']),
+        this.supabase.client
+          .from('v_student_progress_b')
+          .select('enrollment_id, completed_practices, pct_theory_attendance')
+          .in('enrollment_id', enrollmentIds),
+      ]);
+
+      if (enrollmentResult.error) throw enrollmentResult.error;
+
+      const progressMap = new Map<number, { completed: number; theoryPct: number }>();
+      for (const p of progressResult.data || []) {
+        progressMap.set(p.enrollment_id, {
+          completed: p.completed_practices || 0,
+          theoryPct: p.pct_theory_attendance || 0,
+        });
+      }
 
       const mappedStudents: InstructorStudentCard[] = [];
 
-      for (const row of data || []) {
+      for (const row of enrollmentResult.data || []) {
         const sessions = row.class_b_sessions || [];
-        // Check if this instructor is involved in this enrollment
-        // Real implementation should be an inner join on RPC or View. (v_student_progress_b)
-
-        const completed = sessions.filter((s: any) => s.status === 'completed').length;
-        const total = 12; // Static for class B
+        const progress = progressMap.get(row.id);
+        const completed =
+          progress?.completed ?? sessions.filter((s: any) => s.status === 'completed').length;
+        const total = 12;
         const nextSession = sessions
           .filter((s: any) => s.status === 'scheduled')
           .sort(
@@ -122,7 +150,7 @@ export class InstructorAlumnosFacade {
           practiceProgress: completed,
           totalSessions: total,
           practicePercent: Math.round((completed / total) * 100),
-          theoryPercent: 0, // Should come from theory_attendance
+          theoryPercent: progress?.theoryPct ?? 0,
           nextClassDate: nextSession ? nextSession.scheduled_at : null,
           status: row.status as any,
           statusLabel:
@@ -166,7 +194,6 @@ export class InstructorAlumnosFacade {
       if (e1) throw e1;
 
       if (enrollmentData) {
-        // Fetch sessions for this enrollment
         const { data: sessions, error: e2 } = await this.supabase.client
           .from('class_b_sessions')
           .select(
@@ -208,6 +235,12 @@ export class InstructorAlumnosFacade {
           });
         }
 
+        const { data: progressData } = await this.supabase.client
+          .from('v_student_progress_b')
+          .select('pct_theory_attendance')
+          .eq('enrollment_id', enrollmentData.id)
+          .maybeSingle();
+
         this._studentDetail.set({
           studentId: studentId,
           enrollmentId: enrollmentData.id,
@@ -219,7 +252,7 @@ export class InstructorAlumnosFacade {
           courseName: (enrollmentData.courses as any)?.name || '',
           practiceProgress: completed,
           totalSessions: 12,
-          theoryPercent: 0, // mock
+          theoryPercent: progressData?.pct_theory_attendance ?? 0,
           fichaTecnica: fichaData,
         });
       } else {
@@ -237,7 +270,13 @@ export class InstructorAlumnosFacade {
     this._error.set(null);
     this._examLoading.set(true);
     try {
-      // Mock fetching logic, replacing with database fetch is straightforward
+      const enrollmentIds = this._students().map((s) => s.enrollmentId);
+      if (enrollmentIds.length === 0) {
+        this._examScores.set([]);
+        this._examLoading.set(false);
+        return;
+      }
+
       const { data, error } = await this.supabase.client
         .from('class_b_exam_scores')
         .select(
@@ -247,6 +286,7 @@ export class InstructorAlumnosFacade {
           enrollments(id)
         `,
         )
+        .in('enrollment_id', enrollmentIds)
         .order('date', { ascending: false });
 
       if (error) throw error;
@@ -276,15 +316,13 @@ export class InstructorAlumnosFacade {
   }
 
   async registerExamScore(payload: RegisterExamPayload): Promise<void> {
-    const user = this.profileFacade.instructorId(); // Needs registered_by possibly via authFacade
-
     try {
       const { error } = await this.supabase.client.from('class_b_exam_scores').insert({
         student_id: payload.studentId,
         enrollment_id: payload.enrollmentId,
         date: payload.date || new Date().toISOString(),
         score: payload.score,
-        passed: payload.score >= 87, // Assuming 87 is passing score out of 100 for example
+        passed: payload.score >= 87,
       });
 
       if (error) throw error;
@@ -299,10 +337,38 @@ export class InstructorAlumnosFacade {
   }
 
   async fetchTheoryAttendance(): Promise<any[]> {
-    // Mock data for theory attendance
-    return [
-      { studentName: 'Juan Pérez', studentRut: '11.111.111-1', attendance: true, score: 35 },
-      { studentName: 'Ana Silva', studentRut: '22.222.222-2', attendance: false, score: null },
-    ];
+    const instructorId = await this.profileFacade.getInstructorId();
+    if (!instructorId) return [];
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('class_b_theory_attendance')
+        .select(
+          `
+          id, status,
+          class_b_theory_sessions!inner(id, scheduled_at, topic, instructor_id),
+          students!inner(id, users!inner(first_names, paternal_last_name, rut))
+        `,
+        )
+        .eq('class_b_theory_sessions.instructor_id', instructorId)
+        .order('recorded_at', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((row) => {
+        const session = row.class_b_theory_sessions as any;
+        const user = (row.students as any)?.users;
+        return {
+          studentName: user ? `${user.first_names} ${user.paternal_last_name}` : 'Unknown',
+          studentRut: user?.rut || '',
+          attendance: row.status === 'present',
+          sessionDate: session?.scheduled_at || null,
+          topic: session?.topic || '',
+        };
+      });
+    } catch (err: any) {
+      console.error('Error fetching theory attendance:', err);
+      return [];
+    }
   }
 }

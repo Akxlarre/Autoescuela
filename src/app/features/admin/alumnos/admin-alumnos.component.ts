@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { AlumnosListContentComponent } from '@shared/components/alumnos-list-content/alumnos-list-content.component';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { AdminClaseOnlineDrawerComponent } from './clase-online-drawer/admin-clase-online-drawer.component';
 
 @Component({
@@ -26,14 +27,19 @@ import { AdminClaseOnlineDrawerComponent } from './clase-online-drawer/admin-cla
     />
   `,
 })
-export class AdminAlumnosComponent implements OnInit {
+export class AdminAlumnosComponent {
   protected readonly facade = inject(AdminAlumnosFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   protected readonly drawerOpen = signal(false);
   protected readonly drawerMode = signal<'zoom' | 'asistencia'>('zoom');
 
-  ngOnInit(): void {
-    this.facade.loadAlumnos();
+  constructor() {
+    // Re-carga la lista cada vez que el admin cambia de sede (o vuelve a "Todas")
+    effect(() => {
+      const _ = this.branchFacade.selectedBranchId(); // tracking
+      this.facade.loadAlumnos();
+    });
   }
 
   protected openClaseOnlineDrawer(mode: 'zoom' | 'asistencia'): void {
