@@ -57,3 +57,114 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PendingDocumentsAlert` | `enrollment-confirmation.model.ts` | Alerta de documentos opcionales pendientes: visibilidad y mensaje (ej: certificado médico psicosensométrico) |
 
 > **Nota para los Agentes**: Al crear una interfaz nueva que defina la estructura de una tabla, ponla en `dto/`. Si es un formato de datos para que un componente se dibuje, ponla en `ui/`. Actualiza esta tabla al agregar un modelo.
+
+## Auto-Index — Modelos detectados por AST (generado automáticamente)
+
+<!-- AUTO-GENERATED:BEGIN -->
+| Interfaces | Categoría | Archivo |
+|-----------|----------|---------|
+| `AbsenceEvidence` | `dto` | `src/app/core/models/dto/absence-evidence.model.ts` |
+| `AlertConfig` | `dto` | `src/app/core/models/dto/alert-config.model.ts` |
+| `AuditLog` | `dto` | `src/app/core/models/dto/audit-log.model.ts` |
+| `BiometricRecord` | `dto` | `src/app/core/models/dto/biometric-record.model.ts` |
+| `Branch` | `dto` | `src/app/core/models/dto/branch.model.ts` |
+| `CashClosing` | `dto` | `src/app/core/models/dto/cash-closing.model.ts` |
+| `CertificateBatch` | `dto` | `src/app/core/models/dto/certificate-batch.model.ts` |
+| `CertificateIssuanceLog` | `dto` | `src/app/core/models/dto/certificate-issuance-log.model.ts` |
+| `Certificate` | `dto` | `src/app/core/models/dto/certificate.model.ts` |
+| `ClassBExamAttempt` | `dto` | `src/app/core/models/dto/class-b-exam-attempt.model.ts` |
+| `ClassBExamCatalog` | `dto` | `src/app/core/models/dto/class-b-exam-catalog.model.ts` |
+| `ClassBExamQuestion` | `dto` | `src/app/core/models/dto/class-b-exam-question.model.ts` |
+| `ClassBExamScore` | `dto` | `src/app/core/models/dto/class-b-exam-score.model.ts` |
+| `ClassBPracticeAttendance` | `dto` | `src/app/core/models/dto/class-b-practice-attendance.model.ts` |
+| `ClassBSession` | `dto` | `src/app/core/models/dto/class-b-session.model.ts` |
+| `ClassBTheoryAttendance` | `dto` | `src/app/core/models/dto/class-b-theory-attendance.model.ts` |
+| `ClassBTheorySession` | `dto` | `src/app/core/models/dto/class-b-theory-session.model.ts` |
+| `ClassBook` | `dto` | `src/app/core/models/dto/class-book.model.ts` |
+| `Course` | `dto` | `src/app/core/models/dto/course.model.ts` |
+| `DigitalContract` | `dto` | `src/app/core/models/dto/digital-contract.model.ts` |
+| `DisciplinaryNote` | `dto` | `src/app/core/models/dto/disciplinary-note.model.ts` |
+| `DiscountApplication` | `dto` | `src/app/core/models/dto/discount-application.model.ts` |
+| `Discount` | `dto` | `src/app/core/models/dto/discount.model.ts` |
+| `DocumentTemplate` | `dto` | `src/app/core/models/dto/document-template.model.ts` |
+| `Enrollment` | `dto` | `src/app/core/models/dto/enrollment.model.ts` |
+| `Expense` | `dto` | `src/app/core/models/dto/expense.model.ts` |
+| `InstructorAdvance` | `dto` | `src/app/core/models/dto/instructor-advance.model.ts` |
+| `InstructorMonthlyHour` | `dto` | `src/app/core/models/dto/instructor-monthly-hour.model.ts` |
+| `InstructorMonthlyPayment` | `dto` | `src/app/core/models/dto/instructor-monthly-payment.model.ts` |
+| `InstructorReplacement` | `dto` | `src/app/core/models/dto/instructor-replacement.model.ts` |
+| `Instructor` | `dto` | `src/app/core/models/dto/instructor.model.ts` |
+| `LecturerMonthlyHour` | `dto` | `src/app/core/models/dto/lecturer-monthly-hour.model.ts` |
+| `Lecturer` | `dto` | `src/app/core/models/dto/lecturer.model.ts` |
+| `LicenseValidation` | `dto` | `src/app/core/models/dto/license-validation.model.ts` |
+| `LoginAttempt` | `dto` | `src/app/core/models/dto/login-attempt.model.ts` |
+| `MaintenanceRecord` | `dto` | `src/app/core/models/dto/maintenance-record.model.ts` |
+| `NotificationTemplate` | `dto` | `src/app/core/models/dto/notification-template.model.ts` |
+| `Notification` | `dto` | `src/app/core/models/dto/notification.model.ts` |
+| `PaymentAttemptStatus`, `PaymentAttempt` | `dto` | `src/app/core/models/dto/payment-attempt.model.ts` |
+| `PaymentDenomination` | `dto` | `src/app/core/models/dto/payment-denomination.model.ts` |
+| `Payment` | `dto` | `src/app/core/models/dto/payment.model.ts` |
+| `PricingSeason` | `dto` | `src/app/core/models/dto/pricing-season.model.ts` |
+| `ProfessionalFinalRecord` | `dto` | `src/app/core/models/dto/professional-final-record.model.ts` |
+| `ProfessionalModuleGrade` | `dto` | `src/app/core/models/dto/professional-module-grade.model.ts` |
+| `ProfessionalPracticeAttendance` | `dto` | `src/app/core/models/dto/professional-practice-attendance.model.ts` |
+| `ProfessionalPracticeSession` | `dto` | `src/app/core/models/dto/professional-practice-session.model.ts` |
+| `PsychTestStatus`, `PsychTestResult`, `PreRegistrationStatus`, `RegistrationChannel`, `ProfessionalPreRegistration` | `dto` | `src/app/core/models/dto/professional-pre-registration.model.ts` |
+| `ProfessionalPromotion` | `dto` | `src/app/core/models/dto/professional-promotion.model.ts` |
+| `ProfessionalScheduleTemplate` | `dto` | `src/app/core/models/dto/professional-schedule-template.model.ts` |
+| `ProfessionalTheoryAttendance` | `dto` | `src/app/core/models/dto/professional-theory-attendance.model.ts` |
+| `ProfessionalTheorySession` | `dto` | `src/app/core/models/dto/professional-theory-session.model.ts` |
+| `PromotionCourseLecturer` | `dto` | `src/app/core/models/dto/promotion-course-lecturer.model.ts` |
+| `PromotionCourse` | `dto` | `src/app/core/models/dto/promotion-course.model.ts` |
+| `Role` | `dto` | `src/app/core/models/dto/role.model.ts` |
+| `RouteIncident` | `dto` | `src/app/core/models/dto/route-incident.model.ts` |
+| `SchoolDocument` | `dto` | `src/app/core/models/dto/school-document.model.ts` |
+| `SchoolSchedule` | `dto` | `src/app/core/models/dto/school-schedule.model.ts` |
+| `SecretaryObservation` | `dto` | `src/app/core/models/dto/secretary-observation.model.ts` |
+| `SenceCode` | `dto` | `src/app/core/models/dto/sence-code.model.ts` |
+| `ServiceCatalog` | `dto` | `src/app/core/models/dto/service-catalog.model.ts` |
+| `SessionMachinery` | `dto` | `src/app/core/models/dto/session-machinery.model.ts` |
+| `SiiReceipt` | `dto` | `src/app/core/models/dto/sii-receipt.model.ts` |
+| `SlotHold` | `dto` | `src/app/core/models/dto/slot-hold.model.ts` |
+| `SpecialServiceSale` | `dto` | `src/app/core/models/dto/special-service-sale.model.ts` |
+| `StandaloneCourseEnrollment` | `dto` | `src/app/core/models/dto/standalone-course-enrollment.model.ts` |
+| `StandaloneCourse` | `dto` | `src/app/core/models/dto/standalone-course.model.ts` |
+| `StudentDocument` | `dto` | `src/app/core/models/dto/student-document.model.ts` |
+| `Student` | `dto` | `src/app/core/models/dto/student.model.ts` |
+| `TemplateBlock` | `dto` | `src/app/core/models/dto/template-block.model.ts` |
+| `User` | `dto` | `src/app/core/models/dto/user.model.ts` |
+| `VehicleAssignment` | `dto` | `src/app/core/models/dto/vehicle-assignment.model.ts` |
+| `VehicleDocument` | `dto` | `src/app/core/models/dto/vehicle-document.model.ts` |
+| `Vehicle` | `dto` | `src/app/core/models/dto/vehicle.model.ts` |
+| `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendableStudent`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
+| `AlumnoDetalleUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
+| `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `AuditAction`, `AuditLogRow` | `ui` | `src/app/core/models/ui/audit-log-row.model.ts` |
+| `BranchOption`, `BranchCoursePrice` | `ui` | `src/app/core/models/ui/branch.model.ts` |
+| `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
+| `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertModel`, `QuickActionModel`, `SystemStatusModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |
+| `DmsTab`, `TemplateCategory`, `TemplateCategoryFilter`, `StudentWithDocsRow`, `DmsStudentDocRow`, `SchoolDocRow`, `TemplateCard`, `DmsKpis`, `UploadStudentDocPayload`, `UploadSchoolDocPayload`, `UploadTemplatePayload`, `DmsViewerDocument` | `ui` | `src/app/core/models/ui/dms.model.ts` |
+| `EgresadoTableRow` | `ui` | `src/app/core/models/ui/egresado-table.model.ts` |
+| `StudentSummaryBanner`, `PaymentMode`, `PaymentModeOption`, `InstructorOption`, `SlotStatus`, `TimeSlot`, `WeekDay`, `WeekRange`, `ScheduleGrid`, `SlotSelection`, `PromotionStatus`, `PromotionOption`, `PromotionGroup`, `SingularFeature`, `AssignmentView`, `EnrollmentAssignmentData` | `ui` | `src/app/core/models/ui/enrollment-assignment.model.ts` |
+| `EnrollmentStudentSummary`, `EnrollmentCourseSummary`, `NextStep`, `NextStepsVariant`, `PendingDocumentsAlert`, `EnrollmentConfirmationData` | `ui` | `src/app/core/models/ui/enrollment-confirmation.model.ts` |
+| `ContractStatus`, `ContractGeneration`, `UploadStatus`, `SignedContractUpload`, `EnrollmentContractData` | `ui` | `src/app/core/models/ui/enrollment-contract.model.ts` |
+| `PhotoSource`, `PhotoTab`, `CameraState`, `CarnetPhoto`, `DocumentType`, `UploadedDocument`, `HvcValidation`, `DocumentRequirement`, `DocumentsView`, `EnrollmentDocumentsData` | `ui` | `src/app/core/models/ui/enrollment-documents.model.ts` |
+| `PaymentMethod`, `PaymentMethodOption`, `PricingBreakdown`, `DiscountData`, `AvailableDiscount`, `SingularPaymentAlert`, `EnrollmentPaymentData` | `ui` | `src/app/core/models/ui/enrollment-payment.model.ts` |
+| `Gender`, `CourseCategory`, `CourseType`, `SingularCourseCode`, `CurrentLicenseType`, `ValidationBook`, `AgeAlertStatus`, `SingularCourseOption`, `CourseOption`, `SenceCodeOption`, `HistoricalPromotion`, `EnrollmentPersonalData`, `AgeValidation`, `LicenseValidation` | `ui` | `src/app/core/models/ui/enrollment-personal-data.model.ts` |
+| `EnrollmentWizardStep`, `StepStatus`, `StepConfig`, `CourseSummary`, `Requirement`, `SidebarSummary`, `EnrollmentWizardState`, `DraftSummary` | `ui` | `src/app/core/models/ui/enrollment-wizard.model.ts` |
+| `HistorialCierre`, `HistorialFiltro` | `ui` | `src/app/core/models/ui/historial-cuadraturas.model.ts` |
+| `InstructorDashboardData`, `InstructorDashboardKpis`, `InstructorClassRow`, `InstructorStudentCard`, `InstructorStudentDetail`, `FichaTecnicaRow`, `EvaluationFormData`, `EvaluationChecklistItem`, `ScheduleBlock`, `WeekScheduleKpis`, `ScheduleDay`, `DaySchedule`, `WeekSchedule`, `MonthlyHoursRow`, `LiquidacionKpis`, `SessionDetailRow`, `ExamScoreRow`, `RegisterExamPayload`, `AttendanceClassRow`, `UpcomingDay` | `ui` | `src/app/core/models/ui/instructor-portal.model.ts` |
+| `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
+| `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
+| `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification` | `ui` | `src/app/core/models/ui/notification.model.ts` |
+| `RentabilidadCurso`, `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
+| `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
+| `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |
+| `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
+| `SectionHeroChip`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
+| `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |
+| `UserRole`, `User` | `ui` | `src/app/core/models/ui/user.model.ts` |
+| `MaintenanceRow`, `MaintenanceKpis`, `ScheduledMaintenance`, `VehicleAgendaSlot` | `ui` | `src/app/core/models/ui/vehicle-detail.model.ts` |
+| `VehicleType`, `VehicleStatus`, `DocStatus`, `VehicleDocSummary`, `VehicleTableRow`, `FlotaKpis` | `ui` | `src/app/core/models/ui/vehicle-table.model.ts` |
+
+<!-- AUTO-GENERATED:END -->

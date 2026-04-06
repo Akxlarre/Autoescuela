@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type {
   SesionProfesional,
   SesionAlumnoAsistencia,
@@ -17,6 +18,17 @@ import type {
 export class AsistenciaProfesionalFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
+  private readonly confirmModal = inject(ConfirmModalService);
+
+  async confirm(config: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    severity?: 'info' | 'warn' | 'success' | 'danger' | 'secondary';
+  }): Promise<boolean> {
+    return this.confirmModal.confirm(config);
+  }
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _promociones = signal<PromocionOption[]>([]);

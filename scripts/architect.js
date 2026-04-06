@@ -42,6 +42,71 @@ const cyan   = '\x1b[36m%s\x1b[0m';
 console.log(yellow, '🔍 Iniciando Auditoría Arquitectónica (AST Mode v2.0)...');
 console.log('');
 
+// ─── Stack flags (lee blueprint.json para saltar reglas según configuración) ──
+let STACK = { angular: true, tailwind: true, primeng: true, gsap: true, supabase: true };
+try {
+    const blueprintPath = path.join(process.cwd(), 'blueprint.json');
+    if (fs.existsSync(blueprintPath)) {
+        const bp = JSON.parse(fs.readFileSync(blueprintPath, 'utf-8'));
+        if (bp.stack && typeof bp.stack === 'object') {
+            STACK = { ...STACK, ...bp.stack };
+        }
+    }
+} catch { /* fail-open: usar defaults */ }
+
+const RULES = {
+    'ARCH-01': {
+        name: 'No Supabase in UI',
+        doc: 'docs/TECH-STACK-RULES.md#arch-01',
+        fix: 'Mueve la lógica de datos a un FacadeService (@Injectable).',
+    },
+    'ARCH-02': {
+        name: 'Facade-only injection',
+        doc: 'docs/TECH-STACK-RULES.md#arch-02',
+        fix: 'Los componentes vista solo deben inyectar clases tipo Facade (*FacadeService).',
+    },
+    'ARCH-03': {
+        name: 'TDD required for core logic',
+        doc: 'docs/TECH-STACK-RULES.md#arch-03',
+        fix: 'Escribe el archivo .spec.ts compañero (Agentic TDD obligatorio).',
+    },
+    'ARCH-04': {
+        name: 'OnPush required',
+        doc: 'docs/TECH-STACK-RULES.md#arch-04',
+        fix: 'Agrega changeDetection: ChangeDetectionStrategy.OnPush al decorador @Component.',
+    },
+    'ARCH-05': {
+        name: 'No @angular/animations',
+        doc: 'docs/TECH-STACK-RULES.md#arch-05',
+        fix: 'Usa GsapAnimationsService para todas las animaciones. GSAP es obligatorio.',
+    },
+    'ARCH-06': {
+        name: 'No legacy template directives',
+        doc: 'docs/TECH-STACK-RULES.md#arch-06',
+        fix: 'Usa Control Flow nativo (Angular 17+): @if/@for y bindings directos.',
+    },
+    'ARCH-07': {
+        name: 'No @keyframes in app styles',
+        doc: 'docs/TECH-STACK-RULES.md#arch-07',
+        fix: 'Usa GsapAnimationsService para animaciones. GSAP es obligatorio en este proyecto.',
+    },
+    'ARCH-08': {
+        name: 'No hardcoded Tailwind colors',
+        doc: 'docs/TECH-STACK-RULES.md#arch-08',
+        fix: 'Usa tokens semánticos: text-primary, text-muted, bg-surface, bg-base, var(--ds-brand).',
+    },
+    'ARCH-09': {
+        name: 'Complexity warning (shared components)',
+        doc: 'docs/TECH-STACK-RULES.md#arch-09',
+        fix: 'Divide el componente en subcomponentes o extrae lógica a servicios/utilidades. Mantén shared/ simple.',
+    },
+    'ARCH-10': {
+        name: 'Complexity warning (facades)',
+        doc: 'docs/TECH-STACK-RULES.md#arch-10',
+        fix: 'Extrae lógica a helpers/servicios y reduce inject() y métodos largos. Mantén la Facade como orquestador.',
+    },
+};
+
 const targetDirs = [
     path.join(process.cwd(), 'src', 'app', 'features'),
     path.join(process.cwd(), 'src', 'app', 'shared'),
@@ -65,22 +130,39 @@ function walkAst(node, visitor) {
     ts.forEachChild(node, child => walkAst(child, visitor));
 }
 
-function reportError(rule, filePath, message, solution) {
+function reportError(ruleId, filePath, message, solutionOverride) {
     const relativePath = path.relative(process.cwd(), filePath);
-    console.error(red, `🚨 [REGLA ${rule}] ${message}`);
+    const rule = RULES[ruleId];
+    const ruleName = rule?.name ? `${rule.name}: ` : '';
+    console.error(red, `🚨 [${ruleId}] ${ruleName}${message}`);
     console.error(cyan, `   Archivo: ${relativePath}`);
-    if (solution) console.error(yellow, `   Solución: ${solution}`);
+    const fix = solutionOverride || rule?.fix;
+    if (fix) console.error(yellow, `   Fix: ${fix}`);
+    if (rule?.doc) console.error(cyan, `   Doc: ${rule.doc}`);
     console.error('');
     errors++;
 }
 
-function reportWarning(filePath, message) {
+function reportWarning(ruleId, filePath, message, fixOverride) {
     const relativePath = path.relative(process.cwd(), filePath);
-    console.warn(yellow, `⚠️  ${message}: ${relativePath}`);
+    const rule = RULES[ruleId];
+    const ruleName = rule?.name ? `${rule.name}: ` : '';
+    console.warn(yellow, `⚠️  [${ruleId}] ${ruleName}${message}`);
+    console.warn(cyan, `   Archivo: ${relativePath}`);
+    const fix = fixOverride || rule?.fix;
+    if (fix) console.warn(yellow, `   Fix: ${fix}`);
+    if (rule?.doc) console.warn(cyan, `   Doc: ${rule.doc}`);
+    console.warn('');
     warnings++;
 }
 
 // ─── Análisis TypeScript (AST) ──────────────────────────────────────────────
+
+function getLineSpan(sourceFile, node) {
+    const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line;
+    const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line;
+    return { startLine: start + 1, endLine: end + 1, lines: (end - start) + 1 };
+}
 
 function analyzeTypeScript(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
@@ -96,6 +178,7 @@ function analyzeTypeScript(filePath) {
     const isInFeatures = pathContainsSegment(filePath, 'features');
     const isInShared = pathContainsSegment(filePath, 'shared');
     const isInCore = pathContainsSegment(filePath, 'core');
+    const isFacade = filePath.endsWith('.facade.ts') && isInCore;
     const isComponent = filePath.endsWith('.component.ts');
     const isViewComponent = isComponent && (isInFeatures || isInShared);
 
@@ -106,21 +189,19 @@ function analyzeTypeScript(filePath) {
                 .getText(sourceFile)
                 .replace(/['"]/g, '');
 
-            // Regla 1: Supabase directo en UI
-            if (specifier === '@supabase/supabase-js' && (isInFeatures || isInShared)) {
+            // Regla 1: Supabase directo en UI (skip si stack.supabase === false)
+            if (STACK.supabase && specifier === '@supabase/supabase-js' && (isInFeatures || isInShared)) {
                 reportError(
-                    1, filePath,
+                    'ARCH-01', filePath,
                     'Importación directa de Supabase en capa UI',
-                    'Mueve la lógica de datos a un FacadeService (@Injectable).'
                 );
             }
 
-            // Regla 5: @angular/animations prohibido
-            if (specifier.startsWith('@angular/animations')) {
+            // Regla 5: @angular/animations prohibido (skip si stack.gsap === false)
+            if (STACK.gsap && specifier.startsWith('@angular/animations')) {
                 reportError(
-                    5, filePath,
+                    'ARCH-05', filePath,
                     'Importación de @angular/animations detectada',
-                    'Usa GsapAnimationsService para todas las animaciones. GSAP es obligatorio.'
                 );
             }
         }
@@ -149,9 +230,8 @@ function analyzeTypeScript(filePath) {
                 !ALLOWED_SERVICES_IN_COMPONENTS.includes(argText)
             ) {
                 reportError(
-                    2, filePath,
+                    'ARCH-02', filePath,
                     `Inyección directa de '${argText}' en componente vista`,
-                    'Los componentes vista solo deben inyectar clases tipo Facade (*FacadeService).'
                 );
             }
         });
@@ -182,9 +262,8 @@ function analyzeTypeScript(filePath) {
 
             if (!hasOnPush) {
                 reportError(
-                    4, filePath,
+                    'ARCH-04', filePath,
                     'Componente sin ChangeDetectionStrategy.OnPush',
-                    'Agrega changeDetection: ChangeDetectionStrategy.OnPush al decorador @Component.'
                 );
             }
         }
@@ -196,10 +275,56 @@ function analyzeTypeScript(filePath) {
     const colorMatches = content.match(hardcodedColorRe);
     if (colorMatches) {
         reportError(
-            8, filePath,
+            'ARCH-08', filePath,
             `Colores Tailwind hardcodeados detectados: ${[...new Set(colorMatches)].join(', ')}`,
-            'Usa tokens semánticos: text-primary, text-muted, bg-surface, bg-base, var(--ds-brand).'
         );
+    }
+
+    // ── ARCH-09 (WARNING): shared/**/*.component.ts con clase >200 líneas ────
+    if (isComponent && isInShared) {
+        walkAst(sourceFile, node => {
+            if (!ts.isClassDeclaration(node)) return;
+            const span = getLineSpan(sourceFile, node);
+            if (span.lines > 200) {
+                reportWarning(
+                    'ARCH-09',
+                    filePath,
+                    `Clase demasiado grande (${span.lines} líneas). Límite recomendado: 200.`,
+                );
+            }
+        });
+    }
+
+    // ── ARCH-10 (WARNING): facades complejas ────────────────────────────────
+    if (isFacade) {
+        let injectCalls = 0;
+        walkAst(sourceFile, node => {
+            if (!ts.isCallExpression(node)) return;
+            const callee = node.expression;
+            if (ts.isIdentifier(callee) && callee.text === 'inject') injectCalls++;
+        });
+
+        if (injectCalls > 5) {
+            reportWarning(
+                'ARCH-10',
+                filePath,
+                `Demasiadas llamadas a inject() (${injectCalls}). Límite recomendado: 5.`,
+            );
+        }
+
+        walkAst(sourceFile, node => {
+            if (!ts.isMethodDeclaration(node)) return;
+            if (!node.body) return;
+            const span = getLineSpan(sourceFile, node);
+            if (span.lines > 50) {
+                const methodName = node.name?.getText(sourceFile) || '<método>';
+                reportWarning(
+                    'ARCH-10',
+                    filePath,
+                    `Método demasiado largo: ${methodName}() (${span.lines} líneas). Límite recomendado: 50.`,
+                );
+            }
+        });
     }
 }
 
@@ -219,9 +344,9 @@ function analyzeTemplate(filePath) {
     for (const { pattern, name, replacement } of deprecatedDirectives) {
         if (pattern.test(content)) {
             reportError(
-                6, filePath,
+                'ARCH-06', filePath,
                 `Directiva deprecada ${name} detectada en template`,
-                `Usa ${replacement} (Angular 17+ control flow).`
+                `Usa ${replacement}.`
             );
         }
     }
@@ -232,7 +357,7 @@ function analyzeTemplate(filePath) {
     const colorMatches = content.match(hardcodedColorRe);
     if (colorMatches) {
         reportError(
-            8, filePath,
+            'ARCH-08', filePath,
             `Colores Tailwind hardcodeados en template: ${[...new Set(colorMatches)].join(', ')}`,
             'Usa tokens semánticos: text-primary, text-muted, bg-surface, bg-base.'
         );
@@ -244,12 +369,11 @@ function analyzeTemplate(filePath) {
 function analyzeStyles(filePath) {
     const content = fs.readFileSync(filePath, 'utf-8');
 
-    // ── Regla 7: @keyframes prohibido ───────────────────────────────────────
-    if (/@keyframes\s/.test(content)) {
+    // ── Regla 7: @keyframes prohibido (skip si stack.gsap === false) ─────────
+    if (STACK.gsap && /@keyframes\s/.test(content)) {
         reportError(
-            7, filePath,
+            'ARCH-07', filePath,
             '@keyframes detectado en archivo de estilos',
-            'Usa GsapAnimationsService para animaciones. GSAP es obligatorio en este proyecto.'
         );
     }
 }
@@ -281,9 +405,8 @@ function scanDirectory(dir) {
                 const specPath = fullPath.replace('.ts', '.spec.ts');
                 if (!fs.existsSync(specPath)) {
                     reportError(
-                        3, fullPath,
+                        'ARCH-03', fullPath,
                         'Falta test unitario para lógica Core',
-                        'Escribe el archivo .spec.ts compañero (Agentic TDD obligatorio).'
                     );
                 }
             }
@@ -313,14 +436,10 @@ if (errors > 0) {
     console.error(red, `❌ Auditoría falló: ${errors} error(es), ${warnings} advertencia(s).`);
     console.error('');
     console.log(yellow, '📋 Reglas validadas:');
-    console.log('   1. Sin @supabase/supabase-js en UI (features/shared)');
-    console.log('   2. Sin inject(*Service) directo en componentes vista');
-    console.log('   3. TDD: .spec.ts para facades y services en core/');
-    console.log('   4. OnPush obligatorio en todos los componentes');
-    console.log('   5. Sin @angular/animations (usar GSAP)');
-    console.log('   6. Sin *ngIf/*ngFor/[ngClass]/[ngStyle] en templates');
-    console.log('   7. Sin @keyframes en SCSS (usar GSAP)');
-    console.log('   8. Sin colores Tailwind hardcodeados');
+    for (const [ruleId, meta] of Object.entries(RULES)) {
+        const doc = meta.doc ? ` — ${meta.doc}` : '';
+        console.log(`   ${ruleId} — ${meta.name}${doc}`);
+    }
     console.log('');
     process.exit(1);
 } else {

@@ -15,7 +15,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { EnrollmentFacade } from '@core/facades/enrollment.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
@@ -92,7 +91,6 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
 })
 export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
-  private readonly confirmModal = inject(ConfirmModalService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthFacade);
   readonly enrollment = inject(EnrollmentFacade);
@@ -449,7 +447,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   /** Descarta un borrador tras confirmación y actualiza la vista. */
   async onDiscardDraft(enrollmentId: number): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
+    const confirmed = await this.enrollment.confirm({
       title: '¿Descartar matrícula?',
       message: 'Se eliminarán todos los datos del borrador. Esta acción no se puede deshacer.',
       severity: 'danger',

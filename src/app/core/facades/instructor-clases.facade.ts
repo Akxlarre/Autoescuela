@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import type {
   InstructorClassRow,
   EvaluationFormData,
@@ -13,6 +14,7 @@ import type {
 export class InstructorClasesFacade {
   private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
+  private toast = inject(ToastService);
 
   private _todayClasses = signal<InstructorClassRow[]>([]);
   private _selectedClass = signal<InstructorClassRow | null>(null);
@@ -495,6 +497,14 @@ export class InstructorClasesFacade {
     if (this.profileFacade.instructorId()) {
       await this.fetchTodayClasses();
     }
+  }
+
+  showSuccess(summary: string, detail?: string): void {
+    this.toast.success(summary, detail);
+  }
+
+  showError(summary: string, detail?: string): void {
+    this.toast.error(summary, detail);
   }
 
   private mapSessionToRow(row: any): InstructorClassRow {

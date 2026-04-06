@@ -11,7 +11,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { DmsFacade } from '@core/facades/dms.facade';
-import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import type { TemplateCategory } from '@core/models/ui/dms.model';
 
 /**
@@ -141,7 +140,6 @@ import type { TemplateCategory } from '@core/models/ui/dms.model';
 })
 export class DmsTemplateDrawerComponent {
   private readonly facade = inject(DmsFacade);
-  private readonly layoutDrawer = inject(LayoutDrawerService);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly name = signal('');
@@ -238,7 +236,7 @@ export class DmsTemplateDrawerComponent {
   }
 
   onClose(): void {
-    this.layoutDrawer.close();
+    this.facade.closeDrawer();
   }
 
   private resetForm(): void {

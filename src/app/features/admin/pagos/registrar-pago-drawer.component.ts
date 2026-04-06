@@ -18,7 +18,6 @@ import {
 import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
-import { ToastService } from '@core/services/ui/toast.service';
 import { formatCLP, toISODate } from '@core/utils/date.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 
@@ -555,7 +554,6 @@ export class RegistrarPagoDrawerComponent {
 
   // ── Injections ──────────────────────────────────────────────────────────────
   protected readonly facade = inject(PagosFacade);
-  private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
 
   // ── Estado local ────────────────────────────────────────────────────────────
@@ -679,7 +677,7 @@ export class RegistrarPagoDrawerComponent {
         montosActuales,
       );
 
-      this.toast.success('Pago registrado correctamente.');
+      this.facade.showSuccess('Pago registrado correctamente.');
       this.resetForm();
       this.saved.emit();
       this.closed.emit();

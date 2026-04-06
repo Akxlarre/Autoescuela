@@ -8,9 +8,7 @@ import {
 import { Router, ActivatedRoute } from '@angular/router';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
-import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import type { TemplateCard } from '@core/models/ui/dms.model';
 
 /**
@@ -51,8 +49,6 @@ export class AdminDocumentosComponent implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly confirmModal = inject(ConfirmModalService);
-  private readonly dmsViewer = inject(DmsViewerService);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
@@ -76,11 +72,11 @@ export class AdminDocumentosComponent implements OnInit {
   }
 
   onViewDocument(url: string, fileName?: string): void {
-    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+    this.facade.openDocument(url, fileName);
   }
 
   async onDeleteStudentDoc(payload: { id: string; source: string }): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
+    const confirmed = await this.facade.confirm({
       title: 'Eliminar documento',
       message: '¿Estás seguro de que quieres eliminar este documento? Esta acción no se puede deshacer.',
       severity: 'danger',
@@ -96,7 +92,7 @@ export class AdminDocumentosComponent implements OnInit {
   }
 
   async onDeleteSchoolDoc(id: number): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
+    const confirmed = await this.facade.confirm({
       title: 'Eliminar documento institucional',
       message: '¿Estás seguro de que quieres eliminar este documento?',
       severity: 'danger',
@@ -112,7 +108,7 @@ export class AdminDocumentosComponent implements OnInit {
   }
 
   async onDeleteTemplate(id: number): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
+    const confirmed = await this.facade.confirm({
       title: 'Eliminar plantilla',
       message: '¿Estás seguro de que quieres eliminar esta plantilla? (desactivación suave)',
       severity: 'danger',

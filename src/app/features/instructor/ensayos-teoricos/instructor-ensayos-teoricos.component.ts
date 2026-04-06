@@ -17,7 +17,6 @@ import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
-import { ToastService } from '@core/services/ui/toast.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -299,7 +298,6 @@ import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.mo
 })
 export class InstructorEnsayosTeoricosComponent implements OnInit, AfterViewInit {
   readonly facade = inject(InstructorAlumnosFacade);
-  private readonly toast = inject(ToastService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
@@ -376,10 +374,10 @@ export class InstructorEnsayosTeoricosComponent implements OnInit, AfterViewInit
         date: this.examDate.toISOString().split('T')[0],
         score: this.scoreValue,
       });
-      this.toast.success('Puntaje registrado exitosamente');
+      this.facade.showSuccess('Puntaje registrado exitosamente');
       this.closeModal();
     } catch (e: any) {
-      this.toast.error(e?.message || 'Error al registrar puntaje');
+      this.facade.showError(e?.message || 'Error al registrar puntaje');
     } finally {
       this.saving.set(false);
     }

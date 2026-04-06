@@ -20,6 +20,7 @@ Servicios estructurales compartidos que proveen funcionalidades base, autenticac
 | `ModalOverlayService` | Teleporta modales al overlay container (z-index > topbar) | `core/services/modal-overlay.service.ts` | — | ✅ Estable |
 | `LayoutDrawerService` | Orquesta el drawer arquitectónico del AppShell. Estado via signal. **Navegación en pila:** `open()` (raíz, limpia historial), `push()` (sub-vista sin cerrar panel), `back()` (restaura anterior o cierra), `close()` (cierra + limpia historial). `canGoBack` computed. `clear()` limpia componente post-animación GSAP. | `core/services/ui/layout-drawer.service.ts` | — | ✅ Estable |
 | `LayoutDrawerFacadeService` | Interfaz pública para componentes UI hacia `LayoutDrawerService`. Expone: `isOpen`, `component`, `title`, `icon`, `actions`, `canGoBack`. Métodos: `open()`, `push()`, `back()`, `close()`, `setActions()`. | `core/services/ui/layout-drawer.facade.service.ts` | LayoutDrawerService | ✅ Estable |
+| `DmsViewerService` | Estado y control del visor global de documentos (PDF/Imágenes). Detecta automáticamente el tipo por URL. | `core/services/ui/dms-viewer.service.ts` | — | ✅ Estable |
 
 ## 1b. Pure Utilities (Functional Core)
 Funciones puras sin estado ni inyección de Angular. Testeables sin framework.
@@ -50,3 +51,24 @@ Servicios que median entre la UI (`features/`) y las APIs de datos (`SupabaseSer
 | `HistorialCuadraturasFacade` | Historial de cierres de caja (`cash_closings`). **Navegación mensual:** signals `mesActual` (1-12) y `anioActual`; métodos `mesAnterior()`, `mesSiguiente()`, `volverAHoy()` cambian el mes y recargan automáticamente. `cargarHistorial()` (sin params) filtra `date` entre `yyyy-mm-01` y `yyyy-mm-{lastDay}` + JOIN `users(first_names, paternal_last_name)`. `exportarCSV()` → descarga `.csv` vía `Blob` nativo. Mapeo DTO→UI: `balance`=saldoSistema, `arqueo_amount`=saldoFisico, denomination fields (`qty_bill_*`, `qty_coin_*`), `notes`. `estadoDiferencia` derivado (balanced/surplus/shortage). | `core/facades/historial-cuadraturas.facade.ts` | SupabaseService, AuthFacade, ToastService | ✅ Estable |
 | `LiquidacionesFacade` | Liquidaciones mensuales de instructores. **Navegación mensual:** signals `mesActual` (1-12) y `anioActual`; métodos `mesAnterior()`, `mesSiguiente()` cambian el mes y recargan. **4 queries paralelas:** `instructors` (JOIN users con branch_id), `instructor_monthly_hours` (filtrado por mes+año), `instructor_advances` (filtrado por rango de fechas del mes), `instructor_monthly_payments` (filtrado por mes+año). **Maps O(1):** `hoursMap`, `advancesMap` (suma por instructor), `paymentsMap`. Construye `LiquidacionRow[]` con `getInitials()` y `getAvatarColor()` (hash 8 colores). `amountPerHour` desde payment existente o default 5.000. `finalPaymentAmount = max(0, base - advances)`. `status` = `'paid'` si existe registro en `instructor_monthly_payments`. **`registrarPago(row, payload)`:** upsert en `instructor_monthly_payments` con `onConflict: 'instructor_id,month,year'`; luego UPDATE `instructor_advances.status='discounted'` para los del mes. **`deshacerPago(row)`:** DELETE en `instructor_monthly_payments` + UPDATE advances a `status='pending'`. **`kpis`** computed: totalNomina, totalAnticipos, totalPagados, totalInstructores. Filtra por `branchId` del usuario autenticado. | `core/facades/liquidaciones.facade.ts` | SupabaseService, AuthFacade, ToastService | ✅ Estable |
 | `PagosFacade` | Gestión de Pagos: KPIs + deudores + historial + distribución de métodos + estado de cuenta por matrícula. **Signals globales:** `ingresosHoy`, `ingresosMes`, `boletasMes`, `pagosPendientesTotales`, `alumnosConDeuda` (`AlumnoDeudor[]`), `pagosRecientes` (`PagoReciente[]`, últimos 50), `metodosPagoMes` (`MetodoPago[]`), `totalDeudores` (computed), `isLoading`, `error`. **Signals de detalle:** `enrollmentSeleccionado` (number\|null), `estadoCuentaResumen` (`EstadoCuentaResumen\|null`), `estadoCuentaHistorial` (`EstadoCuentaHistorialItem[]`), `isLoadingDetalle`. **Métodos de detalle:** `seleccionarEnrollment(id)` (fija contexto antes de abrir drawer), `cargarEstadoCuenta(id)` (Promise.all de resumen + historial). **Patrón SWR:** `initialize()` → primera carga con skeleton, revisitas refrescan en background. Helpers puros: `resolveMetodo()` → detecta método (Mixto si varios). `METODOS_CONFIG` define color/icono por canal. `registrarNuevoPago(enrollmentId, payload, montosActuales)`: INSERT payments → UPDATE enrollments → `refreshSilently()`. | `core/facades/pagos.facade.ts` | SupabaseService | ✅ Estable |
+
+## Auto-Index — Servicios detectados por AST (generado automáticamente)
+
+<!-- AUTO-GENERATED:BEGIN -->
+| Clase | Dependencias | Archivo |
+|-------|-------------|---------|
+| `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
+| `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
+| `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
+| `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
+| `DmsViewerService` | — | `src/app/core/services/ui/dms-viewer.service.ts` |
+| `GsapAnimationsService` | `PLATFORM_ID` | `src/app/core/services/ui/gsap-animations.service.ts` |
+| `LayoutDrawerFacadeService` | `LayoutDrawerService` | `src/app/core/services/ui/layout-drawer.facade.service.ts` |
+| `LayoutDrawerService` | — | `src/app/core/services/ui/layout-drawer.service.ts` |
+| `LayoutService` | — | `src/app/core/services/ui/layout.service.ts` |
+| `ModalOverlayService` | — | `src/app/core/services/ui/modal-overlay.service.ts` |
+| `SearchPanelFacadeService` | `SearchPanelFacadeService` | `src/app/core/services/ui/search-panel.service.ts` |
+| `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
+| `ToastService` | `MessageService` | `src/app/core/services/ui/toast.service.ts` |
+
+<!-- AUTO-GENERATED:END -->
