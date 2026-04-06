@@ -6,22 +6,22 @@ import { ToastService } from '@core/services/ui/toast.service';
 
 describe('HistorialCuadraturasFacade', () => {
   let facade: HistorialCuadraturasFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let authFacadeSpy: jasmine.SpyObj<AuthFacade>;
-  let toastSpy: jasmine.SpyObj<ToastService>;
+  let supabaseSpy: any;
+  let authFacadeSpy: any;
+  let toastSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
-    authFacadeSpy = jasmine.createSpyObj('AuthFacade', ['currentUser']);
-    toastSpy = jasmine.createSpyObj('ToastService', ['error', 'success', 'warning']);
+    supabaseSpy = { client: vi.fn() };
+    authFacadeSpy = { currentUser: vi.fn() };
+    toastSpy = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-             gte: jasmine.createSpy('gte').and.returnValue({
-               lte: jasmine.createSpy('lte').and.returnValue({
-                 order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+             gte: vi.fn().mockReturnValue({
+               lte: vi.fn().mockReturnValue({
+                 order: vi.fn().mockResolvedValue({ data: [], error: null })
                })
              })
           })

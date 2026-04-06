@@ -18,7 +18,7 @@ describe('LayoutDrawerService', () => {
     });
 
     it('should initialize with default state', () => {
-        expect(service.isOpen()).toBeFalse();
+        expect(service.isOpen()).toBe(false);
         expect(service.component()).toBeNull();
         expect(service.title()).toBe('');
         expect(service.icon()).toBeUndefined();
@@ -26,7 +26,7 @@ describe('LayoutDrawerService', () => {
 
     it('should update state on open()', () => {
         service.open(DummyComponent, 'Test Title', 'test-icon');
-        expect(service.isOpen()).toBeTrue();
+        expect(service.isOpen()).toBe(true);
         expect(service.component()).toBe(DummyComponent);
         expect(service.title()).toBe('Test Title');
         expect(service.icon()).toBe('test-icon');
@@ -35,7 +35,7 @@ describe('LayoutDrawerService', () => {
     it('should update state on close(), keeping the component for animation', () => {
         service.open(DummyComponent, 'Test Title');
         service.close();
-        expect(service.isOpen()).toBeFalse();
+        expect(service.isOpen()).toBe(false);
         expect(service.component()).toBe(DummyComponent); // Ensure not cleared yet
     });
 

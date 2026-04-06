@@ -8,48 +8,48 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 
 describe('DmsFacade', () => {
   let facade: DmsFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let drawerSpy: jasmine.SpyObj<LayoutDrawerService>;
-  let confirmSpy: jasmine.SpyObj<ConfirmModalService>;
-  let toastSpy: jasmine.SpyObj<ToastService>;
-  let viewerSpy: jasmine.SpyObj<DmsViewerService>;
+  let supabaseSpy: any;
+  let drawerSpy: any;
+  let confirmSpy: any;
+  let toastSpy: any;
+  let viewerSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
-    drawerSpy = jasmine.createSpyObj('LayoutDrawerService', ['open', 'close']);
-    confirmSpy = jasmine.createSpyObj('ConfirmModalService', ['confirm']);
-    toastSpy = jasmine.createSpyObj('ToastService', ['success', 'error']);
-    viewerSpy = jasmine.createSpyObj('DmsViewerService', ['openByUrl']);
+    supabaseSpy = { client: vi.fn() };
+    drawerSpy = { open: vi.fn(), close: vi.fn() };
+    confirmSpy = { confirm: vi.fn() };
+    toastSpy = { success: vi.fn(), error: vi.fn() };
+    viewerSpy = { openByUrl: vi.fn() };
 
     // Mock supabase client
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-            order: jasmine.createSpy('order').and.returnValue({
-              limit: jasmine.createSpy('limit').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue({ data: [], error: null })
             }),
-            single: jasmine.createSpy('single').and.resolveTo({ data: null, error: null })
+            single: vi.fn().mockResolvedValue({ data: null, error: null })
           })
         }),
-        update: jasmine.createSpy('update').and.returnValue({
-           eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        update: vi.fn().mockReturnValue({
+           eq: vi.fn().mockResolvedValue({ error: null })
         }),
-        delete: jasmine.createSpy('delete').and.returnValue({
-           eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        delete: vi.fn().mockReturnValue({
+           eq: vi.fn().mockResolvedValue({ error: null })
         }),
-        insert: jasmine.createSpy('insert').and.resolveTo({ error: null })
+        insert: vi.fn().mockResolvedValue({ error: null })
       }),
       storage: {
-        from: jasmine.createSpy('from').and.returnValue({
-          upload: jasmine.createSpy('upload').and.resolveTo({ error: null }),
-          getPublicUrl: jasmine.createSpy('getPublicUrl').and.returnValue({ data: { publicUrl: 'http://example.com' } })
+        from: vi.fn().mockReturnValue({
+          upload: vi.fn().mockResolvedValue({ error: null }),
+          getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'http://example.com' } })
         })
       },
       auth: {
-        getUser: jasmine.createSpy('getUser').and.resolveTo({ data: { user: { id: 'auth_id' } }, error: null })
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'auth_id' } }, error: null })
       },
-      rpc: jasmine.createSpy('rpc').and.resolveTo({ data: null, error: null })
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null })
     };
 
     TestBed.configureTestingModule({
@@ -83,10 +83,10 @@ describe('DmsFacade', () => {
 
     it('should call confirmModal.confirm on confirm', async () => {
       const config = { title: 'Test', message: 'Msg' };
-      confirmSpy.confirm.and.resolveTo(true);
+      confirmSpy.confirm.mockResolvedValue(true);
       const result = await facade.confirm(config);
       expect(confirmSpy.confirm).toHaveBeenCalledWith(config);
-      expect(result).toBeTrue();
+      expect(result).toBe(true);
     });
 
     it('should call dmsViewer.openByUrl on openDocument', () => {
@@ -108,7 +108,7 @@ describe('DmsFacade', () => {
   describe('Upload notify', () => {
     it('should update uploadSaved signal on notifyUploadSaved', () => {
       facade.notifyUploadSaved();
-      expect(facade.uploadSaved()).toBeTrue();
+      expect(facade.uploadSaved()).toBe(true);
     });
   });
 

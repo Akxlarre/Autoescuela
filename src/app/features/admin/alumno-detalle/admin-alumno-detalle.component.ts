@@ -985,7 +985,7 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {
-      this.facade.loadDetalle(Number(id));
+      void this.facade.initialize(Number(id));
     }
   }
 
@@ -1006,16 +1006,17 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   protected onInasistenciaGuardada(): void {
+    // In SWR pattern, refresh happens automatically if we call initialize with same ID
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {
-      this.facade.loadDetalle(Number(id));
+      void this.facade.initialize(Number(id));
     }
   }
 
   protected onPerfilActualizado(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {
-      this.facade.loadDetalle(Number(id));
+      void this.facade.initialize(Number(id));
     }
   }
 }

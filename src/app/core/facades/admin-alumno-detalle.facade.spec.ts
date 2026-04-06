@@ -4,23 +4,23 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 
 describe('AdminAlumnoDetalleFacade', () => {
   let facade: AdminAlumnoDetalleFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
+  let supabaseSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
+    supabaseSpy = { client: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-            single: jasmine.createSpy('single').and.resolveTo({ data: null, error: null }),
-            order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+            order: vi.fn().mockResolvedValue({ data: [], error: null })
           })
         }),
-        update: jasmine.createSpy('update').and.returnValue({
-          eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null })
         }),
-        insert: jasmine.createSpy('insert').and.resolveTo({ error: null })
+        insert: vi.fn().mockResolvedValue({ error: null })
       })
     };
 
@@ -42,7 +42,7 @@ describe('AdminAlumnoDetalleFacade', () => {
     expect(facade.alumno()).toBeNull();
     expect(facade.inasistencias()).toEqual([]);
     expect(facade.clasesPracticas()).toEqual([]);
-    expect(facade.isLoading()).toBeFalse();
+    expect(facade.isLoading()).toBe(false);
   });
 
   it('porcentajePracticas should return 0 initially', () => {

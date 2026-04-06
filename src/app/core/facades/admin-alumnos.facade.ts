@@ -54,7 +54,6 @@ interface RawStudent {
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
 
-/** Days ahead to consider an enrollment "por vencer" */
 const VENCER_THRESHOLD_DAYS = 7;
 
 @Injectable({ providedIn: 'root' })
@@ -63,13 +62,15 @@ export class AdminAlumnosFacade {
   private readonly branchFacade = inject(BranchFacade);
 
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
-
   private readonly _alumnos = signal<AlumnoTableRow[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
 
-  // ── 2. ESTADO PÚBLICO (solo lectura) ────────────────────────────────────
+  private _initialized = false;
+  private _lastBranchId: number | null = null;
+  private _realtimeChannel: any | null = null;
 
+  // ── 2. ESTADO PÚBLICO (solo lectura) ────────────────────────────────────
   readonly alumnos = this._alumnos.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
@@ -83,59 +84,89 @@ export class AdminAlumnosFacade {
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────
 
-  async loadAlumnos(): Promise<void> {
+  setupRealtime(): void {
+    if (this._realtimeChannel) return;
+    this._realtimeChannel = this.supabase.client
+      .channel('alumnos-listado-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'students' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'enrollments' },
+        () => void this.refreshSilently(),
+      )
+      .subscribe();
+  }
+
+  destroyRealtime(): void {
+    if (this._realtimeChannel) {
+      void this.supabase.client.removeChannel(this._realtimeChannel);
+      this._realtimeChannel = null;
+    }
+  }
+
+  /**
+   * SWR Initialization
+   */
+  async initialize(): Promise<void> {
+    const currentBranchId = this.branchFacade.selectedBranchId();
+    this.setupRealtime();
+
+    if (this._initialized && currentBranchId === this._lastBranchId) {
+      void this.refreshSilently();
+      return;
+    }
+
     this._isLoading.set(true);
     this._error.set(null);
-
     try {
-      const branchId = this.branchFacade.selectedBranchId();
+      await this.fetchAlumnosData(currentBranchId);
+      this._initialized = true;
+      this._lastBranchId = currentBranchId;
+    } catch {
+      this._error.set('Error al cargar alumnos');
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
 
-      let query = this.supabase.client
-        .from('students')
-        .select(
-          `
-          id,
-          status,
-          address,
-          users!inner(
-            id,
-            rut,
-            first_names,
-            paternal_last_name,
-            maternal_last_name,
-            email,
-            phone,
-            branch_id
-          ),
-          enrollments(
-            id,
-            number,
-            status,
-            payment_status,
-            pending_balance,
-            total_paid,
-            docs_complete,
-            created_at,
-            expires_at,
-            courses(
-              id,
-              name
-            ),
-            student_documents(
-              type,
-              status
-            )
+  private async refreshSilently(): Promise<void> {
+    try {
+      const currentBranchId = this.branchFacade.selectedBranchId();
+      await this.fetchAlumnosData(currentBranchId);
+      this._lastBranchId = currentBranchId;
+    } catch {
+      // Swallowed
+    }
+  }
+
+  async loadAlumnos(): Promise<void> {
+    return this.initialize();
+  }
+
+  clearError(): void {
+    this._error.set(null);
+  }
+
+  private async fetchAlumnosData(branchId: number | null): Promise<void> {
+    try {
+      let query: any = this.supabase.client.from('students').select(`
+          id, status, address,
+          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id),
+          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at,
+            courses(id, name),
+            student_documents(type, status)
           )
-        `,
-        )
-        .order('id', { ascending: false });
+        `);
 
       if (branchId !== null) {
         query = query.eq('users.branch_id', branchId);
       }
 
-      const { data, error } = await query;
-
+      const { data, error } = await query.order('id', { ascending: false });
       if (error) throw error;
 
       const rows = ((data ?? []) as unknown as RawStudent[]).map((s) =>
@@ -144,21 +175,12 @@ export class AdminAlumnosFacade {
       this._alumnos.set(rows);
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Error al cargar alumnos');
-    } finally {
-      this._isLoading.set(false);
+      throw err;
     }
   }
 
-  clearError(): void {
-    this._error.set(null);
-  }
-
-  // ── Mappers ──────────────────────────────────────────────────────────────
-
   private mapToAlumnoTableRow(s: RawStudent): AlumnoTableRow {
     const u = s.users;
-
-    // Take the most recent enrollment (last created)
     const enrollment =
       s.enrollments.length > 0
         ? s.enrollments.sort(
@@ -166,7 +188,7 @@ export class AdminAlumnosFacade {
           )[0]
         : null;
 
-    const docs: RawDocument[] = enrollment?.student_documents ?? [];
+    const docs = enrollment?.student_documents ?? [];
 
     return {
       id: String(s.id),
@@ -198,10 +220,7 @@ export class AdminAlumnosFacade {
     enrollment: RawEnrollment | null,
     studentStatus: string | null,
   ): AlumnoStatus {
-    if (!enrollment) {
-      return studentStatus === 'inactive' ? 'Inactivo' : 'Pre-inscrito';
-    }
-
+    if (!enrollment) return studentStatus === 'inactive' ? 'Inactivo' : 'Pre-inscrito';
     switch (enrollment.status) {
       case 'active':
         if (enrollment.payment_status === 'pending') return 'Pendiente Pago';
@@ -229,16 +248,14 @@ export class AdminAlumnosFacade {
   }
 
   private isWithinThreshold(expiresAt: string): boolean {
-    const now = new Date();
-    const exp = new Date(expiresAt);
-    const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = new Date(expiresAt).getTime() - new Date().getTime();
+    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
     return diffDays >= 0 && diffDays <= VENCER_THRESHOLD_DAYS;
   }
 
   private formatVencimiento(expiresAt: string): string {
-    const now = new Date();
-    const exp = new Date(expiresAt);
-    const diffDays = Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const diff = new Date(expiresAt).getTime() - new Date().getTime();
+    const diffDays = Math.ceil(diff / (1000 * 60 * 60 * 24));
     if (diffDays <= 0) return 'Hoy';
     if (diffDays === 1) return 'Mañana';
     return `En ${diffDays} días`;

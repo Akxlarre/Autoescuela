@@ -6,33 +6,33 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 
 describe('AsistenciaProfesionalFacade', () => {
   let facade: AsistenciaProfesionalFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let toastSpy: jasmine.SpyObj<ToastService>;
-  let confirmSpy: jasmine.SpyObj<ConfirmModalService>;
+  let supabaseSpy: any;
+  let toastSpy: any;
+  let confirmSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
-    toastSpy = jasmine.createSpyObj('ToastService', ['success', 'error']);
-    confirmSpy = jasmine.createSpyObj('ConfirmModalService', ['confirm']);
+    supabaseSpy = { client: vi.fn() };
+    toastSpy = { success: vi.fn(), error: vi.fn() };
+    confirmSpy = { confirm: vi.fn() };
 
     // Mock supabase client
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          in: jasmine.createSpy('in').and.returnValue({
-            order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null })
           }),
-          eq: jasmine.createSpy('eq').and.returnValue({
-            order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null }),
-            not: jasmine.createSpy('not').and.resolveTo({ data: [], error: null })
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+            not: vi.fn().mockResolvedValue({ data: [], error: null })
           })
         }),
-        update: jasmine.createSpy('update').and.returnValue({
-          eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null })
         }),
-        insert: jasmine.createSpy('insert').and.resolveTo({ error: null }),
-        delete: jasmine.createSpy('delete').and.returnValue({
-          eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null })
         })
       })
     };
@@ -56,10 +56,10 @@ describe('AsistenciaProfesionalFacade', () => {
   describe('UI Wrappers', () => {
     it('should call confirmModal.confirm on confirm', async () => {
       const config = { title: 'Test', message: 'Msg' };
-      confirmSpy.confirm.and.resolveTo(true);
+      confirmSpy.confirm.mockResolvedValue(true);
       const result = await facade.confirm(config);
       expect(confirmSpy.confirm).toHaveBeenCalledWith(config);
-      expect(result).toBeTrue();
+      expect(result).toBe(true);
     });
   });
 

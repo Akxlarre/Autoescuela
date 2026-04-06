@@ -5,17 +5,17 @@ import { BranchFacade } from '@core/facades/branch.facade';
 
 describe('AdminAlumnosFacade', () => {
   let facade: AdminAlumnosFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let branchFacadeSpy: jasmine.SpyObj<BranchFacade>;
+  let supabaseSpy: any;
+  let branchFacadeSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
-    branchFacadeSpy = jasmine.createSpyObj('BranchFacade', ['selectedBranchId']);
+    supabaseSpy = { client: vi.fn() };
+    branchFacadeSpy = { selectedBranchId: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: [], error: null })
         })
       })
     };
@@ -37,7 +37,7 @@ describe('AdminAlumnosFacade', () => {
 
   it('should have initial empty state', () => {
     expect(facade.alumnos()).toEqual([]);
-    expect(facade.isLoading()).toBeFalse();
+    expect(facade.isLoading()).toBe(false);
     expect(facade.error()).toBeNull();
   });
 

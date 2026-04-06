@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { InstructorAlumnosFacade } from './instructor-alumnos.facade';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 
 describe('InstructorAlumnosFacade', () => {
   let facade: InstructorAlumnosFacade;
@@ -23,12 +24,12 @@ describe('InstructorAlumnosFacade', () => {
       'not',
     ];
     for (const m of methods) {
-      chain[m] = (window as any).vi.fn().mockReturnValue(chain);
+      chain[m] = vi.fn().mockReturnValue(chain);
     }
-    chain.order = (window as any).vi.fn().mockResolvedValue(resolvedValue);
-    chain.maybeSingle = (window as any).vi.fn().mockResolvedValue(resolvedValue);
-    chain.in = (window as any).vi.fn().mockReturnValue(chain);
-    chain.lte = (window as any).vi.fn().mockResolvedValue(resolvedValue);
+    chain.order = vi.fn().mockResolvedValue(resolvedValue);
+    chain.maybeSingle = vi.fn().mockResolvedValue(resolvedValue);
+    chain.in = vi.fn().mockReturnValue(chain);
+    chain.lte = vi.fn().mockResolvedValue(resolvedValue);
     return chain;
   }
 
@@ -36,13 +37,13 @@ describe('InstructorAlumnosFacade', () => {
     const chain = createChainMock();
     supabaseMock = {
       client: {
-        from: (window as any).vi.fn().mockReturnValue(chain),
+        from: vi.fn().mockReturnValue(chain),
       },
     };
 
     profileMock = {
-      getInstructorId: (window as any).vi.fn().mockResolvedValue(1),
-      instructorId: (window as any).vi.fn().mockReturnValue(1),
+      getInstructorId: vi.fn().mockResolvedValue(1),
+      instructorId: vi.fn().mockReturnValue(1),
     };
 
     TestBed.configureTestingModule({
@@ -50,6 +51,10 @@ describe('InstructorAlumnosFacade', () => {
         InstructorAlumnosFacade,
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: InstructorProfileFacade, useValue: profileMock },
+        {
+          provide: ToastService,
+          useValue: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+        },
       ],
     });
 

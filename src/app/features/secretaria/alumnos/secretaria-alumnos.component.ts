@@ -14,7 +14,7 @@ import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
       [alumnosPorVencer]="facade.alumnosPorVencer()"
-      (refreshRequested)="facade.loadAlumnos()"
+      (refreshRequested)="facade.initialize()"
     />
   `,
 })
@@ -22,6 +22,6 @@ export class SecretariaAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
 
   ngOnInit(): void {
-    this.facade.loadAlumnos();
+    this.facade.initialize();
   }
 }

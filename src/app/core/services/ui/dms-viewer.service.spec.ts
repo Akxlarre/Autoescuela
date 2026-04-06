@@ -14,14 +14,14 @@ describe('DmsViewerService', () => {
   });
 
   it('should be closed initially', () => {
-    expect(service.isOpen()).toBeFalse();
+    expect(service.isOpen()).toBe(false);
     expect(service.currentDoc()).toBeNull();
   });
 
   it('open should set document and open', () => {
     const doc = { url: 'test.pdf', name: 'Test', type: 'pdf' as any };
     service.open(doc);
-    expect(service.isOpen()).toBeTrue();
+    expect(service.isOpen()).toBe(true);
     expect(service.currentDoc()).toEqual(doc);
   });
 
@@ -38,7 +38,7 @@ describe('DmsViewerService', () => {
   it('close should reset document', () => {
     service.openByUrl('test.pdf', 'Test');
     service.close();
-    expect(service.isOpen()).toBeFalse();
+    expect(service.isOpen()).toBe(false);
     expect(service.currentDoc()).toBeNull();
   });
 });

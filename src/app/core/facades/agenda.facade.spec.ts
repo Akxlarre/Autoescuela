@@ -5,29 +5,29 @@ import { AuthFacade } from './auth.facade';
 
 describe('AgendaFacade', () => {
   let facade: AgendaFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let authFacadeSpy: jasmine.SpyObj<AuthFacade>;
+  let supabaseSpy: any;
+  let authFacadeSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client', 'removeChannel']);
-    authFacadeSpy = jasmine.createSpyObj('AuthFacade', ['currentUser']);
+    supabaseSpy = { client: vi.fn(), removeChannel: vi.fn() };
+    authFacadeSpy = { currentUser: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-             gte: jasmine.createSpy('gte').and.returnValue({
-               lt: jasmine.createSpy('lt').and.returnValue({
-                 order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null }),
-                 neq: jasmine.createSpy('neq').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+             gte: vi.fn().mockReturnValue({
+               lt: vi.fn().mockReturnValue({
+                 order: vi.fn().mockResolvedValue({ data: [], error: null }),
+                 neq: vi.fn().mockResolvedValue({ data: [], error: null })
                })
              })
           }),
-          neq: jasmine.createSpy('neq').and.resolveTo({ data: [], error: null })
+          neq: vi.fn().mockResolvedValue({ data: [], error: null })
         }),
-        channel: jasmine.createSpy('channel').and.returnValue({
-          on: jasmine.createSpy('on').and.returnValue({
-            subscribe: jasmine.createSpy('subscribe').and.returnValue({})
+        channel: vi.fn().mockReturnValue({
+          on: vi.fn().mockReturnValue({
+            subscribe: vi.fn().mockReturnValue({})
           })
         })
       })
@@ -49,9 +49,9 @@ describe('AgendaFacade', () => {
   });
 
   it('should have initial state', () => {
-    expect(facade.isLoading()).toBeFalse();
+    expect(facade.isLoading()).toBe(false);
     expect(facade.weekData()).toBeNull();
-    expect(facade.isCurrentWeek()).toBeTrue();
+    expect(facade.isCurrentWeek()).toBe(true);
   });
 
   it('nextWeek and prevWeek should change weekStart', () => {

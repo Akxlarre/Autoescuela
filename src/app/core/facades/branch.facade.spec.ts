@@ -9,10 +9,10 @@ const MOCK_BRANCHES = [
 
 function buildSupabaseMock(response: { data: unknown; error: unknown }) {
   const builder = {
-    select: jest.fn().mockReturnThis(),
-    order: jest.fn().mockResolvedValue(response),
+    select: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue(response),
   };
-  return { client: { from: jest.fn().mockReturnValue(builder) } };
+  return { client: { from: vi.fn().mockReturnValue(builder) } };
 }
 
 describe('BranchFacade', () => {
@@ -67,14 +67,15 @@ describe('BranchFacade', () => {
     });
 
     it('sets error signal on failure', async () => {
-      const errorMock = buildSupabaseMock({ data: null, error: { message: 'DB error' } });
-      TestBed.overrideProvider(SupabaseService, { useValue: errorMock });
-      const failFacade = TestBed.inject(BranchFacade);
+      supabaseMock.client.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } }),
+      });
 
-      await failFacade.loadBranches();
+      await facade.loadBranches();
 
-      expect(failFacade.error()).toBe('DB error');
-      expect(failFacade.branches()).toEqual([]);
+      expect(facade.error()).toBe('DB error');
+      expect(facade.branches()).toEqual([]);
     });
 
     it('resets isLoading to false after fetch (success)', async () => {
@@ -83,13 +84,14 @@ describe('BranchFacade', () => {
     });
 
     it('resets isLoading to false after fetch (failure)', async () => {
-      const errorMock = buildSupabaseMock({ data: null, error: { message: 'fail' } });
-      TestBed.overrideProvider(SupabaseService, { useValue: errorMock });
-      const failFacade = TestBed.inject(BranchFacade);
+      supabaseMock.client.from.mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: null, error: { message: 'fail' } }),
+      });
 
-      await failFacade.loadBranches();
+      await facade.loadBranches();
 
-      expect(failFacade.isLoading()).toBe(false);
+      expect(facade.isLoading()).toBe(false);
     });
   });
 

@@ -74,8 +74,8 @@ describe('notification.utils', () => {
     });
 
     it('should map read status', () => {
-      expect(mapNotificationDtoToUi(baseDto).read).toBeFalse();
-      expect(mapNotificationDtoToUi({ ...baseDto, read: true }).read).toBeTrue();
+      expect(mapNotificationDtoToUi(baseDto).read).toBe(false);
+      expect(mapNotificationDtoToUi({ ...baseDto, read: true }).read).toBe(true);
     });
 
     it('should convert created_at to Date', () => {

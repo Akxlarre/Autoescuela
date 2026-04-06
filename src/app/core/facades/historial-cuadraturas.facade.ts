@@ -101,6 +101,12 @@ export class HistorialCuadraturasFacade {
   private readonly _isLoadingHistorial = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
+  // ── SWR State ────────────────────────────────────────────────────────────
+  private _initialized = false;
+  private _lastMonth: number | null = null;
+  private _lastYear: number | null = null;
+  private _lastBranchId: number | null = null;
+
   // ── Navegación de mes ─────────────────────────────────────────────────────
   private readonly _mesActual = signal<number>(new Date().getMonth() + 1);
   private readonly _anioActual = signal<number>(new Date().getFullYear());
@@ -125,7 +131,7 @@ export class HistorialCuadraturasFacade {
     }
     this._mesActual.set(mes);
     this._anioActual.set(anio);
-    this.cargarHistorial();
+    this.initialize();
   }
 
   mesSiguiente(): void {
@@ -139,28 +145,71 @@ export class HistorialCuadraturasFacade {
     }
     this._mesActual.set(mes);
     this._anioActual.set(anio);
-    this.cargarHistorial();
+    this.initialize();
   }
 
   volverAHoy(): void {
     const now = new Date();
     this._mesActual.set(now.getMonth() + 1);
     this._anioActual.set(now.getFullYear());
-    this.cargarHistorial();
+    this.initialize();
   }
 
   // ── Carga de datos ────────────────────────────────────────────────────────
 
-  /** Carga los cierres del mes/año actualmente configurados en el facade. */
-  async cargarHistorial(): Promise<void> {
+  async initialize(): Promise<void> {
     const mes = this._mesActual();
     const anio = this._anioActual();
+    const branchId = this.auth.currentUser()?.branchId ?? null;
+
+    const isSameContext =
+      this._initialized &&
+      mes === this._lastMonth &&
+      anio === this._lastYear &&
+      branchId === this._lastBranchId;
+
+    if (isSameContext) {
+      void this.refreshSilently();
+      return;
+    }
 
     this._isLoadingHistorial.set(true);
     this._error.set(null);
-
     try {
+      await this.fetchHistorialData(mes, anio, branchId);
+      this._initialized = true;
+      this._lastMonth = mes;
+      this._lastYear = anio;
+      this._lastBranchId = branchId;
+    } finally {
+      this._isLoadingHistorial.set(false);
+    }
+  }
+
+  private async refreshSilently(): Promise<void> {
+    try {
+      const mes = this._mesActual();
+      const anio = this._anioActual();
       const branchId = this.auth.currentUser()?.branchId ?? null;
+      await this.fetchHistorialData(mes, anio, branchId);
+      this._lastMonth = mes;
+      this._lastYear = anio;
+      this._lastBranchId = branchId;
+    } catch {
+      // Swallowed
+    }
+  }
+
+  async cargarHistorial(): Promise<void> {
+    return this.initialize();
+  }
+
+  private async fetchHistorialData(
+    mes: number,
+    anio: number,
+    branchId: number | null,
+  ): Promise<void> {
+    try {
       const mm = String(mes).padStart(2, '0');
       const yyyy = String(anio);
       const fechaInicio = `${yyyy}-${mm}-01`;
@@ -182,10 +231,9 @@ export class HistorialCuadraturasFacade {
       const { data, error } = await query;
       if (error) throw error;
 
-      this._historialCierres.set((data ?? []).map(mapCierreToHistorial));
+      this._historialCierres.set((data ?? []).map(mapCierreToHistorial as any));
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : 'Error al cargar el historial de cuadraturas.';
+      const msg = err instanceof Error ? err.message : 'Error al cargar el historial.';
       this._error.set(msg);
       this.toast.error(msg);
     } finally {

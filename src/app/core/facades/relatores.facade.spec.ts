@@ -5,27 +5,27 @@ import { ToastService } from '@core/services/ui/toast.service';
 
 describe('RelatoresFacade', () => {
   let facade: RelatoresFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let toastSpy: jasmine.SpyObj<ToastService>;
+  let supabaseSpy: any;
+  let toastSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
-    toastSpy = jasmine.createSpyObj('ToastService', ['error', 'success']);
+    supabaseSpy = { client: vi.fn() };
+    toastSpy = { error: vi.fn(), success: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null }),
-          in: jasmine.createSpy('in').and.returnValue({
-             not: jasmine.createSpy('not').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          in: vi.fn().mockReturnValue({
+             not: vi.fn().mockResolvedValue({ data: [], error: null })
           }),
-          eq: jasmine.createSpy('eq').and.returnValue({
-             order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null })
+          eq: vi.fn().mockReturnValue({
+             order: vi.fn().mockResolvedValue({ data: [], error: null })
           })
         }),
-        insert: jasmine.createSpy('insert').and.resolveTo({ error: null }),
-        update: jasmine.createSpy('update').and.returnValue({
-          eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        insert: vi.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null })
         })
       })
     };
@@ -47,7 +47,7 @@ describe('RelatoresFacade', () => {
 
   it('should have initial empty state', () => {
     expect(facade.relatores()).toEqual([]);
-    expect(facade.isLoading()).toBeFalse();
+    expect(facade.isLoading()).toBe(false);
     expect(facade.totalRelatores()).toBe(0);
   });
 

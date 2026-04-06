@@ -51,9 +51,18 @@ export class LiquidacionesFacade {
   private readonly _isSaving = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
+  // ── SWR State ────────────────────────────────────────────────────────────
+  private _initialized = false;
+  private _lastMonth: number | null = null;
+  private _lastYear: number | null = null;
+  private _lastBranchId: number | null = null;
+
   // ── Navegación de mes ─────────────────────────────────────────────────────
   private readonly _mesActual = signal<number>(new Date().getMonth() + 1);
   private readonly _anioActual = signal<number>(new Date().getFullYear());
+
+  // ── Realtime ─────────────────────────────────────────────────────────────
+  private _realtimeChannel: any | null = null;
 
   // ── Estado público ────────────────────────────────────────────────────────
   readonly liquidaciones = this._liquidaciones.asReadonly();
@@ -87,7 +96,7 @@ export class LiquidacionesFacade {
     }
     this._mesActual.set(mes);
     this._anioActual.set(anio);
-    this.cargarLiquidaciones();
+    this.initialize();
   }
 
   mesSiguiente(): void {
@@ -101,42 +110,128 @@ export class LiquidacionesFacade {
     }
     this._mesActual.set(mes);
     this._anioActual.set(anio);
-    this.cargarLiquidaciones();
+    this.initialize();
+  }
+
+  // ── Sincronización Realtime ──────────────────────────────────────────────
+
+  /**
+   * Suscribe la Facade a cambios en Supabase para las tablas de pagos y anticipos.
+   */
+  setupRealtime(): void {
+    if (this._realtimeChannel) return;
+
+    this._realtimeChannel = this.supabase.client
+      .channel('liquidaciones-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'instructor_monthly_payments' },
+        () => {
+          console.log('[LiquidacionesFacade] Realtime update: Payments changed');
+          void this.refreshSilently();
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'instructor_advances' },
+        () => {
+          console.log('[LiquidacionesFacade] Realtime update: Advances changed');
+          void this.refreshSilently();
+        },
+      )
+      .subscribe();
+  }
+
+  destroyRealtime(): void {
+    if (this._realtimeChannel) {
+      void this.supabase.client.removeChannel(this._realtimeChannel);
+      this._realtimeChannel = null;
+    }
   }
 
   // ── Carga de datos ────────────────────────────────────────────────────────
 
-  async cargarLiquidaciones(): Promise<void> {
+  /**
+   * SWR Initialization:
+   * First call triggers isLoading(true). Subsequent calls refresh silently.
+   */
+  async initialize(): Promise<void> {
     const mes = this._mesActual();
     const anio = this._anioActual();
     const branchId = this.auth.currentUser()?.branchId ?? null;
 
+    // Aseguramos suscripción realtime una sola vez
+    this.setupRealtime();
+
+    const isSameContext =
+      this._initialized &&
+      mes === this._lastMonth &&
+      anio === this._lastYear &&
+      branchId === this._lastBranchId;
+
+    if (isSameContext) {
+      void this.refreshSilently();
+      return;
+    }
+
     this._isLoading.set(true);
     this._error.set(null);
+    try {
+      await this.fetchLiquidacionesData(mes, anio, branchId);
+      this._initialized = true;
+      this._lastMonth = mes;
+      this._lastYear = anio;
+      this._lastBranchId = branchId;
+    } catch {
+      this._error.set('Error en la carga inicial de liquidaciones.');
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
 
+  private async refreshSilently(): Promise<void> {
+    try {
+      const mes = this._mesActual();
+      const anio = this._anioActual();
+      const branchId = this.auth.currentUser()?.branchId ?? null;
+      await this.fetchLiquidacionesData(mes, anio, branchId);
+      this._lastMonth = mes;
+      this._lastYear = anio;
+      this._lastBranchId = branchId;
+    } catch {
+      // Swallowed
+    }
+  }
+
+  /** Legacy wrapper */
+  async cargarLiquidaciones(): Promise<void> {
+    return this.initialize();
+  }
+
+  private async fetchLiquidacionesData(
+    mes: number,
+    anio: number,
+    branchId: number | null,
+  ): Promise<void> {
     try {
       const mm = String(mes).padStart(2, '0');
       const lastDay = new Date(anio, mes, 0).getDate();
       const fechaInicio = `${anio}-${mm}-01`;
       const fechaFin = `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`;
 
-      // Parallel: instructores, horas, anticipos, pagos
       const [instrRes, hoursRes, advancesRes, paymentsRes] = await Promise.all([
         this.supabase.client
           .from('instructors')
           .select('id, user_id, users(id, first_names, paternal_last_name, rut, branch_id)'),
-
         this.supabase.client
           .from('instructor_monthly_hours')
           .select('instructor_id, total_equivalent')
           .eq('period', `${anio}-${mm}`),
-
         this.supabase.client
           .from('instructor_advances')
           .select('instructor_id, amount')
           .gte('date', fechaInicio)
           .lte('date', fechaFin),
-
         this.supabase.client
           .from('instructor_monthly_payments')
           .select('*')
@@ -145,7 +240,6 @@ export class LiquidacionesFacade {
 
       if (instrRes.error) throw instrRes.error;
 
-      // Mapas de lookup O(1)
       const hoursMap = new Map<number, number>(
         (hoursRes.data ?? []).map((h) => [h.instructor_id, h.total_equivalent ?? 0]),
       );
@@ -155,29 +249,19 @@ export class LiquidacionesFacade {
         advancesMap.set(adv.instructor_id, (advancesMap.get(adv.instructor_id) ?? 0) + adv.amount);
       }
 
-      type PaymentRow = NonNullable<typeof paymentsRes.data>[number];
-      const paymentsMap = new Map<number, PaymentRow>(
+      const paymentsMap = new Map<number, any>(
         (paymentsRes.data ?? []).map((p) => [p.instructor_id, p]),
       );
 
-      type UserJoin = {
-        id: number;
-        first_names: string;
-        paternal_last_name: string;
-        rut: string;
-        branch_id: number;
-      } | null;
-
-      const liquidaciones: LiquidacionRow[] = (instrRes.data ?? [])
+      const rows: LiquidacionRow[] = (instrRes.data ?? [])
         .filter((instr) => {
-          const raw = instr.users;
-          const u = (Array.isArray(raw) ? raw[0] : raw) as { branch_id?: number } | null;
-          return !branchId || u?.branch_id === branchId;
+          const u = instr.users as any;
+          const bId = Array.isArray(u) ? u[0]?.branch_id : u?.branch_id;
+          return !branchId || bId === branchId;
         })
         .map((instr) => {
-          const raw = instr.users;
-          const u = (Array.isArray(raw) ? raw[0] : raw) as UserJoin;
-
+          const rawU = instr.users as any;
+          const u = Array.isArray(rawU) ? rawU[0] : rawU;
           const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
           const totalHours = hoursMap.get(instr.id) ?? 0;
           const totalAdvances = advancesMap.get(instr.id) ?? 0;
@@ -201,16 +285,15 @@ export class LiquidacionesFacade {
             status: payment?.payment_status === 'paid' ? 'paid' : 'pending',
             paymentId: payment?.id,
             paymentDate: payment?.paid_at ?? undefined,
-          } satisfies LiquidacionRow;
+          };
         });
 
-      this._liquidaciones.set(liquidaciones);
+      this._liquidaciones.set(rows);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al cargar liquidaciones.';
       this._error.set(msg);
       this.toast.error(msg);
-    } finally {
-      this._isLoading.set(false);
+      throw err;
     }
   }
 
@@ -249,7 +332,6 @@ export class LiquidacionesFacade {
 
       if (payErr) throw payErr;
 
-      // Marcar anticipos del mes como descontados
       await this.supabase.client
         .from('instructor_advances')
         .update({ status: 'discounted' })
@@ -258,7 +340,7 @@ export class LiquidacionesFacade {
         .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
 
       this.toast.success(`Liquidación de ${row.nombre} registrada correctamente.`);
-      await this.cargarLiquidaciones();
+      await this.refreshSilently();
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al registrar el pago.';
@@ -290,7 +372,6 @@ export class LiquidacionesFacade {
 
       if (delErr) throw delErr;
 
-      // Reactivar anticipos del mes
       await this.supabase.client
         .from('instructor_advances')
         .update({ status: 'pending' })
@@ -299,7 +380,7 @@ export class LiquidacionesFacade {
         .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
 
       this.toast.success(`Pago de ${row.nombre} revertido.`);
-      await this.cargarLiquidaciones();
+      await this.refreshSilently();
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al revertir el pago.';

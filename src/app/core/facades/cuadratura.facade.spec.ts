@@ -111,7 +111,7 @@ describe('CuadraturaFacade', () => {
         },
         {
           provide: ToastService,
-          useValue: { success: jest.fn(), error: jest.fn() },
+          useValue: { success: vi.fn(), error: vi.fn() },
         },
       ],
     });
