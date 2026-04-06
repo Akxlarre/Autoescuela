@@ -5,18 +5,19 @@ import {
   computed,
   effect,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, SelectModule, DatePickerModule, IconComponent],
   template: `
@@ -352,7 +353,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
       <div class="flex items-center gap-3 pt-4" style="border-top: 1px solid var(--border-subtle)">
         <button
           class="cancel-btn"
-          (click)="saved.emit()"
+          (click)="layoutDrawer.close()"
           data-llm-action="cancelar-editar-instructor"
         >
           Cancelar
@@ -530,8 +531,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
 })
 export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly facade = inject(InstructoresFacade);
-
-  readonly saved = output<void>();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -725,7 +725,8 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     });
 
     if (ok) {
-      this.saved.emit();
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
     }
   }
 }

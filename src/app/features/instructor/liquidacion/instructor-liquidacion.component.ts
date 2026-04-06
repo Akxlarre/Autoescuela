@@ -42,6 +42,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         #heroRef
         title="Liquidación"
         subtitle="Resumen de horas trabajadas y cálculo mensual"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
         [actions]="heroActions"
       />
 

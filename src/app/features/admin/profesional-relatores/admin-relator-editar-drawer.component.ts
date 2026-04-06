@@ -5,11 +5,11 @@ import {
   computed,
   effect,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 const SPEC_COLORS: Record<string, string> = {
@@ -21,6 +21,7 @@ const SPEC_COLORS: Record<string, string> = {
 
 @Component({
   selector: 'app-admin-relator-editar-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   template: `
@@ -175,7 +176,7 @@ const SPEC_COLORS: Record<string, string> = {
       class="flex items-center gap-3 pt-4 mt-4"
       style="border-top: 1px solid var(--border-subtle)"
     >
-      <button class="cancel-btn" (click)="saved.emit()" data-llm-action="cancelar-editar-relator">
+      <button class="cancel-btn" (click)="layoutDrawer.close()" data-llm-action="cancelar-editar-relator">
         Cancelar
       </button>
       <button
@@ -361,7 +362,7 @@ const SPEC_COLORS: Record<string, string> = {
 })
 export class AdminRelatorEditarDrawerComponent {
   protected readonly facade = inject(RelatoresFacade);
-  readonly saved = output<void>();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Campos ──────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -455,6 +456,9 @@ export class AdminRelatorEditarDrawerComponent {
       active: this.active(),
     });
 
-    if (ok) this.saved.emit();
+    if (ok) {
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
+    }
   }
 }

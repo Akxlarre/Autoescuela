@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
 
 const SPEC_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -19,6 +21,7 @@ const SPEC_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-admin-relator-ver-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, SkeletonBlockComponent],
   template: `
@@ -209,7 +212,7 @@ const SPEC_LABELS: Record<string, string> = {
 
       <!-- ── Acciones ───────────────────────────────────────────────────── -->
       <div style="border-top: 1px solid var(--border-subtle);" class="pt-4">
-        <button class="edit-btn" (click)="editarClicked.emit()" data-llm-action="editar-relator">
+        <button class="edit-btn" (click)="editar()" data-llm-action="editar-relator">
           <app-icon name="edit" [size]="15" />
           Editar relator
         </button>
@@ -229,6 +232,21 @@ const SPEC_LABELS: Record<string, string> = {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .info-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ds-brand);
     }
     .info-item {
       display: flex;
@@ -343,7 +361,7 @@ const SPEC_LABELS: Record<string, string> = {
 })
 export class AdminRelatorVerDrawerComponent {
   protected readonly facade = inject(RelatoresFacade);
-  readonly editarClicked = output<void>();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected specColor(spec: string): string {
     return SPEC_COLORS[spec] ?? '#6b7280';
@@ -372,5 +390,9 @@ export class AdminRelatorVerDrawerComponent {
       cancelled: 'Cancelada',
     };
     return status ? (labels[status] ?? status) : '—';
+  }
+
+  protected editar(): void {
+    this.layoutDrawer.open(AdminRelatorEditarDrawerComponent, 'Editar relator', 'edit');
   }
 }

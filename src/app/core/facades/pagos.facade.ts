@@ -253,11 +253,23 @@ export class PagosFacade {
         pending_balance: Math.max(0, montosActuales.pending_balance - payload.total_amount),
         payment_status: (montosActuales.pending_balance - payload.total_amount) <= 0 ? 'paid' : 'partial'
       }).eq('id', enrollmentId);
+      
+      // Refrescamos los detalles del estado de cuenta específicos para este enrollment
+      void this.cargarEstadoCuenta(enrollmentId);
     }
     void this.refreshSilently();
   }
 
   seleccionarEnrollment(enrollmentId: number): void { this._enrollmentSeleccionado.set(enrollmentId); }
+
+  seleccionarParaPago(enrollmentId: number | null): void {
+    this._enrollmentSeleccionado.set(enrollmentId);
+    if (enrollmentId) {
+      void this.cargarEstadoCuenta(enrollmentId);
+    } else {
+      this._estadoCuentaResumen.set(null);
+    }
+  }
 
   async cargarEstadoCuenta(enrollmentId: number): Promise<void> {
     this._isLoadingDetalle.set(true);

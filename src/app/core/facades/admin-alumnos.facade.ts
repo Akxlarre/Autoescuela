@@ -69,6 +69,7 @@ export class AdminAlumnosFacade {
   private _initialized = false;
   private _lastBranchId: number | null = null;
   private _realtimeChannel: any | null = null;
+  private readonly _drawerMode = signal<'zoom' | 'asistencia'>('zoom');
 
   // ── 2. ESTADO PÚBLICO (solo lectura) ────────────────────────────────────
   readonly alumnos = this._alumnos.asReadonly();
@@ -81,6 +82,7 @@ export class AdminAlumnosFacade {
   readonly alumnosPorVencer = computed(() =>
     this._alumnos().filter((a) => a.expiresAt !== null && this.isWithinThreshold(a.expiresAt)),
   );
+  readonly drawerMode = this._drawerMode.asReadonly();
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────
 
@@ -145,6 +147,10 @@ export class AdminAlumnosFacade {
 
   async loadAlumnos(): Promise<void> {
     return this.initialize();
+  }
+
+  setDrawerMode(mode: 'zoom' | 'asistencia'): void {
+    this._drawerMode.set(mode);
   }
 
   clearError(): void {

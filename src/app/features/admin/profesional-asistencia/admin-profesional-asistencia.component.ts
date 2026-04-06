@@ -13,7 +13,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminSesionDrawerComponent } from './admin-sesion-drawer.component';
 import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesional.model';
 
@@ -28,8 +28,6 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
-    DrawerComponent,
-    AdminSesionDrawerComponent,
   ],
   template: `
     <!-- ═══ Hero ═══ -->
@@ -306,18 +304,6 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
         }
       </section>
     }
-
-    <!-- ═══ Drawer de sesión ═══ -->
-    <app-drawer
-      [isOpen]="drawerOpen()"
-      [title]="drawerTitle()"
-      icon="clipboard-list"
-      (closed)="closeDrawer()"
-    >
-      @if (facade.selectedSesion(); as sesion) {
-        <app-admin-sesion-drawer (closed)="closeDrawer()" />
-      }
-    </app-drawer>
   `,
   styles: `
     .session-card {
@@ -417,8 +403,8 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
 })
 export class AdminProfesionalAsistenciaComponent implements OnInit {
   readonly facade = inject(AsistenciaProfesionalFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  readonly drawerOpen = signal(false);
   readonly skeletonDays = [1, 2, 3, 4, 5, 6];
 
   readonly promoOptions = computed(() =>
@@ -435,13 +421,6 @@ export class AdminProfesionalAsistenciaComponent implements OnInit {
     })),
   );
 
-  readonly drawerTitle = computed(() => {
-    const sesion = this.facade.selectedSesion();
-    if (!sesion) return 'Sesión';
-    const tipo = sesion.tipo === 'theory' ? 'Teoría' : 'Práctica';
-    return `${tipo} — ${this.formatDate(sesion.date)}`;
-  });
-
   ngOnInit(): void {
     void this.facade.initialize();
   }
@@ -456,11 +435,13 @@ export class AdminProfesionalAsistenciaComponent implements OnInit {
 
   openSesion(sesion: SesionProfesional): void {
     void this.facade.selectSesion(sesion);
-    this.drawerOpen.set(true);
+    const tipo = sesion.tipo === 'theory' ? 'Teoría' : 'Práctica';
+    const title = `${tipo} — ${this.formatDate(sesion.date)}`;
+    this.layoutDrawer.open(AdminSesionDrawerComponent, title, 'clipboard-list');
   }
 
   closeDrawer(): void {
-    this.drawerOpen.set(false);
+    this.layoutDrawer.close();
     this.facade.clearSelectedSesion();
   }
 

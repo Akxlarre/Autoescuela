@@ -10,10 +10,12 @@ import type {
   EgresoRow,
 } from '@core/models/ui/cuadratura.model';
 
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+
 @Component({
   selector: 'app-secretaria-contabilidad-cuadratura',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CuadraturaContentComponent, EgresoModalComponent, RegistrarPagoDrawerComponent],
+  imports: [CuadraturaContentComponent, EgresoModalComponent],
   template: `
     <app-cuadratura-content
       [pagosHoy]="facade.pagosHoy()"
@@ -26,21 +28,10 @@ import type {
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving()"
       (guardarCierre)="onGuardarCierre($event)"
-      (abrirIngreso)="ingresoDrawerOpen.set(true)"
+      (abrirIngreso)="openIngresoDrawer()"
       (abrirEgreso)="egresoModalOpen.set(true)"
       (eliminarIngreso)="onEliminarIngreso($event)"
       (eliminarEgreso)="onEliminarEgreso($event)"
-    />
-
-    <!-- ── Drawer: Registrar Pago (modo global, sin alumno preseleccionado) ── -->
-    <app-registrar-pago-drawer
-      [isOpen]="ingresoDrawerOpen()"
-      [enrollmentId]="null"
-      alumnoNombre=""
-      [saldoPendiente]="0"
-      [pagadoActual]="0"
-      (closed)="ingresoDrawerOpen.set(false)"
-      (saved)="onPagoGuardado()"
     />
 
     <!-- ── Modal: Registrar Egreso ──────────────────────────────────────────── -->
@@ -54,8 +45,8 @@ import type {
 })
 export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   protected readonly facade = inject(CuadraturaFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  protected readonly ingresoDrawerOpen = signal(false);
   protected readonly egresoModalOpen = signal(false);
 
   ngOnInit(): void {
@@ -66,10 +57,11 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
     await this.facade.cerrarCaja(payload);
   }
 
-  protected async onPagoGuardado(): Promise<void> {
-    await this.facade.refresh();
-    this.ingresoDrawerOpen.set(false);
+  protected openIngresoDrawer(): void {
+    this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
   }
+
+
 
   protected async onEgresoGuardado(datos: EgresoFormData): Promise<void> {
     const ok = await this.facade.registrarEgreso(datos);

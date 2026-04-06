@@ -4,12 +4,12 @@ import {
   computed,
   effect,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { RelatorOption } from '@core/models/ui/promocion-table.model';
@@ -21,21 +21,12 @@ const COURSE_COLORS: Record<string, string> = {
   A5: '#10b981',
 };
 
-const COURSE_NAMES: Record<string, string> = {
-  A2: 'Taxis y colectivos',
-  A3: 'Buses',
-  A4: 'Carga simple',
-  A5: 'Carga',
-};
-
 /**
  * Calcula la fecha de término: sábado de la 5ta semana (30 días clase lun-sáb).
- * start es un lunes → end = start + 33 días (5 semanas = 35 días, -2 domingos = 33,
- * pero más sencillo: sábado de la 5ta semana = start + 4 semanas + 5 días).
  */
 function computeEndDate(startIso: string): string {
+  if (!startIso) return '';
   const d = new Date(startIso + 'T12:00:00');
-  // Sábado de la 5ta semana = lunes + 33 días (Mon→Sat = 5, + 4*7 = 28 + 5 = 33)
   d.setDate(d.getDate() + 33);
   return d.toISOString().split('T')[0];
 }
@@ -45,13 +36,11 @@ function generateAvailableMondays(count: number): { date: string; suggested: boo
   const today = new Date();
   today.setHours(12, 0, 0, 0);
 
-  // Encontrar el próximo lunes
   const dayOfWeek = today.getDay();
   const daysUntilMonday = dayOfWeek === 0 ? 1 : dayOfWeek === 1 ? 0 : 8 - dayOfWeek;
   const nextMonday = new Date(today);
   nextMonday.setDate(today.getDate() + daysUntilMonday);
 
-  // Si hoy es lunes y todavía no ha pasado, incluirlo
   if (dayOfWeek === 1) {
     nextMonday.setDate(today.getDate());
   }
@@ -59,10 +48,8 @@ function generateAvailableMondays(count: number): { date: string; suggested: boo
   const mondays: { date: string; suggested: boolean }[] = [];
   const current = new Date(nextMonday);
 
-  // Generar lunes para las próximas semanas
   for (let i = 0; mondays.length < count; i++) {
     const iso = current.toISOString().split('T')[0];
-    // Suggested = cada 2 semanas a partir del primer lunes
     const suggested = i % 2 === 0;
     mondays.push({ date: iso, suggested });
     current.setDate(current.getDate() + 7);
@@ -72,6 +59,7 @@ function generateAvailableMondays(count: number): { date: string; suggested: boo
 }
 
 function formatMondayLabel(iso: string): string {
+  if (!iso) return '';
   const d = new Date(iso + 'T12:00:00');
   return d.toLocaleDateString('es-CL', {
     weekday: 'short',
@@ -110,6 +98,7 @@ function generatePromoName(startIso: string): string {
 
 @Component({
   selector: 'app-admin-promocion-crear-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, SelectModule, IconComponent, AsyncBtnComponent],
   template: `
@@ -291,7 +280,7 @@ function generatePromoName(startIso: string): string {
       <div class="flex items-center gap-3 pt-2" style="border-top: 1px solid var(--border-subtle);">
         <button
           class="btn-secondary"
-          (click)="closed.emit()"
+          (click)="layoutDrawer.close()"
           data-llm-action="cancelar-crear-promocion"
         >
           Cancelar
@@ -344,7 +333,7 @@ function generatePromoName(startIso: string): string {
     }
     .monday-btn.selected {
       background: var(--color-primary);
-      color: var(--color-primary-text, white);
+      color: white;
       border-color: var(--color-primary);
       font-weight: 600;
     }
@@ -381,7 +370,7 @@ function generatePromoName(startIso: string): string {
 })
 export class AdminPromocionCrearDrawerComponent {
   protected readonly facade = inject(PromocionesFacade);
-  readonly closed = output();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Form state ────────────────────────────────────────────────────────────
   protected readonly nombre = signal('');
@@ -392,7 +381,7 @@ export class AdminPromocionCrearDrawerComponent {
     return start ? computeEndDate(start) : '';
   });
 
-  // ── Relatores por curso: Map<courseId, lecturerId[]> ──────────────────────
+  // ── Relatores por curso: Record<courseId, lecturerId[]> ──────────────────────
   protected readonly relatorAssignments = signal<Record<number, number[]>>({});
 
   // ── Cursos disponibles ────────────────────────────────────────────────────
@@ -493,7 +482,8 @@ export class AdminPromocionCrearDrawerComponent {
     });
 
     if (success) {
-      this.closed.emit();
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
     }
   }
 }

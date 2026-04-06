@@ -30,14 +30,17 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       [attr.aria-busy]="loading()"
     >
       @if (loading()) {
-        <!-- Modo Skeleton: Mantiene la misma estructura de gaps y paddings -->
-        <div class="flex items-start justify-between gap-3 mb-2">
-          <app-skeleton-block variant="text" width="60%" height="12px" />
+        <!-- Skeleton fiel: misma estructura que el contenido real -->
+        <!-- Fila 1: label + icono -->
+        <div class="flex items-start justify-between gap-3">
+          <app-skeleton-block variant="text" width="55%" height="12px" />
           <app-skeleton-block variant="rect" width="28px" height="28px" />
         </div>
-        <app-skeleton-block variant="rect" width="80%" height="40px" />
-        <div class="flex items-center gap-2 mt-auto pt-2">
-          <app-skeleton-block variant="text" width="40%" height="12px" />
+        <!-- Fila 2: valor KPI — altura = text-3xl md:text-4xl (~44px) -->
+        <app-skeleton-block variant="rect" width="70%" height="44px" />
+        <!-- Fila 3: subtexto — mt-auto igual que el contenido real -->
+        <div class="mt-auto pt-2" style="border-top: 1px solid var(--border-subtle)">
+          <app-skeleton-block variant="text" width="45%" height="12px" />
         </div>
       } @else {
         <!-- Modo Contenido Real -->
@@ -61,9 +64,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
               {{ prefix() }}
             </span>
           }
-          <span #valueEl class="text-3xl md:text-4xl font-bold" style="color: var(--text-primary)">{{
-            value()
-          }}</span>
+          <span
+            #valueEl
+            class="text-3xl md:text-4xl font-bold"
+            style="color: var(--text-primary)"
+            >{{ value() }}</span
+          >
           @if (suffix()) {
             <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
               {{ suffix() }}
@@ -114,31 +120,43 @@ export class KpiCardVariantComponent {
 
   protected readonly labelColor = computed(() => {
     switch (this.color()) {
-      case 'success': return 'var(--state-success)';
-      case 'warning': return 'var(--state-warning)';
-      case 'error': return 'var(--state-error)';
+      case 'success':
+        return 'var(--state-success)';
+      case 'warning':
+        return 'var(--state-warning)';
+      case 'error':
+        return 'var(--state-error)';
       case 'default':
-      default: return 'var(--color-primary)';
+      default:
+        return 'var(--color-primary)';
     }
   });
 
   protected readonly iconBg = computed(() => {
     switch (this.color()) {
-      case 'success': return 'rgba(34, 197, 94, 0.1)';
-      case 'warning': return 'rgba(245, 158, 11, 0.1)';
-      case 'error': return 'rgba(239, 68, 68, 0.1)';
+      case 'success':
+        return 'rgba(34, 197, 94, 0.1)';
+      case 'warning':
+        return 'rgba(245, 158, 11, 0.1)';
+      case 'error':
+        return 'rgba(239, 68, 68, 0.1)';
       case 'default':
-      default: return 'rgba(14, 165, 233, 0.1)';
+      default:
+        return 'rgba(14, 165, 233, 0.1)';
     }
   });
 
   protected readonly iconColorStyle = computed(() => {
     switch (this.color()) {
-      case 'success': return 'var(--state-success)';
-      case 'warning': return 'var(--state-warning)';
-      case 'error': return 'var(--state-error)';
+      case 'success':
+        return 'var(--state-success)';
+      case 'warning':
+        return 'var(--state-warning)';
+      case 'error':
+        return 'var(--state-error)';
       case 'default':
-      default: return 'var(--color-primary)';
+      default:
+        return 'var(--color-primary)';
     }
   });
 

@@ -3,12 +3,13 @@ import {
   Component,
   computed,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 
 const COURSE_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -42,6 +43,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 
 @Component({
   selector: 'app-admin-promocion-ver-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, SkeletonBlockComponent],
   template: `
@@ -377,7 +379,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
         >
           <button
             class="btn-outline flex items-center gap-2"
-            (click)="editarClicked.emit()"
+            (click)="editar()"
             data-llm-action="editar-promocion"
           >
             <app-icon name="edit" [size]="14" />
@@ -429,7 +431,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
 })
 export class AdminPromocionVerDrawerComponent {
   protected readonly facade = inject(PromocionesFacade);
-  readonly editarClicked = output();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected readonly promo = this.facade.selectedPromocion;
 
@@ -517,5 +519,9 @@ export class AdminPromocionVerDrawerComponent {
     if (!iso) return '';
     const d = new Date(iso + 'T12:00:00');
     return d.toLocaleDateString('es-CL', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  }
+
+  protected editar(): void {
+    this.layoutDrawer.open(AdminPromocionEditarDrawerComponent, 'Editar promoción', 'edit');
   }
 }

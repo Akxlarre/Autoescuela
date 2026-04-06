@@ -29,6 +29,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         title="Iniciar Clase"
         subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
         variant="compact"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
         [actions]="heroActions"
       />
 
@@ -201,15 +203,7 @@ export class InstructorClaseComponent implements OnInit {
   public startForm: FormGroup;
   public isSubmitting = signal(false);
 
-  readonly heroActions: SectionHeroAction[] = [
-    {
-      id: 'back',
-      label: 'Volver',
-      icon: 'arrow-left',
-      primary: false,
-      route: '/app/instructor/dashboard'
-    }
-  ];
+  readonly heroActions: SectionHeroAction[] = [];
 
   constructor() {
     this.startForm = this.fb.group({

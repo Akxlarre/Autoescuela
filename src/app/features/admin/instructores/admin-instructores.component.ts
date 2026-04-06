@@ -7,12 +7,12 @@ import {
   signal,
 } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { InstructorTableRow } from '@core/models/ui/instructor-table.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { AdminInstructorCrearDrawerComponent } from './admin-instructor-crear-drawer.component';
 import { AdminInstructorVerDrawerComponent } from './admin-instructor-ver-drawer.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
@@ -21,15 +21,12 @@ type FilterTab = 'all' | 'active' | 'expiring';
 
 @Component({
   selector: 'app-admin-instructores',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
     IconComponent,
     SkeletonBlockComponent,
-    DrawerComponent,
-    AdminInstructorCrearDrawerComponent,
-    AdminInstructorVerDrawerComponent,
-    AdminInstructorEditarDrawerComponent,
   ],
   template: `
     <div class="page-wide">
@@ -283,36 +280,6 @@ type FilterTab = 'all' | 'active' | 'expiring';
         }
       </div>
     </div>
-
-    <!-- ── Drawer: Crear Instructor ──────────────────────────────────────── -->
-    <app-drawer
-      [isOpen]="crearDrawerOpen()"
-      title="Crear instructor Clase B"
-      icon="user-plus"
-      (closed)="onCrearDrawerClosed()"
-    >
-      <app-admin-instructor-crear-drawer (closed)="onCrearDrawerClosed()" />
-    </app-drawer>
-
-    <!-- ── Drawer: Ver Instructor ────────────────────────────────────────── -->
-    <app-drawer
-      [isOpen]="verDrawerOpen()"
-      title="Detalle de Instructor"
-      icon="eye"
-      (closed)="verDrawerOpen.set(false)"
-    >
-      <app-admin-instructor-ver-drawer (editarClicked)="switchToEditar()" />
-    </app-drawer>
-
-    <!-- ── Drawer: Editar Instructor ─────────────────────────────────────── -->
-    <app-drawer
-      [isOpen]="editarDrawerOpen()"
-      title="Editar instructor"
-      icon="edit"
-      (closed)="onEditarDrawerClosed()"
-    >
-      <app-admin-instructor-editar-drawer (saved)="onEditarDrawerClosed()" />
-    </app-drawer>
   `,
   styles: `
     .filter-pill {
@@ -462,6 +429,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
 })
 export class AdminInstructoresComponent implements OnInit {
   protected readonly facade = inject(InstructoresFacade);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -470,13 +438,10 @@ export class AdminInstructoresComponent implements OnInit {
   ]);
 
   protected handleHeroAction(actionId: string): void {
-    if (actionId === 'new') this.crearDrawerOpen.set(true);
+    if (actionId === 'new') {
+      this.layoutDrawer.open(AdminInstructorCrearDrawerComponent, 'Crear instructor Clase B', 'user-plus');
+    }
   }
-
-  // ── Estado drawers ─────────────────────────────────────────────────────────
-  protected readonly crearDrawerOpen = signal(false);
-  protected readonly verDrawerOpen = signal(false);
-  protected readonly editarDrawerOpen = signal(false);
 
   // ── Filtros ────────────────────────────────────────────────────────────────
   protected readonly activeFilter = signal<FilterTab>('all');
@@ -522,27 +487,12 @@ export class AdminInstructoresComponent implements OnInit {
   protected openVerDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
     this.facade.loadAssignmentHistory(inst.id);
-    this.verDrawerOpen.set(true);
+    this.layoutDrawer.open(AdminInstructorVerDrawerComponent, 'Detalle de Instructor', 'eye');
   }
 
   protected openEditarDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
     this.facade.loadAssignmentHistory(inst.id);
-    this.editarDrawerOpen.set(true);
-  }
-
-  protected switchToEditar(): void {
-    this.verDrawerOpen.set(false);
-    this.editarDrawerOpen.set(true);
-  }
-
-  protected onCrearDrawerClosed(): void {
-    this.crearDrawerOpen.set(false);
-    this.facade.initialize();
-  }
-
-  protected onEditarDrawerClosed(): void {
-    this.editarDrawerOpen.set(false);
-    this.facade.initialize();
+    this.layoutDrawer.open(AdminInstructorEditarDrawerComponent, 'Editar instructor', 'edit');
   }
 }

@@ -38,6 +38,8 @@ import {
         [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
         [subtitle]="showFinalStep() ? 'Registra el kilometraje final y firmas' : 'Completa la evaluación mientras transcurre la clase'"
         variant="compact"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
         [actions]="heroActions()"
         (actionClick)="onHeroAction($event)"
       />
@@ -259,26 +261,19 @@ export class InstructorClaseDetailComponent implements OnInit {
   public showFinalStep = signal(false);
   public isSubmitting = signal(false);
 
+  // ── Hero actions (acciones principales / estado interno) ──
   readonly heroActions = computed<SectionHeroAction[]>(() => {
     if (this.showFinalStep()) {
       return [
         {
           id: 'back_to_eval',
-          label: 'Atrás a Evaluación',
-          icon: 'arrow-left',
+          label: 'Editar Evaluación',
+          icon: 'pen-to-square',
           primary: false,
-        }
+        },
       ];
     }
-    return [
-      {
-        id: 'back_to_dash',
-        label: 'Dashboard',
-        icon: 'arrow-left',
-        primary: false,
-        route: '/app/instructor/dashboard'
-      }
-    ];
+    return [];
   });
 
   onHeroAction(id: string) {
