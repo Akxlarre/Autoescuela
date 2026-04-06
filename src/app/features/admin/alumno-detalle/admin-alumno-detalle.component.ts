@@ -10,6 +10,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 
@@ -20,8 +21,6 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
     RouterLink,
     IconComponent,
     SkeletonBlockComponent,
-    AdminInasistenciaDrawerComponent,
-    AdminEditarPerfilDrawerComponent,
   ],
   template: `
     <div class="p-6 max-w-7xl mx-auto flex flex-col gap-6">
@@ -112,7 +111,7 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
             </button>
             <button
               class="btn-outline flex items-center gap-2"
-              (click)="editDrawerOpen.set(true)"
+              (click)="openEditDrawer()"
               data-llm-action="editar-alumno"
               aria-label="Editar datos del alumno"
             >
@@ -278,7 +277,7 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
             </div>
             <button
               class="inas-btn-add"
-              (click)="drawerOpen.set(true)"
+              (click)="openInasistenciaDrawer()"
               data-llm-action="registrar-inasistencia"
               aria-label="Registrar nueva inasistencia"
             >
@@ -619,19 +618,6 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
       }
       <!-- fin @else if alumno -->
 
-      <!-- ── Drawer: Registrar Inasistencia ── -->
-      <app-admin-inasistencia-drawer
-        [isOpen]="drawerOpen()"
-        (closed)="drawerOpen.set(false)"
-        (saved)="onInasistenciaGuardada()"
-      />
-
-      <!-- ── Drawer: Editar Perfil ── -->
-      <app-admin-editar-perfil-drawer
-        [isOpen]="editDrawerOpen()"
-        (closed)="editDrawerOpen.set(false)"
-        (saved)="onPerfilActualizado()"
-      />
     </div>
   `,
   styles: `
@@ -967,10 +953,7 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
 export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly route = inject(ActivatedRoute);
-
-  // ── Estado de Drawers ────────────────────────────────────────────────────────
-  protected readonly drawerOpen = signal(false);
-  protected readonly editDrawerOpen = signal(false);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -1005,7 +988,15 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  protected onInasistenciaGuardada(): void {
+  protected openInasistenciaDrawer(): void {
+    this.layoutDrawer.open(AdminInasistenciaDrawerComponent, 'Registrar Inasistencia', 'alert-triangle');
+  }
+
+  protected openEditDrawer(): void {
+    this.layoutDrawer.open(AdminEditarPerfilDrawerComponent, 'Editar Perfil del Alumno', 'user-pen');
+  }
+
+  protected async onInasistenciaGuardada(): Promise<void> {
     // In SWR pattern, refresh happens automatically if we call initialize with same ID
     const id = this.route.snapshot.paramMap.get('id');
     if (id && !isNaN(Number(id))) {

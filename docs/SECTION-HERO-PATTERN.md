@@ -16,13 +16,16 @@ Cabecera de sección reutilizable para vistas principales (Dashboard, Base de Al
 
 ## API
 
-| Input        | Tipo                 | Requerido | Descripción                                                                 |
-|-------------|----------------------|-----------|-----------------------------------------------------------------------------|
-| `title`     | `string`             | Sí        | H1 de la vista (ej. "¡Bienvenido, Pepito!" o "Alumnos").                    |
-| `contextLine` | `string`           | No        | Línea encima del título, texto pequeño muted (ej. fecha).                    |
-| `subtitle`  | `string`             | No        | Texto debajo del título.                                                     |
-| `chips`     | `SectionHeroChip[]`  | No        | Badges de contexto (icono opcional, label, style: default\|warning\|error\|success). |
-| `actions`   | `SectionHeroAction[]`| Sí        | Botones: id, label, icon?, primary (solo uno true), route? (si no hay route se emite actionClick). |
+| Input         | Tipo                 | Requerido | Descripción                                                                 |
+|--------------|----------------------|-----------|-----------------------------------------------------------------------------|
+| `title`      | `string`             | Sí        | H1 de la vista (ej. "¡Bienvenido, Pepito!" o "Alumnos").                    |
+| `contextLine`| `string`             | No        | Línea encima del título, texto pequeño en color de marca (ej. fecha, rol).  |
+| `subtitle`   | `string`             | No        | Texto debajo del título.                                                     |
+| `icon`       | `string \| null`     | No        | Nombre Lucide (kebab-case) para badge de ícono de marca sobre el título.    |
+| `chips`      | `SectionHeroChip[]`  | No        | Badges de contexto (icono opcional, label, style: default\|warning\|error\|success). |
+| `actions`    | `SectionHeroAction[]`| Sí        | Botones: id, label, icon?, primary (solo uno true), route? (si no hay route se emite actionClick). |
+| `backRoute`  | `string \| null`     | No        | Ruta para botón "Volver" estandarizado.                                     |
+| `backLabel`  | `string`             | No        | Etiqueta del botón volver. Default: "Volver".                               |
 
 | Output       | Tipo     | Descripción                          |
 |-------------|----------|--------------------------------------|

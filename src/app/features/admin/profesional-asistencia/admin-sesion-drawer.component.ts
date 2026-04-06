@@ -13,6 +13,7 @@ import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesiona
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
 
 @Component({
@@ -343,6 +344,7 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
 })
 export class AdminSesionDrawerComponent implements OnInit {
   readonly facade = inject(AsistenciaProfesionalFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   readonly closed = output();
 
   readonly mode = signal<'attendance' | 'edit'>('attendance');
@@ -457,7 +459,7 @@ export class AdminSesionDrawerComponent implements OnInit {
 
     if (!confirmed) return;
     await this.facade.editarSesion(sesion, { status: 'cancelled' });
-    this.closed.emit();
+    this.layoutDrawer.close();
   }
 
   async reactivarSesion(): Promise<void> {

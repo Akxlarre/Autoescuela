@@ -57,6 +57,8 @@ import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.mo
         #heroRef
         title="Ensayos Teóricos"
         subtitle="Registro de puntajes para preparación de examen municipal"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
         [actions]="heroActions"
         (actionClick)="onHeroAction($event)"
       />

@@ -2,33 +2,27 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
-  input,
+  OnInit,
   output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
+import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 
 @Component({
   selector: 'app-admin-clase-online-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerComponent, IconComponent, SkeletonBlockComponent, FormsModule],
+  imports: [IconComponent, SkeletonBlockComponent, FormsModule],
   template: `
-    <app-drawer
-      [isOpen]="isOpen()"
-      [title]="mode() === 'zoom' ? 'Enviar Enlace Zoom' : 'Registrar Asistencia'"
-      [icon]="mode() === 'zoom' ? 'video' : 'check-circle'"
-      [hasFooter]="true"
-      (closed)="onClose()"
-    >
-      <!-- ─── BODY ──────────────────────────────────────────────────────── -->
-      <div class="flex flex-col gap-5 p-4">
+    <div class="flex flex-col h-full bg-surface">
+      <div class="flex-1 overflow-y-auto p-5">
         <!-- Sesión info -->
         @if (facade.isLoading()) {
           <app-skeleton-block variant="rect" width="100%" height="60px" />
@@ -68,8 +62,8 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
         }
 
         <!-- ─── MODO ZOOM: campos de link y mensaje ───────────────────── -->
-        @if (mode() === 'zoom') {
-          <div class="flex flex-col gap-3">
+        @if (alumnosFacade.drawerMode() === 'zoom') {
+          <div class="flex flex-col gap-3 mt-4">
             <div class="flex flex-col gap-1.5">
               <label class="field-label">Enlace Zoom *</label>
               <input
@@ -94,7 +88,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
         }
 
         <!-- ─── Lista de alumnos ──────────────────────────────────────── -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between mt-6">
           <p class="text-sm font-semibold" style="color: var(--text-primary)">
             Alumnos Clase B&nbsp;
             @if (!facade.isLoading()) {
@@ -112,7 +106,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
           </button>
         </div>
 
-        <div class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-1.5 mt-3">
           @if (facade.isLoading()) {
             @for (_ of [1, 2, 3, 4]; track $index) {
               <div class="flex items-center gap-3 py-2 px-3">
@@ -157,7 +151,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
         <!-- Banner éxito -->
         @if (facade.savedOk()) {
           <div
-            class="flex items-center gap-2 px-4 py-3 rounded-xl"
+            class="flex items-center gap-2 px-4 py-3 rounded-xl mt-4"
             style="background: color-mix(in srgb, var(--state-success) 12%, transparent);"
           >
             <app-icon
@@ -166,7 +160,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
               style="color: var(--state-success); shrink-0"
             />
             <span class="text-sm font-medium" style="color: var(--state-success);">
-              {{ mode() === 'zoom' ? 'Enlace guardado correctamente.' : 'Asistencia registrada.' }}
+              {{ alumnosFacade.drawerMode() === 'zoom' ? 'Enlace guardado correctamente.' : 'Asistencia registrada.' }}
             </span>
           </div>
         }
@@ -174,7 +168,7 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
         <!-- Banner error -->
         @if (facade.error()) {
           <div
-            class="flex items-center gap-2 px-4 py-3 rounded-xl"
+            class="flex items-center gap-2 px-4 py-3 rounded-xl mt-4"
             style="background: color-mix(in srgb, var(--state-error) 12%, transparent);"
           >
             <app-icon name="circle-alert" [size]="16" style="color: var(--state-error); shrink-0" />
@@ -182,8 +176,9 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
           </div>
         }
       </div>
+
       <!-- ─── FOOTER ─────────────────────────────────────────────────────── -->
-      <div class="drawer-footer">
+      <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
         <button class="btn-ghost" (click)="onClose()" data-llm-action="cancelar-clase-online">
           Cancelar
         </button>
@@ -196,22 +191,64 @@ import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
           @if (facade.isLoading()) {
             <app-icon name="loader" [size]="14" />
           }
-          {{ mode() === 'zoom' ? 'Guardar enlace' : 'Registrar asistencia' }}
+          {{ alumnosFacade.drawerMode() === 'zoom' ? 'Guardar enlace' : 'Registrar asistencia' }}
         </button>
       </div>
-    </app-drawer>
+    </div>
+  `,
+  styles: `
+    .field-label {
+      display: block;
+      font-size: var(--text-xs);
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .field-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-default);
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: var(--text-sm);
+      outline: none;
+    }
+    .field-input:focus {
+      border-color: var(--ds-brand);
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      background: var(--ds-brand);
+      color: #fff;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-ghost {
+      padding: 8px 16px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+    }
   `,
 })
-export class AdminClaseOnlineDrawerComponent {
+export class AdminClaseOnlineDrawerComponent implements OnInit {
   protected readonly facade = inject(ClaseOnlineFacade);
+  protected readonly alumnosFacade = inject(AdminAlumnosFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  // ─── Inputs / Outputs ────────────────────────────────────────────────────
-  readonly isOpen = input<boolean>(false);
-  readonly mode = input<'zoom' | 'asistencia'>('zoom');
-  readonly closed = output<void>();
   readonly saved = output<void>();
 
-  // ─── Estado local ────────────────────────────────────────────────────────
   protected zoomLink = '';
   protected mensajeZoom = '';
   protected readonly selectedStudentIds = signal<Set<number>>(new Set());
@@ -223,29 +260,20 @@ export class AdminClaseOnlineDrawerComponent {
 
   protected readonly canSave = computed(() => {
     if (!this.facade.sesionHoy()) return false;
-    if (this.mode() === 'zoom') return this.zoomLink.trim().length > 0;
+    if (this.alumnosFacade.drawerMode() === 'zoom') return this.zoomLink.trim().length > 0;
     return this.selectedStudentIds().size > 0;
   });
 
-  constructor() {
-    // Cargar datos al abrir
-    effect(() => {
-      if (this.isOpen()) {
-        this.resetLocal();
-        this.facade.cargarDatos();
-      }
-    });
+  ngOnInit(): void {
+    this.resetLocal();
+    void this.facade.cargarDatos();
 
     // Pre-rellenar el link si la sesión ya tiene uno guardado
-    effect(() => {
-      const sesion = this.facade.sesionHoy();
-      if (sesion?.zoomLink && this.mode() === 'zoom' && !this.zoomLink) {
-        this.zoomLink = sesion.zoomLink;
-      }
-    });
+    const sesion = this.facade.sesionHoy();
+    if (sesion?.zoomLink && this.alumnosFacade.drawerMode() === 'zoom' && !this.zoomLink) {
+      this.zoomLink = sesion.zoomLink;
+    }
   }
-
-  // ─── Handlers ────────────────────────────────────────────────────────────
 
   protected toggleStudent(studentId: number): void {
     const next = new Set(this.selectedStudentIds());
@@ -269,7 +297,7 @@ export class AdminClaseOnlineDrawerComponent {
     const sesion = this.facade.sesionHoy();
     if (!sesion) return;
 
-    if (this.mode() === 'zoom') {
+    if (this.alumnosFacade.drawerMode() === 'zoom') {
       await this.facade.guardarZoomLink(sesion.id, this.zoomLink.trim());
     } else {
       await this.facade.guardarAsistencia(sesion.id, [...this.selectedStudentIds()]);
@@ -283,10 +311,8 @@ export class AdminClaseOnlineDrawerComponent {
 
   protected onClose(): void {
     this.resetLocal();
-    this.closed.emit();
+    this.layoutDrawer.close();
   }
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────
 
   private resetLocal(): void {
     this.zoomLink = '';

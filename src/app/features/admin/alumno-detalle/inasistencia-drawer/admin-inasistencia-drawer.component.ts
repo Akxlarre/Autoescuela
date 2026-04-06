@@ -1,142 +1,140 @@
-import { ChangeDetectionStrategy, Component, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 
-/**
- * AdminInasistenciaDrawerComponent — Panel lateral para registrar una inasistencia.
- *
- * Smart component (features/): inyecta AdminAlumnoDetalleFacade para llamar
- * a insertAbsenceEvidence y lee enrollmentId directamente desde alumno().
- *
- * Inputs:  isOpen (boolean)
- * Outputs: closed, saved
- */
 @Component({
   selector: 'app-admin-inasistencia-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerComponent, ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent],
   template: `
-    <app-drawer
-      [isOpen]="isOpen()"
-      title="Registrar Inasistencia"
-      icon="alert-triangle"
-      [hasFooter]="true"
-      (closed)="onCancel()"
-    >
-      <!-- ── Formulario ── -->
-      <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
-        <!-- Fecha de inasistencia -->
-        <div class="flex flex-col gap-1.5">
-          <label for="inas-date" class="field-label">
-            FECHA DE INASISTENCIA <span style="color: var(--state-error)">*</span>
-          </label>
-          <input
-            id="inas-date"
-            type="date"
-            formControlName="document_date"
-            class="field-input"
-            data-llm-description="Fecha en que ocurrió la inasistencia del alumno"
-            [class.field-input--error]="isInvalid('document_date')"
-          />
-          @if (isInvalid('document_date')) {
-            <span class="field-error">Este campo es obligatorio.</span>
-          }
-        </div>
+    <div class="flex flex-col h-full bg-surface">
+      <!-- ── Body ── -->
+      <div class="flex-1 overflow-y-auto p-5">
+        <form [formGroup]="form" class="flex flex-col gap-6" (ngSubmit)="onSubmit()">
+          <!-- Info Alumno -->
+          <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
+            <div class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted">
+              <app-icon name="user" [size]="20" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-sm font-semibold text-primary">{{ facade.alumno()?.nombre }}</span>
+              <span class="text-xs text-muted">Matrícula {{ facade.alumno()?.matricula }}</span>
+            </div>
+          </div>
 
-        <!-- Tipo de justificación -->
-        <div class="flex flex-col gap-1.5">
-          <label for="inas-type" class="field-label">
-            TIPO DE JUSTIFICACIÓN <span style="color: var(--state-error)">*</span>
-          </label>
-          <select
-            id="inas-type"
-            formControlName="document_type"
-            class="field-input field-select"
-            data-llm-description="Categoría del documento que justifica la inasistencia"
-            [class.field-input--error]="isInvalid('document_type')"
-          >
-            <option value="" disabled>Selecciona un tipo...</option>
-            <option value="Justificación Médica">Justificación Médica</option>
-            <option value="Permiso Personal">Permiso Personal</option>
-            <option value="Emergencia Familiar">Emergencia Familiar</option>
-            <option value="Accidente">Accidente</option>
-            <option value="Otro">Otro</option>
-          </select>
-          @if (isInvalid('document_type')) {
-            <span class="field-error">Selecciona un tipo de justificación.</span>
-          }
-        </div>
-
-        <!-- Descripción / Motivo -->
-        <div class="flex flex-col gap-1.5">
-          <label for="inas-desc" class="field-label">MOTIVO / DESCRIPCIÓN</label>
-          <textarea
-            id="inas-desc"
-            formControlName="description"
-            rows="3"
-            class="field-input"
-            placeholder="Describe brevemente el motivo de la inasistencia..."
-            data-llm-description="Descripción detallada del motivo de la inasistencia del alumno"
-          ></textarea>
-        </div>
-
-        <!-- Archivo adjunto (simulado) -->
-        <div class="flex flex-col gap-1.5">
-          <span class="field-label">DOCUMENTO DE RESPALDO</span>
-          <label
-            class="file-upload-zone"
-            [class.file-upload-zone--selected]="selectedFileName()"
-            tabindex="0"
-            role="button"
-            aria-label="Seleccionar archivo de respaldo"
-            (keydown.enter)="fileInput.click()"
-            (keydown.space)="fileInput.click(); $event.preventDefault()"
-          >
+          <!-- Fecha de inasistencia -->
+          <div class="flex flex-col gap-1.5">
+            <label for="inas-date" class="field-label">
+              FECHA DE INASISTENCIA <span style="color: var(--state-error)">*</span>
+            </label>
             <input
-              #fileInput
-              type="file"
-              class="sr-only"
-              accept=".pdf,.jpg,.jpeg,.png"
-              (change)="onFileChange($event)"
-              data-llm-description="Archivo PDF o imagen que respalda la justificación"
+              id="inas-date"
+              type="date"
+              formControlName="document_date"
+              class="field-input"
+              data-llm-description="Fecha en que ocurrió la inasistencia del alumno"
+              [class.field-input--error]="isInvalid('document_date')"
             />
-            @if (selectedFileName()) {
-              <div class="flex items-center gap-2" style="color: var(--state-success)">
-                <app-icon name="check-circle" [size]="16" />
-                <span class="text-sm font-medium">{{ selectedFileName() }}</span>
-              </div>
-            } @else {
-              <div class="flex flex-col items-center gap-1.5" style="color: var(--text-muted)">
-                <app-icon name="upload-cloud" [size]="22" />
-                <span class="text-sm">
-                  Arrastra o
-                  <span style="color: var(--ds-brand); font-weight: 500"
-                    >haz clic para seleccionar</span
-                  >
-                </span>
-                <span class="text-xs">PDF, JPG o PNG — máx. 5 MB</span>
-              </div>
+            @if (isInvalid('document_date')) {
+              <span class="field-error">Este campo es obligatorio.</span>
             }
-          </label>
-        </div>
+          </div>
 
-        @if (saveError()) {
-          <p class="text-sm" style="color: var(--state-error)">
-            {{ saveError() }}
-          </p>
-        }
-      </form>
+          <!-- Tipo de justificación -->
+          <div class="flex flex-col gap-1.5">
+            <label for="inas-type" class="field-label">
+              TIPO DE JUSTIFICACIÓN <span style="color: var(--state-error)">*</span>
+            </label>
+            <select
+              id="inas-type"
+              formControlName="document_type"
+              class="field-input field-select"
+              data-llm-description="Categoría del documento que justifica la inasistencia"
+              [class.field-input--error]="isInvalid('document_type')"
+            >
+              <option value="" disabled>Selecciona un tipo...</option>
+              <option value="Justificación Médica">Justificación Médica</option>
+              <option value="Permiso Personal">Permiso Personal</option>
+              <option value="Emergencia Familiar">Emergencia Familiar</option>
+              <option value="Accidente">Accidente</option>
+              <option value="Otro">Otro</option>
+            </select>
+            @if (isInvalid('document_type')) {
+              <span class="field-error">Selecciona un tipo de justificación.</span>
+            }
+          </div>
+
+          <!-- Descripción / Motivo -->
+          <div class="flex flex-col gap-1.5">
+            <label for="inas-desc" class="field-label">MOTIVO / DESCRIPCIÓN</label>
+            <textarea
+              id="inas-desc"
+              formControlName="description"
+              rows="3"
+              class="field-input"
+              placeholder="Describe brevemente el motivo de la inasistencia..."
+              data-llm-description="Descripción detallada del motivo de la inasistencia del alumno"
+            ></textarea>
+          </div>
+
+          <!-- Archivo adjunto (simulado) -->
+          <div class="flex flex-col gap-1.5">
+            <span class="field-label">DOCUMENTO DE RESPALDO</span>
+            <label
+              class="file-upload-zone"
+              [class.file-upload-zone--selected]="selectedFileName()"
+              tabindex="0"
+              role="button"
+              aria-label="Seleccionar archivo de respaldo"
+              (keydown.enter)="fileInput.click()"
+              (keydown.space)="fileInput.click(); $event.preventDefault()"
+            >
+              <input
+                #fileInput
+                type="file"
+                class="sr-only"
+                accept=".pdf,.jpg,.jpeg,.png"
+                (change)="onFileChange($event)"
+                data-llm-description="Archivo PDF o imagen que respalda la justificación"
+              />
+              @if (selectedFileName()) {
+                <div class="flex items-center gap-2" style="color: var(--state-success)">
+                  <app-icon name="check-circle" [size]="16" />
+                  <span class="text-sm font-medium">{{ selectedFileName() }}</span>
+                </div>
+              } @else {
+                <div class="flex flex-col items-center gap-1.5" style="color: var(--text-muted)">
+                  <app-icon name="upload-cloud" [size]="22" />
+                  <span class="text-sm">
+                    Arrastra o
+                    <span style="color: var(--ds-brand); font-weight: 500"
+                      >haz clic para seleccionar</span
+                    >
+                  </span>
+                  <span class="text-xs">PDF, JPG o PNG — máx. 5 MB</span>
+                </div>
+              }
+            </label>
+          </div>
+
+          @if (saveError()) {
+            <p class="text-sm" style="color: var(--state-error)">
+              {{ saveError() }}
+            </p>
+          }
+        </form>
+      </div>
 
       <!-- ── Footer ── -->
-      <div drawer-footer class="flex items-center justify-end gap-2">
+      <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
         <button
           type="button"
           class="btn-cancel"
           (click)="onCancel()"
           data-llm-action="cancelar-registro-inasistencia"
-          aria-label="Cancelar y cerrar panel"
         >
           Cancelar
         </button>
@@ -146,17 +144,16 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
           [disabled]="form.invalid || isSaving()"
           (click)="onSubmit()"
           data-llm-action="guardar-inasistencia"
-          aria-label="Guardar registro de inasistencia"
         >
           @if (isSaving()) {
-            <app-icon name="loader" [size]="14" />
+            <app-icon name="loader" [size]="14" class="animate-spin" />
             Guardando...
           } @else {
             Guardar
           }
         </button>
       </div>
-    </app-drawer>
+    </div>
   `,
   styles: `
     .field-label {
@@ -165,68 +162,55 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
       letter-spacing: 0.06em;
       color: var(--ds-brand);
     }
-
     .field-input {
       width: 100%;
-      padding: 8px 12px;
+      padding: 10px 12px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-default);
       background: var(--bg-base);
       color: var(--text-primary);
       font-size: var(--text-sm);
-      font-family: inherit;
-      transition:
-        border-color var(--duration-fast),
-        box-shadow var(--duration-fast);
       outline: none;
     }
     .field-input:focus {
       border-color: var(--ds-brand);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
     }
     .field-input--error {
       border-color: var(--state-error) !important;
     }
     textarea.field-input {
       resize: vertical;
-      min-height: 76px;
+      min-height: 80px;
     }
     .field-select {
       appearance: auto;
       cursor: pointer;
     }
-
     .field-error {
       font-size: var(--text-xs);
       color: var(--state-error);
+      margin-top: 4px;
     }
-
     .file-upload-zone {
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 84px;
-      padding: 16px;
+      min-height: 100px;
       border: 1.5px dashed var(--border-default);
       border-radius: var(--radius-md);
       cursor: pointer;
-      transition:
-        border-color var(--duration-fast),
-        background var(--duration-fast);
-      background: var(--bg-base);
+      background: var(--bg-surface);
     }
     .file-upload-zone:hover {
       border-color: var(--ds-brand);
-      background: color-mix(in srgb, var(--ds-brand) 4%, var(--bg-base));
     }
     .file-upload-zone--selected {
       border-color: var(--state-success);
       border-style: solid;
       background: var(--state-success-bg);
     }
-
     .btn-cancel {
-      padding: 7px 16px;
+      padding: 8px 16px;
       border-radius: var(--radius-md);
       border: 1px solid var(--border-strong);
       background: transparent;
@@ -234,28 +218,19 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
       font-size: var(--text-sm);
       font-weight: var(--font-medium);
       cursor: pointer;
-      transition: background var(--duration-fast);
     }
-    .btn-cancel:hover {
-      background: var(--bg-elevated);
-    }
-
     .btn-primary {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 7px 20px;
+      padding: 8px 20px;
       border-radius: var(--radius-md);
-      border: none;
       background: var(--ds-brand);
       color: #fff;
       font-size: var(--text-sm);
       font-weight: var(--font-semibold);
+      border: none;
       cursor: pointer;
-      transition: opacity var(--duration-fast);
-    }
-    .btn-primary:hover:not(:disabled) {
-      opacity: 0.85;
     }
     .btn-primary:disabled {
       opacity: 0.5;
@@ -264,34 +239,27 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
   `,
 })
 export class AdminInasistenciaDrawerComponent {
-  // ── Inputs / Outputs ────────────────────────────────────────────────────────
-  readonly isOpen = input.required<boolean>();
-  readonly closed = output<void>();
-  readonly saved = output<void>();
-
-  // ── Injections ──────────────────────────────────────────────────────────────
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
 
-  // ── Estado local ────────────────────────────────────────────────────────────
+  readonly saved = output<void>();
+
   protected readonly isSaving = signal(false);
   protected readonly selectedFileName = signal<string | null>(null);
   protected readonly saveError = signal<string | null>(null);
 
-  // ── Formulario reactivo ─────────────────────────────────────────────────────
   protected readonly form = this.fb.group({
     document_date: ['', Validators.required],
     document_type: ['', Validators.required],
     description: [''],
   });
 
-  // ── Helpers de template ─────────────────────────────────────────────────────
   protected isInvalid(field: string): boolean {
     const ctrl = this.form.get(field);
     return !!(ctrl?.invalid && ctrl.touched);
   }
 
-  // ── Handlers ────────────────────────────────────────────────────────────────
   protected onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.selectedFileName.set(input.files?.[0]?.name ?? null);
@@ -299,7 +267,7 @@ export class AdminInasistenciaDrawerComponent {
 
   protected onCancel(): void {
     this.resetForm();
-    this.closed.emit();
+    this.layoutDrawer.close();
   }
 
   protected async onSubmit(): Promise<void> {
@@ -324,15 +292,13 @@ export class AdminInasistenciaDrawerComponent {
         documentDate: document_date!,
         documentType: document_type!,
         description: description ?? '',
-        fileUrl: null, // Simulado — integrar Supabase Storage cuando esté disponible
+        fileUrl: null,
       });
       this.resetForm();
       this.saved.emit();
-      this.closed.emit();
+      this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(
-        err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.',
-      );
+      this.saveError.set(err instanceof Error ? err.message : 'Error al guardar.');
     } finally {
       this.isSaving.set(false);
     }

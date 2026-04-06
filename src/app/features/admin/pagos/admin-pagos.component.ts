@@ -36,7 +36,6 @@ const POR_PAGINA = 5;
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
-    RegistrarPagoDrawerComponent,
     RentabilidadCursosComponent,
   ],
   template: `
@@ -54,7 +53,7 @@ const POR_PAGINA = 5;
         <button
           class="btn-primary flex items-center gap-2 shrink-0"
           data-llm-action="register-payment"
-          (click)="openDrawer()"
+          (click)="openDrawer(null)"
         >
           <app-icon name="plus" [size]="16" />
           Registrar Pago
@@ -193,7 +192,7 @@ const POR_PAGINA = 5;
                   <button
                     class="btn-primary text-xs px-3 py-1.5"
                     [attr.data-llm-action]="'register-payment-enrollment-' + alumno.enrollmentId"
-                    (click)="openDrawer(alumno)"
+                    (click)="openDrawer(alumno.enrollmentId)"
                   >
                     Registrar pago
                   </button>
@@ -455,7 +454,7 @@ const POR_PAGINA = 5;
             <button
               class="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-left btn-primary"
               data-llm-action="quick-register-payment"
-              (click)="openDrawer()"
+              (click)="openDrawer(null)"
             >
               <app-icon name="plus" [size]="16" />
               Registrar Pago
@@ -527,22 +526,11 @@ const POR_PAGINA = 5;
         </div>
       }
     </div>
-
-    <!-- ── Drawer: Registrar Pago ──────────────────────────────────────────── -->
-    <app-registrar-pago-drawer
-      [isOpen]="drawerOpen()"
-      [enrollmentId]="drawerEnrollmentId()"
-      [alumnoNombre]="drawerAlumnoNombre()"
-      [saldoPendiente]="drawerSaldoPendiente()"
-      [pagadoActual]="drawerPagadoActual()"
-      (closed)="drawerOpen.set(false)"
-      (saved)="onDrawerSaved()"
-    />
   `,
 })
 export class AdminPagosComponent implements OnInit {
   protected readonly facade = inject(PagosFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Funciones puras expuestas al template
@@ -560,13 +548,6 @@ export class AdminPagosComponent implements OnInit {
   protected readonly filtroEstado = signal('todos');
   protected readonly filtroMetodo = signal('todos');
   protected readonly paginaActual = signal(1);
-
-  // ── Estado del drawer ─────────────────────────────────────────────────────────
-  protected readonly drawerOpen = signal(false);
-  protected readonly drawerEnrollmentId = signal<number | null>(null);
-  protected readonly drawerAlumnoNombre = signal('');
-  protected readonly drawerSaldoPendiente = signal(0);
-  protected readonly drawerPagadoActual = signal(0);
 
   // ── Computed: tabla filtrada y paginada ──────────────────────────────────────
   protected readonly pagosFiltrados = computed(() => {
@@ -687,19 +668,11 @@ export class AdminPagosComponent implements OnInit {
 
   protected openDetalle(enrollmentId: number): void {
     this.facade.seleccionarEnrollment(enrollmentId);
-    this.drawer.push(AdminPagoDetalleDrawerComponent, 'Estado de Cuenta', 'file-text');
+    this.layoutDrawer.open(AdminPagoDetalleDrawerComponent, 'Estado de Cuenta', 'file-text');
   }
 
-  protected openDrawer(alumno?: AlumnoDeudor): void {
-    this.drawerEnrollmentId.set(alumno?.enrollmentId ?? null);
-    this.drawerAlumnoNombre.set(alumno?.alumno ?? '');
-    this.drawerSaldoPendiente.set(alumno?.saldo ?? 0);
-    this.drawerPagadoActual.set(alumno?.pagado ?? 0);
-    this.drawerOpen.set(true);
-  }
-
-  protected onDrawerSaved(): void {
-    // PagosFacade.registrarNuevoPago() ya llama refreshSilently() internamente.
-    // Los signals se actualizan solos; no se necesita acción adicional aquí.
+  protected openDrawer(enrollmentId: number | null): void {
+    void this.facade.seleccionarParaPago(enrollmentId);
+    this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
   }
 }

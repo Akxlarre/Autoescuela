@@ -3,18 +3,17 @@ import {
   Component,
   computed,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
-const SPECIALIZATIONS = ['A2', 'A3', 'A4', 'A5'];
-
 @Component({
   selector: 'app-admin-relator-crear-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   template: `
@@ -187,7 +186,7 @@ const SPECIALIZATIONS = ['A2', 'A3', 'A4', 'A5'];
       class="flex items-center gap-3 pt-4 mt-4"
       style="border-top: 1px solid var(--border-subtle)"
     >
-      <button class="cancel-btn" (click)="closed.emit()" data-llm-action="cancelar-crear-relator">
+      <button class="cancel-btn" (click)="layoutDrawer.close()" data-llm-action="cancelar-crear-relator">
         Cancelar
       </button>
       <button
@@ -350,7 +349,7 @@ const SPECIALIZATIONS = ['A2', 'A3', 'A4', 'A5'];
 })
 export class AdminRelatorCrearDrawerComponent {
   protected readonly facade = inject(RelatoresFacade);
-  readonly closed = output<void>();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Campos ──────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -441,6 +440,9 @@ export class AdminRelatorCrearDrawerComponent {
       specializations: this.selectedSpecs(),
     });
 
-    if (ok) this.closed.emit();
+    if (ok) {
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
+    }
   }
 }

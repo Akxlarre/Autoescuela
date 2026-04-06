@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 
 @Component({
   selector: 'app-admin-secretarias-ver-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [DatePipe, IconComponent],
   template: `
@@ -126,7 +129,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       <div class="flex items-center gap-3 pt-4" style="border-top: 1px solid var(--border-subtle);">
         <button
           class="edit-btn"
-          (click)="editarClicked.emit()"
+          (click)="editar()"
           data-llm-action="editar-secretaria-desde-ver"
         >
           <app-icon name="edit" [size]="15" />
@@ -179,6 +182,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 })
 export class AdminSecretariasVerDrawerComponent {
   protected readonly facade = inject(SecretariasFacade);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  readonly editarClicked = output<void>();
+  protected editar(): void {
+    this.layoutDrawer.open(AdminSecretariasEditarDrawerComponent, 'Editar Secretaria', 'edit');
+  }
 }

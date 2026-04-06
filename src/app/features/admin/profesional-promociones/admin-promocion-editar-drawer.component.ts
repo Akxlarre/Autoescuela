@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, effect, inject, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
@@ -15,6 +16,7 @@ const STATUS_OPTIONS = [
 
 @Component({
   selector: 'app-admin-promocion-editar-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, SelectModule, IconComponent, AsyncBtnComponent],
   template: `
@@ -124,7 +126,7 @@ const STATUS_OPTIONS = [
       <div class="flex items-center gap-3 pt-4" style="border-top: 1px solid var(--border-subtle);">
         <button
           class="btn-secondary"
-          (click)="saved.emit()"
+          (click)="layoutDrawer.close()"
           data-llm-action="cancelar-editar-promocion"
         >
           Cancelar
@@ -176,7 +178,7 @@ const STATUS_OPTIONS = [
 })
 export class AdminPromocionEditarDrawerComponent {
   protected readonly facade = inject(PromocionesFacade);
-  readonly saved = output();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Form state ────────────────────────────────────────────────────────────
   protected readonly status = signal<PromocionStatus>('planned');
@@ -216,7 +218,8 @@ export class AdminPromocionEditarDrawerComponent {
     });
 
     if (success) {
-      this.saved.emit();
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
     }
   }
 }
