@@ -10,8 +10,6 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { SlicePipe } from '@angular/common';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
-import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -159,8 +157,6 @@ export class AdminAlumnoDocsDetalleComponent implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly confirmModal = inject(ConfirmModalService);
-  private readonly dmsViewer = inject(DmsViewerService);
 
   readonly studentId = signal<number | null>(null);
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
@@ -179,11 +175,11 @@ export class AdminAlumnoDocsDetalleComponent implements OnInit {
   }
 
   onViewDocument(url: string, fileName?: string): void {
-    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+    this.facade.openDocument(url, fileName);
   }
 
   async onDeleteDoc(docId: string, source: string): Promise<void> {
-    const confirmed = await this.confirmModal.confirm({
+    const confirmed = await this.facade.confirm({
       title: 'Eliminar documento',
       message: '¿Estás seguro de que quieres eliminar este documento?',
       severity: 'danger',

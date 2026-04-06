@@ -12,7 +12,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { DmsFacade } from '@core/facades/dms.facade';
-import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 
 type UploadMode = 'student' | 'school';
 
@@ -154,7 +153,6 @@ type UploadMode = 'student' | 'school';
 })
 export class DmsUploadDrawerComponent {
   readonly facade = inject(DmsFacade);
-  readonly layoutDrawer = inject(LayoutDrawerService);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly selectedStudentId = signal<number | null>(null);
@@ -268,7 +266,7 @@ export class DmsUploadDrawerComponent {
   }
 
   onClose(): void {
-    this.layoutDrawer.close();
+    this.facade.closeDrawer();
   }
 
   private resetForm(): void {

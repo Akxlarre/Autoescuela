@@ -2,6 +2,11 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { EnrollmentFacade } from './enrollment.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
+import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
 
 // ── Mock Supabase client ──
 
@@ -63,15 +68,39 @@ function createMockSupabaseService() {
   };
 }
 
+function createMockService(methods: string[]) {
+  const mock: any = {};
+  methods.forEach((m) => (mock[m] = vi.fn()));
+  return mock;
+}
+
 describe('EnrollmentFacade', () => {
   let facade: EnrollmentFacade;
   let mockSupabase: ReturnType<typeof createMockSupabaseService>;
+  let mockConfirm: any;
+  let mockViewer: any;
+  let mockAuth: any;
+  let mockDocs: any;
+  let mockPayment: any;
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseService();
+    mockConfirm = createMockService(['confirm']);
+    mockViewer = createMockService(['openByUrl']);
+    mockAuth = { whenReady: Promise.resolve(), currentUser: vi.fn() };
+    mockDocs = createMockService(['reset']);
+    mockPayment = createMockService(['reset']);
 
     TestBed.configureTestingModule({
-      providers: [EnrollmentFacade, { provide: SupabaseService, useValue: mockSupabase }],
+      providers: [
+        EnrollmentFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ConfirmModalService, useValue: mockConfirm },
+        { provide: DmsViewerService, useValue: mockViewer },
+        { provide: AuthFacade, useValue: mockAuth },
+        { provide: EnrollmentDocumentsFacade, useValue: mockDocs },
+        { provide: EnrollmentPaymentFacade, useValue: mockPayment },
+      ],
     });
 
     facade = TestBed.inject(EnrollmentFacade);
@@ -216,6 +245,28 @@ describe('EnrollmentFacade', () => {
     it('should clear error', () => {
       facade.clearError();
       expect(facade.error()).toBeNull();
+    });
+  });
+
+  // ── UI Wrappers ──
+
+  describe('UI Wrappers', () => {
+    it('should call confirmModal.confirm on confirm', async () => {
+      const config = { title: 'Test', message: 'Msg' };
+      mockConfirm.confirm.mockResolvedValue(true);
+      const result = await facade.confirm(config);
+      expect(mockConfirm.confirm).toHaveBeenCalledWith(config);
+      expect(result).toBe(true);
+    });
+
+    it('should call dmsViewer.openByUrl on openDocument', () => {
+      facade.openDocument('http://test.com', 'File');
+      expect(mockViewer.openByUrl).toHaveBeenCalledWith('http://test.com', 'File');
+    });
+
+    it('should use default filename in openDocument if not provided', () => {
+      facade.openDocument('http://test.com');
+      expect(mockViewer.openByUrl).toHaveBeenCalledWith('http://test.com', 'Documento');
     });
   });
 

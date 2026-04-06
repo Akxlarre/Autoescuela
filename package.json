@@ -11,9 +11,13 @@
     "claude:sync": "claude -p \"Ejecuta /sync-indices para actualizar los índices del proyecto\" --allowedTools Read,Edit,Glob,Grep",
     "claude:fix": "claude -p \"Ejecuta ng lint, identifica los errores y corrígelos\" --allowedTools Read,Edit,Bash",
     "claude:tdd": "claude -p \"Ejecuta las pruebas unitarias (ng test --watch=false). Si fallan, auto-corrige la lógica hasta que el compilador pase en verde.\" --allowedTools Read,Edit,Bash",
-    "lint:arch": "node scripts/architect.js"
+    "lint:arch": "node scripts/lint-arch-wrapper.js",
+    "indices:sync": "node scripts/indices-sync.js",
+    "test:ci": "vitest run --reporter=verbose",
+    "test:coverage": "vitest run --coverage"
   },
   "private": true,
+  "type": "module",
   "packageManager": "npm@10.9.3",
   "dependencies": {
     "@angular/animations": "^21.2.0",
@@ -35,6 +39,7 @@
     "tslib": "^2.3.0"
   },
   "devDependencies": {
+    "@analogjs/vitest-angular": "^2.4.0",
     "@angular/build": "^21.2.0",
     "@angular/cli": "^21.2.0",
     "@angular/compiler-cli": "^21.2.0",

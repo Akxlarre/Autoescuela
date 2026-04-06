@@ -12,6 +12,9 @@ import type {
   UploadTemplatePayload,
 } from '@core/models/ui/dms.model';
 import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { ToastService } from '@core/services/ui/toast.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -108,6 +111,35 @@ interface RawTemplate {
 export class DmsFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly layoutDrawer = inject(LayoutDrawerService);
+  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly toast = inject(ToastService);
+  private readonly dmsViewer = inject(DmsViewerService);
+
+  showSuccess(summary: string, detail?: string): void {
+    this.toast.success(summary, detail);
+  }
+
+  showError(summary: string, detail?: string): void {
+    this.toast.error(summary, detail);
+  }
+
+  async confirm(config: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    severity?: 'info' | 'warn' | 'success' | 'danger' | 'secondary';
+  }): Promise<boolean> {
+    return this.confirmModal.confirm(config);
+  }
+
+  openDocument(url: string, fileName?: string): void {
+    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+  }
+
+  closeDrawer(): void {
+    this.layoutDrawer.close();
+  }
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
 

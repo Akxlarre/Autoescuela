@@ -37,7 +37,7 @@
 | `class_b_theory_sessions` | M4 - Acad. B | `id`, `scheduled_at` | `branch_id`, `instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R | ✅ Definida |
 | `class_b_theory_attendance` | M4 - Acad. B | `id`, `session_id` | `theory_session_b_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
 | `class_b_practice_attendance` | M4 - Acad. B | `id`, `session_id` | `class_b_session_id`, `student_id`, `recorded_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida |
-| `class_b_exam_scores` | M4 - Acad. B | `id`, `student_id` | `student_id`, `enrollment_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (suyos) | ✅ Definida |
+| `class_b_exam_scores` | M4 - Acad. B | `id`, `student_id` | `student_id`, `enrollment_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (suyos) | ✅ Definida · Relaciones explicitadas via `20260406000000` para corregir error de resolución en PostgREST. |
 | `class_b_exam_catalog` | M4 - Acad. B | `id`, `title` | `created_by` | Admin: CRUD, Sec: R, Stu: R | ✅ Definida |
 | `class_b_exam_questions` | M4 - Acad. B | `id`, `exam_id` | `exam_id` | Admin: CRUD, Stu: R | ✅ Definida |
 | `class_b_exam_attempts` | M4 - Acad. B | `id`, `exam_id` | `exam_id`, `student_id`, `enrollment_id` | Admin: CRUD, Sec: R, Stu: CR (suyos) | ✅ Definida |

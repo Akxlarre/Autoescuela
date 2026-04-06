@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import type {
   AlumnoDeudor,
   EstadoCuentaHistorialItem,
@@ -60,6 +61,15 @@ interface MontosRow {
 @Injectable({ providedIn: 'root' })
 export class PagosFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly toast = inject(ToastService);
+
+  showSuccess(summary: string, detail?: string): void {
+    this.toast.success(summary, detail);
+  }
+
+  showError(summary: string, detail?: string): void {
+    this.toast.error(summary, detail);
+  }
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)

@@ -1,0 +1,12 @@
+{
+  "name": "koa-agent-blueprint",
+  "version": "6.1.0",
+  "project": "autoescuela",
+  "stack": {
+    "angular": true,
+    "tailwind": true,
+    "primeng": true,
+    "gsap": true,
+    "supabase": true
+  }
+}

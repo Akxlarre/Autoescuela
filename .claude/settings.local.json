@@ -14,7 +14,11 @@
       "Bash(grep:*)",
       "Bash(wc:*)",
       "Bash(cat C:UsersAkxlarreDesktopmockwebsrcpagesinstructoralumnos[id]ficha.astro)",
-      "Bash(cat C:/Users/Akxlarre/Desktop/mock/web/src/pages/instructor/alumnos/[id]/ficha.astro)"
+      "Bash(cat C:/Users/Akxlarre/Desktop/mock/web/src/pages/instructor/alumnos/[id]/ficha.astro)",
+      "Bash(printf '\\\\n## Auto-Index — Facades detectadas por AST \\(generado automáticamente\\)\\\\n\\\\n<!-- AUTO-GENERATED:BEGIN -->\\\\n_Sin facades auto-detectadas aún. Ejecuta `npm run indices:sync` para poblar._\\\\n<!-- AUTO-GENERATED:END -->\\\\n')",
+      "Bash(printf '\\\\n## Auto-Index — Servicios detectados por AST \\(generado automáticamente\\)\\\\n\\\\n<!-- AUTO-GENERATED:BEGIN -->\\\\n_Sin servicios auto-detectados aún. Ejecuta `npm run indices:sync` para poblar._\\\\n<!-- AUTO-GENERATED:END -->\\\\n')",
+      "Bash(printf '\\\\n## Auto-Index — Componentes detectados por AST \\(generado automáticamente\\)\\\\n\\\\n<!-- AUTO-GENERATED:BEGIN -->\\\\n_Sin componentes auto-detectados aún. Ejecuta `npm run indices:sync` para poblar._\\\\n<!-- AUTO-GENERATED:END -->\\\\n')",
+      "Bash(npm install:*)"
     ]
   }
 }

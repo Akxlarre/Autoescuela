@@ -124,7 +124,8 @@
 | `RentabilidadCursosComponent` | Presentacional / Reporte RF-040 — Tabla "Rentabilidad Estimada por Tipo de Curso". Sin inyección de facade. `datosRentabilidad` signal con mock data (4 cursos). `totales` computed: suma ingresos/gastos/margen + rentabilidad promedio. `mesActual` computed. Barra de progreso coloreada con `[style.width.%]` y `[style.background]`. Badge rentabilidad con `color-mix`. Nota al pie con fondo atenuado. | — | `features/admin/pagos/rentabilidad-cursos.component.ts` | ✅ UI Ready (mock) |
 | `RegistrarPagoDrawerComponent` | Smart / Drawer — Registrar Pago (Dual Mode) | **Modo Contextual** (`enrollmentId !== null`): pre-muestra alumno info card (nombre + saldo). **Modo Global** (`enrollmentId === null`): selector `<select>` de `facade.alumnosConDeuda()`; info card reactiva del alumno seleccionado via getter `selectedAlumno`. `enrollment_id` FormControl con `Validators.required` solo cuando hay deudores en modo global. `sumMatchesTotalValidator` a nivel FormGroup valida que suma canales = total. Balance card live (getter, no signal). `onSubmit()` resuelve `enrollmentId` y `montosActuales` según modo. `resetForm()` ajusta validators según modo al abrir. Outputs: `closed`, `saved`. | `PagosFacade`, `ToastService` | `features/admin/pagos/registrar-pago-drawer.component.ts` | ✅ Estable |
 | `/app/admin/contabilidad/reportes` | Stub PLANO | — | `features/admin/contabilidad-reportes/admin-contabilidad-reportes.component.ts` | 🚧 Stub |
-| `/app/admin/contabilidad/cuadratura` | Stub PLANO | — | `features/admin/contabilidad-cuadratura/admin-contabilidad-cuadratura.component.ts" | 🚧 Stub |
+| `/app/admin/contabilidad/cuadratura` — `AdminContabilidadCuadraturaComponent` | **Cuadratura Diaria (Admin)** — Gestión de ingresos/egresos hoy y cierre de caja físico con arqueo de billetes/monedas. | `CuadraturaFacade` | `features/admin/contabilidad-cuadratura/admin-contabilidad-cuadratura.component.ts` | ✅ Estable |
+| `/app/admin/contabilidad/historial` — `AdminContabilidadHistorialCuadraturasComponent` | **Historial de Cuadraturas (Admin)** — Calendario mensual de cierres de caja con visualización de arqueos históricos y exportación. | `HistorialCuadraturasFacade` | `features/admin/contabilidad-historial-cuadraturas/admin-contabilidad-historial-cuadraturas.component.ts` | ✅ Estable |
 | `/app/admin/contabilidad/anticipos` | Stub PLANO | — | `features/admin/contabilidad-anticipos/admin-contabilidad-anticipos.component.ts` | 🚧 Stub |
 | `/app/admin/contabilidad/cursos` | Stub PLANO | — | `features/admin/contabilidad-cursos/admin-contabilidad-cursos.component.ts` | 🚧 Stub |
 | `/app/admin/contabilidad/liquidaciones` — `AdminContabilidadLiquidacionesComponent` | **Liquidaciones de Instructores (Admin)** — Thin Smart wrapper. `ngOnInit` llama `facade.cargarLiquidaciones()`. Escucha output `(pagar)` → llama `facade.registrarPago(row, payload)`. Reutiliza `app-liquidaciones-content`. | `LiquidacionesFacade` | `features/admin/contabilidad-liquidaciones/admin-contabilidad-liquidaciones.component.ts` | ✅ Estable |
@@ -224,3 +225,57 @@
 | `/app/relator/maquinaria` | Stub PLANO | — | `features/relator/maquinaria/relator-maquinaria.component.ts" | 🚧 Stub |
 | `/app/relator/acta-final` | Stub PLANO | — | `features/relator/acta-final/relator-acta-final.component.ts" | 🚧 Stub |
 
+
+## Auto-Index — Componentes detectados por AST (generado automáticamente)
+
+<!-- AUTO-GENERATED:BEGIN -->
+| Selector | Inputs | Outputs | Archivo |
+|----------|--------|---------|---------|
+| `app-agenda-semanal` | `weekData`, `filteredDays`, `timeRows`, `isLoading`, `isCurrentWeek`, `instructors`, `selectedInstructorId`, `showKpis`, `showHero` | `weekNext`, `weekPrev`, `weekToday`, `instructorFilterChange`, `slotClick` | `src/app/shared/components/agenda-semanal/agenda-semanal.component.ts` |
+| `app-agenda-slot` | `slot`, `compact` | `slotClicked` | `src/app/shared/components/agenda-semanal/agenda-slot.component.ts` |
+| `app-alert-card` | `severity`, `title`, `actionLabel`, `dismissible` | `action`, `dismissed` | `src/app/shared/components/alert-card/alert-card.component.ts` |
+| `app-alumnos-list-content` | `basePath`, `alumnos`, `isLoading`, `alumnosPorVencer` | `refreshRequested`, `claseOnlineAction` | `src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts` |
+| `app-alumnos-por-vencer-drawer` | — | — | `src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts` |
+| `app-async-btn` | `label`, `icon`, `loading`, `disabled`, `loadingLabel` | — | `src/app/shared/components/async-btn/async-btn.component.ts` |
+| `app-badge` | — | — | `src/app/shared/components/badge/badge.component.ts` |
+| `app-branch-selector` | `branches`, `selectedBranchId`, `showAllOption` | `branchChange` | `src/app/shared/components/branch-selector/branch-selector.component.ts` |
+| `app-cuadratura-content` | `pagosHoy`, `gastosHoy`, `fondoInicial`, `totalIngresosHoy`, `totalEgresosHoy`, `saldoTeorico`, `cajaYaCerrada`, `isLoading`, `isSaving` | `guardarCierre`, `abrirIngreso`, `abrirEgreso`, `eliminarIngreso`, `eliminarEgreso` | `src/app/shared/components/cuadratura-content/cuadratura-content.component.ts` |
+| `app-daily-schedule-timeline` | `daySchedule`, `weekDays`, `selectedDateString`, `isLoading` | `prevDay`, `nextDay`, `todayNav`, `dateNav`, `blockClick` | `src/app/shared/components/daily-schedule-timeline/daily-schedule-timeline.component.ts` |
+| `app-detalle-cuadratura-modal` | `cierre` | `closed` | `src/app/shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component.ts` |
+| `app-dms-list-content` | `basePath`, `studentsWithDocs`, `recentDocs`, `schoolDocs`, `templates`, `isLoading`, `isAdmin` | `uploadStudentDoc`, `uploadSchoolDoc`, `uploadTemplate`, `viewStudentDocs`, `viewDocument`, `deleteStudentDoc`, `deleteSchoolDoc`, `deleteTemplate`, `downloadTemplate` | `src/app/shared/components/dms-list-content/dms-list-content.component.ts` |
+| `app-dms-viewer-modal` | `doc` | `closed` | `src/app/shared/components/dms-viewer-modal/dms-viewer-modal.component.ts` |
+| `app-drawer` | `isOpen`, `title`, `icon`, `hasFooter` | `closed` | `src/app/shared/components/drawer/drawer.component.ts` |
+| `app-egreso-modal` | `isOpen`, `isSaving` | `guardar`, `cerrado` | `src/app/shared/components/egreso-modal/egreso-modal.component.ts` |
+| `app-email-input` | `value`, `id`, `label`, `required`, `placeholder` | `valueChange` | `src/app/shared/components/email-input/email-input.component.ts` |
+| `app-empty-state` | `message`, `subtitle`, `icon`, `actionLabel`, `actionIcon` | `action` | `src/app/shared/components/empty-state/empty-state.component.ts` |
+| `app-evaluation-checklist` | — | — | `src/app/shared/components/evaluation-checklist/evaluation-checklist.component.ts` |
+| `app-flota-list-content` | `vehicles`, `kpis`, `isLoading`, `basePath` | `newVehicle`, `editVehicle`, `viewAgenda`, `viewMaintenances`, `printRouteSheet`, `printAllRouteSheets`, `manageDocuments`, `typeFilterChange`, `statusFilterChange`, `searchChange`, `refreshRequested` | `src/app/shared/components/flota-list-content/flota-list-content.component.ts` |
+| `app-historial-cuadraturas-content` | `cierres`, `isLoading`, `mesActual`, `anioActual` | `mesAnterior`, `mesSiguiente`, `volverAHoy`, `exportarCSV` | `src/app/shared/components/historial-cuadraturas-content/historial-cuadraturas-content.component.ts` |
+| `app-horizontal-bar-chart` | `title`, `subtitle`, `data` | — | `src/app/shared/components/horizontal-bar-chart/horizontal-bar-chart.component.ts` |
+| `app-icon` | `name`, `size`, `color`, `ariaHidden`, `ariaLabel` | — | `src/app/shared/components/icon/icon.component.ts` |
+| `app-action-kpi-card` | `value`, `label`, `suffix`, `prefix`, `accent`, `icon`, `size`, `color`, `pulse`, `loading` | — | `src/app/shared/components/kpi-card/action-kpi-card.component.ts` |
+| `app-kpi-card-variant` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `subValue`, `accent`, `icon`, `color`, `loading` | — | `src/app/shared/components/kpi-card/kpi-card-variant.component.ts` |
+| `app-kpi-card` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `accent`, `icon`, `size`, `color` | — | `src/app/shared/components/kpi-card/kpi-card.component.ts` |
+| `app-liquidaciones-content` | `liquidaciones`, `isLoading`, `isSaving`, `kpis`, `mesActual`, `anioActual` | `mesAnterior`, `mesSiguiente`, `pagar`, `deshacer` | `src/app/shared/components/liquidaciones-content/liquidaciones-content.component.ts` |
+| `app-login-card` | `mode`, `loading`, `errorMsg`, `successMsg` | `modeChange`, `formSubmit` | `src/app/shared/components/login-card/login-card.component.ts` |
+| `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |
+| `app-branch-course-selector` | `branches`, `coursePricing` | `branchSelect`, `flowSelect`, `confirm` | `src/app/shared/components/matricula-steps/branch-course-selector/branch-course-selector.component.ts` |
+| `app-confirmation-step` | `data` | `finish`, `downloadReceipt`, `downloadContract` | `src/app/shared/components/matricula-steps/confirmation/confirmation.component.ts` |
+| `app-contract-step` | `data`, `loading`, `stepNumber`, `isPublic`, `file` | `dataChange`, `generateContract`, `next`, `back` | `src/app/shared/components/matricula-steps/contract/contract.component.ts` |
+| `app-documents-step` | `data`, `loading`, `stepNumber`, `file` | `fileSelected`, `lightboxOpen`, `next`, `back` | `src/app/shared/components/matricula-steps/documents/documents.component.ts` |
+| `app-draft-list` | `drafts` | `resume`, `discard`, `startNew` | `src/app/shared/components/matricula-steps/draft-list/draft-list.component.ts` |
+| `app-payment-step` | `data`, `loading` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/payment/payment.component.ts` |
+| `app-personal-data-step` | `data`, `loading`, `hiddenCategories`, `branches`, `selectedBranchId` | `dataChange`, `next`, `cancel`, `branchChange` | `src/app/shared/components/matricula-steps/personal-data/personal-data.component.ts` |
+| `app-psych-test` | `answers`, `loading` | `answersChange`, `next`, `back` | `src/app/shared/components/matricula-steps/psych-test/psych-test.component.ts` |
+| `app-public-confirmation` | `type`, `enrollmentNumber`, `message` | — | `src/app/shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts` |
+| `app-notifications-panel` | `notifications`, `unreadCount` | `markRead`, `markAllRead` | `src/app/shared/components/notifications-panel/notifications-panel.component.ts` |
+| `app-page-header` | — | — | `src/app/shared/components/page-header/page-header.component.ts` |
+| `app-pago-instructor-modal` | `row` | `confirmed`, `closed` | `src/app/shared/components/pago-instructor-modal/pago-instructor-modal.component.ts` |
+| `app-search-panel` | — | `queryChange`, `closed` | `src/app/shared/components/search-panel/search-panel.component.ts` |
+| `app-section-hero` | `title`, `contextLine`, `subtitle`, `chips`, `actions`, `variant` | `actionClick` | `src/app/shared/components/section-hero/section-hero.component.ts` |
+| `app-signature-pad` | — | — | `src/app/shared/components/signature-pad/signature-pad.component.ts` |
+| `app-skeleton-block` | `variant`, `width`, `height` | — | `src/app/shared/components/skeleton-block/skeleton-block.component.ts` |
+| `app-user-panel` | `user` | `action`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
+| `app-weekly-schedule-grid` | `schedule`, `isLoading` | `prevWeek`, `nextWeek`, `today`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
+
+<!-- AUTO-GENERATED:END -->

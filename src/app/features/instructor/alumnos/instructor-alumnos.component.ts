@@ -14,7 +14,6 @@ import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -364,7 +363,6 @@ const PAGE_SIZE = 9;
 export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   public facade = inject(InstructorAlumnosFacade);
   private gsap = inject(GsapAnimationsService);
-  private drawer = inject(LayoutDrawerService);
 
   private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
@@ -416,7 +414,7 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
 
   openDetail(student: InstructorStudentCard) {
     this.facade.setActiveStudent(student);
-    this.drawer.open(
+    this.facade.openDrawer(
       StudentDrawerDetailComponent,
       student.name,
       'user'
