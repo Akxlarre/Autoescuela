@@ -6,40 +6,47 @@ import { ToastService } from '@core/services/ui/toast.service';
 
 describe('LiquidacionesFacade', () => {
   let facade: LiquidacionesFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let authFacadeSpy: jasmine.SpyObj<AuthFacade>;
-  let toastSpy: jasmine.SpyObj<ToastService>;
+  let supabaseSpy: any;
+  let authFacadeSpy: any;
+  let toastSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
-    authFacadeSpy = jasmine.createSpyObj('AuthFacade', ['currentUser']);
-    toastSpy = jasmine.createSpyObj('ToastService', ['error', 'success']);
+    supabaseSpy = { client: vi.fn() };
+    authFacadeSpy = { currentUser: vi.fn() };
+    toastSpy = { error: vi.fn(), success: vi.fn() };
+
+    const mockChannel = {
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+    };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-             gte: jasmine.createSpy('gte').and.returnValue({
-               lte: jasmine.createSpy('lte').and.resolveTo({ data: [], error: null })
-             }),
-             resolveTo: jasmine.createSpy('resolveTo').and.resolveTo({ data: [], error: null })
+      channel: vi.fn().mockReturnValue(mockChannel),
+      removeChannel: vi.fn(),
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            gte: vi.fn().mockReturnValue({
+              lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+            resolveTo: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
-          resolveTo: jasmine.createSpy('resolveTo').and.resolveTo({ data: [], error: null })
+          resolveTo: vi.fn().mockResolvedValue({ data: [], error: null }),
         }),
-        upsert: jasmine.createSpy('upsert').and.resolveTo({ error: null }),
-        delete: jasmine.createSpy('delete').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-            eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
-          })
+        upsert: vi.fn().mockResolvedValue({ error: null }),
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({ error: null }),
+          }),
         }),
-        update: jasmine.createSpy('update').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-            gte: jasmine.createSpy('gte').and.returnValue({
-              lte: jasmine.createSpy('lte').and.resolveTo({ error: null })
-            })
-          })
-        })
-      })
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            gte: vi.fn().mockReturnValue({
+              lte: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          }),
+        }),
+      }),
     };
 
     TestBed.configureTestingModule({
@@ -47,8 +54,8 @@ describe('LiquidacionesFacade', () => {
         LiquidacionesFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
-        { provide: ToastService, useValue: toastSpy }
-      ]
+        { provide: ToastService, useValue: toastSpy },
+      ],
     });
 
     facade = TestBed.inject(LiquidacionesFacade);

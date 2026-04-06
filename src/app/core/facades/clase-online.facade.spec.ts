@@ -4,30 +4,30 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 
 describe('ClaseOnlineFacade', () => {
   let facade: ClaseOnlineFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
+  let supabaseSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
+    supabaseSpy = { client: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          gte: jasmine.createSpy('gte').and.returnValue({
-            order: jasmine.createSpy('order').and.returnValue({
-              limit: jasmine.createSpy('limit').and.returnValue({
-                maybeSingle: jasmine.createSpy('maybeSingle').and.resolveTo({ data: null, error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          gte: vi.fn().mockReturnValue({
+            order: vi.fn().mockReturnValue({
+              limit: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null })
               })
             })
           }),
-          eq: jasmine.createSpy('eq').and.resolveTo({ data: [], error: null })
+          eq: vi.fn().mockResolvedValue({ data: [], error: null })
         }),
-        update: jasmine.createSpy('update').and.returnValue({
-          eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null })
         }),
-        delete: jasmine.createSpy('delete').and.returnValue({
-          eq: jasmine.createSpy('eq').and.resolveTo({ error: null })
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ error: null })
         }),
-        insert: jasmine.createSpy('insert').and.resolveTo({ error: null })
+        insert: vi.fn().mockResolvedValue({ error: null })
       })
     };
 
@@ -48,13 +48,13 @@ describe('ClaseOnlineFacade', () => {
   it('should have initial empty state', () => {
     expect(facade.sesionHoy()).toBeNull();
     expect(facade.alumnos()).toEqual([]);
-    expect(facade.isLoading()).toBeFalse();
-    expect(facade.savedOk()).toBeFalse();
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.savedOk()).toBe(false);
   });
 
   it('resetSavedOk should reset savedOk signal', () => {
     (facade as any)._savedOk.set(true);
     facade.resetSavedOk();
-    expect(facade.savedOk()).toBeFalse();
+    expect(facade.savedOk()).toBe(false);
   });
 });

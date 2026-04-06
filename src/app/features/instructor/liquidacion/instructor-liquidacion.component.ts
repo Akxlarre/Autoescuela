@@ -179,8 +179,6 @@ export class InstructorLiquidacionComponent implements OnInit, AfterViewInit {
 
   async ngOnInit() {
     await this.facade.initialize();
-    await this.facade.fetchMonthlyTarget();
-    await this.facade.fetchSessionsLog();
   }
 
   ngAfterViewInit() {

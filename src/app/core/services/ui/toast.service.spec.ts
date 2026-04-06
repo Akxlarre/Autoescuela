@@ -4,10 +4,10 @@ import { ToastService } from './toast.service';
 
 describe('ToastService', () => {
   let service: ToastService;
-  let msgSpy: jasmine.SpyObj<MessageService>;
+  let msgSpy: any;
 
   beforeEach(() => {
-    msgSpy = jasmine.createSpyObj('MessageService', ['add']);
+    msgSpy = { add: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [ToastService, { provide: MessageService, useValue: msgSpy }],

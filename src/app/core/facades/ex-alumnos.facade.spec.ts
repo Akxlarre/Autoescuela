@@ -4,16 +4,16 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 
 describe('ExAlumnosFacade', () => {
   let facade: ExAlumnosFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
+  let supabaseSpy: any;
 
   beforeEach(() => {
-    supabaseSpy = jasmine.createSpyObj('SupabaseService', ['client']);
+    supabaseSpy = { client: vi.fn() };
 
     (supabaseSpy as any).client = {
-      from: jasmine.createSpy('from').and.returnValue({
-        select: jasmine.createSpy('select').and.returnValue({
-          eq: jasmine.createSpy('eq').and.returnValue({
-            order: jasmine.createSpy('order').and.resolveTo({ data: [], error: null })
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null })
           })
         })
       })
@@ -35,7 +35,7 @@ describe('ExAlumnosFacade', () => {
 
   it('should have initial empty state', () => {
     expect(facade.egresados()).toEqual([]);
-    expect(facade.isLoading()).toBeFalse();
+    expect(facade.isLoading()).toBe(false);
     expect(facade.totalEgresados()).toBe(0);
   });
 });

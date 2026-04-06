@@ -6,38 +6,34 @@ import { ToastService } from '@core/services/ui/toast.service';
 
 describe('NotificationsFacade', () => {
   let facade: NotificationsFacade;
-  let supabaseSpy: jasmine.SpyObj<SupabaseService>;
-  let authSpy: jasmine.SpyObj<AuthFacade>;
-  let toastSpy: jasmine.SpyObj<ToastService>;
+  let supabaseSpy: any;
+  let authSpy: any;
+  let toastSpy: any;
 
   const mockSelectChain = (data: unknown[] | null, error: unknown = null) => {
-    const chain: any = {
-      select: jasmine.createSpy('select').and.returnValue(chain),
-      eq: jasmine.createSpy('eq').and.returnValue(chain),
-      order: jasmine.createSpy('order').and.returnValue(chain),
-      limit: jasmine.createSpy('limit').and.returnValue(Promise.resolve({ data, error })),
-    };
+    const chain: any = {};
+    chain.select = vi.fn().mockReturnValue(chain);
+    chain.eq = vi.fn().mockReturnValue(chain);
+    chain.order = vi.fn().mockReturnValue(chain);
+    chain.limit = vi.fn().mockReturnValue(Promise.resolve({ data, error }));
     return chain;
   };
 
   const mockUpdateChain = (error: unknown = null) => {
-    const chain: any = {
-      update: jasmine.createSpy('update').and.returnValue(chain),
-      eq: jasmine.createSpy('eq').and.returnValue(chain),
-    };
-    // Last eq returns the promise
-    chain.eq.and.returnValue(Promise.resolve({ error }));
+    const chain: any = {};
+    chain.update = vi.fn().mockReturnValue(chain);
+    chain.eq = vi.fn().mockReturnValue(Promise.resolve({ error }));
     return chain;
   };
 
   beforeEach(() => {
-    const fromSpy = jasmine.createSpy('from');
-    const channelSpy = jasmine.createSpy('channel').and.returnValue({
-      on: jasmine.createSpy('on').and.returnValue({
-        subscribe: jasmine.createSpy('subscribe'),
+    const fromSpy = vi.fn();
+    const channelSpy = vi.fn().mockReturnValue({
+      on: vi.fn().mockReturnValue({
+        subscribe: vi.fn(),
       }),
     });
-    const removeChannelSpy = jasmine.createSpy('removeChannel');
+    const removeChannelSpy = vi.fn();
 
     supabaseSpy = {
       client: {
@@ -45,11 +41,11 @@ describe('NotificationsFacade', () => {
         channel: channelSpy,
         removeChannel: removeChannelSpy,
       },
-    } as unknown as jasmine.SpyObj<SupabaseService>;
+    } as unknown as any;
 
     authSpy = {
       whenReady: Promise.resolve(),
-      currentUser: jasmine.createSpy('currentUser').and.returnValue({
+      currentUser: vi.fn().mockReturnValue({
         id: 'auth-uuid',
         dbId: 1,
         name: 'Test',
@@ -57,10 +53,10 @@ describe('NotificationsFacade', () => {
         role: 'admin',
         initials: 'T',
       }),
-      isAuthenticated: jasmine.createSpy('isAuthenticated').and.returnValue(true),
-    } as unknown as jasmine.SpyObj<AuthFacade>;
+      isAuthenticated: vi.fn().mockReturnValue(true),
+    } as unknown as any;
 
-    toastSpy = jasmine.createSpyObj('ToastService', ['success', 'error', 'warning', 'info']);
+    toastSpy = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -112,7 +108,7 @@ describe('NotificationsFacade', () => {
       ];
 
       const chain = mockSelectChain(mockData);
-      (supabaseSpy.client.from as jasmine.Spy).and.returnValue(chain);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
 
       await facade.loadNotifications();
 
@@ -120,17 +116,17 @@ describe('NotificationsFacade', () => {
       expect(facade.notifications()[0].title).toBe('Hello');
       expect(facade.notifications()[0].id).toBe('1');
       expect(facade.unreadCount()).toBe(1);
-      expect(facade.isLoading()).toBeFalse();
+      expect(facade.isLoading()).toBe(false);
     });
 
     it('should set error on failure', async () => {
       const chain = mockSelectChain(null, { message: 'DB error' });
-      (supabaseSpy.client.from as jasmine.Spy).and.returnValue(chain);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
 
       await facade.loadNotifications();
 
       expect(facade.error()).toBe('Error al cargar notificaciones');
-      expect(facade.isLoading()).toBeFalse();
+      expect(facade.isLoading()).toBe(false);
     });
   });
 
@@ -153,16 +149,16 @@ describe('NotificationsFacade', () => {
           created_at: '2026-03-10T10:00:00Z',
         },
       ]);
-      (supabaseSpy.client.from as jasmine.Spy).and.returnValue(chain);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
       await facade.loadNotifications();
 
       // Now mock update
       const updateChain = mockUpdateChain();
-      (supabaseSpy.client.from as jasmine.Spy).and.returnValue(updateChain);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
 
       await facade.markAsRead('5');
 
-      expect(facade.notifications()[0].read).toBeTrue();
+      expect(facade.notifications()[0].read).toBe(true);
       expect(facade.unreadCount()).toBe(0);
     });
   });
@@ -175,7 +171,7 @@ describe('NotificationsFacade', () => {
       expect(facade.notifications()).toEqual([]);
       expect(facade.filter()).toBe('all');
       expect(facade.error()).toBeNull();
-      expect(facade.isLoading()).toBeFalse();
+      expect(facade.isLoading()).toBe(false);
     });
   });
 
@@ -206,7 +202,7 @@ describe('NotificationsFacade', () => {
         },
       ];
       const chain = mockSelectChain(mockData);
-      (supabaseSpy.client.from as jasmine.Spy).and.returnValue(chain);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
       await facade.loadNotifications();
     });
 

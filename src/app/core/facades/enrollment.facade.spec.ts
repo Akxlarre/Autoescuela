@@ -26,6 +26,9 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     limit: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: responseData, error: responseError }),
     maybeSingle: vi.fn().mockResolvedValue({ data: responseData, error: responseError }),
+    // Make builder directly awaitable (for patterns like: await supabase.from(...).select(...).eq(...))
+    then: (resolve: any, reject: any) =>
+      Promise.resolve({ data: responseData, error: responseError }).then(resolve, reject),
   };
   return builder;
 }
@@ -305,8 +308,9 @@ describe('EnrollmentFacade', () => {
         { id: 1, name: 'Clase B', license_class: 'B', active: true, branch_id: 1 },
       ];
 
-      const builder = createMockQueryBuilder();
-      builder.order = vi.fn().mockResolvedValue({ data: mockCourses, error: null });
+      // loadCourses chains .order() mid-chain then does `await query` at the end —
+      // so order must return `this` and the builder must be awaitable via `then`.
+      const builder = createMockQueryBuilder(mockCourses, null);
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
       await facade.loadCourses(1);
@@ -315,10 +319,7 @@ describe('EnrollmentFacade', () => {
     });
 
     it('should set error on failure', async () => {
-      const builder = createMockQueryBuilder();
-      builder.order = vi
-        .fn()
-        .mockResolvedValue({ data: null, error: { message: 'Connection failed' } });
+      const builder = createMockQueryBuilder(null, { message: 'Connection failed' });
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
       await facade.loadCourses(1);

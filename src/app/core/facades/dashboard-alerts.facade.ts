@@ -20,6 +20,9 @@ export class DashboardAlertsFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
 
+  // ── SWR State ────────────────────────────────────────────────────────────
+  private _initialized = false;
+
   // ── 1. ESTADO PRIVADO ──────────────────────────────────────────────────────
   private _activeAlerts = signal<AlertModel[]>([]);
   private _isLoading = signal(false);
@@ -34,21 +37,47 @@ export class DashboardAlertsFacade {
   // ── 3. MÉTODOS DE ACCIÓN ───────────────────────────────────────────────────
 
   /**
-   * Carga alertas computadas desde queries paralelas.
+   * SWR Initialization:
+   * First call triggers isLoading(true). Subsequent calls refresh silently.
    */
-  async loadAlerts(): Promise<void> {
+  async initialize(): Promise<void> {
+    if (this._initialized) {
+      void this.refreshSilently();
+      return;
+    }
+
     this._isLoading.set(true);
     this._error.set(null);
-
     try {
-      const alerts = await Promise.all([this.checkExpiredDocuments(), this.checkPendingPayments()]);
-
-      this._activeAlerts.set(alerts.flat());
-    } catch (err) {
-      console.error('[DashboardAlertsFacade] loadAlerts error:', err);
+      await this.fetchAlertsData();
+      this._initialized = true;
+    } catch {
       this._error.set('Error al cargar alertas');
     } finally {
       this._isLoading.set(false);
+    }
+  }
+
+  private async refreshSilently(): Promise<void> {
+    try {
+      await this.fetchAlertsData();
+    } catch {
+      // Swallowed
+    }
+  }
+
+  /** Legacy wrapper */
+  async loadAlerts(): Promise<void> {
+    return this.initialize();
+  }
+
+  private async fetchAlertsData(): Promise<void> {
+    try {
+      const alerts = await Promise.all([this.checkExpiredDocuments(), this.checkPendingPayments()]);
+      this._activeAlerts.set(alerts.flat());
+    } catch (err) {
+      console.error('[DashboardAlertsFacade] fetchAlertsData error:', err);
+      throw err;
     }
   }
 

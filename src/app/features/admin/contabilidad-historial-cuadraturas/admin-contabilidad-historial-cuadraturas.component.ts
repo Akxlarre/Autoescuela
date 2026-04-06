@@ -23,6 +23,6 @@ export class AdminContabilidadHistorialCuadraturasComponent implements OnInit {
   protected readonly facade = inject(HistorialCuadraturasFacade);
 
   ngOnInit(): void {
-    this.facade.cargarHistorial();
+    this.facade.initialize();
   }
 }

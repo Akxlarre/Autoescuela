@@ -75,7 +75,7 @@ import { Button } from 'primeng/button';
 
       <!-- Selector de sede (solo admin) / breadcrumb -->
       <div
-        class="flex-1 min-w-0 flex items-center overflow-hidden"
+        class="flex-1 min-w-0 flex items-center overflow-visible"
         aria-label="Contexto de sede activa"
       >
         @if (auth.currentUser()?.role === 'admin') {

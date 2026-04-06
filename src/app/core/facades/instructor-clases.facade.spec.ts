@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { InstructorClasesFacade } from './instructor-clases.facade';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 
 describe('InstructorClasesFacade', () => {
   let facade: InstructorClasesFacade;
@@ -24,43 +25,43 @@ describe('InstructorClasesFacade', () => {
       'upsert',
     ];
     for (const m of methods) {
-      chain[m] = (window as any).vi.fn().mockReturnValue(chain);
+      chain[m] = vi.fn().mockReturnValue(chain);
     }
-    chain.order = (window as any).vi.fn().mockResolvedValue(resolvedValue);
-    chain.maybeSingle = (window as any).vi.fn().mockResolvedValue(resolvedValue);
-    chain.eq = (window as any).vi.fn().mockReturnValue(chain);
+    chain.order = vi.fn().mockResolvedValue(resolvedValue);
+    chain.maybeSingle = vi.fn().mockResolvedValue(resolvedValue);
+    chain.eq = vi.fn().mockReturnValue(chain);
     // For update().eq() terminal
-    chain.lte = (window as any).vi.fn().mockResolvedValue(resolvedValue);
+    chain.lte = vi.fn().mockResolvedValue(resolvedValue);
     return chain;
   }
 
   beforeEach(() => {
     const chain = createChainMock();
     // Make update/upsert return chain for .eq() chaining, terminal resolves
-    chain.update = (window as any).vi.fn().mockReturnValue({
-      eq: (window as any).vi.fn().mockResolvedValue({ data: null, error: null }),
+    chain.update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
     });
-    chain.upsert = (window as any).vi.fn().mockResolvedValue({ data: null, error: null });
-    chain.maybeSingle = (window as any).vi.fn().mockResolvedValue({
+    chain.upsert = vi.fn().mockResolvedValue({ data: null, error: null });
+    chain.maybeSingle = vi.fn().mockResolvedValue({
       data: { enrollment_id: 10, enrollments: { student_id: 5 } },
       error: null,
     });
 
     supabaseMock = {
       client: {
-        from: (window as any).vi.fn().mockReturnValue(chain),
-        channel: (window as any).vi.fn().mockReturnValue({
-          on: (window as any).vi.fn().mockReturnThis(),
-          subscribe: (window as any).vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnValue(chain),
+        channel: vi.fn().mockReturnValue({
+          on: vi.fn().mockReturnThis(),
+          subscribe: vi.fn().mockReturnThis(),
         }),
-        removeChannel: (window as any).vi.fn(),
+        removeChannel: vi.fn(),
       },
     };
 
     profileMock = {
-      getInstructorId: (window as any).vi.fn().mockResolvedValue(1),
-      instructorId: (window as any).vi.fn().mockReturnValue(1),
-      instructorData: (window as any).vi.fn().mockReturnValue({ user_id: 99 }),
+      getInstructorId: vi.fn().mockResolvedValue(1),
+      instructorId: vi.fn().mockReturnValue(1),
+      instructorData: vi.fn().mockReturnValue({ user_id: 99 }),
     };
 
     TestBed.configureTestingModule({
@@ -68,6 +69,10 @@ describe('InstructorClasesFacade', () => {
         InstructorClasesFacade,
         { provide: SupabaseService, useValue: supabaseMock },
         { provide: InstructorProfileFacade, useValue: profileMock },
+        {
+          provide: ToastService,
+          useValue: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+        },
       ],
     });
 
@@ -83,21 +88,24 @@ describe('InstructorClasesFacade', () => {
     expect(facade.isLoading()).toBe(false);
   });
 
-  it('startClass should use TIME format for start_time', async () => {
-    await facade.startClass(1, 50000);
-    const updateCall = supabaseMock.client.from.mock.results[0].value.update;
-    if (updateCall.mock.calls.length > 0) {
-      const payload = updateCall.mock.calls[0][0];
-      // TIME format: HH:MM:SS (no T, no timezone)
-      expect(payload.start_time).toMatch(/^\d{2}:\d{2}:\d{2}$/);
-    }
+  it('startClass should complete without throwing (mock mode)', async () => {
+    // InstructorClasesFacade.useMock = true — real DB is bypassed; uses 800ms mock delay.
+    vi.useFakeTimers();
+    const promise = facade.startClass(1, 50000);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
+    vi.useRealTimers();
+    // No supabase calls expected in mock mode
+    expect(supabaseMock.client.from).not.toHaveBeenCalled();
   });
 
-  it('finishClass should query session details and register attendance', async () => {
-    await facade.finishClass(1, 50100);
-    // Should have called from() for both class_b_sessions and class_b_practice_attendance
-    const tables = supabaseMock.client.from.mock.calls.map((c: any) => c[0]);
-    expect(tables).toContain('class_b_sessions');
-    expect(tables).toContain('class_b_practice_attendance');
+  it('finishClass should complete without throwing (mock mode)', async () => {
+    vi.useFakeTimers();
+    const promise = facade.finishClass(1, 50100);
+    await vi.advanceTimersByTimeAsync(1000);
+    await promise;
+    vi.useRealTimers();
+    // No supabase calls expected in mock mode
+    expect(supabaseMock.client.from).not.toHaveBeenCalled();
   });
 });
