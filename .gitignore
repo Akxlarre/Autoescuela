@@ -29,5 +29,6 @@ bazel-out/
 .gemini/
 
 environments/
+docs/2020libros-curso-profesional.pdf
 docs/2020libros-curso-profesional.xlsx
 docs/2TESTPSICOLOGICO.doc

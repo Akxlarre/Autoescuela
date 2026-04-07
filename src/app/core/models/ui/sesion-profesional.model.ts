@@ -66,3 +66,17 @@ export interface WeekDay {
   theory: SesionProfesional | null;
   practice: SesionProfesional | null;
 }
+
+export interface AlumnoFirmaSemana {
+  enrollmentId: number;
+  studentId: number;
+  nombre: string;
+  rut: string;
+  initials: string;
+  /** null = no ha firmado esta semana */
+  signatureId: number | null;
+  /** ISO timestamp del momento en que se registró la firma */
+  signedAt: string | null;
+  /** % de sesiones teóricas completadas en la semana visible */
+  pctTeoriaSemana: number;
+}

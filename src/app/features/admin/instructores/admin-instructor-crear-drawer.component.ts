@@ -1,8 +1,8 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -164,6 +165,31 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
         />
         @if (telefonoTouched() && !telefonoValido()) {
           <span class="field-error">Ingresa un teléfono válido (mínimo 8 dígitos).</span>
+        }
+      </div>
+
+      <!-- Sede -->
+      <div class="flex flex-col gap-1.5">
+        <label class="field-label" for="c-sede">Sede asignada *</label>
+        <p-select
+          inputId="c-sede"
+          [options]="sedeOptions()"
+          [(ngModel)]="sedeIdModel"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccione sede"
+          [style]="{ width: '100%', height: '40px' }"
+          [disabled]="sedeDisabled()"
+          aria-required="true"
+          data-llm-description="Sede de trabajo asignada al nuevo instructor"
+        />
+        @if (sedeDisabled()) {
+          <span class="flex items-center gap-1 text-xs" style="color: var(--text-muted)">
+            <app-icon name="lock" [size]="11" />
+            Sede fijada por el selector de la barra superior.
+          </span>
+        } @else if (sedeTouched() && !sedeValida()) {
+          <span class="field-error">Selecciona una sede.</span>
         }
       </div>
     </div>
@@ -408,9 +434,10 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
     }
   `,
 })
-export class AdminInstructorCrearDrawerComponent implements OnInit {
+export class AdminInstructorCrearDrawerComponent {
   protected readonly facade = inject(InstructoresFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly branchFacade = inject(BranchFacade);
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -419,6 +446,7 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
   protected readonly rut = signal('');
   protected readonly email = signal('');
   protected readonly telefono = signal('');
+  protected readonly sedeId = signal<number | null>(null);
   protected readonly licenseClass = signal<string | null>(null);
   protected readonly licenseExpiry = signal<Date | null>(null);
   protected readonly tipo = signal<InstructorType | null>(null);
@@ -434,6 +462,7 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
   protected readonly licenseClassTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly typeTouched = signal(false);
+  protected readonly sedeTouched = signal(false);
 
   // ── Validaciones ───────────────────────────────────────────────────────────
   protected readonly nombresValido = computed(() => this.nombres().trim().length >= 2);
@@ -466,6 +495,8 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
     return 'valid';
   });
 
+  protected readonly sedeValida = computed(() => this.sedeId() !== null);
+
   protected readonly formValido = computed(
     () =>
       this.nombresValido() &&
@@ -474,6 +505,7 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
       this.rutValido() &&
       this.emailValido() &&
       this.telefonoValido() &&
+      this.sedeValida() &&
       this.licenseClassValida() &&
       this.licenseExpiryValida() &&
       this.typeValido() &&
@@ -504,6 +536,20 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
         value: v.id,
       })),
   );
+
+  // ── Sede ──────────────────────────────────────────────────────────────────
+  protected readonly sedeDisabled = computed(() => this.branchFacade.selectedBranchId() !== null);
+  protected readonly sedeOptions = computed(() =>
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
+
+  protected get sedeIdModel(): number | null {
+    return this.sedeId();
+  }
+  protected set sedeIdModel(v: number | null) {
+    this.sedeId.set(v);
+    this.sedeTouched.set(true);
+  }
 
   // ── p-select models ────────────────────────────────────────────────────────
   protected get licenseClassModel(): string | null {
@@ -537,7 +583,15 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
     this.vehicleId.set(v);
   }
 
-  ngOnInit(): void {
+  constructor() {
+    // Sincroniza la sede del formulario con el branch selector del topbar
+    effect(() => {
+      const branchId = this.branchFacade.selectedBranchId();
+      if (branchId !== null) {
+        this.sedeId.set(branchId);
+        this.sedeTouched.set(true);
+      }
+    });
     this.facade.loadVehicles();
   }
 
@@ -556,6 +610,7 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
     this.rutTouched.set(true);
     this.emailTouched.set(true);
     this.telefonoTouched.set(true);
+    this.sedeTouched.set(true);
     this.licenseClassTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.typeTouched.set(true);
@@ -577,6 +632,7 @@ export class AdminInstructorCrearDrawerComponent implements OnInit {
       licenseClass: this.licenseClass()!,
       licenseExpiry: expiryStr,
       vehicleId: this.vehicleId(),
+      branchId: this.sedeId()!,
     });
 
     if (ok) {

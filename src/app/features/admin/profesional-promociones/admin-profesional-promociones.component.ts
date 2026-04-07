@@ -173,7 +173,10 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                   </div>
 
                   <div class="flex items-center gap-4 flex-wrap">
-                    <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-muted)">
+                    <span
+                      class="flex items-center gap-1.5 text-xs"
+                      style="color: var(--text-muted)"
+                    >
                       <app-icon name="calendar" [size]="12" />
                       {{ promo.startDate | date: 'dd/MM/yyyy' }} →
                       {{ promo.endDate | date: 'dd/MM/yyyy' }}
@@ -365,7 +368,11 @@ export class AdminProfesionalPromocionesComponent {
 
   protected handleHeroAction(actionId: string): void {
     if (actionId === 'new') {
-      this.layoutDrawer.open(AdminPromocionCrearDrawerComponent, 'Programar Promoción', 'calendar-plus');
+      this.layoutDrawer.open(
+        AdminPromocionCrearDrawerComponent,
+        'Programar Promoción',
+        'calendar-plus',
+      );
     }
   }
 

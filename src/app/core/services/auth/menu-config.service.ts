@@ -107,7 +107,6 @@ const ADMIN_NAV: NavGroup[] = [
         routerLink: '/app/admin/contabilidad/liquidaciones',
       },
       { label: 'Flota', icon: 'truck', routerLink: '/app/admin/flota' },
-      { label: 'Libro de Clases', icon: 'book-open', routerLink: '/app/admin/libro-de-clases' },
       { label: 'DMS', icon: 'folder-open', routerLink: '/app/admin/documentos' },
     ],
   },
@@ -128,6 +127,16 @@ const ADMIN_NAV: NavGroup[] = [
         label: 'Clases y Asistencia',
         icon: 'clipboard-list',
         routerLink: '/app/admin/clase-profesional/asistencia',
+      },
+      {
+        label: 'Evaluaciones',
+        icon: 'file-spreadsheet',
+        routerLink: '/app/admin/clase-profesional/evaluaciones',
+      },
+      {
+        label: 'Libro de Clases',
+        icon: 'book-open',
+        routerLink: '/app/admin/libro-de-clases',
       },
       {
         label: 'Certificados Prof.',
@@ -195,11 +204,6 @@ const SECRETARIA_NAV: NavGroup[] = [
         routerLink: '/app/secretaria/contabilidad/liquidaciones',
       },
       {
-        label: 'Libro de Clases',
-        icon: 'book-open',
-        routerLink: '/app/secretaria/libro-de-clases',
-      },
-      {
         label: 'Servicios Especiales',
         icon: 'briefcase',
         routerLink: '/app/secretaria/servicios-especiales',
@@ -223,6 +227,11 @@ const SECRETARIA_NAV: NavGroup[] = [
         label: 'Clases y Asistencia',
         icon: 'clipboard-list',
         routerLink: '/app/secretaria/profesional/asistencia',
+      },
+      {
+        label: 'Libro de Clases',
+        icon: 'book-open',
+        routerLink: '/app/secretaria/libro-de-clases',
       },
       {
         label: 'Calificaciones',

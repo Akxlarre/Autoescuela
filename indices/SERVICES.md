@@ -29,6 +29,7 @@ Funciones puras sin estado ni inyección de Angular. Testeables sin framework.
 |----------|---------------------|-----------------------|-----------|--------|
 | `rut.utils` | `cleanRut()`, `formatRut()`, `normalizeRutForStorage()`, `validateRut()` | `core/utils/rut.utils.ts` | `PersonalDataComponent`, `EnrollmentFacade` | ✅ Estable |
 | `notification.utils` | `mapReferenceToNotificationType(referenceType)`, `mapNotificationDtoToUi(dto)` — Mapeo DTO→UI para notificaciones. `reference_type` → `NotificationType` (document_expiry→warning, payment→info, class_b/professional_session→success). | `core/utils/notification.utils.ts` | `NotificationsFacade` | ✅ Estable |
+| `professional-modules` | Catálogo de módulos Clase Profesional (Art. 16 MTT). Constantes: `GRADE_MIN` (10), `GRADE_MAX` (100), `GRADE_PASS` (75), `MODULE_COUNT` (7). Funciones: `getModuleNames(licenseClass)` → array de 7 nombres (módulo 5 varía: A4/A5→Carga, A2/A3→Pasajeros), `getModuleShortLabel(n)` → "Módulo N", `isPassing(grade)` → `grade >= 75`, `roundGrade(value)` → 1 decimal, `calcAverage(grades[])` → promedio ignorando nulos. | `core/utils/professional-modules.ts` | `EvaluacionesProfesionalFacade`, `LibroDeClasesFacade` | ✅ Estable |
 
 ## 2. Facades & Feature-Specific State
 Servicios que median entre la UI (`features/`) y las APIs de datos (`SupabaseService`/`HttpClient`). Manejan el estado del dominio (`toSignal()`).

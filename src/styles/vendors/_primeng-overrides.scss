@@ -114,12 +114,16 @@
 
   /* Select (Dropdown) */
   --p-select-background: var(--bg-surface);
+  --p-select-border-color: var(--border-strong);
   --p-select-color: var(--text-primary);
   --p-select-hover-border-color: var(--ds-brand);
   --p-select-focus-border-color: var(--ds-brand);
+  --p-select-focus-ring-color: color-mix(in srgb, var(--ds-brand) 12%, transparent);
   --p-select-overlay-background: var(--bg-surface);
   --p-select-option-focus-background: var(--bg-elevated);
   --p-select-placeholder-color: var(--text-muted);
+  --p-select-disabled-background: var(--bg-elevated);
+  --p-select-disabled-color: var(--text-muted);
 
   /* Badge */
   --p-badge-primary-background: var(--ds-brand);
@@ -614,6 +618,14 @@ app-main-layout p-toast.p-toast-top-center,
 /* Select (Dropdown) Centering Fix & Premium Overlay */
 .p-select {
   align-items: center;
+  border: 1px solid var(--border-strong) !important;
+}
+.p-select:hover {
+  border-color: var(--ds-brand) !important;
+}
+.p-select.p-focus {
+  border-color: var(--ds-brand) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
 }
 
 .p-select .p-select-label {

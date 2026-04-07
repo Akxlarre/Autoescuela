@@ -4,8 +4,8 @@ import {
   computed,
   effect,
   inject,
-  linkedSignal,
   signal,
+  untracked,
   OnInit,
   OnDestroy,
 } from '@angular/core';
@@ -16,6 +16,7 @@ import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { EnrollmentFacade } from '@core/facades/enrollment.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
@@ -93,6 +94,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   readonly enrollment = inject(EnrollmentFacade);
   readonly docs = inject(EnrollmentDocumentsFacade);
   readonly payment = inject(EnrollmentPaymentFacade);
@@ -100,26 +102,38 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   // ── activeStep (0-indexed para p-stepper, derivado del facade 1-based) ───
   readonly activeStep = computed(() => this.enrollment.currentStep() - 1);
 
-  // ── Sede activa — secretaria: anclada a la suya; admin: seleccionable ────
-  // linkedSignal inicializa desde currentUser() y permite override manual (.set)
-  private readonly _activeBranchId = linkedSignal<number>(
-    () => this.auth.currentUser()?.branchId ?? 1,
-  );
-  readonly activeBranchId = this._activeBranchId.asReadonly();
-
-  /** Solo expone sedes al admin (para el selector). Secretarias reciben []. */
-  readonly adminBranches = computed(() => {
+  // ── Sede activa — admin: usa el selector del topbar (BranchFacade); secretaria: anclada a la suya ────
+  readonly activeBranchId = computed(() => {
     const user = this.auth.currentUser();
-    return user?.role === 'admin' ? this.enrollment.branches() : [];
+    if (user?.role === 'admin') {
+      const selected = this.branchFacade.selectedBranchId();
+      return selected ?? this.branchFacade.branches()[0]?.id ?? 1;
+    }
+    return user?.branchId ?? 1;
   });
 
   constructor() {
+    // Reacciona al cambio de sede en el topbar (solo admin) mientras el wizard está activo.
+    // Usa untracked para leer _viewMode sin suscribirse a sus cambios (evita re-ejecución al entrar al wizard).
+    effect(() => {
+      const user = this.auth.currentUser();
+      if (user?.role !== 'admin') return;
+
+      const branchId = this.branchFacade.selectedBranchId();
+      if (branchId === null) return; // "Todas las escuelas" no aplica al wizard
+
+      if (untracked(() => this._viewMode()) !== 'wizard') return;
+
+      this._step1Form.set(DEFAULT_PERSONAL_DATA);
+      void this.enrollment.loadCourses(branchId);
+    });
+
     effect(() => {
       const step = this.enrollment.currentStep();
       const pd = this.enrollment.personalData();
 
       // Paso 2: carga instructores al entrar (Clase B)
-      const branchId = this._activeBranchId();
+      const branchId = this.activeBranchId();
       if (step === 2 && pd?.courseCategory === 'non-professional' && branchId != null) {
         this.enrollment.loadInstructors(branchId);
         // Draft resume: instructor ya seleccionado pero grilla no cargada → cargar sin resetear slots
@@ -389,6 +403,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.layoutDrawer.setActions([]);
+    this.branchFacade.setRequiresSpecificBranch(false);
   }
 
   private async initWizard(): Promise<void> {
@@ -397,7 +412,11 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     // Esperar a que el usuario esté resuelto antes de leer su rol o branchId.
     await this.auth.whenReady;
 
-    const branchId = this._activeBranchId();
+    // Admin: requerir sede concreta en el topbar (deshabilita "Todas las escuelas")
+    // y auto-seleccionar la primera si no hay ninguna elegida.
+    if (this.auth.currentUser()?.role === 'admin') {
+      this.branchFacade.setRequiresSpecificBranch(true);
+    }
 
     // Verificar si hay borradores pendientes antes de iniciar wizard limpio
     const drafts = await this.enrollment.loadActiveDrafts();
@@ -408,12 +427,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     }
 
     // Sin borradores → iniciar wizard limpio
-    await this.startFreshWizard(branchId);
+    await this.startFreshWizard();
   }
 
-  /** Inicia el wizard desde cero (sin borrador). */
-  private async startFreshWizard(branchId?: number): Promise<void> {
-    const branch = branchId ?? this._activeBranchId();
+  /** Inicia el wizard desde cero (sin borrador). La sede activa se lee desde activeBranchId(). */
+  private async startFreshWizard(): Promise<void> {
+    const branch = this.activeBranchId();
     this.enrollment.reset();
     this.docs.reset();
     this.payment.reset();
@@ -421,7 +440,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this._contractPdfUrl.set(null);
     this._contractStatus.set('pending');
     this._signedContractUpload.set(null);
-    await this.enrollment.loadBranches();
     await this.enrollment.loadCourses(branch);
     this._viewMode.set('wizard');
   }
@@ -432,7 +450,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const ok = await this.enrollment.resumeDraft(enrollmentId);
     if (ok) {
       // Cargar cursos para que los computed funcionen correctamente
-      const branchId = this._activeBranchId();
+      const branchId = this.activeBranchId();
       await this.enrollment.loadCourses(branchId);
       // Sincronizar _step1Form con los datos del draft para que onStep1Next
       // envíe los datos correctos si el usuario navega de vuelta al paso 1.
@@ -487,14 +505,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   // ── Paso 1: Datos personales ──────────────────────────────────────────────
 
-  /** Admin: cambia de sede, recarga cursos y reinicia selección de curso. */
-  async onBranchChange(branchId: number | null): Promise<void> {
-    if (branchId === null) return; // En el wizard siempre se requiere una sede concreta
-    this._activeBranchId.set(branchId);
-    this._step1Form.set(DEFAULT_PERSONAL_DATA);
-    await this.enrollment.loadCourses(branchId);
-  }
-
   onStep1DataChange(data: EnrollmentPersonalData): void {
     this._step1Form.set(data);
   }
@@ -502,7 +512,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   async onStep1Next(): Promise<void> {
     this._isSaving.set(true);
     try {
-      const branchId = this._activeBranchId();
+      const branchId = this.activeBranchId();
       const ok = await this.enrollment.savePersonalData(this._step1Form(), branchId);
       if (ok) {
         const category = this._step1Form().courseCategory;

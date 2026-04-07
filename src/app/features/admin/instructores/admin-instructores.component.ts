@@ -1,12 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { InstructorTableRow } from '@core/models/ui/instructor-table.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
@@ -23,11 +24,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
   selector: 'app-admin-instructores',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    SectionHeroComponent,
-    IconComponent,
-    SkeletonBlockComponent,
-  ],
+  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent],
   template: `
     <div class="page-wide">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
@@ -427,9 +424,17 @@ type FilterTab = 'all' | 'active' | 'expiring';
     }
   `,
 })
-export class AdminInstructoresComponent implements OnInit {
+export class AdminInstructoresComponent {
   protected readonly facade = inject(InstructoresFacade);
+  private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      this.facade.initialize();
+    });
+  }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -439,7 +444,11 @@ export class AdminInstructoresComponent implements OnInit {
 
   protected handleHeroAction(actionId: string): void {
     if (actionId === 'new') {
-      this.layoutDrawer.open(AdminInstructorCrearDrawerComponent, 'Crear instructor Clase B', 'user-plus');
+      this.layoutDrawer.open(
+        AdminInstructorCrearDrawerComponent,
+        'Crear instructor Clase B',
+        'user-plus',
+      );
     }
   }
 
@@ -479,10 +488,6 @@ export class AdminInstructoresComponent implements OnInit {
   protected readonly paginationEnd = computed(() =>
     Math.min(this.currentPage() * this.pageSize, this.filteredInstructores().length),
   );
-
-  ngOnInit(): void {
-    this.facade.initialize();
-  }
 
   protected openVerDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);

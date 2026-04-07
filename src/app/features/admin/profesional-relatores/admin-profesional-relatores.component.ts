@@ -153,7 +153,9 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
         } @else {
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             @for (rel of paginatedRelatores(); track rel.id) {
-              <div class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative">
+              <div
+                class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative"
+              >
                 <!-- Status Badge -->
                 <div class="absolute top-4 right-4">
                   @if (rel.estado === 'activo') {

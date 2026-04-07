@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { BranchFacade } from '@core/facades/branch.facade';
 
 @Component({
   selector: 'app-admin-profesional-archivo',
@@ -29,4 +30,14 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     </div>
   `,
 })
-export class AdminProfesionalArchivoComponent {}
+export class AdminProfesionalArchivoComponent implements OnInit, OnDestroy {
+  private readonly branchFacade = inject(BranchFacade);
+
+  ngOnInit(): void {
+    this.branchFacade.setProfessionalOnly(true);
+  }
+
+  ngOnDestroy(): void {
+    this.branchFacade.setProfessionalOnly(false);
+  }
+}

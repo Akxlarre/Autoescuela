@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type {
   InstructorTableRow,
   InstructorType,
@@ -24,6 +25,7 @@ export interface CrearInstructorPayload {
   licenseClass: string;
   licenseExpiry: string;
   vehicleId: number | null;
+  branchId: number;
 }
 
 export interface EditarInstructorPayload {
@@ -40,6 +42,7 @@ export interface EditarInstructorPayload {
   active: boolean;
   vehicleId: number | null;
   currentVehicleId: number | null;
+  branchId: number;
 }
 
 // ── DTOs internos de Supabase ─────────────────────────────────────────────────
@@ -108,12 +111,14 @@ const LICENSE_STATUS_LABELS: Record<string, string> = {
 export class InstructoresFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
   private readonly _instructores = signal<InstructorTableRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   private readonly _branches = signal<BranchOption[]>([]);
   private _branchesLoaded = false;
@@ -154,11 +159,13 @@ export class InstructoresFacade {
   }
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const currentBranchId = this.branchFacade.selectedBranchId();
+    if (this._initialized && currentBranchId === this._lastBranchId) {
       this.refreshSilently();
       return;
     }
     this._initialized = true;
+    this._lastBranchId = currentBranchId;
     this._isLoading.set(true);
     try {
       await this.fetchData();
@@ -176,7 +183,9 @@ export class InstructoresFacade {
   }
 
   private async fetchData(): Promise<void> {
-    const { data, error } = await this.supabase.client
+    const branchId = this.branchFacade.selectedBranchId();
+
+    let query = this.supabase.client
       .from('instructors')
       .select(
         `
@@ -210,6 +219,12 @@ export class InstructoresFacade {
       )
       .is('vehicle_assignments.end_date', null)
       .order('registration_date', { ascending: false });
+
+    if (branchId !== null) {
+      query = query.eq('users.branch_id', branchId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       this._error.set(error.message);
@@ -341,10 +356,9 @@ export class InstructoresFacade {
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
 
-      this._initialized = false;
-      this._vehiclesLoaded = false;
-      void this.loadVehicles();
       this.toast.success('Instructor creado', 'La cuenta ha sido creada correctamente.');
+      this._vehiclesLoaded = false;
+      await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al crear instructor';
@@ -379,13 +393,13 @@ export class InstructoresFacade {
           active: payload.active,
           vehicleId: payload.vehicleId,
           currentVehicleId: payload.currentVehicleId,
+          branchId: payload.branchId,
         },
       });
 
       if (error) throw new Error(error.message ?? 'Error al actualizar instructor');
       if (data?.error) throw new Error(data.error);
 
-      this._initialized = false;
       this._vehiclesLoaded = false;
       await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       this.toast.success(
