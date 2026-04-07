@@ -3,7 +3,6 @@ import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
-import { ToastService } from '@core/services/ui/toast.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { EvaluationChecklistComponent } from '@shared/components/evaluation-checklist/evaluation-checklist.component';
@@ -39,6 +38,8 @@ import {
         [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
         [subtitle]="showFinalStep() ? 'Registra el kilometraje final y firmas' : 'Completa la evaluación mientras transcurre la clase'"
         variant="compact"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
         [actions]="heroActions()"
         (actionClick)="onHeroAction($event)"
       />
@@ -256,31 +257,23 @@ export class InstructorClaseDetailComponent implements OnInit {
   public clasesFacade = inject(InstructorClasesFacade);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
-  private toast = inject(ToastService);
 
   public showFinalStep = signal(false);
   public isSubmitting = signal(false);
 
+  // ── Hero actions (acciones principales / estado interno) ──
   readonly heroActions = computed<SectionHeroAction[]>(() => {
     if (this.showFinalStep()) {
       return [
         {
           id: 'back_to_eval',
-          label: 'Atrás a Evaluación',
-          icon: 'arrow-left',
+          label: 'Editar Evaluación',
+          icon: 'pen-to-square',
           primary: false,
-        }
+        },
       ];
     }
-    return [
-      {
-        id: 'back_to_dash',
-        label: 'Dashboard',
-        icon: 'arrow-left',
-        primary: false,
-        route: '/app/instructor/dashboard'
-      }
-    ];
+    return [];
   });
 
   onHeroAction(id: string) {
@@ -371,10 +364,10 @@ export class InstructorClaseDetailComponent implements OnInit {
       await this.clasesFacade.finishClass(cls.sessionId, this.kmEnd!);
       await this.clasesFacade.saveEvaluation(evalData);
 
-      this.toast.success('Clase Finalizada', 'La sesión y evaluación se han guardado con éxito.');
+      this.clasesFacade.showSuccess('Clase Finalizada', 'La sesión y evaluación se han guardado con éxito.');
       this.router.navigate(['/app/instructor/dashboard']);
     } catch {
-      this.toast.error('Error al finalizar', 'Hubo un problema al guardar los datos.');
+      this.clasesFacade.showError('Error al finalizar', 'Hubo un problema al guardar los datos.');
     } finally {
       this.isSubmitting.set(false);
     }

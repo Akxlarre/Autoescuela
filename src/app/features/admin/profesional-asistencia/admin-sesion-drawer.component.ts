@@ -10,10 +10,10 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
-import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
 
 @Component({
@@ -344,7 +344,7 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
 })
 export class AdminSesionDrawerComponent implements OnInit {
   readonly facade = inject(AsistenciaProfesionalFacade);
-  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   readonly closed = output();
 
   readonly mode = signal<'attendance' | 'edit'>('attendance');
@@ -448,7 +448,7 @@ export class AdminSesionDrawerComponent implements OnInit {
     const sesion = this.facade.selectedSesion();
     if (!sesion) return;
 
-    const confirmed = await this.confirmModal.confirm({
+    const confirmed = await this.facade.confirm({
       title: 'Cancelar sesión',
       message:
         'Esta sesión no contará para el cálculo de asistencia. ¿Estás segura de que deseas cancelarla?',
@@ -459,7 +459,7 @@ export class AdminSesionDrawerComponent implements OnInit {
 
     if (!confirmed) return;
     await this.facade.editarSesion(sesion, { status: 'cancelled' });
-    this.closed.emit();
+    this.layoutDrawer.close();
   }
 
   async reactivarSesion(): Promise<void> {

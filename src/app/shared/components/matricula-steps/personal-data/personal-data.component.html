@@ -10,6 +10,7 @@
           <app-branch-selector
             [branches]="branches()"
             [selectedBranchId]="selectedBranchId()"
+            [topbarMode]="false"
             (branchChange)="branchChange.emit($event)"
             data-llm-description="Branch selector for admin: choose which school to enroll the student in"
           />

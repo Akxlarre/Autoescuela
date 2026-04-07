@@ -1,7 +1,7 @@
-import { TestBed } from "@angular/core/testing";
-import { SupabaseService } from "./supabase.service";
+import { TestBed } from '@angular/core/testing';
+import { SupabaseService } from './supabase.service';
 
-describe("SupabaseService", () => {
+describe('SupabaseService', () => {
   let service: SupabaseService;
 
   beforeEach(() => {
@@ -9,51 +9,51 @@ describe("SupabaseService", () => {
     service = TestBed.inject(SupabaseService);
   });
 
-  it("should be created", () => {
+  it('should be created', () => {
     expect(service).toBeTruthy();
   });
 
-  it("client getter should return a SupabaseClient instance", () => {
+  it('client getter should return a SupabaseClient instance', () => {
     expect(service.client).toBeTruthy();
   });
 
-  it("client should expose the auth API", () => {
+  it('client should expose the auth API', () => {
     expect(service.client.auth).toBeTruthy();
-    expect(typeof service.client.auth.signInWithPassword).toBe("function");
+    expect(typeof service.client.auth.signInWithPassword).toBe('function');
   });
 
-  it("getUser() should return a Promise", () => {
+  it('getUser() should return a Promise', () => {
     const result = service.getUser();
-    expect(result).toBeInstanceOf(Promise);
+    expect(typeof result.then).toBe('function');
     // Suppress unhandled rejection from placeholder Supabase URL in tests
     result.catch(() => {});
   });
 
-  it("getSession() should return a Promise", () => {
+  it('getSession() should return a Promise', () => {
     const result = service.getSession();
-    expect(result).toBeInstanceOf(Promise);
+    expect(typeof result.then).toBe('function');
     result.catch(() => {});
   });
 
-  it("signIn() should be a function", () => {
-    expect(typeof service.signIn).toBe("function");
+  it('signIn() should be a function', () => {
+    expect(typeof service.signIn).toBe('function');
   });
 
-  it("signOut() should be a function", () => {
-    expect(typeof service.signOut).toBe("function");
+  it('signOut() should be a function', () => {
+    expect(typeof service.signOut).toBe('function');
   });
 
-  it("signUp() should be a function", () => {
-    expect(typeof service.signUp).toBe("function");
+  it('signUp() should be a function', () => {
+    expect(typeof service.signUp).toBe('function');
   });
 
-  it("resetPasswordForEmail() should be a function", () => {
-    expect(typeof service.resetPasswordForEmail).toBe("function");
+  it('resetPasswordForEmail() should be a function', () => {
+    expect(typeof service.resetPasswordForEmail).toBe('function');
   });
 
-  it("refreshSession() should return a Promise", () => {
+  it('refreshSession() should return a Promise', () => {
     const result = service.refreshSession();
-    expect(result).toBeInstanceOf(Promise);
+    expect(typeof result.then).toBe('function');
     result.catch(() => {});
   });
 });

@@ -5,25 +5,24 @@ import { AuthFacade } from '@core/facades/auth.facade';
 
 describe('DashboardAlertsFacade', () => {
   let facade: DashboardAlertsFacade;
-  let fromSpy: jasmine.Spy;
+  let fromSpy: ReturnType<typeof vi.fn>;
 
   // Builds a chain that resolves with { data, count, error }
   const buildChain = (result: { data?: unknown; count?: number; error?: unknown }) => {
     const resolved = Promise.resolve(result);
-    const chain: any = {
-      select: jasmine.createSpy('select').and.returnValue(chain),
-      eq: jasmine.createSpy('eq').and.returnValue(chain),
-      lt: jasmine.createSpy('lt').and.returnValue(chain),
-      gt: jasmine.createSpy('gt').and.returnValue(chain),
-      gte: jasmine.createSpy('gte').and.returnValue(chain),
-      lte: jasmine.createSpy('lte').and.returnValue(chain),
-      then: (resolve: any, reject: any) => resolved.then(resolve, reject),
-    };
+    const chain: any = {};
+    chain.select = vi.fn().mockReturnValue(chain);
+    chain.eq = vi.fn().mockReturnValue(chain);
+    chain.lt = vi.fn().mockReturnValue(chain);
+    chain.gt = vi.fn().mockReturnValue(chain);
+    chain.gte = vi.fn().mockReturnValue(chain);
+    chain.lte = vi.fn().mockReturnValue(chain);
+    chain.then = (resolve: any, reject: any) => resolved.then(resolve, reject);
     return chain;
   };
 
   beforeEach(() => {
-    fromSpy = jasmine.createSpy('from');
+    fromSpy = vi.fn();
 
     const supabaseMock = {
       client: { from: fromSpy },
@@ -31,7 +30,7 @@ describe('DashboardAlertsFacade', () => {
 
     const authMock = {
       whenReady: Promise.resolve(),
-      currentUser: jasmine.createSpy().and.returnValue({ dbId: 1 }),
+      currentUser: vi.fn().mockReturnValue({ dbId: 1 }),
     } as unknown as AuthFacade;
 
     TestBed.configureTestingModule({
@@ -57,7 +56,7 @@ describe('DashboardAlertsFacade', () => {
   describe('loadAlerts', () => {
     it('should produce alerts for expired documents and pending payments', async () => {
       let callCount = 0;
-      fromSpy.and.callFake((table: string) => {
+      fromSpy.mockImplementation((table: string) => {
         if (table === 'alert_config') {
           return buildChain({ data: [{ alert_type: 'document_expiry', advance_days: 30 }] });
         }
@@ -80,7 +79,7 @@ describe('DashboardAlertsFacade', () => {
 
       expect(facade.activeAlerts().length).toBe(3);
       expect(facade.alertCount()).toBe(3);
-      expect(facade.isLoading()).toBeFalse();
+      expect(facade.isLoading()).toBe(false);
 
       const severities = facade.activeAlerts().map((a) => a.severity);
       expect(severities).toContain('error');
@@ -88,7 +87,7 @@ describe('DashboardAlertsFacade', () => {
     });
 
     it('should produce no alerts when everything is clean', async () => {
-      fromSpy.and.callFake((table: string) => {
+      fromSpy.mockImplementation((table: string) => {
         if (table === 'alert_config') {
           return buildChain({ data: [] });
         }
@@ -102,14 +101,14 @@ describe('DashboardAlertsFacade', () => {
     });
 
     it('should set error when query fails', async () => {
-      fromSpy.and.callFake(() => {
+      fromSpy.mockImplementation(() => {
         throw new Error('DB down');
       });
 
       await facade.loadAlerts();
 
       expect(facade.error()).toBe('Error al cargar alertas');
-      expect(facade.isLoading()).toBeFalse();
+      expect(facade.isLoading()).toBe(false);
     });
   });
 });

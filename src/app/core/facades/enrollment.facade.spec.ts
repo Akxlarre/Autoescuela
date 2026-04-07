@@ -2,6 +2,11 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { EnrollmentFacade } from './enrollment.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
+import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
 
 // ── Mock Supabase client ──
 
@@ -21,6 +26,9 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     limit: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: responseData, error: responseError }),
     maybeSingle: vi.fn().mockResolvedValue({ data: responseData, error: responseError }),
+    // Make builder directly awaitable (for patterns like: await supabase.from(...).select(...).eq(...))
+    then: (resolve: any, reject: any) =>
+      Promise.resolve({ data: responseData, error: responseError }).then(resolve, reject),
   };
   return builder;
 }
@@ -63,15 +71,39 @@ function createMockSupabaseService() {
   };
 }
 
+function createMockService(methods: string[]) {
+  const mock: any = {};
+  methods.forEach((m) => (mock[m] = vi.fn()));
+  return mock;
+}
+
 describe('EnrollmentFacade', () => {
   let facade: EnrollmentFacade;
   let mockSupabase: ReturnType<typeof createMockSupabaseService>;
+  let mockConfirm: any;
+  let mockViewer: any;
+  let mockAuth: any;
+  let mockDocs: any;
+  let mockPayment: any;
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseService();
+    mockConfirm = createMockService(['confirm']);
+    mockViewer = createMockService(['openByUrl']);
+    mockAuth = { whenReady: Promise.resolve(), currentUser: vi.fn() };
+    mockDocs = createMockService(['reset']);
+    mockPayment = createMockService(['reset']);
 
     TestBed.configureTestingModule({
-      providers: [EnrollmentFacade, { provide: SupabaseService, useValue: mockSupabase }],
+      providers: [
+        EnrollmentFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: ConfirmModalService, useValue: mockConfirm },
+        { provide: DmsViewerService, useValue: mockViewer },
+        { provide: AuthFacade, useValue: mockAuth },
+        { provide: EnrollmentDocumentsFacade, useValue: mockDocs },
+        { provide: EnrollmentPaymentFacade, useValue: mockPayment },
+      ],
     });
 
     facade = TestBed.inject(EnrollmentFacade);
@@ -219,6 +251,28 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // ── UI Wrappers ──
+
+  describe('UI Wrappers', () => {
+    it('should call confirmModal.confirm on confirm', async () => {
+      const config = { title: 'Test', message: 'Msg' };
+      mockConfirm.confirm.mockResolvedValue(true);
+      const result = await facade.confirm(config);
+      expect(mockConfirm.confirm).toHaveBeenCalledWith(config);
+      expect(result).toBe(true);
+    });
+
+    it('should call dmsViewer.openByUrl on openDocument', () => {
+      facade.openDocument('http://test.com', 'File');
+      expect(mockViewer.openByUrl).toHaveBeenCalledWith('http://test.com', 'File');
+    });
+
+    it('should use default filename in openDocument if not provided', () => {
+      facade.openDocument('http://test.com');
+      expect(mockViewer.openByUrl).toHaveBeenCalledWith('http://test.com', 'Documento');
+    });
+  });
+
   // ── Student Summary (Computed) ──
 
   describe('Student Summary', () => {
@@ -254,8 +308,9 @@ describe('EnrollmentFacade', () => {
         { id: 1, name: 'Clase B', license_class: 'B', active: true, branch_id: 1 },
       ];
 
-      const builder = createMockQueryBuilder();
-      builder.order = vi.fn().mockResolvedValue({ data: mockCourses, error: null });
+      // loadCourses chains .order() mid-chain then does `await query` at the end —
+      // so order must return `this` and the builder must be awaitable via `then`.
+      const builder = createMockQueryBuilder(mockCourses, null);
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
       await facade.loadCourses(1);
@@ -264,10 +319,7 @@ describe('EnrollmentFacade', () => {
     });
 
     it('should set error on failure', async () => {
-      const builder = createMockQueryBuilder();
-      builder.order = vi
-        .fn()
-        .mockResolvedValue({ data: null, error: { message: 'Connection failed' } });
+      const builder = createMockQueryBuilder(null, { message: 'Connection failed' });
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
 
       await facade.loadCourses(1);

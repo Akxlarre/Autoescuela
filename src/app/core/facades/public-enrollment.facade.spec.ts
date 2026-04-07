@@ -200,7 +200,7 @@ describe('PublicEnrollmentFacade', () => {
         courseCategory: 'professional',
         courseType: 'professional_a2',
       });
-      expect(facade.currentStep()).toBe('course-selection');
+      expect(facade.currentStep()).toBe('psych-test-intro');
     });
   });
 

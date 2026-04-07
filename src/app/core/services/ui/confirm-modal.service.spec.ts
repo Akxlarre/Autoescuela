@@ -14,13 +14,13 @@ describe("ConfirmModalService", () => {
   });
 
   it("should start with modal closed and no config", () => {
-    expect(service.isOpen()).toBeFalse();
+    expect(service.isOpen()).toBe(false);
     expect(service.config()).toBeNull();
   });
 
   it("confirm() should open the modal with the provided config", () => {
     service.confirm({ title: "Eliminar", message: "¿Estás seguro?" });
-    expect(service.isOpen()).toBeTrue();
+    expect(service.isOpen()).toBe(true);
     expect(service.config()?.title).toBe("Eliminar");
     expect(service.config()?.message).toBe("¿Estás seguro?");
   });
@@ -48,16 +48,16 @@ describe("ConfirmModalService", () => {
   it("accept() should resolve the promise with true and close the modal", async () => {
     const result = service.confirm({ title: "T", message: "M" });
     service.accept();
-    expect(await result).toBeTrue();
-    expect(service.isOpen()).toBeFalse();
+    expect(await result).toBe(true);
+    expect(service.isOpen()).toBe(false);
     expect(service.config()).toBeNull();
   });
 
   it("cancel() should resolve the promise with false and close the modal", async () => {
     const result = service.confirm({ title: "T", message: "M" });
     service.cancel();
-    expect(await result).toBeFalse();
-    expect(service.isOpen()).toBeFalse();
+    expect(await result).toBe(false);
+    expect(service.isOpen()).toBe(false);
     expect(service.config()).toBeNull();
   });
 });

@@ -28,7 +28,7 @@ export class AdminContabilidadLiquidacionesComponent implements OnInit {
   protected readonly facade = inject(LiquidacionesFacade);
 
   ngOnInit(): void {
-    this.facade.cargarLiquidaciones();
+    this.facade.initialize();
   }
 
   protected onPagar(event: { row: LiquidacionRow; payload: PagoInstructorPayload }): void {

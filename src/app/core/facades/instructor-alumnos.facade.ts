@@ -1,6 +1,9 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
+import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
+import type { Type } from '@angular/core';
 import type {
   InstructorStudentCard,
   InstructorStudentDetail,
@@ -14,6 +17,24 @@ import type {
 export class InstructorAlumnosFacade {
   private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
+  private toast = inject(ToastService);
+  private layoutDrawer = inject(LayoutDrawerService);
+
+  showSuccess(summary: string, detail?: string): void {
+    this.toast.success(summary, detail);
+  }
+
+  showError(summary: string, detail?: string): void {
+    this.toast.error(summary, detail);
+  }
+
+  openDrawer(component: Type<any>, title: string, icon?: string): void {
+    this.layoutDrawer.open(component, title, icon);
+  }
+
+  closeDrawer(): void {
+    this.layoutDrawer.close();
+  }
 
   private _students = signal<InstructorStudentCard[]>([]);
   private _studentDetail = signal<InstructorStudentDetail | null>(null);
@@ -282,8 +303,8 @@ export class InstructorAlumnosFacade {
         .select(
           `
           id, score, date, passed,
-          students!inner(id, users!inner(first_names, paternal_last_name, rut)),
-          enrollments(id)
+          students!fk_class_b_exam_scores_student!inner(id, users!inner(first_names, paternal_last_name, rut)),
+          enrollments!fk_class_b_exam_scores_enrollment(id)
         `,
         )
         .in('enrollment_id', enrollmentIds)
@@ -347,7 +368,7 @@ export class InstructorAlumnosFacade {
           `
           id, status,
           class_b_theory_sessions!inner(id, scheduled_at, topic, instructor_id),
-          students!inner(id, users!inner(first_names, paternal_last_name, rut))
+          students!student_id!inner(id, users!inner(first_names, paternal_last_name, rut))
         `,
         )
         .eq('class_b_theory_sessions.instructor_id', instructorId)

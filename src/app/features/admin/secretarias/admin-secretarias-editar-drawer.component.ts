@@ -5,16 +5,17 @@ import {
   computed,
   effect,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-admin-secretarias-editar-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, SelectModule, IconComponent],
   template: `
@@ -139,7 +140,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           }
           @if (email() !== currentEmail && emailValido()) {
             <span class="text-xs" style="color: var(--state-warning, #f59e0b);">
-              Se enviará confirmación al nuevo correo. El acceso cambiará inmediatamente.
+              Se enviará confirmación al nuevo correo. El cambio es inmediato.
             </span>
           }
         </div>
@@ -196,7 +197,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       >
         <button
           class="cancel-btn"
-          (click)="saved.emit()"
+          (click)="layoutDrawer.close()"
           data-llm-action="cancelar-editar-secretaria"
         >
           Cancelar
@@ -344,8 +345,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 })
 export class AdminSecretariasEditarDrawerComponent implements OnInit {
   protected readonly facade = inject(SecretariasFacade);
-
-  readonly saved = output<void>();
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -443,7 +443,8 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
     });
 
     if (ok) {
-      this.saved.emit();
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
     }
   }
 }

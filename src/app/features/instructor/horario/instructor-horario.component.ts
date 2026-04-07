@@ -15,6 +15,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { WeeklyScheduleGridComponent } from '@shared/components/weekly-schedule-grid/weekly-schedule-grid.component';
 import { DailyScheduleTimelineComponent } from '@shared/components/daily-schedule-timeline/daily-schedule-timeline.component';
+import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { IconComponent } from '@shared/components/icon/icon.component';
 import type { ScheduleBlock, DaySchedule } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
@@ -25,17 +27,52 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   imports: [
     SectionHeroComponent, 
     WeeklyScheduleGridComponent, 
-    DailyScheduleTimelineComponent
+    DailyScheduleTimelineComponent,
+    KpiCardVariantComponent
   ],
   template: `
     <div class="px-6 py-6 pb-20 max-w-7xl mx-auto space-y-6">
-      <!-- Hero: solo desktop -->
-      <div class="hidden md:block">
-        <app-section-hero
-          #heroRef
-          title="Mi Horario"
-          subtitle="Visualiza y gestiona tus clases programadas para esta semana"
-          [actions]="heroActions"
+      
+      <app-section-hero
+        #heroRef
+        title="Mi Horario"
+        [subtitle]="weekLabel()"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="heroActions"
+        [chips]="heroChips()"
+      />
+
+      <!-- KPI Row: Bento Grid 4 columns -->
+      <div #kpiGridRef class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <app-kpi-card-variant
+          label="Clases Hoy"
+          [value]="facade.weeklySchedule()?.kpis?.clasesHoy || 0"
+          icon="calendar-check"
+          color="default"
+          [loading]="facade.isLoading()"
+        />
+        <app-kpi-card-variant
+          label="Agendadas"
+          [value]="facade.weeklySchedule()?.kpis?.clasesAgendadas || 0"
+          icon="calendar-days"
+          color="default"
+          [loading]="facade.isLoading()"
+        />
+        <app-kpi-card-variant
+          label="Completadas"
+          [value]="facade.weeklySchedule()?.kpis?.clasesCompletadas || 0"
+          icon="check-circle"
+          color="success"
+          [loading]="facade.isLoading()"
+        />
+        <app-kpi-card-variant
+          label="Horas Semana"
+          [value]="facade.weeklySchedule()?.kpis?.horasSemana || 0"
+          suffix="h"
+          icon="clock"
+          color="default"
+          [loading]="facade.isLoading()"
         />
       </div>
 
@@ -44,9 +81,11 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         <app-weekly-schedule-grid
           [schedule]="facade.weeklySchedule()"
           [isLoading]="facade.isLoading()"
+          [selectedDate]="selectedDayDate()"
           (prevWeek)="changeWeek(-1)"
           (nextWeek)="changeWeek(1)"
           (today)="resetToToday()"
+          (daySelect)="onDaySelect($event)"
           (blockClick)="onBlockClick($event)"
         />
       </div>
@@ -58,10 +97,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           [weekDays]="facade.weeklySchedule()?.days"
           [selectedDateString]="selectedDate()"
           [isLoading]="facade.isLoading()"
-          (prevDay)="changeDay(-1)"
-          (nextDay)="changeDay(1)"
-          (todayNav)="resetToToday()"
-          (dateNav)="changeToDate($event)"
+          (daySelect)="onMobileDaySelect($event)"
           (blockClick)="onBlockClick($event)"
         />
       </div>
@@ -74,11 +110,29 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
   private router = inject(Router);
 
   private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
+  private readonly kpiGridRef = viewChild<ElementRef<HTMLElement>>('kpiGridRef');
   
   private currentWeekDate: string = new Date().toISOString();
   
   // Mobile day selection
   public selectedDate = signal<string>(new Date().toISOString().split('T')[0]);
+  
+  // Desktop day highlighting
+  public selectedDayDate = signal<string | null>(null);
+
+  readonly weekLabel = computed(() => {
+    const schedule = this.facade.weeklySchedule();
+    return schedule ? `Semana del ${schedule.weekLabel}` : 'Cargando horario...';
+  });
+
+  readonly heroChips = computed(() => {
+    const kpis = this.facade.weeklySchedule()?.kpis;
+    if (!kpis) return [];
+    return [
+      { label: `${kpis.clasesHoy} clases hoy`, variant: 'default' as const },
+      { label: `${kpis.horasSemana}h esta semana`, variant: 'default' as const },
+    ];
+  });
 
   // Derived state for mobile layout
   readonly todaySchedule = computed<DaySchedule | null>(() => {
@@ -87,8 +141,8 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
     
     // Convert selectedDate string "YYYY-MM-DD" to matching week day
     const sd = new Date(this.selectedDate() + 'T12:00:00'); // Midday to avoid timezone shifting
-    // Because weekSchedule.days has day names and numbers... we can match the exact date if we format it or we use DayOfWeek
-    const dayOfWeek = sd.getDay() === 0 ? 6 : sd.getDay() - 1; // 0=Lun, 6=Dom
+    // 0=Domingo in JS, but UI expects 0=Lunes, 6=Domingo
+    const dayOfWeek = sd.getDay() === 0 ? 6 : sd.getDay() - 1; 
     
     let targetDayLabel = 'Día';
     let targetDateLabel = '';
@@ -102,7 +156,6 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
       targetDayLabel = dayNames[dayOfWeek] || 'Día';
     }
     
-    // Format full date label e.g. "1 de Abril, 2026"
     const monthNames = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
@@ -126,15 +179,7 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
     };
   });
 
-  readonly heroActions: SectionHeroAction[] = [
-    {
-      id: 'dashboard',
-      label: 'Ir al Dashboard',
-      icon: 'monitor',
-      primary: false,
-      route: '/app/instructor/dashboard',
-    },
-  ];
+  readonly heroActions: SectionHeroAction[] = [];
 
   async ngOnInit() {
     await this.facade.initialize();
@@ -143,7 +188,14 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     const hero = this.heroRef();
+    const kpiGrid = this.kpiGridRef();
+    
     if (hero) this.gsap.animateHero(hero.nativeElement);
+    
+    if (kpiGrid) {
+      const cards = kpiGrid.nativeElement.querySelectorAll('app-kpi-card-variant');
+      this.gsap.staggerListItems(Array.from(cards));
+    }
   }
 
   changeWeek(offset: number) {
@@ -152,36 +204,44 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
     this.currentWeekDate = date.toISOString();
     this.facade.fetchWeeklySchedule(this.currentWeekDate);
     
-    // Also sync the day to the new week's Monday (or keep it if it makes sense)
+    // Also sync the day to the new week's Monday
     this.selectedDate.set(this.currentWeekDate.split('T')[0]);
+    this.selectedDayDate.set(null); // Clear desktop selection on week change
   }
   
-  changeDay(offset: number) {
-    // Current selected date string 'YYYY-MM-DD'
-    const curDateParts = this.selectedDate().split('-');
-    const dt = new Date(parseInt(curDateParts[0], 10), parseInt(curDateParts[1], 10) - 1, parseInt(curDateParts[2], 10), 12, 0, 0);
-    dt.setDate(dt.getDate() + offset);
-    
-    const newDateStr = dt.toISOString().split('T')[0];
-    this.selectedDate.set(newDateStr);
-    
-    // Check if we need to fetch another week (dt is outside of current week range)
-    // For simplicity, we can just trigger a fetch of the week containing dt.
-    // The facade will handle caching or deduplicating if needed.
-    this.currentWeekDate = dt.toISOString();
-    this.facade.fetchWeeklySchedule(this.currentWeekDate);
+  onDaySelect(dateStr: string) {
+    this.selectedDayDate.set(dateStr);
   }
 
-  changeToDate(dateStr: string) {
+  onMobileDaySelect(dateStr: string) {
     this.selectedDate.set(dateStr);
+    
+    // Refresh week if we moved outside the current week range
     const dt = new Date(dateStr + 'T12:00:00');
-    this.currentWeekDate = dt.toISOString();
-    this.facade.fetchWeeklySchedule(this.currentWeekDate);
+    // If the week of dt is different from currentWeekDate, fetch.
+    // For now, simplicity: if the date is far from currentWeekDate, fetch.
+    const current = new Date(this.currentWeekDate);
+    const diffTime = Math.abs(dt.getTime() - current.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 7) {
+      this.currentWeekDate = dt.toISOString();
+      this.facade.fetchWeeklySchedule(this.currentWeekDate);
+    }
+  }
+
+  changeDay(offset: number) {
+    const parts = this.selectedDate().split('-');
+    const dt = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 12, 0, 0);
+    dt.setDate(dt.getDate() + offset);
+    this.onMobileDaySelect(dt.toISOString().split('T')[0]);
   }
 
   resetToToday() {
     const today = new Date();
-    this.selectedDate.set(today.toISOString().split('T')[0]);
+    const todayStr = today.toISOString().split('T')[0];
+    this.selectedDate.set(todayStr);
+    this.selectedDayDate.set(todayStr);
     this.currentWeekDate = today.toISOString();
     this.facade.fetchWeeklySchedule(this.currentWeekDate);
   }
@@ -189,7 +249,6 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
   onBlockClick(block: ScheduleBlock) {
     if (!block.sessionId) return;
 
-    // Navigation logic based on session status
     if (block.status === 'completed') {
       this.router.navigate([`/app/instructor/alumnos/${block.sessionId}/evaluacion/${block.sessionId}`]);
     } else if (block.status === 'scheduled' || block.status === 'in_progress') {

@@ -3,22 +3,20 @@ import {
   Component,
   inject,
   OnInit,
-  OnDestroy,
   signal,
   computed,
   effect,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
-import { BranchFacade } from '@core/facades/branch.facade';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminSesionDrawerComponent } from './admin-sesion-drawer.component';
-import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesional.model';
+import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model';
 
 @Component({
   selector: 'app-admin-profesional-asistencia',
@@ -31,8 +29,6 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
-    DrawerComponent,
-    AdminSesionDrawerComponent,
   ],
   template: `
     <!-- ═══ Hero ═══ -->
@@ -448,18 +444,6 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
         }
       </section>
     }
-
-    <!-- ═══ Drawer de sesión ═══ -->
-    <app-drawer
-      [isOpen]="drawerOpen()"
-      [title]="drawerTitle()"
-      icon="clipboard-list"
-      (closed)="closeDrawer()"
-    >
-      @if (facade.selectedSesion(); as sesion) {
-        <app-admin-sesion-drawer (closed)="closeDrawer()" />
-      }
-    </app-drawer>
   `,
   styles: `
     .session-card {
@@ -575,11 +559,10 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
     }
   `,
 })
-export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
+export class AdminProfesionalAsistenciaComponent implements OnInit {
   readonly facade = inject(AsistenciaProfesionalFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  readonly drawerOpen = signal(false);
   readonly skeletonDays = [1, 2, 3, 4, 5, 6];
 
   // ── Firma semanal — estado de selección local ──────────────────────────────
@@ -621,7 +604,7 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
   constructor() {
     // Recargar firmas cada vez que el usuario navega a otra semana
     effect(() => {
-      const _ = this.facade.weekOffset();
+      const _week = this.facade.weekOffset();
       if (this.facade.selectedCursoId()) {
         this.selectedForSign.set([]);
         void this.facade.fetchFirmasSemana();
@@ -630,12 +613,7 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.branchFacade.setProfessionalOnly(true);
     void this.facade.initialize();
-  }
-
-  ngOnDestroy(): void {
-    this.branchFacade.setProfessionalOnly(false);
   }
 
   onPromoChange(id: number): void {
@@ -648,11 +626,13 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
 
   openSesion(sesion: SesionProfesional): void {
     void this.facade.selectSesion(sesion);
-    this.drawerOpen.set(true);
+    const tipo = sesion.tipo === 'theory' ? 'Teoría' : 'Práctica';
+    const title = `${tipo} — ${this.formatDate(sesion.date)}`;
+    this.layoutDrawer.open(AdminSesionDrawerComponent, title, 'clipboard-list');
   }
 
   closeDrawer(): void {
-    this.drawerOpen.set(false);
+    this.layoutDrawer.close();
     this.facade.clearSelectedSesion();
   }
 

@@ -5,6 +5,8 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -65,6 +67,22 @@ export class EnrollmentFacade {
   private readonly auth = inject(AuthFacade);
   private readonly docsFacade = inject(EnrollmentDocumentsFacade);
   private readonly paymentFacade = inject(EnrollmentPaymentFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
+  private readonly dmsViewer = inject(DmsViewerService);
+
+  async confirm(config: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    severity?: 'info' | 'warn' | 'success' | 'danger' | 'secondary';
+  }): Promise<boolean> {
+    return this.confirmModal.confirm(config);
+  }
+
+  openDocument(url: string, fileName?: string): void {
+    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+  }
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)

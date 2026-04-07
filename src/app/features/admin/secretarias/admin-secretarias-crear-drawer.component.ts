@@ -4,18 +4,19 @@ import {
   computed,
   effect,
   inject,
-  output,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 @Component({
   selector: 'app-admin-secretarias-crear-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, SelectModule, IconComponent],
   template: `
@@ -196,7 +197,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     >
       <button
         class="cancel-btn"
-        (click)="closed.emit()"
+        (click)="layoutDrawer.close()"
         data-llm-action="cancelar-crear-secretaria"
       >
         Cancelar
@@ -322,8 +323,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 })
 export class AdminSecretariasCrearDrawerComponent {
   protected readonly facade = inject(SecretariasFacade);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
-  readonly closed = output<void>();
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
@@ -425,7 +426,8 @@ export class AdminSecretariasCrearDrawerComponent {
     });
 
     if (ok) {
-      this.closed.emit();
+      this.layoutDrawer.close();
+      this.facade.initialize(); // Refresh table
     }
   }
 }

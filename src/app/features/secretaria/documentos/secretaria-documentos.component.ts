@@ -7,7 +7,6 @@ import {
 import { Router, ActivatedRoute } from '@angular/router';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
-import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import type { TemplateCard } from '@core/models/ui/dms.model';
 
 /**
@@ -46,7 +45,6 @@ export class SecretariaDocumentosComponent implements OnInit {
   readonly facade = inject(DmsFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
-  private readonly dmsViewer = inject(DmsViewerService);
 
   ngOnInit(): void {
     void this.facade.initialize();
@@ -65,7 +63,7 @@ export class SecretariaDocumentosComponent implements OnInit {
   }
 
   onViewDocument(url: string, fileName?: string): void {
-    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+    this.facade.openDocument(url, fileName);
   }
 
   onDownloadTemplate(template: TemplateCard): void {

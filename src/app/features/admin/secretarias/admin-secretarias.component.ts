@@ -12,6 +12,7 @@ import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-drawer.component';
 import { AdminSecretariasVerDrawerComponent } from './admin-secretarias-ver-drawer.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
@@ -21,10 +22,10 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 
 @Component({
   selector: 'app-admin-secretarias',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
@@ -34,10 +35,6 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
     KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
-    DrawerComponent,
-    AdminSecretariasCrearDrawerComponent,
-    AdminSecretariasVerDrawerComponent,
-    AdminSecretariasEditarDrawerComponent,
   ],
   template: `
     <div class="page-wide">
@@ -328,36 +325,6 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
         </div>
       </div>
     </div>
-
-    <!-- ── Drawer: Crear Secretaria ─────────────────────────────────────────── -->
-    <app-drawer
-      [isOpen]="crearDrawerOpen()"
-      title="Nueva Secretaria"
-      icon="user-plus"
-      (closed)="onCrearDrawerClosed()"
-    >
-      <app-admin-secretarias-crear-drawer (closed)="onCrearDrawerClosed()" />
-    </app-drawer>
-
-    <!-- ── Drawer: Ver Secretaria ───────────────────────────────────────────── -->
-    <app-drawer
-      [isOpen]="verDrawerOpen()"
-      title="Detalle de Secretaria"
-      icon="eye"
-      (closed)="verDrawerOpen.set(false)"
-    >
-      <app-admin-secretarias-ver-drawer (editarClicked)="switchToEditar()" />
-    </app-drawer>
-
-    <!-- ── Drawer: Editar Secretaria ────────────────────────────────────────── -->
-    <app-drawer
-      [isOpen]="editarDrawerOpen()"
-      title="Editar Secretaria"
-      icon="edit"
-      (closed)="editarDrawerOpen.set(false)"
-    >
-      <app-admin-secretarias-editar-drawer (saved)="editarDrawerOpen.set(false)" />
-    </app-drawer>
   `,
   styles: `
     .search-input {
@@ -464,6 +431,7 @@ import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 })
 export class AdminSecretariasComponent {
   protected readonly facade = inject(SecretariasFacade);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
 
@@ -481,13 +449,10 @@ export class AdminSecretariasComponent {
   ]);
 
   protected handleHeroAction(actionId: string): void {
-    if (actionId === 'new') this.crearDrawerOpen.set(true);
+    if (actionId === 'new') {
+      this.layoutDrawer.open(AdminSecretariasCrearDrawerComponent, 'Nueva Secretaria', 'user-plus');
+    }
   }
-
-  // ── Estado drawers ─────────────────────────────────────────────────────────
-  protected readonly crearDrawerOpen = signal(false);
-  protected readonly verDrawerOpen = signal(false);
-  protected readonly editarDrawerOpen = signal(false);
 
   // ── Filtros locales ────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
@@ -573,25 +538,15 @@ export class AdminSecretariasComponent {
 
   protected openVerDrawer(sec: SecretariaTableRow): void {
     this.facade.selectSecretaria(sec);
-    this.verDrawerOpen.set(true);
-  }
-
-  protected onCrearDrawerClosed(): void {
-    this.crearDrawerOpen.set(false);
+    this.layoutDrawer.open(AdminSecretariasVerDrawerComponent, 'Detalle de Secretaria', 'eye');
   }
 
   protected openEditarDrawer(sec: SecretariaTableRow): void {
     this.facade.selectSecretaria(sec);
-    this.editarDrawerOpen.set(true);
+    this.layoutDrawer.open(AdminSecretariasEditarDrawerComponent, 'Editar Secretaria', 'edit');
   }
 
   protected goToAuditoria(): void {
     void this.router.navigate(['/app/admin/auditoria']);
-  }
-
-  /** Desde el drawer Ver → abrir Editar sin perder la secretaria seleccionada */
-  protected switchToEditar(): void {
-    this.verDrawerOpen.set(false);
-    this.editarDrawerOpen.set(true);
   }
 }

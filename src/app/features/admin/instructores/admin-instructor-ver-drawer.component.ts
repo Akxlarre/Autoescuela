@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { LowerCasePipe } from '@angular/common';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
 
 @Component({
   selector: 'app-admin-instructor-ver-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LowerCasePipe, IconComponent],
   template: `
@@ -243,7 +246,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         <h3 class="section-header">Acciones rápidas</h3>
         <button
           class="quick-action-btn"
-          (click)="editarClicked.emit()"
+          (click)="editar()"
           data-llm-action="editar-instructor-desde-ver"
         >
           <app-icon name="edit" [size]="16" />
@@ -360,6 +363,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 })
 export class AdminInstructorVerDrawerComponent {
   protected readonly facade = inject(InstructoresFacade);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  readonly editarClicked = output<void>();
+  protected editar(): void {
+    this.layoutDrawer.open(AdminInstructorEditarDrawerComponent, 'Editar instructor', 'edit');
+  }
 }

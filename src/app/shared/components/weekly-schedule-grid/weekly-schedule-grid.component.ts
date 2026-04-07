@@ -1,130 +1,170 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { getStatusVisual, getStatusLabel, getDotStyle } from '@core/utils/schedule-status.utils';
 import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-portal.model';
 
 @Component({
   selector: 'app-weekly-schedule-grid',
   standalone: true,
-  imports: [CommonModule, IconComponent, SkeletonBlockComponent],
+  imports: [DecimalPipe, IconComponent, SkeletonBlockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [
+    `
+      .schedule-grid {
+        display: grid;
+        grid-template-columns: 60px repeat(var(--days, 5), 1fr);
+      }
+
+      .hour-cell {
+        height: 80px; /* 1 hora = 80px */
+      }
+
+      .grid-content {
+        display: grid;
+        grid-template-columns: repeat(var(--days, 5), 1fr);
+        grid-template-rows: repeat(48, 20px); /* 12h × 4 cuartos = 48 filas */
+      }
+
+      .overflow-x-auto::-webkit-scrollbar {
+        height: 6px;
+      }
+      .overflow-x-auto::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .overflow-x-auto::-webkit-scrollbar-thumb {
+        background: var(--border-subtle);
+        border-radius: 10px;
+      }
+      .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+        background: var(--text-muted);
+      }
+    `,
+  ],
   template: `
-    <div
-      class="bg-surface rounded-[2rem] overflow-hidden relative shadow-[0_4px_24px_rgba(0,0,0,0.02)] ring-1 ring-border-subtle/50 flex flex-col h-full bg-clip-border"
-    >
-      <!-- Toolbar Premium -->
-      <div class="px-8 py-6 flex items-center justify-between bg-surface z-30">
-        <div class="flex flex-col">
-          <h3 class="font-extrabold text-text-primary text-xl tracking-tight">
+    <div class="card overflow-hidden flex flex-col h-full" style="border-radius: var(--radius-xl)">
+      <!-- Toolbar -->
+      <div
+        class="px-6 py-5 flex items-center justify-between"
+        style="border-bottom: 1px solid var(--border-subtle)"
+      >
+        <div class="flex flex-col gap-1">
+          <h3 class="font-bold text-lg tracking-tight" [style.color]="'var(--text-primary)'">
             @if (isLoading()) {
-              <app-skeleton-block variant="text" width="180px" height="28px" />
+              <app-skeleton-block variant="text" width="180px" height="22px" />
             } @else {
               {{ schedule()?.weekLabel || 'Horario Semanal' }}
             }
           </h3>
-          <p class="text-xs font-medium text-text-muted mt-1">
-            Visualización de clases programadas
+          <p class="text-xs font-medium" [style.color]="'var(--text-muted)'">
+            Selecciona un día para ver el detalle en mobile o visualizarlo aquí
           </p>
         </div>
 
-        <div class="flex items-center">
-          <div class="flex p-1 bg-surface-hover/50 border border-divider/50 rounded-xl shadow-sm">
-            <button
-              class="w-8 h-8 flex items-center justify-center hover:bg-surface rounded-lg transition-all text-text-secondary hover:text-text-primary hover:shadow-sm"
-              (click)="prevWeek.emit()"
-              title="Semana anterior"
-            >
-              <app-icon name="chevron-left" [size]="18" />
-            </button>
-            <button
-              class="px-4 h-8 text-sm font-bold hover:bg-surface rounded-lg transition-all text-text-primary mx-1 hover:shadow-sm"
-              (click)="today.emit()"
-            >
-              Hoy
-            </button>
-            <button
-              class="w-8 h-8 flex items-center justify-center hover:bg-surface rounded-lg transition-all text-text-secondary hover:text-text-primary hover:shadow-sm"
-              (click)="nextWeek.emit()"
-              title="Siguiente semana"
-            >
-              <app-icon name="chevron-right" [size]="18" />
-            </button>
-          </div>
+        <!-- Navegación de semana -->
+        <div
+          class="flex items-center p-1 rounded-xl"
+          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle)"
+        >
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style="color: var(--text-secondary)"
+            (click)="prevWeek.emit()"
+            title="Semana anterior"
+            data-llm-action="prev-week"
+          >
+            <app-icon name="chevron-left" [size]="18" />
+          </button>
+          <button
+            class="px-4 h-8 text-sm font-bold rounded-lg transition-colors mx-1"
+            style="color: var(--text-primary)"
+            (click)="today.emit()"
+            data-llm-action="go-today"
+          >
+            Hoy
+          </button>
+          <button
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
+            style="color: var(--text-secondary)"
+            (click)="nextWeek.emit()"
+            title="Siguiente semana"
+            data-llm-action="next-week"
+          >
+            <app-icon name="chevron-right" [size]="18" />
+          </button>
         </div>
       </div>
-      <div class="overflow-x-auto flex-1 bg-surface relative">
+
+      <!-- Cuerpo con scroll horizontal -->
+      <div class="overflow-x-auto flex-1" style="background: var(--bg-surface)">
         <div
           class="min-w-[900px] schedule-container"
           [style.--days]="schedule()?.days?.length || 5"
         >
-          <!-- Grid Header Premium -->
-          <div class="schedule-grid sticky top-0 z-40 bg-surface/80 backdrop-blur-md pt-6 pb-8">
-            <!-- Time Corner -->
+          <!-- Header días — sticky -->
+          <div
+            class="schedule-grid sticky top-0 z-40 pt-5 pb-6"
+            style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle)"
+          >
+            <!-- Esquina vacía (alineada con la columna de horas) -->
             <div></div>
 
-            <!-- Day Columns: skeleton vs real -->
+            <!-- Columnas de días -->
             @if (isLoading()) {
               @for (i of [1, 2, 3, 4, 5]; track i) {
                 <div class="flex flex-col items-center justify-center px-1">
-                  <div
-                    class="w-full max-w-[85px] py-4 rounded-3xl flex flex-col items-center justify-center gap-2.5 opacity-50"
-                  >
-                    <app-skeleton-block variant="text" width="32px" height="10px" />
-                    <app-skeleton-block
-                      variant="rect"
-                      width="44px"
-                      height="44px"
-                      class="rounded-2xl"
-                    />
+                  <div class="w-full max-w-[80px] py-3 flex flex-col items-center gap-2">
+                    <app-skeleton-block variant="text" width="28px" height="10px" />
+                    <app-skeleton-block variant="rect" width="44px" height="44px" />
                   </div>
                 </div>
               }
             } @else {
               @for (day of schedule()?.days; track day.date) {
                 <div class="flex flex-col items-center justify-center px-1">
-                  <div
-                    class="w-full max-w-[85px] py-4 rounded-3xl flex flex-col items-center justify-center transition-all duration-500 group relative"
-                    [class.bg-brand]="day.isToday"
-                    [class.text-brand-contrast]="day.isToday"
-                    [class.shadow-2xl]="day.isToday"
-                    [class.shadow-brand/25]="day.isToday"
-                    [class.hover:bg-surface-hover]="!day.isToday"
+                  <button
+                    class="w-full max-w-[80px] py-3 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 relative group"
+                    [style.background]="getDayHeaderBg(day)"
+                    (click)="daySelect.emit(day.date)"
                   >
-                    <div
-                      class="text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 opacity-60"
-                      [class.text-text-muted]="!day.isToday"
-                      [class.text-brand-contrast/90]="day.isToday"
+                    <!-- Nombre del día -->
+                    <span
+                      class="text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                      [style.color]="getDayHeaderTextColor(day, 'label')"
                     >
                       {{ day.name }}
-                    </div>
-                    <div
-                      class="text-3xl font-black flex items-center justify-center leading-none tracking-tighter"
-                      [class.text-text-primary]="!day.isToday"
+                    </span>
+                    <!-- Número del día -->
+                    <span
+                      class="text-3xl font-black leading-none tracking-tighter"
+                      [style.color]="getDayHeaderTextColor(day, 'number')"
                     >
                       {{ day.dayNumber }}
-                    </div>
-
-                    @if (day.isToday) {
+                    </span>
+                    
+                    <!-- Indicador "hoy" sutil -->
+                    @if (day.isToday && day.date !== selectedDate()) {
                       <div
-                        class="absolute -bottom-2 w-1.5 h-1.5 rounded-full bg-brand shadow-[0_0_10px_var(--color-brand)]"
+                        class="absolute -bottom-1 w-1 h-1 rounded-full"
+                        style="background: var(--color-primary)"
                       ></div>
                     }
-                  </div>
+                  </button>
                 </div>
               }
             }
           </div>
 
-          <!-- Grid Body -->
+          <!-- Cuerpo del grid -->
           <div class="relative schedule-grid schedule-body">
-            <!-- Time Labels Column -->
-            <!-- Time Labels Column (Minimalist) -->
+            <!-- Columna de etiquetas horarias -->
             <div class="flex flex-col z-20 pointer-events-none">
               @for (hour of hours; track hour) {
-                <div class="hour-cell relative flex items-start justify-end pr-6">
+                <div class="hour-cell relative flex items-start justify-end pr-4">
                   <span
-                    class="text-[10px] text-text-muted/60 font-bold tracking-widest absolute -top-[6px]"
+                    class="text-[10px] font-bold tracking-widest absolute -top-[6px]"
+                    [style.color]="'var(--text-muted)'"
                   >
                     {{ hour | number: '2.0' }}:00
                   </span>
@@ -132,148 +172,66 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
               }
             </div>
 
-            <!-- Grid Cells -->
+            <!-- Celdas del grid con bloques de clase -->
             <div
               class="grid-content relative"
               [style.grid-column]="'span ' + (schedule()?.days?.length || 5)"
             >
-              <!-- Full Floating Grid: No horizontal lines as requested -->
-              <div class="absolute inset-0 pointer-events-none"></div>
+              <!-- Today Column Tint -->
+              @for (day of schedule()?.days; track day.date; let i = $index) {
+                @if (day.isToday) {
+                  <div
+                    class="absolute top-0 bottom-0 pointer-events-none z-0 rounded-lg"
+                    [style.grid-column]="i + 1"
+                    style="background: rgba(14, 165, 233, 0.04)"
+                  ></div>
+                }
+              }
 
-              <!-- Skeleton: ghost blocks posicionados en el CSS grid (grid-template-rows: repeat(48,20px)) -->
-              <!-- Fórmula: row = (hour-8)*4 + minuteOffset + 1 | 60min=4rows, 90min=6rows -->
+              <!-- Líneas horizontales de horas -->
+              <div class="absolute inset-0 pointer-events-none" aria-hidden="true">
+                @for (hour of hours; track hour; let i = $index) {
+                  <div
+                    class="absolute w-full"
+                    style="border-top: 1px solid var(--border-subtle); opacity: 0.5"
+                    [style.top.px]="i * 80"
+                  ></div>
+                }
+              </div>
+
+              <!-- Skeleton: bloques fantasma representativos -->
               @if (isLoading()) {
-                <!-- Lunes: 9:00 90min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-4 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:1; grid-row-start:5; grid-row-end:11;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="72%"
-                    height="13px"
-                    class="opacity-60 mt-1"
-                  />
-                </div>
-                <!-- Lunes: 14:00 60min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-3 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:1; grid-row-start:25; grid-row-end:29;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="60%"
-                    height="13px"
-                    class="opacity-55 mt-1"
-                  />
-                </div>
-                <!-- Martes: 10:30 90min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-4 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:2; grid-row-start:11; grid-row-end:17;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="80%"
-                    height="13px"
-                    class="opacity-60 mt-1"
-                  />
-                </div>
-                <!-- Miércoles: 8:00 60min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-3 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:3; grid-row-start:1; grid-row-end:5;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="65%"
-                    height="13px"
-                    class="opacity-55 mt-1"
-                  />
-                </div>
-                <!-- Miércoles: 13:00 90min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-4 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:3; grid-row-start:21; grid-row-end:27;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="75%"
-                    height="13px"
-                    class="opacity-60 mt-1"
-                  />
-                </div>
-                <!-- Jueves: 11:00 60min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-3 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:4; grid-row-start:13; grid-row-end:17;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="55%"
-                    height="13px"
-                    class="opacity-55 mt-1"
-                  />
-                </div>
-                <!-- Jueves: 16:00 90min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-4 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:4; grid-row-start:33; grid-row-end:39;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="70%"
-                    height="13px"
-                    class="opacity-60 mt-1"
-                  />
-                </div>
-                <!-- Viernes: 9:30 90min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-4 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:5; grid-row-start:7; grid-row-end:13;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="85%"
-                    height="13px"
-                    class="opacity-60 mt-1"
-                  />
-                </div>
-                <!-- Viernes: 15:00 60min -->
-                <div
-                  class="rounded-[1.5rem] bg-surface-hover/60 ring-1 ring-border-subtle/30 m-1 p-3 flex flex-col gap-2 pointer-events-none"
-                  style="grid-column:5; grid-row-start:29; grid-row-end:33;"
-                >
-                  <app-skeleton-block variant="text" width="38px" height="8px" class="opacity-50" />
-                  <app-skeleton-block
-                    variant="text"
-                    width="60%"
-                    height="13px"
-                    class="opacity-55 mt-1"
-                  />
-                </div>
+                @for (ghost of skeletonBlocks; track ghost.col) {
+                  <div
+                    class="rounded-2xl m-1 p-3 flex flex-col gap-2 pointer-events-none"
+                    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle)"
+                    [style.grid-column]="ghost.col"
+                    [style.grid-row-start]="ghost.rowStart"
+                    [style.grid-row-end]="ghost.rowEnd"
+                  >
+                    <app-skeleton-block variant="text" width="36px" height="8px" />
+                    <app-skeleton-block variant="text" width="70%" height="12px" />
+                  </div>
+                }
               } @else {
                 @for (block of schedule()?.blocks; track block.sessionId) {
                   <div
-                    [class]="getBlockCardClass(block)"
+                    [class]="getBlockClass(block)"
+                    [style]="getBlockStyle(block)"
                     [style.grid-column]="block.dayOfWeek + 1"
                     [style.grid-row-start]="getRowStart(block)"
                     [style.grid-row-end]="getRowEnd(block)"
+                    [attr.data-llm-action]="
+                      block.status === 'scheduled' || block.status === 'in_progress'
+                        ? 'open-class-' + block.sessionId
+                        : null
+                    "
                     (click)="
                       block.status !== 'cancelled' &&
                         block.status !== 'no_show' &&
                         blockClick.emit(block)
                     "
                   >
-                    <!-- Card content anatomy Optimized for variable heights -->
                     <div
                       class="flex flex-col gap-0.5 h-full min-h-0 overflow-hidden"
                       [class.flex-row]="block.durationMin <= 30"
@@ -281,87 +239,84 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                       [class.gap-2]="block.durationMin <= 30"
                     >
                       @if (block.durationMin > 30) {
-                        <div
-                          class="flex items-center justify-between pointer-events-none shrink-0 mb-1"
-                        >
+                        <!-- Layout normal: hora + nombre + footer -->
+                        <div class="flex items-center justify-between shrink-0 mb-1">
                           <span
-                            class="text-[9px] font-black tracking-[0.1em] uppercase opacity-90"
-                            [class]="
-                              block.status === 'in_progress' ? 'text-brand-contrast' : 'text-brand'
+                            class="text-[9px] font-black tracking-widest uppercase"
+                            [style.color]="
+                              block.status === 'in_progress'
+                                ? 'var(--color-primary-text)'
+                                : 'var(--color-primary)'
                             "
                           >
                             {{ block.startTime }}
                           </span>
                           @if (block.status === 'in_progress') {
                             <span
-                              class="flex h-1.5 w-1.5 rounded-full bg-brand-contrast shadow-[0_0_8px_#fff]"
+                              class="flex h-1.5 w-1.5 rounded-full indicator-live"
+                              style="background: var(--color-primary-text)"
                             ></span>
+                          } @else if (getStatusVisual(block.status).icon; as iconName) {
+                             <app-icon [name]="iconName" [size]="10" [style.color]="'var(--text-muted)'" />
                           }
                         </div>
-
                         <div
-                          class="text-xs font-black leading-tight tracking-tight line-clamp-2"
-                          [class]="
+                          class="text-xs font-bold leading-tight tracking-tight line-clamp-2"
+                          [style.color]="
                             block.status === 'in_progress'
-                              ? 'text-brand-contrast'
-                              : 'text-text-primary'
+                              ? 'var(--color-primary-text)'
+                              : 'var(--text-primary)'
                           "
                         >
                           {{ block.studentName }}
                         </div>
-
                         <div
-                          class="mt-auto flex items-center justify-between opacity-80 shrink-0 pt-1"
+                          class="mt-auto flex items-center justify-between shrink-0 pt-1"
+                          style="opacity: 0.8"
                         >
-                          <div
+                          <span
                             class="text-[9px] font-bold uppercase tracking-wider truncate"
-                            [class]="
+                            [style.color]="
                               block.status === 'in_progress'
-                                ? 'text-brand-contrast'
-                                : 'text-text-muted'
+                                ? 'var(--color-primary-text)'
+                                : 'var(--text-muted)'
                             "
                           >
-                            Linea #{{ block.classNumber }}
-                          </div>
-                          <div
+                            #{{ block.classNumber }}
+                          </span>
+                          <span
                             class="text-[9px] font-black shrink-0 ml-2"
-                            [class]="
+                            [style.color]="
                               block.status === 'in_progress'
-                                ? 'text-brand-contrast'
-                                : 'text-text-muted'
+                                ? 'var(--color-primary-text)'
+                                : 'var(--text-muted)'
                             "
                           >
                             {{ block.durationMin }}'
-                          </div>
+                          </span>
                         </div>
                       } @else {
-                        <!-- Ultra-compact layout for 30min blocks -->
+                        <!-- Layout ultra-compacto para bloques ≤ 30min -->
                         <span
-                          class="text-[9px] font-black tracking-[0.1em] uppercase px-1.5 py-0.5 rounded bg-brand/10 text-brand"
-                          [class.bg-brand-contrast/20]="block.status === 'in_progress'"
-                          [class.text-brand-contrast]="block.status === 'in_progress'"
+                          class="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-md"
+                          style="background: rgba(255,255,255,0.2)"
+                          [style.color]="
+                            block.status === 'in_progress'
+                              ? 'var(--color-primary-text)'
+                              : 'var(--text-primary)'
+                          "
                         >
                           {{ block.startTime }}
                         </span>
                         <div
                           class="text-[11px] font-bold truncate flex-1"
-                          [class]="
+                          [style.color]="
                             block.status === 'in_progress'
-                              ? 'text-brand-contrast'
-                              : 'text-text-primary'
+                              ? 'var(--color-primary-text)'
+                              : 'var(--text-primary)'
                           "
                         >
                           {{ block.studentName }}
-                        </div>
-                        <div
-                          class="text-[9px] font-bold opacity-60 shrink-0"
-                          [class]="
-                            block.status === 'in_progress'
-                              ? 'text-brand-contrast'
-                              : 'text-text-muted'
-                          "
-                        >
-                          {{ block.durationMin }}'
                         </div>
                       }
                     </div>
@@ -373,140 +328,111 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         </div>
       </div>
 
-      <!-- Legend -->
+      <!-- Leyenda -->
       <div
-        class="px-8 py-5 bg-surface flex flex-wrap gap-8 items-center z-30 relative border-t border-divider/30"
+        class="px-6 py-4 flex flex-wrap gap-6 items-center"
+        style="border-top: 1px solid var(--border-subtle); background: var(--bg-surface)"
       >
-        <span class="text-[10px] font-bold text-text-muted uppercase tracking-widest mr-2"
-          >Leyenda</span
+        <span
+          class="text-[10px] font-bold uppercase tracking-widest mr-1"
+          [style.color]="'var(--text-muted)'"
         >
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2.5 h-2.5 rounded-full bg-surface border-2 border-brand/50 shadow-sm"
-          ></span>
-          <span class="text-xs font-medium text-text-secondary">Programada</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2.5 h-2.5 rounded-full bg-brand shadow-[0_0_8px_var(--color-brand)] shadow-brand/40"
-          ></span>
-          <span class="text-xs font-bold text-text-primary">En curso</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2.5 h-2.5 rounded-full bg-surface-hover border border-border-subtle opacity-70"
-          ></span>
-          <span class="text-xs font-medium text-text-muted">Completada</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2.5 h-2.5 rounded-full bg-transparent border border-dashed border-divider/50"
-          ></span>
-          <span class="text-xs font-medium text-text-muted">Cancelada</span>
-        </div>
+          Leyenda
+        </span>
+        @for (item of legendItems; track item.label) {
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full shrink-0" [attr.style]="item.dotStyle"></span>
+            <span
+              class="text-xs font-medium"
+              [style.color]="item.emphasis ? 'var(--text-primary)' : 'var(--text-secondary)'"
+            >
+              {{ item.label }}
+            </span>
+          </div>
+        }
       </div>
     </div>
-
-    <style>
-      .schedule-grid {
-        display: grid;
-        grid-template-columns: 60px repeat(var(--days, 5), 1fr);
-      }
-
-      .hour-cell,
-      .hour-row {
-        height: 80px; /* 1 hour = 80px */
-      }
-
-      .grid-content {
-        display: grid;
-        grid-template-columns: repeat(var(--days, 5), 1fr);
-        grid-template-rows: repeat(48, 20px); /* 12h * 4 quarters = 48 rows. Each quarter = 20px */
-      }
-
-      /* Webkit scrollbar for premium look */
-      .overflow-x-auto::-webkit-scrollbar {
-        height: 6px;
-      }
-      .overflow-x-auto::-webkit-scrollbar-track {
-        background: transparent;
-      }
-      .overflow-x-auto::-webkit-scrollbar-thumb {
-        background: var(--divider);
-        border-radius: 10px;
-      }
-      .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-        background: var(--text-muted);
-      }
-    </style>
   `,
 })
 export class WeeklyScheduleGridComponent {
   schedule = input<WeekSchedule | null>(null);
   isLoading = input(false);
+  selectedDate = input<string | null>(null);
 
-  // Outputs
   prevWeek = output<void>();
   nextWeek = output<void>();
   today = output<void>();
+  daySelect = output<string>();
   blockClick = output<ScheduleBlock>();
 
-  // Use 12 hours grid (8:00 to 20:00)
   readonly hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
-  /**
-   * Calculates the starting row for a block (1-based index)
-   * We have 4 rows per hour (15min each)
-   */
+  /** Bloques fantasma para skeleton */
+  readonly skeletonBlocks = [
+    { col: 1, rowStart: 5, rowEnd: 11 },
+    { col: 1, rowStart: 25, rowEnd: 29 },
+    { col: 2, rowStart: 11, rowEnd: 17 },
+    { col: 3, rowStart: 1, rowEnd: 5 },
+    { col: 3, rowStart: 21, rowEnd: 27 },
+    { col: 4, rowStart: 13, rowEnd: 17 },
+    { col: 4, rowStart: 33, rowEnd: 39 },
+    { col: 5, rowStart: 7, rowEnd: 13 },
+    { col: 5, rowStart: 29, rowEnd: 33 },
+  ];
+
+  readonly legendItems = (['scheduled', 'in_progress', 'completed', 'cancelled'] as const).map(s => ({
+    label: getStatusLabel(s),
+    dotStyle: `background: ${getDotStyle(s)['background']}; border: ${getDotStyle(s)['border']};`,
+    emphasis: s === 'in_progress',
+  }));
+
   getRowStart(block: ScheduleBlock): number {
     const hourOffset = block.hour - 8;
     const minuteOffset = Math.floor(block.minuteStart / 15);
     return hourOffset * 4 + minuteOffset + 1;
   }
 
-  /**
-   * Calculates the ending row / span
-   */
   getRowEnd(block: ScheduleBlock): number {
-    const span = Math.ceil(block.durationMin / 15);
-    return this.getRowStart(block) + span;
+    return this.getRowStart(block) + Math.ceil(block.durationMin / 15);
   }
 
-  /**
-   * Dynamic classes replacing static CSS rules
-   */
-  getBlockCardClass(block: ScheduleBlock): string {
-    const isInteractive = block.status !== 'cancelled' && block.status !== 'no_show';
-    const isShort = block.durationMin <= 45;
+  getDayHeaderBg(day: any): string {
+    if (day.isToday) return 'var(--color-primary)';
+    if (day.date === this.selectedDate()) return 'var(--color-primary-muted)';
+    return 'transparent';
+  }
 
-    // Base: very rounded, dynamic padding based on duration
-    const base =
-      'rounded-[1.5rem] transition-all duration-300 relative group z-10 m-1 flex flex-col overflow-hidden ' +
-      (isShort ? 'p-2 px-3 ' : 'p-4 ') +
-      (isInteractive ? 'cursor-pointer hover:scale-[1.03] ' : 'cursor-default ');
+  getDayHeaderTextColor(day: any, type: 'label' | 'number'): string {
+    if (day.isToday) return 'var(--color-primary-text)';
+    if (day.date === this.selectedDate()) return 'var(--color-primary)';
+    return type === 'label' ? 'var(--text-muted)' : 'var(--text-primary)';
+  }
 
-    switch (block.status) {
-      case 'in_progress':
-        return (
-          base +
-          'bg-brand text-brand-contrast shadow-[0_12px_40px_-12px_rgba(var(--color-brand-rgb),0.6)] shadow-brand/40 ring-1 ring-white/20'
-        );
-      case 'completed':
-        return (
-          base +
-          'bg-surface-hover/30 text-text-secondary ring-1 ring-divider/10 opacity-40 hover:opacity-100 grayscale hover:grayscale-0 lg:p-2'
-        );
-      case 'cancelled':
-      case 'no_show':
-        return (
-          base +
-          'bg-transparent border-2 border-dashed border-divider/10 text-text-muted opacity-30'
-        );
-      default: // scheduled
-        return (
-          base +
-          'bg-surface text-text-primary shadow-[0_4px_20px_rgba(0,0,0,0.03)] ring-1 ring-border-subtle/30 hover:shadow-[0_15px_30px_rgba(0,0,0,0.06)]'
-        );
+  getBlockStyle(block: ScheduleBlock): string {
+    const visual = getStatusVisual(block.status);
+    let style = `border-left: 3px solid ${visual.borderColor}; opacity: ${visual.opacity};`;
+    
+    if (block.status === 'in_progress') {
+      style += ` background: var(--color-primary); box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent); z-index: 20;`;
+    } else {
+      style += ` background: var(--bg-surface); border: 1px solid var(--border-subtle); border-left-width: 3px;`;
     }
+    
+    return style;
+  }
+
+  getBlockClass(block: ScheduleBlock): string {
+    const visual = getStatusVisual(block.status);
+    const isShort = block.durationMin <= 45;
+    const pad = isShort ? 'p-2 px-3' : 'p-3';
+    const cursor = visual.interactive ? 'cursor-pointer' : 'cursor-default';
+    const base = `rounded-2xl transition-all duration-200 relative m-1 flex flex-col overflow-hidden ${pad} ${cursor}`;
+    
+    return block.status === 'in_progress' ? `${base} scale-[1.02] shadow-lg` : base;
+  }
+
+  // Wrapper for template
+  getStatusVisual(status: any) {
+    return getStatusVisual(status);
   }
 }

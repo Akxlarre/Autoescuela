@@ -8,17 +8,10 @@ import {
   output,
   signal,
 } from '@angular/core';
-import {
-  AbstractControl,
-  FormBuilder,
-  ReactiveFormsModule,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
-import { DrawerComponent } from '@shared/components/drawer/drawer.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
-import { ToastService } from '@core/services/ui/toast.service';
 import { formatCLP, toISODate } from '@core/utils/date.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 
@@ -43,26 +36,18 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
  * **Modo Global** (enrollmentId === null): abierto desde el botón "+ Registrar Pago".
  *   El usuario debe seleccionar el alumno desde un <select> que itera facade.alumnosConDeuda().
  *   Si el alumno no tiene matrícula activa con saldo, el pago se registra sin vínculo.
- *
- * Inputs:  isOpen (req), enrollmentId, alumnoNombre, saldoPendiente, pagadoActual
- * Outputs: closed, saved
  */
 @Component({
   selector: 'app-registrar-pago-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerComponent, ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent],
   template: `
-    <app-drawer
-      [isOpen]="isOpen()"
-      title="Registrar Pago"
-      icon="credit-card"
-      [hasFooter]="true"
-      (closed)="onCancel()"
-    >
-      <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
-        <!-- ── MODO GLOBAL: selector de alumno ────────────────────────────── -->
-        @if (modoGlobal()) {
+    <div class="flex flex-col h-full bg-surface">
+      <div class="flex-1 overflow-y-auto p-5">
+        <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
+          <!-- ── MODO GLOBAL: selector de alumno ────────────────────────────── -->
+          @if (facade.enrollmentSeleccionado() === null) {
           <div class="flex flex-col gap-1.5">
             <label for="pago-enrollment" class="field-label">
               ALUMNO / MATRÍCULA <span style="color: var(--state-error)">*</span>
@@ -132,33 +117,47 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           </div>
         }
 
-        <!-- ── MODO CONTEXTUAL: info del alumno preseleccionado ───────────── -->
-        @if (!modoGlobal() && alumnoNombre()) {
-          <div class="alumno-info-card">
-            <div class="flex flex-col gap-0.5">
-              <span
-                class="text-xs font-semibold uppercase tracking-wide"
-                style="color: var(--ds-brand)"
-              >
-                Alumno
-              </span>
-              <span class="text-sm font-semibold" style="color: var(--text-primary)">
-                {{ alumnoNombre() }}
-              </span>
+          <!-- ── MODO CONTEXTUAL: info del alumno preseleccionado ───────────── -->
+          @if (facade.enrollmentSeleccionado() !== null && facade.estadoCuentaResumen(); as ctx) {
+            <div class="alumno-info-card">
+              <div class="flex flex-col gap-0.5">
+                <span
+                  class="text-xs font-semibold uppercase tracking-wide"
+                  style="color: var(--ds-brand)"
+                >
+                  Alumno
+                </span>
+                <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                  {{ ctx.alumno }}
+                </span>
+              </div>
+              <div class="flex flex-col gap-0.5 text-right">
+                <span
+                  class="text-xs font-semibold uppercase tracking-wide"
+                  style="color: var(--text-muted)"
+                >
+                  Saldo Pendiente
+                </span>
+                <span class="text-base font-bold" style="color: var(--state-warning)">
+                  {{ clp(ctx.saldoPendiente) }}
+                </span>
+              </div>
             </div>
-            <div class="flex flex-col gap-0.5 text-right">
-              <span
-                class="text-xs font-semibold uppercase tracking-wide"
-                style="color: var(--text-muted)"
-              >
-                Saldo Pendiente
-              </span>
-              <span class="text-base font-bold" style="color: var(--state-warning)">
-                {{ clp(saldoPendiente()) }}
-              </span>
-            </div>
-          </div>
-        }
+          } @else if (facade.enrollmentSeleccionado() !== null) {
+             <!-- Fallback if details not loaded yet or row source -->
+              @if (selectedFromList; as alumno) {
+                <div class="alumno-info-card">
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--ds-brand)">Alumno</span>
+                    <span class="text-sm font-semibold" style="color: var(--text-primary)">{{ alumno.alumno }}</span>
+                  </div>
+                  <div class="flex flex-col gap-0.5 text-right">
+                    <span class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-muted)">Saldo Pendiente</span>
+                    <span class="text-base font-bold" style="color: var(--state-warning)">{{ clp(alumno.saldo) }}</span>
+                  </div>
+                </div>
+              }
+          }
 
         <!-- Fecha de pago -->
         <div class="flex flex-col gap-1.5">
@@ -375,7 +374,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
       </form>
 
       <!-- ── Footer ──────────────────────────────────────────────────────────── -->
-      <div drawer-footer class="flex items-center justify-end gap-2">
+      <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
         <button
           type="button"
           class="btn-cancel"
@@ -400,7 +399,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           }
         </button>
       </div>
-    </app-drawer>
+    </div>
   `,
   styles: `
     /* ── Alumno info ── */
@@ -544,19 +543,13 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
   `,
 })
 export class RegistrarPagoDrawerComponent {
-  // ── Inputs / Outputs ────────────────────────────────────────────────────────
-  readonly isOpen = input.required<boolean>();
-  readonly enrollmentId = input<number | null>(null);
-  readonly alumnoNombre = input<string>('');
-  readonly saldoPendiente = input<number>(0);
-  readonly pagadoActual = input<number>(0);
-  readonly closed = output<void>();
+  // ── Outputs ────────────────────────────────────────────────────────────────
   readonly saved = output<void>();
 
   // ── Injections ──────────────────────────────────────────────────────────────
   protected readonly facade = inject(PagosFacade);
-  private readonly toast = inject(ToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Estado local ────────────────────────────────────────────────────────────
   protected readonly isSaving = signal(false);
@@ -564,14 +557,21 @@ export class RegistrarPagoDrawerComponent {
   protected readonly clp = formatCLP;
 
   /** Modo global: drawer abierto sin matrícula preseleccionada. */
-  protected readonly modoGlobal = computed(() => this.enrollmentId() === null);
+  protected readonly modoGlobal = computed(() => this.facade.enrollmentSeleccionado() === null);
 
-  /** Alumno seleccionado en modo global — getter evaluado en cada CD del formulario. */
+  /** Alumno seleccionado en el dropdown (solo modo global). */
   protected get selectedAlumno(): AlumnoDeudor | null {
     if (!this.modoGlobal()) return null;
     const eid = this.form.get('enrollment_id')?.value;
     if (!eid) return null;
     return this.facade.alumnosConDeuda().find((a) => a.enrollmentId === Number(eid)) ?? null;
+  }
+
+  /** Alumno coincidente desde la lista de deudores si hay enrollmentSeleccionado. */
+  protected get selectedFromList(): AlumnoDeudor | null {
+    const eid = this.facade.enrollmentSeleccionado();
+    if (eid === null) return null;
+    return this.facade.alumnosConDeuda().find((a) => a.enrollmentId === eid) ?? null;
   }
 
   // ── Formulario reactivo ─────────────────────────────────────────────────────
@@ -591,10 +591,7 @@ export class RegistrarPagoDrawerComponent {
   );
 
   constructor() {
-    // Resetear el formulario y ajustar validators cada vez que el drawer se abre
-    effect(() => {
-      if (this.isOpen()) this.resetForm();
-    });
+    this.resetForm();
   }
 
   // ── Balance check (getter — se re-evalúa con cada CD del form) ───────────────
@@ -629,8 +626,7 @@ export class RegistrarPagoDrawerComponent {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   protected onCancel(): void {
-    this.resetForm();
-    this.closed.emit();
+    this.layoutDrawer.back();
   }
 
   protected async onSubmit(): Promise<void> {
@@ -646,21 +642,21 @@ export class RegistrarPagoDrawerComponent {
       const v = this.form.getRawValue();
 
       // Resuelve qué enrollmentId usar según el modo
-      const enrollmentId = this.modoGlobal() ? (v.enrollment_id ?? null) : this.enrollmentId();
+      const enrollmentId = this.modoGlobal() ? (v.enrollment_id ?? null) : this.facade.enrollmentSeleccionado();
 
       // Resuelve montosActuales según el modo
       let montosActuales: { total_paid: number; pending_balance: number } | null = null;
       if (enrollmentId !== null) {
-        if (this.modoGlobal()) {
+        // Prioridad 1: Estado de cuenta (más fiable)
+        const res = this.facade.estadoCuentaResumen();
+        if (res && res.enrollmentId === enrollmentId) {
+          montosActuales = { total_paid: res.totalPagado, pending_balance: res.saldoPendiente };
+        } else {
+          // Prioridad 2: Buscar en la lista de deudores
           const alumno = this.facade.alumnosConDeuda().find((a) => a.enrollmentId === enrollmentId);
           if (alumno) {
             montosActuales = { total_paid: alumno.pagado, pending_balance: alumno.saldo };
           }
-        } else {
-          montosActuales = {
-            total_paid: this.pagadoActual(),
-            pending_balance: this.saldoPendiente(),
-          };
         }
       }
 
@@ -679,10 +675,9 @@ export class RegistrarPagoDrawerComponent {
         montosActuales,
       );
 
-      this.toast.success('Pago registrado correctamente.');
-      this.resetForm();
+      this.facade.showSuccess('Pago registrado correctamente.');
       this.saved.emit();
-      this.closed.emit();
+      this.layoutDrawer.back();
     } catch (err) {
       this.saveError.set(
         err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.',
@@ -700,7 +695,7 @@ export class RegistrarPagoDrawerComponent {
       eidCtrl.setValue(null);
     } else {
       eidCtrl.clearValidators();
-      eidCtrl.setValue(this.modoGlobal() ? null : this.enrollmentId());
+      eidCtrl.setValue(this.modoGlobal() ? null : this.facade.enrollmentSeleccionado());
     }
     eidCtrl.updateValueAndValidity();
 

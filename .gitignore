@@ -25,6 +25,7 @@ bazel-out/
 # Agentes de IA e Indexed (Koa Blueprint)
 .mcp.json
 .claude/logs/
+.claude/temp/
 .gemini/
 
 environments/

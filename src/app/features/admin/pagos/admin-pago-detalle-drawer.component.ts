@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@ang
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
@@ -21,7 +22,7 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
   selector: 'app-admin-pago-detalle-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, RegistrarPagoDrawerComponent],
+  imports: [IconComponent, SkeletonBlockComponent],
   template: `
     <div class="flex flex-col gap-5 p-1">
       <!-- ── Skeleton ──────────────────────────────────────────────────────────── -->
@@ -295,19 +296,6 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
         </div>
       }
     </div>
-
-    <!-- ── Drawer: Registrar Pago (overlay sobre el panel) ────────────────────── -->
-    @if (facade.estadoCuentaResumen(); as resumen) {
-      <app-registrar-pago-drawer
-        [isOpen]="pagoDrawerOpen()"
-        [enrollmentId]="resumen.enrollmentId"
-        [alumnoNombre]="resumen.alumno"
-        [saldoPendiente]="resumen.saldoPendiente"
-        [pagadoActual]="resumen.totalPagado"
-        (closed)="pagoDrawerOpen.set(false)"
-        (saved)="onPagoSaved()"
-      />
-    }
   `,
   styles: `
     .btn-primary {
@@ -328,8 +316,8 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 })
 export class AdminPagoDetalleDrawerComponent implements OnInit {
   protected readonly facade = inject(PagosFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  protected readonly pagoDrawerOpen = signal(false);
   protected readonly clp = formatCLP;
 
   ngOnInit(): void {
@@ -340,16 +328,10 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
   }
 
   protected openPagoDrawer(): void {
-    this.pagoDrawerOpen.set(true);
+    this.layoutDrawer.push(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
   }
 
-  protected onPagoSaved(): void {
-    // Recargar el detalle tras un pago exitoso
-    const eid = this.facade.enrollmentSeleccionado();
-    if (eid !== null) {
-      this.facade.cargarEstadoCuenta(eid);
-    }
-  }
+
 
   protected fechaCorta(fecha: string | null): string {
     if (!fecha) return '—';

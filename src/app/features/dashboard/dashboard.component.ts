@@ -232,9 +232,9 @@ export class DashboardComponent {
     })),
   );
   constructor() {
-    // Iniciar la carga de datos del dashboard al construir el componente
-    this.dashboardFacade.loadDashboardData();
-    this.dashboardAlertsFacade.loadAlerts();
+    // Iniciar la carga de datos con patrón SWR
+    void this.dashboardFacade.initialize();
+    void this.dashboardAlertsFacade.initialize();
 
     afterNextRender(() => {
       if (this.bentoGrid()) {

@@ -73,18 +73,10 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
         [subtitle]="heroSubtitle()"
         [chips]="heroChips()"
         [actions]="heroActions()"
+        backRoute="/app/admin/flota"
+        backLabel="Flota"
         (actionClick)="handleHeroAction($event)"
-      >
-        <!-- Breadcrumb slot -->
-        <nav slot="breadcrumb" class="flex items-center gap-1.5 text-xs text-text-muted mb-1">
-          <a routerLink="/app/admin/flota" class="hover:text-text-primary transition-colors flex items-center gap-1">
-            <app-icon name="car" [size]="12" />
-            Flota
-          </a>
-          <app-icon name="chevron-right" [size]="12" />
-          <span class="text-text-secondary font-medium">Mantenimientos</span>
-        </nav>
-      </app-section-hero>
+      />
 
       <!-- KPIs Bento -->
       @for (kpi of maintenanceKpis(); track kpi.id) {

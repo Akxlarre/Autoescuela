@@ -51,6 +51,9 @@ export class PromocionesFacade {
   readonly finalizadas = computed(
     () => this._promociones().filter((p) => p.status === 'finished').length,
   );
+  readonly totalAlumnos = computed(() =>
+    this._promociones().reduce((sum, p) => sum + p.totalEnrolled, 0),
+  );
 
   // ── SWR: initialize ─────────────────────────────────────────────────────────
   async initialize(): Promise<void> {

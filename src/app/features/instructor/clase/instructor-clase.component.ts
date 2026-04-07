@@ -4,7 +4,6 @@ import { LowerCasePipe } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
-import { ToastService } from '@core/services/ui/toast.service';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -30,6 +29,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         title="Iniciar Clase"
         subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
         variant="compact"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
         [actions]="heroActions"
       />
 
@@ -198,20 +199,11 @@ export class InstructorClaseComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private fb = inject(FormBuilder);
-  private toast = inject(ToastService);
 
   public startForm: FormGroup;
   public isSubmitting = signal(false);
 
-  readonly heroActions: SectionHeroAction[] = [
-    {
-      id: 'back',
-      label: 'Volver',
-      icon: 'arrow-left',
-      primary: false,
-      route: '/app/instructor/dashboard'
-    }
-  ];
+  readonly heroActions: SectionHeroAction[] = [];
 
   constructor() {
     this.startForm = this.fb.group({
@@ -239,7 +231,7 @@ export class InstructorClaseComponent implements OnInit {
       await this.clasesFacade.startClass(sessionId, kmStart);
       this.router.navigate(['/app/instructor/clase', sessionId]);
     } catch {
-      this.toast.error('Error al iniciar la clase', 'Por favor, intenta de nuevo.');
+      this.clasesFacade.showError('Error al iniciar la clase', 'Por favor, intenta de nuevo.');
     } finally {
       this.isSubmitting.set(false);
     }

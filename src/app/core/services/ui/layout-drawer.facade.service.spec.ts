@@ -4,42 +4,50 @@ import { LayoutDrawerService } from './layout-drawer.service';
 import { Component } from '@angular/core';
 
 @Component({ template: '' })
-class DummyComponent { }
+class DummyComponent {}
 
 describe('LayoutDrawerFacadeService', () => {
-    let facade: LayoutDrawerFacadeService;
-    let serviceSpy: jasmine.SpyObj<LayoutDrawerService>;
+  let facade: LayoutDrawerFacadeService;
+  let serviceSpy: any;
 
-    beforeEach(() => {
-        // Create a mock for the underlying service
-        serviceSpy = jasmine.createSpyObj('LayoutDrawerService', ['open', 'close', 'clear'], {
-            isOpen: () => false,
-            component: () => null,
-            title: () => '',
-            icon: () => undefined
-        });
+  beforeEach(() => {
+    // Create a mock for the underlying service
+    serviceSpy = {
+      open: vi.fn(),
+      close: vi.fn(),
+      clear: vi.fn(),
+      isOpen: () => false,
+      component: () => null,
+      title: () => '',
+      icon: () => undefined,
+    };
 
-        TestBed.configureTestingModule({
-            providers: [
-                LayoutDrawerFacadeService,
-                { provide: LayoutDrawerService, useValue: serviceSpy }
-            ]
-        });
-
-        facade = TestBed.inject(LayoutDrawerFacadeService);
+    TestBed.configureTestingModule({
+      providers: [
+        LayoutDrawerFacadeService,
+        { provide: LayoutDrawerService, useValue: serviceSpy },
+      ],
     });
 
-    it('should be created', () => {
-        expect(facade).toBeTruthy();
-    });
+    facade = TestBed.inject(LayoutDrawerFacadeService);
+  });
 
-    it('should call open on underlying service', () => {
-        facade.open(DummyComponent, 'Unit Test', 'icon-test');
-        expect(serviceSpy.open).toHaveBeenCalledWith(DummyComponent, 'Unit Test', 'icon-test');
-    });
+  it('should be created', () => {
+    expect(facade).toBeTruthy();
+  });
 
-    it('should call close on underlying service', () => {
-        facade.close();
-        expect(serviceSpy.close).toHaveBeenCalled();
-    });
+  it('should call open on underlying service', () => {
+    facade.open(DummyComponent, 'Unit Test', 'icon-test');
+    expect(serviceSpy.open).toHaveBeenCalledWith(
+      DummyComponent,
+      'Unit Test',
+      'icon-test',
+      undefined,
+    );
+  });
+
+  it('should call close on underlying service', () => {
+    facade.close();
+    expect(serviceSpy.close).toHaveBeenCalled();
+  });
 });
