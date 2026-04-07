@@ -48,11 +48,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
           data-llm-action="toggle-branch-dropdown"
         >
           <!-- Mobile: ícono building-2 con affordance clara -->
-          <app-icon
-            name="building-2"
-            [size]="15"
-            class="branch-trigger__icon-mobile"
-          />
+          <app-icon name="building-2" [size]="15" class="branch-trigger__icon-mobile" />
           <!-- Desktop: dot de color semántico -->
           <span
             class="branch-trigger__dot"
@@ -167,211 +163,213 @@ import type { BranchOption } from '@core/models/ui/branch.model';
       </div>
     }
   `,
-  styles: [`
-    /* ── Trigger pill ───────────────────────────────────────────
+  styles: [
+    `
+      /* ── Trigger pill ───────────────────────────────────────────
        Mobile: ícono building-2 + chevron (affordance clara, ~36px).
        Desktop (md+): dot de color + label + chevron.
     ─────────────────────────────────────────────────────────── */
-    .branch-trigger {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      /* Mobile: solo dot + chevron */
-      padding: 6px 7px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-surface);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      font-family: var(--font-body);
-      cursor: pointer;
-      transition: var(--transition-btn);
-      white-space: nowrap;
-      box-shadow: var(--shadow-sm);
-    }
-
-    @media (min-width: 768px) {
       .branch-trigger {
-        gap: 6px;
-        padding: 5px 10px 5px 8px;
-        max-width: 220px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        /* Mobile: solo dot + chevron */
+        padding: 6px 7px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-default);
+        background: var(--bg-surface);
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+        font-family: var(--font-body);
+        cursor: pointer;
+        transition: var(--transition-btn);
+        white-space: nowrap;
+        box-shadow: var(--shadow-sm);
       }
-    }
 
-    .branch-trigger:hover {
-      border-color: var(--border-strong);
-      color: var(--text-primary);
-      background: var(--bg-elevated);
-    }
+      @media (min-width: 768px) {
+        .branch-trigger {
+          gap: 6px;
+          padding: 5px 10px 5px 8px;
+          max-width: 220px;
+        }
+      }
 
-    .branch-trigger--active {
-      border-color: var(--accent-border);
-      background: var(--color-primary-muted);
-      color: var(--color-primary);
-      box-shadow: var(--shadow-focus);
-    }
+      .branch-trigger:hover {
+        border-color: var(--border-strong);
+        color: var(--text-primary);
+        background: var(--bg-elevated);
+      }
 
-    /* Ícono mobile: visible en mobile, oculto en desktop */
-    .branch-trigger__icon-mobile {
-      display: inline-flex;
-      flex-shrink: 0;
-      color: var(--ds-brand);
-    }
+      .branch-trigger--active {
+        border-color: var(--accent-border);
+        background: var(--color-primary-muted);
+        color: var(--color-primary);
+        box-shadow: var(--shadow-focus);
+      }
 
-    @media (min-width: 768px) {
+      /* Ícono mobile: visible en mobile, oculto en desktop */
       .branch-trigger__icon-mobile {
+        display: inline-flex;
+        flex-shrink: 0;
+        color: var(--ds-brand);
+      }
+
+      @media (min-width: 768px) {
+        .branch-trigger__icon-mobile {
+          display: none;
+        }
+      }
+
+      /* Dot de estado: oculto en mobile, visible en desktop */
+      .branch-trigger__dot {
+        display: none;
+        width: 7px;
+        height: 7px;
+        border-radius: var(--radius-full);
+        background: var(--ds-brand);
+        flex-shrink: 0;
+      }
+
+      @media (min-width: 768px) {
+        .branch-trigger__dot {
+          display: inline-block;
+        }
+      }
+
+      .branch-trigger__dot--all {
+        background: var(--text-muted);
+      }
+
+      /* ── Label: oculto en mobile, visible en desktop ── */
+      .branch-trigger__label {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
         display: none;
       }
-    }
 
-    /* Dot de estado: oculto en mobile, visible en desktop */
-    .branch-trigger__dot {
-      display: none;
-      width: 7px;
-      height: 7px;
-      border-radius: var(--radius-full);
-      background: var(--ds-brand);
-      flex-shrink: 0;
-    }
+      @media (min-width: 768px) {
+        .branch-trigger__label {
+          display: block;
+        }
+      }
 
-    @media (min-width: 768px) {
-      .branch-trigger__dot {
+      /* Chevron con rotación animada */
+      .branch-trigger__chevron {
+        flex-shrink: 0;
+        opacity: 0.5;
+        transition:
+          transform var(--duration-fast) var(--ease-standard),
+          opacity var(--duration-fast) var(--ease-standard);
+      }
+
+      .branch-trigger__chevron--open {
+        transform: rotate(180deg);
+        opacity: 1;
+      }
+
+      /* ── Panel flotante glassmorphism ── */
+      .branch-panel {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        z-index: 60;
+        min-width: 200px;
+        background: var(--bg-glass-surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: 6px;
+        overflow: hidden;
+      }
+
+      /* Header del panel */
+      .branch-panel__header {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 10px 8px;
+        font-size: var(--text-xs);
+        font-weight: var(--font-medium);
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      /* Separador */
+      .branch-panel__divider {
+        height: 1px;
+        background: var(--border-subtle);
+        margin: 4px;
+      }
+
+      /* Item de opción */
+      .branch-panel__item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: var(--radius-md);
+        border: none;
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+        font-family: var(--font-body);
+        cursor: pointer;
+        text-align: left;
+        transition: var(--transition-color);
+      }
+
+      .branch-panel__item:hover {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+      }
+
+      .branch-panel__item--selected {
+        background: var(--color-primary-muted);
+        color: var(--color-primary);
+      }
+
+      .branch-panel__item--selected:hover {
+        background: var(--color-primary-muted);
+        color: var(--color-primary);
+      }
+
+      /* Dot dentro del item */
+      .branch-panel__item-dot {
         display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: var(--radius-full);
+        background: var(--ds-brand);
+        flex-shrink: 0;
       }
-    }
 
-    .branch-trigger__dot--all {
-      background: var(--text-muted);
-    }
-
-    /* ── Label: oculto en mobile, visible en desktop ── */
-    .branch-trigger__label {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      display: none;
-    }
-
-    @media (min-width: 768px) {
-      .branch-trigger__label {
-        display: block;
+      .branch-panel__item-dot--all {
+        background: var(--text-muted);
       }
-    }
 
-    /* Chevron con rotación animada */
-    .branch-trigger__chevron {
-      flex-shrink: 0;
-      opacity: 0.5;
-      transition: transform var(--duration-fast) var(--ease-standard),
-                  opacity var(--duration-fast) var(--ease-standard);
-    }
+      .branch-panel__item-label {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-    .branch-trigger__chevron--open {
-      transform: rotate(180deg);
-      opacity: 1;
-    }
-
-    /* ── Panel flotante glassmorphism ── */
-    .branch-panel {
-      position: absolute;
-      top: calc(100% + 6px);
-      left: 0;
-      z-index: 60;
-      min-width: 200px;
-      background: var(--bg-glass-surface);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--border-default);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-lg);
-      padding: 6px;
-      overflow: hidden;
-    }
-
-    /* Header del panel */
-    .branch-panel__header {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px 8px;
-      font-size: var(--text-xs);
-      font-weight: var(--font-medium);
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    /* Separador */
-    .branch-panel__divider {
-      height: 1px;
-      background: var(--border-subtle);
-      margin: 4px;
-    }
-
-    /* Item de opción */
-    .branch-panel__item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 8px 10px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      font-family: var(--font-body);
-      cursor: pointer;
-      text-align: left;
-      transition: var(--transition-color);
-    }
-
-    .branch-panel__item:hover {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
-    }
-
-    .branch-panel__item--selected {
-      background: var(--color-primary-muted);
-      color: var(--color-primary);
-    }
-
-    .branch-panel__item--selected:hover {
-      background: var(--color-primary-muted);
-      color: var(--color-primary);
-    }
-
-    /* Dot dentro del item */
-    .branch-panel__item-dot {
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      border-radius: var(--radius-full);
-      background: var(--ds-brand);
-      flex-shrink: 0;
-    }
-
-    .branch-panel__item-dot--all {
-      background: var(--text-muted);
-    }
-
-    .branch-panel__item-label {
-      flex: 1;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Check de selección activa */
-    .branch-panel__item-check {
-      flex-shrink: 0;
-      color: var(--color-primary);
-    }
-  `],
+      /* Check de selección activa */
+      .branch-panel__item-check {
+        flex-shrink: 0;
+        color: var(--color-primary);
+      }
+    `,
+  ],
 })
-<<<<<<< HEAD
 export class BranchSelectorComponent implements OnDestroy {
   readonly branches = input.required<BranchOption[]>();
   readonly selectedBranchId = input<number | null>(null);

@@ -10,6 +10,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -436,6 +437,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
 export class AdminInstructorCrearDrawerComponent {
   protected readonly facade = inject(InstructoresFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly branchFacade = inject(BranchFacade);
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');

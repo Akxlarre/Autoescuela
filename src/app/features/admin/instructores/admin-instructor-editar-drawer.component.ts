@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
@@ -548,6 +549,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
 export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly facade = inject(InstructoresFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly branchFacade = inject(BranchFacade);
 
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
