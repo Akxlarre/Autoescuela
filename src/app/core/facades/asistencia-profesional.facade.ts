@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
@@ -11,12 +12,14 @@ import type {
   SesionTipo,
   SesionStatus,
   AsistenciaStatus,
+  AlumnoFirmaSemana,
 } from '@core/models/ui/sesion-profesional.model';
 
 @Injectable({ providedIn: 'root' })
 export class AsistenciaProfesionalFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
+  private readonly auth = inject(AuthFacade);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _promociones = signal<PromocionOption[]>([]);
@@ -38,6 +41,10 @@ export class AsistenciaProfesionalFacade {
   private readonly _resumenAlumnos = signal<ResumenAlumnoAsistencia[]>([]);
   private readonly _isLoadingResumen = signal(false);
 
+  // Firma semanal
+  private readonly _firmasSemana = signal<AlumnoFirmaSemana[]>([]);
+  private readonly _isLoadingFirmas = signal(false);
+
   private _initialized = false;
 
   // ── Estado público ──────────────────────────────────────────────────────────
@@ -55,6 +62,8 @@ export class AsistenciaProfesionalFacade {
   readonly isSaving = this._isSaving.asReadonly();
   readonly resumenAlumnos = this._resumenAlumnos.asReadonly();
   readonly isLoadingResumen = this._isLoadingResumen.asReadonly();
+  readonly firmasSemana = this._firmasSemana.asReadonly();
+  readonly isLoadingFirmas = this._isLoadingFirmas.asReadonly();
 
   // ── KPIs ─────────────────────────────────────────────────────────────────────
   private readonly sesionesSemanales = computed(() => {
@@ -137,6 +146,15 @@ export class AsistenciaProfesionalFacade {
   });
 
   readonly isCurrentWeek = computed(() => this._weekOffset() === 0);
+
+  /** Fecha ISO del lunes de la semana visible (usado para firma semanal) */
+  readonly weekStartDate = computed(() => this.weekDays()[0]?.date ?? null);
+
+  /** Cuántos alumnos firmaron sobre el total matriculado en la semana visible */
+  readonly firmasSemanaCount = computed(() => ({
+    firmaron: this._firmasSemana().filter((a) => a.signatureId !== null).length,
+    total: this._firmasSemana().length,
+  }));
 
   readonly weekLabel = computed(() => {
     const days = this.weekDays();
@@ -228,10 +246,12 @@ export class AsistenciaProfesionalFacade {
   async selectCurso(cursoId: number): Promise<void> {
     this._selectedCursoId.set(cursoId);
     this._resumenAlumnos.set([]);
+    this._firmasSemana.set([]);
     this._isLoading.set(true);
     try {
       await this.fetchSesiones();
       void this.fetchResumenAlumnos(cursoId);
+      void this.fetchFirmasSemana();
     } finally {
       this._isLoading.set(false);
     }
@@ -365,10 +385,10 @@ export class AsistenciaProfesionalFacade {
       if (sesion.tipo === 'theory') {
         const { data: att } = await this.supabase.client
           .from('professional_theory_attendance')
-          .select('id, student_id, status, justification')
+          .select('id, enrollment_id, status, justification')
           .eq('theory_session_prof_id', sesion.id);
         for (const row of (att ?? []) as any[]) {
-          existingAttendance[row.student_id] = {
+          existingAttendance[row.enrollment_id] = {
             id: row.id,
             status: row.status,
             justification: row.justification,
@@ -377,10 +397,10 @@ export class AsistenciaProfesionalFacade {
       } else {
         const { data: att } = await this.supabase.client
           .from('professional_practice_attendance')
-          .select('id, student_id, status, justification')
+          .select('id, enrollment_id, status, justification')
           .eq('session_id', sesion.id);
         for (const row of (att ?? []) as any[]) {
-          existingAttendance[row.student_id] = {
+          existingAttendance[row.enrollment_id] = {
             id: row.id,
             status: row.status,
             justification: row.justification,
@@ -399,7 +419,7 @@ export class AsistenciaProfesionalFacade {
           .filter((_: string, i: number) => i === 0 || i === parts.length - 1)
           .map((p: string) => p[0]?.toUpperCase() ?? '')
           .join('');
-        const att = existingAttendance[e.student_id];
+        const att = existingAttendance[e.id];
 
         return {
           attendanceId: att?.id ?? null,
@@ -452,7 +472,6 @@ export class AsistenciaProfesionalFacade {
               toInsert.map((r) => ({
                 theory_session_prof_id: sesion.id,
                 enrollment_id: r.enrollmentId,
-                student_id: r.studentId,
                 status: r.status,
               })),
             );
@@ -473,7 +492,6 @@ export class AsistenciaProfesionalFacade {
               toInsert.map((r) => ({
                 session_id: sesion.id,
                 enrollment_id: r.enrollmentId,
-                student_id: r.studentId,
                 status: r.status,
                 block_percentage: 100,
               })),
@@ -601,20 +619,21 @@ export class AsistenciaProfesionalFacade {
         theoryIds.length > 0
           ? this.supabase.client
               .from('professional_theory_attendance')
-              .select('student_id, status')
+              .select('enrollment_id, status')
               .in('theory_session_prof_id', theoryIds)
           : Promise.resolve({ data: [], error: null }),
         practiceIds.length > 0
           ? this.supabase.client
               .from('professional_practice_attendance')
-              .select('student_id, status')
+              .select('enrollment_id, status')
               .in('session_id', practiceIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
-      // 4. Contar presentes por alumno
-      const countPresent = (rows: any[], studentId: number): number =>
-        (rows ?? []).filter((r) => r.student_id === studentId && r.status === 'present').length;
+      // 4. Contar presentes por alumno (via enrollment_id)
+      const countPresent = (rows: any[], enrollmentId: number): number =>
+        (rows ?? []).filter((r) => r.enrollment_id === enrollmentId && r.status === 'present')
+          .length;
 
       const resumen: ResumenAlumnoAsistencia[] = (enrollments as any[]).map((e) => {
         const u = e.students?.users;
@@ -627,8 +646,8 @@ export class AsistenciaProfesionalFacade {
           .map((p: string) => p[0]?.toUpperCase() ?? '')
           .join('');
 
-        const teoriaAsistida = countPresent(theoryAttRes.data as any[], e.student_id);
-        const practicaAsistida = countPresent(practiceAttRes.data as any[], e.student_id);
+        const teoriaAsistida = countPresent(theoryAttRes.data as any[], e.id);
+        const practicaAsistida = countPresent(practiceAttRes.data as any[], e.id);
         const totalAsistida = teoriaAsistida + practicaAsistida;
         const totalSesiones = theoryIds.length + practiceIds.length;
         const pctTeoria =
@@ -715,5 +734,139 @@ export class AsistenciaProfesionalFacade {
 
   private formatDateIso(d: Date): string {
     return d.toISOString().split('T')[0];
+  }
+
+  // ── Firma semanal ───────────────────────────────────────────────────────────
+
+  async fetchFirmasSemana(): Promise<void> {
+    const cursoId = this._selectedCursoId();
+    const weekStart = this.weekStartDate();
+    if (!cursoId || !weekStart) return;
+
+    const weekDays = this.weekDays();
+    const weekEnd = weekDays[weekDays.length - 1]?.date ?? weekStart;
+
+    this._isLoadingFirmas.set(true);
+    try {
+      const [enrollRes, sigRes, theorySessionsRes] = await Promise.all([
+        this.supabase.client
+          .from('enrollments')
+          .select(
+            `id, student_id,
+             students!inner (
+               id,
+               users!inner ( first_names, paternal_last_name, maternal_last_name, rut )
+             )`,
+          )
+          .eq('promotion_course_id', cursoId)
+          .not('status', 'in', '("cancelled","draft")'),
+
+        this.supabase.client
+          .from('professional_weekly_signatures')
+          .select('id, enrollment_id, signed_at')
+          .eq('promotion_course_id', cursoId)
+          .eq('week_start_date', weekStart),
+
+        this.supabase.client
+          .from('professional_theory_sessions')
+          .select('id')
+          .eq('promotion_course_id', cursoId)
+          .gte('date', weekStart)
+          .lte('date', weekEnd)
+          .eq('status', 'completed'),
+      ]);
+
+      const theoryIds = (theorySessionsRes.data ?? []).map((s: any) => s.id);
+
+      const theoryAttData =
+        theoryIds.length > 0
+          ? ((
+              await this.supabase.client
+                .from('professional_theory_attendance')
+                .select('enrollment_id, status')
+                .in('theory_session_prof_id', theoryIds)
+            ).data ?? [])
+          : [];
+
+      // Mapa: enrollment_id → firma
+      const sigMap: Record<number, { id: number; signedAt: string }> = {};
+      for (const sig of (sigRes.data ?? []) as any[]) {
+        sigMap[sig.enrollment_id] = { id: sig.id, signedAt: sig.signed_at };
+      }
+
+      const result: AlumnoFirmaSemana[] = ((enrollRes.data ?? []) as any[]).map((e) => {
+        const u = e.students?.users;
+        const nombre = [u?.first_names, u?.paternal_last_name, u?.maternal_last_name]
+          .filter(Boolean)
+          .join(' ');
+        const parts = nombre.trim().split(' ');
+        const initials = parts
+          .filter((_: string, i: number) => i === 0 || i === parts.length - 1)
+          .map((p: string) => p[0]?.toUpperCase() ?? '')
+          .join('');
+
+        const presentThisWeek = (theoryAttData as any[]).filter(
+          (r) => r.enrollment_id === e.id && r.status === 'present',
+        ).length;
+        const pctTeoriaSemana =
+          theoryIds.length > 0 ? Math.round((presentThisWeek / theoryIds.length) * 100) : 0;
+
+        const sig = sigMap[e.id];
+        return {
+          enrollmentId: e.id,
+          studentId: e.student_id,
+          nombre,
+          rut: u?.rut ?? '',
+          initials: initials || '?',
+          signatureId: sig?.id ?? null,
+          signedAt: sig?.signedAt ?? null,
+          pctTeoriaSemana,
+        };
+      });
+
+      this._firmasSemana.set(result.sort((a, b) => a.nombre.localeCompare(b.nombre)));
+    } catch {
+      this._firmasSemana.set([]);
+    } finally {
+      this._isLoadingFirmas.set(false);
+    }
+  }
+
+  async registrarFirmas(enrollmentIds: number[]): Promise<boolean> {
+    const cursoId = this._selectedCursoId();
+    const weekStart = this.weekStartDate();
+    if (!cursoId || !weekStart || enrollmentIds.length === 0) return false;
+
+    const recordedBy = this.auth.currentUser()?.dbId;
+    if (!recordedBy) {
+      this.toast.error('No se pudo identificar al usuario actual');
+      return false;
+    }
+
+    this._isSaving.set(true);
+    try {
+      const { error } = await this.supabase.client.from('professional_weekly_signatures').insert(
+        enrollmentIds.map((eid) => ({
+          promotion_course_id: cursoId,
+          enrollment_id: eid,
+          week_start_date: weekStart,
+          recorded_by: recordedBy,
+        })),
+      );
+
+      if (error) throw error;
+
+      this.toast.success(
+        `${enrollmentIds.length} firma${enrollmentIds.length > 1 ? 's' : ''} registrada${enrollmentIds.length > 1 ? 's' : ''}`,
+      );
+      await this.fetchFirmasSemana();
+      return true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al registrar firmas';
+      this.toast.error(msg);
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
   }
 }

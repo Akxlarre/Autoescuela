@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
 
@@ -152,6 +153,22 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             [ngModel]="telefono()"
             (ngModelChange)="telefono.set($event)"
             data-llm-description="Teléfono de contacto del instructor"
+          />
+        </div>
+
+        <!-- Sede -->
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label" for="e-sede">Sede asignada *</label>
+          <p-select
+            inputId="e-sede"
+            [options]="sedeOptions()"
+            [(ngModel)]="sedeIdModel"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccione sede"
+            [style]="{ width: '100%', height: '40px' }"
+            aria-required="true"
+            data-llm-description="Sede de trabajo del instructor"
           />
         </div>
       </div>
@@ -530,6 +547,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
 })
 export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly facade = inject(InstructoresFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   readonly saved = output<void>();
 
@@ -544,6 +562,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly licenseExpiry = signal<Date | null>(null);
   protected readonly tipo = signal<InstructorType | null>(null);
   protected readonly vehicleId = signal<number | null>(null);
+  protected readonly sedeId = signal<number | null>(null);
   protected readonly activo = signal(true);
 
   protected currentEmail = '';
@@ -626,6 +645,18 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       })),
   );
 
+  // ── Sede ──────────────────────────────────────────────────────────────────
+  protected readonly sedeOptions = computed(() =>
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
+
+  protected get sedeIdModel(): number | null {
+    return this.sedeId();
+  }
+  protected set sedeIdModel(v: number | null) {
+    this.sedeId.set(v);
+  }
+
   // ── p-select models ────────────────────────────────────────────────────────
   protected get licenseClassModel(): string | null {
     return this.licenseClass();
@@ -670,6 +701,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         this.tipo.set(inst.tipo);
         this.vehicleId.set(inst.vehicleId);
         this.currentVehicleId.set(inst.vehicleId);
+        this.sedeId.set(inst.branchId);
         this.activo.set(inst.estado === 'activo');
 
         // Parse license expiry date
@@ -722,6 +754,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       active: this.activo(),
       vehicleId: this.vehicleId(),
       currentVehicleId: this.currentVehicleId(),
+      branchId: this.sedeId()!,
     });
 
     if (ok) {

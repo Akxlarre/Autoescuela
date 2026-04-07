@@ -2,12 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  OnDestroy,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { AdminRelatorCrearDrawerComponent } from './admin-relator-crear-drawer.component';
 import { AdminRelatorVerDrawerComponent } from './admin-relator-ver-drawer.component';
@@ -414,8 +416,9 @@ const SPEC_COLORS: Record<string, string> = {
     }
   `,
 })
-export class AdminProfesionalRelatoresComponent implements OnInit {
+export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(RelatoresFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Hero ────────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -540,7 +543,12 @@ export class AdminProfesionalRelatoresComponent implements OnInit {
   protected readonly skeletonRows = [1, 2, 3, 4];
 
   ngOnInit(): void {
+    this.branchFacade.setProfessionalOnly(true);
     this.facade.initialize();
+  }
+
+  ngOnDestroy(): void {
+    this.branchFacade.setProfessionalOnly(false);
   }
 
   protected specColor(spec: string): string {

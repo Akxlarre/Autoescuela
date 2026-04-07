@@ -1,12 +1,13 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { InstructorTableRow } from '@core/models/ui/instructor-table.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -460,8 +461,16 @@ type FilterTab = 'all' | 'active' | 'expiring';
     }
   `,
 })
-export class AdminInstructoresComponent implements OnInit {
+export class AdminInstructoresComponent {
   protected readonly facade = inject(InstructoresFacade);
+  private readonly branchFacade = inject(BranchFacade);
+
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      this.facade.initialize();
+    });
+  }
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -515,10 +524,6 @@ export class AdminInstructoresComponent implements OnInit {
     Math.min(this.currentPage() * this.pageSize, this.filteredInstructores().length),
   );
 
-  ngOnInit(): void {
-    this.facade.initialize();
-  }
-
   protected openVerDrawer(inst: InstructorTableRow): void {
     this.facade.selectInstructor(inst);
     this.facade.loadAssignmentHistory(inst.id);
@@ -538,11 +543,9 @@ export class AdminInstructoresComponent implements OnInit {
 
   protected onCrearDrawerClosed(): void {
     this.crearDrawerOpen.set(false);
-    this.facade.initialize();
   }
 
   protected onEditarDrawerClosed(): void {
     this.editarDrawerOpen.set(false);
-    this.facade.initialize();
   }
 }

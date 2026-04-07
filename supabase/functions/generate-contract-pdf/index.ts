@@ -175,7 +175,6 @@ Deno.serve(async (req: Request) => {
     const { error: contractError } = await supabase.from('digital_contracts').upsert(
       {
         enrollment_id,
-        student_id: getStudentId(enrollment),
         file_name: fileName,
         file_url: pdfUrl,
         content_hash: await computeHash(pdfBytes),
@@ -241,12 +240,6 @@ function flattenEnrollment(
     },
     convalidation: licenseValidation ?? null,
   };
-}
-
-function getStudentId(enrollment: any): number {
-  // The students table has its own id, but the FK in enrollments is student_id
-  // Since we selected via enrollments.student_id, the join gives us the student record
-  return enrollment.students?.id ?? enrollment.student_id;
 }
 
 function sanitizeFilename(name: string): string {

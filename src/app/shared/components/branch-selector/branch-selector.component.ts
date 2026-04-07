@@ -23,12 +23,15 @@ import type { BranchOption } from '@core/models/ui/branch.model';
           <button
             type="button"
             class="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all"
-            [class.border-brand]="selectedBranchId() === null"
-            [class.bg-brand-muted]="selectedBranchId() === null"
-            [class.text-brand]="selectedBranchId() === null"
-            [class.border-border-default]="selectedBranchId() !== null"
-            [class.bg-surface]="selectedBranchId() !== null"
-            [class.text-text-secondary]="selectedBranchId() !== null"
+            [class.border-brand]="selectedBranchId() === null && !disableAllOption()"
+            [class.bg-brand-muted]="selectedBranchId() === null && !disableAllOption()"
+            [class.text-brand]="selectedBranchId() === null && !disableAllOption()"
+            [class.border-border-default]="selectedBranchId() !== null || disableAllOption()"
+            [class.bg-surface]="selectedBranchId() !== null || disableAllOption()"
+            [class.text-text-secondary]="selectedBranchId() !== null || disableAllOption()"
+            [class.opacity-40]="disableAllOption()"
+            [class.cursor-not-allowed]="disableAllOption()"
+            [disabled]="disableAllOption()"
             (click)="branchChange.emit(null)"
             data-llm-action="select-branch-all"
           >
@@ -40,12 +43,27 @@ import type { BranchOption } from '@core/models/ui/branch.model';
           <button
             type="button"
             class="flex items-center gap-2 px-3 py-2 rounded-lg border text-sm font-medium transition-all"
-            [class.border-brand]="selectedBranchId() === branch.id"
-            [class.bg-brand-muted]="selectedBranchId() === branch.id"
-            [class.text-brand]="selectedBranchId() === branch.id"
-            [class.border-border-default]="selectedBranchId() !== branch.id"
-            [class.bg-surface]="selectedBranchId() !== branch.id"
-            [class.text-text-secondary]="selectedBranchId() !== branch.id"
+            [class.border-brand]="
+              selectedBranchId() === branch.id && !disabledBranchIds().includes(branch.id)
+            "
+            [class.bg-brand-muted]="
+              selectedBranchId() === branch.id && !disabledBranchIds().includes(branch.id)
+            "
+            [class.text-brand]="
+              selectedBranchId() === branch.id && !disabledBranchIds().includes(branch.id)
+            "
+            [class.border-border-default]="
+              selectedBranchId() !== branch.id || disabledBranchIds().includes(branch.id)
+            "
+            [class.bg-surface]="
+              selectedBranchId() !== branch.id || disabledBranchIds().includes(branch.id)
+            "
+            [class.text-text-secondary]="
+              selectedBranchId() !== branch.id || disabledBranchIds().includes(branch.id)
+            "
+            [class.opacity-40]="disabledBranchIds().includes(branch.id)"
+            [class.cursor-not-allowed]="disabledBranchIds().includes(branch.id)"
+            [disabled]="disabledBranchIds().includes(branch.id)"
             (click)="branchChange.emit(branch.id)"
             [attr.data-llm-action]="'select-branch-' + branch.slug"
           >
@@ -62,5 +80,9 @@ export class BranchSelectorComponent {
   selectedBranchId = input<number | null>(null);
   /** Muestra la opción "Todas las escuelas" (emite null). Usar en Topbar para admin. */
   showAllOption = input(false);
+  /** Deshabilita el botón "Todas las escuelas". Usar en vistas que requieren sede concreta. */
+  disableAllOption = input(false);
+  /** IDs de sedes individuales a deshabilitar (ej: sedes sin Clase Profesional). */
+  disabledBranchIds = input<number[]>([]);
   branchChange = output<number | null>();
 }

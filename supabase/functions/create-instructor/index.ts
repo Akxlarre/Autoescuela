@@ -120,6 +120,7 @@ Deno.serve(async (req: Request) => {
       licenseClass,
       licenseExpiry,
       vehicleId,
+      branchId,
     } = await req.json();
 
     if (
@@ -129,10 +130,11 @@ Deno.serve(async (req: Request) => {
       !email ||
       !type ||
       !licenseClass ||
-      !licenseExpiry
+      !licenseExpiry ||
+      !branchId
     ) {
       return errorResponse(
-        'Faltan campos requeridos: firstNames, paternalLastName, rut, email, type, licenseClass, licenseExpiry',
+        'Faltan campos requeridos: firstNames, paternalLastName, rut, email, type, licenseClass, licenseExpiry, branchId',
       );
     }
 
@@ -187,6 +189,7 @@ Deno.serve(async (req: Request) => {
         email,
         phone: phone || null,
         role_id: roleRow.id,
+        branch_id: branchId,
         active: true,
         first_login: true,
       })

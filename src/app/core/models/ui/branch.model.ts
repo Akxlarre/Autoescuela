@@ -5,6 +5,8 @@ export interface BranchOption {
   name: string;
   slug: string;
   address?: string | null;
+  /** true si la sede ofrece Clase Profesional. Mapeado desde branches.has_professional. */
+  hasProfessional?: boolean;
 }
 
 /** Precio de un curso dentro de una sede, para mostrar en el selector público. */

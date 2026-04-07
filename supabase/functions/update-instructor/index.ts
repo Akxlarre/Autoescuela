@@ -121,6 +121,7 @@ Deno.serve(async (req: Request) => {
       active,
       vehicleId,
       currentVehicleId,
+      branchId,
     } = await req.json();
 
     if (
@@ -172,6 +173,7 @@ Deno.serve(async (req: Request) => {
       paternal_last_name: paternalLastName.trim(),
       maternal_last_name: maternalLastName?.trim() || null,
       phone: phone?.trim() || null,
+      branch_id: branchId ?? null,
       active,
     };
 

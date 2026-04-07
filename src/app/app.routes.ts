@@ -313,6 +313,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'clase-profesional/evaluaciones',
+            loadComponent: () =>
+              import('./features/admin/profesional-evaluaciones/admin-profesional-evaluaciones.component').then(
+                (m) => m.AdminProfesionalEvaluacionesComponent,
+              ),
+          },
+          {
             path: 'clase-profesional/archivo',
             loadComponent: () =>
               import('./features/admin/profesional-archivo/admin-profesional-archivo.component').then(

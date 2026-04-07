@@ -2,12 +2,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   OnInit,
+  OnDestroy,
   computed,
   inject,
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { AdminPromocionCrearDrawerComponent } from './admin-promocion-crear-drawer.component';
 import { AdminPromocionVerDrawerComponent } from './admin-promocion-ver-drawer.component';
@@ -504,8 +506,9 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; 
     }
   `,
 })
-export class AdminProfesionalPromocionesComponent implements OnInit {
+export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(PromocionesFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
@@ -574,7 +577,12 @@ export class AdminProfesionalPromocionesComponent implements OnInit {
   protected readonly skeletonRows = [1, 2, 3];
 
   ngOnInit(): void {
+    this.branchFacade.setProfessionalOnly(true);
     this.facade.initialize();
+  }
+
+  ngOnDestroy(): void {
+    this.branchFacade.setProfessionalOnly(false);
   }
 
   protected statusConfig(status: string): {

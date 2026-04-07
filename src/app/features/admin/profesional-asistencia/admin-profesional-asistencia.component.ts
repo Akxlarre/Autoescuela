@@ -3,11 +3,14 @@ import {
   Component,
   inject,
   OnInit,
+  OnDestroy,
   signal,
   computed,
+  effect,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
@@ -229,6 +232,145 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
       </div>
     }
 
+    <!-- ═══ Firma Semanal ═══ -->
+    @if (facade.selectedCursoId()) {
+      <section class="mt-8">
+        <div class="mb-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <app-icon name="pen-line" [size]="16" color="var(--ds-brand)" />
+            <h2 class="text-sm font-semibold text-primary">Firma semanal de asistencia teórica</h2>
+            <span class="text-xs text-muted ml-1">{{ facade.weekLabel() }}</span>
+          </div>
+          @if (!facade.isLoadingFirmas()) {
+            <span class="text-xs font-medium text-secondary">
+              {{ facade.firmasSemanaCount().firmaron }}/{{ facade.firmasSemanaCount().total }}
+              firmaron
+            </span>
+          }
+        </div>
+
+        @if (facade.isLoadingFirmas()) {
+          <div class="card p-4 flex flex-col gap-3">
+            @for (i of [1, 2, 3]; track i) {
+              <app-skeleton-block variant="text" width="100%" height="36px" />
+            }
+          </div>
+        } @else if (facade.firmasSemana().length === 0) {
+          <div class="card p-8 text-center">
+            <p class="text-sm text-muted">No hay alumnos matriculados en este curso.</p>
+          </div>
+        } @else {
+          <div class="card overflow-hidden">
+            <table class="resumen-table w-full">
+              <thead>
+                <tr>
+                  <th class="text-left">Alumno</th>
+                  <th class="text-center">% Teoría esta semana</th>
+                  <th class="text-center">Estado firma</th>
+                  <th class="text-center">
+                    @if (facade.firmasSemana().some((a) => a.signatureId === null)) {
+                      <label class="flex items-center gap-1 cursor-pointer justify-center">
+                        <input
+                          type="checkbox"
+                          [checked]="allPendingSelected()"
+                          (change)="toggleSelectAll()"
+                          data-llm-description="Seleccionar todos los alumnos sin firma"
+                          class="cursor-pointer"
+                        />
+                        <span
+                          style="font-size: inherit; font-weight: inherit; letter-spacing: inherit; color: inherit;"
+                          >Marcar todos</span
+                        >
+                      </label>
+                    }
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (alumno of facade.firmasSemana(); track alumno.enrollmentId) {
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <div class="initials-avatar">{{ alumno.initials }}</div>
+                        <div>
+                          <p class="text-sm font-medium text-primary">{{ alumno.nombre }}</p>
+                          <p class="text-xs text-muted">{{ alumno.rut }}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-center">
+                      @if (
+                        alumno.pctTeoriaSemana === 0 &&
+                        facade.weekDays()[0]?.theory === null &&
+                        facade.weekDays()[1]?.theory === null
+                      ) {
+                        <span class="text-xs text-muted">Sin sesiones</span>
+                      } @else {
+                        <span
+                          class="pct-badge"
+                          [class.pct-ok]="alumno.pctTeoriaSemana >= 75"
+                          [class.pct-warn]="
+                            alumno.pctTeoriaSemana >= 50 && alumno.pctTeoriaSemana < 75
+                          "
+                          [class.pct-danger]="alumno.pctTeoriaSemana < 50"
+                        >
+                          {{ alumno.pctTeoriaSemana }}%
+                        </span>
+                      }
+                    </td>
+                    <td class="text-center">
+                      @if (alumno.signatureId !== null) {
+                        <span class="firma-badge firma-ok">
+                          <app-icon name="check-circle" [size]="12" />
+                          Firmó {{ formatSignedAt(alumno.signedAt) }}
+                        </span>
+                      } @else {
+                        <span class="firma-badge firma-pending">Sin firma</span>
+                      }
+                    </td>
+                    <td class="text-center">
+                      @if (alumno.signatureId === null) {
+                        <input
+                          type="checkbox"
+                          [checked]="isSelected(alumno.enrollmentId)"
+                          (change)="toggleSelect(alumno.enrollmentId)"
+                          data-llm-action="select-student-for-signature"
+                          class="cursor-pointer"
+                        />
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+
+            @if (selectedForSign().length > 0) {
+              <div
+                class="flex items-center justify-between border-t border-border px-4 py-3 bg-surface"
+              >
+                <span class="text-xs text-secondary">
+                  {{ selectedForSign().length }} alumno{{
+                    selectedForSign().length > 1 ? 's' : ''
+                  }}
+                  seleccionado{{ selectedForSign().length > 1 ? 's' : '' }}
+                </span>
+                <button
+                  class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
+                  style="background: var(--ds-brand); color: #fff;"
+                  [disabled]="facade.isSaving()"
+                  (click)="onRegistrarFirmas()"
+                  data-llm-action="register-weekly-signatures"
+                >
+                  <app-icon name="pen-line" [size]="14" />
+                  Registrar firma{{ selectedForSign().length > 1 ? 's' : '' }}
+                </button>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+
     <!-- ═══ Resumen de asistencia por alumno ═══ -->
     @if (facade.selectedCursoId()) {
       <section class="mt-8">
@@ -413,13 +555,47 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
     .bg-brand-muted {
       background: color-mix(in srgb, var(--ds-brand) 4%, var(--color-bg-surface));
     }
+
+    .firma-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: var(--text-xs);
+      font-weight: 600;
+    }
+    .firma-ok {
+      background: color-mix(in srgb, var(--state-success) 12%, transparent);
+      color: var(--state-success);
+    }
+    .firma-pending {
+      background: var(--color-bg-surface-elevated, var(--bg-elevated));
+      color: var(--text-muted);
+    }
   `,
 })
-export class AdminProfesionalAsistenciaComponent implements OnInit {
+export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
   readonly facade = inject(AsistenciaProfesionalFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   readonly drawerOpen = signal(false);
   readonly skeletonDays = [1, 2, 3, 4, 5, 6];
+
+  // ── Firma semanal — estado de selección local ──────────────────────────────
+  readonly selectedForSign = signal<number[]>([]);
+
+  readonly allPendingSelected = computed(() => {
+    const pending = this.facade.firmasSemana().filter((a) => a.signatureId === null);
+    return (
+      pending.length > 0 && pending.every((a) => this.selectedForSign().includes(a.enrollmentId))
+    );
+  });
+
+  readonly somePendingSelected = computed(() => {
+    const sel = this.selectedForSign();
+    return sel.length > 0 && !this.allPendingSelected();
+  });
 
   readonly promoOptions = computed(() =>
     this.facade.promociones().map((p) => ({
@@ -442,8 +618,24 @@ export class AdminProfesionalAsistenciaComponent implements OnInit {
     return `${tipo} — ${this.formatDate(sesion.date)}`;
   });
 
+  constructor() {
+    // Recargar firmas cada vez que el usuario navega a otra semana
+    effect(() => {
+      const _ = this.facade.weekOffset();
+      if (this.facade.selectedCursoId()) {
+        this.selectedForSign.set([]);
+        void this.facade.fetchFirmasSemana();
+      }
+    });
+  }
+
   ngOnInit(): void {
+    this.branchFacade.setProfessionalOnly(true);
     void this.facade.initialize();
+  }
+
+  ngOnDestroy(): void {
+    this.branchFacade.setProfessionalOnly(false);
   }
 
   onPromoChange(id: number): void {
@@ -468,6 +660,39 @@ export class AdminProfesionalAsistenciaComponent implements OnInit {
     const today = new Date().toISOString().slice(0, 10);
     if (session.date > today) return 'session-future';
     return `session-${session.status}`;
+  }
+
+  // ── Firma semanal ───────────────────────────────────────────────────────────
+
+  isSelected(enrollmentId: number): boolean {
+    return this.selectedForSign().includes(enrollmentId);
+  }
+
+  toggleSelect(enrollmentId: number): void {
+    this.selectedForSign.update((ids) =>
+      ids.includes(enrollmentId) ? ids.filter((id) => id !== enrollmentId) : [...ids, enrollmentId],
+    );
+  }
+
+  toggleSelectAll(): void {
+    const pending = this.facade
+      .firmasSemana()
+      .filter((a) => a.signatureId === null)
+      .map((a) => a.enrollmentId);
+    this.selectedForSign.set(this.allPendingSelected() ? [] : pending);
+  }
+
+  async onRegistrarFirmas(): Promise<void> {
+    const ids = this.selectedForSign();
+    const ok = await this.facade.registrarFirmas(ids);
+    if (ok) this.selectedForSign.set([]);
+  }
+
+  formatSignedAt(signedAt: string | null): string {
+    if (!signedAt) return '';
+    const d = new Date(signedAt);
+    const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    return `${dayNames[d.getDay()]} ${d.getDate()}`;
   }
 
   private formatDate(dateStr: string): string {
