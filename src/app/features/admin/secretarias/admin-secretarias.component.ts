@@ -48,8 +48,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
         />
       </div>
 
-      <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
+      <!-- ── KPI Cards: Densidad Inteligente (2 col en móvil, 3 en desktop) ── -->
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
         <app-kpi-card-variant
           label="Total Secretarias"
           [value]="facade.totalSecretarias()"
@@ -75,8 +75,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       </div>
 
       <!-- ── Search + Filters ───────────────────────────────────────────────── -->
-      <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3 mb-6">
-        <div class="relative flex-1">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 flex-wrap">
+        <div class="relative flex-1 min-w-[240px]">
           <span
             class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
             style="color: var(--text-muted)"
@@ -93,14 +93,15 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
           />
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <p-select
             [options]="sedeOptions()"
             [(ngModel)]="filtroSedeModel"
             optionLabel="label"
             optionValue="value"
             placeholder="Todas las sedes"
-            [style]="{ height: '40px' }"
+            [style]="{ height: '40px', 'min-width': '160px' }"
+            panelStyleClass="filter-select-panel"
             aria-label="Filtrar por sede"
             data-llm-description="Filtro de secretarias por sede"
           />
@@ -110,7 +111,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
-            [style]="{ height: '40px' }"
+            [style]="{ height: '40px', 'min-width': '160px' }"
+            panelStyleClass="filter-select-panel"
             aria-label="Filtrar por estado"
             data-llm-description="Filtro de secretarias por estado"
           />

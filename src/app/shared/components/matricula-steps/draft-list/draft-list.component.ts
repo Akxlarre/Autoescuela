@@ -9,61 +9,63 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
   selector: 'app-draft-list',
   standalone: true,
   imports: [DatePipe, IconComponent],
+  styleUrls: ['./draft-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="space-y-8">
+    <div class="draft-container">
       <!-- Encabezado -->
-      <div>
+      <div class="draft-header">
         <h2 class="text-2xl font-bold text-text-primary">Matrículas en progreso</h2>
-        <p class="text-sm text-text-muted mt-1">
-          Hay {{ drafts().length }} matrícula(s) pendiente(s) de completar.
+        <p class="text-sm text-text-muted">
+          Hay {{ drafts().length }} matrícula(s) pendiente(s). Puedes retomar una o empezar de cero.
         </p>
       </div>
 
       <!-- Lista de borradores -->
-      <div class="grid gap-3">
+      <div class="draft-list">
         @for (draft of drafts(); track draft.enrollmentId) {
-          <div class="card p-5 flex items-start gap-4 hover:shadow-md transition-shadow">
-            <!-- Avatar iniciales -->
-            <div
-              class="w-11 h-11 rounded-full bg-brand-muted flex items-center justify-center text-sm font-bold text-brand shrink-0"
-            >
-              {{ getInitials(draft.studentName) }}
+          <div class="draft-card" [class.draft-card--active]="draft.currentStep > 1">
+            <!-- Arriba: Identidad e Info básica -->
+            <div class="draft-card__top">
+              <div class="draft-avatar">
+                {{ getInitials(draft.studentName) }}
+              </div>
+
+              <div class="draft-info">
+                <div class="draft-info__header">
+                  <span class="draft-info__name" [title]="draft.studentName">{{
+                    draft.studentName
+                  }}</span>
+                  <span class="draft-info__rut">{{ draft.studentRut }}</span>
+                </div>
+                <p class="draft-info__course">{{ draft.courseLabel }}</p>
+              </div>
             </div>
 
-            <!-- Info -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-semibold text-text-primary truncate">{{
-                  draft.studentName
-                }}</span>
-                <span class="text-xs text-text-muted font-mono">{{ draft.studentRut }}</span>
-              </div>
-              <p class="text-sm text-text-secondary mt-0.5">{{ draft.courseLabel }}</p>
-
-              <!-- Mini stepper de progreso -->
-              <div class="flex items-center gap-1 mt-3">
+            <!-- Centro: Progreso visual (Stepper compacto) -->
+            <div class="draft-card__middle">
+              <div class="draft-stepper">
                 @for (step of stepNumbers; track step) {
                   <div
-                    class="h-1.5 flex-1 rounded-full transition-colors"
-                    [class.bg-brand]="step === draft.currentStep"
-                    [class.bg-brand-muted]="step < draft.currentStep"
-                    [class.bg-bg-subtle]="step > draft.currentStep"
+                    class="step-bar"
+                    [class.step-bar--active]="step === draft.currentStep"
+                    [class.step-bar--completed]="step < draft.currentStep"
+                    [class.step-bar--pending]="step > draft.currentStep"
                   ></div>
                 }
               </div>
-              <p class="text-xs text-text-muted mt-1.5 flex items-center gap-1">
-                <app-icon name="clock" [size]="11" />
-                Paso {{ draft.currentStep }}/6 — {{ draft.stepLabel }} · Creada
-                {{ draft.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+              <p class="draft-status">
+                <app-icon name="clock" [size]="12" />
+                <span>Paso {{ draft.currentStep }}/6 — {{ draft.stepLabel }}</span>
+                <span class="draft-status__date">· {{ draft.createdAt | date: 'dd/MM' }}</span>
               </p>
             </div>
 
-            <!-- Acciones -->
-            <div class="flex items-center gap-2 shrink-0">
+            <!-- Acciones (Sticky on bottom mobile, Top right desktop) -->
+            <div class="draft-actions">
               <button
                 type="button"
-                class="cursor-pointer btn-primary flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold"
+                class="btn-resume"
                 data-llm-action="resume-enrollment-draft"
                 (click)="resume.emit(draft.enrollmentId)"
               >
@@ -72,7 +74,7 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
               </button>
               <button
                 type="button"
-                class="cursor-pointer flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-text-muted hover:text-state-error hover:bg-state-error-bg border border-border-default hover:border-state-error-border transition-all"
+                class="btn-discard"
                 data-llm-action="discard-enrollment-draft"
                 (click)="discard.emit(draft.enrollmentId)"
               >
@@ -84,11 +86,11 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
         }
       </div>
 
-      <!-- CTA principal — Nueva matrícula -->
-      <div class="pt-2 border-t border-border-subtle">
+      <!-- Acción principal: Empezar nueva matrícula -->
+      <div class="draft-footer">
         <button
           type="button"
-          class="cursor-pointer w-full h-14 flex items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border-default hover:border-brand hover:bg-brand-muted text-text-secondary hover:text-brand font-semibold transition-all"
+          class="btn-new-draft"
           data-llm-action="start-new-enrollment"
           (click)="startNew.emit()"
         >

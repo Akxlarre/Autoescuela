@@ -56,7 +56,7 @@ import { Button } from 'primeng/button';
   template: `
     <header
       appSearchShortcut
-      class="sticky top-0 z-40 flex h-14 items-center gap-2 px-4 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-(--shadow-layout-topbar) shrink-0"
+      class="sticky top-0 z-40 flex h-14 items-center gap-1 px-3 lg:gap-4 lg:px-6 border-b border-border-subtle bg-surface shadow-(--shadow-layout-topbar) shrink-0"
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->
@@ -65,11 +65,12 @@ import { Button } from 'primeng/button';
           [text]="true"
           [rounded]="true"
           severity="secondary"
+          size="small"
           ariaLabel="Abrir menú de navegación"
           data-llm-action="toggle-mobile-sidebar"
           (onClick)="layout.toggleSidebar()"
         >
-          <app-icon name="menu" [size]="18" />
+          <app-icon name="menu" [size]="16" />
         </p-button>
       </div>
 
@@ -91,7 +92,7 @@ import { Button } from 'primeng/button';
 
       <!-- Acciones de la derecha -->
       <div
-        class="toolbar-actions flex items-center gap-1"
+        class="toolbar-actions flex items-center gap-0.5 lg:gap-1"
         role="toolbar"
         aria-label="Acciones globales"
       >
@@ -107,6 +108,7 @@ import { Button } from 'primeng/button';
           <p-button
             [text]="true"
             [rounded]="true"
+            size="small"
             [severity]="search.isOpen() ? 'primary' : 'secondary'"
             ariaLabel="Buscar (Ctrl+K)"
             [attr.aria-expanded]="search.isOpen()"
@@ -114,7 +116,7 @@ import { Button } from 'primeng/button';
             data-llm-action="open-search-panel"
             (onClick)="openSearch(searchWrapper)"
           >
-            <app-icon name="search" [size]="18" />
+            <app-icon name="search" [size]="16" />
           </p-button>
         </div>
 
@@ -129,7 +131,7 @@ import { Button } from 'primeng/button';
           data-llm-action="toggle-color-mode"
           (onClick)="cycleTheme($event)"
         >
-          <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="18" />
+          <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="16" />
         </p-button>
 
         <!-- Notificaciones — wrapper con click-outside y animación Aladino -->
@@ -143,6 +145,7 @@ import { Button } from 'primeng/button';
           <p-button
             [text]="true"
             [rounded]="true"
+            size="small"
             [severity]="panelOpen() ? 'primary' : 'secondary'"
             [ariaLabel]="'Notificaciones — ' + notifications.unreadCount() + ' sin leer'"
             [attr.aria-expanded]="panelOpen()"
@@ -150,7 +153,7 @@ import { Button } from 'primeng/button';
             data-llm-action="open-notifications-panel"
             (onClick)="togglePanel()"
           >
-            <app-icon name="bell" [size]="18" />
+            <app-icon name="bell" [size]="16" />
           </p-button>
 
           @if (notifications.unreadCount() > 0) {
@@ -184,6 +187,7 @@ import { Button } from 'primeng/button';
             <p-button
               [text]="true"
               [rounded]="true"
+              size="small"
               [severity]="userPanelOpen() ? 'primary' : 'secondary'"
               [attr.aria-expanded]="userPanelOpen()"
               [attr.aria-label]="'Perfil de ' + user.name"
@@ -191,7 +195,7 @@ import { Button } from 'primeng/button';
               data-llm-action="open-user-profile-menu"
               (onClick)="userPanelOpen.set(!userPanelOpen())"
             >
-              <app-icon name="user" [size]="18" />
+              <app-icon name="user" [size]="16" />
             </p-button>
 
             @if (userPanelOpen()) {

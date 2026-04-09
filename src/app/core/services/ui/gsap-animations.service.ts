@@ -97,8 +97,11 @@ export class GsapAnimationsService {
    * @param suffix - Sufijo opcional (ej: '%', 'hrs')
    */
   animateCounter(el: HTMLElement, target: number, suffix = ''): void {
+    const hasDecimals = target % 1 !== 0;
+    
     if (!this.shouldAnimate()) {
-      el.textContent = Math.round(target) + suffix;
+      const display = hasDecimals ? target.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(target).toLocaleString('es-CL');
+      el.textContent = display + suffix;
       return;
     }
 
@@ -108,7 +111,8 @@ export class GsapAnimationsService {
       duration: 1.2,
       ease: 'power2.out',
       onUpdate: () => {
-        el.textContent = Math.round(obj.val) + suffix;
+        const display = hasDecimals ? obj.val.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : Math.round(obj.val).toLocaleString('es-CL');
+        el.textContent = display + suffix;
       },
     });
   }

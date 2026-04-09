@@ -257,7 +257,15 @@ export class LiquidacionesFacade {
         .filter((instr) => {
           const u = instr.users as any;
           const bId = Array.isArray(u) ? u[0]?.branch_id : u?.branch_id;
-          return !branchId || bId === branchId;
+          if (branchId && bId !== branchId) return false;
+
+          const totalHours = hoursMap.get(instr.id) ?? 0;
+          const totalAdvances = advancesMap.get(instr.id) ?? 0;
+          const payment = paymentsMap.get(instr.id);
+
+          // ONLY include instructors that have activity this month:
+          // either they worked hours, got an advance, or have a payment record.
+          return totalHours > 0 || totalAdvances > 0 || !!payment;
         })
         .map((instr) => {
           const rawU = instr.users as any;

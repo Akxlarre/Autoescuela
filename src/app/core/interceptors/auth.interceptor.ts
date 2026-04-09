@@ -16,22 +16,24 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const supabase = inject(SupabaseService);
+  const session = supabase.session(); // Lectura síncrona del Signal
 
   const addToken = (request: typeof req, token: string) =>
     request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
 
-  return from(supabase.getSession()).pipe(
-    switchMap(({ data: { session } }) =>
-      session?.access_token
-        ? next(addToken(req, session.access_token))
-        : next(req)
-    ),
+  // Si tenemos sesión en el signal, usamos el token
+  const authenticatedRequest = session?.access_token 
+    ? next(addToken(req, session.access_token)) 
+    : next(req);
+
+  return authenticatedRequest.pipe(
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse && err.status === 401) {
+        // En caso de 401 (token expirado no detectado), intentamos refresh explícito
         return from(supabase.refreshSession()).pipe(
-          switchMap(({ data: { session } }) =>
-            session?.access_token
-              ? next(addToken(req, session.access_token))
+          switchMap(({ data: { session: newSession } }) =>
+            newSession?.access_token
+              ? next(addToken(req, newSession.access_token))
               : throwError(() => err)
           ),
           catchError(() => throwError(() => err))

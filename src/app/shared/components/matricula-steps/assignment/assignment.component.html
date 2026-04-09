@@ -1,6 +1,6 @@
 <div class="space-y-6">
   <div class="bg-surface rounded-2xl border border-border-default shadow-sm overflow-hidden">
-    <div class="p-6 border-b border-border-subtle">
+    <div class="p-4 sm:p-6 border-b border-border-subtle">
       <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
         @if (data().view === 'professional') {
           <app-icon name="users" [size]="20" class="text-brand" />
@@ -21,7 +21,7 @@
       </p>
     </div>
 
-    <div class="p-6 space-y-8">
+    <div class="p-4 sm:p-6 space-y-8">
       <!-- VISTA CLASE B -->
       @if (data().view === 'class-b') {
         <!-- 1. Modalidad de Pago (oculta si ya fue seleccionada en paso previo) -->
@@ -426,7 +426,7 @@
     </div>
 
     <!-- Acciones Inferiores -->
-    <div class="p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
+    <div class="p-4 sm:p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
       <button
         type="button"
         (click)="onBack()"
