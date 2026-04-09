@@ -1,9 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { formatCLP } from '@core/utils/date.utils';
 import type { IngresoRow, EgresoRow, CierrePayload } from '@core/models/ui/cuadratura.model';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 /** Denominaciones para el arqueo de caja. */
 interface Denominacion {
@@ -31,519 +32,461 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 @Component({
   selector: 'app-cuadratura-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent],
   template: `
-    <!-- ── Header ─────────────────────────────────────────────────────────── -->
-    <div class="flex flex-wrap items-center justify-between gap-4 px-6 pt-6 pb-2">
-      <div class="flex items-center gap-3">
-        <h1 class="text-2xl font-semibold" style="color: var(--text-primary)">Cuadratura Diaria</h1>
-        @if (cajaYaCerrada()) {
-          <span
-            class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full"
-            style="background: color-mix(in srgb, var(--state-error) 12%, transparent); color: var(--state-error)"
-          >
-            <span class="w-1.5 h-1.5 rounded-full" style="background: var(--state-error)"></span>
-            Caja Cerrada
-          </span>
-        } @else {
-          <span
-            class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full"
-            style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success)"
-          >
-            <span
-              class="w-1.5 h-1.5 rounded-full"
-              style="background: var(--state-success); animation: pulse 2s infinite"
-            ></span>
-            Caja Abierta
-          </span>
-        }
-      </div>
-      <div class="flex items-center gap-3">
-        <span
-          class="text-sm font-medium px-3 py-2 rounded-lg"
-          style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary)"
-        >
-          {{ fechaHoy() }}
-        </span>
-        <a
-          [routerLink]="['../historial-cuadraturas']"
-          class="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg cursor-pointer"
-          style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary); text-decoration: none"
-          data-llm-action="ver-historial-cuadratura"
-          data-llm-nav="historial-cuadraturas"
-          aria-label="Ver historial de cierres de caja"
-        >
-          <app-icon name="history" [size]="15" />
-          Ver Historial
-        </a>
-        <button
-          class="flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg"
-          style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary)"
-          data-llm-action="exportar-cuadratura-excel"
-          aria-label="Exportar cuadratura a Excel"
-        >
-          <app-icon name="download" [size]="15" />
-          Exportar a Excel
-        </button>
-      </div>
-    </div>
+    <div class="bento-grid p-6 pb-12 items-start">
+      <!-- ── Header ─────────────────────────────────────────────────────────── -->
+      <app-section-hero
+        title="Cuadratura Diaria"
+        [contextLine]="fechaHoy()"
+        [chips]="heroChips()"
+        [actions]="heroActions()"
+        (actionClick)="onHeroAction($event)"
+      />
 
-    <!-- ── Cuerpo principal ───────────────────────────────────────────────── -->
-    <div class="grid grid-cols-3 gap-6 p-6 pb-28 items-start">
-      <!-- ─ Columna izquierda (2/3): Registro de Ingresos ─────────────────── -->
-      <div class="col-span-2 flex flex-col gap-6">
-        <div class="card p-0 overflow-hidden">
-          <!-- Header tabla -->
-          <div
-            class="flex items-start justify-between px-6 py-4 border-b"
-            style="border-color: var(--border-muted)"
-          >
+      <!-- ─ Columna izquierda (2/3): Tablas de Registro de Sistema ─────────────────── -->
+      <div class="bento-feature flex flex-col gap-6">
+        
+        <!-- REGISTRO DE INGRESOS -->
+        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5 border-b border-border-muted/50">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center shrink-0">
+              <app-icon name="trending-up" [size]="20" color="var(--color-primary)" />
+            </div>
             <div>
-              <h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-                Registro de Ingresos
-              </h2>
-              <p class="text-xs mt-0.5" style="color: var(--color-primary)">
-                Detalle de boletas y pagos recibidos en el día.
-              </p>
+              <h2 class="text-base font-bold text-text-primary">Registro de Ingresos</h2>
+              <p class="text-[13px] text-text-muted mt-0.5">Detalle de pagos y boletas recibidos en el día.</p>
             </div>
-            <button
-              class="btn-primary flex items-center gap-2 text-sm shrink-0"
-              data-llm-action="agregar-ingreso-cuadratura"
-              [disabled]="cajaYaCerrada()"
-              [style.opacity]="cajaYaCerrada() ? '0.5' : '1'"
-              aria-label="Agregar nuevo ingreso"
-              (click)="abrirIngreso.emit()"
-            >
-              <app-icon name="plus" [size]="14" />
-              Agregar Ingreso
-            </button>
           </div>
-
-          <!-- Columnas header -->
-          <div
-            class="px-6 py-2 grid text-xs font-semibold tracking-wide uppercase"
-            style="
-              grid-template-columns: 80px 1fr 90px 90px 90px 90px 100px 36px;
-              color: var(--text-muted);
-              background: var(--bg-surface);
-            "
+          <button
+            class="btn-primary flex items-center gap-2 text-[13px] px-5 py-2.5 rounded-xl shrink-0 transition-transform active:scale-[0.98] shadow-sm"
+            data-llm-action="agregar-ingreso-cuadratura"
+            [disabled]="cajaYaCerrada()"
+            [style.opacity]="cajaYaCerrada() ? '0.5' : '1'"
+            aria-label="Agregar nuevo ingreso"
+            (click)="abrirIngreso.emit()"
           >
-            <span>N° Boleta</span>
-            <span>Glosa / Alumno</span>
-            <span class="text-right">Clase B</span>
-            <span class="text-right">Clase A</span>
-            <span class="text-right">Sensom.</span>
-            <span class="text-right">Otros</span>
-            <span class="text-right">Total</span>
-            <span></span>
-          </div>
-
-          <!-- Filas -->
-          @if (isLoading()) {
-            <div class="divide-y" style="border-color: var(--border-muted)">
-              @for (row of [1, 2, 3]; track row) {
-                <div
-                  class="px-6 py-3 grid gap-3 items-center"
-                  style="grid-template-columns: 80px 1fr 90px 90px 90px 90px 100px 36px"
-                >
-                  <app-skeleton-block variant="text" width="60px" height="12px" />
-                  <app-skeleton-block variant="text" width="80%" height="12px" />
-                  <app-skeleton-block variant="text" width="70%" height="12px" />
-                  <app-skeleton-block variant="text" width="70%" height="12px" />
-                  <app-skeleton-block variant="text" width="70%" height="12px" />
-                  <app-skeleton-block variant="text" width="70%" height="12px" />
-                  <app-skeleton-block variant="text" width="80%" height="12px" />
-                  <div></div>
-                </div>
-              }
-            </div>
-          } @else if (pagosHoy().length === 0) {
-            <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
-              <app-icon name="inbox" [size]="28" color="var(--text-muted)" />
-              <p class="text-sm" style="color: var(--text-muted)">
-                No hay ingresos registrados hoy.
-              </p>
-            </div>
-          } @else {
-            <div class="divide-y" style="border-color: var(--border-muted)">
-              @for (fila of pagosHoy(); track fila.id) {
-                <div
-                  class="px-6 py-3 grid gap-3 items-center"
-                  style="grid-template-columns: 80px 1fr 90px 90px 90px 90px 100px 36px"
-                >
-                  <span class="text-xs font-mono font-semibold" style="color: var(--color-primary)">
-                    {{ fila.nBoleta ?? '—' }}
-                  </span>
-                  <span class="text-sm font-medium truncate" style="color: var(--text-primary)">
-                    {{ fila.glosa }}
-                  </span>
-                  <span class="text-sm text-right" style="color: var(--text-secondary)">
-                    {{ fila.claseB > 0 ? fila.claseB.toLocaleString('es-CL') : 0 }}
-                  </span>
-                  <span class="text-sm text-right" style="color: var(--text-secondary)">
-                    {{ fila.claseA > 0 ? fila.claseA.toLocaleString('es-CL') : 0 }}
-                  </span>
-                  <span class="text-sm text-right" style="color: var(--text-secondary)">
-                    {{ fila.sence > 0 ? fila.sence.toLocaleString('es-CL') : 0 }}
-                  </span>
-                  <span class="text-sm text-right" style="color: var(--text-secondary)">
-                    {{ fila.otros > 0 ? fila.otros.toLocaleString('es-CL') : 0 }}
-                  </span>
-                  <span class="text-sm text-right font-bold" style="color: var(--text-primary)">
-                    {{ clp(fila.total) }}
-                  </span>
-                  <button
-                    class="flex items-center justify-center w-7 h-7 rounded-lg opacity-40 hover:opacity-100 transition-opacity"
-                    style="color: var(--state-error)"
-                    [disabled]="cajaYaCerrada()"
-                    [attr.aria-label]="'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)"
-                    [attr.data-llm-action]="'eliminar-ingreso-' + fila.id"
-                    (click)="onEliminarIngreso(fila, $event)"
-                  >
-                    <app-icon name="trash-2" [size]="14" />
-                  </button>
-                </div>
-              }
-            </div>
-
-            <!-- Footer total -->
-            <div
-              class="px-6 py-3 flex items-center justify-end gap-3 border-t"
-              style="border-color: var(--border-muted); background: var(--bg-surface)"
-            >
-              <span
-                class="text-xs font-semibold uppercase tracking-wide"
-                style="color: var(--text-muted)"
-              >
-                Total Ingresos del Día:
-              </span>
-              <span class="text-base font-bold" style="color: var(--color-primary)">
-                {{ clp(totalIngresosHoy()) }}
-              </span>
-            </div>
-          }
+            <app-icon name="plus" [size]="16" />
+            <span class="font-bold">Agregar Ingreso</span>
+          </button>
         </div>
-      </div>
 
-      <!-- ─ Columna derecha (1/3): Egresos + Arqueo ───────────────────────── -->
-      <div class="col-span-1 flex flex-col gap-5">
-        <!-- Egresos / Retiros -->
-        <div class="card p-0 overflow-hidden">
-          <div
-            class="flex items-center justify-between px-5 py-3.5 border-b"
-            style="border-color: var(--border-muted)"
-          >
-            <h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-              Egresos / Retiros
-            </h2>
+        <!-- Tabla (Desktop) / Cards (Mobile) -->
+        <div class="flex-1 overflow-x-auto" style="container-type: inline-size;">
+          <!-- Vista Desktop (Table) -->
+          <div class="hidden sm:block min-w-[750px]">
+            <!-- Header Columnas -->
+            <div class="px-6 py-3 grid items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-bg-subtle border-y border-border-muted/50"
+                 style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px">
+               <span>N° Boleta</span>
+               <span>Glosa / Alumno</span>
+               <span class="text-right">Clase B</span>
+               <span class="text-right">Clase A</span>
+               <span class="text-right">Sensom.</span>
+               <span class="text-right">Otros</span>
+               <span class="text-right text-text-primary">Total</span>
+               <span></span>
+            </div>
+
+            <!-- Filas -->
+            @if (isLoading()) {
+              <div class="divide-y divide-border-muted/50">
+                @for (row of [1, 2, 3]; track row) {
+                  <div class="px-6 py-4 grid gap-2 items-center" style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px">
+                    <app-skeleton-block variant="text" width="60px" height="14px" />
+                    <app-skeleton-block variant="text" width="80%" height="14px" />
+                    <app-skeleton-block variant="text" width="50px" height="14px" class="ml-auto" />
+                    <app-skeleton-block variant="text" width="50px" height="14px" class="ml-auto" />
+                    <app-skeleton-block variant="text" width="50px" height="14px" class="ml-auto" />
+                    <app-skeleton-block variant="text" width="50px" height="14px" class="ml-auto" />
+                    <app-skeleton-block variant="text" width="70px" height="18px" class="ml-auto" />
+                    <div></div>
+                  </div>
+                }
+              </div>
+            } @else if (pagosHoy().length === 0) {
+              <div class="px-6 py-20 flex flex-col items-center justify-center text-center">
+                <div class="w-14 h-14 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4 border border-border-muted/50 shadow-sm">
+                  <app-icon name="receipt" [size]="24" color="var(--text-muted)" />
+                </div>
+                <h3 class="text-sm font-bold text-text-primary">No hay ingresos registrados</h3>
+                <p class="text-[13px] text-text-muted mt-1.5 max-w-sm">
+                  Aún no se han registrado pagos, transferencias o boletas en la caja de hoy.
+                </p>
+              </div>
+            } @else {
+              <div class="divide-y divide-border-muted/50">
+                @for (fila of pagosHoy(); track fila.id) {
+                  <div class="px-6 py-3.5 grid gap-2 items-center hover:bg-bg-subtle transition-colors group"
+                       style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px">
+                    <span class="text-[13px] font-mono font-medium text-text-secondary">
+                      {{ fila.nBoleta ?? '—' }}
+                    </span>
+                    <span class="text-[13px] font-semibold text-text-primary truncate">
+                      {{ fila.glosa }}
+                    </span>
+                    <span class="text-[13px] text-right text-text-secondary tabular-nums">
+                      {{ fila.claseB > 0 ? fila.claseB.toLocaleString('es-CL') : '—' }}
+                    </span>
+                    <span class="text-[13px] text-right text-text-secondary tabular-nums">
+                      {{ fila.claseA > 0 ? fila.claseA.toLocaleString('es-CL') : '—' }}
+                    </span>
+                    <span class="text-[13px] text-right text-text-secondary tabular-nums">
+                      {{ fila.sence > 0 ? fila.sence.toLocaleString('es-CL') : '—' }}
+                    </span>
+                    <span class="text-[13px] text-right text-text-secondary tabular-nums">
+                      {{ fila.otros > 0 ? fila.otros.toLocaleString('es-CL') : '—' }}
+                    </span>
+                    <span class="text-[14px] text-right font-black text-text-primary tabular-nums tracking-tight">
+                      {{ clp(fila.total) }}
+                    </span>
+                    <button
+                      class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-state-error/10 hover:text-state-error transition-all focus-visible:opacity-100 ml-auto"
+                      [disabled]="cajaYaCerrada()"
+                      [attr.aria-label]="'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)"
+                      (click)="onEliminarIngreso(fila, $event)"
+                    >
+                      <app-icon name="trash-2" [size]="15" />
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Vista Mobile (Cards) se activa por Container Query en estilos -->
+          <div class="sm:hidden flex flex-col gap-3 p-4">
+            @if (isLoading()) {
+              @for (i of [1,2]; track i) {
+                <div class="p-4 rounded-xl border border-border-muted/50 flex flex-col gap-3">
+                  <app-skeleton-block variant="text" width="60%" height="16px" />
+                  <div class="flex justify-between">
+                    <app-skeleton-block variant="text" width="30%" height="14px" />
+                    <app-skeleton-block variant="text" width="30%" height="14px" />
+                  </div>
+                </div>
+              }
+            } @else {
+              @for (fila of pagosHoy(); track fila.id) {
+                <div class="card-mobile-ingreso">
+                  <div class="flex justify-between items-start mb-2">
+                    <div class="flex flex-col">
+                      <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider">Boleta {{ fila.nBoleta ?? 'S/N' }}</span>
+                      <span class="text-[14px] font-bold text-text-primary">{{ fila.glosa }}</span>
+                    </div>
+                    <button
+                      class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-state-error transition-colors"
+                      [disabled]="cajaYaCerrada()"
+                      (click)="onEliminarIngreso(fila, $event)"
+                    >
+                      <app-icon name="trash-2" [size]="14" />
+                    </button>
+                  </div>
+                  <div class="grid grid-cols-2 gap-y-2 mt-2 pt-2 border-t border-border-muted/30">
+                    <div class="flex flex-col">
+                      <span class="text-[10px] text-text-muted uppercase">Conceptos</span>
+                      <div class="flex flex-wrap gap-1 mt-0.5">
+                        @if (fila.claseB > 0) { <span class="badge-mini">B</span> }
+                        @if (fila.claseA > 0) { <span class="badge-mini">A</span> }
+                        @if (fila.sence > 0) { <span class="badge-mini">SIM</span> }
+                        @if (fila.otros > 0) { <span class="badge-mini">+</span> }
+                      </div>
+                    </div>
+                    <div class="flex flex-col items-end">
+                      <span class="text-[10px] text-text-muted uppercase">Total</span>
+                      <span class="text-[16px] font-black text-text-primary">{{ clp(fila.total) }}</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+        </div>
+
+        <!-- Footer total Ingresos -->
+        <div class="px-6 py-5 flex items-center justify-between border-t border-border-muted/50 bg-bg-surface mt-auto">
+          <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted">
+            Mostrando {{ pagosHoy().length }} ingresos
+          </span>
+          <div class="flex items-center gap-4 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10">
+            <span class="text-[11px] font-black uppercase tracking-widest opacity-80" style="color: var(--color-primary)">
+              Total Día
+            </span>
+            <span class="text-[22px] font-black tabular-nums tracking-tight" style="color: var(--color-primary)">
+              {{ clp(totalIngresosHoy()) }}
+            </span>
+          </div>
+        </div>
+        </div>
+        
+        <!-- REGISTRO DE EGRESOS (Movido a la izquierda) -->
+        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted/50">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-state-warning/10 flex items-center justify-center shrink-0">
+                <app-icon name="trending-down" [size]="16" color="var(--state-warning)" />
+              </div>
+              <h2 class="text-[15px] font-bold text-text-primary">Egresos / Retiros</h2>
+            </div>
             <button
-              class="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg"
-              style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary)"
+              class="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-lg text-text-primary bg-bg-surface border border-border-muted shadow-sm hover:shadow hover:bg-bg-subtle active:scale-[0.98] transition-all"
               data-llm-action="agregar-egreso-cuadratura"
               [disabled]="cajaYaCerrada()"
               [style.opacity]="cajaYaCerrada() ? '0.5' : '1'"
               aria-label="Agregar egreso"
               (click)="abrirEgreso.emit()"
             >
-              <app-icon name="plus" [size]="12" />
+              <app-icon name="plus" [size]="14" />
               Egreso
             </button>
           </div>
 
-          <!-- Header cols -->
-          <div
-            class="px-5 py-2 grid grid-cols-[1fr_80px_24px] gap-3 text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted); background: var(--bg-surface)"
-          >
-            <span>Glosa / Motivo</span>
+          <div class="px-6 py-2 grid grid-cols-[1fr_80px_24px] gap-3 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-bg-subtle border-b border-border-muted/50">
+            <span>Motivo</span>
             <span class="text-right">Monto</span>
             <span></span>
           </div>
 
           @if (isLoading()) {
-            <div class="divide-y" style="border-color: var(--border-muted)">
+            <div class="divide-y divide-border-muted/50">
               @for (i of [1, 2]; track i) {
-                <div class="px-5 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center">
-                  <app-skeleton-block variant="text" width="80%" height="12px" />
-                  <app-skeleton-block variant="text" width="60px" height="12px" />
+                <div class="px-6 py-3.5 grid grid-cols-[1fr_80px_24px] gap-3 items-center">
+                  <app-skeleton-block variant="text" width="80%" height="14px" />
+                  <app-skeleton-block variant="text" width="60px" height="14px" class="ml-auto" />
                   <div></div>
                 </div>
               }
             </div>
           } @else if (gastosHoy().length === 0) {
-            <div class="px-5 py-6 text-center">
-              <p class="text-xs" style="color: var(--text-muted)">Sin egresos registrados.</p>
+            <div class="px-6 py-10 flex flex-col items-center justify-center text-center">
+              <p class="text-[13px] text-text-muted">Sin egresos registrados hoy.</p>
             </div>
           } @else {
-            <div class="divide-y" style="border-color: var(--border-muted)">
+            <div class="divide-y divide-border-muted/50">
               @for (egreso of gastosHoy(); track egreso.id + egreso.tipo) {
-                <div class="px-5 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center">
-                  <span class="text-xs truncate" style="color: var(--text-primary)">
+                <div class="px-6 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center group hover:bg-bg-subtle transition-colors">
+                  <span class="text-[13px] font-medium text-text-primary truncate">
                     {{ egreso.descripcion }}
                   </span>
-                  <span class="text-xs text-right font-medium" style="color: var(--text-primary)">
+                  <span class="text-[13px] text-right font-bold text-text-primary tabular-nums">
                     {{ egreso.monto.toLocaleString('es-CL') }}
                   </span>
                   <button
-                    class="opacity-40 hover:opacity-100 transition-opacity"
-                    style="color: var(--state-error)"
+                    class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-state-error/10 hover:text-state-error transition-all focus-visible:opacity-100"
                     [disabled]="cajaYaCerrada()"
-                    [attr.data-llm-action]="'eliminar-egreso-' + egreso.tipo + '-' + egreso.id"
-                    [attr.aria-label]="'Eliminar egreso ' + egreso.descripcion"
                     (click)="onEliminarEgreso(egreso, $event)"
                   >
-                    <app-icon name="x" [size]="13" />
+                    <app-icon name="x" [size]="14" />
                   </button>
                 </div>
               }
             </div>
           }
 
-          <!-- Total egresos -->
-          <div
-            class="px-5 py-3 flex items-center justify-between border-t"
-            style="border-color: var(--border-muted); background: var(--bg-surface)"
-          >
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Total Egresos:
-            </span>
-            <span class="text-sm font-bold" style="color: var(--state-warning)">
+          <div class="px-6 py-4 flex items-center justify-between border-t border-border-muted/50 bg-bg-surface mt-auto">
+            <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted">Total Egresos</span>
+            <span class="text-[17px] font-black tabular-nums tracking-tight" style="color: var(--state-warning)">
               {{ clp(totalEgresosHoy()) }}
             </span>
           </div>
         </div>
+        
+      </div>
 
-        <!-- Arqueo de Caja Física -->
-        <div class="card p-0 overflow-hidden" style="border-top: 2px solid var(--ds-brand)">
-          <div class="px-5 py-3.5 border-b" style="border-color: var(--border-muted)">
-            <h2 class="text-sm font-semibold" style="color: var(--text-primary)">
-              Arqueo de Caja Física
-            </h2>
-            <p class="text-xs mt-0.5" style="color: var(--text-muted)">
-              Ingrese la cantidad de billetes y monedas.
+      <!-- ─ Columna derecha (1/3): Panel Interactivo (Sticky Checkout) ───────────────────────── -->
+      <div class="bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col">
+        
+        <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
+        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
+          <!-- Titular principal -->
+          <div class="px-6 py-5 border-b border-border-muted/50 bg-bg-surface">
+            <div class="flex items-center gap-3 mb-1.5">
+              <div class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <app-icon name="wallet" [size]="16" color="var(--color-primary)" />
+              </div>
+              <h2 class="text-[16px] font-bold text-text-primary">Arqueo y Cierre Operativo</h2>
+            </div>
+            <p class="text-[13px] text-text-muted pl-11">
+              Conciliación entre lo esperado por el sistema y el efectivo declarado.
             </p>
           </div>
 
-          <!-- Grid billetes/monedas -->
-          <div class="px-5 py-4 grid grid-cols-2 gap-x-6 gap-y-3">
-            <!-- Header columnas -->
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Billetes
-            </span>
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Monedas
-            </span>
+          <!-- 1. Formulación Esperada (System Math) -->
+          <div class="px-6 py-5 bg-brand/5 border-b border-brand/10 flex flex-col gap-2.5">
+            <div class="flex items-center justify-between text-[13px] font-semibold text-text-secondary">
+               <span>Ingresos de Sistema</span>
+               <span class="tabular-nums" style="color: var(--color-primary)">{{ clp(totalIngresosHoy()) }}</span>
+            </div>
+            <div class="flex items-center justify-between text-[13px] font-semibold text-text-secondary">
+               <span>Egresos / Retiros (-)</span>
+               <span class="tabular-nums" style="color: var(--state-warning)">{{ clp(totalEgresosHoy()) }}</span>
+            </div>
+            <div class="mt-1 pt-3 border-t border-brand/10 flex items-center justify-between">
+               <span class="text-[11px] font-black uppercase tracking-widest" style="color: var(--color-primary)">Debe Haber en Caja</span>
+               <span class="text-[17px] font-black text-text-primary tabular-nums tracking-tight">{{ clp(saldoTeorico()) }}</span>
+            </div>
+          </div>
 
-            <!-- Filas paralelas: billete | moneda -->
-            @for (i of [0, 1, 2, 3, 4]; track i) {
-              <!-- Billete -->
-              <div class="flex items-center gap-2">
-                <span class="text-xs flex-1 truncate" style="color: var(--text-secondary)">
-                  {{ billetes()[i].label.replace('Billetes de ', '') }}
-                </span>
-                <span class="text-xs" style="color: var(--text-muted)">×</span>
-                <input
-                  type="number"
-                  min="0"
-                  class="w-14 text-xs text-right px-2 py-1 rounded"
-                  style="
-                    background: var(--bg-surface);
-                    border: 1px solid var(--border-muted);
-                    color: var(--text-primary);
-                    outline: none;
-                  "
-                  [value]="cantidades()[billetes()[i].key]"
-                  [disabled]="cajaYaCerrada()"
-                  [attr.data-llm-description]="
-                    'Cantidad de ' + billetes()[i].label + ' para arqueo de caja'
-                  "
-                  (input)="onCantidadChange(billetes()[i].key, $event)"
-                  (focus)="selectAll($event)"
-                />
+          <!-- 2. Arqueo Form (Billetes y Monedas) -->
+          <div class="px-6 py-6 grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-8 bg-bg-surface">
+            <!-- Billetes -->
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted">Billetes</span>
+                <app-icon name="banknote" [size]="14" color="var(--text-muted)" class="opacity-50" />
               </div>
-
-              <!-- Moneda (solo 5 primeras, la última fila del billete no tiene moneda) -->
-              @if (i < monedas().length) {
-                <div class="flex items-center gap-2">
-                  <span class="text-xs flex-1 truncate" style="color: var(--text-secondary)">
-                    {{ monedas()[i].label.replace('Monedas de ', '') }}
+              @for (billete of billetes(); track billete.key) {
+                <div class="flex items-center justify-between group">
+                  <span class="text-[13px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors cursor-default">
+                    {{ billete.label.replace('Billetes de ', '') }}
                   </span>
-                  <span class="text-xs" style="color: var(--text-muted)">×</span>
-                  <input
-                    type="number"
-                    min="0"
-                    class="w-14 text-xs text-right px-2 py-1 rounded"
-                    style="
-                      background: var(--bg-surface);
-                      border: 1px solid var(--border-muted);
-                      color: var(--text-primary);
-                      outline: none;
-                    "
-                    [value]="cantidades()[monedas()[i].key]"
-                    [disabled]="cajaYaCerrada()"
-                    [attr.data-llm-description]="
-                      'Cantidad de ' + monedas()[i].label + ' para arqueo de caja'
-                    "
-                    (input)="onCantidadChange(monedas()[i].key, $event)"
-                    (focus)="selectAll($event)"
-                  />
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      class="w-[76px] h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                      [value]="cantidades()[billete.key] || ''"
+                      placeholder="0"
+                      [disabled]="cajaYaCerrada()"
+                      (input)="onCantidadChange(billete.key, $event)"
+                      (focus)="selectAll($event)"
+                    />
+                  </div>
                 </div>
-              } @else {
-                <div></div>
               }
-            }
+            </div>
+
+            <!-- Monedas -->
+            <div class="flex flex-col gap-3">
+              <div class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted">Monedas</span>
+                <app-icon name="circle" [size]="14" color="var(--text-muted)" class="opacity-50" />
+              </div>
+              @for (moneda of monedas(); track moneda.key) {
+                <div class="flex items-center justify-between group">
+                  <span class="text-[13px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors cursor-default">
+                    {{ moneda.label.replace('Monedas de ', '') }}
+                  </span>
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
+                    <input
+                      type="number"
+                      min="0"
+                      class="w-[76px] h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                      [value]="cantidades()[moneda.key] || ''"
+                      placeholder="0"
+                      [disabled]="cajaYaCerrada()"
+                      (input)="onCantidadChange(moneda.key, $event)"
+                      (focus)="selectAll($event)"
+                    />
+                  </div>
+                </div>
+              }
+            </div>
           </div>
 
-          <!-- Justificación del descuadre -->
-          <div class="px-5 pb-4 flex flex-col gap-2">
-            @if (diferencia() !== 0) {
-              <label class="text-xs font-semibold" style="color: var(--state-warning)">
-                Justificación del descuadre
-              </label>
-            } @else {
-              <label class="text-xs font-semibold" style="color: var(--text-muted)">
-                Notas / Observaciones
-              </label>
-            }
-            <textarea
-              rows="3"
-              class="text-xs px-3 py-2 rounded-lg resize-y"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-primary);
-                outline: none;
-                min-height: 64px;
-              "
-              placeholder="Ingrese el motivo de la diferencia en caja..."
-              [disabled]="cajaYaCerrada()"
-              [value]="notas()"
-              data-llm-description="Campo de texto para justificar diferencias en el arqueo de caja"
-              (input)="notas.set(getInputValue($event))"
-            ></textarea>
+          <!-- 3. Dynamic Differential Status -->
+          <div class="px-6 py-5 border-y border-border-muted/50 transition-colors flex flex-col gap-3"
+               [style.background]="'color-mix(in srgb, ' + colorDiferencia() + ' 8%, transparent)'">
+             <div class="flex items-center justify-between">
+               <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted">Total Físico Arqueado</span>
+               <span class="text-[16px] font-black tabular-nums" [style.color]="totalArqueo() > 0 ? 'var(--text-primary)' : 'var(--text-muted)'">
+                 {{ clp(totalArqueo()) }}
+               </span>
+             </div>
+             <div class="flex items-center justify-between">
+               <span class="text-[13px] font-black uppercase tracking-widest" [style.color]="colorDiferencia()">Diferencia</span>
+               <span class="text-[22px] font-black tabular-nums tracking-tighter" [style.color]="colorDiferencia()">
+                  {{ diferencia() > 0 ? '+' : '' }}{{ clp(diferencia()) }}
+               </span>
+             </div>
+          </div>
+
+          <!-- 4. Justificación y CTAs (Fondo de Tarjeta) -->
+          <div class="px-6 py-6 border-t border-border-muted/50 mt-auto flex flex-col gap-5 bg-bg-subtle/30">
+            <div class="flex flex-col gap-2.5">
+              <div class="flex items-center justify-between">
+                <label class="text-[12px] font-bold uppercase tracking-widest" [style.color]="diferencia() !== 0 ? 'var(--state-warning)' : 'var(--text-muted)'">
+                  {{ diferencia() !== 0 ? 'Justificación Obligatoria' : 'Observaciones (Opcional)' }}
+                </label>
+                <app-icon name="message-circle" [size]="14" color="var(--text-muted)" class="opacity-50" />
+              </div>
+              <textarea
+                rows="2"
+                class="w-full text-[13px] px-4 py-3.5 rounded-xl resize-none bg-bg-surface border border-border-muted focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-shadow placeholder:text-text-muted/60"
+                placeholder="Ej: Faltan $500 por vuelto mal dado..."
+                [disabled]="cajaYaCerrada()"
+                [value]="notas()"
+                (input)="notas.set(getInputValue($event))"
+              ></textarea>
+            </div>
+            
+            <button
+               class="w-full flex items-center justify-center gap-2.5 font-bold text-[14px] py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand"
+               [class.btn-primary]="!cajaYaCerrada()"
+               [style.background]="cajaYaCerrada() ? 'var(--bg-surface)' : ''"
+               [style.border]="cajaYaCerrada() ? '1px solid var(--border-muted)' : ''"
+               [style.color]="cajaYaCerrada() ? 'var(--text-muted)' : ''"
+               [disabled]="cajaYaCerrada() || isSaving()"
+               [style.opacity]="cajaYaCerrada() || isSaving() ? '0.7' : '1'"
+               data-llm-action="cerrar-caja-guardar"
+               (click)="onGuardarCierre()"
+            >
+               @if (isSaving()) {
+                 <app-icon name="loader" [size]="18" class="animate-spin" />
+                 <span class="tracking-wide">Procesando...</span>
+               } @else if (cajaYaCerrada()) {
+                 <app-icon name="lock" [size]="18" />
+                 <span class="tracking-wide">Caja Cerrada Exitosamente</span>
+               } @else {
+                 <app-icon name="lock" [size]="18" />
+                 <span class="tracking-wide">Validar Arqueo y Cerrar Caja</span>
+               }
+            </button>
           </div>
         </div>
       </div>
     </div>
+  `,
+  styles: `
+    .badge-mini {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: var(--brand-muted);
+      color: var(--color-primary);
+      border: 1px solid color-mix(in srgb, var(--color-primary) 10%, transparent);
+    }
 
-    <!-- ── Barra inferior fija ─────────────────────────────────────────────── -->
-    <div
-      class="fixed bottom-0 right-0 z-20 flex items-center gap-0 border-t"
-      style="
-        left: var(--sidebar-width, 260px);
-        background: var(--bg-surface);
-        border-color: var(--border-muted);
-        padding: 14px 24px;
-      "
-    >
-      <!-- KPIs de resumen -->
-      <div class="flex flex-1 items-center gap-8 overflow-x-auto">
-        <!-- Ingresos Sistema -->
-        <div class="flex flex-col items-center gap-0.5 min-w-0 shrink-0">
-          <span
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-          >
-            Ingresos Sistema
-          </span>
-          <span class="text-lg font-bold" style="color: var(--color-primary)">
-            {{ clp(totalIngresosHoy()) }}
-          </span>
-        </div>
+    .card-mobile-ingreso {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-muted);
+      border-radius: 12px;
+      padding: 14px;
+      transition: transform 0.2s ease;
+    }
 
-        <span class="text-xl font-light" style="color: var(--border-muted)">−</span>
+    .card-mobile-ingreso:active {
+      transform: scale(0.98);
+      background: var(--bg-subtle);
+    }
 
-        <!-- Egresos Sistema -->
-        <div class="flex flex-col items-center gap-0.5 min-w-0 shrink-0">
-          <span
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-          >
-            Egresos Sistema
-          </span>
-          <span class="text-lg font-bold" style="color: var(--state-warning)">
-            {{ clp(totalEgresosHoy()) }}
-          </span>
-        </div>
+    @media (max-width: 1024px) {
+      .bento-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
 
-        <span class="text-xl font-light" style="color: var(--border-muted)">=</span>
-
-        <!-- Debe Haber en Caja -->
-        <div class="flex flex-col items-center gap-0.5 min-w-0 shrink-0">
-          <span
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-          >
-            Debe Haber en Caja
-          </span>
-          <span class="text-lg font-bold" style="color: var(--text-primary)">
-            {{ clp(saldoTeorico()) }}
-          </span>
-        </div>
-
-        <div class="h-8 w-px shrink-0 mx-2" style="background: var(--border-muted)"></div>
-
-        <!-- Efectivo Arqueo -->
-        <div class="flex flex-col items-center gap-0.5 min-w-0 shrink-0">
-          <span
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-          >
-            Efectivo Arqueo
-          </span>
-          <span class="text-lg font-bold" style="color: var(--state-success)">
-            {{ clp(totalArqueo()) }}
-          </span>
-        </div>
-
-        <!-- Diferencia -->
-        <div class="flex flex-col items-center gap-0.5 min-w-0 shrink-0">
-          <span
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-          >
-            Diferencia
-          </span>
-          <span class="text-lg font-bold" [style.color]="colorDiferencia()">
-            {{ clp(diferencia()) }}
-          </span>
-        </div>
-      </div>
-
-      <!-- Botón guardar -->
-      <button
-        class="flex items-center gap-2 font-semibold text-sm px-5 py-2.5 rounded-lg shrink-0 ml-6 transition-opacity"
-        [class.btn-primary]="!cajaYaCerrada()"
-        [style.background]="cajaYaCerrada() ? 'var(--bg-surface)' : ''"
-        [style.border]="cajaYaCerrada() ? '1px solid var(--border-muted)' : ''"
-        [style.color]="cajaYaCerrada() ? 'var(--text-muted)' : ''"
-        [disabled]="cajaYaCerrada() || isSaving()"
-        [style.opacity]="cajaYaCerrada() || isSaving() ? '0.6' : '1'"
-        data-llm-action="cerrar-caja-guardar"
-        aria-label="Cerrar caja y guardar cierre del día"
-        (click)="onGuardarCierre()"
-      >
-        @if (isSaving()) {
-          <app-icon name="loader" [size]="16" />
-          Guardando...
-        } @else if (cajaYaCerrada()) {
-          <app-icon name="lock" [size]="16" />
-          Caja Cerrada
-        } @else {
-          <app-icon name="lock" [size]="16" />
-          Cerrar Caja y Guardar
-        }
-      </button>
-    </div>
+      .sticky {
+        position: static !important;
+        width: 100%;
+      }
+    }
   `,
 })
 export class CuadraturaContentComponent {
@@ -618,6 +561,30 @@ export class CuadraturaContentComponent {
     });
   });
 
+  protected readonly heroChips = computed<SectionHeroChip[]>(() => {
+    if (this.cajaYaCerrada()) {
+      return [{ label: 'Caja Cerrada', style: 'error', icon: 'lock' }];
+    } else {
+      return [{ label: 'Caja Abierta', style: 'success', icon: 'unlock' }];
+    }
+  });
+
+  protected readonly heroActions = computed<SectionHeroAction[]>(() => [
+    {
+      id: 'ver-historial',
+      label: 'Ver Historial',
+      icon: 'history',
+      route: '../historial-cuadraturas',
+      primary: false
+    },
+    {
+      id: 'exportar-excel',
+      label: 'Exportar a Excel',
+      icon: 'download',
+      primary: false
+    }
+  ]);
+
   // ── Helpers de template ───────────────────────────────────────────────────
   protected readonly clp = formatCLP;
 
@@ -632,6 +599,12 @@ export class CuadraturaContentComponent {
 
   protected getInputValue(event: Event): string {
     return (event.target as HTMLTextAreaElement).value;
+  }
+
+  protected onHeroAction(actionId: string): void {
+    if (actionId === 'exportar-excel') {
+      console.log('TODO: Exportar Excel');
+    }
   }
 
   protected onEliminarIngreso(fila: IngresoRow, event: Event): void {

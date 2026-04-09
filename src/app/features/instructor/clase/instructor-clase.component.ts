@@ -28,7 +28,6 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       <app-section-hero
         title="Iniciar Clase"
         subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
-        variant="compact"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="heroActions"

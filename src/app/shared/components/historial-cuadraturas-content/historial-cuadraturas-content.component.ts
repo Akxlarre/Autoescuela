@@ -1,7 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DetalleCuadraturaModalComponent } from '@shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { HistorialCuadraturasFacade } from '@core/facades/historial-cuadraturas.facade';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
@@ -47,7 +51,7 @@ function formatCLP(value: number): string {
 @Component({
   selector: 'app-historial-cuadraturas-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, DetalleCuadraturaModalComponent],
+  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent],
   styles: `
     .cal-grid {
       display: grid;
@@ -127,90 +131,69 @@ function formatCLP(value: number): string {
   `,
   template: `
     <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-      <div>
-        <h1 class="text-2xl font-semibold text-primary">Historial de Cuadraturas</h1>
-        <p class="text-sm text-muted mt-0.5">Registro de cierres de caja mensuales</p>
-      </div>
-
-      <div class="flex items-center gap-3 flex-wrap">
-        <!-- Navegación de mes -->
-        <div
-          class="flex items-center"
-          style="background: var(--bg-surface); border: 1px solid var(--border-muted); border-radius: var(--radius-lg, 10px); overflow: hidden"
-        >
-          <button
-            class="px-3 py-2 transition-colors cursor-pointer"
-            style="color: var(--text-secondary); border-right: 1px solid var(--border-muted)"
-            (click)="mesAnterior.emit()"
-            aria-label="Mes anterior"
-            data-llm-action="historial-mes-anterior"
-          >
-            <app-icon name="chevron-left" [size]="16" />
-          </button>
-          <span
-            class="text-sm font-semibold px-4 text-primary"
-            style="min-width: 140px; text-align: center"
-          >
-            {{ mesLabel() }}
-          </span>
-          <button
-            class="px-3 py-2 transition-colors cursor-pointer"
-            style="color: var(--text-secondary); border-left: 1px solid var(--border-muted)"
-            (click)="mesSiguiente.emit()"
-            aria-label="Mes siguiente"
-            data-llm-action="historial-mes-siguiente"
-          >
-            <app-icon name="chevron-right" [size]="16" />
-          </button>
-        </div>
-
+    <app-section-hero
+      title="Historial de Cuadraturas"
+      subtitle="Registro y visualización del calendario financiero mensual para arqueo de caja."
+      icon="calendar"
+      [actions]="heroActions"
+      (actionClick)="onHeroAction($event)"
+      class="mb-6"
+    >
+      <!-- Navegación de mes insertada nativamente vía ng-content -->
+      <div
+        class="flex items-center shadow-sm"
+        style="background: var(--bg-surface); border: 1px solid var(--border-muted); border-radius: var(--radius-lg, 10px); overflow: hidden"
+      >
         <button
-          class="btn-primary text-sm px-4 py-2 cursor-pointer"
-          style="border-radius: var(--radius-lg, 10px)"
-          (click)="volverAHoy.emit()"
-          data-llm-action="historial-volver-hoy"
-          aria-label="Volver al mes actual"
+          class="px-3.5 py-2.5 transition-colors cursor-pointer"
+          style="color: var(--text-secondary); border-right: 1px solid var(--border-muted)"
+          (click)="mesAnterior.emit()"
+          aria-label="Mes anterior"
+          data-llm-action="historial-mes-anterior"
         >
-          Volver a Hoy
+          <app-icon name="chevron-left" [size]="16" />
         </button>
-
-        <button
-          class="flex items-center gap-2 text-sm font-medium px-4 py-2 cursor-pointer transition-colors"
-          style="background: var(--bg-surface); border: 1px solid var(--border-muted); color: var(--text-primary); border-radius: var(--radius-lg, 10px)"
-          (click)="exportarCSV.emit()"
-          data-llm-action="exportar-historial-csv"
-          aria-label="Exportar historial a CSV"
+        <span
+          class="text-sm font-semibold px-4 text-primary"
+          style="min-width: 140px; text-align: center"
         >
-          <app-icon name="download" [size]="15" />
-          Exportar CSV
+          {{ mesLabel() }}
+        </span>
+        <button
+          class="px-3.5 py-2.5 transition-colors cursor-pointer"
+          style="color: var(--text-secondary); border-left: 1px solid var(--border-muted)"
+          (click)="mesSiguiente.emit()"
+          aria-label="Mes siguiente"
+          data-llm-action="historial-mes-siguiente"
+        >
+          <app-icon name="chevron-right" [size]="16" />
         </button>
       </div>
-    </div>
+    </app-section-hero>
 
     <!-- ── Calendario ─────────────────────────────────────────────────────────── -->
     <div
       class="overflow-hidden"
       style="border: 1px solid var(--border-color); border-radius: var(--radius-lg, 10px)"
     >
-      <!-- Cabecera de días (LUN–DOM) -->
-      <div class="cal-header-days">
+      <!-- Cabecera de días (LUN–DOM) | DESKTOP SOLO -->
+      <div class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/50 border-b border-border-muted/50">
         @for (dia of diasSemana; track dia) {
-          <div class="cal-header-cell">{{ dia }}</div>
+          <div class="px-2 py-3.5 text-center text-[10px] font-bold text-text-muted bg-bg-subtle uppercase tracking-widest">
+            {{ dia }}
+          </div>
         }
       </div>
 
-      <!-- Grid de celdas -->
-      @if (isLoading()) {
-        <div class="cal-grid">
+      <!-- Grid de celdas | DESKTOP SOLO -->
+      <div class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/30 flex-1">
+        @if (isLoading()) {
           @for (i of skeletonCells; track i) {
-            <div class="cal-cell cal-cell--empty">
+            <div class="cal-cell bg-bg-surface-elevated p-2 flex flex-col justify-between">
               <app-skeleton-block variant="text" width="40%" height="13px" />
             </div>
           }
-        </div>
-      } @else {
-        <div class="cal-grid">
+        } @else {
           @for (celda of calendarDays(); track $index) {
             <div
               class="cal-cell"
@@ -285,15 +268,111 @@ function formatCLP(value: number): string {
               }
             </div>
           }
-        </div>
-      }
-    </div>
+        }
+      </div>
 
-    <!-- ── Modal de detalle ───────────────────────────────────────────────────── -->
-    <app-detalle-cuadratura-modal [cierre]="cierreSeleccionado()" (closed)="cerrarDetalle()" />
+      <!-- ── VISTA MÓVIL (Feed/List View) ── -->
+      <div class="flex lg:hidden flex-col divide-y divide-border-muted/30">
+        @if (isLoading()) {
+          @for (i of [1, 2, 3, 4]; track i) {
+            <div class="p-4 flex items-center justify-between bg-bg-surface">
+              <div class="flex gap-3 items-center w-full">
+                <app-skeleton-block variant="circle" width="44px" height="44px" />
+                <div class="flex flex-col gap-2 flex-1">
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
+                  <app-skeleton-block variant="text" width="40%" height="10px" />
+                </div>
+              </div>
+            </div>
+          }
+        } @else {
+          @for (celda of calendarDays(); track $index) {
+             @if (celda.day && (celda.cierre || celda.isToday)) {
+                <!-- Mobile Card/Row -->
+                <button
+                  class="flex items-center justify-between p-4 bg-bg-surface hover:bg-bg-subtle active:bg-border-muted/30 transition-colors w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
+                  (click)="celda.cierre && abrirDetalle(celda.cierre)"
+                  [attr.aria-disabled]="!celda.cierre"
+                >
+                   <div class="flex items-center gap-4">
+                     <!-- Fecha Circle -->
+                     <div class="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl"
+                          [class.bg-brand]="celda.isToday"
+                          [class.text-white]="celda.isToday"
+                          [class.bg-bg-subtle]="!celda.isToday"
+                          [class.border]="!celda.isToday"
+                          [class.border-border-muted]="!celda.isToday">
+                        <span class="text-[10px] font-bold uppercase tracking-widest" [class.text-white]="celda.isToday" [class.text-text-muted]="!celda.isToday">
+                          {{ getMesCorto(mesActual()) }}
+                        </span>
+                        <span class="text-lg font-black leading-none" [class.text-text-primary]="!celda.isToday">
+                          {{ celda.day }}
+                        </span>
+                     </div>
+                     
+                     <!-- Detalles -->
+                     <div class="flex flex-col flex-1">
+                        @if (celda.cierre; as cierre) {
+                           <div class="flex items-center gap-1.5 mb-0.5">
+                              @if (cierre.estadoDiferencia === 'balanced') {
+                                <div class="w-1.5 h-1.5 rounded-full bg-state-success"></div>
+                                <span class="text-[13px] font-bold text-text-primary">Cuadrado</span>
+                              } @else if (cierre.estadoDiferencia === 'surplus') {
+                                <div class="w-1.5 h-1.5 rounded-full bg-state-warning"></div>
+                                <span class="text-[13px] font-bold text-text-primary">Sobrante</span>
+                              } @else {
+                                <div class="w-1.5 h-1.5 rounded-full bg-state-error"></div>
+                                <span class="text-[13px] font-bold text-text-primary">Descuadre</span>
+                              }
+                           </div>
+                           <div class="flex items-center gap-1 text-text-muted text-xs">
+                             <app-icon name="user" [size]="10" />
+                             <span class="truncate max-w-[120px] lg:max-w-none">{{ cierre.cajero }}</span>
+                           </div>
+                        } @else if (celda.isToday) {
+                           <div class="flex items-center gap-1.5 mb-1 text-brand">
+                              <app-icon name="loader" [size]="14" class="animate-spin" />
+                              <span class="text-[13px] font-bold">Sesión en curso</span>
+                           </div>
+                           <span class="text-text-muted text-[11px] font-semibold">Esperando cierre operativo</span>
+                        }
+                     </div>
+                   </div>
+                   
+                   <!-- Monto / Acción -->
+                   <div class="flex flex-col items-end gap-1">
+                      @if (celda.cierre; as cierre) {
+                         <span class="text-[13px] font-black tabular-nums tracking-tight"
+                           [class.text-state-error]="cierre.estadoDiferencia === 'shortage'"
+                           [class.text-state-warning]="cierre.estadoDiferencia === 'surplus'"
+                           [class.text-state-success]="cierre.estadoDiferencia === 'balanced'">
+                           {{ formatDiferencia(cierre.diferencia) }}
+                         </span>
+                         <app-icon name="chevron-right" [size]="16" class="text-text-muted opacity-50" />
+                      }
+                   </div>
+                </button>
+             }
+          }
+
+          <!-- Empty State si no hay ningún registro en el mes visible -->
+          @if (mesSinCierresMobile()) {
+            <div class="flex flex-col items-center justify-center py-12 px-4 shadow-inner text-center bg-bg-subtle text-text-muted">
+              <div class="w-12 h-12 rounded-full bg-bg-surface border border-border-muted flex items-center justify-center mb-3">
+                <app-icon name="calendar-x" [size]="20" class="opacity-50" />
+              </div>
+              <h3 class="text-sm font-bold text-text-primary mb-1">Sin Actividad</h3>
+              <p class="text-xs max-w-[200px]">No existen cierres ni registros arqueados en este mes.</p>
+            </div>
+          }
+        }
+      </div>
+    </div>
   `,
 })
 export class HistorialCuadraturasContentComponent {
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly facade = inject(HistorialCuadraturasFacade);
   // ── Inputs ────────────────────────────────────────────────────────────────
   cierres = input<HistorialCierre[]>([]);
   isLoading = input(false);
@@ -306,12 +385,14 @@ export class HistorialCuadraturasContentComponent {
   volverAHoy = output<void>();
   exportarCSV = output<void>();
 
-  // ── Estado UI interno (no es estado de dominio — es solo UI) ──────────────
-  protected readonly cierreSeleccionado = signal<HistorialCierre | null>(null);
-
-  // ── Constantes ────────────────────────────────────────────────────────────
+  // ── Constantes y Configuración de Hero ─────────────────────────────────────
   protected readonly diasSemana = DIAS_SEMANA;
   protected readonly skeletonCells = Array.from({ length: 35 });
+  
+  protected readonly heroActions: SectionHeroAction[] = [
+    { id: 'volver_hoy', label: 'Volver a Hoy', primary: true },
+    { id: 'exportar_csv', label: 'Exportar CSV', icon: 'download', primary: false },
+  ];
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
@@ -361,14 +442,23 @@ export class HistorialCuadraturasContentComponent {
     return days;
   });
 
+  protected readonly mesSinCierresMobile = computed(() => {
+    // Es true si en este mes específico no hay día que esté "en curso" ni día que tenga "cierre"
+    return !this.calendarDays().some(c => c.day && (c.cierre || c.isToday));
+  });
+
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   protected abrirDetalle(cierre: HistorialCierre): void {
-    this.cierreSeleccionado.set(cierre);
-  }
-
-  protected cerrarDetalle(): void {
-    this.cierreSeleccionado.set(null);
+    this.facade.seleccionarCierre(cierre);
+    const [yyyy, mm, dd] = cierre.fecha.split('-');
+    const fechaFormat = `${dd}/${mm}/${yyyy}`;
+    
+    this.layoutDrawer.push(
+      DetalleCuadraturaModalComponent,
+      `Detalle Cuadratura — ${fechaFormat}`,
+      'calculator',
+    );
   }
 
   protected formatDiferencia(diff: number): string {
@@ -376,5 +466,19 @@ export class HistorialCuadraturasContentComponent {
     if (diff > 0) return `+ ${formatted}`;
     if (diff < 0) return `- ${formatted}`;
     return formatted;
+  }
+
+  protected onHeroAction(actionId: string): void {
+    if (actionId === 'volver_hoy') {
+      this.volverAHoy.emit();
+    } else if (actionId === 'exportar_csv') {
+      this.exportarCSV.emit();
+    }
+  }
+
+  // Traducción rápida al formato de string del mes de 3 letras
+  protected getMesCorto(numeroMes: number): string {
+    const ms = MESES[numeroMes - 1];
+    return ms ? ms.substring(0, 3) : '';
   }
 }

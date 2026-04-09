@@ -82,7 +82,6 @@ interface CellSummary {
         <app-section-hero
           contextLine="Gestión de horarios"
           title="Agenda Semanal"
-          variant="compact"
           [subtitle]="weekSubtitle()"
           [actions]="heroActions"
           (actionClick)="onHeroAction($event)"
@@ -91,9 +90,10 @@ interface CellSummary {
 
       <!-- ── KPIs ──────────────────────────────────────────────────────────── -->
       @if (showKpis()) {
-        @for (kpi of kpiCards(); track kpi.id) {
-          <div class="bento-square">
-            <app-kpi-card-variant
+        <div #kpiGrid class="contents">
+          @for (kpi of kpiCards(); track kpi.id) {
+            <div class="bento-square">
+              <app-kpi-card-variant
               [value]="kpi.value"
               [label]="kpi.label"
               [icon]="kpi.icon"
@@ -102,6 +102,7 @@ interface CellSummary {
             />
           </div>
         }
+        </div>
       }
 
       <!-- ── Calendario ─────────────────────────────────────────────────────── -->

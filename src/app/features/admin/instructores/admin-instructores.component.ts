@@ -5,10 +5,14 @@ import {
   effect,
   inject,
   signal,
+  afterNextRender,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { InstructorTableRow } from '@core/models/ui/instructor-table.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -75,203 +79,250 @@ type FilterTab = 'all' | 'active' | 'expiring';
         </button>
       </div>
 
-      <!-- ── Table ────────────────────────────────────────────────────────── -->
-      <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="instructor-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>RUT</th>
-                <th>Licencia</th>
-                <th>Vehículo</th>
-                <th>Tipo</th>
-                <th class="text-center">Clases activas</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @if (facade.isLoading()) {
-                @for (_ of skeletonRows; track $index) {
-                  <tr>
-                    <td>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="140px" height="14px" />
-                        <app-skeleton-block variant="text" width="180px" height="11px" />
-                      </div>
-                    </td>
-                    <td><app-skeleton-block variant="text" width="100px" height="14px" /></td>
-                    <td>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="rect" width="70px" height="22px" />
-                        <app-skeleton-block variant="text" width="110px" height="11px" />
-                      </div>
-                    </td>
-                    <td>
-                      <div class="flex flex-col gap-1.5">
-                        <app-skeleton-block variant="text" width="80px" height="14px" />
-                        <app-skeleton-block variant="text" width="120px" height="11px" />
-                      </div>
-                    </td>
-                    <td><app-skeleton-block variant="text" width="70px" height="14px" /></td>
-                    <td class="text-center">
-                      <app-skeleton-block variant="circle" width="32px" height="32px" />
-                    </td>
-                    <td><app-skeleton-block variant="text" width="60px" height="14px" /></td>
-                    <td><app-skeleton-block variant="rect" width="60px" height="28px" /></td>
-                  </tr>
-                }
-              } @else if (filteredInstructores().length === 0) {
+      <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
+      <div class="card p-0 overflow-hidden shadow-sm dual-viewport-container" #listCard>
+        <div class="viewport-content bg-surface">
+          <!-- VISTA Desktop: Tabla clásica -->
+          <div class="desktop-view hide-on-squeeze overflow-x-auto">
+            <table class="instructor-table">
+              <thead>
                 <tr>
-                  <td colspan="8">
-                    <div class="py-14 text-center">
-                      <div class="flex flex-col items-center gap-2">
-                        <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
-                        <p class="text-sm mt-1" style="color: var(--text-muted)">
-                          No hay instructores que coincidan con los filtros.
-                        </p>
-                      </div>
-                    </div>
-                  </td>
+                  <th>Nombre</th>
+                  <th>RUT</th>
+                  <th>Licencia</th>
+                  <th>Vehículo</th>
+                  <th>Tipo</th>
+                  <th class="text-center">Clases activas</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
                 </tr>
-              } @else {
-                @for (inst of paginatedInstructores(); track inst.id) {
-                  <tr class="instructor-row">
-                    <!-- Nombre + email -->
-                    <td>
-                      <div class="flex flex-col">
-                        <span class="text-sm font-semibold" style="color: var(--text-primary)">
-                          {{ inst.nombre }}
-                        </span>
-                        <a
-                          class="text-xs"
-                          style="color: var(--text-muted); text-decoration: none;"
-                          [href]="'mailto:' + inst.email"
-                        >
-                          {{ inst.email }}
-                        </a>
+              </thead>
+              <tbody>
+                @if (facade.isLoading()) {
+                  @for (_ of skeletonRows; track $index) {
+                    <tr>
+                      <td>
+                        <div class="flex flex-col gap-1.5">
+                          <app-skeleton-block variant="text" width="140px" height="14px" />
+                          <app-skeleton-block variant="text" width="180px" height="11px" />
+                        </div>
+                      </td>
+                      <td><app-skeleton-block variant="text" width="100px" height="14px" /></td>
+                      <td>
+                        <div class="flex flex-col gap-1.5">
+                          <app-skeleton-block variant="rect" width="70px" height="22px" />
+                          <app-skeleton-block variant="text" width="110px" height="11px" />
+                        </div>
+                      </td>
+                      <td>
+                        <div class="flex flex-col gap-1.5">
+                          <app-skeleton-block variant="text" width="80px" height="14px" />
+                          <app-skeleton-block variant="text" width="120px" height="11px" />
+                        </div>
+                      </td>
+                      <td><app-skeleton-block variant="text" width="70px" height="14px" /></td>
+                      <td class="text-center">
+                        <app-skeleton-block variant="circle" width="32px" height="32px" />
+                      </td>
+                      <td><app-skeleton-block variant="text" width="60px" height="14px" /></td>
+                      <td><app-skeleton-block variant="rect" width="60px" height="28px" /></td>
+                    </tr>
+                  }
+                } @else if (filteredInstructores().length === 0) {
+                  <tr>
+                    <td colspan="8">
+                      <div class="py-14 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                          <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
+                          <p class="text-sm mt-1" style="color: var(--text-muted)">
+                            No hay instructores que coincidan con los filtros.
+                          </p>
+                        </div>
                       </div>
                     </td>
-
-                    <!-- RUT -->
-                    <td>
-                      <span class="text-sm" style="color: var(--text-primary)">{{ inst.rut }}</span>
-                    </td>
-
-                    <!-- Licencia -->
-                    <td>
-                      <div class="flex flex-col gap-1">
-                        <span
-                          class="license-badge"
-                          [class]="'license-badge license-badge--' + inst.licenseStatus"
-                        >
-                          {{ inst.licenseStatusLabel }}
-                        </span>
-                        @if (inst.licenseExpiry) {
-                          <span class="text-xs" style="color: var(--text-muted)">
-                            Vence: {{ inst.licenseExpiry }}
-                          </span>
-                        }
-                      </div>
-                    </td>
-
-                    <!-- Vehículo -->
-                    <td>
-                      @if (inst.vehiclePlate) {
+                  </tr>
+                } @else {
+                  @for (inst of paginatedInstructores(); track inst.id) {
+                    <tr class="instructor-row">
+                      <!-- Nombre + email -->
+                      <td>
                         <div class="flex flex-col">
                           <span class="text-sm font-semibold" style="color: var(--text-primary)">
-                            {{ inst.vehiclePlate }}
+                            {{ inst.nombre }}
                           </span>
-                          <span class="text-xs" style="color: var(--text-muted)">
-                            {{ inst.vehicleModel }}
-                          </span>
+                          <a
+                            class="text-xs"
+                            style="color: var(--text-muted); text-decoration: none;"
+                            [href]="'mailto:' + inst.email"
+                          >
+                            {{ inst.email }}
+                          </a>
                         </div>
-                      } @else {
-                        <span class="text-sm italic" style="color: var(--text-muted)">
-                          Sin asignar
+                      </td>
+
+                      <!-- RUT -->
+                      <td>
+                        <span class="text-sm" style="color: var(--text-primary)">{{ inst.rut }}</span>
+                      </td>
+
+                      <!-- Licencia -->
+                      <td>
+                        <div class="flex flex-col gap-1">
+                          <span
+                            class="license-badge"
+                            [class]="'license-badge license-badge--' + inst.licenseStatus"
+                          >
+                            {{ inst.licenseStatusLabel }}
+                          </span>
+                          @if (inst.licenseExpiry) {
+                            <span class="text-xs" style="color: var(--text-muted)">
+                              Vence: {{ inst.licenseExpiry }}
+                            </span>
+                          }
+                        </div>
+                      </td>
+
+                      <!-- Vehículo -->
+                      <td>
+                        @if (inst.vehiclePlate) {
+                          <div class="flex flex-col">
+                            <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                              {{ inst.vehiclePlate }}
+                            </span>
+                            <span class="text-xs" style="color: var(--text-muted)">
+                              {{ inst.vehicleModel }}
+                            </span>
+                          </div>
+                        } @else {
+                          <span class="text-sm italic" style="color: var(--text-muted)">
+                            Sin asignar
+                          </span>
+                        }
+                      </td>
+
+                      <!-- Tipo -->
+                      <td>
+                        <span class="text-sm" style="color: var(--text-primary)">
+                          {{ inst.tipoLabel }}
                         </span>
-                      }
-                    </td>
+                      </td>
 
-                    <!-- Tipo -->
-                    <td>
-                      <span class="text-sm" style="color: var(--text-primary)">
-                        {{ inst.tipoLabel }}
-                      </span>
-                    </td>
+                      <!-- Clases activas -->
+                      <td class="text-center">
+                        <span class="classes-badge">
+                          {{ inst.activeClassesCount }}
+                        </span>
+                      </td>
 
-                    <!-- Clases activas -->
-                    <td class="text-center">
-                      <span class="classes-badge">
-                        {{ inst.activeClassesCount }}
-                      </span>
-                    </td>
+                      <!-- Estado -->
+                      <td>
+                        @if (inst.estado === 'activo') {
+                          <span class="status-text status-text--active">Activo</span>
+                        } @else {
+                          <span class="status-text status-text--inactive">Inactivo</span>
+                        }
+                      </td>
 
-                    <!-- Estado -->
-                    <td>
-                      @if (inst.estado === 'activo') {
-                        <span class="status-text status-text--active">Activo</span>
-                      } @else {
-                        <span class="status-text status-text--inactive">Inactivo</span>
-                      }
-                    </td>
-
-                    <!-- Acciones -->
-                    <td>
-                      <div class="flex items-center gap-1">
-                        <button
-                          class="action-btn"
-                          title="Ver detalle"
-                          (click)="openVerDrawer(inst)"
-                          data-llm-action="ver-instructor"
-                        >
-                          <app-icon name="eye" [size]="16" />
-                        </button>
-                        <button
-                          class="action-btn"
-                          title="Editar instructor"
-                          (click)="openEditarDrawer(inst)"
-                          data-llm-action="editar-instructor"
-                        >
-                          <app-icon name="edit" [size]="16" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      <!-- Acciones -->
+                      <td>
+                        <div class="flex items-center gap-1">
+                          <button
+                            class="action-btn"
+                            title="Ver detalle"
+                            (click)="openVerDrawer(inst)"
+                            data-llm-action="ver-instructor"
+                          >
+                            <app-icon name="eye" [size]="16" />
+                          </button>
+                          <button
+                            class="action-btn"
+                            title="Editar instructor"
+                            (click)="openEditarDrawer(inst)"
+                            data-llm-action="editar-instructor"
+                          >
+                            <app-icon name="edit" [size]="16" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
                 }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- VISTA Mobile: Tarjetas apiladas -->
+          <div class="mobile-view show-on-squeeze p-4 space-y-4">
+            @if (facade.isLoading()) {
+              @for (card of [1,2,3]; track card) {
+                <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
+                  <div class="flex justify-between items-start">
+                    <app-skeleton-block variant="text" width="140px" height="14px" />
+                    <app-skeleton-block variant="rect" width="60px" height="20px" />
+                  </div>
+                  <div class="space-y-2">
+                    <app-skeleton-block variant="text" width="90%" height="12px" />
+                    <app-skeleton-block variant="text" width="50%" height="10px" />
+                  </div>
+                </div>
               }
-            </tbody>
-          </table>
+            } @else {
+              @for (inst of paginatedInstructores(); track inst.id) {
+                <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all">
+                  <div class="p-4 border-b border-border-subtle flex items-start justify-between bg-subtle">
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-sm font-bold text-text-primary truncate">{{ inst.nombre }}</span>
+                      <span class="text-xs text-text-muted truncate">{{ inst.email }}</span>
+                    </div>
+                    <span class="license-badge shrink-0" [class]="'license-badge license-badge--' + inst.licenseStatus" style="font-size: 10px; padding: 2px 8px;">
+                      {{ inst.licenseStatusLabel }}
+                    </span>
+                  </div>
+                  <div class="p-4 grid grid-cols-2 gap-4 text-xs">
+                    <div class="flex flex-col">
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">RUT</span>
+                      <span>{{ inst.rut }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">Tipo</span>
+                      <span>{{ inst.tipoLabel }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">Vehículo</span>
+                      <span class="truncate">{{ inst.vehiclePlate || 'Sin asignar' }}</span>
+                    </div>
+                    <div class="flex flex-col">
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">Estado</span>
+                      <span [class.text-state-success]="inst.estado === 'activo'"
+                            [class.text-text-muted]="inst.estado !== 'activo'"
+                            class="font-medium">
+                        {{ inst.estado === 'activo' ? 'Activo' : 'Inactivo' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
+                    <button class="action-btn" (click)="openVerDrawer(inst)">
+                      <app-icon name="eye" [size]="16" />
+                    </button>
+                    <button class="action-btn" (click)="openEditarDrawer(inst)">
+                      <app-icon name="edit" [size]="16" />
+                    </button>
+                  </div>
+                </div>
+              }
+            }
+          </div>
         </div>
 
-        <!-- Paginación -->
+        <!-- Paginación Global -->
         @if (!facade.isLoading() && filteredInstructores().length > 0) {
-          <div
-            class="flex items-center justify-between px-6 py-4"
-            style="border-top: 1px solid var(--border-subtle);"
-          >
-            <p class="text-xs" style="color: var(--text-muted)">
-              Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
-              {{ filteredInstructores().length }} instructores
+          <div class="flex items-center justify-between px-6 py-4" style="border-top: 1px solid var(--border-subtle);">
+            <p class="text-xs text-text-muted">
+              Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de {{ filteredInstructores().length }}
             </p>
             <div class="flex items-center gap-2">
-              <button
-                class="pagination-btn"
-                [disabled]="currentPage() === 1"
-                (click)="currentPage.set(currentPage() - 1)"
-                data-llm-action="pagina-anterior"
-              >
-                Anterior
-              </button>
-              <button
-                class="pagination-btn"
-                [disabled]="currentPage() >= totalPages()"
-                (click)="currentPage.set(currentPage() + 1)"
-                data-llm-action="pagina-siguiente"
-              >
-                Siguiente
-              </button>
+              <button class="pagination-btn" [disabled]="currentPage() === 1" (click)="currentPage.set(currentPage() - 1)">Anterior</button>
+              <button class="pagination-btn" [disabled]="currentPage() >= totalPages()" (click)="currentPage.set(currentPage() + 1)">Siguiente</button>
             </div>
           </div>
         }
@@ -422,17 +473,38 @@ type FilterTab = 'all' | 'active' | 'expiring';
       opacity: 0.4;
       cursor: not-allowed;
     }
+
+    /* Container Queries para Dual-Viewport Render */
+    .dual-viewport-container {
+      container-type: inline-size;
+      container-name: instructorContainer;
+    }
+
+    .show-on-squeeze { display: none; }
+
+    @container instructorContainer (max-width: 850px) {
+      .hide-on-squeeze { display: none !important; }
+      .show-on-squeeze { display: block !important; }
+    }
   `,
 })
 export class AdminInstructoresComponent {
   protected readonly facade = inject(InstructoresFacade);
   private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly listCard = viewChild<ElementRef<HTMLElement>>('listCard');
 
   constructor() {
     effect(() => {
       this.branchFacade.selectedBranchId(); // tracking
       this.facade.initialize();
+    });
+
+    afterNextRender(() => {
+      if (this.listCard()) {
+        setTimeout(() => this.gsap.animateBentoGrid(this.listCard()!.nativeElement), 50);
+      }
     });
   }
 

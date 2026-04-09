@@ -25,8 +25,8 @@
 | `instructor_monthly_payments` | M3 - Finanzas | `id`, `period` | `instructor_id`, `paid_by` | Admin: CRUD, Sec: R, Inst: R (self) | ✅ Definida |
 | `standalone_courses` | M3 - Finanzas | `id`, `type` | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `standalone_course_enrollments` | M3 - Finanzas | `id`, `course_id`| `standalone_course_id`, `student_id`, `certificate_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
-| `service_catalog` | M3 - Finanzas | `id`, `name` | Ninguna | Admin: CRUD, Sec: R | ✅ Definida |
-| `special_service_sales` | M3 - Finanzas | `id`, `service_id`| `student_id`, `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
+| `service_catalog` | M3 - Finanzas | `id`, `name`, `description`, `base_price`, `active` | Ninguna | Admin: CRUD, Sec: R | ✅ Definida |
+| `special_service_sales` | M3 - Finanzas | `id`, `service_id`→service_catalog, `student_id` (nullable), `is_student`, `client_name`, `client_rut`, `sale_date`, `price`, `status` (pending/completed), `paid`, `metadata` JSONB, `registered_by`→users | `service_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida — patch 20260407: student_id nullable, +is_student/client_name/client_rut/status/paid |
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructors` | M4 - Acad. B | `id`, `user_id` | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
@@ -78,6 +78,7 @@
 | `certificate_batches` | M10 - Reglas| `id`, `batch_code` | `branch_id`, `received_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `certificates` | M10 - Reglas| `id`, `folio` | `batch_id`, `enrollment_id`, `student_id`, `issued_by` | Admin: CRUD, Sec: CRUD, Stu: R (self) | ✅ Definida |
 | `biometric_records` | M14 - Norm. | `id`, `method` | `student_id`, `class_b_session_id`, `professional_session_id` | Admin: CRUD, Sec: R, Stu: R (self) | ✅ Definida |
+| `student_surveys` | M15 - Calidad| `id`, `obtained_license`, `satisfaction_rating` | `enrollment_id` | Admin: R, Sec: R | ✅ Definida (`20260408000000`) |
 | `professional_weekly_signatures` | M5 - Prof. | `id`, `week_start_date` (DATE, siempre lunes), `signed_at`, `notes` | `promotion_course_id` (CASCADE), `enrollment_id` (CASCADE), `recorded_by` · UNIQUE(`enrollment_id`, `week_start_date`) | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (suyas vía enrollment) | ✅ Definida (`20260403100000`) |
 
 ## Vistas (security_invoker = true)

@@ -59,6 +59,7 @@ import {
   HelpCircle,
   Info,
   MinusCircle,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   ShieldOff,
@@ -86,9 +87,11 @@ import {
   FileSpreadsheet,
   FileText,
   FileX,
+  FilterX,
   Folder,
   FolderOpen,
   FolderSearch,
+  List,
   ListChecks,
   Scroll,
   // ── Calendar & Time ──
@@ -115,6 +118,7 @@ import {
   Inbox,
   Mail,
   MessageCircle,
+  MessageSquareOff,
   Mic,
   Phone,
   // ── Media & UI ──
@@ -144,6 +148,7 @@ import {
   Gauge,
   GraduationCap,
   Hash,
+  Coins,
   IdCard,
   LifeBuoy,
   Loader,
@@ -165,6 +170,7 @@ import {
   TrendingUp,
   // ── Surfaces ──
   Circle,
+  Unlock,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -268,6 +274,7 @@ export const appConfig: ApplicationConfig = {
         HelpCircle,
         Info,
         MinusCircle,
+        Shield,
         ShieldAlert,
         ShieldCheck,
         ShieldOff,
@@ -295,9 +302,11 @@ export const appConfig: ApplicationConfig = {
         FileSpreadsheet,
         FileText,
         FileX,
+        FilterX,
         Folder,
         FolderOpen,
         FolderSearch,
+        List,
         ListChecks,
         Scroll,
         // ── Calendar & Time ──
@@ -324,6 +333,7 @@ export const appConfig: ApplicationConfig = {
         Inbox,
         Mail,
         MessageCircle,
+        MessageSquareOff,
         Mic,
         Phone,
         // ── Media & UI ──
@@ -354,6 +364,7 @@ export const appConfig: ApplicationConfig = {
         Gauge,
         GraduationCap,
         Hash,
+        Coins,
         IdCard,
         LifeBuoy,
         Loader,
@@ -371,6 +382,7 @@ export const appConfig: ApplicationConfig = {
         TrendingDown,
         TrendingUp,
         Truck,
+        Unlock,
         Wrench,
       }),
     ),

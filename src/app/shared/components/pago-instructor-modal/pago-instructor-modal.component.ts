@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { DrawerComponent } from '@shared/components/drawer/drawer.component';
 import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liquidaciones.model';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -24,126 +25,101 @@ function formatCLP(value: number): string {
 
 @Component({
   selector: 'app-pago-instructor-modal',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, DrawerComponent],
   template: `
-    @if (row()) {
-      <!-- Backdrop -->
-      <div
-        class="fixed inset-0 z-40"
-        style="background: rgba(0,0,0,0.45); backdrop-filter: blur(2px)"
-        aria-hidden="true"
-        (click)="cerrar()"
-      ></div>
-
-      <!-- Panel -->
-      <div
-        class="fixed z-50 flex flex-col overflow-hidden"
-        style="
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: min(520px, calc(100vw - 32px));
-          max-height: calc(100vh - 64px);
-          background: var(--bg-surface);
-          border: 1px solid var(--border-muted);
-          border-radius: var(--radius-lg, 12px);
-          box-shadow: 0 24px 64px rgba(0,0,0,0.22);
-        "
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="pago-modal-title"
-      >
-        <!-- ── Header ────────────────────────────────────────────────────── -->
-        <div
-          class="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
-          style="border-color: var(--border-muted)"
-        >
+    <app-drawer
+      [isOpen]="isOpen()"
+      title="Registrar Liquidación"
+      icon="banknote"
+      [hasFooter]="true"
+      (closed)="cerrar()"
+    >
+      @if (row()) {
+        <!-- ── Subtítulo Contextual ── -->
+        <div class="mb-5 pb-5 border-b" style="border-color: var(--border-muted)">
           <div class="flex items-center gap-3">
-            <app-icon name="banknote" [size]="18" color="var(--ds-brand)" />
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
+              [style.background]="row()!.avatarColor"
+            >
+              {{ row()!.initials }}
+            </div>
             <div>
-              <h2 id="pago-modal-title" class="text-base font-semibold text-primary">
-                Registrar Liquidación
-              </h2>
-              <p class="text-xs text-muted mt-0.5">{{ row()!.nombre }}</p>
+              <h3 class="text-base font-bold text-primary leading-tight">{{ row()!.nombre }}</h3>
+              <p class="text-xs text-muted mt-0.5">{{ row()!.rut }}</p>
             </div>
           </div>
-          <button
-            class="p-1.5 rounded-lg transition-colors cursor-pointer"
-            style="color: var(--text-muted)"
-            (click)="cerrar()"
-            aria-label="Cerrar modal"
-          >
-            <app-icon name="x" [size]="16" />
-          </button>
         </div>
 
-        <!-- ── Cuerpo ────────────────────────────────────────────────────── -->
-        <div class="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
+        <div class="flex flex-col gap-6">
           <!-- Resumen de liquidación -->
           <section>
-            <h3 class="text-xs font-semibold text-secondary uppercase tracking-wide mb-3">
-              Resumen
+            <h3 class="text-[11px] font-bold text-secondary uppercase tracking-widest mb-3">
+              Resumen Financiero
             </h3>
             <div class="grid grid-cols-2 gap-3">
               <div
-                class="rounded-lg px-4 py-3"
-                style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color)"
+                class="rounded-xl px-4 py-3 border"
+                style="background: var(--bg-surface-elevated); border-color: var(--border-color)"
               >
-                <p class="text-xs text-muted mb-1">Horas trabajadas</p>
-                <p class="text-sm font-semibold text-primary">{{ row()!.totalHours }} hrs</p>
+                <p class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wider">Horas trabajadas</p>
+                <p class="text-sm font-semibold text-primary font-mono">{{ row()!.totalHours }} hrs</p>
               </div>
               <div
-                class="rounded-lg px-4 py-3"
-                style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color)"
+                class="rounded-xl px-4 py-3 border"
+                style="background: var(--bg-surface-elevated); border-color: var(--border-color)"
               >
-                <p class="text-xs text-muted mb-1">Valor por hora</p>
-                <p class="text-sm font-semibold text-primary">
+                <p class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wider">Valor / hora</p>
+                <p class="text-sm font-semibold text-primary font-mono">
                   {{ formatCLP(row()!.amountPerHour) }}
                 </p>
               </div>
               <div
-                class="rounded-lg px-4 py-3"
-                style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color)"
+                class="rounded-xl px-4 py-3 border"
+                style="background: var(--bg-surface-elevated); border-color: var(--border-color)"
               >
-                <p class="text-xs text-muted mb-1">Base ganado</p>
-                <p class="text-sm font-semibold text-primary">
+                <p class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wider">Base ganado</p>
+                <p class="text-sm font-bold text-primary font-mono">
                   {{ formatCLP(row()!.totalBaseAmount) }}
                 </p>
               </div>
               <div
-                class="rounded-lg px-4 py-3"
-                style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color)"
+                class="rounded-xl px-4 py-3 border"
+                style="background: var(--bg-surface-elevated); border-color: color-mix(in srgb, var(--state-error) 20%, var(--border-color))"
               >
-                <p class="text-xs text-muted mb-1">Anticipos descontados</p>
-                <p class="text-sm font-semibold" style="color: var(--color-error)">
+                <p class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wider">Descuentos</p>
+                <p class="text-sm font-bold font-mono" style="color: var(--state-error)">
                   - {{ formatCLP(row()!.totalAdvances) }}
                 </p>
               </div>
               <div
-                class="col-span-2 rounded-lg px-4 py-3"
-                style="background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface-elevated)); border: 1px solid var(--border-color)"
+                class="col-span-2 rounded-xl px-5 py-4 border mt-1"
+                style="background: color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface-elevated)); border-color: color-mix(in srgb, var(--ds-brand) 30%, var(--border-color))"
               >
-                <p class="text-xs text-muted mb-1">Total a pagar</p>
-                <p class="text-base font-bold" style="color: var(--ds-brand)">
-                  {{ formatCLP(row()!.finalPaymentAmount) }}
-                </p>
+                <div class="flex items-center justify-between">
+                  <p class="text-[11px] font-bold text-primary uppercase tracking-widest">Total a pagar</p>
+                  <p class="text-2xl font-black tracking-tight" style="color: var(--ds-brand)">
+                    {{ formatCLP(row()!.finalPaymentAmount) }}
+                  </p>
+                </div>
               </div>
             </div>
           </section>
 
           <!-- Método de pago -->
           <section>
-            <h3 class="text-xs font-semibold text-secondary uppercase tracking-wide mb-3">
+            <h3 class="text-[11px] font-bold text-secondary uppercase tracking-widest mb-3">
               Método de Pago
             </h3>
 
             <!-- Selector método -->
             <div class="flex gap-2 mb-4">
               <button
-                class="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border transition-all cursor-pointer text-sm font-medium"
+                class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer text-sm font-bold"
                 [style.border-color]="
-                  paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'var(--border-muted)'
+                  paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'transparent'
                 "
                 [style.background]="
                   paymentMethod() === 'cash'
@@ -157,13 +133,13 @@ function formatCLP(value: number): string {
                 data-llm-action="select-payment-method-cash"
                 aria-label="Pago en efectivo"
               >
-                <app-icon name="banknote" [size]="15" />
+                <app-icon name="banknote" [size]="16" />
                 Efectivo
               </button>
               <button
-                class="flex-1 flex items-center gap-2 px-4 py-3 rounded-lg border transition-all cursor-pointer text-sm font-medium"
+                class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer text-sm font-bold"
                 [style.border-color]="
-                  paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'var(--border-muted)'
+                  paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'transparent'
                 "
                 [style.background]="
                   paymentMethod() === 'transfer'
@@ -177,27 +153,30 @@ function formatCLP(value: number): string {
                 data-llm-action="select-payment-method-transfer"
                 aria-label="Pago por transferencia"
               >
-                <app-icon name="arrow-right-left" [size]="15" />
+                <app-icon name="arrow-right-left" [size]="16" />
                 Transferencia
               </button>
             </div>
 
             <!-- Código de transferencia (condicional) -->
             @if (paymentMethod() === 'transfer') {
-              <div>
-                <label class="block text-xs font-medium text-secondary mb-1.5" for="transfer-code">
+              <div class="mt-2">
+                <label class="block text-xs font-bold text-secondary mb-2" for="transfer-code">
                   Código / N° de transferencia
                 </label>
                 <input
                   id="transfer-code"
                   type="text"
-                  class="w-full px-3 py-2 text-sm rounded-lg"
+                  class="w-full px-4 py-3 text-sm rounded-xl font-mono"
                   style="
                     background: var(--bg-surface-elevated);
                     border: 1px solid var(--border-muted);
                     color: var(--text-primary);
                     outline: none;
+                    transition: border-color 0.2s;
                   "
+                  onfocus="this.style.borderColor='var(--ds-brand)'"
+                  onblur="this.style.borderColor='var(--border-muted)'"
                   placeholder="Ej: 123456789"
                   [value]="transferCode()"
                   (input)="transferCode.set($any($event.target).value)"
@@ -205,51 +184,49 @@ function formatCLP(value: number): string {
                   aria-label="Código o número de transferencia"
                 />
                 @if (showTransferError()) {
-                  <p class="text-xs mt-1" style="color: var(--color-error)">
-                    Ingresa el código de la transferencia.
+                  <p class="text-xs font-medium mt-2 flex items-center gap-1.5" style="color: var(--state-error)">
+                    <app-icon name="alert-circle" [size]="14" />
+                    Ingresa el código de la transferencia para continuar.
                   </p>
                 }
               </div>
             }
           </section>
         </div>
+      }
 
-        <!-- ── Footer ────────────────────────────────────────────────────── -->
-        <div
-          class="flex items-center justify-end gap-3 px-6 py-4 border-t flex-shrink-0"
-          style="border-color: var(--border-muted)"
+      <div drawer-footer class="flex items-center justify-end gap-3 w-full">
+        <button
+          class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
+          style="
+            background: transparent;
+            color: var(--text-secondary);
+          "
+          (click)="cerrar()"
+          data-llm-action="cancelar-pago-instructor"
+          aria-label="Cancelar"
         >
-          <button
-            class="flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-lg cursor-pointer transition-colors"
-            style="
-              background: var(--bg-surface-elevated);
-              border: 1px solid var(--border-muted);
-              color: var(--text-secondary);
-            "
-            (click)="cerrar()"
-            data-llm-action="cancelar-pago-instructor"
-            aria-label="Cancelar"
-          >
-            Cancelar
-          </button>
-          <button
-            class="btn-primary flex items-center gap-2 text-sm px-4 py-2 rounded-lg cursor-pointer"
-            (click)="confirmar()"
-            data-llm-action="confirmar-pago-instructor"
-            aria-label="Confirmar pago"
-          >
-            <app-icon name="check" [size]="15" />
-            Confirmar Pago
-          </button>
-        </div>
+          Cancelar
+        </button>
+        <button
+          class="btn-primary flex items-center justify-center gap-2 text-sm px-6 py-2.5 rounded-xl cursor-pointer shadow-sm font-bold"
+          (click)="confirmar()"
+          data-llm-action="confirmar-pago-instructor"
+          aria-label="Confirmar pago"
+        >
+          <app-icon name="check" [size]="16" />
+          Confirmar Pago
+        </button>
       </div>
-    }
+    </app-drawer>
   `,
 })
 export class PagoInstructorModalComponent {
   row = input<LiquidacionRow | null>(null);
   confirmed = output<PagoInstructorPayload>();
   closed = output<void>();
+
+  isOpen = computed(() => this.row() !== null);
 
   protected readonly paymentMethod = signal<'cash' | 'transfer'>('cash');
   protected readonly transferCode = signal<string>('');
@@ -286,3 +263,4 @@ export class PagoInstructorModalComponent {
     });
   }
 }
+

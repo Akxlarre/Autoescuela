@@ -1,4 +1,4 @@
-import { Injectable } from "@angular/core";
+import { Injectable, signal } from "@angular/core";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { environment } from "../../../../environments/environment";
 
@@ -7,12 +7,31 @@ import { environment } from "../../../../environments/environment";
 })
 export class SupabaseService {
   private supabase: SupabaseClient;
+  private _session = signal<any>(null); // Type 'any' to avoid import issues if Session isn't exported, but it is in supabase-js
+  public readonly session = this._session.asReadonly();
 
   constructor() {
     this.supabase = createClient(
       environment.supabase.url,
       environment.supabase.anonKey,
+      {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+        },
+      }
     );
+
+    // Escuchar cambios de sesión de forma centralizada
+    this.supabase.auth.onAuthStateChange((event, session) => {
+      this._session.set(session);
+    });
+
+    // Carga inicial de sesión (una sola vez)
+    this.supabase.auth.getSession().then(({ data: { session } }) => {
+      this._session.set(session);
+    });
   }
 
   get client() {

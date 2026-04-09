@@ -525,12 +525,16 @@ body {
 
 .kpi-value {
   font-family: var(--font-display);
-  font-size: var(--text-4xl);
+  font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));
   font-weight: var(--font-bold);
   line-height: var(--leading-tight);
   color: var(--text-primary);
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .kpi-label {
@@ -541,6 +545,20 @@ body {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* ── Section Eyebrow — Línea de contexto sobre títulos ─────────
+   Para contextLine en SectionHero: nombre de dominio, estado, ruta.
+   PROHIBIDO usar .kpi-label aquí: ese estilo es exclusivo para
+   etiquetas de métricas numéricas (uppercase + tracking agresivo).
+   ─────────────────────────────────────────────────────────── */
+.section-eyebrow {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+  letter-spacing: 0.01em;
 }
 
 /* ── Jerarquía de Superficies ────────────────────────────────
@@ -564,6 +582,44 @@ body {
     background: radial-gradient(ellipse at top right, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
     pointer-events: none;
   }
+
+  /* ── Token cascade para contexto gradient ──────────────────
+     Al aplicar surface-hero, todos los tokens hijos se adaptan
+     automáticamente al fondo oscuro sin cambiar clases en el HTML.
+
+     Efecto: text-text-primary → blanco, btn-primary → inverso,
+             bg-subtle → glass blanco, hover:text-brand → blanco.
+     ───────────────────────────────────────────────────────── */
+
+  // Jerarquía tipográfica sobre gradiente
+  --text-primary: var(--color-primary-text); // → #ffffff
+  --text-secondary: rgba(255, 255, 255, 0.78);
+  --text-muted: rgba(255, 255, 255, 0.55);
+
+  // Superficies interactivas (hover, badges, chips default)
+  --bg-subtle: rgba(255, 255, 255, 0.1);
+
+  // Bordes sobre gradiente
+  --border-subtle: rgba(255, 255, 255, 0.18);
+  --border-default: rgba(255, 255, 255, 0.28);
+
+  // Brand color → blanco (hover:text-brand, bg-brand/10, border-brand/20)
+  // Efecto: icon badge → glass blanco; back-link hover → blanco
+  --color-brand: rgba(255, 255, 255, 1);
+  --color-brand-hover: rgba(255, 255, 255, 0.85);
+
+  // Botón primario: inverso (blanco + texto brand)
+  --btn-primary-bg: rgba(255, 255, 255, 0.95);
+  --btn-primary-bg-hover: rgba(255, 255, 255, 1);
+  --btn-primary-text: var(--ds-brand); // brand sobre blanco = legible
+  --btn-primary-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --btn-primary-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.2);
+
+  // Botón secundario: glass blanco
+  --btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-bg-hover: rgba(255, 255, 255, 0.18);
+  --btn-secondary-border: rgba(255, 255, 255, 0.32);
+  --btn-secondary-text: var(--color-primary-text); // → #ffffff
 }
 
 .surface-glass {
