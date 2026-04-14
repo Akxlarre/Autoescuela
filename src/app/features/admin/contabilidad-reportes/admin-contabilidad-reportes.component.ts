@@ -1,32 +1,43 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ReportesContablesFacade } from '@core/facades/reportes-contables.facade';
+import { ReportesContablesContentComponent } from '@shared/components/reportes-contables-content/reportes-contables-content.component';
+import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
 
 @Component({
   selector: 'app-admin-contabilidad-reportes',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ReportesContablesContentComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Reportes Contables</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /admin/contabilidad/reportes</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/admin/contabilidad/reportes.astro
-        </code>
-      </div>
-    </div>
+    <app-reportes-contables-content
+      [kpis]="facade.kpis()"
+      [ingresosCategoria]="facade.ingresosCategoria()"
+      [gastosCategoria]="facade.gastosCategoria()"
+      [evolucionMensual]="facade.evolucionMensual()"
+      [detalleDiario]="facade.detalleDiario()"
+      [diasConMovimientos]="facade.diasConMovimientos()"
+      [escuela]="facade.escuela()"
+      [isLoading]="facade.isLoading()"
+      [filtros]="facade.filtros()"
+      (aplicarFiltros)="onAplicarFiltros($event)"
+      (exportarExcel)="facade.exportarExcel()"
+      (exportarPDF)="facade.exportarPDF()"
+      (verDetalle)="onVerDetalle($event)"
+    />
   `,
 })
-export class AdminContabilidadReportesComponent {}
+export class AdminContabilidadReportesComponent implements OnInit {
+  protected readonly facade = inject(ReportesContablesFacade);
+
+  ngOnInit(): void {
+    void this.facade.initialize();
+  }
+
+  protected async onAplicarFiltros(filtros: FiltrosReporte): Promise<void> {
+    await this.facade.aplicarFiltros(filtros);
+  }
+
+  protected onVerDetalle(fecha: string): void {
+    // TODO: abrir drawer con detalle del día (fecha YYYY-MM-DD)
+    console.log('Ver detalle del día:', fecha);
+  }
+}
