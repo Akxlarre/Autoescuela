@@ -138,17 +138,14 @@ export class EnrollmentDocumentsFacade {
         return false;
       }
 
-      const {
-        data: { publicUrl },
-      } = this.supabase.client.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
-
-      // Upsert student_documents record
+      // Upsert student_documents — guardamos el path relativo, no la URL pública.
+      // El bucket es privado; las URLs firmadas se generan bajo demanda con TTL.
       const { error: dbError } = await this.supabase.client.from('student_documents').upsert(
         {
           enrollment_id: enrollmentId,
           type: 'id_photo',
           file_name: fileName,
-          storage_url: publicUrl,
+          storage_url: filePath,
           status: 'approved',
           uploaded_at: new Date().toISOString(),
         },
@@ -160,12 +157,11 @@ export class EnrollmentDocumentsFacade {
         return false;
       }
 
-      // Update local state so the UI reflects the uploaded photo immediately.
-      // Append a cache-busting param so the browser always fetches the new image
-      // even when the storage path is the same (upsert replaces same key).
+      // Para preview inmediato usamos el dataUrl original (ya está en memoria),
+      // evitando llamar a Storage para un display que ya tenemos localmente.
       this._carnetPhoto.set({
         source: 'upload',
-        capturedDataUrl: `${publicUrl}?t=${Date.now()}`,
+        capturedDataUrl: dataUrl,
         fileName: fileName,
       });
 
@@ -210,16 +206,13 @@ export class EnrollmentDocumentsFacade {
         return false;
       }
 
-      const {
-        data: { publicUrl },
-      } = this.supabase.client.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
-
+      // Guardar path relativo en DB (no URL pública — bucket privado).
       const { error: dbError } = await this.supabase.client.from('student_documents').upsert(
         {
           enrollment_id: enrollmentId,
           type,
           file_name: file.name,
-          storage_url: publicUrl,
+          storage_url: filePath,
           status: 'pending',
           document_issue_date: issueDate ?? null,
           uploaded_at: new Date().toISOString(),
@@ -265,10 +258,9 @@ export class EnrollmentDocumentsFacade {
       );
 
       if (persisted) {
-        // Remove from storage
-        const storagePath = this.extractStoragePath(persisted.storage_url);
-        if (storagePath) {
-          await this.supabase.client.storage.from(STORAGE_BUCKET).remove([storagePath]);
+        // storage_url contiene el path relativo directamente tras la migración SQL.
+        if (persisted.storage_url) {
+          await this.supabase.client.storage.from(STORAGE_BUCKET).remove([persisted.storage_url]);
         }
 
         // Remove from DB
@@ -359,11 +351,15 @@ export class EnrollmentDocumentsFacade {
         });
       }
 
-      // Restore carnet photo if exists (canonical CarnetPhoto: capturedDataUrl)
+      // Restaurar foto carnet: storage_url es ahora un path relativo →
+      // generar signed URL (TTL 1h) para que el <img> pueda mostrarlo.
       if (doc.type === 'id_photo') {
+        const { data: signedData } = await this.supabase.client.storage
+          .from(STORAGE_BUCKET)
+          .createSignedUrl(doc.storage_url, 3600);
         this._carnetPhoto.set({
           source: 'upload',
-          capturedDataUrl: doc.storage_url,
+          capturedDataUrl: signedData?.signedUrl ?? doc.storage_url,
           fileName: doc.file_name,
         });
       }
@@ -459,13 +455,5 @@ export class EnrollmentDocumentsFacade {
       ia[i] = byteString.charCodeAt(i);
     }
     return new Blob([ab], { type: mime });
-  }
-
-  /** Extrae el path relativo del storage desde una URL pública. */
-  private extractStoragePath(publicUrl: string): string | null {
-    const marker = `/storage/v1/object/public/${STORAGE_BUCKET}/`;
-    const idx = publicUrl.indexOf(marker);
-    if (idx === -1) return null;
-    return publicUrl.substring(idx + marker.length);
   }
 }

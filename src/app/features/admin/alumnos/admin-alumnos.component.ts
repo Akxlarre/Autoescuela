@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, effect, inject, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { AlumnosListContentComponent } from '@shared/components/alumnos-list-content/alumnos-list-content.component';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -18,6 +19,7 @@ import { AdminClaseOnlineDrawerComponent } from './clase-online-drawer/admin-cla
       [alumnosPorVencer]="facade.alumnosPorVencer()"
       (refreshRequested)="facade.initialize()"
       (claseOnlineAction)="openClaseOnlineDrawer($event)"
+      (preInscritosRequested)="navigateToPreInscritos()"
     />
   `,
 })
@@ -25,6 +27,7 @@ export class AdminAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly router = inject(Router);
 
   constructor() {
     // Re-carga la lista cada vez que el admin cambia de sede (o vuelve a "Todas")
@@ -44,5 +47,9 @@ export class AdminAlumnosComponent implements OnInit {
     const title = mode === 'zoom' ? 'Enviar Enlace Zoom' : 'Registrar Asistencia';
     const icon = mode === 'zoom' ? 'video' : 'check-circle';
     this.layoutDrawer.open(AdminClaseOnlineDrawerComponent, title, icon);
+  }
+
+  protected navigateToPreInscritos(): void {
+    void this.router.navigate(['/app/admin/alumnos/pre-inscritos']);
   }
 }

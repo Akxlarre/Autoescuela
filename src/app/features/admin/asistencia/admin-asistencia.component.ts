@@ -1,32 +1,93 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, effect, inject } from '@angular/core';
+import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AsistenciaClaseBContentComponent } from '@shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component';
+import { AsistenciaTeoriaDrawerComponent } from './asistencia-teoria-drawer.component';
+import { AgendarTeoriaDrawerComponent } from './agendar-teoria-drawer.component';
+import type { ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
 
+/**
+ * AdminAsistenciaComponent — Smart component.
+ * Ruta: /app/admin/asistencia
+ *
+ * Reactivo al selector de sede del topbar (BranchFacade.selectedBranchId).
+ */
 @Component({
   selector: 'app-admin-asistencia',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [AsistenciaClaseBContentComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Asistencia</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /admin/asistencia</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/admin/asistencia.astro
-        </code>
-      </div>
-    </div>
+    <app-asistencia-clase-b-content
+      [kpis]="facade.kpis()"
+      [clasesTeorias]="facade.clasesTeorias()"
+      [clasesPracticas]="facade.clasesPracticas()"
+      [alertas]="facade.alertas()"
+      [instructores]="facade.instructores()"
+      [selectedDate]="facade.selectedDate()"
+      [isLoading]="facade.isLoading()"
+      [isSaving]="facade.isSaving()"
+      (markAttendance)="facade.markAttendance($event.sessionId, $event.status)"
+      (justifyAbsence)="facade.justifyAbsence($event.sessionId, $event.reason)"
+      (removeSchedule)="facade.removeSchedule($event)"
+      (reactivateSchedule)="facade.reactivateSchedule($event)"
+      (sendReminder)="facade.sendReminder($event)"
+      (viewAtendanceList)="openTeoriaDrawer($event)"
+      (dateChange)="facade.setDate($event)"
+      (exportExcel)="onExportExcel()"
+      (refreshRequested)="onRefresh()"
+      (scheduleNewClass)="openAgendarDrawer()"
+    />
   `,
 })
-export class AdminAsistenciaComponent {}
+export class AdminAsistenciaComponent implements OnInit {
+  protected readonly facade = inject(AsistenciaClaseBFacade);
+  private readonly branchFacade = inject(BranchFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  constructor() {
+    let previousBranchId: number | null | undefined = undefined;
+
+    effect(() => {
+      const branchId = this.branchFacade.selectedBranchId();
+      this.facade.setBranchFilter(branchId);
+
+      if (previousBranchId === undefined) {
+        // First run on component creation — SWR (no skeleton if already cached)
+        void this.facade.initialize();
+      } else if (previousBranchId !== branchId) {
+        // Branch actually changed — force full reload with skeleton
+        void this.facade.reload();
+      }
+      previousBranchId = branchId;
+    });
+  }
+
+  ngOnInit(): void {}
+
+  protected async openTeoriaDrawer(clase: ClaseTeoricoRow): Promise<void> {
+    await this.facade.openTeoriaDrawer(clase);
+    this.layoutDrawer.open(
+      AsistenciaTeoriaDrawerComponent,
+      `${clase.horaInicio} – ${clase.horaFin} · ${clase.tema}`,
+      'graduation-cap',
+    );
+  }
+
+  protected openAgendarDrawer(): void {
+    this.layoutDrawer.open(
+      AgendarTeoriaDrawerComponent,
+      'Agendar nueva clase teórica',
+      'calendar-plus',
+    );
+  }
+
+  protected async onRefresh(): Promise<void> {
+    await this.facade.reload();
+  }
+
+  protected onExportExcel(): void {
+    // TODO: exportación Excel
+  }
+}

@@ -19,6 +19,7 @@ export interface Enrollment {
   current_step: number;
   payment_mode?: 'total' | 'partial' | null;
   license_group?: 'class_b' | 'professional' | null;
+  certificate_b_pdf_url?: string | null;
   registration_channel?: string | null;
   registered_by?: number | null;
   created_at: string;

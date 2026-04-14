@@ -1,32 +1,51 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { CertificacionClaseBContentComponent } from '@shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component';
 
+/**
+ * AdminCertificacionComponent — Smart component.
+ * Ruta: /app/admin/certificacion
+ *
+ * Reactivo al selector de sede del topbar (BranchFacade.selectedBranchId).
+ */
 @Component({
   selector: 'app-admin-certificacion',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CertificacionClaseBContentComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Certificados</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /admin/certificacion</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/admin/certificacion.astro
-        </code>
-      </div>
-    </div>
+    <app-certificacion-clase-b-content
+      [alumnos]="facade.alumnos()"
+      [kpis]="facade.kpis()"
+      [log]="facade.log()"
+      [isLoading]="facade.isLoading()"
+      [generatingId]="facade.generatingId()"
+      (generarCertificado)="facade.generarCertificado($event)"
+      (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
+      (enviarEmail)="facade.enviarEmail($event)"
+      (generarPendientes)="facade.generarPendientes()"
+      (enviarEmailsMasivo)="facade.enviarEmailsMasivo()"
+      (exportar)="facade.exportar()"
+    />
   `,
 })
-export class AdminCertificacionComponent {}
+export class AdminCertificacionComponent {
+  protected readonly facade = inject(CertificacionClaseBFacade);
+  private readonly branchFacade = inject(BranchFacade);
+
+  constructor() {
+    let previousBranchId: number | null | undefined = undefined;
+
+    effect(() => {
+      const branchId = this.branchFacade.selectedBranchId();
+
+      if (previousBranchId === undefined) {
+        void this.facade.initialize();
+      } else if (previousBranchId !== branchId) {
+        void this.facade.reload();
+      }
+      previousBranchId = branchId;
+    });
+  }
+}

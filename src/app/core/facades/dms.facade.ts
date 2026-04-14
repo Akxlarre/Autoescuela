@@ -80,7 +80,10 @@ interface RawSchoolDoc {
   description: string | null;
   branch_id: number | null;
   created_at: string;
-  users: { first_names: string; paternal_last_name: string } | { first_names: string; paternal_last_name: string }[] | null;
+  users:
+    | { first_names: string; paternal_last_name: string }
+    | { first_names: string; paternal_last_name: string }[]
+    | null;
 }
 
 interface RawTemplate {
@@ -133,8 +136,20 @@ export class DmsFacade {
     return this.confirmModal.confirm(config);
   }
 
-  openDocument(url: string, fileName?: string): void {
-    this.dmsViewer.openByUrl(url, fileName || 'Documento');
+  /**
+   * Abre el visor de documentos generando una signed URL (TTL 1h) desde el
+   * path relativo almacenado en DB. El bucket 'documents' es privado.
+   */
+  async openDocument(path: string, fileName?: string): Promise<void> {
+    try {
+      const { data, error } = await this.supabase.client.storage
+        .from('documents')
+        .createSignedUrl(path, 3600);
+      if (error || !data) throw error ?? new Error('No signed URL');
+      this.dmsViewer.openByUrl(data.signedUrl, fileName || 'Documento');
+    } catch {
+      this.toast.error('No se pudo abrir el documento');
+    }
   }
 
   closeDrawer(): void {
@@ -152,7 +167,9 @@ export class DmsFacade {
   private _initialized = false;
 
   // Sub-ruta: detalle de alumno
-  private readonly _studentDetail = signal<{ name: string; rut: string; studentId: number } | null>(null);
+  private readonly _studentDetail = signal<{ name: string; rut: string; studentId: number } | null>(
+    null,
+  );
   private readonly _studentDocs = signal<DmsStudentDocRow[]>([]);
   private readonly _studentDocsLoading = signal(false);
 
@@ -177,12 +194,14 @@ export class DmsFacade {
   readonly preselectedStudentId = this._preselectedStudentId.asReadonly();
   readonly uploadSaved = this._uploadSaved.asReadonly();
 
-  readonly kpis = computed((): DmsKpis => ({
-    totalStudentDocs: this._recentDocs().length,      // proxy; backend contaría mejor
-    totalSchoolDocs: this._schoolDocs().length,
-    totalTemplates: this._templates().length,
-    recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
-  }));
+  readonly kpis = computed(
+    (): DmsKpis => ({
+      totalStudentDocs: this._recentDocs().length, // proxy; backend contaría mejor
+      totalSchoolDocs: this._schoolDocs().length,
+      totalTemplates: this._templates().length,
+      recentUploads: this._studentsWithDocs().reduce((acc, s) => acc + s.docCount, 0),
+    }),
+  );
 
   // ── Métodos de Acción ────────────────────────────────────────────────────────
 
@@ -214,28 +233,34 @@ export class DmsFacade {
     this._preselectedStudentId.set(studentId);
     this._uploadSaved.set(false);
 
-    // Importación dinámica para evitar ciclos circulares si fuera necesario, 
+    // Importación dinámica para evitar ciclos circulares si fuera necesario,
     // pero aquí usaremos el componente directamente (se cargará al abrir el drawer).
-    // Nota: El componente se llamará DmsUploadDrawerComponent por ahora, 
+    // Nota: El componente se llamará DmsUploadDrawerComponent por ahora,
     // pero actuará como contenido puro.
-    import('../../features/admin/documentos/dms-upload-drawer/dms-upload-drawer.component').then(m => {
-      this.layoutDrawer.open(m.DmsUploadDrawerComponent, 
-        mode === 'student' ? 'Subir documento de alumno' : 'Subir documento institucional',
-        'upload'
-      );
-    });
+    import('../../features/admin/documentos/dms-upload-drawer/dms-upload-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(
+          m.DmsUploadDrawerComponent,
+          mode === 'student' ? 'Subir documento de alumno' : 'Subir documento institucional',
+          'upload',
+        );
+      },
+    );
   }
 
   /**
    * Abre el drawer para crear una nueva plantilla.
    */
   openTemplate(): void {
-    import('../../features/admin/documentos/dms-template-drawer/dms-template-drawer.component').then(m => {
-      this.layoutDrawer.open(m.DmsTemplateDrawerComponent, 
-        'Nueva plantilla institucional',
-        'folder'
-      );
-    });
+    import('../../features/admin/documentos/dms-template-drawer/dms-template-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(
+          m.DmsTemplateDrawerComponent,
+          'Nueva plantilla institucional',
+          'folder',
+        );
+      },
+    );
   }
 
   /**
@@ -274,7 +299,9 @@ export class DmsFacade {
 
         const rawStudent = studentData as unknown as RawStudent | null;
         const user = rawStudent
-          ? (Array.isArray(rawStudent.users) ? rawStudent.users[0] : rawStudent.users)
+          ? Array.isArray(rawStudent.users)
+            ? rawStudent.users[0]
+            : rawStudent.users
           : null;
         if (user) {
           this._studentDetail.set({
@@ -293,7 +320,9 @@ export class DmsFacade {
           .single();
         const rawStudent = studentData as unknown as RawStudent | null;
         const user = rawStudent
-          ? (Array.isArray(rawStudent.users) ? rawStudent.users[0] : rawStudent.users)
+          ? Array.isArray(rawStudent.users)
+            ? rawStudent.users[0]
+            : rawStudent.users
           : null;
         if (user) {
           this._studentDetail.set({
@@ -320,10 +349,6 @@ export class DmsFacade {
       .upload(path, payload.file, { upsert: true });
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = this.supabase.client.storage
-      .from('documents')
-      .getPublicUrl(path);
-
     let enrollmentId = payload.enrollmentId;
 
     // Si no viene enrollmentId (o es dummy 0), buscamos el último del alumno
@@ -343,27 +368,25 @@ export class DmsFacade {
       enrollmentId = enrollmentData.id;
     }
 
-    const { error: insertError } = await this.supabase.client
-      .from('student_documents')
-      .insert({
-        enrollment_id: enrollmentId,
-        type: payload.type,
-        file_name: payload.file.name,
-        storage_url: urlData.publicUrl,
-        status: 'pending',
-      });
+    const { error: insertError } = await this.supabase.client.from('student_documents').insert({
+      enrollment_id: enrollmentId,
+      type: payload.type,
+      file_name: payload.file.name,
+      storage_url: path,
+      status: 'pending',
+    });
     if (insertError) throw insertError;
 
     await this.refreshSilently();
   }
 
-  async deleteStudentDocument(docId: string, source: 'student_document' | 'digital_contract'): Promise<void> {
+  async deleteStudentDocument(
+    docId: string,
+    source: 'student_document' | 'digital_contract',
+  ): Promise<void> {
     const table = source === 'student_document' ? 'student_documents' : 'digital_contracts';
     const numericId = parseInt(docId, 10);
-    const { error } = await this.supabase.client
-      .from(table)
-      .delete()
-      .eq('id', numericId);
+    const { error } = await this.supabase.client.from(table).delete().eq('id', numericId);
     if (error) throw error;
     await this.refreshSilently();
   }
@@ -379,10 +402,6 @@ export class DmsFacade {
       .upload(path, payload.file, { upsert: true });
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = this.supabase.client.storage
-      .from('documents')
-      .getPublicUrl(path);
-
     const sessionRes = await this.supabase.client.auth.getUser();
     const userId = sessionRes.data.user?.id;
 
@@ -397,25 +416,20 @@ export class DmsFacade {
       numericUserId = (userData as { id: number } | null)?.id ?? null;
     }
 
-    const { error: insertError } = await this.supabase.client
-      .from('school_documents')
-      .insert({
-        type: payload.type,
-        file_name: payload.file.name,
-        storage_url: urlData.publicUrl,
-        description: payload.description ?? null,
-        uploaded_by: numericUserId,
-      });
+    const { error: insertError } = await this.supabase.client.from('school_documents').insert({
+      type: payload.type,
+      file_name: payload.file.name,
+      storage_url: path,
+      description: payload.description ?? null,
+      uploaded_by: numericUserId,
+    });
     if (insertError) throw insertError;
 
     await this.refreshSilently();
   }
 
   async deleteSchoolDocument(docId: number): Promise<void> {
-    const { error } = await this.supabase.client
-      .from('school_documents')
-      .delete()
-      .eq('id', docId);
+    const { error } = await this.supabase.client.from('school_documents').delete().eq('id', docId);
     if (error) throw error;
     await this.refreshSilently();
   }
@@ -431,22 +445,16 @@ export class DmsFacade {
       .upload(path, payload.file, { upsert: false });
     if (uploadError) throw uploadError;
 
-    const { data: urlData } = this.supabase.client.storage
-      .from('documents')
-      .getPublicUrl(path);
-
-    const { error: insertError } = await this.supabase.client
-      .from('document_templates')
-      .insert({
-        name: payload.name,
-        description: payload.description ?? null,
-        category: payload.category,
-        format: ext === 'docx' ? 'docx' : ext === 'xlsx' ? 'xlsx' : 'pdf',
-        version: 'v1.0',
-        file_url: urlData.publicUrl,
-        download_count: 0,
-        active: true,
-      });
+    const { error: insertError } = await this.supabase.client.from('document_templates').insert({
+      name: payload.name,
+      description: payload.description ?? null,
+      category: payload.category,
+      format: ext === 'docx' ? 'docx' : ext === 'xlsx' ? 'xlsx' : 'pdf',
+      version: 'v1.0',
+      file_url: path,
+      download_count: 0,
+      active: true,
+    });
     if (insertError) throw insertError;
 
     await this.refreshSilently();
@@ -490,7 +498,8 @@ export class DmsFacade {
         // Documentos institucionales
         this.supabase.client
           .from('school_documents')
-          .select(`
+          .select(
+            `
             id,
             type,
             file_name,
@@ -499,13 +508,16 @@ export class DmsFacade {
             branch_id,
             created_at,
             users(first_names, paternal_last_name)
-          `)
+          `,
+          )
           .order('created_at', { ascending: false }),
 
         // Plantillas activas
         this.supabase.client
           .from('document_templates')
-          .select('id, name, description, category, format, version, file_url, download_count, active')
+          .select(
+            'id, name, description, category, format, version, file_url, download_count, active',
+          )
           .eq('active', true)
           .order('category', { ascending: true })
           .order('name', { ascending: true }),
@@ -518,7 +530,7 @@ export class DmsFacade {
 
       // Construir mapa studentId → info
       const studentMap = new Map<number, { name: string; rut: string }>();
-      const rawStudents = ((studentsRes.data ?? []) as unknown as RawStudent[]);
+      const rawStudents = (studentsRes.data ?? []) as unknown as RawStudent[];
       for (const s of rawStudents) {
         const user = Array.isArray(s.users) ? s.users[0] : s.users;
         if (user) {
@@ -530,10 +542,21 @@ export class DmsFacade {
       }
 
       // Procesar docs de alumnos
-      const allVDocs = ((vDocsRes.data ?? []) as unknown as RawVDmsDoc[]);
+      const allVDocs = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
       const recentDocs = allVDocs.slice(0, 5).map((d) => {
         const student = studentMap.get(d.student_id);
-        return this.mapVDocToStudentDocRow(d, student ? { ...student, id: d.student_id, rut: student.rut, first_names: student.name.split(' ')[0], paternal_last_name: student.name.split(' ').slice(1).join(' ') } : null);
+        return this.mapVDocToStudentDocRow(
+          d,
+          student
+            ? {
+                ...student,
+                id: d.student_id,
+                rut: student.rut,
+                first_names: student.name.split(' ')[0],
+                paternal_last_name: student.name.split(' ').slice(1).join(' '),
+              }
+            : null,
+        );
       });
 
       // Agrupar por alumno para studentsWithDocs
@@ -556,7 +579,7 @@ export class DmsFacade {
       studentsWithDocs.sort((a, b) => a.name.localeCompare(b.name));
 
       // Procesar school docs
-      const rawSchoolDocs = ((schoolDocsRes.data ?? []) as unknown as RawSchoolDoc[]);
+      const rawSchoolDocs = (schoolDocsRes.data ?? []) as unknown as RawSchoolDoc[];
       const schoolDocs: SchoolDocRow[] = rawSchoolDocs.map((d) => {
         const userRaw = Array.isArray(d.users) ? d.users[0] : d.users;
         const uploaderName = userRaw
@@ -576,7 +599,7 @@ export class DmsFacade {
       });
 
       // Procesar plantillas
-      const rawTemplates = ((templatesRes.data ?? []) as unknown as RawTemplate[]);
+      const rawTemplates = (templatesRes.data ?? []) as unknown as RawTemplate[];
       const templates: TemplateCard[] = rawTemplates.map((t) => ({
         id: t.id,
         name: t.name,
@@ -601,14 +624,20 @@ export class DmsFacade {
 
   private mapVDocToStudentDocRow(
     d: RawVDmsDoc,
-    user: { id?: number; rut: string; first_names?: string; paternal_last_name?: string; name?: string } | null,
+    user: {
+      id?: number;
+      rut: string;
+      first_names?: string;
+      paternal_last_name?: string;
+      name?: string;
+    } | null,
   ): DmsStudentDocRow {
     const studentName = user
       ? (user.name ?? `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim())
       : 'Alumno';
     return {
       id: d.id,
-      source: (d.source as 'student_document' | 'digital_contract'),
+      source: d.source as 'student_document' | 'digital_contract',
       studentId: d.student_id,
       enrollmentId: d.enrollment_id,
       type: d.type ?? '',

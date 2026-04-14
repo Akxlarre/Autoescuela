@@ -48,8 +48,8 @@ export class PromocionesFacade {
   readonly enCurso = computed(
     () => this._promociones().filter((p) => p.status === 'in_progress').length,
   );
-  readonly finalizadas = computed(
-    () => this._promociones().filter((p) => p.status === 'finished').length,
+  readonly canceladas = computed(
+    () => this._promociones().filter((p) => p.status === 'cancelled').length,
   );
   readonly totalAlumnos = computed(() =>
     this._promociones().reduce((sum, p) => sum + p.totalEnrolled, 0),
@@ -85,6 +85,7 @@ export class PromocionesFacade {
            )
          )`,
       )
+      .not('status', 'eq', 'finished')
       .order('start_date', { ascending: false });
 
     if (error) throw error;
@@ -154,7 +155,7 @@ export class PromocionesFacade {
         const pcId = row.promotion_course_id as number;
         const u = row.students?.users;
         if (!u) continue;
-        const nombre = [u.first_names, u.paternal_last_name, u.maternal_last_name]
+        const nombre = [u.paternal_last_name, u.maternal_last_name, u.first_names]
           .filter(Boolean)
           .join(' ');
         const parts = nombre.trim().split(' ');
@@ -172,6 +173,9 @@ export class PromocionesFacade {
           initials: initials || '?',
           enrollmentStatus: row.status,
         });
+      }
+      for (const pcId of Object.keys(map)) {
+        map[Number(pcId)].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
       }
       this._cursoStudents.set(map);
     } catch {

@@ -180,6 +180,8 @@ export class EnrollmentFacade {
   readonly contractAccepted = computed(() => this._enrollment()?.contract_accepted ?? false);
   readonly paymentStatus = computed(() => this._enrollment()?.payment_status ?? null);
   readonly contractFileUrl = this._contractFileUrl.asReadonly();
+  /** Precio base del enrollment ya persisitido en BD (fallback cuando courseOptions aún no cargó). */
+  readonly enrollmentBasePrice = computed(() => this._enrollment()?.base_price ?? 0);
 
   // ── UI ──
   readonly isLoading = this._isLoading.asReadonly();
@@ -221,7 +223,7 @@ export class EnrollmentFacade {
     const course = this._courses().find(
       (c) => c.license_class === this.courseTypeToLicenseClass(pd.courseType),
     );
-    const baseName = course?.name ?? pd.courseType;
+    const baseName = course?.name ?? this.courseTypeToLicenseClass(pd.courseType);
     const convSuffix = pd.convalidatesSimultaneously
       ? ` + conv. ${pd.courseType === 'professional_a2' ? 'A4' : 'A3'}`
       : '';
@@ -670,7 +672,7 @@ export class EnrollmentFacade {
       .eq('courses.license_class', licenseClass)
       .eq('professional_promotions.branch_id', branchId)
       .in('professional_promotions.status', ['planned', 'in_progress'])
-      .eq('status', 'active');
+      .in('status', ['planned', 'in_progress']);
 
     if (error) {
       this._error.set('Error al cargar promociones: ' + error.message);
@@ -720,7 +722,7 @@ export class EnrollmentFacade {
         courseCode: course.code,
         enrolledCount: enrolledCounts[row.id] ?? 0,
         maxCapacity: row.max_students,
-        status: row.status === 'active' ? 'open' : 'finished',
+        status: row.status === 'planned' || row.status === 'in_progress' ? 'open' : 'finished',
       };
 
       const existing = groupMap.get(groupKey) ?? [];
@@ -912,19 +914,15 @@ export class EnrollmentFacade {
         return false;
       }
 
-      const {
-        data: { publicUrl },
-      } = this.supabase.client.storage.from('documents').getPublicUrl(filePath);
-
-      this._contractFileUrl.set(publicUrl);
+      // Bucket privado: guardar path relativo en estado y en DB.
+      this._contractFileUrl.set(filePath);
 
       // Upsert digital_contracts record
       const { error: contractError } = await this.supabase.client.from('digital_contracts').upsert(
         {
           enrollment_id: draft.enrollmentId,
-          student_id: draft.studentId,
           file_name: file.name,
-          file_url: publicUrl,
+          file_url: filePath,
           accepted_at: new Date().toISOString(),
         },
         { onConflict: 'enrollment_id' },
@@ -980,7 +978,6 @@ export class EnrollmentFacade {
       const { error: contractError } = await this.supabase.client.from('digital_contracts').upsert(
         {
           enrollment_id: draft.enrollmentId,
-          student_id: draft.studentId,
           accepted_at: meta.signedAt ?? new Date().toISOString(),
         },
         { onConflict: 'enrollment_id' },
