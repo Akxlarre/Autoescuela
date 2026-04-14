@@ -1,95 +1,154 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  inject,
+  input,
+  output,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 /**
- * Section Hero — Cabecera de sección reutilizable (Dashboard, Alumnos, etc.).
- * Una vista principal = un hero. Una sola acción primaria. Botones custom con tokens.
- * Ver docs/SECTION-HERO-PATTERN.md.
+ * Section Hero — Cabecera de sección reutilizable.
+ *
+ * Experiencia visual única (el canon):
+ *   full    → bento-hero (2 filas). Gradient surface-hero: sky→indigo→violet.
+ *             Layout vertical: acciones arriba, título anclado al fondo.
+ *             Todos los tokens (texto, botones, badges) se adaptan
+ *             automáticamente vía cascade desde .surface-hero en _variables.scss.
+ *
+ * GSAP: animateHero() se dispara en ngAfterViewInit.
  */
 @Component({
   selector: 'app-section-hero',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    'class': 'block min-h-0',
-    '[class.bento-hero]': "variant() === 'full'",
-    '[class.bento-banner]': "variant() === 'compact'",
+    // HOST = único grid item. bento-hero va aquí, nunca en el div interno.
+    class: 'block min-h-0 bento-hero',
   },
   imports: [IconComponent, RouterLink],
   template: `
+    <!-- ═══════════════════════════════════════════════════════════
+         CANONICAL HERO — Gradient hero, layout vertical
+         surface-hero aplica token cascade: texto, botones y badges
+         se adaptan al fondo oscuro sin condicionales en el HTML.
+    ═══════════════════════════════════════════════════════════ -->
     <div
-      class="bento-card h-full min-h-0 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-300 items-start text-left"
-      [class.bento-hero]="variant() === 'full'"
-      [class.bento-banner]="variant() === 'compact'"
-      [class.card-accent]="variant() === 'full'"
-      [class.p-6]="variant() === 'full'"
-      [class.md:p-8]="variant() === 'full'"
-      [class.p-4]="variant() === 'compact'"
-      [class.md:p-5]="variant() === 'compact'"
+      #cardRef
+      class="surface-hero rounded-lg h-full flex flex-col p-5 md:p-6 gap-3"
       role="region"
       [attr.aria-label]="title()"
     >
-      <!-- Contenido principal: alineado a la izquierda siempre -->
-      <div class="flex flex-col gap-1 min-w-0 flex-1 items-start">
-        <!-- Navegación atrás estilo breadcrumb -->
-        @if (backRoute()) {
-          <a
-            [routerLink]="backRoute()"
-            class="group flex items-center gap-1.5 w-fit mb-3 py-1 px-2 -ml-2 rounded-md text-xs font-bold uppercase tracking-wider hover:text-[var(--color-primary)] hover:bg-[var(--bg-subtle)] no-underline transition-all duration-200"
-            [style.color]="'var(--text-muted)'"
-            [attr.aria-label]="'Volver a ' + backLabel()"
-            data-llm-nav="back"
-          >
-            <app-icon
-              name="arrow-left"
-              [size]="14"
-              class="transition-transform group-hover:-translate-x-1"
-            />
-            <span>{{ backLabel() }}</span>
-          </a>
-        }
-
-        <!-- Ícono de sección (opcional) — badge visual de marca sobre el título -->
-        @if (icon()) {
+      <!-- TOP BAR: navegación atrás (izq) + acciones (der) -->
+      <div class="flex items-start justify-between gap-4 relative z-10">
+        <div class="flex-1 min-w-0">
+          @if (backRoute()) {
+            <a
+              [routerLink]="backRoute()"
+              class="group inline-flex items-center gap-1.5 py-1 px-2 -ml-2 rounded-md text-xs font-bold uppercase tracking-wider text-text-muted hover:text-brand hover:bg-subtle no-underline transition-colors"
+              [attr.aria-label]="'Volver a ' + backLabel()"
+              data-llm-nav="back"
+            >
+              <app-icon
+                name="arrow-left"
+                [size]="13"
+                class="transition-transform group-hover:-translate-x-1"
+              />
+              <span>{{ backLabel() }}</span>
+            </a>
+          }
+        </div>
+        @if (actions().length) {
           <div
-            class="w-10 h-10 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0 mb-2"
+            class="flex flex-wrap items-center gap-2 shrink-0"
+            role="group"
+            aria-label="Acciones principales"
           >
-            <app-icon [name]="icon()!" [size]="20" class="text-brand" />
+            @for (action of actions(); track action.id) {
+              @if (action.route) {
+                <a
+                  [routerLink]="action.route"
+                  class="no-underline"
+                  [class.btn-primary]="action.primary"
+                  [class.btn-secondary]="!action.primary"
+                  [attr.data-llm-nav]="action.id"
+                >
+                  @if (action.icon) {
+                    <app-icon [name]="action.icon" [size]="16" />
+                  }
+                  {{ action.label }}
+                </a>
+              } @else {
+                <button
+                  type="button"
+                  [class.btn-primary]="action.primary"
+                  [class.btn-secondary]="!action.primary"
+                  [attr.data-llm-action]="action.id"
+                  (click)="onActionClick(action.id)"
+                >
+                  @if (action.icon) {
+                    <app-icon [name]="action.icon" [size]="16" />
+                  }
+                  {{ action.label }}
+                </button>
+              }
+            }
+          </div>
+        }
+      </div>
+
+      <!-- SPACER: empuja el contenido tipográfico hacia el fondo -->
+      <div class="flex-1" aria-hidden="true"></div>
+
+      <!-- BOTTOM: icon badge → eyebrow → título → subtítulo → chips -->
+      <div class="flex flex-col gap-3 relative z-10">
+        @if (icon()) {
+          <!--
+            bg-brand/10 + border-brand/20 + text-brand:
+            Dentro de surface-hero, --color-brand = white →
+            badge se renderiza como glass blanco automáticamente.
+          -->
+          <div
+            class="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0"
+          >
+            <app-icon [name]="icon()!" [size]="22" class="text-brand" />
           </div>
         }
 
-        <div class="min-w-0 flex flex-col gap-1 items-start">
+        <div class="flex flex-col gap-2">
           @if (contextLine()) {
-            <p class="kpi-label m-0 break-words">{{ contextLine() }}</p>
+            <!-- section-eyebrow hereda text-secondary → rgba(255,255,255,0.78) aquí -->
+            <p class="section-eyebrow m-0 break-words">{{ contextLine() }}</p>
           }
+          <!-- Sin text-text-primary: hereda color blanco de .surface-hero via cascade. -->
           <h1
-            class="font-display font-bold leading-tight text-text-primary tracking-tight m-0"
-            [class.text-2xl]="variant() === 'full'"
-            [class.md:text-4xl]="variant() === 'full'"
-            [class.text-xl]="variant() === 'compact'"
-            [class.md:text-2xl]="variant() === 'compact'"
+            class="font-display font-bold leading-tight tracking-tight m-0 text-2xl md:text-plus-4xl"
           >
             {{ title() }}
           </h1>
           @if (subtitle()) {
-            <p
-              class="text-sm md:text-base leading-relaxed m-0 max-w-2xl"
-              [style.color]="'var(--text-secondary)'"
-              [class.mt-2]="variant() === 'full'"
-              [class.mt-1]="variant() === 'compact'"
-            >
+            <!-- text-text-secondary → rgba(255,255,255,0.78) dentro del gradient -->
+            <p class="text-sm md:text-base leading-relaxed m-0 max-w-2xl text-text-secondary">
               {{ subtitle() }}
             </p>
           }
         </div>
 
         @if (chips().length) {
-          <div class="flex flex-wrap items-center gap-2 mt-4">
+          <!--
+            Chips default: getChipStyle() usa var(--bg-subtle)/var(--border-subtle) →
+            glass blanco dentro de surface-hero gracias al token cascade.
+          -->
+          <div class="flex flex-wrap gap-2">
             @for (chip of chips(); track chip.label) {
               <span
-                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
                 [attr.style]="getChipStyle(chip)"
               >
                 @if (chip.icon) {
@@ -101,84 +160,41 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           </div>
         }
       </div>
-
-      <!-- Acciones: a la derecha en desktop -->
-      @if (actions().length) {
-        <div
-          class="flex flex-wrap items-center gap-2 shrink-0 mt-2 md:mt-0"
-          role="group"
-          aria-label="Acciones principales"
-        >
-          @for (action of actions(); track action.id) {
-            @if (action.route) {
-              <a
-                [routerLink]="action.route"
-                class="flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm cursor-pointer transition-all duration-300 border font-bold no-underline shadow-sm hover:shadow-md active:scale-95"
-                [class.bg-[var(--color-primary)]]="action.primary"
-                [class.text-[var(--color-primary-text)]]="action.primary"
-                [class.border-transparent]="action.primary"
-                [class.hover:brightness-110]="action.primary"
-                [class.bg-transparent]="!action.primary"
-                [class.text-[var(--color-primary)]]="!action.primary"
-                [class.border-[var(--border-default)]]="!action.primary"
-                [class.hover:bg-[var(--bg-subtle)]]="!action.primary"
-                [attr.data-llm-nav]="action.id"
-              >
-                @if (action.icon) {
-                  <app-icon [name]="action.icon" [size]="16" />
-                }
-                {{ action.label }}
-              </a>
-            } @else {
-              <button
-                type="button"
-                class="flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm cursor-pointer transition-all duration-300 border font-bold shadow-sm hover:shadow-md active:scale-95"
-                [class.bg-[var(--color-primary)]]="action.primary"
-                [class.text-[var(--color-primary-text)]]="action.primary"
-                [class.border-transparent]="action.primary"
-                [class.hover:brightness-110]="action.primary"
-                [class.bg-transparent]="!action.primary"
-                [class.text-[var(--color-primary)]]="!action.primary"
-                [class.border-[var(--border-default)]]="!action.primary"
-                [class.hover:bg-[var(--bg-subtle)]]="!action.primary"
-                [attr.data-llm-action]="action.id"
-                (click)="onActionClick(action.id)"
-              >
-                @if (action.icon) {
-                  <app-icon [name]="action.icon" [size]="16" />
-                }
-                {{ action.label }}
-              </button>
-            }
-          }
-        </div>
-      }
     </div>
   `,
 })
-export class SectionHeroComponent {
+export class SectionHeroComponent implements AfterViewInit {
+  private readonly gsap = inject(GsapAnimationsService);
+
   readonly title = input.required<string>();
   readonly contextLine = input<string>('');
   readonly subtitle = input<string>('');
   /**
-   * Nombre del ícono Lucide para el badge de sección (kebab-case, ej: "car", "calendar").
-   * Renderiza un badge con color de marca encima del título.
+   * Nombre del ícono Lucide (kebab-case, ej: "car", "graduation-cap").
+   * badge 48px glass (blanco sobre gradient).
    */
   readonly icon = input<string | null>(null);
   readonly chips = input<SectionHeroChip[]>([]);
   readonly actions = input.required<SectionHeroAction[]>();
-  readonly variant = input<'full' | 'compact'>('full');
 
-  /**
-   * Ruta opcional para navegación atrás.
-   * Si se define, renderiza un botón "Volver" estandarizado.
-   */
+  /** Ruta para el botón "Volver" con label. */
   readonly backRoute = input<string | null>(null);
-  /** Etiqueta opcional para el botón de volver (ej: "Mis Alumnos"). Default: "Volver" */
   readonly backLabel = input<string>('Volver');
 
   readonly actionClick = output<string>();
 
+  private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
+
+  ngAfterViewInit(): void {
+    // Obligatorio: todas las entradas de vista usan GsapAnimationsService.
+    this.gsap.animateHero(this.cardRef()?.nativeElement);
+  }
+
+  /**
+   * Estilos inline para chips usando tokens CSS del DS.
+   * Dentro de .surface-hero, var(--bg-subtle) y var(--border-subtle)
+   * se resuelven automáticamente como glass blanco (token cascade).
+   */
   getChipStyle(chip: SectionHeroChip): string {
     switch (chip.style) {
       case 'error':

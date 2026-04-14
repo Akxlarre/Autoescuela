@@ -25,8 +25,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    SectionHeroComponent, 
-    WeeklyScheduleGridComponent, 
+    SectionHeroComponent,
+    WeeklyScheduleGridComponent,
     DailyScheduleTimelineComponent,
     KpiCardVariantComponent
   ],
@@ -35,7 +35,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       
       <app-section-hero
         #heroRef
-        title="Mi Horario"
+        title="Mi Horario "
         [subtitle]="weekLabel()"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
@@ -111,12 +111,12 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
 
   private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly kpiGridRef = viewChild<ElementRef<HTMLElement>>('kpiGridRef');
-  
+
   private currentWeekDate: string = new Date().toISOString();
-  
+
   // Mobile day selection
   public selectedDate = signal<string>(new Date().toISOString().split('T')[0]);
-  
+
   // Desktop day highlighting
   public selectedDayDate = signal<string | null>(null);
 
@@ -138,15 +138,15 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
   readonly todaySchedule = computed<DaySchedule | null>(() => {
     const schedule = this.facade.weeklySchedule();
     if (!schedule) return null;
-    
+
     // Convert selectedDate string "YYYY-MM-DD" to matching week day
     const sd = new Date(this.selectedDate() + 'T12:00:00'); // Midday to avoid timezone shifting
     // 0=Domingo in JS, but UI expects 0=Lunes, 6=Domingo
-    const dayOfWeek = sd.getDay() === 0 ? 6 : sd.getDay() - 1; 
-    
+    const dayOfWeek = sd.getDay() === 0 ? 6 : sd.getDay() - 1;
+
     let targetDayLabel = 'Día';
     let targetDateLabel = '';
-    
+
     // Find matching day in week info
     const dayMeta = schedule.days.find(d => d.date === this.selectedDate());
     if (dayMeta) {
@@ -155,21 +155,21 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
       const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
       targetDayLabel = dayNames[dayOfWeek] || 'Día';
     }
-    
+
     const monthNames = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
     targetDateLabel = `${sd.getDate()} de ${monthNames[sd.getMonth()]}, ${sd.getFullYear()}`;
-    
+
     // Blocks for this day
     const blocksForDay = schedule.blocks
       .filter(b => b.dayOfWeek === dayOfWeek)
       .sort((a, b) => (a.hour * 60 + a.minuteStart) - (b.hour * 60 + b.minuteStart));
-      
+
     // Next block logic
     const nextBlock = blocksForDay.find(b => b.status === 'scheduled' || b.status === 'in_progress') ?? null;
-      
+
     return {
       date: this.selectedDate(),
       dayLabel: targetDayLabel,
@@ -189,9 +189,9 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
   ngAfterViewInit() {
     const hero = this.heroRef();
     const kpiGrid = this.kpiGridRef();
-    
+
     if (hero) this.gsap.animateHero(hero.nativeElement);
-    
+
     if (kpiGrid) {
       const cards = kpiGrid.nativeElement.querySelectorAll('app-kpi-card-variant');
       this.gsap.staggerListItems(Array.from(cards));
@@ -203,19 +203,19 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
     date.setDate(date.getDate() + offset * 7);
     this.currentWeekDate = date.toISOString();
     this.facade.fetchWeeklySchedule(this.currentWeekDate);
-    
+
     // Also sync the day to the new week's Monday
     this.selectedDate.set(this.currentWeekDate.split('T')[0]);
     this.selectedDayDate.set(null); // Clear desktop selection on week change
   }
-  
+
   onDaySelect(dateStr: string) {
     this.selectedDayDate.set(dateStr);
   }
 
   onMobileDaySelect(dateStr: string) {
     this.selectedDate.set(dateStr);
-    
+
     // Refresh week if we moved outside the current week range
     const dt = new Date(dateStr + 'T12:00:00');
     // If the week of dt is different from currentWeekDate, fetch.
@@ -223,7 +223,7 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
     const current = new Date(this.currentWeekDate);
     const diffTime = Math.abs(dt.getTime() - current.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays > 7) {
       this.currentWeekDate = dt.toISOString();
       this.facade.fetchWeeklySchedule(this.currentWeekDate);

@@ -57,6 +57,9 @@ export class AuthFacade {
     email?: string;
     user_metadata?: Record<string, unknown>;
   }): Promise<void> {
+    // Si ya tenemos el usuario y el ID no ha cambiado, no recargamos
+    if (this._currentUser()?.id === authUser.id) return;
+
     // Definimos la interfaz para la respuesta del JOIN con roles
     interface UserWithRole {
       id: number;

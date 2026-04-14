@@ -58,20 +58,21 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           }
         </div>
 
-        <p class="flex items-baseline gap-1 m-0 truncate">
+        <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
           @if (prefix()) {
-            <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
+            <span class="text-2xl md:text-3xl font-bold align-baseline" style="color: var(--text-primary)">
               {{ prefix() }}
             </span>
           }
           <span
             #valueEl
-            class="text-3xl md:text-4xl font-bold"
-            style="color: var(--text-primary)"
+            class="font-display font-bold align-baseline truncate"
+            style="color: var(--text-primary); font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));"
+            title="{{ value() }}"
             >{{ value() }}</span
           >
           @if (suffix()) {
-            <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
+            <span class="text-2xl md:text-3xl font-bold align-baseline" style="color: var(--text-primary)">
               {{ suffix() }}
             </span>
           }

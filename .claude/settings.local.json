@@ -18,7 +18,12 @@
       "Bash(printf '\\\\n## Auto-Index — Facades detectadas por AST \\(generado automáticamente\\)\\\\n\\\\n<!-- AUTO-GENERATED:BEGIN -->\\\\n_Sin facades auto-detectadas aún. Ejecuta `npm run indices:sync` para poblar._\\\\n<!-- AUTO-GENERATED:END -->\\\\n')",
       "Bash(printf '\\\\n## Auto-Index — Servicios detectados por AST \\(generado automáticamente\\)\\\\n\\\\n<!-- AUTO-GENERATED:BEGIN -->\\\\n_Sin servicios auto-detectados aún. Ejecuta `npm run indices:sync` para poblar._\\\\n<!-- AUTO-GENERATED:END -->\\\\n')",
       "Bash(printf '\\\\n## Auto-Index — Componentes detectados por AST \\(generado automáticamente\\)\\\\n\\\\n<!-- AUTO-GENERATED:BEGIN -->\\\\n_Sin componentes auto-detectados aún. Ejecuta `npm run indices:sync` para poblar._\\\\n<!-- AUTO-GENERATED:END -->\\\\n')",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npx supabase:*)",
+      "Skill(supabase-data-model)",
+      "Read(//mnt/c/Users/Akxlarre/AppData/Local/Temp/claude/C--Users-Akxlarre-Autoescuela/d668136f-07f5-419a-b0ca-b6f3bcdd4c15/tasks/**)",
+      "Read(//tmp/**)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

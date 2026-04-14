@@ -1,11 +1,14 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   computed,
   DestroyRef,
+  ElementRef,
   inject,
   OnInit,
   signal,
+  viewChild,
 } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -13,17 +16,22 @@ import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { RentabilidadCursosComponent } from './rentabilidad-cursos.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
-/** Convierte un monto CLP a representación compacta (K / M) para KPI cards. */
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
-    return { value: parseFloat((amount / 1_000_000).toFixed(2)), suffix: 'M' };
+    return { value: parseFloat((amount / 1_000_000).toFixed(1)), suffix: 'M' };
   }
-  return { value: Math.round(amount / 1_000), suffix: 'K' };
+  if (amount >= 10_000) {
+    return { value: parseFloat((amount / 1_000).toFixed(1)), suffix: 'K' };
+  }
+  return { value: amount, suffix: '' };
 }
 
 const POR_PAGINA = 5;
@@ -33,35 +41,27 @@ const POR_PAGINA = 5;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    SectionHeroComponent,
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     RentabilidadCursosComponent,
   ],
   template: `
-    <div class="p-6 flex flex-col gap-6">
+    <div class="px-6 py-6 pb-20 max-w-7xl mx-auto space-y-6">
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold" style="color: var(--text-primary)">
-            Gestión de Pagos
-          </h1>
-          <p class="text-sm mt-0.5" style="color: var(--color-primary)">
-            Registro y seguimiento de pagos
-          </p>
-        </div>
-        <button
-          class="btn-primary flex items-center gap-2 shrink-0"
-          data-llm-action="register-payment"
-          (click)="openDrawer(null)"
-        >
-          <app-icon name="plus" [size]="16" />
-          Registrar Pago
-        </button>
-      </div>
+      <app-section-hero
+        #heroRef
+        title="Gestión de Pagos"
+        subtitle="Registro y seguimiento financiero"
+        icon="wallet"
+        [actions]="heroActions"
+        [chips]="heroChips()"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ── KPI Grid ─────────────────────────────────────────────────────────── -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div #kpiGridRef class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <app-kpi-card-variant
           label="Ingresos Hoy"
           [value]="ingresosHoyDisplay().value"
@@ -127,15 +127,20 @@ const POR_PAGINA = 5;
         @if (facade.isLoading()) {
           <div class="divide-y" style="border-color: var(--border-muted)">
             @for (row of [1, 2, 3, 4]; track row) {
-              <div class="px-6 py-4 grid grid-cols-6 gap-4 items-center">
-                <app-skeleton-block variant="text" width="80%" height="14px" />
-                <app-skeleton-block variant="text" width="70%" height="14px" />
-                <app-skeleton-block variant="text" width="60%" height="14px" />
-                <app-skeleton-block variant="text" width="60%" height="14px" />
-                <app-skeleton-block variant="text" width="60%" height="14px" />
-                <div class="flex gap-2 justify-end">
+              <div class="p-4 lg:px-6 lg:py-4 flex flex-col gap-3 lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center">
+                <div class="lg:col-span-2 flex flex-col gap-1">
+                  <app-skeleton-block variant="text" width="80%" height="14px" />
+                  <app-skeleton-block variant="text" width="50%" height="10px" class="lg:hidden" />
+                </div>
+                <app-skeleton-block variant="text" width="60%" height="14px" class="hidden lg:block" />
+                <div class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0">
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
+                </div>
+                <div class="flex gap-2 justify-end mt-2 lg:mt-0">
                   <app-skeleton-block variant="rect" width="80px" height="28px" />
-                  <app-skeleton-block variant="rect" width="120px" height="28px" />
+                  <app-skeleton-block variant="rect" width="100px" height="28px" />
                 </div>
               </div>
             }
@@ -152,8 +157,8 @@ const POR_PAGINA = 5;
           </div>
         } @else {
           <div
-            class="px-6 py-2 grid grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase"
-            style="color: var(--text-muted); background: var(--bg-surface)"
+            class="hidden lg:grid px-6 py-2 grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase border-b"
+            style="color: var(--text-muted); background: var(--bg-surface); border-color: var(--border-muted)"
           >
             <span>Alumno</span>
             <span>RUT</span>
@@ -164,33 +169,52 @@ const POR_PAGINA = 5;
           </div>
           <div class="divide-y" style="border-color: var(--border-muted)">
             @for (alumno of facade.alumnosConDeuda(); track alumno.enrollmentId) {
-              <div class="px-6 py-4 grid grid-cols-6 gap-4 items-center">
-                <span class="text-sm font-semibold" style="color: var(--text-primary)">
-                  {{ alumno.alumno }}
-                </span>
-                <span class="text-sm" style="color: var(--color-primary)">
+              <div class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors">
+                
+                <!-- Identidad Mobile (Alumno + RUT) / Alumno Desktop -->
+                <div class="flex flex-col min-w-0">
+                  <span class="text-sm font-semibold truncate" style="color: var(--text-primary)">
+                    {{ alumno.alumno }}
+                  </span>
+                  <!-- RUT Mobile only -->
+                  <span class="text-xs lg:hidden mt-0.5" style="color: var(--color-primary)">
+                    RUT:  {{ alumno.rut }}
+                  </span>
+                </div>
+
+                <!-- RUT Desktop only -->
+                <span class="hidden lg:block text-sm" style="color: var(--color-primary)">
                   {{ alumno.rut }}
                 </span>
-                <span class="text-sm text-right" style="color: var(--text-primary)">
-                  {{ clp(alumno.totalAPagar) }}
-                </span>
-                <span class="text-sm text-right font-medium" style="color: var(--state-success)">
-                  {{ clp(alumno.pagado) }}
-                </span>
-                <span class="text-sm text-right font-semibold" style="color: var(--state-warning)">
-                  {{ clp(alumno.saldo) }}
-                </span>
-                <div class="flex items-center justify-end gap-2">
+
+                <!-- Finanzas -->
+                <div class="grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none" style="background: color-mix(in srgb, var(--bg-surface) 60%, transparent)">
+                  <div class="flex flex-col lg:block text-center lg:text-right">
+                    <span class="text-[10px] uppercase font-bold lg:hidden mb-1" style="color: var(--text-muted)">Total</span>
+                    <span class="text-sm" style="color: var(--text-primary)">{{ clp(alumno.totalAPagar) }}</span>
+                  </div>
+                  <div class="flex flex-col lg:block text-center lg:text-right">
+                    <span class="text-[10px] uppercase font-bold lg:hidden mb-1" style="color: var(--text-muted)">Pagado</span>
+                    <span class="text-sm font-medium" style="color: var(--state-success)">{{ clp(alumno.pagado) }}</span>
+                  </div>
+                  <div class="flex flex-col lg:block text-center lg:text-right">
+                    <span class="text-[10px] uppercase font-bold lg:hidden mb-1" style="color: var(--text-muted)">Saldo</span>
+                    <span class="text-sm font-bold" style="color: var(--state-warning)">{{ clp(alumno.saldo) }}</span>
+                  </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end">
                   <button
-                    class="text-xs font-medium"
-                    style="color: var(--text-secondary)"
+                    class="text-xs font-medium flex-1 lg:flex-none justify-center py-2 lg:py-0 border lg:border-none rounded-lg lg:rounded-none"
+                    style="color: var(--text-secondary); border-color: var(--border-muted)"
                     [attr.data-llm-action]="'view-detail-enrollment-' + alumno.enrollmentId"
                     (click)="openDetalle(alumno.enrollmentId)"
                   >
                     Ver detalle
                   </button>
                   <button
-                    class="btn-primary text-xs px-3 py-1.5"
+                    class="btn-primary text-xs flex-1 lg:flex-none justify-center px-3 py-2 lg:py-1.5"
                     [attr.data-llm-action]="'register-payment-enrollment-' + alumno.enrollmentId"
                     (click)="openDrawer(alumno.enrollmentId)"
                   >
@@ -203,73 +227,99 @@ const POR_PAGINA = 5;
         }
       </div>
 
-      <!-- ── Barra de búsqueda + filtros ───────────────────────────────────── -->
-      <div class="flex flex-wrap gap-3">
-        <input
-          type="search"
-          placeholder="Buscar por alumno o N° boleta..."
-          class="flex-1 min-w-48 text-sm px-4 py-2.5 rounded-lg"
-          style="
-            background: var(--bg-surface);
-            border: 1px solid var(--border-muted);
-            color: var(--text-primary);
-            outline: none;
-          "
-          data-llm-description="Search input for filtering payments by student name or receipt number"
-          (input)="onSearch($event)"
-        />
-        <select
-          class="text-sm px-3 py-2.5 rounded-lg"
-          style="
-            background: var(--bg-surface);
-            border: 1px solid var(--border-muted);
-            color: var(--text-primary);
-          "
-          (change)="onFiltroEstado($event)"
-        >
-          <option value="todos">Todos los estados</option>
-          <option value="completado">Completado</option>
-          <option value="pendiente">Pendiente</option>
-        </select>
-        <select
-          class="text-sm px-3 py-2.5 rounded-lg"
-          style="
-            background: var(--bg-surface);
-            border: 1px solid var(--border-muted);
-            color: var(--text-primary);
-          "
-          (change)="onFiltroMetodo($event)"
-        >
-          <option value="todos">Todos los métodos</option>
-          <option value="Transferencia">Transferencia</option>
-          <option value="Efectivo">Efectivo</option>
-          <option value="Débito/Crédito">Débito/Crédito</option>
-          <option value="WebPay">WebPay</option>
-          <option value="Mixto">Mixto</option>
-        </select>
-      </div>
 
-      <!-- ── Layout dos columnas: Pagos Recientes | Sidebar ────────────────── -->
-      <div class="grid grid-cols-3 gap-6 items-start">
-        <!-- ─ Pagos Recientes (2/3) ─────────────────────────────────────────── -->
-        <div class="col-span-2 card p-0 overflow-hidden">
-          <div class="px-6 py-4 border-b" style="border-color: var(--border-muted)">
+
+      <!-- ── Layout: Pagos Recientes | Sidebar ────────────────── -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:col-span-12 items-start">
+        <!-- ─ Pagos Recientes (lg:col-span-8) ─────────────────────────────────────────── -->
+        <div class="lg:col-span-8 card p-0 overflow-hidden">
+          <div class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b" style="border-color: var(--border-muted); background: var(--bg-surface)">
             <h2 class="text-base font-semibold" style="color: var(--text-primary)">
               Pagos Recientes
             </h2>
+
+            <!-- ── Barra de búsqueda + filtros (Integrada como Toolbar) ── -->
+            <div class="flex flex-col xl:flex-row gap-3 w-full">
+              <!-- Input de búsqueda -->
+              <div class="relative flex-1">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <app-icon name="search" [size]="16" color="var(--text-muted)" />
+                </div>
+                <input
+                  type="search"
+                  placeholder="Buscar por alumno o N° boleta..."
+                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand"
+                  style="border: 1px solid var(--border-muted); color: var(--text-primary);"
+                  (input)="onSearch($event)"
+                />
+              </div>
+
+              <div class="flex flex-col sm:flex-row gap-3">
+                <!-- Select Estado -->
+                <div class="relative">
+                  <select
+                    class="w-full sm:w-auto text-sm pl-4 pr-10 py-2.5 rounded-lg appearance-none cursor-pointer focus:outline-none focus:border-brand transition-colors bg-base hover:border-text-muted"
+                    style="border: 1px solid var(--border-muted); color: var(--text-primary);"
+                    [value]="filtroEstado()"
+                    (change)="onFiltroEstado($event)"
+                  >
+                    <option value="todos">Todos los estados</option>
+                    <option value="completado">Completado</option>
+                    <option value="pendiente">Pendiente</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <app-icon name="chevron-down" [size]="16" color="var(--text-muted)" />
+                  </div>
+                </div>
+
+                <!-- Select Método -->
+                <div class="relative">
+                  <select
+                    class="w-full sm:w-auto text-sm pl-4 pr-10 py-2.5 rounded-lg appearance-none cursor-pointer focus:outline-none focus:border-brand transition-colors bg-base hover:border-text-muted"
+                    style="border: 1px solid var(--border-muted); color: var(--text-primary);"
+                    [value]="filtroMetodo()"
+                    (change)="onFiltroMetodo($event)"
+                  >
+                    <option value="todos">Todos los métodos</option>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Débito/Crédito">Débito/Crédito</option>
+                    <option value="WebPay">WebPay</option>
+                    <option value="Mixto">Mixto</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <app-icon name="chevron-down" [size]="16" color="var(--text-muted)" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           @if (facade.isLoading()) {
             <div class="divide-y" style="border-color: var(--border-muted)">
               @for (row of [1, 2, 3, 4, 5]; track row) {
-                <div class="px-6 py-4 grid grid-cols-7 gap-3 items-center">
-                  <app-skeleton-block variant="text" width="80%" height="12px" />
-                  <app-skeleton-block variant="text" width="90%" height="12px" />
-                  <app-skeleton-block variant="text" width="70%" height="12px" />
-                  <app-skeleton-block variant="text" width="60%" height="12px" />
-                  <app-skeleton-block variant="text" width="80%" height="12px" />
-                  <app-skeleton-block variant="text" width="70%" height="12px" />
-                  <app-skeleton-block variant="rect" width="80px" height="22px" />
+                <div class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center">
+                  <!-- Mobile: Fecha + Estado | Desktop: Fecha -->
+                  <div class="flex justify-between items-center lg:contents">
+                     <app-skeleton-block variant="text" width="60%" height="14px" />
+                     <app-skeleton-block variant="rect" width="60px" height="20px" class="lg:hidden" />
+                  </div>
+                  
+                  <!-- Mobile: Alumno + Concepto | Desktop: Alumno (col2) + Concepto (col3) -->
+                  <div class="flex flex-col lg:contents gap-1 lg:gap-0">
+                     <app-skeleton-block variant="text" width="90%" height="14px" />
+                     <app-skeleton-block variant="text" width="70%" height="12px" />
+                  </div>
+
+                  <!-- Mobile: Monto + Method | Desktop: Monto (col4) + Method (col5) + Doc (col6) -->
+                  <div class="grid grid-cols-2 lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none" style="border-color: var(--border-muted)">
+                     <app-skeleton-block variant="text" width="70%" height="12px" />
+                     <app-skeleton-block variant="text" width="80%" height="12px" />
+                     <app-skeleton-block variant="text" width="80%" height="12px" class="col-span-2 lg:col-span-1 mt-1 lg:mt-0 lg:justify-self-center" />
+                  </div>
+
+                  <!-- Desktop only: Estado (col7) -->
+                  <app-skeleton-block variant="rect" width="80px" height="22px" class="hidden lg:block justify-self-center" />
                 </div>
               }
             </div>
@@ -281,10 +331,10 @@ const POR_PAGINA = 5;
               </p>
             </div>
           } @else {
-            <!-- Header columnas -->
+            <!-- Header columnas (desktop only) -->
             <div
-              class="px-6 py-2 grid grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase"
-              style="color: var(--text-muted); background: var(--bg-surface)"
+              class="hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b"
+              style="color: var(--text-muted); background: var(--bg-surface); border-color: var(--border-muted)"
             >
               <span>Fecha</span>
               <span>Alumno</span>
@@ -297,59 +347,69 @@ const POR_PAGINA = 5;
 
             <div class="divide-y" style="border-color: var(--border-muted)">
               @for (pago of pagosVisibles(); track pago.id) {
-                <div class="px-6 py-3.5 grid grid-cols-7 gap-3 items-center">
-                  <!-- Fecha -->
-                  <span class="text-xs font-medium" style="color: var(--color-primary)">
-                    {{ fechaCorta(pago.fecha) }}
-                  </span>
+                <div class="p-4 lg:px-6 lg:py-3.5 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors">
+                  
+                  <!-- Top Row Mobile: Fecha + Estado / Desktop: Fecha -->
+                  <div class="flex items-center justify-between lg:contents">
+                    <span class="text-xs font-medium" style="color: var(--color-primary)">
+                      {{ fechaCorta(pago.fecha) }}
+                    </span>
+                    <!-- Mobile Estado Badge -->
+                    <span
+                      class="lg:hidden inline-flex items-center justify-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      [style.background]="estadoBg(pago.estado)"
+                      [style.color]="estadoColor(pago.estado)"
+                    >
+                      @if (pago.estado === 'completado') {
+                        <app-icon name="check" [size]="10" />
+                      }
+                      {{ estadoLabel(pago.estado) }}
+                    </span>
+                  </div>
 
-                  <!-- Alumno -->
-                  <span class="text-sm font-semibold truncate" style="color: var(--text-primary)">
-                    {{ pago.alumno }}
-                  </span>
+                  <!-- Alumno + Concepto (Mobile stacks them, Desktop side maps them) -->
+                  <div class="flex flex-col lg:contents min-w-0">
+                    <span class="text-sm font-semibold truncate" style="color: var(--text-primary)">
+                      {{ pago.alumno }}
+                    </span>
+                    <span class="text-xs truncate lg:text-secondary mt-0.5 lg:mt-0" style="color: var(--text-muted)">
+                      {{ pago.concepto ?? '—' }}
+                    </span>
+                  </div>
 
-                  <!-- Concepto -->
-                  <span class="text-xs truncate" style="color: var(--text-secondary)">
-                    {{ pago.concepto ?? '—' }}
-                  </span>
+                  <!-- Monto + Método + Doc -->
+                  <div class="flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none" style="border-color: var(--border-muted)">
+                     <div class="flex justify-between items-center lg:contents">
+                       <span class="text-xs uppercase font-bold lg:hidden" style="color: var(--text-muted)">Monto</span>
+                       <span class="text-sm font-bold lg:text-right" style="color: var(--text-primary)">
+                         {{ clp(pago.monto) }}
+                       </span>
+                     </div>
+                     <div class="flex items-center justify-between lg:contents mt-2 lg:mt-0">
+                       <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-secondary)">
+                         <app-icon [name]="pago.metodoIcono" [size]="13" />
+                         {{ pago.metodo }}
+                       </span>
+                       <span class="text-[10px] lg:text-xs font-mono px-1.5 py-0.5 rounded" style="color: var(--text-muted); background: var(--bg-surface); border: 1px solid var(--border-muted);">
+                         {{ pago.nroDocumento ?? '—' }}
+                       </span>
+                     </div>
+                  </div>
 
-                  <!-- Monto -->
-                  <span class="text-sm font-bold text-right" style="color: var(--text-primary)">
-                    {{ clp(pago.monto) }}
-                  </span>
+                  <!-- Estado indicator Desktop only -->
+                  <div class="hidden lg:flex justify-center">
+                    <span
+                      class="inline-flex items-center justify-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                      [style.background]="estadoBg(pago.estado)"
+                      [style.color]="estadoColor(pago.estado)"
+                    >
+                      @if (pago.estado === 'completado') {
+                        <app-icon name="check" [size]="10" />
+                      }
+                      {{ estadoLabel(pago.estado) }}
+                    </span>
+                  </div>
 
-                  <!-- Método con ícono -->
-                  <span
-                    class="flex items-center gap-1.5 text-xs"
-                    style="color: var(--text-secondary)"
-                  >
-                    <app-icon [name]="pago.metodoIcono" [size]="13" />
-                    {{ pago.metodo }}
-                  </span>
-
-                  <!-- N° Documento -->
-                  <span
-                    class="text-xs font-mono px-1.5 py-0.5 rounded"
-                    style="
-                      color: var(--text-muted);
-                      background: var(--bg-surface);
-                      border: 1px solid var(--border-muted);
-                    "
-                  >
-                    {{ pago.nroDocumento ?? '—' }}
-                  </span>
-
-                  <!-- Estado badge -->
-                  <span
-                    class="inline-flex items-center justify-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full mx-auto"
-                    [style.background]="estadoBg(pago.estado)"
-                    [style.color]="estadoColor(pago.estado)"
-                  >
-                    @if (pago.estado === 'completado') {
-                      <app-icon name="check" [size]="10" />
-                    }
-                    {{ estadoLabel(pago.estado) }}
-                  </span>
                 </div>
               }
             </div>
@@ -396,8 +456,8 @@ const POR_PAGINA = 5;
           }
         </div>
 
-        <!-- ─ Sidebar derecho (1/3) ──────────────────────────────────────────── -->
-        <div class="col-span-1 flex flex-col gap-4">
+        <!-- ─ Sidebar derecho (lg:col-span-4) ──────────────────────────────────────────── -->
+        <div class="lg:col-span-4 flex flex-col gap-4">
           <!-- Métodos de Pago del Mes -->
           <div class="card p-5 flex flex-col gap-4">
             <h3 class="text-sm font-semibold" style="color: var(--text-primary)">
@@ -445,68 +505,6 @@ const POR_PAGINA = 5;
               }
             }
           </div>
-
-          <!-- Accesos Rápidos -->
-          <div class="card p-5 flex flex-col gap-3">
-            <h3 class="text-sm font-semibold" style="color: var(--text-primary)">
-              Accesos Rápidos
-            </h3>
-            <button
-              class="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-left btn-primary"
-              data-llm-action="quick-register-payment"
-              (click)="openDrawer(null)"
-            >
-              <app-icon name="plus" [size]="16" />
-              Registrar Pago
-            </button>
-            <button
-              class="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-left"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-primary);
-              "
-              data-llm-action="view-pending-payments"
-            >
-              <app-icon name="clock" [size]="16" color="var(--text-secondary)" />
-              Ver Pendientes
-            </button>
-            <button
-              class="w-full flex items-center gap-3 p-3 rounded-lg text-sm font-medium text-left"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-primary);
-              "
-              data-llm-action="generate-payment-report"
-            >
-              <app-icon name="file-text" [size]="16" color="var(--text-secondary)" />
-              Generar Reporte
-            </button>
-          </div>
-
-          <!-- Recordatorio -->
-          <div
-            class="card p-4 flex flex-col gap-1"
-            style="border-color: var(--color-primary); border-left-width: 3px"
-          >
-            <div class="flex items-center gap-2">
-              <app-icon name="info" [size]="15" color="var(--color-primary)" />
-              <span class="text-sm font-semibold" style="color: var(--color-primary)">
-                Recordatorio
-              </span>
-            </div>
-            <p class="text-xs pl-5" style="color: var(--color-primary)">
-              Revisa los pagos pendientes de boleta esta semana.
-            </p>
-            <button
-              class="text-xs pl-5 mt-0.5 font-medium text-left"
-              style="color: var(--color-primary)"
-              data-llm-action="view-payments-without-receipt"
-            >
-              Ver lista →
-            </button>
-          </div>
         </div>
       </div>
 
@@ -528,10 +526,42 @@ const POR_PAGINA = 5;
     </div>
   `,
 })
-export class AdminPagosComponent implements OnInit {
+export class AdminPagosComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(PagosFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild('heroRef', { read: ElementRef });
+  private readonly kpiGridRef = viewChild<ElementRef<HTMLElement>>('kpiGridRef');
+
+  readonly heroActions: SectionHeroAction[] = [
+    {
+      id: 'generate-report',
+      label: 'Generar Reporte',
+      icon: 'file-text',
+      primary: false
+    },
+    {
+      id: 'view-pending',
+      label: 'Ver Pendientes',
+      icon: 'clock',
+      primary: false
+    },
+    {
+      id: 'register-payment',
+      label: 'Registrar Pago',
+      icon: 'plus',
+      primary: true
+    }
+  ];
+
+  readonly heroChips = computed(() => {
+    return [
+      { label: `${this.facade.boletasMes()} boletas emitidas`, style: 'default' as const },
+      { label: `${this.facade.totalDeudores()} con deuda`, style: 'default' as const }
+    ];
+  });
 
   // Funciones puras expuestas al template
   protected readonly clp = formatCLP;
@@ -595,6 +625,35 @@ export class AdminPagosComponent implements OnInit {
 
   ngOnInit(): void {
     this.facade.initialize();
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const kpiGrid = this.kpiGridRef();
+    
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    
+    if (kpiGrid) {
+      const cards = kpiGrid.nativeElement.querySelectorAll('app-kpi-card-variant');
+      if (cards.length > 0) {
+        this.gsap.animateBentoGrid(kpiGrid.nativeElement);
+      }
+    }
+  }
+
+  protected onHeroAction(actionId: string): void {
+    if (actionId === 'register-payment') {
+      this.openDrawer(null);
+    } else if (actionId === 'view-pending') {
+      this.filtroEstado.set('pendiente');
+      this.paginaActual.set(1);
+      
+      // Asegurar que scroll al listado
+      const hero = this.heroRef();
+      if (hero) hero.nativeElement.scrollIntoView({ behavior: 'smooth' });
+    } else if (actionId === 'generate-report') {
+      console.info('Generar reporte - a implementar');
+    }
   }
 
   // ── Handlers de búsqueda / filtros ───────────────────────────────────────────

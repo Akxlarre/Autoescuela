@@ -98,6 +98,7 @@ export class HistorialCuadraturasFacade {
 
   // ── Estado privado ────────────────────────────────────────────────────────
   private readonly _historialCierres = signal<HistorialCierre[]>([]);
+  private readonly _cierreSeleccionado = signal<HistorialCierre | null>(null);
   private readonly _isLoadingHistorial = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
@@ -113,6 +114,7 @@ export class HistorialCuadraturasFacade {
 
   // ── Estado público ────────────────────────────────────────────────────────
   readonly historialCierres = this._historialCierres.asReadonly();
+  readonly cierreSeleccionado = this._cierreSeleccionado.asReadonly();
   readonly isLoadingHistorial = this._isLoadingHistorial.asReadonly();
   readonly error = this._error.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
@@ -153,6 +155,10 @@ export class HistorialCuadraturasFacade {
     this._mesActual.set(now.getMonth() + 1);
     this._anioActual.set(now.getFullYear());
     this.initialize();
+  }
+
+  seleccionarCierre(cierre: HistorialCierre | null): void {
+    this._cierreSeleccionado.set(cierre);
   }
 
   // ── Carga de datos ────────────────────────────────────────────────────────

@@ -6,7 +6,7 @@
 
 | Archivo | Responsabilidad | Ubicación | Estado |
 |---------|----------------|-----------|--------|
-| `_variables.scss` | Tokens del Design System (4 capas): escala (colores, espaciado, radios, tipografía, motion), semántica (superficies, texto, bordes, sombras, estados), marca (brand, gradientes, acciones), componentes (btn, input, card, motion). Light + Dark mode. | `styles/tokens/_variables.scss` | ✅ Estable |
+| `_variables.scss` | Tokens del Design System (4 capas): escala (colores, espaciado, radios, tipografía, motion), semántica (superficies, texto, bordes, sombras, estados), marca (brand, gradientes, acciones), componentes (btn, input, card, motion). Light + Dark mode. Clases semánticas globales: `.kpi-value`, `.kpi-label`, `.section-eyebrow`, `.surface-hero`, `.surface-glass`, `.indicator-live`, `.badge-pulse`. | `styles/tokens/_variables.scss` | ✅ Estable |
 | `_scrollbar.scss` | Styling minimalista y dinámico para scrollbars. Integrado con tokens. Solo desktop. | `styles/tokens/_scrollbar.scss` | ✅ Estable |
 
 
@@ -44,6 +44,35 @@
 | Scroll locks | `body.layout-drawer-open`, `body.modal-open` | Bloqueo de scroll en drawer mobile y modales |
 | Modal overlay | `.modal-overlay__wrapper` | Posicionamiento fijo del overlay de modales (z-index > topbar) |
 
+## Clases Semánticas Globales (`_variables.scss`)
+
+| Clase | Propósito | Cuándo usar |
+|-------|-----------|-------------|
+| `.kpi-value` | Número KPI principal — `font-display`, clamp 2xl→4xl, tabular-nums | Métricas numéricas en dashboards y cards |
+| `.kpi-label` | Etiqueta de KPI — `text-xs`, uppercase, `tracking-wider`, muted | **Solo** etiquetas de datos numéricos. NUNCA para contexto de sección |
+| `.section-eyebrow` | Línea de contexto pre-título — `text-sm`, `font-medium`, color secondary, sin uppercase | `contextLine` en `app-section-hero`, cabeceras de sección, breadcrumb textual |
+| `.surface-hero` | Superficie gradient (sky→indigo→violet) con glow overlay | Banners, `app-section-hero` variant full, CTAs de alta jerarquía |
+| `.surface-glass` | Overlay glass con backdrop-blur | Modales flotantes, panels, tooltips ricos |
+| `.indicator-live` | Dot verde pulsante — sistema activo / conexión online | Indicadores de estado en tiempo real |
+| `.badge-pulse` | Badge con pulso de atención | Conteos sin leer, alertas nuevas |
+
+> **⚠️ Distinción clave:** `.kpi-label` ≠ `.section-eyebrow`. La primera es para datos numéricos (uppercase + tracking agresivo). La segunda es para texto de contexto pre-título (natural, legible).
+
+## Token Cascade en `.surface-hero`
+
+`.surface-hero` incluye **15 overrides de tokens CSS** que cascadean automáticamente a todos los hijos. Usar `surface-hero` en un contenedor adapta colores sin ningún cambio en el HTML hijo:
+
+| Token sobreescrito | Valor dentro de surface-hero | Efecto en clases Tailwind |
+|--------------------|------------------------------|---------------------------|
+| `--text-primary` | `var(--color-primary-text)` → `#fff` | `text-text-primary` = blanco |
+| `--text-secondary` | `rgba(255,255,255,0.78)` | `text-text-secondary` = blanco/78% |
+| `--text-muted` | `rgba(255,255,255,0.55)` | `text-text-muted` = blanco/55% |
+| `--bg-subtle` | `rgba(255,255,255,0.10)` | `bg-subtle`, `hover:bg-subtle` = glass |
+| `--border-subtle` | `rgba(255,255,255,0.18)` | `border-border-subtle` = glass |
+| `--color-brand` | `rgba(255,255,255,1)` | `text-brand`, `bg-brand/10`, `hover:text-brand` = blanco |
+| `--btn-primary-bg/text` | blanco / `var(--ds-brand)` | `btn-primary` = blanco + brand text (inverso) |
+| `--btn-secondary-*` | glass blanco | `btn-secondary` = ghost blanco translúcido |
+
 ## Reglas de Uso
 
 1. **Layouts de página**: usar `.page-centered`, `.page-narrow`, `.page-wide`, etc. — NO crear max-width ad-hoc
@@ -51,3 +80,4 @@
 3. **Colores y espaciado**: usar tokens `var(--*)` de `_variables.scss` — NUNCA valores hex/px directos
 4. **Componentes PrimeNG**: los overrides ya están en `_primeng-overrides.scss` — NO sobrescribir en componentes individuales
 5. **Animaciones de página**: usar View Transitions API (`_view-transitions.scss`) — NO crear transiciones de ruta custom
+6. **Contexto gradient**: dentro de `.surface-hero`, NO agregar clases de color condicionales — el token cascade lo resuelve automáticamente

@@ -71,15 +71,15 @@ import { IconComponent } from '../icon/icon.component';
       </div>
 
       <!-- Valor principal — animado por GSAP al montar -->
-      <p class="kpi-value flex items-baseline gap-0.5">
+      <p class="kpi-value flex items-baseline gap-0.5 min-w-0 w-full overflow-hidden">
         @if (prefix()) {
-          <span class="text-2xl font-semibold" style="color: var(--text-secondary)">
+          <span class="font-semibold align-baseline" style="color: var(--text-secondary); font-size: clamp(var(--text-lg), 5vw, var(--text-2xl));">
             {{ prefix() }}
           </span>
         }
-        <span #valueEl>{{ value() }}</span>
+        <span #valueEl class="truncate align-baseline" title="{{ value() }}">{{ value() }}</span>
         @if (suffix()) {
-          <span class="text-2xl font-semibold" style="color: var(--text-secondary)">
+          <span class="font-semibold align-baseline" style="color: var(--text-secondary); font-size: clamp(var(--text-lg), 5vw, var(--text-2xl));">
             {{ suffix() }}
           </span>
         }

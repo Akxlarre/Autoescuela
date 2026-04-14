@@ -37,7 +37,6 @@ import {
       <app-section-hero
         [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
         [subtitle]="showFinalStep() ? 'Registra el kilometraje final y firmas' : 'Completa la evaluación mientras transcurre la clase'"
-        variant="compact"
         backRoute="/app/instructor/dashboard"
         backLabel="Dashboard"
         [actions]="heroActions()"

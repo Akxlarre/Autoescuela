@@ -2,6 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type {
   LiquidacionRow,
   LiquidacionesKpis,
@@ -39,8 +42,9 @@ function formatCLP(value: number): string {
 
 @Component({
   selector: 'app-liquidaciones-content',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, PagoInstructorModalComponent],
+  imports: [IconComponent, SkeletonBlockComponent, PagoInstructorModalComponent, SectionHeroComponent, KpiCardVariantComponent],
   styles: [
     `
       .liq-kpi-card {
@@ -67,10 +71,10 @@ function formatCLP(value: number): string {
         background: var(--ds-brand);
       }
       .liq-kpi-card.accent-error::before {
-        background: var(--color-error);
+        background: var(--state-);
       }
       .liq-kpi-card.accent-success::before {
-        background: var(--color-success);
+        background: var(--state-);
       }
 
       .liq-table th {
@@ -110,26 +114,26 @@ function formatCLP(value: number): string {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: color-mix(in srgb, var(--color-error) 10%, transparent);
-        border: 1px solid color-mix(in srgb, var(--color-error) 25%, transparent);
+        background: color-mix(in srgb, var(--state-) 10%, transparent);
+        border: 1px solid color-mix(in srgb, var(--state-) 25%, transparent);
         border-radius: 6px;
         padding: 3px 10px;
         font-size: 12px;
         font-weight: 600;
-        color: var(--color-error);
+        color: var(--state-);
         font-variant-numeric: tabular-nums;
       }
 
       .progress-track {
         height: 6px;
         border-radius: 99px;
-        background: color-mix(in srgb, var(--color-success) 15%, var(--bg-surface-elevated));
+        background: color-mix(in srgb, var(--state-) 15%, var(--bg-surface-elevated));
         overflow: hidden;
       }
       .progress-fill {
         height: 100%;
         border-radius: 99px;
-        background: var(--color-success);
+        background: var(--state-);
         transition: width 0.4s ease;
       }
 
@@ -141,15 +145,15 @@ function formatCLP(value: number): string {
         font-weight: 600;
         padding: 6px 14px;
         border-radius: 8px;
-        border: 1px solid color-mix(in srgb, var(--color-success) 35%, transparent);
-        background: color-mix(in srgb, var(--color-success) 10%, var(--bg-surface));
-        color: var(--color-success);
+        border: 1px solid color-mix(in srgb, var(--state-) 35%, transparent);
+        background: color-mix(in srgb, var(--state-) 10%, var(--bg-surface));
+        color: var(--state-);
         cursor: pointer;
         transition: background 0.15s;
         white-space: nowrap;
       }
       .btn-pagar:hover {
-        background: color-mix(in srgb, var(--color-success) 18%, var(--bg-surface));
+        background: color-mix(in srgb, var(--state-success) 18%, var(--bg-surface));
       }
 
       .btn-pagado {
@@ -185,105 +189,74 @@ function formatCLP(value: number): string {
         white-space: nowrap;
       }
       .btn-deshacer:hover {
-        color: var(--color-error);
-        border-color: color-mix(in srgb, var(--color-error) 30%, transparent);
-        background: color-mix(in srgb, var(--color-error) 6%, transparent);
+        color: var(--state-);
+        border-color: color-mix(in srgb, var(--state-) 30%, transparent);
+        background: color-mix(in srgb, var(--state-) 6%, transparent);
+      }
+
+      .card-mobile-liq {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-muted);
+        border-radius: 12px;
+        padding: 16px;
+        transition: transform 0.2s ease, background 0.2s ease;
+      }
+      .card-mobile-liq:active {
+        transform: scale(0.98);
+      }
+
+      .badge-liq {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 6px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
       }
     `,
   ],
   template: `
     <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
-      <div>
-        <h1 class="text-2xl font-semibold text-primary">Liquidaciones de Instructores</h1>
-        <p class="text-sm text-muted mt-0.5">Nómina mensual y registro de pagos</p>
-      </div>
+    <app-section-hero
+      title="Liquidaciones de Instructores"
+      subtitle="Nómina mensual y registro de pagos"
+      [actions]="heroActions"
+      class="block mb-6"
+    />
 
-      <!-- Navegación de mes -->
-      <div
-        class="flex items-center"
-        style="background: var(--bg-surface); border: 1px solid var(--border-muted); border-radius: var(--radius-lg, 10px); overflow: hidden"
-      >
-        <button
-          class="px-3 py-2 transition-colors cursor-pointer"
-          style="color: var(--text-secondary); border-right: 1px solid var(--border-muted)"
-          (click)="mesAnterior.emit()"
-          aria-label="Mes anterior"
-          data-llm-action="liquidaciones-mes-anterior"
-        >
-          <app-icon name="chevron-left" [size]="16" />
-        </button>
-        <span
-          class="text-sm font-semibold px-5 text-primary"
-          style="min-width: 145px; text-align: center"
-        >
-          {{ mesLabel() }}
-        </span>
-        <button
-          class="px-3 py-2 transition-colors cursor-pointer"
-          style="color: var(--text-secondary); border-left: 1px solid var(--border-muted)"
-          (click)="mesSiguiente.emit()"
-          aria-label="Mes siguiente"
-          data-llm-action="liquidaciones-mes-siguiente"
-        >
-          <app-icon name="chevron-right" [size]="16" />
-        </button>
-      </div>
-    </div>
-
-    <!-- ── KPIs ──────────────────────────────────────────────────────────────── -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-5 w-full">
+    <!-- ── KPIs: Densidad Inteligente (2 col en móvil, 3 en desktop) ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5 w-full">
       <!-- KPI 1: Total Nómina -->
-      <div class="liq-kpi-card accent-brand">
-        <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold text-secondary uppercase tracking-wider">Total Nómina</p>
-          <div
-            class="flex items-center justify-center"
-            style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--ds-brand) 12%,transparent)"
-          >
-            <app-icon name="banknote" [size]="17" color="var(--ds-brand)" />
-          </div>
-        </div>
-        @if (isLoading()) {
-          <app-skeleton-block variant="text" width="70%" height="28px" />
-          <app-skeleton-block variant="text" width="55%" height="12px" />
-        } @else {
-          <p class="kpi-value" style="font-size:1.6rem;color:var(--ds-brand)">
-            {{ formatCLP(kpis().totalNomina) }}
-          </p>
-          <p class="text-xs text-muted">Suma bruta del periodo</p>
-        }
-      </div>
+      <app-kpi-card-variant
+        class="col-span-1"
+        [value]="kpis().totalNomina"
+        label="Total Nómina"
+        icon="banknote"
+        color="default"
+        [accent]="true"
+        prefix="$ "
+        subValue="Suma bruta del periodo"
+        [loading]="isLoading()"
+      />
 
       <!-- KPI 2: Anticipos -->
-      <div class="liq-kpi-card accent-error">
-        <div class="flex items-center justify-between">
-          <p class="text-xs font-semibold text-secondary uppercase tracking-wider">
-            Anticipos a Descontar
-          </p>
-          <div
-            class="flex items-center justify-center"
-            style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--color-error) 12%,transparent)"
-          >
-            <app-icon name="trending-down" [size]="17" color="var(--color-error)" />
-          </div>
-        </div>
-        @if (isLoading()) {
-          <app-skeleton-block variant="text" width="70%" height="28px" />
-          <app-skeleton-block variant="text" width="55%" height="12px" />
-        } @else {
-          <p class="kpi-value" style="font-size:1.6rem;color:var(--color-error)">
-            @if (kpis().totalAnticipos > 0) {
-              -
-            }
-            {{ formatCLP(kpis().totalAnticipos) }}
-          </p>
-          <p class="text-xs text-muted">Total de adelantos entregados</p>
-        }
-      </div>
+      <app-kpi-card-variant
+        class="col-span-1"
+        [value]="kpis().totalAnticipos"
+        label="Anticipos a Descontar"
+        icon="trending-down"
+        color="error"
+        [accent]="true"
+        [prefix]="kpis().totalAnticipos > 0 ? '-$ ' : '$ '"
+        subValue="Total de adelantos entregados"
+        [loading]="isLoading()"
+      />
 
       <!-- KPI 3: Estado Pagos -->
-      <div class="liq-kpi-card accent-success">
+      <div class="col-span-2 lg:col-span-1 liq-kpi-card accent-success shadow-sm">
         @if (isLoading()) {
           <app-skeleton-block variant="text" width="100%" height="6px" />
           <app-skeleton-block variant="text" width="60%" height="28px" />
@@ -293,76 +266,99 @@ function formatCLP(value: number): string {
           <div class="progress-track">
             <div class="progress-fill" [style.width.%]="progresoPagos()"></div>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between mt-1">
             <p class="text-xs font-semibold text-secondary uppercase tracking-wider">
               Estado de Pagos
             </p>
             <div
               class="flex items-center justify-center"
-              style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--color-success) 12%,transparent)"
+              style="width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--state-) 12%,transparent)"
             >
-              <app-icon name="check-circle" [size]="17" color="var(--color-success)" />
+              <app-icon name="check-circle" [size]="17" color="var(--state-)" />
             </div>
           </div>
-          <p class="kpi-value" style="font-size:1.6rem;color:var(--color-success)">
-            {{ kpis().totalPagados }} / {{ kpis().totalInstructores }}
-            <span class="text-sm font-normal text-secondary ml-1">Pagados</span>
+          <p class="kpi-value text-[1.4rem] lg:text-[1.6rem] text-state-success font-bold" style="color:var(--state-)">
+            {{ kpis().totalPagados }}<span class="text-secondary opacity-50 mx-1">/</span>{{ kpis().totalInstructores }}
           </p>
-          <div class="flex items-center gap-4 text-xs">
-            <span style="color:var(--color-warning)" class="flex items-center gap-1 font-medium">
-              <span
-                style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"
-              ></span>
-              {{ kpis().totalInstructores - kpis().totalPagados }} Pendientes
-            </span>
-            <span style="color:var(--color-success)" class="flex items-center gap-1 font-medium">
-              <span
-                style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"
-              ></span>
-              {{ kpis().totalPagados }} Pagados
+          <p class="text-[10px] lg:text-xs text-muted">Instructores Pagados</p>
+          <div class="hidden sm:flex items-center gap-4 text-xs mt-1">
+            <span style="color:var(--state-)" class="flex items-center gap-1 font-medium">
+              <span style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block"></span>
+              {{ kpis().totalInstructores - kpis().totalPagados }} Pend.
             </span>
           </div>
         }
       </div>
     </div>
 
-    <!-- ── Filtros ─────────────────────────────────────────────────────────────── -->
+    <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
     <div
-      class="flex flex-wrap items-center gap-3 mb-4 px-4 py-3"
+      class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 px-4 py-3 shadow-sm"
       style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px)"
     >
-      <!-- Buscador -->
-      <div
-        class="flex items-center gap-2 px-3 py-2 rounded-lg flex-1"
-        style="background:var(--bg-surface-elevated);border:1px solid var(--border-muted);min-width:200px;max-width:340px"
-      >
-        <app-icon name="search" [size]="14" color="var(--text-muted)" />
-        <input
-          type="text"
-          placeholder="Buscar instructor..."
-          class="flex-1 text-sm bg-transparent text-primary outline-none placeholder:text-muted"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-          data-llm-description="Search filter for instructor liquidations by name or RUT"
-          aria-label="Buscar instructor"
-        />
-        @if (query()) {
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+        <!-- Navegación de mes -->
+        <div
+          class="flex items-center shrink-0"
+          style="background:var(--bg-surface-elevated); border:1px solid var(--border-muted); border-radius:8px; overflow:hidden"
+        >
           <button
-            class="cursor-pointer"
-            style="color:var(--text-muted)"
-            (click)="query.set('')"
-            aria-label="Limpiar"
+            class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75"
+            style="color:var(--text-secondary); border-right:1px solid var(--border-muted)"
+            (click)="mesAnterior.emit()"
+            aria-label="Mes anterior"
           >
-            <app-icon name="x" [size]="12" />
+            <app-icon name="chevron-left" [size]="16" />
           </button>
-        }
+          <span
+            class="text-sm font-semibold px-4 text-primary"
+            style="min-width: 140px; text-align: center"
+          >
+            {{ mesLabel() }}
+          </span>
+          <button
+            class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75"
+            style="color:var(--text-secondary); border-left:1px solid var(--border-muted)"
+            (click)="mesSiguiente.emit()"
+            aria-label="Mes siguiente"
+          >
+            <app-icon name="chevron-right" [size]="16" />
+          </button>
+        </div>
+
+        <!-- Buscador -->
+        <div
+          class="flex items-center gap-2 px-3 py-2 rounded-lg sm:min-w-[200px]"
+          style="background:var(--bg-surface-elevated);border:1px solid var(--border-muted);"
+        >
+          <app-icon name="search" [size]="14" color="var(--text-muted)" />
+          <input
+            type="text"
+            placeholder="Buscar instructor..."
+            class="flex-1 text-sm bg-transparent text-primary outline-none placeholder:text-muted"
+            [value]="query()"
+            (input)="query.set($any($event.target).value)"
+            data-llm-description="Search filter for instructor liquidations by name or RUT"
+            aria-label="Buscar instructor"
+          />
+          @if (query()) {
+            <button
+              class="cursor-pointer"
+              style="color:var(--text-muted)"
+              (click)="query.set('')"
+              aria-label="Limpiar"
+            >
+              <app-icon name="x" [size]="12" />
+            </button>
+          }
+        </div>
       </div>
 
       <!-- Contadores de estado -->
-      <div class="flex items-center gap-4 ml-auto">
+      <div class="flex items-center gap-4 justify-end shrink-0">
         <span
           class="flex items-center gap-1.5 text-xs font-semibold"
-          style="color:var(--color-warning)"
+          style="color:var(--state-warning)"
         >
           <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
           {{ contadores().pendientes }} Pendientes
@@ -374,11 +370,13 @@ function formatCLP(value: number): string {
       </div>
     </div>
 
-    <!-- ── Tabla ─────────────────────────────────────────────────────────────── -->
+    <!-- ── Tabla Dual-View ────────────────────────────────────────────────── -->
     <div
-      style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px);overflow:hidden"
+      style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px);overflow:hidden;container-type:inline-size;"
+      class="shadow-sm"
     >
-      <div class="overflow-x-auto">
+      <!-- VISTA ESCRITORIO -->
+      <div class="hidden md:block overflow-x-auto w-full">
         <table
           class="w-full liq-table"
           role="table"
@@ -430,7 +428,7 @@ function formatCLP(value: number): string {
                   <td>
                     <div class="flex items-center gap-3">
                       <div
-                        class="shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                        class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
                         style="width:38px;height:38px;border-radius:50%;background:{{
                           row.avatarColor
                         }}"
@@ -457,7 +455,7 @@ function formatCLP(value: number): string {
 
                   <!-- Base ganado -->
                   <td class="text-right tabular-nums">
-                    <span class="text-sm font-semibold" style="color:var(--color-success)">
+                    <span class="text-sm font-semibold" style="color:var(--state-success)">
                       {{ formatCLP(row.totalBaseAmount) }}
                     </span>
                   </td>
@@ -469,7 +467,7 @@ function formatCLP(value: number): string {
                         <span class="anticipo-box">{{ formatCLP(row.totalAdvances) }}</span>
                         <span
                           class="text-xs font-medium tabular-nums"
-                          style="color:var(--color-error)"
+                          style="color:var(--state-error)"
                         >
                           - {{ formatCLP(row.totalAdvances) }}
                         </span>
@@ -491,11 +489,11 @@ function formatCLP(value: number): string {
                     @if (row.status === 'paid') {
                       <div class="flex items-center justify-center gap-2">
                         <span class="btn-pagado">
-                          <app-icon name="check-circle" [size]="13" color="var(--color-success)" />
+                          <app-icon name="check-circle" [size]="13" color="var(--state-)" />
                           Pagado
                         </span>
                         <button
-                          class="btn-deshacer"
+                          class="btn-deshacer shadow-sm"
                           (click)="onDeshacer(row)"
                           [attr.aria-label]="'Deshacer pago de ' + row.nombre"
                           data-llm-action="deshacer-pago-instructor"
@@ -506,7 +504,7 @@ function formatCLP(value: number): string {
                       </div>
                     } @else {
                       <button
-                        class="btn-pagar"
+                        class="btn-pagar shadow-sm"
                         (click)="abrirModal(row)"
                         [attr.aria-label]="'Registrar pago para ' + row.nombre"
                         data-llm-action="pagar-instructor"
@@ -521,7 +519,7 @@ function formatCLP(value: number): string {
             }
           </tbody>
 
-          <!-- Fila de totales -->
+          <!-- Fila de totales escritorio -->
           @if (!isLoading() && filtradas().length > 0) {
             <tfoot>
               <tr>
@@ -535,7 +533,7 @@ function formatCLP(value: number): string {
                   <span class="text-xs text-muted ml-1">hrs</span>
                 </td>
                 <td class="text-right tabular-nums">
-                  <span class="text-sm font-bold" style="color:var(--color-success)">
+                  <span class="text-sm font-bold" style="color:var(--state-success)">
                     {{ formatCLP(totales().base) }}
                   </span>
                 </td>
@@ -556,6 +554,133 @@ function formatCLP(value: number): string {
             </tfoot>
           }
         </table>
+      </div>
+
+      <!-- VISTA MÓVIL (Cards) -->
+      <div class="md:hidden flex flex-col gap-4 p-4" style="background:var(--bg-surface-elevated)">
+        @if (isLoading()) {
+          @for (i of skeletonRows; track i) {
+            <div class="p-5 rounded-xl border border-border-muted" style="background:var(--bg-surface)">
+              <div class="flex items-center gap-3 mb-4">
+                <app-skeleton-block variant="circle" width="38px" height="38px" />
+                <div class="flex flex-col gap-2 flex-1">
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
+                  <app-skeleton-block variant="text" width="40%" height="12px" />
+                </div>
+              </div>
+              <app-skeleton-block variant="text" width="100%" height="40px" />
+            </div>
+          }
+        } @else if (filtradas().length === 0) {
+          <div class="py-10 text-center text-sm text-muted">
+            @if (query()) {
+              No se encontraron instructores para "{{ query() }}".
+            } @else {
+               No hay instructores registrados para este período.
+            }
+          </div>
+        } @else {
+          @for (row of filtradas(); track row.instructorId) {
+            <div class="card-mobile-liq shadow-sm">
+              <!-- Header Card (Instructor info) -->
+              <div class="flex justify-between items-start mb-4">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                    style="width:42px;height:42px;border-radius:50%;background:{{ row.avatarColor }}"
+                    aria-hidden="true"
+                  >
+                    {{ row.initials }}
+                  </div>
+                  <div>
+                    <h3 class="text-[15px] font-bold text-primary leading-tight">{{ row.nombre }}</h3>
+                    <p class="text-[12px] text-muted mt-0.5">{{ row.rut }}</p>
+                  </div>
+                </div>
+                
+                @if (row.status === 'paid') {
+                  <span class="badge-liq" style="background:color-mix(in srgb,var(--state-success) 12%,transparent);color:var(--state-success)">
+                    <app-icon name="check-circle" [size]="12" /> Pagado
+                  </span>
+                } @else {
+                  <span class="badge-liq" style="background:color-mix(in srgb,var(--state-warning) 12%,transparent);color:var(--state-warning)">
+                    Pendiente
+                  </span>
+                }
+              </div>
+
+              <!-- Content Card (Metrics) -->
+              <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg" style="background:var(--bg-surface-elevated)">
+                <div class="flex flex-col gap-1">
+                  <span class="text-[10px] uppercase font-bold text-muted">Base (Ganado)</span>
+                  <span class="text-[13px] font-bold" style="color:var(--state-success)">
+                    {{ formatCLP(row.totalBaseAmount) }}
+                  </span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-[10px] uppercase font-bold text-muted">Horas Registradas</span>
+                  <div class="text-[13px] font-bold text-primary tabular-nums">
+                    {{ row.totalHours }} <span class="font-normal text-muted">hrs</span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1" style="border-color:var(--border-muted)">
+                  <div class="flex justify-between items-center w-full">
+                    <span class="text-[10px] uppercase font-bold text-muted">Anticipos Emitidos</span>
+                    <span class="text-[13px] font-bold tabular-nums" style="color:var(--state-error)">
+                      {{ row.totalAdvances > 0 ? '-' + formatCLP(row.totalAdvances) : '—' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1 col-span-2 border-t pt-2" style="border-color:var(--border-muted)">
+                  <div class="flex justify-between items-center w-full">
+                    <span class="text-[11px] uppercase font-black text-primary">A Pagar</span>
+                    <span class="text-[18px] font-black tracking-tight" style="color:var(--ds-brand)">
+                      {{ formatCLP(row.finalPaymentAmount) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Actions Card -->
+              <div class="flex flex-col sm:flex-row justify-end gap-2 mt-2">
+                @if (row.status === 'paid') {
+                  <button
+                    class="btn-deshacer w-full sm:w-auto justify-center py-2.5 shadow-sm"
+                    (click)="onDeshacer(row)"
+                  >
+                    <app-icon name="rotate-ccw" [size]="14" />
+                    Deshacer Pago
+                  </button>
+                } @else {
+                  <button
+                    class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-[14px] shadow-sm"
+                    (click)="abrirModal(row)"
+                  >
+                    <app-icon name="banknote" [size]="15" />
+                    Registrar Pago
+                  </button>
+                }
+              </div>
+            </div>
+          }
+          
+          <!-- Mobile Totals Summary -->
+          <div class="mt-4 p-4 rounded-xl border-2" style="border-color:color-mix(in srgb,var(--ds-brand) 30%,transparent); background:color-mix(in srgb,var(--ds-brand) 5%,transparent)">
+            <h4 class="text-[11px] uppercase font-black tracking-widest text-primary mb-3">Resumen de Totales</h4>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs text-muted font-medium">Bases Registradas</span>
+              <span class="text-sm font-bold tabular-nums" style="color:var(--state-success)">{{ formatCLP(totales().base) }}</span>
+            </div>
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs text-muted font-medium">Anticipos a Descontar</span>
+              <span class="text-sm font-bold tabular-nums" style="color:var(--state-error)">- {{ formatCLP(totales().anticipos) }}</span>
+            </div>
+            <div class="flex justify-between items-center pt-2 mt-2 border-t" style="border-color:color-mix(in srgb,var(--ds-brand) 20%,transparent)">
+              <span class="text-xs font-black uppercase text-primary">Total Final</span>
+              <span class="text-[18px] font-black tabular-nums tracking-tight" style="color:var(--ds-brand)">{{ formatCLP(totales().total) }}</span>
+            </div>
+          </div>
+        }
       </div>
     </div>
 
@@ -593,6 +718,15 @@ export class LiquidacionesContentComponent {
 
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
+  
+  protected readonly heroActions: SectionHeroAction[] = [
+    {
+      id: 'export',
+      label: 'Exportar Nómina',
+      icon: 'download',
+      primary: false
+    }
+  ];
 
   // ── Computed ─────────────────────────────────────────────────────────────────
 
