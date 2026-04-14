@@ -31,9 +31,12 @@ function createMockSupabaseService() {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
           remove: vi.fn().mockResolvedValue({ error: null }),
-          getPublicUrl: vi
+          createSignedUrl: vi
             .fn()
-            .mockReturnValue({ data: { publicUrl: 'https://example.com/photo.jpg' } }),
+            .mockResolvedValue({
+              data: { signedUrl: 'https://example.com/signed/photo.jpg' },
+              error: null,
+            }),
         }),
       },
     },

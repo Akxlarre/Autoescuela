@@ -303,14 +303,14 @@ export class LibroDeClasesFacade {
 
     if (error) return;
 
-    const alumnos: AlumnoLibro[] = (data as any[]).map((e, i) => {
+    const alumnos: AlumnoLibro[] = (data as any[]).map((e) => {
       const u = e.students.users;
       const nombre = [u.paternal_last_name, u.maternal_last_name, u.first_names]
         .filter(Boolean)
         .join(' ');
 
       return {
-        numero: i + 1,
+        numero: 0,
         enrollmentId: e.id,
         nombre,
         rut: u.rut ?? '',
@@ -318,6 +318,9 @@ export class LibroDeClasesFacade {
         licenciaPostulada: licenseClass,
       };
     });
+
+    alumnos.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    alumnos.forEach((a, i) => (a.numero = i + 1));
 
     this._alumnos.set(alumnos);
   }

@@ -1,32 +1,40 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { CertificacionClaseBContentComponent } from '@shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component';
 
+/**
+ * SecretariaCertificadosComponent — Smart component.
+ * Ruta: /app/secretaria/certificados
+ *
+ * La secretaria siempre ve su propia sede (branchId del usuario autenticado).
+ */
 @Component({
   selector: 'app-secretaria-certificados',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CertificacionClaseBContentComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Certificados</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /secretaria/certificados</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/secretaria/certificados.astro
-        </code>
-      </div>
-    </div>
+    <app-certificacion-clase-b-content
+      [alumnos]="facade.alumnos()"
+      [kpis]="facade.kpis()"
+      [log]="facade.log()"
+      [isLoading]="facade.isLoading()"
+      [generatingId]="facade.generatingId()"
+      (generarCertificado)="facade.generarCertificado($event)"
+      (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
+      (enviarEmail)="facade.enviarEmail($event)"
+      (generarPendientes)="facade.generarPendientes()"
+      (enviarEmailsMasivo)="facade.enviarEmailsMasivo()"
+      (exportar)="facade.exportar()"
+    />
   `,
 })
-export class SecretariaCertificadosComponent {}
+export class SecretariaCertificadosComponent implements OnInit {
+  protected readonly facade = inject(CertificacionClaseBFacade);
+  private readonly authFacade = inject(AuthFacade);
+
+  ngOnInit(): void {
+    void this.facade.initialize();
+  }
+}

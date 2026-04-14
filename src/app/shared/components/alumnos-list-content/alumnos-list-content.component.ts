@@ -684,6 +684,7 @@ export class AlumnosListContentComponent {
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
   readonly claseOnlineAction = output<'zoom' | 'asistencia'>();
+  readonly preInscritosRequested = output<void>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
@@ -875,7 +876,7 @@ export class AlumnosListContentComponent {
         this.registrarAsistenciaZoom();
         break;
       case 'preinscritos':
-        // TODO: navegar o abrir vista Pre-inscritos
+        this.preInscritosRequested.emit();
         break;
       case 'nueva-matricula':
         this.openNuevaMatriculaDrawer();

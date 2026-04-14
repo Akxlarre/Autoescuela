@@ -33,6 +33,7 @@ import {
   Edit3,
   Eraser,
   Eye,
+  Filter,
   Pencil,
   Play,
   Plus,
@@ -47,6 +48,7 @@ import {
   Upload,
   UploadCloud,
   X,
+  XCircle,
   ZoomIn,
   // ── Status & Alerts ──
   AlertCircle,
@@ -89,6 +91,7 @@ import {
   Folder,
   FolderOpen,
   FolderSearch,
+  List,
   ListChecks,
   Scroll,
   // ── Calendar & Time ──
@@ -165,6 +168,8 @@ import {
   TrendingUp,
   // ── Surfaces ──
   Circle,
+  CalendarPlus,
+  MousePointerClick,
 } from 'lucide-angular';
 
 import { routes } from './app.routes';
@@ -242,6 +247,7 @@ export const appConfig: ApplicationConfig = {
         Edit3,
         Eraser,
         Eye,
+        Filter,
         Pencil,
         Play,
         Plus,
@@ -256,6 +262,7 @@ export const appConfig: ApplicationConfig = {
         Upload,
         UploadCloud,
         X,
+        XCircle,
         ZoomIn,
         // ── Status & Alerts ──
         AlertCircle,
@@ -298,6 +305,7 @@ export const appConfig: ApplicationConfig = {
         Folder,
         FolderOpen,
         FolderSearch,
+        List,
         ListChecks,
         Scroll,
         // ── Calendar & Time ──
@@ -305,6 +313,7 @@ export const appConfig: ApplicationConfig = {
         CalendarCheck,
         CalendarClock,
         CalendarDays,
+        CalendarPlus,
         CalendarX,
         Clock,
         History,
@@ -350,6 +359,7 @@ export const appConfig: ApplicationConfig = {
         Bus,
         Car,
         Circle,
+        MousePointerClick,
         FlaskConical,
         Gauge,
         GraduationCap,

@@ -28,9 +28,6 @@ describe('PublicEnrollmentFacade', () => {
     upload: vi.fn().mockResolvedValue({ error: null }),
     move: vi.fn().mockResolvedValue({ error: null }),
     remove: vi.fn().mockResolvedValue({ error: null }),
-    getPublicUrl: vi.fn().mockReturnValue({
-      data: { publicUrl: 'https://example.com/public-uploads/carnet/test-token' },
-    }),
   };
 
   const mockSupabaseClient = {
@@ -48,6 +45,13 @@ describe('PublicEnrollmentFacade', () => {
   };
 
   beforeEach(() => {
+    // jsdom no implementa URL.createObjectURL — mockearlo para que uploadCarnetPhoto funcione.
+    vi.stubGlobal('URL', {
+      ...URL,
+      createObjectURL: vi.fn().mockReturnValue('blob:mock-preview'),
+      revokeObjectURL: vi.fn(),
+    });
+
     // Montar mock de localStorage antes de instanciar el facade
     localStorageMock = createLocalStorageMock();
     Object.defineProperty(globalThis, 'localStorage', {

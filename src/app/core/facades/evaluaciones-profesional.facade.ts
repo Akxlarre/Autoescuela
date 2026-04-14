@@ -24,6 +24,7 @@ interface EnrollmentRow {
     users: {
       first_names: string;
       paternal_last_name: string;
+      maternal_last_name: string | null;
       rut: string;
     };
   };
@@ -69,7 +70,7 @@ export class EvaluacionesProfesionalFacade {
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
       .select('id, name, code, status')
-      .in('status', ['planned', 'in_progress', 'finished'])
+      .in('status', ['planned', 'in_progress'])
       .order('start_date', { ascending: false });
 
     if (error) {
@@ -152,7 +153,9 @@ export class EvaluacionesProfesionalFacade {
       // Matrículas activas del curso
       const { data: enrollments, error: enrError } = await this.supabase.client
         .from('enrollments')
-        .select('id, students!inner(users!inner(first_names, paternal_last_name, rut))')
+        .select(
+          'id, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut))',
+        )
         .eq('promotion_course_id', promotionCourseId)
         .in('status', ['active', 'completed'])
         .order('id');
@@ -185,7 +188,9 @@ export class EvaluacionesProfesionalFacade {
       const filas: FilaEvaluacion[] = (enrollments ?? []).map((enr) => {
         const row = enr as unknown as EnrollmentRow;
         const u = row.students.users;
-        const fullName = `${u.first_names} ${u.paternal_last_name}`;
+        const fullName = [u.paternal_last_name, u.maternal_last_name, u.first_names]
+          .filter(Boolean)
+          .join(' ');
         const initials = fullName
           .split(' ')
           .filter(Boolean)
@@ -218,6 +223,8 @@ export class EvaluacionesProfesionalFacade {
           promedioAprobado: promedio !== null ? isPassing(promedio) : null,
         };
       });
+
+      filas.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
       this._grilla.set({
         promotionCourseId,

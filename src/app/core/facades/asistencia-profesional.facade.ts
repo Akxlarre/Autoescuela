@@ -205,7 +205,7 @@ export class AsistenciaProfesionalFacade {
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
       .select('id, name, code, status')
-      .in('status', ['in_progress', 'planned', 'finished'])
+      .in('status', ['in_progress', 'planned'])
       .order('start_date', { ascending: false });
 
     if (error) throw error;
@@ -423,7 +423,7 @@ export class AsistenciaProfesionalFacade {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const alumnos: SesionAlumnoAsistencia[] = (enrollments as any[]).map((e) => {
         const u = e.students?.users;
-        const nombre = [u?.first_names, u?.paternal_last_name, u?.maternal_last_name]
+        const nombre = [u?.paternal_last_name, u?.maternal_last_name, u?.first_names]
           .filter(Boolean)
           .join(' ');
         const parts = nombre.trim().split(' ');
@@ -649,7 +649,7 @@ export class AsistenciaProfesionalFacade {
 
       const resumen: ResumenAlumnoAsistencia[] = (enrollments as any[]).map((e) => {
         const u = e.students?.users;
-        const nombre = [u?.first_names, u?.paternal_last_name, u?.maternal_last_name]
+        const nombre = [u?.paternal_last_name, u?.maternal_last_name, u?.first_names]
           .filter(Boolean)
           .join(' ');
         const parts = nombre.trim().split(' ');
@@ -808,7 +808,7 @@ export class AsistenciaProfesionalFacade {
 
       const result: AlumnoFirmaSemana[] = ((enrollRes.data ?? []) as any[]).map((e) => {
         const u = e.students?.users;
-        const nombre = [u?.first_names, u?.paternal_last_name, u?.maternal_last_name]
+        const nombre = [u?.paternal_last_name, u?.maternal_last_name, u?.first_names]
           .filter(Boolean)
           .join(' ');
         const parts = nombre.trim().split(' ');

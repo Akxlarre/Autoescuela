@@ -147,14 +147,16 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       if (step === 4 && pd) {
         const course = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
         const paymentMode = this.enrollment.paymentMode();
-        if (course) {
-          const SESSION_MIN = 45;
-          const totalSessions = course.practicalHours
-            ? Math.round((course.practicalHours * 60) / SESSION_MIN)
-            : 12;
+        // Fallback al base_price del enrollment en BD por si courseOptions aún no cargó
+        const basePrice = course?.basePrice ?? this.enrollment.enrollmentBasePrice();
+        const SESSION_MIN = 45;
+        const totalSessions = course?.practicalHours
+          ? Math.round((course.practicalHours * 60) / SESSION_MIN)
+          : 12;
+        if (basePrice > 0) {
           this.payment.computePricing({
-            courseLabel: course.label,
-            basePrice: course.basePrice,
+            courseLabel: course?.label ?? pd.courseType,
+            basePrice,
             practicalClassesIncluded: totalSessions,
             isDeposit: paymentMode === 'partial',
           });

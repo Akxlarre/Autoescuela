@@ -167,16 +167,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
-
-    const pdfUrl = urlData.publicUrl;
-
-    // 6. Upsert digital_contracts record
+    // 6. Upsert digital_contracts — guardamos el path relativo (bucket privado).
     const { error: contractError } = await supabase.from('digital_contracts').upsert(
       {
         enrollment_id,
         file_name: fileName,
-        file_url: pdfUrl,
+        file_url: storagePath,
         content_hash: await computeHash(pdfBytes),
       },
       { onConflict: 'enrollment_id' },
@@ -187,8 +183,13 @@ Deno.serve(async (req: Request) => {
       // Non-fatal: the PDF was uploaded, just the DB record failed
     }
 
-    // 7. Return the URL
-    return new Response(JSON.stringify({ pdfUrl }), {
+    // 7. Generar signed URL (TTL 1h) para visualización inmediata en el cliente.
+    const { data: signedData, error: signErr } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+    const pdfUrl = signErr ? null : signedData?.signedUrl;
+
+    return new Response(JSON.stringify({ pdfUrl, pdfPath: storagePath }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

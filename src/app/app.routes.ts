@@ -99,6 +99,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'alumnos/pre-inscritos',
+            loadComponent: () =>
+              import('./features/admin/alumnos/pre-inscritos/admin-pre-inscritos.component').then(
+                (m) => m.AdminPreInscritosComponent,
+              ),
+          },
+          {
             path: 'alumnos/:id',
             loadComponent: () =>
               import('./features/admin/alumno-detalle/admin-alumno-detalle.component').then(
