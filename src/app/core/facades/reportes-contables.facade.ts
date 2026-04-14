@@ -1,89 +1,24 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
+import type { FiltrosReporte, ReporteContable } from '@core/models/ui/reportes-contables.model';
+import { computeDateRange } from '@core/models/ui/reportes-contables.model';
+import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import {
-  computeDateRange,
-  type FiltrosReporte,
-  type ReporteContable,
-} from '@core/models/ui/reportes-contables.model';
-
-// ── Mock data (RF-030 / RF-031) — reemplazar con query Supabase real ──────────
-const MOCK_REPORTE: ReporteContable = {
-  kpis: {
-    totalIngresos: 8_475_000,
-    totalGastos: 2_210_000,
-    totalNeto: 6_265_000,
-    operacionesIngresos: 71,
-    operacionesGastos: 79,
-    margenGanancia: 73.9,
-  },
-  ingresosCategoria: [
-    {
-      nombre: 'Clase B (A. Chillán)',
-      monto: 5_040_000,
-      operaciones: 18,
-      porcentaje: 59.5,
-      barColor: 'var(--state-info)',
-    },
-    {
-      nombre: 'Profesional (C. Chillán)',
-      monto: 2_280_000,
-      operaciones: 6,
-      porcentaje: 26.9,
-      barColor: '#7c3aed',
-    },
-    {
-      nombre: 'Psicotécnico',
-      monto: 480_000,
-      operaciones: 12,
-      porcentaje: 5.7,
-      barColor: 'var(--state-success)',
-    },
-    {
-      nombre: 'Clases Extra',
-      monto: 375_000,
-      operaciones: 15,
-      porcentaje: 4.4,
-      barColor: 'var(--state-success)',
-    },
-    {
-      nombre: 'Certificados',
-      monto: 300_000,
-      operaciones: 20,
-      porcentaje: 3.5,
-      barColor: 'var(--state-success)',
-    },
-  ],
-  gastosCategoria: [
-    { nombre: 'Bencina', monto: 850_000, registros: 45, porcentaje: 38.5 },
-    { nombre: 'Arriendo', monto: 600_000, registros: 2, porcentaje: 27.1 },
-    { nombre: 'Sueldos', monto: 380_000, registros: 2, porcentaje: 17.2 },
-    { nombre: 'Mantención', monto: 195_000, registros: 8, porcentaje: 8.8 },
-    { nombre: 'Materiales', monto: 105_000, registros: 12, porcentaje: 4.8 },
-    { nombre: 'Aseo', monto: 42_000, registros: 6, porcentaje: 1.9 },
-    { nombre: 'Otros', monto: 38_000, registros: 4, porcentaje: 1.7 },
-  ],
-  evolucionMensual: [
-    { mes: 'Enero 2026', ingresos: 4_850_000, gastos: 1_230_000, neto: 3_620_000, margen: 74.6 },
-    { mes: 'Febrero 2026', ingresos: 3_620_000, gastos: 980_000, neto: 2_640_000, margen: 72.9 },
-  ],
-  detalleDiario: [
-    { fecha: '2026-01-02', operaciones: 4, ingresos: 560_000, gastos: 85_000, neto: 475_000 },
-    { fecha: '2026-01-03', operaciones: 3, ingresos: 310_000, gastos: 62_000, neto: 248_000 },
-    { fecha: '2026-01-06', operaciones: 6, ingresos: 680_000, gastos: 95_000, neto: 585_000 },
-    { fecha: '2026-01-07', operaciones: 2, ingresos: 280_000, gastos: 43_000, neto: 237_000 },
-    { fecha: '2026-01-08', operaciones: 5, ingresos: 420_000, gastos: 78_000, neto: 342_000 },
-    { fecha: '2026-01-09', operaciones: 3, ingresos: 380_000, gastos: 55_000, neto: 325_000 },
-    { fecha: '2026-01-10', operaciones: 4, ingresos: 290_000, gastos: 120_000, neto: 170_000 },
-    { fecha: '2026-01-13', operaciones: 5, ingresos: 510_000, gastos: 68_000, neto: 442_000 },
-    { fecha: '2026-01-14', operaciones: 3, ingresos: 340_000, gastos: 92_000, neto: 248_000 },
-    { fecha: '2026-01-15', operaciones: 7, ingresos: 600_000, gastos: 45_000, neto: 555_000 },
-    { fecha: '2026-01-16', operaciones: 4, ingresos: 480_000, gastos: 87_000, neto: 393_000 },
-  ],
-  diasConMovimientos: 11,
-  escuela: 'Ambas escuelas',
-};
+  buildReporte,
+  filterPaymentsByBranch,
+  type ExpenseRow,
+  type PaymentRow,
+} from '@core/utils/reportes-contables.utils';
 
 @Injectable({ providedIn: 'root' })
 export class ReportesContablesFacade {
+  private readonly supabase = inject(SupabaseService);
+  private readonly authFacade = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
+  private readonly toast = inject(ToastService);
+
   // ── 1. Estado privado ──────────────────────────────────────────────────────
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
@@ -108,6 +43,32 @@ export class ReportesContablesFacade {
   public readonly detalleDiario = computed(() => this._reporte()?.detalleDiario ?? []);
   public readonly diasConMovimientos = computed(() => this._reporte()?.diasConMovimientos ?? 0);
   public readonly escuela = computed(() => this._reporte()?.escuela ?? '');
+
+  /**
+   * Sede efectiva para filtrar queries:
+   * - Secretaria → usa su `branchId` fijo desde AuthFacade.
+   * - Admin/Owner → usa la selección de BranchFacade (null = todas las sedes).
+   */
+  private readonly _effectiveBranchId = computed<number | null>(() => {
+    const user = this.authFacade.currentUser();
+    if (!user) return null;
+    if (user.role === 'secretaria') return user.branchId ?? null;
+    return this.branchFacade.selectedBranchId();
+  });
+
+  /** Etiqueta de escuela para el banner del reporte. */
+  private readonly _escuelaLabel = computed<string>(() => {
+    const user = this.authFacade.currentUser();
+    if (!user) return '';
+    if (user.role === 'secretaria') {
+      const branchId = user.branchId;
+      const branch = this.branchFacade.branches().find((b) => b.id === branchId);
+      return branch?.name ?? 'Mi escuela';
+    }
+    const branchId = this.branchFacade.selectedBranchId();
+    if (branchId === null) return 'Ambas escuelas';
+    return this.branchFacade.selectedBranchLabel();
+  });
 
   // ── 3. Acciones ───────────────────────────────────────────────────────────
 
@@ -148,13 +109,57 @@ export class ReportesContablesFacade {
   // ── Privado ───────────────────────────────────────────────────────────────
 
   private async fetchReporte(): Promise<void> {
+    const { desde, hasta } = this._filtros();
+    const branchId = this._effectiveBranchId();
+
     try {
-      // TODO: reemplazar con query real a Supabase usando this._filtros()
-      await new Promise<void>((r) => setTimeout(r, 600));
-      this._reporte.set(MOCK_REPORTE);
+      const [paymentsResult, expensesResult] = await Promise.all([
+        this.queryPayments(desde, hasta),
+        this.queryExpenses(desde, hasta, branchId),
+      ]);
+
+      if (paymentsResult.error) throw paymentsResult.error;
+      if (expensesResult.error) throw expensesResult.error;
+
+      const payments = filterPaymentsByBranch(
+        (paymentsResult.data ?? []) as PaymentRow[],
+        branchId,
+      );
+      const expenses = (expensesResult.data ?? []) as ExpenseRow[];
+
+      this._reporte.set(buildReporte(payments, expenses, this._escuelaLabel(), branchId));
       this._error.set(null);
-    } catch {
-      this._error.set('Error al cargar el reporte contable.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al cargar el reporte contable.';
+      this._error.set(msg);
+      this.toast.error('Error en reportes', msg);
     }
+  }
+
+  /** Consulta pagos en el rango de fechas con join a enrollments para branch y license_group. */
+  private queryPayments(desde: string, hasta: string) {
+    return this.supabase.client
+      .from('payments')
+      .select('total_amount, type, payment_date, enrollments!inner(branch_id, license_group)')
+      .gte('payment_date', desde)
+      .lte('payment_date', hasta);
+  }
+
+  /**
+   * Consulta gastos en el rango de fechas.
+   * Aplica filtro directo de branch_id cuando la sede está determinada.
+   */
+  private queryExpenses(desde: string, hasta: string, branchId: number | null) {
+    let query = this.supabase.client
+      .from('expenses')
+      .select('amount, category, date')
+      .gte('date', desde)
+      .lte('date', hasta);
+
+    if (branchId !== null) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    return query;
   }
 }
