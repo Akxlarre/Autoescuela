@@ -1,7 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  OnInit,
+} from '@angular/core';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { LiquidacionesContentComponent } from '@shared/components/liquidaciones-content/liquidaciones-content.component';
-import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liquidaciones.model';
+import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 
 @Component({
   selector: 'app-admin-contabilidad-liquidaciones',
@@ -18,7 +23,6 @@ import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liqu
         [anioActual]="facade.anioActual()"
         (mesAnterior)="facade.mesAnterior()"
         (mesSiguiente)="facade.mesSiguiente()"
-        (pagar)="onPagar($event)"
         (deshacer)="facade.deshacerPago($event)"
       />
     </div>
@@ -30,8 +34,5 @@ export class AdminContabilidadLiquidacionesComponent implements OnInit {
   ngOnInit(): void {
     this.facade.initialize();
   }
-
-  protected onPagar(event: { row: LiquidacionRow; payload: PagoInstructorPayload }): void {
-    this.facade.registrarPago(event.row, event.payload);
-  }
 }
+

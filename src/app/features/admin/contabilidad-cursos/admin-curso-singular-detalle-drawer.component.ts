@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { KpiCardComponent } from '@shared/components/kpi-card/kpi-card.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
 const ESTADO_LABEL: Record<string, string> = {
@@ -39,7 +39,7 @@ const PAYMENT_LABEL: Record<string, string> = {
   selector: 'app-admin-curso-singular-detalle-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, KpiCardComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
   template: `
     <div class="flex flex-col gap-5 p-1">
       @if (facade.selectedCurso(); as curso) {
@@ -54,7 +54,7 @@ const PAYMENT_LABEL: Record<string, string> = {
               <div class="flex items-center gap-1.5 mt-1">
                 <app-icon name="calendar" [size]="12" color="var(--text-muted)" />
                 <p class="text-xs font-medium" style="color: var(--text-muted)">
-                  Inicio: {{ formatChileanDate(curso.inicio) }}
+                   Inicio: {{ formatChileanDate(curso.inicio) }}
                 </p>
               </div>
             </div>
@@ -74,45 +74,40 @@ const PAYMENT_LABEL: Record<string, string> = {
           </div>
 
           <!-- Datos en grid -->
-          <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+          <div class="grid grid-cols-2 gap-3">
             @for (item of fichaItems(curso); track item.label) {
-              <div class="flex flex-col gap-0.5">
-                <p
-                  class="text-[10px] font-bold uppercase tracking-widest"
-                  style="color: var(--text-muted)"
-                >
-                  {{ item.label }}
-                </p>
-                <p class="text-sm font-semibold" style="color: var(--text-secondary)">
-                  {{ item.value }}
-                </p>
-              </div>
+              <app-stat-box
+                [label]="item.label"
+                [value]="item.value"
+                variant="surface"
+                [compact]="true"
+              />
             }
           </div>
         </div>
 
         <!-- ── KPIs mini ────────────────────────────────────────────────────── -->
         <div class="grid grid-cols-3 gap-3">
-          <app-kpi-card
+          <app-stat-box
             label="Inscritos"
             [value]="curso.inscritos"
-            [suffix]="' / ' + curso.cupos"
-            size="md"
+            [suffix]="'/ ' + curso.cupos"
+            [compact]="true"
           />
 
-          <app-kpi-card
+          <app-stat-box
             label="Ingreso Est."
-            [value]="curso.estado !== 'upcoming' ? curso.ingresoEstimado : 0"
-            prefix="$"
-            [color]="curso.estado !== 'upcoming' ? 'success' : 'default'"
-            size="md"
+            [value]="formatCLP(curso.estado !== 'upcoming' ? curso.ingresoEstimado : 0)"
+            [variant]="curso.estado !== 'upcoming' ? 'success' : 'default'"
+            [compact]="true"
+            [useMono]="true"
           />
 
-          <app-kpi-card
+          <app-stat-box
             label="Libres"
             [value]="curso.cupos - curso.inscritos"
-            [color]="curso.cupos - curso.inscritos > 0 ? 'success' : 'error'"
-            size="md"
+            [variant]="curso.cupos - curso.inscritos > 0 ? 'success' : 'error'"
+            [compact]="true"
           />
         </div>
 

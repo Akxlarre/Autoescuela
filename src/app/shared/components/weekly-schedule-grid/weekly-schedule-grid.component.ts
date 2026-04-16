@@ -14,11 +14,12 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
     `
       .schedule-grid {
         display: grid;
-        grid-template-columns: 60px repeat(var(--days, 5), 1fr);
+        grid-template-columns: 72px repeat(var(--days, 5), 1fr);
       }
 
       .hour-cell {
         height: 80px; /* 1 hora = 80px */
+        overflow: visible; /* allow the absolutely-positioned time label (-top-6px) to escape */
       }
 
       .grid-content {
@@ -43,7 +44,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
     `,
   ],
   template: `
-    <div class="card overflow-hidden flex flex-col h-full" style="border-radius: var(--radius-xl)">
+    <div class="card overflow-x-clip flex flex-col h-full" style="border-radius: var(--radius-xl)">
       <!-- Toolbar -->
       <div
         class="px-6 py-5 flex items-center justify-between"
@@ -160,10 +161,11 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
           <div class="relative schedule-grid schedule-body">
             <!-- Columna de etiquetas horarias -->
             <div class="flex flex-col z-20 pointer-events-none">
-              @for (hour of hours; track hour) {
-                <div class="hour-cell relative flex items-start justify-end pr-4">
+              @for (hour of hours; track hour; let isFirst = $first) {
+                <div class="hour-cell relative">
                   <span
-                    class="text-[10px] font-bold tracking-widest absolute -top-[6px]"
+                    class="text-[10px] font-bold tracking-widest absolute right-4 whitespace-nowrap"
+                    [style.top]="isFirst ? '2px' : '-6px'"
                     [style.color]="'var(--text-muted)'"
                   >
                     {{ hour | number: '2.0' }}:00

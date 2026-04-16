@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  effect,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 // Facades & Models
@@ -24,7 +18,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   template: `
     <div class="flex-1 flex flex-col min-h-0 bg-surface">
       <!-- Header Info -->
-      <div class="shrink-0 px-6 py-4 border-b flex items-center justify-between" style="border-color: var(--border-subtle);">
+      <div
+        class="shrink-0 px-6 py-4 border-b flex items-center justify-between"
+        style="border-color: var(--border-subtle);"
+      >
         <h3 class="text-sm font-bold text-text-primary">Documentación Obligatoria</h3>
       </div>
 
@@ -37,7 +34,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           </div>
         } @else if (documents().length === 0) {
           <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
-            <div class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center text-text-muted">
+            <div
+              class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center text-text-muted"
+            >
               <app-icon name="file-question" [size]="32" />
             </div>
             <p class="font-bold text-text-primary">Sin documentos registrados</p>
@@ -45,14 +44,22 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         } @else {
           <div class="grid grid-cols-1 gap-4">
             @for (doc of documents(); track doc.type) {
-              <div class="p-5 rounded-2xl border bg-base flex items-center justify-between group hover:border-ds-brand hover:shadow-sm transition-all duration-300">
+              <div
+                class="p-5 rounded-2xl border bg-base flex items-center justify-between group hover:border-ds-brand hover:shadow-sm transition-all duration-300"
+              >
                 <div class="flex items-center gap-4">
-                  <div class="w-12 h-12 rounded-xl bg-ds-brand-muted flex items-center justify-center text-ds-brand">
+                  <div
+                    class="w-12 h-12 rounded-xl bg-ds-brand-muted flex items-center justify-center text-ds-brand"
+                  >
                     <app-icon [name]="docIcon(doc.type)" [size]="24" />
                   </div>
                   <div>
-                    <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">{{ docLabel(doc.type) }}</h4>
-                    <p class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Vence: {{ doc.expiryDate | date:'dd MMM yyyy' }}</p>
+                    <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">
+                      {{ docLabel(doc.type) }}
+                    </h4>
+                    <p class="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                      Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
+                    </p>
                   </div>
                 </div>
 
@@ -64,7 +71,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                   >
                     {{ doc.status === 'valid' ? 'Vigente' : 'Vencido' }}
                   </span>
-                  <button class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors">
+                  <button
+                    class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                  >
                     <app-icon name="external-link" [size]="14" />
                   </button>
                 </div>
@@ -75,12 +84,11 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       </div>
 
       <!-- Footer -->
-      <div class="shrink-0 p-6 border-t bg-surface flex items-center justify-end" style="border-color: var(--border-subtle);">
-        <button
-          type="button"
-          class="h-11 px-8 rounded-xl bg-ds-brand text-white border-none cursor-pointer font-semibold shadow-sm hover:opacity-90 transition-all active:scale-95"
-          (click)="onClose()"
-        >
+      <div
+        class="shrink-0 p-6 border-t bg-surface flex items-center justify-end"
+        style="border-color: var(--border-subtle);"
+      >
+        <button type="button" class="btn-primary h-11 px-8" (click)="onClose()">
           Cerrar Panel
         </button>
       </div>
@@ -97,7 +105,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       color: var(--state-error, rgb(239, 68, 68));
       border-color: var(--state-error-border, rgba(239, 68, 68, 0.2));
     }
-  `
+  `,
 })
 export class VehicleDocumentsDrawerComponent {
   private readonly flotaFacade = inject(FlotaFacade);

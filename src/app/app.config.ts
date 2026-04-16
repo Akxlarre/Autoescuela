@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, importProvidersFrom } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
@@ -217,6 +217,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     provideCoreAuth(),
+    { provide: LOCALE_ID, useValue: 'es' },
     MessageService,
     ConfirmationService,
     importProvidersFrom(

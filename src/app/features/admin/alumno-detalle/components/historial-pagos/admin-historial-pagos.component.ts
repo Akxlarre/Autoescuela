@@ -3,15 +3,16 @@ import { CommonModule } from '@angular/common';
 import { Button } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
 @Component({
   selector: 'app-admin-historial-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, Button, RouterLink, IconComponent],
+  imports: [CommonModule, Button, RouterLink, IconComponent, StatBoxComponent],
   template: `
-    <div class="bento-card bento-tall !p-0 flex flex-col h-full overflow-hidden">
+    <div class="bento-card !p-0 flex flex-col h-full w-full overflow-hidden">
       <!-- Header -->
       <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/30">
         <div class="flex flex-col">
@@ -27,19 +28,17 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
       <div class="flex flex-col gap-5 p-5 flex-1 min-h-0">
         <!-- Totals Section -->
         <div class="grid grid-cols-1 gap-4">
-          <div class="flex flex-col gap-1 p-3 rounded-xl bg-state-success-bg/30 border border-state-success-border/50">
-            <span class="kpi-label !text-state-success">TOTAL PAGADO</span>
-            <span class="text-2xl font-display font-bold text-state-success">
-              \${{ totalPagado().toLocaleString('es-CL') }}
-            </span>
-          </div>
+          <app-stat-box
+            label="TOTAL PAGADO"
+            [value]="'$' + totalPagado().toLocaleString('es-CL')"
+            variant="success"
+          />
 
-          <div class="flex flex-col gap-1 p-3 rounded-xl bg-state-warning-bg/30 border border-state-warning-border/50">
-            <span class="kpi-label !text-state-warning">SALDO PENDIENTE</span>
-            <span class="text-2xl font-display font-bold text-state-warning">
-              \${{ saldoPendiente().toLocaleString('es-CL') }}
-            </span>
-          </div>
+          <app-stat-box
+            label="SALDO PENDIENTE"
+            [value]="'$' + saldoPendiente().toLocaleString('es-CL')"
+            variant="warning"
+          />
         </div>
 
         <div class="h-px bg-border-subtle w-full my-1"></div>
@@ -92,14 +91,6 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
     </div>
   `,
   styles: `
-    .kpi-label {
-      font-size: var(--text-xs);
-      font-weight: var(--font-bold);
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-
     .inas-badge {
       flex-shrink: 0;
       display: inline-flex;

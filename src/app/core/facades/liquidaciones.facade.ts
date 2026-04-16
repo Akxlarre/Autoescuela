@@ -71,6 +71,7 @@ export class LiquidacionesFacade {
   readonly error = this._error.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
   readonly anioActual = this._anioActual.asReadonly();
+  readonly selectedRow = signal<LiquidacionRow | null>(null);
 
   // ── Computed KPIs ─────────────────────────────────────────────────────────
   readonly kpis = computed<LiquidacionesKpis>(() => {
@@ -111,6 +112,12 @@ export class LiquidacionesFacade {
     this._mesActual.set(mes);
     this._anioActual.set(anio);
     this.initialize();
+  }
+
+  // ── Selección Contextual ──────────────────────────────────────────────────
+
+  seleccionarParaPago(row: LiquidacionRow | null): void {
+    this.selectedRow.set(row);
   }
 
   // ── Sincronización Realtime ──────────────────────────────────────────────

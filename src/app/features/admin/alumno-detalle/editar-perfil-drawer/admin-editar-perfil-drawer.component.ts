@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, OnInit, output, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
@@ -32,6 +25,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               formControlName="first_names"
               class="field-input"
               placeholder="Ej: Juan Carlos"
+              aria-required="true"
               data-llm-description="Nombres del alumno"
               [class.field-input--error]="isInvalid('first_names')"
             />
@@ -51,6 +45,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               formControlName="paternal_last_name"
               class="field-input"
               placeholder="Ej: González"
+              aria-required="true"
               data-llm-description="Apellido paterno del alumno"
               [class.field-input--error]="isInvalid('paternal_last_name')"
             />
@@ -83,6 +78,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               formControlName="email"
               class="field-input"
               placeholder="correo@ejemplo.cl"
+              aria-required="true"
               data-llm-description="Correo electrónico del alumno"
               [class.field-input--error]="isInvalid('email')"
             />
@@ -128,7 +124,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
         <button
           type="button"
-          class="btn-cancel"
+          class="btn-secondary"
           (click)="onCancel()"
           data-llm-action="cancelar-edicion-perfil"
         >
@@ -178,33 +174,6 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       font-size: var(--text-xs);
       color: var(--state-error);
       margin-top: 4px;
-    }
-    .btn-cancel {
-      padding: 8px 16px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-strong);
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      cursor: pointer;
-    }
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 20px;
-      border-radius: var(--radius-md);
-      background: var(--ds-brand);
-      color: #fff;
-      font-size: var(--text-sm);
-      font-weight: var(--font-semibold);
-      border: none;
-      cursor: pointer;
-    }
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
     }
   `,
 })

@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
@@ -20,7 +21,7 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
   selector: 'app-admin-sesion-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SkeletonBlockComponent, IconComponent, AsyncBtnComponent],
+  imports: [FormsModule, SkeletonBlockComponent, IconComponent, AsyncBtnComponent, StatBoxComponent],
   template: `
     @if (facade.selectedSesion(); as sesion) {
       <!-- ═══ Header de la sesión ═══ -->
@@ -64,17 +65,20 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
           </div>
         </div>
 
-        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <span class="text-xs text-muted">Curso</span>
-            <p class="font-medium text-primary">{{ sesion.courseCode }}</p>
-          </div>
-          <div>
-            <span class="text-xs text-muted">Asistencia</span>
-            <p class="font-medium text-primary">
-              {{ sesion.attendanceCount }}/{{ sesion.enrolledCount }}
-            </p>
-          </div>
+        <div class="mt-3 grid grid-cols-2 gap-3">
+          <app-stat-box
+            label="Curso"
+            [value]="sesion.courseCode"
+            variant="surface"
+            [compact]="true"
+          />
+          <app-stat-box
+            label="Asistencia"
+            [value]="sesion.attendanceCount + '/' + sesion.enrolledCount"
+            variant="surface"
+            [compact]="true"
+            [useMono]="true"
+          />
         </div>
 
         @if (sesion.zoomLink) {

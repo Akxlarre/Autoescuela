@@ -33,6 +33,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     </div>
 
     <!-- Campos del formulario -->
+    <h3 class="section-title">Datos Personales</h3>
     <div class="flex flex-col gap-4">
       <!-- Nombres -->
       <div class="flex flex-col gap-1.5">
@@ -54,44 +55,44 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         }
       </div>
 
-      <!-- Apellido Paterno -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="d-paterno">Apellido Paterno *</label>
-        <input
-          id="d-paterno"
-          type="text"
-          class="field-input"
-          [class.field-input--error]="paternoTouched() && !paternoValido()"
-          placeholder="González"
-          [ngModel]="paterno()"
-          (ngModelChange)="paterno.set($event)"
-          (blur)="paternoTouched.set(true)"
-          data-llm-description="Apellido paterno de la nueva secretaria"
-          aria-required="true"
-        />
-        @if (paternoTouched() && !paternoValido()) {
-          <span class="field-error">Ingresa el apellido paterno (mínimo 2 caracteres)</span>
-        }
-      </div>
-
-      <!-- Apellido Materno -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="d-materno">Apellido Materno *</label>
-        <input
-          id="d-materno"
-          type="text"
-          class="field-input"
-          [class.field-input--error]="maternoTouched() && !maternoValido()"
-          placeholder="Pérez"
-          [ngModel]="materno()"
-          (ngModelChange)="materno.set($event)"
-          (blur)="maternoTouched.set(true)"
-          data-llm-description="Apellido materno de la nueva secretaria"
-          aria-required="true"
-        />
-        @if (maternoTouched() && !maternoValido()) {
-          <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
-        }
+      <!-- Apellido Paterno / Materno -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label" for="d-paterno">Apellido Paterno *</label>
+          <input
+            id="d-paterno"
+            type="text"
+            class="field-input"
+            [class.field-input--error]="paternoTouched() && !paternoValido()"
+            placeholder="González"
+            [ngModel]="paterno()"
+            (ngModelChange)="paterno.set($event)"
+            (blur)="paternoTouched.set(true)"
+            data-llm-description="Apellido paterno de la nueva secretaria"
+            aria-required="true"
+          />
+          @if (paternoTouched() && !paternoValido()) {
+            <span class="field-error">Ingresa el apellido paterno (mínimo 2 caracteres)</span>
+          }
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="field-label" for="d-materno">Apellido Materno *</label>
+          <input
+            id="d-materno"
+            type="text"
+            class="field-input"
+            [class.field-input--error]="maternoTouched() && !maternoValido()"
+            placeholder="Pérez"
+            [ngModel]="materno()"
+            (ngModelChange)="materno.set($event)"
+            (blur)="maternoTouched.set(true)"
+            data-llm-description="Apellido materno de la nueva secretaria"
+            aria-required="true"
+          />
+          @if (maternoTouched() && !maternoValido()) {
+            <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
+          }
+        </div>
       </div>
 
       <!-- RUT -->
@@ -196,21 +197,21 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       style="border-top: 1px solid var(--border-subtle);"
     >
       <button
-        class="cancel-btn"
+        class="btn-secondary flex-1"
         (click)="layoutDrawer.close()"
         data-llm-action="cancelar-crear-secretaria"
       >
         Cancelar
       </button>
       <button
-        class="submit-btn"
+        class="btn-primary flex-[2]"
         [disabled]="facade.isSubmitting()"
         (click)="submit()"
         data-llm-action="confirmar-crear-secretaria"
         aria-label="Crear nueva secretaria"
       >
         @if (facade.isSubmitting()) {
-          <span class="spinner"><app-icon name="loader-circle" [size]="15" /></span>
+          <app-icon name="loader-2" [size]="15" class="animate-spin" />
           Creando...
         } @else {
           <app-icon name="user-plus" [size]="15" />
@@ -220,6 +221,15 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     </div>
   `,
   styles: `
+    .section-title {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
     .field-label {
       font-size: var(--text-sm);
       font-weight: 500;
@@ -262,62 +272,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     .field-error {
       font-size: 12px;
       color: var(--state-error, #ef4444);
-    }
-
-    .cancel-btn {
-      flex: 1;
-      padding: 9px 0;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .cancel-btn:hover {
-      border-color: var(--border-strong, var(--text-muted));
-      color: var(--text-primary);
-    }
-
-    .submit-btn {
-      flex: 2;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 9px 0;
-      border-radius: var(--radius-md);
-      border: none;
-      background: var(--ds-brand);
-      color: white;
-      font-size: var(--text-sm);
-      font-family: inherit;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity var(--duration-fast);
-    }
-    .submit-btn:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-    .submit-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    .spinner {
-      display: inline-flex;
-      animation: spin 0.75s linear infinite;
     }
   `,
 })

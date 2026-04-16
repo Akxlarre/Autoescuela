@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -186,18 +180,22 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       class="flex items-center gap-3 pt-4 mt-4"
       style="border-top: 1px solid var(--border-subtle)"
     >
-      <button class="cancel-btn" (click)="layoutDrawer.close()" data-llm-action="cancelar-crear-relator">
+      <button
+        class="btn-secondary flex-1"
+        (click)="layoutDrawer.close()"
+        data-llm-action="cancelar-crear-relator"
+      >
         Cancelar
       </button>
       <button
-        class="submit-btn"
+        class="btn-primary flex-[2]"
         [disabled]="facade.isSubmitting()"
         (click)="submit()"
         data-llm-action="confirmar-crear-relator"
         aria-label="Crear nuevo relator"
       >
         @if (facade.isSubmitting()) {
-          <span class="spinner"><app-icon name="loader-circle" [size]="15" /></span>
+          <app-icon name="loader-2" [size]="15" class="animate-spin" />
           Creando...
         } @else {
           <app-icon name="user-plus" [size]="15" />
@@ -289,61 +287,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       font-size: 11px;
       font-weight: 700;
       color: white;
-    }
-
-    .cancel-btn {
-      flex: 1;
-      padding: 9px 0;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .cancel-btn:hover {
-      border-color: var(--border-strong, var(--text-muted));
-      color: var(--text-primary);
-    }
-    .submit-btn {
-      flex: 2;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 9px 0;
-      border-radius: var(--radius-md);
-      border: none;
-      background: var(--ds-brand);
-      color: white;
-      font-size: var(--text-sm);
-      font-family: inherit;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity var(--duration-fast);
-    }
-    .submit-btn:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-    .submit-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    .spinner {
-      display: inline-flex;
-      animation: spin 0.75s linear infinite;
     }
   `,
 })

@@ -60,8 +60,7 @@ const PAGE_SIZE = 9;
     BentoGridLayoutDirective,
   ],
   template: `
-    <!-- Layout Wrapper: Garantiza alineación vertical y espaciado consistente -->
-    <div class="alumnos-shell">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ══ HERO ══ -->
       <app-section-hero
         #heroRef
@@ -70,296 +69,274 @@ const PAGE_SIZE = 9;
         [actions]="heroActions"
       />
 
-      <!-- ══ KPIs BENTO GRID ══
-           Usamos bento-grid--four-equal para forzar el layout horizontal
-           exacto del dashboard (4 columnas en MD/LG). -->
-      <div class="bento-grid bento-grid--four-equal" appBentoGridLayout #bentoGrid>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Total Alumnos"
-            [value]="facade.kpis().totalAlumnos"
-            icon="users"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Activos"
-            [value]="facade.kpis().activos"
-            icon="user-check"
-            color="success"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Progreso Promedio"
-            [value]="facade.kpis().promedioProgreso"
-            suffix="%"
-            icon="trending-up"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Por Certificar"
-            [value]="facade.kpis().porCertificar"
-            icon="award"
-            color="warning"
-            [loading]="facade.isLoading()"
-          />
-        </div>
+      <!-- ══ KPIs ══ -->
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Total Alumnos"
+          [value]="facade.kpis().totalAlumnos"
+          icon="users"
+          [loading]="facade.isLoading()"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Activos"
+          [value]="facade.kpis().activos"
+          icon="user-check"
+          color="success"
+          [loading]="facade.isLoading()"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Progreso Promedio"
+          [value]="facade.kpis().promedioProgreso"
+          suffix="%"
+          icon="trending-up"
+          [loading]="facade.isLoading()"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Por Certificar"
+          [value]="facade.kpis().porCertificar"
+          icon="award"
+          color="warning"
+          [loading]="facade.isLoading()"
+        />
       </div>
 
-      <!-- ══ TOOLS BAR (Search + Filters) ══
+      <!-- ══ MAIN CONTENT ══ -->
+      <div class="bento-banner flex flex-col gap-6">
+        <!-- ══ TOOLS BAR (Search + Filters) ══
            Unificamos buscador y filtros en una sola card premium. -->
-      <div class="card overflow-visible">
-        <div class="p-4 space-y-4">
-          <!-- Premium Search Field -->
-          <div class="search-field">
-            <app-icon name="search" [size]="18" class="text-text-muted" />
-            <input
-              type="text"
-              class="search-field__input"
-              placeholder="Buscar alumno por nombre o RUT..."
-              [ngModel]="searchTerm()"
-              (ngModelChange)="onSearch($event)"
-            />
-            @if (searchTerm()) {
-              <button class="search-field__clear" (click)="onSearch('')">
-                <app-icon name="x" [size]="14" />
-              </button>
-            }
-          </div>
-
-          <!-- Bottom Tools Row -->
-          <div class="flex flex-wrap items-center justify-between gap-4">
-            <!-- Filter Pills Row -->
-            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-              @for (f of statusFilters; track f.value) {
-                <button
-                  class="filter-pill"
-                  [class.filter-pill--active]="filterStatus() === f.value"
-                  (click)="setFilter(f.value)"
-                >
-                  <span
-                    class="filter-pill__dot"
-                    [class.filter-pill__dot--active]="filterStatus() === f.value"
-                  ></span>
-                  <span>{{ f.label }}</span>
-                  <span class="filter-pill__badge">{{ f.count() }}</span>
+        <div class="card overflow-visible">
+          <div class="p-4 space-y-4">
+            <!-- Premium Search Field -->
+            <div class="search-field">
+              <app-icon name="search" [size]="18" class="text-text-muted" />
+              <input
+                type="text"
+                class="search-field__input"
+                placeholder="Buscar alumno por nombre o RUT..."
+                [ngModel]="searchTerm()"
+                (ngModelChange)="onSearch($event)"
+              />
+              @if (searchTerm()) {
+                <button class="search-field__clear" (click)="onSearch('')">
+                  <app-icon name="x" [size]="14" />
                 </button>
               }
             </div>
 
-            <!-- Sort Tool -->
-            <div class="sort-tool">
-              <app-icon name="arrow-up-down" [size]="14" class="text-text-muted" />
-              <select
-                class="sort-tool__select"
-                [ngModel]="sortBy()"
-                (ngModelChange)="sortBy.set($event)"
-              >
-                <option value="name">Nombre A-Z</option>
-                <option value="progress">Mayor Progreso</option>
-                <option value="nextClass">Próxima Clase</option>
-              </select>
+            <!-- Bottom Tools Row -->
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <!-- Filter Pills Row -->
+              <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+                @for (f of statusFilters; track f.value) {
+                  <button
+                    class="filter-pill"
+                    [class.filter-pill--active]="filterStatus() === f.value"
+                    (click)="setFilter(f.value)"
+                  >
+                    <span
+                      class="filter-pill__dot"
+                      [class.filter-pill__dot--active]="filterStatus() === f.value"
+                    ></span>
+                    <span>{{ f.label }}</span>
+                    <span class="filter-pill__badge">{{ f.count() }}</span>
+                  </button>
+                }
+              </div>
+
+              <!-- Sort Tool -->
+              <div class="sort-tool">
+                <app-icon name="arrow-up-down" [size]="14" class="text-text-muted" />
+                <select
+                  class="sort-tool__select"
+                  [ngModel]="sortBy()"
+                  (ngModelChange)="sortBy.set($event)"
+                >
+                  <option value="name">Nombre A-Z</option>
+                  <option value="progress">Mayor Progreso</option>
+                  <option value="nextClass">Próxima Clase</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ══ STUDENT DIRECTORY ══ -->
+        <!-- ══ STUDENT DIRECTORY ══ -->
 
-      <!-- Empty state (solo cuando termina de cargar y no hay resultados) -->
-      @if (!facade.isLoading() && filteredStudents().length === 0) {
-        <app-empty-state
-          icon="search"
-          message="No se encontraron alumnos"
-          subtitle="Refina tus términos de búsqueda o filtros."
-          actionLabel="Ver todos"
-          (action)="clearFilters()"
-        />
-      } @else {
-        <!-- Grid único — skeleton inline dentro del mismo contenedor -->
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          @if (facade.isLoading()) {
-            @for (i of skeletonItems; track i) {
-              <!-- Skeleton fiel a la student-card: mismos gaps, padding y estructura -->
-              <div class="student-card" aria-hidden="true">
-                <!-- Accent bar -->
-                <div class="student-card__accent" style="background: var(--bg-subtle)"></div>
+        <!-- Empty state (solo cuando termina de cargar y no hay resultados) -->
+        @if (!facade.isLoading() && filteredStudents().length === 0) {
+          <app-empty-state
+            icon="search"
+            message="No se encontraron alumnos"
+            subtitle="Refina tus términos de búsqueda o filtros."
+            actionLabel="Ver todos"
+            (action)="clearFilters()"
+          />
+        } @else {
+          <!-- Grid único — skeleton inline dentro del mismo contenedor -->
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @if (facade.isLoading()) {
+              @for (i of skeletonItems; track i) {
+                <!-- Skeleton fiel a la student-card: mismos gaps, padding y estructura -->
+                <div class="student-card" aria-hidden="true">
+                  <!-- Accent bar -->
+                  <div class="student-card__accent" style="background: var(--bg-subtle)"></div>
 
-                <div class="p-5 flex flex-col gap-4 h-full">
-                  <!-- Header: avatar + nombre/rut + badge -->
-                  <div class="flex justify-between items-start gap-4">
-                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                      <app-skeleton-block variant="circle" width="42px" height="42px" />
-                      <div class="flex-1 space-y-2">
-                        <app-skeleton-block variant="text" width="65%" />
-                        <app-skeleton-block variant="text" width="40%" />
+                  <div class="p-5 flex flex-col gap-4 h-full">
+                    <!-- Header: avatar + nombre/rut + badge -->
+                    <div class="flex justify-between items-start gap-4">
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <app-skeleton-block variant="circle" width="42px" height="42px" />
+                        <div class="flex-1 space-y-2">
+                          <app-skeleton-block variant="text" width="65%" />
+                          <app-skeleton-block variant="text" width="40%" />
+                        </div>
                       </div>
+                      <!-- Badge placeholder -->
+                      <app-skeleton-block variant="rect" width="64px" height="22px" />
                     </div>
-                    <!-- Badge placeholder -->
-                    <app-skeleton-block variant="rect" width="64px" height="22px" />
-                  </div>
 
-                  <!-- Curso -->
-                  <app-skeleton-block variant="text" width="75%" />
+                    <!-- Curso -->
+                    <app-skeleton-block variant="text" width="75%" />
 
-                  <!-- Progreso -->
-                  <div class="space-y-2">
-                    <div class="flex justify-between">
-                      <app-skeleton-block variant="text" width="45%" />
-                      <app-skeleton-block variant="text" width="20%" />
+                    <!-- Progreso -->
+                    <div class="space-y-2">
+                      <div class="flex justify-between">
+                        <app-skeleton-block variant="text" width="45%" />
+                        <app-skeleton-block variant="text" width="20%" />
+                      </div>
+                      <app-skeleton-block variant="rect" height="6px" />
                     </div>
-                    <app-skeleton-block variant="rect" height="6px" />
-                  </div>
 
-                  <!-- Footer -->
-                  <div class="pt-4 mt-auto border-t" style="border-color: var(--border-subtle)">
-                    <div class="flex items-center justify-between">
-                      <app-skeleton-block variant="text" width="50%" />
-                      <app-skeleton-block variant="rect" width="48px" height="22px" />
+                    <!-- Footer -->
+                    <div class="pt-4 mt-auto border-t" style="border-color: var(--border-subtle)">
+                      <div class="flex items-center justify-between">
+                        <app-skeleton-block variant="text" width="50%" />
+                        <app-skeleton-block variant="rect" width="48px" height="22px" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            }
-          } @else {
-            @for (s of pagedStudents(); track s.studentId) {
-              <div class="student-card group" appCardHover (click)="openDetail(s)">
-                <!-- Accent gradient top bar -->
-                <div class="student-card__accent" [style.background]="getPalette(s.name).bg"></div>
-
-                <div class="p-5 flex flex-col gap-4 h-full relative">
-                  <!-- Header -->
-                  <div class="flex justify-between items-start gap-4">
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="avatar-ring" [style.background]="getPalette(s.name).bg">
-                        {{ initials(s.name) }}
-                      </div>
-                      <div class="min-w-0">
-                        <h3
-                          class="text-sm font-bold truncate"
-                          [style.color]="'var(--text-primary)'"
-                        >
-                          {{ s.name }}
-                        </h3>
-                        <p class="text-xs" [style.color]="'var(--text-muted)'">{{ s.rut }}</p>
-                      </div>
-                    </div>
-                    <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
-                  </div>
-
-                  <!-- Curso -->
+              }
+            } @else {
+              @for (s of pagedStudents(); track s.studentId) {
+                <div class="student-card group" appCardHover (click)="openDetail(s)">
+                  <!-- Accent gradient top bar -->
                   <div
-                    class="flex items-center gap-2 text-xs"
-                    [style.color]="'var(--text-secondary)'"
-                  >
-                    <app-icon name="book-open" [size]="14" />
-                    <span class="truncate">{{ s.courseName }}</span>
-                  </div>
+                    class="student-card__accent"
+                    [style.background]="getPalette(s.name).bg"
+                  ></div>
 
-                  <!-- Progreso -->
-                  <div class="space-y-2">
-                    <div class="flex justify-between text-xs" [style.color]="'var(--text-muted)'">
-                      <span>Progreso Práctico</span>
-                      <span class="font-bold" [style.color]="'var(--text-primary)'"
-                        >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
-                      >
+                  <div class="p-5 flex flex-col gap-4 h-full relative">
+                    <!-- Header -->
+                    <div class="flex justify-between items-start gap-4">
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div class="avatar-ring" [style.background]="getPalette(s.name).bg">
+                          {{ initials(s.name) }}
+                        </div>
+                        <div class="min-w-0">
+                          <h3
+                            class="text-sm font-bold truncate"
+                            [style.color]="'var(--text-primary)'"
+                          >
+                            {{ s.name }}
+                          </h3>
+                          <p class="text-xs" [style.color]="'var(--text-muted)'">{{ s.rut }}</p>
+                        </div>
+                      </div>
+                      <p-tag [value]="s.statusLabel" [severity]="$any(s.statusColor)" />
                     </div>
-                    <div class="progress-track">
-                      <div
-                        class="progress-fill"
-                        [style.width.%]="s.practicePercent"
-                        [style.background]="getPalette(s.name).bg"
-                      ></div>
-                    </div>
-                  </div>
 
-                  <!-- Footer -->
-                  <div
-                    class="pt-4 mt-auto flex items-center justify-between border-t"
-                    style="border-color: var(--border-subtle)"
-                  >
+                    <!-- Curso -->
                     <div
                       class="flex items-center gap-2 text-xs"
-                      [style.color]="'var(--text-muted)'"
+                      [style.color]="'var(--text-secondary)'"
                     >
-                      <app-icon name="calendar" [size]="14" />
-                      <span>{{
-                        s.nextClassDate ? (s.nextClassDate | date: 'dd MMM, HH:mm') : 'Sin agendar'
-                      }}</span>
+                      <app-icon name="book-open" [size]="14" />
+                      <span class="truncate">{{ s.courseName }}</span>
                     </div>
-                    <div class="details-link">
-                      <span>Ficha</span>
-                      <app-icon name="chevron-right" [size]="14" />
+
+                    <!-- Progreso -->
+                    <div class="space-y-2">
+                      <div class="flex justify-between text-xs" [style.color]="'var(--text-muted)'">
+                        <span>Progreso Práctico</span>
+                        <span class="font-bold" [style.color]="'var(--text-primary)'"
+                          >{{ s.practiceProgress }}/{{ s.totalSessions }}</span
+                        >
+                      </div>
+                      <div class="progress-track">
+                        <div
+                          class="progress-fill"
+                          [style.width.%]="s.practicePercent"
+                          [style.background]="getPalette(s.name).bg"
+                        ></div>
+                      </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div
+                      class="pt-4 mt-auto flex items-center justify-between border-t"
+                      style="border-color: var(--border-subtle)"
+                    >
+                      <div
+                        class="flex items-center gap-2 text-xs"
+                        [style.color]="'var(--text-muted)'"
+                      >
+                        <app-icon name="calendar" [size]="14" />
+                        <span>{{
+                          s.nextClassDate
+                            ? (s.nextClassDate | date: 'dd MMM, HH:mm')
+                            : 'Sin agendar'
+                        }}</span>
+                      </div>
+                      <div class="details-link">
+                        <span>Ficha</span>
+                        <app-icon name="chevron-right" [size]="14" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              }
             }
-          }
-        </div>
+          </div>
 
-        <!-- Paginación (solo con contenido real) -->
-        @if (!facade.isLoading() && totalPages() > 1) {
-          <div class="pagination-footer">
-            <div class="pagination-shell">
-              <button class="pag-btn" [disabled]="currentPage() === 0" (click)="prevPage()">
-                <app-icon name="chevron-left" [size]="16" />
-              </button>
-              @for (p of pageNumbers(); track p) {
+          <!-- Paginación (solo con contenido real) -->
+          @if (!facade.isLoading() && totalPages() > 1) {
+            <div class="pagination-footer">
+              <div class="pagination-shell">
+                <button class="pag-btn" [disabled]="currentPage() === 0" (click)="prevPage()">
+                  <app-icon name="chevron-left" [size]="16" />
+                </button>
+                @for (p of pageNumbers(); track p) {
+                  <button
+                    class="pag-btn"
+                    [class.pag-btn--active]="p === currentPage()"
+                    (click)="currentPage.set(p)"
+                  >
+                    {{ p + 1 }}
+                  </button>
+                }
                 <button
                   class="pag-btn"
-                  [class.pag-btn--active]="p === currentPage()"
-                  (click)="currentPage.set(p)"
+                  [disabled]="currentPage() === totalPages() - 1"
+                  (click)="nextPage()"
                 >
-                  {{ p + 1 }}
+                  <app-icon name="chevron-right" [size]="16" />
                 </button>
-              }
-              <button
-                class="pag-btn"
-                [disabled]="currentPage() === totalPages() - 1"
-                (click)="nextPage()"
-              >
-                <app-icon name="chevron-right" [size]="16" />
-              </button>
+              </div>
             </div>
-          </div>
+          }
         }
-      }
+      </div>
     </div>
   `,
   styles: [
     `
-      /* ══ Layout Shell ══ */
-      .alumnos-shell {
-        padding: var(--space-6);
-        max-width: 80rem;
-        margin: 0 auto;
-        display: flex;
-        flex-direction: column;
-        gap: var(--space-6);
-      }
-      @media (max-width: 640px) {
-        .alumnos-shell {
-          padding: var(--space-4);
-          gap: var(--space-4);
-        }
-      }
-
-      /* ══ Bento Overrides (DASHBOARD SYNC) ══
-         .alumnos-shell es flex-column. El bento-grid base tiene align-self: start
-         que en ese contexto cross-axis (horizontal) impide que el grid se estire al
-         ancho completo. Forzamos width:100% para que los 1fr columns tengan referencia. */
-      .bento-grid {
-        padding: 0 !important; /* El shell ya tiene padding */
-        width: 100%; /* Contrarrestar align-self:start del bento-grid base */
-        align-self: stretch; /* Explícito: estirarse en el cross-axis del flex-column */
-      }
-
       /* ══ Search field premium ══ */
       .search-field {
         display: flex;

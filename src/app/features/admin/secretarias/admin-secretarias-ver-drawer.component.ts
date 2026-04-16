@@ -3,13 +3,14 @@ import { DatePipe } from '@angular/common';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 
 @Component({
   selector: 'app-admin-secretarias-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, IconComponent],
+  imports: [DatePipe, IconComponent, StatBoxComponent],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
       <!-- Avatar + nombre -->
@@ -60,27 +61,24 @@ import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-edita
           Información
         </h3>
 
-        <div class="detail-row">
-          <app-icon name="id-card" [size]="15" />
-          <div>
-            <p class="detail-label">RUT</p>
-            <p class="detail-value">{{ sec.rut }}</p>
-          </div>
+        <div class="grid grid-cols-2 gap-3 pb-3">
+          <app-stat-box label="RUT" [value]="sec.rut" variant="surface" [compact]="true" icon="id-card" />
+          <app-stat-box label="Sede" [value]="sec.sede" variant="surface" [compact]="true" icon="map-pin" />
+          @if (sec.phone) {
+            <app-stat-box label="Teléfono" [value]="sec.phone" variant="surface" [compact]="true" icon="phone" />
+          }
+           @if (sec.aliasPublico) {
+            <app-stat-box label="Alias" [value]="sec.aliasPublico" variant="surface" [compact]="true" icon="at-sign" />
+          }
         </div>
 
-        <div class="detail-row">
-          <app-icon name="map-pin" [size]="15" />
-          <div>
-            <p class="detail-label">Sede asignada</p>
-            <p class="detail-value">{{ sec.sede }}</p>
-          </div>
-        </div>
-
-        <div class="detail-row">
-          <app-icon name="clock" [size]="15" />
-          <div>
-            <p class="detail-label">Último acceso</p>
-            <p class="detail-value">
+        <div
+          class="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-bg-elevated/50"
+        >
+          <app-icon name="clock" [size]="15" color="var(--text-muted)" />
+          <div class="flex flex-col">
+            <p class="text-[10px] font-bold uppercase tracking-wider text-muted">Último acceso</p>
+             <p class="text-sm font-medium text-primary">
               @if (sec.ultimoAcceso) {
                 {{ sec.ultimoAcceso | date: 'dd/MM/yyyy HH:mm' }}
               } @else {
@@ -89,26 +87,6 @@ import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-edita
             </p>
           </div>
         </div>
-
-        @if (sec.phone) {
-          <div class="detail-row">
-            <app-icon name="phone" [size]="15" />
-            <div>
-              <p class="detail-label">Teléfono</p>
-              <p class="detail-value">{{ sec.phone }}</p>
-            </div>
-          </div>
-        }
-
-        @if (sec.aliasPublico) {
-          <div class="detail-row">
-            <app-icon name="at-sign" [size]="15" />
-            <div>
-              <p class="detail-label">Alias público</p>
-              <p class="detail-value">{{ sec.aliasPublico }}</p>
-            </div>
-          </div>
-        }
       </div>
 
       <!-- Rol y permisos -->

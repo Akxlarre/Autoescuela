@@ -1,29 +1,34 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
+import { formatCLP } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { formatCLP } from '@core/utils/date.utils';
-import type { IngresoRow, EgresoRow, CierrePayload } from '@core/models/ui/cuadratura.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  CierrePayload,
+  EgresoRow,
+  IngresoRow,
+} from '@core/models/ui/cuadratura.model';
 
-/** Denominaciones para el arqueo de caja. */
-interface Denominacion {
-  label: string;
-  valor: number;
-  tipo: 'billete' | 'moneda';
-  key: keyof CierrePayload;
-}
-
-const DENOMINACIONES: Denominacion[] = [
-  { label: 'Billetes de $20.000', valor: 20_000, tipo: 'billete', key: 'bill20000' },
-  { label: 'Billetes de $10.000', valor: 10_000, tipo: 'billete', key: 'bill10000' },
-  { label: 'Billetes de $5.000', valor: 5_000, tipo: 'billete', key: 'bill5000' },
-  { label: 'Billetes de $2.000', valor: 2_000, tipo: 'billete', key: 'bill2000' },
-  { label: 'Billetes de $1.000', valor: 1_000, tipo: 'billete', key: 'bill1000' },
-  { label: 'Monedas de $500', valor: 500, tipo: 'moneda', key: 'coin500' },
-  { label: 'Monedas de $100', valor: 100, tipo: 'moneda', key: 'coin100' },
-  { label: 'Monedas de $50', valor: 50, tipo: 'moneda', key: 'coin50' },
-  { label: 'Monedas de $10', valor: 10, tipo: 'moneda', key: 'coin10' },
+const DENOMINACIONES = [
+  { key: 'bill20000', label: 'Billetes de $20.000', tipo: 'billete' },
+  { key: 'bill10000', label: 'Billetes de $10.000', tipo: 'billete' },
+  { key: 'bill5000', label: 'Billetes de $5.000', tipo: 'billete' },
+  { key: 'bill2000', label: 'Billetes de $2.000', tipo: 'billete' },
+  { key: 'bill1000', label: 'Billetes de $1.000', tipo: 'billete' },
+  { key: 'coin500', label: 'Monedas de $500', tipo: 'moneda' },
+  { key: 'coin100', label: 'Monedas de $100', tipo: 'moneda' },
+  { key: 'coin50', label: 'Monedas de $50', tipo: 'moneda' },
+  { key: 'coin10', label: 'Monedas de $10', tipo: 'moneda' },
 ];
 
 const BILLETES = DENOMINACIONES.filter((d) => d.tipo === 'billete');
@@ -31,10 +36,15 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 
 @Component({
   selector: 'app-cuadratura-content',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent],
   template: `
-    <div class="bento-grid p-6 pb-12 items-start">
+    <div 
+      class="bento-grid p-6 pb-12"
+      [class.items-start]="!layoutDrawer.isOpen()"
+      [class.force-compact]="layoutDrawer.isOpen()"
+    >
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
       <app-section-hero
         title="Cuadratura Diaria"
@@ -76,7 +86,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         <!-- Tabla (Desktop) / Cards (Mobile) -->
         <div class="flex-1 overflow-x-auto" style="container-type: inline-size;">
           <!-- Vista Desktop (Table) -->
-          <div class="hidden sm:block min-w-[750px]">
+          <div class="hidden sm:block" [class.!hidden]="layoutDrawer.isOpen()">
             <!-- Header Columnas -->
             <div class="px-6 py-3 grid items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-bg-subtle border-y border-border-muted/50"
                  style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px">
@@ -156,8 +166,8 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             }
           </div>
 
-          <!-- Vista Mobile (Cards) se activa por Container Query en estilos -->
-          <div class="sm:hidden flex flex-col gap-3 p-4">
+          <!-- Vista Mobile (Cards) se activa por Container Query o Drawer abierto -->
+          <div class="sm:hidden flex flex-col gap-3 p-4" [class.!flex]="layoutDrawer.isOpen()">
             @if (isLoading()) {
               @for (i of [1,2]; track i) {
                 <div class="p-4 rounded-xl border border-border-muted/50 flex flex-col gap-3">
@@ -231,15 +241,15 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               <h2 class="text-[15px] font-bold text-text-primary">Egresos / Retiros</h2>
             </div>
             <button
-              class="flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-lg text-text-primary bg-bg-surface border border-border-muted shadow-sm hover:shadow hover:bg-bg-subtle active:scale-[0.98] transition-all"
+              class="btn-primary flex items-center gap-2 text-[13px] px-5 py-2.5 rounded-xl shrink-0 transition-transform active:scale-[0.98] shadow-sm"
               data-llm-action="agregar-egreso-cuadratura"
               [disabled]="cajaYaCerrada()"
               [style.opacity]="cajaYaCerrada() ? '0.5' : '1'"
-              aria-label="Agregar egreso"
+              aria-label="Agregar nuevo egreso"
               (click)="abrirEgreso.emit()"
             >
-              <app-icon name="plus" [size]="14" />
-              Egreso
+              <app-icon name="plus" [size]="16" />
+              <span class="font-bold">Agregar Egreso</span>
             </button>
           </div>
 
@@ -487,6 +497,23 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         width: 100%;
       }
     }
+
+    /* Force Compact overrides (Drawer Open) */
+    .force-compact.bento-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 24px !important;
+    }
+    
+    .force-compact.bento-grid .bento-feature {
+      width: 100% !important;
+    }
+
+    .force-compact.bento-grid .sticky {
+      position: static !important;
+      width: 100% !important;
+    }
   `,
 })
 export class CuadraturaContentComponent {
@@ -500,6 +527,8 @@ export class CuadraturaContentComponent {
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
   readonly isSaving = input<boolean>(false);
+  
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly guardarCierre = output<CierrePayload>();

@@ -135,33 +135,35 @@ function formatCLP(value: number): string {
       title="Historial de Cuadraturas"
       subtitle="Registro y visualización del calendario financiero mensual para arqueo de caja."
       icon="calendar"
+      [backRoute]="backRoute()"
+      [backLabel]="backLabel()"
       [actions]="heroActions"
       (actionClick)="onHeroAction($event)"
       class="mb-6"
     >
-      <!-- Navegación de mes insertada nativamente vía ng-content -->
       <div
-        class="flex items-center shadow-sm"
-        style="background: var(--bg-surface); border: 1px solid var(--border-muted); border-radius: var(--radius-lg, 10px); overflow: hidden"
+        class="flex items-center bg-white/10 border border-white/20 backdrop-blur-md rounded-xl overflow-hidden"
       >
         <button
-          class="px-3.5 py-2.5 transition-colors cursor-pointer"
-          style="color: var(--text-secondary); border-right: 1px solid var(--border-muted)"
+          class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
+          style="color: white; border-right: 1px solid rgba(255, 255, 255, 0.1)"
           (click)="mesAnterior.emit()"
           aria-label="Mes anterior"
           data-llm-action="historial-mes-anterior"
         >
           <app-icon name="chevron-left" [size]="16" />
         </button>
+
         <span
-          class="text-sm font-semibold px-4 text-primary"
+          class="text-sm font-bold px-4 text-white uppercase tracking-wide"
           style="min-width: 140px; text-align: center"
         >
           {{ mesLabel() }}
         </span>
+
         <button
-          class="px-3.5 py-2.5 transition-colors cursor-pointer"
-          style="color: var(--text-secondary); border-left: 1px solid var(--border-muted)"
+          class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
+          style="color: white; border-left: 1px solid rgba(255, 255, 255, 0.1)"
           (click)="mesSiguiente.emit()"
           aria-label="Mes siguiente"
           data-llm-action="historial-mes-siguiente"
@@ -378,6 +380,8 @@ export class HistorialCuadraturasContentComponent {
   isLoading = input(false);
   mesActual = input<number>(new Date().getMonth() + 1);
   anioActual = input<number>(new Date().getFullYear());
+  backRoute = input<string | null>(null);
+  backLabel = input<string>('Volver');
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   mesAnterior = output<void>();
