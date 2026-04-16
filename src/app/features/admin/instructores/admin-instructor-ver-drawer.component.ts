@@ -3,13 +3,14 @@ import { LowerCasePipe } from '@angular/common';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
 
 @Component({
   selector: 'app-admin-instructor-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LowerCasePipe, IconComponent],
+  imports: [LowerCasePipe, IconComponent, StatBoxComponent],
   template: `
     @if (facade.selectedInstructor(); as inst) {
       <!-- ── Header con nombre y tipo ────────────────────────────────────── -->
@@ -57,25 +58,18 @@ import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-
 
       <!-- ── KPI summary cards ───────────────────────────────────────────── -->
       <div class="grid grid-cols-2 gap-3 mb-6">
-        <div class="mini-kpi-card">
-          <span class="mini-kpi-label">Clases activas</span>
-          <span class="mini-kpi-value">{{ inst.activeClassesCount }}</span>
-        </div>
-        <div class="mini-kpi-card">
-          <span class="mini-kpi-label">Licencia</span>
-          <span
-            class="mini-kpi-value text-sm"
-            [style.color]="
-              inst.licenseStatus === 'valid'
-                ? 'var(--state-success)'
-                : inst.licenseStatus === 'expiring_soon'
-                  ? 'var(--state-warning)'
-                  : 'var(--state-error)'
-            "
-          >
-            {{ inst.licenseStatusLabel }}
-          </span>
-        </div>
+        <app-stat-box
+          label="Clases activas"
+          [value]="inst.activeClassesCount"
+          variant="brand"
+          [compact]="true"
+        />
+        <app-stat-box
+          label="Licencia"
+          [value]="inst.licenseStatusLabel"
+          [variant]="inst.licenseStatus === 'valid' ? 'success' : inst.licenseStatus === 'expiring_soon' ? 'warning' : 'error'"
+          [compact]="true"
+        />
       </div>
 
       <!-- ── Información Personal ────────────────────────────────────────── -->
@@ -293,28 +287,6 @@ import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-
       font-size: var(--text-sm);
       color: var(--text-primary);
       font-weight: 500;
-    }
-
-    .mini-kpi-card {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 12px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-subtle);
-      background: var(--bg-surface);
-    }
-
-    .mini-kpi-label {
-      font-size: 11px;
-      font-weight: 500;
-      color: var(--ds-brand);
-    }
-
-    .mini-kpi-value {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--text-primary);
     }
 
     .license-badge {

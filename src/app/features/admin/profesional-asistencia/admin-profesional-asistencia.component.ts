@@ -72,39 +72,47 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
     </section>
 
     <!-- ═══ KPIs ═══ -->
-    <section class="grid grid-cols-2 gap-4 mt-6 md:grid-cols-4">
-      <app-kpi-card-variant
-        label="Alumnos matriculados"
-        [value]="facade.alumnosMatriculados()"
-        icon="users"
-        [loading]="facade.isLoading()"
-        data-llm-description="Alumnos inscritos en el curso seleccionado"
-      />
-      <app-kpi-card-variant
-        label="Asistencia esta semana"
-        [value]="facade.pctAsistenciaSemanal()"
-        suffix="%"
-        icon="bar-chart-2"
-        color="success"
-        [loading]="facade.isLoading()"
-        data-llm-description="Porcentaje de asistencia de la semana visible"
-      />
-      <app-kpi-card-variant
-        label="Asistencia total"
-        [value]="facade.pctAsistenciaTotal()"
-        suffix="%"
-        icon="trending-up"
-        [loading]="facade.isLoading()"
-        data-llm-description="Porcentaje de asistencia acumulada del curso"
-      />
-      <app-kpi-card-variant
-        label="Sesiones canceladas"
-        [value]="facade.sesionesCanceladas()"
-        icon="ban"
-        color="warning"
-        [loading]="facade.isLoading()"
-        data-llm-description="Sesiones canceladas por feriados u otras razones"
-      />
+    <section class="bento-grid mt-6">
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Alumnos matriculados"
+          [value]="facade.alumnosMatriculados()"
+          icon="users"
+          [loading]="facade.isLoading()"
+          data-llm-description="Alumnos inscritos en el curso seleccionado"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Asistencia esta semana"
+          [value]="facade.pctAsistenciaSemanal()"
+          suffix="%"
+          icon="bar-chart-2"
+          color="success"
+          [loading]="facade.isLoading()"
+          data-llm-description="Porcentaje de asistencia de la semana visible"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Asistencia total"
+          [value]="facade.pctAsistenciaTotal()"
+          suffix="%"
+          icon="trending-up"
+          [loading]="facade.isLoading()"
+          data-llm-description="Porcentaje de asistencia acumulada del curso"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="Sesiones canceladas"
+          [value]="facade.sesionesCanceladas()"
+          icon="ban"
+          color="warning"
+          [loading]="facade.isLoading()"
+          data-llm-description="Sesiones canceladas por feriados u otras razones"
+        />
+      </div>
     </section>
 
     <!-- ═══ Navegación semanal ═══ -->

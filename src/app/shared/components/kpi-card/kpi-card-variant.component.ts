@@ -2,8 +2,8 @@ import {
   Component,
   ChangeDetectionStrategy,
   ElementRef,
-  afterNextRender,
   computed,
+  effect,
   inject,
   input,
   viewChild,
@@ -31,21 +31,18 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     >
       @if (loading()) {
         <!-- Skeleton fiel: misma estructura que el contenido real -->
-        <!-- Fila 1: label + icono -->
         <div class="flex items-start justify-between gap-3">
           <app-skeleton-block variant="text" width="55%" height="12px" />
           <app-skeleton-block variant="rect" width="28px" height="28px" />
         </div>
-        <!-- Fila 2: valor KPI — altura = text-3xl md:text-4xl (~44px) -->
         <app-skeleton-block variant="rect" width="70%" height="44px" />
-        <!-- Fila 3: subtexto — mt-auto igual que el contenido real -->
         <div class="mt-auto pt-2" style="border-top: 1px solid var(--border-subtle)">
           <app-skeleton-block variant="text" width="45%" height="12px" />
         </div>
       } @else {
         <!-- Modo Contenido Real -->
-        <div class="flex items-start justify-between gap-3 mb-2">
-          <span class="text-xs font-semibold" [style.color]="labelColor()">{{ label() }}</span>
+        <div class="flex items-start justify-between gap-3 mb-1">
+          <span class="text-[10px] uppercase font-bold tracking-wider" [style.color]="labelColor()">{{ label() }}</span>
           @if (icon(); as iconName) {
             <div
               class="flex items-center justify-center rounded-md w-7 h-7"
@@ -58,25 +55,50 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           }
         </div>
 
-        <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
-          @if (prefix()) {
-            <span class="text-2xl md:text-3xl font-bold align-baseline" style="color: var(--text-primary)">
-              {{ prefix() }}
-            </span>
+        <div class="flex flex-col gap-2">
+          <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
+            @if (prefix()) {
+              <span
+                class="text-2xl md:text-3xl font-bold align-baseline"
+                style="color: var(--text-primary)"
+              >
+                {{ prefix() }}
+              </span>
+            }
+            <span
+              #valueEl
+              class="font-display font-bold align-baseline truncate leading-none"
+              style="color: var(--text-primary); font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));"
+              title="{{ value() }}"
+              >{{ value() }}</span
+            >
+            @if (suffix()) {
+              <span
+                class="text-2xl md:text-3xl font-bold align-baseline"
+                style="color: var(--text-primary)"
+              >
+                {{ suffix() }}
+              </span>
+            }
+          </p>
+
+          <!-- Barra de progreso opcional -->
+          @if (progressPercent() !== undefined) {
+             <div class="w-full flex flex-col gap-1.5 mt-1">
+                <div class="w-full bg-surface-elevated rounded-full overflow-hidden" style="height: 6px;">
+                   <div 
+                      class="h-full rounded-full transition-all duration-700 ease-out"
+                      [style.width.%]="progressPercent()"
+                      [style.background]="iconColorStyle()"
+                   ></div>
+                </div>
+                <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-tight" style="color: var(--text-muted)">
+                   <span>Progreso</span>
+                   <span>{{ progressPercent() }}%</span>
+                </div>
+             </div>
           }
-          <span
-            #valueEl
-            class="font-display font-bold align-baseline truncate"
-            style="color: var(--text-primary); font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));"
-            title="{{ value() }}"
-            >{{ value() }}</span
-          >
-          @if (suffix()) {
-            <span class="text-2xl md:text-3xl font-bold align-baseline" style="color: var(--text-primary)">
-              {{ suffix() }}
-            </span>
-          }
-        </p>
+        </div>
 
         <div class="flex items-center gap-1 mt-auto flex-wrap pt-2">
           @if (trend() !== undefined) {
@@ -118,6 +140,7 @@ export class KpiCardVariantComponent {
   readonly icon = input<string | undefined>(undefined);
   readonly color = input<'default' | 'success' | 'warning' | 'error'>('default');
   readonly loading = input<boolean>(false);
+  readonly progressPercent = input<number | undefined>(undefined);
 
   protected readonly labelColor = computed(() => {
     switch (this.color()) {
@@ -136,14 +159,14 @@ export class KpiCardVariantComponent {
   protected readonly iconBg = computed(() => {
     switch (this.color()) {
       case 'success':
-        return 'rgba(34, 197, 94, 0.1)';
+        return 'var(--state-success-bg, rgba(34, 197, 94, 0.1))';
       case 'warning':
-        return 'rgba(245, 158, 11, 0.1)';
+        return 'var(--state-warning-bg, rgba(245, 158, 11, 0.1))';
       case 'error':
-        return 'rgba(239, 68, 68, 0.1)';
+        return 'var(--state-error-bg, rgba(239, 68, 68, 0.1))';
       case 'default':
       default:
-        return 'rgba(14, 165, 233, 0.1)';
+        return 'var(--color-primary-muted, rgba(14, 165, 233, 0.1))';
     }
   });
 
@@ -180,11 +203,12 @@ export class KpiCardVariantComponent {
   private readonly gsap = inject(GsapAnimationsService);
 
   constructor() {
-    afterNextRender(() => {
+    // effect() en lugar de afterNextRender(): cuando loading pasa de true→false,
+    // viewChild cambia de undefined→ref y el efecto re-dispara animando el contador.
+    effect(() => {
       const el = this.valueEl();
-      if (el) {
-        this.gsap.animateCounter(el.nativeElement, this.value(), '');
-      }
+      if (!el) return;
+      this.gsap.animateCounter(el.nativeElement, this.value(), '');
     });
   }
 }

@@ -9,6 +9,7 @@ import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
 
 const COURSE_COLORS: Record<string, string> = {
@@ -18,34 +19,18 @@ const COURSE_COLORS: Record<string, string> = {
   A5: '#10b981',
 };
 
-const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  planned: {
-    label: 'Planificada',
-    bg: 'color-mix(in srgb, var(--ds-brand) 12%, transparent)',
-    color: 'var(--ds-brand)',
-  },
-  in_progress: {
-    label: 'En curso',
-    bg: 'color-mix(in srgb, var(--state-success) 12%, transparent)',
-    color: 'var(--state-success)',
-  },
-  finished: {
-    label: 'Finalizada',
-    bg: 'var(--bg-elevated)',
-    color: 'var(--text-muted)',
-  },
-  cancelled: {
-    label: 'Cancelada',
-    bg: 'color-mix(in srgb, var(--state-error) 12%, transparent)',
-    color: 'var(--state-error)',
-  },
+const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> = {
+  planned: { label: 'Planificada', variant: 'brand' },
+  in_progress: { label: 'En curso', variant: 'success' },
+  finished: { label: 'Finalizada', variant: 'surface' },
+  cancelled: { label: 'Cancelada', variant: 'error' },
 };
 
 @Component({
   selector: 'app-admin-promocion-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
   template: `
     @if (promo(); as p) {
       <div class="flex flex-col gap-6 p-1">
@@ -57,8 +42,8 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
             </h2>
             <span
               class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-              [style.background]="statusCfg(p.status).bg"
-              [style.color]="statusCfg(p.status).color"
+              [style.background]="statusPillStyle(p.status).bg"
+              [style.color]="statusPillStyle(p.status).color"
             >
               {{ statusCfg(p.status).label }}
             </span>
@@ -128,75 +113,53 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }
         }
 
         <!-- ── Info general ────────────────────────────────────────── -->
-        <div
-          class="rounded-lg p-4"
-          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-        >
-          <h3 class="text-xs font-semibold mb-3" style="color: var(--text-primary)">
+        <div>
+          <h3 class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--text-muted)">
             Información general
           </h3>
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <p class="text-[10px] font-semibold" style="color: var(--ds-brand)">Código</p>
-              <p class="text-sm" style="color: var(--text-primary)">{{ p.code }}</p>
-            </div>
-            <div>
-              <p class="text-[10px] font-semibold" style="color: var(--ds-brand)">Estado</p>
-              <span
-                class="inline-flex text-xs font-semibold px-2 py-0.5 rounded-full"
-                [style.background]="statusCfg(p.status).bg"
-                [style.color]="statusCfg(p.status).color"
-              >
-                {{ statusCfg(p.status).label }}
-              </span>
-            </div>
-            <div>
-              <p class="text-[10px] font-semibold" style="color: var(--ds-brand)">Fecha inicio</p>
-              <p class="text-sm" style="color: var(--text-primary)">
-                {{ formatDate(p.startDate) }}
-              </p>
-            </div>
-            <div>
-              <p class="text-[10px] font-semibold" style="color: var(--ds-brand)">Fecha término</p>
-              <p class="text-sm" style="color: var(--text-primary)">{{ formatDate(p.endDate) }}</p>
-            </div>
-            <div>
-              <p class="text-[10px] font-semibold" style="color: var(--ds-brand)">Duración</p>
-              <p class="text-sm" style="color: var(--text-primary)">
-                30 días de clase (5 semanas, lun-sáb)
-              </p>
-            </div>
-            <div>
-              <p class="text-[10px] font-semibold" style="color: var(--ds-brand)">Total alumnos</p>
-              <p class="text-sm" style="color: var(--text-primary)">
-                {{ p.totalEnrolled }} / {{ p.maxStudents }}
-              </p>
-            </div>
+            <app-stat-box label="Código" [value]="p.code" variant="surface" [compact]="true" [useMono]="true" />
+            <app-stat-box
+              label="Estado"
+              [value]="statusCfg(p.status).label"
+              [variant]="statusCfg(p.status).variant"
+              [compact]="true"
+            />
+            <app-stat-box label="Inicio" [value]="formatDate(p.startDate)" variant="surface" [compact]="true" />
+            <app-stat-box label="Fin" [value]="formatDate(p.endDate)" variant="surface" [compact]="true" />
+            <app-stat-box
+              label="Duración"
+              value="30 días"
+              suffix="clase"
+              variant="surface"
+              [compact]="true"
+              class="col-span-2"
+            />
+            <app-stat-box
+              label="Alumnos"
+              [value]="p.totalEnrolled"
+              [suffix]="'/ ' + p.maxStudents"
+              [variant]="p.totalEnrolled >= p.maxStudents ? 'error' : 'success'"
+              [compact]="true"
+              class="col-span-2"
+            />
           </div>
         </div>
 
         <!-- ── Alumnos por categoría ───────────────────────────────── -->
         <div>
-          <h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">
+          <h3 class="text-xs font-bold uppercase tracking-widest mb-3" style="color: var(--text-muted)">
             Alumnos por categoría
           </h3>
           <div class="grid grid-cols-2 gap-3">
             @for (curso of p.cursos; track curso.id) {
-              <div
-                class="rounded-lg p-4 text-center"
-                [style.borderTop]="'3px solid ' + courseColor(curso.courseCode)"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-              >
-                <p class="text-xs font-medium mb-1" [style.color]="courseColor(curso.courseCode)">
-                  {{ curso.courseCode }}
-                </p>
-                <p class="text-2xl font-bold" style="color: var(--text-primary)">
-                  {{ curso.enrolledStudents }}
-                </p>
-                <p class="text-xs" style="color: var(--text-muted)">
-                  de {{ curso.maxStudents }} cupos
-                </p>
-              </div>
+              <app-stat-box
+                [label]="curso.courseCode"
+                [value]="curso.enrolledStudents"
+                [suffix]="'/ ' + curso.maxStudents"
+                [variant]="curso.enrolledStudents >= curso.maxStudents ? 'error' : 'default'"
+                [compact]="true"
+              />
             }
           </div>
         </div>
@@ -462,8 +425,19 @@ export class AdminPromocionVerDrawerComponent {
     return this.facade.cursoStudents()[cursoId] ?? [];
   }
 
-  protected statusCfg(status: string): { label: string; bg: string; color: string } {
+  protected statusCfg(status: string): { label: string; variant: StatBoxVariant } {
     return STATUS_CONFIG[status] ?? STATUS_CONFIG['planned'];
+  }
+
+  protected statusPillStyle(status: string): { bg: string; color: string } {
+    const cfg = this.statusCfg(status);
+    if (cfg.variant === 'surface') {
+      return { bg: 'var(--bg-elevated)', color: 'var(--text-muted)' };
+    }
+    return {
+      bg: `color-mix(in srgb, var(--state-${cfg.variant}) 12%, transparent)`,
+      color: `var(--state-${cfg.variant})`,
+    };
   }
 
   protected courseColor(code: string): string {

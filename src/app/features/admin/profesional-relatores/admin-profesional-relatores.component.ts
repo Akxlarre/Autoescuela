@@ -43,36 +43,45 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
       </div>
 
       <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      <div class="grid grid-cols-4 gap-4 mb-6">
-        <app-kpi-card-variant
-          label="Total Relatores"
-          [value]="facade.totalRelatores()"
-          icon="users"
-          [loading]="facade.isLoading()"
-          data-llm-description="Total de relatores registrados"
-        />
-        <app-kpi-card-variant
-          label="Activos"
-          [value]="facade.activos()"
-          icon="check-circle"
-          color="success"
-          [loading]="facade.isLoading()"
-          data-llm-description="Relatores en estado activo"
-        />
-        <app-kpi-card-variant
-          label="Inactivos"
-          [value]="facade.inactivos()"
-          icon="user-x"
-          [loading]="facade.isLoading()"
-          data-llm-description="Relatores en estado inactivo"
-        />
-        <app-kpi-card-variant
-          label="Cursos hoy"
-          [value]="0"
-          icon="calendar"
-          [loading]="facade.isLoading()"
-          data-llm-description="Cursos dictados hoy por relatores"
-        />
+      <div class="bento-grid mb-6">
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Total Relatores"
+            [value]="facade.totalRelatores()"
+            icon="users"
+            [loading]="facade.isLoading()"
+            data-llm-description="Total de relatores registrados"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Activos"
+            [value]="facade.activos()"
+            icon="check-circle"
+            color="success"
+            [loading]="facade.isLoading()"
+            data-llm-description="Relatores en estado activo"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Inactivos"
+            [value]="facade.inactivos()"
+            icon="user-x"
+            [loading]="facade.isLoading()"
+            data-llm-description="Relatores en estado inactivo"
+          />
+        </div>
+        <!-- TODO: conectar facade.cursosHoy() cuando esté disponible en RelatoresFacade -->
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Cursos hoy"
+            [value]="0"
+            icon="calendar"
+            [loading]="facade.isLoading()"
+            data-llm-description="Cursos dictados hoy por relatores"
+          />
+        </div>
       </div>
 
       <!-- ── Search + Filters ───────────────────────────────────────────────── -->

@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@ang
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
@@ -22,7 +23,7 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
   selector: 'app-admin-pago-detalle-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
   template: `
     <div class="flex flex-col gap-5 p-1">
       <!-- ── Skeleton ──────────────────────────────────────────────────────────── -->
@@ -128,62 +129,30 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
         <!-- 2. KPI mini-cards -->
         <div class="grid grid-cols-3 gap-3">
-          <!-- Total del Curso -->
-          <div class="card p-3 flex flex-col gap-1">
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Total Curso
-            </span>
-            <span class="text-sm font-bold" style="color: var(--text-primary)">
-              {{ clp(resumen.totalACurso) }}
-            </span>
-            @if (resumen.descuento > 0) {
-              <span class="text-xs line-through" style="color: var(--text-muted)">
-                {{ clp(resumen.basePrice) }}
-              </span>
-            }
-          </div>
+          <app-stat-box
+            label="Total Curso"
+            [value]="clp(resumen.totalACurso)"
+            variant="surface"
+            [compact]="true"
+            [useMono]="true"
+          />
 
-          <!-- Total Pagado -->
-          <div class="card p-3 flex flex-col gap-1" style="border-color: var(--state-success)">
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Pagado
-            </span>
-            <span class="text-sm font-bold" style="color: var(--state-success)">
-              {{ clp(resumen.totalPagado) }}
-            </span>
-            <span class="text-xs" style="color: var(--text-muted)">
-              {{ porcentajePagado(resumen) }}% del total
-            </span>
-          </div>
+          <app-stat-box
+            label="Pagado"
+            [value]="clp(resumen.totalPagado)"
+            variant="success"
+            [compact]="true"
+            [useMono]="true"
+            [suffix]="porcentajePagado(resumen) + '%'"
+          />
 
-          <!-- Saldo Pendiente -->
-          <div
-            class="card p-3 flex flex-col gap-1"
-            [style.borderColor]="
-              resumen.saldoPendiente > 0 ? 'var(--state-warning)' : 'var(--state-success)'
-            "
-          >
-            <span
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Saldo
-            </span>
-            <span
-              class="text-sm font-bold"
-              [style.color]="
-                resumen.saldoPendiente > 0 ? 'var(--state-warning)' : 'var(--state-success)'
-              "
-            >
-              {{ resumen.saldoPendiente > 0 ? clp(resumen.saldoPendiente) : 'Al día' }}
-            </span>
-          </div>
+          <app-stat-box
+            label="Saldo"
+            [value]="resumen.saldoPendiente > 0 ? clp(resumen.saldoPendiente) : 'Al día'"
+            [variant]="resumen.saldoPendiente > 0 ? 'warning' : 'success'"
+            [compact]="true"
+            [useMono]="true"
+          />
         </div>
 
         <!-- 3. Botón Registrar Pago -->

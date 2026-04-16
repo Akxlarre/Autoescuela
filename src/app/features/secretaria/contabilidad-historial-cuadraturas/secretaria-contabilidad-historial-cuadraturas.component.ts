@@ -12,6 +12,8 @@ import { HistorialCuadraturasContentComponent } from '@shared/components/histori
       [isLoading]="facade.isLoadingHistorial()"
       [mesActual]="facade.mesActual()"
       [anioActual]="facade.anioActual()"
+      backRoute="../cuadratura"
+      backLabel="Cuadratura"
       (mesAnterior)="facade.mesAnterior()"
       (mesSiguiente)="facade.mesSiguiente()"
       (volverAHoy)="facade.volverAHoy()"

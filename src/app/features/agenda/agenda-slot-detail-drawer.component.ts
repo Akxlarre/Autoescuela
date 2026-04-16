@@ -4,12 +4,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 
 type StatusConfig = {
   label: string;
   icon: string;
-  color: string;
-  bgColor: string;
+  variant: StatBoxVariant;
 };
 
 /**
@@ -22,8 +22,9 @@ type StatusConfig = {
  */
 @Component({
   selector: 'app-agenda-slot-detail-drawer',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, AnimateInDirective],
+  imports: [IconComponent, AnimateInDirective, StatBoxComponent],
   host: {
     class: 'flex flex-col h-full',
   },
@@ -35,45 +36,43 @@ type StatusConfig = {
           <!-- ── Estado ─────────────────────────────────────────── -->
           <div
             class="status-pill"
-            [style.color]="statusCfg().color"
-            [style.background]="statusCfg().bgColor"
+            [style.color]="statusPillStyle().color"
+            [style.background]="statusPillStyle().bg"
           >
             <app-icon [name]="statusCfg().icon" [size]="12" />
             <span>{{ statusCfg().label }}</span>
           </div>
 
           <!-- ── Horario (prominente) ───────────────────────────── -->
-          <div class="card p-4 flex flex-col gap-1.5">
-            <span class="kpi-label">Horario de clase</span>
-            <div class="time-display">{{ s.startTime }} – {{ s.endTime }}</div>
-          </div>
+          <app-stat-box
+            label="Horario de clase"
+            [value]="s.startTime + ' – ' + s.endTime"
+            variant="brand"
+            [useMono]="true"
+          />
 
           <!-- ── Instructor + Vehículo ─────────────────────────── -->
-          <div class="info-card card p-0 overflow-hidden shadow-sm">
-            <div class="info-row" style="border-bottom: 1px solid var(--color-border)">
-              <div class="info-icon">
-                <app-icon name="user" [size]="15" />
-              </div>
-              <div class="info-body">
-                <span class="info-label">Instructor</span>
-                <span class="info-value">{{ s.instructorName }}</span>
-              </div>
-            </div>
-            <div class="info-row">
-              <div class="info-icon">
-                <app-icon name="car" [size]="15" />
-              </div>
-              <div class="info-body">
-                <span class="info-label">Vehículo</span>
-                <span class="info-value">{{ s.vehiclePlate }}</span>
-              </div>
-            </div>
+          <div class="grid grid-cols-2 gap-3">
+             <app-stat-box
+                label="Instructor"
+                [value]="s.instructorName"
+                variant="surface"
+                [compact]="true"
+                icon="user"
+             />
+             <app-stat-box
+                label="Vehículo"
+                [value]="s.vehiclePlate"
+                variant="surface"
+                [compact]="true"
+                icon="car"
+             />
           </div>
 
           <!-- ── Alumno ────────────────────────────────────────── -->
           @if (s.studentName) {
             <div class="card p-4 flex flex-col gap-3">
-              <span class="kpi-label">Alumno asignado</span>
+              <span class="text-xs font-bold uppercase tracking-widest text-muted">Alumno asignado</span>
               <div class="flex flex-col gap-1">
                 <span class="student-name">{{ s.studentName }}</span>
                 @if (s.classNumber) {
@@ -111,69 +110,6 @@ type StatusConfig = {
       font-weight: var(--font-semibold);
       align-self: flex-start;
     }
-
-    /* ── Horario ── */
-
-    .time-display {
-      font-size: 1.5rem;
-      font-weight: var(--font-bold);
-      color: var(--text-primary);
-      letter-spacing: -0.02em;
-      line-height: 1.2;
-    }
-
-    /* ── Info card ── */
-
-    .info-card {
-      border-radius: var(--radius-lg);
-    }
-
-    .info-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-    }
-
-    .info-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-md);
-      background: var(--bg-elevated);
-      color: var(--text-secondary);
-      flex-shrink: 0;
-    }
-
-    .info-body {
-      display: flex;
-      flex-direction: column;
-      gap: 1px;
-      min-width: 0;
-    }
-
-    .info-label {
-      font-size: var(--text-xs);
-      color: var(--text-muted);
-      font-weight: var(--font-medium);
-    }
-
-    .info-row:first-child .info-icon {
-        color: var(--ds-brand);
-    }
-
-    .info-value {
-      font-size: 0.875rem;
-      font-weight: var(--font-semibold);
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* ── Alumno ── */
 
     .student-name {
       font-size: 1rem;
@@ -215,46 +151,51 @@ export class AgendaSlotDetailDrawerComponent {
         return {
           label: 'Agendada',
           icon: 'calendar-clock',
-          color: 'var(--ds-brand)',
-          bgColor: 'color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface))',
+          variant: 'brand',
         };
       case 'in_progress':
         return {
           label: 'En progreso',
           icon: 'play-circle',
-          color: 'var(--ds-brand)',
-          bgColor: 'color-mix(in srgb, var(--ds-brand) 12%, var(--bg-surface))',
+          variant: 'brand',
         };
       case 'completed':
         return {
           label: 'Completada',
           icon: 'check-circle',
-          color: 'var(--state-success)',
-          bgColor: 'color-mix(in srgb, var(--state-success) 12%, var(--bg-surface))',
+          variant: 'success',
         };
       case 'no_show':
         return {
           label: 'No asistió',
           icon: 'user-x',
-          color: 'var(--text-muted)',
-          bgColor: 'var(--bg-elevated)',
+          variant: 'surface',
         };
       case 'cancelled':
         return {
           label: 'Cancelada',
           icon: 'x-circle',
-          color: 'var(--text-disabled)',
-          bgColor: 'var(--bg-elevated)',
+          variant: 'surface',
         };
       default:
         return {
           label: 'Clase',
           icon: 'calendar-clock',
-          color: 'var(--text-secondary)',
-          bgColor: 'var(--bg-elevated)',
+          variant: 'surface',
         };
     }
   });
+
+  protected statusPillStyle(): { bg: string; color: string } {
+    const cfg = this.statusCfg();
+    if (cfg.variant === 'surface') {
+      return { bg: 'var(--bg-elevated)', color: 'var(--text-secondary)' };
+    }
+    return {
+      bg: `color-mix(in srgb, var(--state-${cfg.variant}) 12%, transparent)`,
+      color: `var(--state-${cfg.variant})`,
+    };
+  }
 
   close(): void {
     this.facade.setSelectedSlot(null);

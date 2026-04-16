@@ -28,6 +28,53 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
   selector: 'app-section-hero',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: [`
+    :host-context(.force-compact) {
+      .surface-hero {
+        padding: 1.25rem !important;
+        min-height: unset !important;
+        transition: all 0.3s ease !important;
+      }
+
+      /* Top bar: wrap si no hay espacio */
+      .flex.items-start.justify-between.gap-4 {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        align-items: flex-start !important;
+      }
+
+      /* Botones de acción: reducir padding para ahorrar espacio */
+      [role="group"] button,
+      [role="group"] a {
+        padding-left: 0.625rem !important;
+        padding-right: 0.625rem !important;
+        font-size: 0.75rem !important;
+        gap: 0.25rem !important;
+      }
+
+      /* Título más pequeño pero legible */
+      h1 {
+        font-size: 1.375rem !important;
+        line-height: 1.2 !important;
+      }
+
+      /* Reducir espaciados internos */
+      .flex.flex-col.gap-3.relative.z-10 {
+        gap: 0.375rem !important;
+      }
+
+      /* Ajustar badge de ícono */
+      .w-12.h-12 {
+        width: 36px !important;
+        height: 36px !important;
+      }
+
+      /* Eliminar el spacer */
+      .flex-1[aria-hidden="true"] {
+        display: none !important;
+      }
+    }
+  `],
   host: {
     // HOST = único grid item. bento-hero va aquí, nunca en el div interno.
     class: 'block min-h-0 bento-hero',
@@ -41,17 +88,17 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     ═══════════════════════════════════════════════════════════ -->
     <div
       #cardRef
-      class="surface-hero rounded-lg h-full flex flex-col p-5 md:p-6 gap-3"
+      class="surface-hero rounded-lg min-h-full flex flex-col p-5 md:p-6 gap-3"
       role="region"
       [attr.aria-label]="title()"
     >
       <!-- TOP BAR: navegación atrás (izq) + acciones (der) -->
       <div class="flex items-start justify-between gap-4 relative z-10">
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 flex items-center gap-4">
           @if (backRoute()) {
             <a
               [routerLink]="backRoute()"
-              class="group inline-flex items-center gap-1.5 py-1 px-2 -ml-2 rounded-md text-xs font-bold uppercase tracking-wider text-text-muted hover:text-brand hover:bg-subtle no-underline transition-colors"
+              class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm"
               [attr.aria-label]="'Volver a ' + backLabel()"
               data-llm-nav="back"
             >
@@ -63,10 +110,11 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               <span>{{ backLabel() }}</span>
             </a>
           }
+          <ng-content />
         </div>
         @if (actions().length) {
           <div
-            class="flex flex-wrap items-center gap-2 shrink-0"
+            class="flex flex-wrap items-start gap-2"
             role="group"
             aria-label="Acciones principales"
           >

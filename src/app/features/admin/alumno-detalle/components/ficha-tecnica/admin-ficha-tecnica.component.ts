@@ -10,7 +10,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, Button, IconComponent],
   template: `
-    <div id="ficha-tecnica-container" class="bento-card bento-hero overflow-hidden !p-0 flex flex-col h-full">
+    <div id="ficha-tecnica-container" class="bento-card overflow-hidden !p-0 flex flex-col h-full w-full">
       <!-- Header -->
       <div class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-bg-elevated/30">
         <div class="flex items-center gap-3">
