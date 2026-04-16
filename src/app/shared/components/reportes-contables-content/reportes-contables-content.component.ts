@@ -5,10 +5,12 @@ import {
   input,
   linkedSignal,
   output,
-  signal,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import {
   RANGOS_REPORTE,
   computeDateRange,
@@ -24,7 +26,7 @@ import {
 @Component({
   selector: 'app-reportes-contables-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, KpiCardVariantComponent],
   styles: [
     `
       /* ── Filter bar ───────────────────────────────────────────────────── */
@@ -65,81 +67,6 @@ import {
 
       input[type='date'].filter-control {
         min-width: 140px;
-      }
-
-      /* ── Botones Exportar ─────────────────────────────────────────────── */
-      .btn-export {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
-        border: none;
-        border-radius: var(--radius-md);
-        font-size: var(--text-sm);
-        font-weight: var(--font-semibold);
-        font-family: var(--font-body);
-        color: white;
-        cursor: pointer;
-        transition: var(--transition-btn);
-
-        &.btn-export--excel {
-          background: var(--state-success);
-
-          &:hover {
-            filter: brightness(0.92);
-          }
-        }
-
-        &.btn-export--pdf {
-          background: var(--state-error);
-
-          &:hover {
-            filter: brightness(0.92);
-          }
-        }
-      }
-
-      /* ── KPI Cards ────────────────────────────────────────────────────── */
-      .kpi-icon-badge {
-        width: 44px;
-        height: 44px;
-        border-radius: var(--radius-md);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-
-        &.badge--success {
-          background: var(--state-success-bg);
-          color: var(--state-success);
-        }
-
-        &.badge--error {
-          background: var(--state-error-bg);
-          color: var(--state-error);
-        }
-
-        &.badge--brand {
-          background: var(--color-primary-muted);
-          color: var(--color-primary);
-        }
-      }
-
-      .kpi-subtitle {
-        font-size: var(--text-xs);
-        color: var(--text-muted);
-        margin-top: 2px;
-      }
-
-      /* ── Summary Banner (pinned-dark) ─────────────────────────────────── */
-      .summary-banner {
-        border-radius: var(--radius-lg);
-        padding: var(--space-5) var(--space-6);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-6);
-        flex-wrap: wrap;
       }
 
       /* ── Category bars ────────────────────────────────────────────────── */
@@ -256,214 +183,128 @@ import {
     `,
   ],
   template: `
-    <div class="w-full p-6 flex flex-col gap-6">
-      <!-- ── Encabezado ────────────────────────────────────────────────────── -->
-      <div class="flex items-start justify-between gap-4 flex-wrap">
+    <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
+    <app-section-hero
+      title="Reportes Contables"
+      subtitle="RF-030 / RF-031 · Resumen financiero y Total Neto por rango de fechas"
+      icon="bar-chart-2"
+      [actions]="heroActions"
+      [chips]="heroChips()"
+      (actionClick)="onHeroAction($event)"
+      class="block mb-5"
+    />
+
+    <!-- ── Contenido ─────────────────────────────────────────────────────── -->
+    <div class="px-4 sm:px-6 pb-6 flex flex-col gap-5">
+      <!-- ── Barra de filtros ─────────────────────────────────────────────── -->
+      <div
+        class="flex flex-col sm:flex-row sm:items-end gap-4 px-4 py-3 shadow-sm flex-wrap"
+        style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px)"
+      >
+        <!-- Rango -->
         <div>
-          <h1
-            style="font-size: var(--text-2xl); font-weight: var(--font-semibold); color: var(--text-primary); line-height: var(--leading-tight)"
+          <label class="filter-label">Rango</label>
+          <select
+            class="filter-control"
+            [value]="localRango()"
+            (change)="onRangoChange($any($event.target).value)"
+            data-llm-description="selector de rango de fechas para el reporte contable"
           >
-            Reportes Contables
-          </h1>
-          <p
-            style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--color-primary); margin-top: 2px"
-          >
-            RF-030 / RF-031 &ndash; Resumen financiero y Total Neto por rango de fechas
-          </p>
+            @for (opt of rangos; track opt.value) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
         </div>
 
-        @if (escuela()) {
-          <span class="escuela-chip">
-            <span class="cat-section-dot dot--success" style="width: 8px; height: 8px"></span>
-            {{ escuela() }}
-          </span>
+        <!-- Desde -->
+        <div>
+          <label class="filter-label">Desde</label>
+          <input
+            type="date"
+            class="filter-control"
+            [value]="localDesde()"
+            [disabled]="localRango() !== 'personalizado'"
+            (change)="localDesde.set($any($event.target).value)"
+            data-llm-description="fecha de inicio del rango del reporte"
+          />
+        </div>
+
+        <!-- Hasta -->
+        <div>
+          <label class="filter-label">Hasta</label>
+          <input
+            type="date"
+            class="filter-control"
+            [value]="localHasta()"
+            [disabled]="localRango() !== 'personalizado'"
+            (change)="localHasta.set($any($event.target).value)"
+            data-llm-description="fecha de fin del rango del reporte"
+          />
+        </div>
+
+        <!-- Aplicar -->
+        <button
+          class="btn-primary flex items-center gap-2"
+          style="height: 36px; padding: 0 var(--space-4)"
+          (click)="onAplicar()"
+          data-llm-action="apply-report-filters"
+        >
+          <app-icon name="search" [size]="14" />
+          Aplicar
+        </button>
+
+        <!-- Período activo (info contextual) -->
+        @if (!isLoading() && kpis()) {
+          <div class="flex items-center gap-2 ml-auto">
+            <app-icon name="calendar" [size]="13" color="var(--text-muted)" />
+            <span
+              style="font-size:var(--text-xs);color:var(--text-muted);font-weight:var(--font-medium)"
+            >
+              {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
+            </span>
+            <span
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+              style="background:var(--state-success-bg);color:var(--state-success);border:1px solid var(--state-success-border)"
+            >
+              {{ pct(kpis()!.margenGanancia) }} margen
+            </span>
+          </div>
         }
       </div>
 
-      <!-- ── Barra de filtros ───────────────────────────────────────────────── -->
-      <div class="card p-4">
-        <div class="flex items-end gap-4 flex-wrap">
-          <!-- Rango -->
-          <div>
-            <label class="filter-label">Rango</label>
-            <select
-              class="filter-control"
-              [value]="localRango()"
-              (change)="onRangoChange($any($event.target).value)"
-              data-llm-description="selector de rango de fechas para el reporte contable"
-            >
-              @for (opt of rangos; track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
-              }
-            </select>
-          </div>
-
-          <!-- Desde -->
-          <div>
-            <label class="filter-label">Desde</label>
-            <input
-              type="date"
-              class="filter-control"
-              [value]="localDesde()"
-              [disabled]="localRango() !== 'personalizado'"
-              (change)="localDesde.set($any($event.target).value)"
-              data-llm-description="fecha de inicio del rango del reporte"
-            />
-          </div>
-
-          <!-- Hasta -->
-          <div>
-            <label class="filter-label">Hasta</label>
-            <input
-              type="date"
-              class="filter-control"
-              [value]="localHasta()"
-              [disabled]="localRango() !== 'personalizado'"
-              (change)="localHasta.set($any($event.target).value)"
-              data-llm-description="fecha de fin del rango del reporte"
-            />
-          </div>
-
-          <!-- Aplicar -->
-          <button
-            class="btn-primary flex items-center gap-2"
-            style="height: 36px; padding: 0 var(--space-4)"
-            (click)="onAplicar()"
-            data-llm-action="apply-report-filters"
-          >
-            <app-icon name="search" [size]="14" />
-            Aplicar
-          </button>
-
-          <!-- Exportar -->
-          <div class="flex gap-2 ml-auto">
-            <button
-              class="btn-export btn-export--excel"
-              (click)="exportarExcel.emit()"
-              data-llm-action="export-report-excel"
-            >
-              <app-icon name="file-spreadsheet" [size]="14" />
-              Excel
-            </button>
-            <button
-              class="btn-export btn-export--pdf"
-              (click)="exportarPDF.emit()"
-              data-llm-action="export-report-pdf"
-            >
-              <app-icon name="file-text" [size]="14" />
-              PDF
-            </button>
-          </div>
-        </div>
+      <!-- ── KPI Cards (tarjetas blancas, estilo Liquidaciones) ──────────── -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <app-kpi-card-variant
+          [value]="kpis()?.totalIngresos ?? 0"
+          label="Total Ingresos"
+          icon="trending-up"
+          color="success"
+          [accent]="true"
+          prefix="$ "
+          [subValue]="(kpis()?.operacionesIngresos ?? 0) + ' operaciones en período'"
+          [loading]="isLoading()"
+        />
+        <app-kpi-card-variant
+          [value]="kpis()?.totalGastos ?? 0"
+          label="Total Gastos"
+          icon="trending-down"
+          color="error"
+          [accent]="true"
+          prefix="$ "
+          [subValue]="(kpis()?.operacionesGastos ?? 0) + ' egresos en período'"
+          [loading]="isLoading()"
+        />
+        <app-kpi-card-variant
+          [value]="kpis()?.totalNeto ?? 0"
+          label="Total Neto (RF-031)"
+          icon="coins"
+          color="default"
+          [accent]="true"
+          prefix="$ "
+          subValue="Ingresos Totales – Gastos Totales"
+          [loading]="isLoading()"
+        />
       </div>
-
-      <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      @if (isLoading()) {
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          @for (_ of [1, 2, 3]; track $index) {
-            <div class="card p-5 flex flex-col gap-3">
-              <app-skeleton-block variant="rect" width="44px" height="44px" />
-              <app-skeleton-block variant="text" width="60%" height="14px" />
-              <app-skeleton-block variant="text" width="80%" height="32px" />
-              <app-skeleton-block variant="text" width="50%" height="12px" />
-            </div>
-          }
-        </div>
-      } @else if (kpis()) {
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <!-- Total Ingresos -->
-          <div
-            class="card p-5"
-            style="background: var(--state-success-bg); border-color: var(--state-success-border)"
-          >
-            <div class="flex items-start gap-3">
-              <div class="kpi-icon-badge badge--success">
-                <app-icon name="trending-up" [size]="20" />
-              </div>
-              <div class="flex flex-col gap-1 min-w-0">
-                <span class="kpi-label">Total Ingresos</span>
-                <span class="kpi-value" style="color: var(--state-success)">
-                  {{ clp(kpis()!.totalIngresos) }}
-                </span>
-                <span class="kpi-subtitle">
-                  {{ kpis()!.operacionesIngresos }} operaciones en período
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Total Gastos -->
-          <div
-            class="card p-5"
-            style="background: var(--state-error-bg); border-color: var(--state-error-border)"
-          >
-            <div class="flex items-start gap-3">
-              <div class="kpi-icon-badge badge--error">
-                <app-icon name="trending-down" [size]="20" />
-              </div>
-              <div class="flex flex-col gap-1 min-w-0">
-                <span class="kpi-label">Total Gastos</span>
-                <span class="kpi-value" style="color: var(--state-error)">
-                  {{ clp(kpis()!.totalGastos) }}
-                </span>
-                <span class="kpi-subtitle">
-                  {{ kpis()!.operacionesGastos }} egresos en período
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Total Neto -->
-          <div
-            class="card p-5"
-            style="background: var(--color-primary-tint); border-color: var(--accent-border)"
-          >
-            <div class="flex items-start gap-3">
-              <div class="kpi-icon-badge badge--brand">
-                <app-icon name="coins" [size]="20" />
-              </div>
-              <div class="flex flex-col gap-1 min-w-0">
-                <span class="kpi-label">Total Neto (RF-031)</span>
-                <span class="kpi-value" style="color: var(--color-primary)">
-                  {{ clp(kpis()!.totalNeto) }}
-                </span>
-                <span class="kpi-subtitle">Ingresos Totales &ndash; Gastos Totales</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- ── Banner resumen (dark pinned) ───────────────────────────────────── -->
-      @if (!isLoading() && kpis()) {
-        <div class="card summary-banner" data-mode="dark">
-          <div class="flex flex-col gap-1">
-            <p
-              style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary)"
-            >
-              Período seleccionado: {{ formatDate(filtros().desde) }} &ndash;
-              {{ formatDate(filtros().hasta) }}
-            </p>
-            <p style="font-size: var(--text-xs); color: var(--text-muted)">
-              Reporte contable mensual con resumen por sección
-            </p>
-          </div>
-
-          <div class="flex flex-col items-end gap-1">
-            @if (escuela()) {
-              <p style="font-size: var(--text-xs); color: var(--text-muted)">
-                Escuela: {{ escuela() }}
-              </p>
-            }
-            <p style="font-size: var(--text-xs); color: var(--text-muted)">Margen de ganancia</p>
-            <p
-              style="font-size: var(--text-2xl); font-weight: var(--font-bold); color: var(--state-success); line-height: 1"
-            >
-              {{ pct(kpis()!.margenGanancia) }}
-            </p>
-          </div>
-        </div>
-      }
 
       <!-- ── Categorías (Ingresos + Gastos) ────────────────────────────────── -->
       @if (!isLoading()) {
@@ -763,6 +604,17 @@ export class ReportesContablesContentComponent {
   /** Emite la fecha (YYYY-MM-DD) cuando el usuario hace clic en "Ver detalle". */
   readonly verDetalle = output<string>();
 
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  protected readonly heroActions: SectionHeroAction[] = [
+    { id: 'excel', label: 'Excel', icon: 'file-spreadsheet', primary: false },
+    { id: 'pdf', label: 'PDF', icon: 'file-text', primary: false },
+  ];
+
+  protected readonly heroChips = computed<SectionHeroChip[]>(() => {
+    const e = this.escuela();
+    return e ? [{ label: e, icon: 'building-2', style: 'success' }] : [];
+  });
+
   // ── Estado local del formulario de filtros ────────────────────────────────
   protected readonly rangos = RANGOS_REPORTE;
 
@@ -811,6 +663,11 @@ export class ReportesContablesContentComponent {
   }
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+  protected onHeroAction(id: string): void {
+    if (id === 'excel') this.exportarExcel.emit();
+    if (id === 'pdf') this.exportarPDF.emit();
+  }
+
   protected onRangoChange(rango: RangoReporte): void {
     this.localRango.set(rango);
     if (rango !== 'personalizado') {
