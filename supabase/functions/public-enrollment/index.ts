@@ -526,6 +526,9 @@ async function handleSubmitClaseB(supabase: any, body: any) {
       await moveCarnetPhoto(supabase, body.carnetStoragePath, enrollment.id);
     }
 
+    // 10. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
+    void inviteStudentToAuth(supabase, userId, personalData.email);
+
     return jsonResponse({
       success: true,
       enrollmentId: enrollment.id,
@@ -717,7 +720,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
       return errorResponse('Error al crear matrícula: ' + enrollError.message, 500);
     }
 
-    // 4. Get vehicle assignment for instructor
+    // 4. Get vehicle assignment for instructor (guardado en snapshot para confirm-payment)
     const { data: va } = await supabase
       .from('vehicle_assignments')
       .select('vehicle_id')
@@ -726,25 +729,10 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .limit(1)
       .single();
 
-    // 5. Create class_b_sessions as 'reserved' (se activan al confirmar el pago)
-    const sessions = selectedSlotIds.map((slotId: string) => ({
-      enrollment_id: enrollment.id,
-      instructor_id: instructorId,
-      vehicle_id: va?.vehicle_id ?? null,
-      scheduled_at: slotId,
-      duration_min: 45,
-      status: 'reserved',
-    }));
-
-    const { error: sessionsError } = await supabase.from('class_b_sessions').insert(sessions);
-
-    if (sessionsError) {
-      console.error('sessions insert error:', sessionsError);
-      // No abortar — el enrollment existe, las sesiones se pueden corregir manualmente
-    }
-
-    // 6. Registrar payment_attempt con draft_snapshot completo
-    // carnetStoragePath se incluye para que confirm-payment pueda mover la foto
+    // 5. Registrar payment_attempt con draft_snapshot completo
+    // Las class_b_sessions NO se crean aquí para evitar sesiones huérfanas si el
+    // alumno abandona Transbank. Se crean en confirm-payment tras el commit exitoso.
+    // carnetStoragePath se incluye para que confirm-payment pueda mover la foto.
     await supabase.from('payment_attempts').upsert(
       {
         session_token: sessionToken,
@@ -755,9 +743,10 @@ async function handleInitiatePayment(supabase: any, body: any) {
           paymentMode,
           instructorId,
           selectedSlotIds,
-          amount,
+          vehicleId: va?.vehicle_id ?? null,
           carnetStoragePath: body.carnetStoragePath ?? null,
           amount: serverAmount,
+          userId,
         },
         enrollment_id: enrollment.id,
       },
@@ -767,7 +756,8 @@ async function handleInitiatePayment(supabase: any, body: any) {
     // 7. Iniciar transacción Webpay Plus
     const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:4200';
     const returnUrl = `${appUrl}/inscripcion/retorno`;
-    const buyOrder = `PAY-${enrollment.id}`;
+    const tokenSuffix = sessionToken.replace(/-/g, '').slice(0, 8).toUpperCase();
+    const buyOrder = `PAY-${enrollment.id}-${tokenSuffix}`;
 
     const wpResponse = await webpayCreate(buyOrder, sessionToken, serverAmount, returnUrl);
 
@@ -840,7 +830,7 @@ async function handleConfirmPayment(supabase: any, body: any) {
         branchName: bd?.name ?? null,
         branchAddress: bd?.address ?? null,
         courseName: cd?.name ?? null,
-        amountPaid: Number(enrollment?.total_paid ?? snap.amount ?? 0),
+        amountPaid: Number(snap.amount ?? 0),
         courseBasePrice: Number(snap.amount ?? 0) + Number(enrollment?.pending_balance ?? 0),
         pendingBalance: Number(enrollment?.pending_balance ?? 0),
         sessionCount: Array.isArray(snap.selectedSlotIds) ? snap.selectedSlotIds.length : 0,
@@ -865,12 +855,9 @@ async function handleConfirmPayment(supabase: any, body: any) {
         .from('enrollments')
         .update({ status: 'cancelled' })
         .eq('id', attempt.enrollment_id);
-      // Liberar slots: sin esto quedan 'reserved' indefinidamente y la vista los marca como ocupados
-      await supabase
-        .from('class_b_sessions')
-        .update({ status: 'cancelled' })
-        .eq('enrollment_id', attempt.enrollment_id)
-        .eq('status', 'reserved');
+      // No hay class_b_sessions que cancelar: desde el cambio arquitectónico las
+      // sesiones solo se crean en confirm-payment tras commit exitoso.
+      await supabase.from('slot_holds').delete().eq('session_token', attempt.session_token);
       return jsonResponse({
         success: false,
         rejected: true,
@@ -896,12 +883,25 @@ async function handleConfirmPayment(supabase: any, body: any) {
 
     const basePrice = Number(enrollmentRow?.base_price ?? 0);
 
-    // 4. Activar sesiones reservadas
-    await supabase
-      .from('class_b_sessions')
-      .update({ status: 'scheduled' })
-      .eq('enrollment_id', attempt.enrollment_id)
-      .eq('status', 'reserved');
+    // 4. Crear class_b_sessions como 'scheduled' directamente (pago ya confirmado)
+    // Se crean aquí y no en initiate-payment para evitar sesiones huérfanas si el
+    // alumno abandona Transbank sin completar el pago.
+    const sessionRows = (snapshot.selectedSlotIds ?? []).map((slotId: string) => ({
+      enrollment_id: attempt.enrollment_id,
+      instructor_id: snapshot.instructorId,
+      vehicle_id: snapshot.vehicleId ?? null,
+      scheduled_at: slotId,
+      duration_min: 45,
+      status: 'scheduled',
+    }));
+
+    if (sessionRows.length > 0) {
+      const { error: sessionsError } = await supabase.from('class_b_sessions').insert(sessionRows);
+      if (sessionsError) {
+        console.error('sessions insert error on confirm:', sessionsError);
+        return errorResponse('Error al crear sesiones: ' + sessionsError.message, 500);
+      }
+    }
 
     // 5. Generar número de matrícula primero — la constraint chk_enrollment_number
     //    exige que number IS NOT NULL cuando status = 'active', por lo que ambos
@@ -959,6 +959,12 @@ async function handleConfirmPayment(supabase: any, body: any) {
     const studentName = snapshot.personalData
       ? `${snapshot.personalData.firstNames ?? ''} ${snapshot.personalData.paternalLastName ?? ''}`.trim()
       : null;
+
+    // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
+    //     userId y email vienen del draft_snapshot guardado en initiate-payment.
+    if (snapshot.userId && snapshot.personalData?.email) {
+      void inviteStudentToAuth(supabase, snapshot.userId, snapshot.personalData.email);
+    }
 
     return jsonResponse({
       success: true,
@@ -1033,6 +1039,52 @@ async function moveCarnetPhoto(
 
   if (dbError) {
     console.error('carnet photo student_documents error:', dbError);
+  }
+}
+
+/**
+ * Crea la cuenta Supabase Auth para un alumno recién matriculado vía flujo público
+ * y le envía un correo de invitación para que establezca su contraseña.
+ * Idempotente: si el alumno ya tiene supabase_uid y ya activó su cuenta no hace nada;
+ * si aún no activó (first_login=true) reenvía la invitación.
+ * Falla silenciosamente para no bloquear la matrícula ya confirmada.
+ */
+async function inviteStudentToAuth(supabase: any, userId: number, email: string): Promise<void> {
+  try {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('supabase_uid, first_login')
+      .eq('id', userId)
+      .maybeSingle();
+
+    // Ya completó el onboarding → no tocar
+    if (userRow?.supabase_uid && !userRow?.first_login) return;
+
+    const siteUrl = Deno.env.get('SITE_URL') ?? '';
+
+    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
+      email,
+      { redirectTo: siteUrl, data: { role: 'student' } },
+    );
+
+    if (inviteError) {
+      console.error('inviteStudentToAuth — invite error:', inviteError.message);
+      return;
+    }
+
+    // Vincular supabase_uid solo si era la primera vez (no re-invite)
+    if (!userRow?.supabase_uid && inviteData?.user?.id) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ supabase_uid: inviteData.user.id })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.error('inviteStudentToAuth — link error:', updateError.message);
+      }
+    }
+  } catch (err) {
+    console.error('inviteStudentToAuth — unexpected error:', err?.message);
   }
 }
 
@@ -1126,11 +1178,23 @@ async function findOrCreateStudent(supabase: any, userId: number, personalData: 
 function buildScheduleGrid(rows: any[]) {
   if (rows.length === 0) return null;
 
+  // Excluir slots del día presente y anteriores — no es posible coordinar una
+  // clase con tan poca antelación. La fecha de referencia usa America/Santiago.
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+  const futureRows = rows.filter((row) => {
+    const slotDate = new Date(row.slot_start).toLocaleDateString('en-CA', {
+      timeZone: 'America/Santiago',
+    });
+    return slotDate > todayStr;
+  });
+
+  if (futureRows.length === 0) return null;
+
   const days = new Map<string, { date: string; dayOfWeek: string; label: string }>();
   const timeRowsSet = new Set<string>();
   const slots: any[] = [];
 
-  for (const row of rows) {
+  for (const row of futureRows) {
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end ?? slotStart.getTime() + 45 * 60 * 1000);
 

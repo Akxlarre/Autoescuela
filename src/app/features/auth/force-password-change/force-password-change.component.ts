@@ -64,7 +64,7 @@ import gsap from 'gsap';
                 type="password"
                 formControlName="password"
                 class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 required
               />
             </div>

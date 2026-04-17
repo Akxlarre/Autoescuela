@@ -364,7 +364,7 @@ export class PromocionesFacade {
     try {
       const { error } = await this.supabase.client
         .from('professional_promotions')
-        .update({ status: payload.status })
+        .update({ name: payload.name, code: payload.code, status: payload.status })
         .eq('id', id);
 
       if (error) throw error;

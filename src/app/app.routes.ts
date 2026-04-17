@@ -708,6 +708,20 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'pagar',
+            loadComponent: () =>
+              import('./features/alumno/pagar/alumno-pagar.component').then(
+                (m) => m.AlumnoPagarComponent,
+              ),
+          },
+          {
+            path: 'pagar/retorno',
+            loadComponent: () =>
+              import('./features/alumno/pagar/alumno-pagar-retorno.component').then(
+                (m) => m.AlumnoPagarRetornoComponent,
+              ),
+          },
+          {
             path: 'notificaciones',
             loadComponent: () =>
               import('./features/alumno/notificaciones/alumno-notificaciones.component').then(

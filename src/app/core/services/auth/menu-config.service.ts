@@ -296,8 +296,8 @@ const ALUMNO_NAV: NavGroup[] = [
     ],
   },
   {
-    group: 'Pagos',
-    items: [{ label: 'Mis Pagos', icon: 'credit-card', routerLink: '/app/alumno/pagos' }],
+    group: 'Pagos y Clases',
+    items: [{ label: 'Pagos y Clases', icon: 'wallet', routerLink: '/app/alumno/pagos' }],
   },
   {
     group: 'Ayuda',

@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
@@ -6,13 +13,6 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
-
-const STATUS_OPTIONS = [
-  { label: 'Planificada', value: 'planned' },
-  { label: 'En curso', value: 'in_progress' },
-  { label: 'Finalizada', value: 'finished' },
-  { label: 'Cancelada', value: 'cancelled' },
-];
 
 @Component({
   selector: 'app-admin-promocion-editar-drawer',
@@ -27,36 +27,32 @@ const STATUS_OPTIONS = [
           Información general
         </h3>
 
-        <!-- Nombre (auto-generado, no editable) -->
+        <!-- Nombre (editable) -->
         <div class="mb-4">
           <label class="text-xs font-medium mb-1 block" style="color: var(--text-secondary)">
             Nombre de la promoción
           </label>
-          <div
+          <input
             class="form-input"
-            style="background: var(--bg-elevated); cursor: default; color: var(--text-muted);"
-          >
-            {{ facade.selectedPromocion()?.name }}
-          </div>
-          <p class="text-[10px] mt-1" style="color: var(--text-muted)">
-            El nombre se genera automáticamente a partir de la fecha de inicio
-          </p>
+            type="text"
+            [(ngModel)]="nameModel"
+            placeholder="Ej: Promoción 30 de Marzo 2026"
+            data-llm-description="Nombre editable de la promoción"
+          />
         </div>
 
-        <!-- Código (readonly) -->
+        <!-- Código (editable) -->
         <div class="mb-4">
           <label class="text-xs font-medium mb-1 block" style="color: var(--text-secondary)">
             Código
           </label>
-          <div
+          <input
             class="form-input"
-            style="background: var(--bg-elevated); cursor: default; color: var(--text-muted);"
-          >
-            {{ facade.selectedPromocion()?.code }}
-          </div>
-          <p class="text-[10px] mt-1" style="color: var(--text-muted)">
-            El código no es modificable
-          </p>
+            type="text"
+            [(ngModel)]="codeModel"
+            placeholder="Ej: PROM-2026-03"
+            data-llm-description="Código editable de la promoción"
+          />
         </div>
 
         <!-- Fechas (readonly) -->
@@ -97,13 +93,31 @@ const STATUS_OPTIONS = [
         </h3>
 
         <p-select
-          [options]="statusOptions"
+          [options]="availableStatusOptions()"
           [(ngModel)]="statusModel"
           optionLabel="label"
           optionValue="value"
           [style]="{ width: '100%' }"
           data-llm-description="Cambiar estado de la promoción"
         />
+
+        @if (plannedButNotStarted()) {
+          <div
+            class="mt-3 rounded-lg p-3 flex items-start gap-2"
+            style="
+              background: color-mix(in srgb, var(--state-warning) 8%, transparent);
+              border: 1px solid color-mix(in srgb, var(--state-warning) 20%, transparent);
+            "
+          >
+            <app-icon name="clock" [size]="14" color="var(--state-warning)" />
+            <p class="text-xs" style="color: var(--text-secondary)">
+              La promoción aún no ha comenzado. Podrás cambiarla a
+              <strong>En curso</strong> a partir del
+              <strong>{{ formatDate(facade.selectedPromocion()?.startDate ?? '') }}</strong
+              >.
+            </p>
+          </div>
+        }
 
         @if (status() === 'cancelled') {
           <div
@@ -181,8 +195,23 @@ export class AdminPromocionEditarDrawerComponent {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Form state ────────────────────────────────────────────────────────────
+  protected readonly name = signal('');
+  protected readonly code = signal('');
   protected readonly status = signal<PromocionStatus>('planned');
-  protected readonly statusOptions = STATUS_OPTIONS;
+
+  protected get nameModel(): string {
+    return this.name();
+  }
+  protected set nameModel(v: string) {
+    this.name.set(v);
+  }
+
+  protected get codeModel(): string {
+    return this.code();
+  }
+  protected set codeModel(v: string) {
+    this.code.set(v);
+  }
 
   protected get statusModel(): PromocionStatus {
     return this.status();
@@ -191,13 +220,73 @@ export class AdminPromocionEditarDrawerComponent {
     this.status.set(v);
   }
 
-  protected readonly canSave = signal(true);
+  /**
+   * Opciones del selector incluyendo el estado actual como primera entrada.
+   * Al seleccionar el estado actual, canSave permanece false (sin cambio real).
+   *   planned     → Planificada | En curso (solo si start_date ≤ hoy) | Cancelada
+   *   in_progress → En curso | Finalizada | Cancelada
+   *   finished    → Finalizada  (sin más transiciones)
+   *   cancelled   → Cancelada   (sin más transiciones)
+   */
+  protected readonly availableStatusOptions = computed(() => {
+    const p = this.facade.selectedPromocion();
+    if (!p) return [];
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(p.startDate + 'T00:00:00');
+
+    switch (p.status) {
+      case 'planned':
+        return [
+          { label: 'Planificada', value: 'planned' as PromocionStatus },
+          ...(startDate <= today
+            ? [{ label: 'En curso', value: 'in_progress' as PromocionStatus }]
+            : []),
+          { label: 'Cancelada', value: 'cancelled' as PromocionStatus },
+        ];
+      case 'in_progress':
+        return [
+          { label: 'En curso', value: 'in_progress' as PromocionStatus },
+          { label: 'Finalizada', value: 'finished' as PromocionStatus },
+          { label: 'Cancelada', value: 'cancelled' as PromocionStatus },
+        ];
+      case 'finished':
+        return [{ label: 'Finalizada', value: 'finished' as PromocionStatus }];
+      case 'cancelled':
+        return [{ label: 'Cancelada', value: 'cancelled' as PromocionStatus }];
+      default:
+        return [];
+    }
+  });
+
+  /** True cuando está planificada pero la fecha de inicio aún no llega. */
+  protected readonly plannedButNotStarted = computed(() => {
+    const p = this.facade.selectedPromocion();
+    if (!p || p.status !== 'planned') return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return new Date(p.startDate + 'T00:00:00') > today;
+  });
+
+  /** Habilita guardar si nombre/código cambiaron O si el nuevo estado es una transición válida. */
+  protected readonly canSave = computed(() => {
+    const p = this.facade.selectedPromocion();
+    if (!p) return false;
+    const nameOrCodeChanged = this.name().trim() !== p.name || this.code().trim() !== p.code;
+    const statusChanged =
+      this.status() !== p.status &&
+      this.availableStatusOptions().some((o) => o.value === this.status());
+    return nameOrCodeChanged || statusChanged;
+  });
 
   constructor() {
-    // Pre-fill from selected promotion
+    // Pre-fill al cambiar la promoción seleccionada
     effect(() => {
       const p = this.facade.selectedPromocion();
       if (p) {
+        this.name.set(p.name);
+        this.code.set(p.code);
         this.status.set(p.status);
       }
     });
@@ -214,12 +303,14 @@ export class AdminPromocionEditarDrawerComponent {
     if (!p) return;
 
     const success = await this.facade.editarPromocion(p.id, {
+      name: this.name().trim(),
+      code: this.code().trim(),
       status: this.status(),
     });
 
     if (success) {
       this.layoutDrawer.close();
-      this.facade.initialize(); // Refresh table
+      this.facade.initialize();
     }
   }
 }
