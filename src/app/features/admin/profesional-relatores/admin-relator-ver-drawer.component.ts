@@ -3,6 +3,7 @@ import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
 
 const SPEC_COLORS: Record<string, string> = {
@@ -23,7 +24,7 @@ const SPEC_LABELS: Record<string, string> = {
   selector: 'app-admin-relator-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
   template: `
     @if (facade.selectedRelator(); as rel) {
       <!-- ── Avatar + nombre ─────────────────────────────────────────────── -->
@@ -65,28 +66,29 @@ const SPEC_LABELS: Record<string, string> = {
 
       <!-- ── Información personal ───────────────────────────────────────── -->
       <h3 class="section-title">Información Personal</h3>
-      <div class="info-grid mb-6">
-        <div class="info-item">
-          <span class="info-label">
-            <app-icon name="id-card" [size]="12" />
-            RUT
-          </span>
-          <span class="info-value">{{ rel.rut }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">
-            <app-icon name="phone" [size]="12" />
-            TELÉFONO
-          </span>
-          <span class="info-value">{{ rel.phone || '—' }}</span>
-        </div>
-        <div class="info-item" style="grid-column: span 2">
-          <span class="info-label">
-            <app-icon name="at-sign" [size]="12" />
-            CORREO ELECTRÓNICO
-          </span>
-          <span class="info-value">{{ rel.email || '—' }}</span>
-        </div>
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <app-stat-box
+          label="RUT"
+          [value]="rel.rut"
+          variant="surface"
+          [compact]="true"
+          icon="id-card"
+        />
+        <app-stat-box
+          label="TELÉFONO"
+          [value]="rel.phone || '—'"
+          variant="surface"
+          [compact]="true"
+          icon="phone"
+        />
+        <app-stat-box
+          label="CORREO ELECTRÓNICO"
+          [value]="rel.email || '—'"
+          variant="surface"
+          [compact]="true"
+          icon="at-sign"
+          class="col-span-2"
+        />
       </div>
 
       <!-- ── Especialidades ─────────────────────────────────────────────── -->
@@ -227,45 +229,6 @@ const SPEC_LABELS: Record<string, string> = {
       margin-bottom: 12px;
       padding-bottom: 8px;
       border-bottom: 1px solid var(--border-subtle);
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .info-label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--ds-brand);
-    }
-    .info-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-    .info-label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--ds-brand);
-    }
-    .info-value {
-      font-size: var(--text-sm);
-      color: var(--text-primary);
     }
     .spec-badge {
       display: inline-flex;

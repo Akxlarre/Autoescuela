@@ -18,7 +18,6 @@ import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liqu
         [anioActual]="facade.anioActual()"
         (mesAnterior)="facade.mesAnterior()"
         (mesSiguiente)="facade.mesSiguiente()"
-        (pagar)="onPagar($event)"
         (deshacer)="facade.deshacerPago($event)"
       />
     </div>
@@ -28,10 +27,6 @@ export class SecretariaContabilidadLiquidacionesComponent implements OnInit {
   protected readonly facade = inject(LiquidacionesFacade);
 
   ngOnInit(): void {
-    this.facade.cargarLiquidaciones();
-  }
-
-  protected onPagar(event: { row: LiquidacionRow; payload: PagoInstructorPayload }): void {
-    this.facade.registrarPago(event.row, event.payload);
+    this.facade.initialize();
   }
 }

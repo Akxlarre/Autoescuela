@@ -8,7 +8,6 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '../icon/icon.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -42,7 +41,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
   selector: 'app-action-kpi-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IconComponent, CardHoverDirective, SkeletonBlockComponent],
+  imports: [IconComponent, CardHoverDirective, SkeletonBlockComponent],
   styleUrl: './kpi-card.component.scss',
   template: `
     <div
@@ -150,7 +149,7 @@ export class ActionKpiCardComponent {
       case 'error':
         return 'var(--state-error-bg, rgba(239, 68, 68, 0.1))';
       default:
-        return 'var(--color-primary-muted, rgba(59, 130, 246, 0.1))';
+        return 'var(--color-primary-muted, rgba(14, 165, 233, 0.1))';
     }
   });
   protected readonly iconColorStyle = computed(() => {

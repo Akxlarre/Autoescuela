@@ -27,29 +27,34 @@ describe('DmsFacade', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             order: vi.fn().mockReturnValue({
-              limit: vi.fn().mockResolvedValue({ data: [], error: null })
+              limit: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),
-            single: vi.fn().mockResolvedValue({ data: null, error: null })
-          })
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
         }),
         update: vi.fn().mockReturnValue({
-           eq: vi.fn().mockResolvedValue({ error: null })
+          eq: vi.fn().mockResolvedValue({ error: null }),
         }),
         delete: vi.fn().mockReturnValue({
-           eq: vi.fn().mockResolvedValue({ error: null })
+          eq: vi.fn().mockResolvedValue({ error: null }),
         }),
-        insert: vi.fn().mockResolvedValue({ error: null })
+        insert: vi.fn().mockResolvedValue({ error: null }),
       }),
       storage: {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
-          getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'http://example.com' } })
-        })
+          createSignedUrl: vi
+            .fn()
+            .mockResolvedValue({
+              data: { signedUrl: 'https://example.com/signed/doc' },
+              error: null,
+            }),
+        }),
       },
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'auth_id' } }, error: null })
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'auth_id' } }, error: null }),
       },
-      rpc: vi.fn().mockResolvedValue({ data: null, error: null })
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     };
 
     TestBed.configureTestingModule({
@@ -59,8 +64,8 @@ describe('DmsFacade', () => {
         { provide: LayoutDrawerService, useValue: drawerSpy },
         { provide: ConfirmModalService, useValue: confirmSpy },
         { provide: ToastService, useValue: toastSpy },
-        { provide: DmsViewerService, useValue: viewerSpy }
-      ]
+        { provide: DmsViewerService, useValue: viewerSpy },
+      ],
     });
 
     facade = TestBed.inject(DmsFacade);

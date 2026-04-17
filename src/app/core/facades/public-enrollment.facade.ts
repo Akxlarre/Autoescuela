@@ -160,6 +160,12 @@ export class PublicEnrollmentFacade {
   // ── Documents ──
   /** Ruta en Storage (sin bucket) del archivo temporal subido por el usuario público. */
   private readonly _carnetStoragePath = signal<string | null>(null);
+  /**
+   * Blob URL local generada con URL.createObjectURL() tras subir el carnet.
+   * Válida mientras la página esté abierta. Se revoca con URL.revokeObjectURL()
+   * al limpiar el estado. Evita llamar a Storage para display (bucket es privado).
+   */
+  private readonly _carnetPreviewUrl = signal<string | null>(null);
 
   // ── Contract ──
   private readonly _contractPdfUrl = signal<string | null>(null);
@@ -199,9 +205,9 @@ export class PublicEnrollmentFacade {
   readonly psychTestAnswers = this._psychTestAnswers.asReadonly();
   /** URL pública de la foto de carnet subida temporalmente al Storage. */
   readonly carnetPhotoUrl = computed<string | null>(() => {
-    const path = this._carnetStoragePath();
-    if (!path) return null;
-    return this.supabase.client.storage.from('documents').getPublicUrl(path).data.publicUrl;
+    // Opción A: blob URL local creada en uploadCarnetPhoto().
+    // No depende de que el bucket sea público; válida mientras la página esté abierta.
+    return this._carnetPreviewUrl();
   });
   readonly contractPdfUrl = this._contractPdfUrl.asReadonly();
   readonly signedContractFile = this._signedContractFile.asReadonly();
@@ -567,6 +573,13 @@ export class PublicEnrollmentFacade {
       }
 
       this._carnetStoragePath.set(path);
+
+      // Crear blob URL local para el preview (bucket privado: no usamos publicUrl).
+      // Revocar la anterior si existía para evitar memory leaks.
+      const prev = this._carnetPreviewUrl();
+      if (prev) URL.revokeObjectURL(prev);
+      this._carnetPreviewUrl.set(URL.createObjectURL(file));
+
       this.saveDraft();
       return true;
     } catch {
@@ -909,6 +922,9 @@ export class PublicEnrollmentFacade {
     this._convalidatesSimultaneously.set(false);
     this._psychTestAnswers.set(Array(81).fill(null));
     this._carnetStoragePath.set(null);
+    const previewUrl = this._carnetPreviewUrl();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    this._carnetPreviewUrl.set(null);
     this._contractPdfUrl.set(null);
     this._signedContractFile.set(null);
     this._result.set(null);
@@ -1087,6 +1103,9 @@ export class PublicEnrollmentFacade {
     this._convalidatesSimultaneously.set(false);
     this._psychTestAnswers.set(Array(81).fill(null));
     this._carnetStoragePath.set(null);
+    const previewUrl = this._carnetPreviewUrl();
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    this._carnetPreviewUrl.set(null);
     this._contractPdfUrl.set(null);
     this._signedContractFile.set(null);
     this._result.set(null);

@@ -96,7 +96,8 @@ interface AlumnoKpiItem {
     SectionHeroComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de alumnos">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de alumnos"
+      [class.force-compact]="layoutDrawer.isOpen()">
       <app-section-hero
         title="Alumnos"
         subtitle="Listado de alumnos de la escuela"
@@ -684,10 +685,11 @@ export class AlumnosListContentComponent {
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
   readonly claseOnlineAction = output<'zoom' | 'asistencia'>();
+  readonly preInscritosRequested = output<void>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
-  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly heroChips = computed((): SectionHeroChip[] => [
@@ -697,21 +699,21 @@ export class AlumnosListContentComponent {
   readonly heroActions = computed((): SectionHeroAction[] => {
     const path = this.basePath();
     return [
-      { id: 'enviar-zoom', label: 'Enviar enlace Zoom', icon: 'video', primary: false },
+      { id: 'enviar-zoom', label: 'Zoom', icon: 'video', primary: false },
       {
         id: 'registrar-asistencia',
-        label: 'Registrar asistencia',
+        label: 'Asistencia',
         icon: 'check-circle',
         primary: false,
       },
       {
         id: 'historial',
-        label: 'Historial Ex-Alumnos',
+        label: 'Ex-Alumnos',
         icon: 'archive',
         primary: false,
         route: `${path}/ex-alumnos`,
       },
-      { id: 'preinscritos', label: 'Ver Pre-inscritos', icon: 'users', primary: false },
+      { id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false },
       {
         id: 'nueva-matricula',
         label: 'Nueva Matrícula',
@@ -875,7 +877,7 @@ export class AlumnosListContentComponent {
         this.registrarAsistenciaZoom();
         break;
       case 'preinscritos':
-        // TODO: navegar o abrir vista Pre-inscritos
+        this.preInscritosRequested.emit();
         break;
       case 'nueva-matricula':
         this.openNuevaMatriculaDrawer();

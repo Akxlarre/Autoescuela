@@ -160,7 +160,11 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               style="color: var(--state-success); shrink-0"
             />
             <span class="text-sm font-medium" style="color: var(--state-success);">
-              {{ alumnosFacade.drawerMode() === 'zoom' ? 'Enlace guardado correctamente.' : 'Asistencia registrada.' }}
+              {{
+                alumnosFacade.drawerMode() === 'zoom'
+                  ? 'Enlace guardado correctamente.'
+                  : 'Asistencia registrada.'
+              }}
             </span>
           </div>
         }
@@ -189,7 +193,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           data-llm-action="guardar-clase-online"
         >
           @if (facade.isLoading()) {
-            <app-icon name="loader" [size]="14" />
+            <app-icon name="loader-2" [size]="14" class="animate-spin" />
           }
           {{ alumnosFacade.drawerMode() === 'zoom' ? 'Guardar enlace' : 'Registrar asistencia' }}
         </button>
@@ -216,19 +220,6 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
     }
     .field-input:focus {
       border-color: var(--ds-brand);
-    }
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      border-radius: var(--radius-md);
-      background: var(--ds-brand);
-      color: #fff;
-      font-size: var(--text-sm);
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
     }
     .btn-ghost {
       padding: 8px 16px;

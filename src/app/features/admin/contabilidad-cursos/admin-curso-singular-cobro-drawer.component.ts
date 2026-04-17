@@ -3,7 +3,7 @@ import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import type { InscriptoCursoSingular } from '@core/models/ui/cursos-singulares.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { KpiCardComponent } from '@shared/components/kpi-card/kpi-card.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { formatCLP } from '@core/utils/date.utils';
 
 /**
@@ -19,7 +19,7 @@ import { formatCLP } from '@core/utils/date.utils';
   selector: 'app-admin-curso-singular-cobro-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, KpiCardComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
   template: `
     <div class="flex flex-col gap-5 p-1">
       @if (facade.selectedCurso(); as curso) {
@@ -49,26 +49,26 @@ import { formatCLP } from '@core/utils/date.utils';
 
         <!-- ── Resumen de cobros ─────────────────────────────────────────────── -->
         <div class="grid grid-cols-3 gap-3">
-          <app-kpi-card
+          <app-stat-box
             label="Pendientes"
             [value]="pendientes()"
-            color="warning"
-            size="md"
+            variant="warning"
+            [compact]="true"
           />
 
-          <app-kpi-card
+          <app-stat-box
             label="Cobrados"
             [value]="cobrados()"
-            color="success"
-            size="md"
+            variant="success"
+            [compact]="true"
           />
 
-          <app-kpi-card
+          <app-stat-box
             label="Total"
-            [value]="totalCobrado()"
-            prefix="$"
-            color="success"
-            size="md"
+            [value]="formatCLP(totalCobrado())"
+            variant="success"
+            [compact]="true"
+            [useMono]="true"
           />
         </div>
 

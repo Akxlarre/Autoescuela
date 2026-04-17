@@ -52,9 +52,12 @@ function createMockSupabaseService() {
       storage: {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
-          getPublicUrl: vi
+          createSignedUrl: vi
             .fn()
-            .mockReturnValue({ data: { publicUrl: 'https://example.com/file.pdf' } }),
+            .mockResolvedValue({
+              data: { signedUrl: 'https://example.com/signed/file.pdf' },
+              error: null,
+            }),
         }),
       },
       functions: {

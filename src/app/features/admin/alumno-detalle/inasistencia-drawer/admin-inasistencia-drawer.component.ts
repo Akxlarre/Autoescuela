@@ -16,7 +16,9 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         <form [formGroup]="form" class="flex flex-col gap-6" (ngSubmit)="onSubmit()">
           <!-- Info Alumno -->
           <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
-            <div class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted">
+            <div
+              class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted"
+            >
               <app-icon name="user" [size]="20" />
             </div>
             <div class="flex flex-col">
@@ -35,6 +37,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               type="date"
               formControlName="document_date"
               class="field-input"
+              aria-required="true"
               data-llm-description="Fecha en que ocurrió la inasistencia del alumno"
               [class.field-input--error]="isInvalid('document_date')"
             />
@@ -52,6 +55,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               id="inas-type"
               formControlName="document_type"
               class="field-input field-select"
+              aria-required="true"
               data-llm-description="Categoría del documento que justifica la inasistencia"
               [class.field-input--error]="isInvalid('document_type')"
             >
@@ -132,7 +136,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
         <button
           type="button"
-          class="btn-cancel"
+          class="btn-secondary"
           (click)="onCancel()"
           data-llm-action="cancelar-registro-inasistencia"
         >
@@ -208,33 +212,6 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       border-color: var(--state-success);
       border-style: solid;
       background: var(--state-success-bg);
-    }
-    .btn-cancel {
-      padding: 8px 16px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-strong);
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      cursor: pointer;
-    }
-    .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 20px;
-      border-radius: var(--radius-md);
-      background: var(--ds-brand);
-      color: #fff;
-      font-size: var(--text-sm);
-      font-weight: var(--font-semibold);
-      border: none;
-      cursor: pointer;
-    }
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
     }
   `,
 })

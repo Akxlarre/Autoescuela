@@ -172,6 +172,13 @@ $bp-lg: 1024px;
     min-height: 180px;
   }
 
+  /* Cuando el hero está en modo compacto (drawer abierto), permite crecer en altura */
+  .force-compact .bento-hero,
+  .force-compact.bento-hero {
+    min-height: unset;
+    height: auto;
+  }
+
   /* Banner: full-width, una fila */
   .bento-banner {
     grid-column: 1 / -1;

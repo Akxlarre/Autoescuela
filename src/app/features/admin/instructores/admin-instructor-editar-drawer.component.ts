@@ -369,21 +369,21 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
       <!-- ── Acciones ────────────────────────────────────────────────────── -->
       <div class="flex items-center gap-3 pt-4" style="border-top: 1px solid var(--border-subtle)">
         <button
-          class="cancel-btn"
+          class="btn-secondary flex-1"
           (click)="layoutDrawer.close()"
           data-llm-action="cancelar-editar-instructor"
         >
           Cancelar
         </button>
         <button
-          class="submit-btn"
+          class="btn-primary flex-[2]"
           [disabled]="facade.isSubmitting()"
           (click)="submit(inst.id, inst.userId)"
           data-llm-action="guardar-editar-instructor"
           aria-label="Guardar cambios del instructor"
         >
           @if (facade.isSubmitting()) {
-            <span class="spinner"><app-icon name="loader-circle" [size]="15" /></span>
+            <app-icon name="loader-2" [size]="15" class="animate-spin" />
             Guardando...
           } @else {
             <app-icon name="check" [size]="15" />
@@ -487,62 +487,6 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
       border-color: var(--border-strong, var(--text-muted));
       background: var(--bg-elevated);
       color: var(--text-secondary);
-    }
-
-    .cancel-btn {
-      flex: 1;
-      padding: 9px 0;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: transparent;
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .cancel-btn:hover {
-      border-color: var(--border-strong, var(--text-muted));
-      color: var(--text-primary);
-    }
-
-    .submit-btn {
-      flex: 2;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 9px 0;
-      border-radius: var(--radius-md);
-      border: none;
-      background: var(--ds-brand);
-      color: white;
-      font-size: var(--text-sm);
-      font-family: inherit;
-      font-weight: 500;
-      cursor: pointer;
-      transition: opacity var(--duration-fast);
-    }
-    .submit-btn:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-    .submit-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    .spinner {
-      display: inline-flex;
-      animation: spin 0.75s linear infinite;
     }
   `,
 })

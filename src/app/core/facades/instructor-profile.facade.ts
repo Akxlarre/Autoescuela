@@ -79,10 +79,19 @@ export class InstructorProfileFacade {
     }
   }
 
+  private _initPromise: Promise<void> | null = null;
+
   async getInstructorId(): Promise<number | null> {
-    if (!this._initialized) {
-      await this.initialize();
+    if (this._initialized) return this._instructorId();
+    // Si ya hay una inicialización en curso, esperar la misma Promise
+    // para evitar la race condition donde múltiples callers concurrentes
+    // ven _initialized=false y disparan queries con instructorId=null.
+    if (!this._initPromise) {
+      this._initPromise = this.initialize().finally(() => {
+        this._initPromise = null;
+      });
     }
+    await this._initPromise;
     return this._instructorId();
   }
 }

@@ -1,4 +1,4 @@
-import { ApplicationConfig, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, importProvidersFrom } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
@@ -33,6 +33,7 @@ import {
   Edit3,
   Eraser,
   Eye,
+  Filter,
   Pencil,
   Play,
   Plus,
@@ -47,6 +48,7 @@ import {
   Upload,
   UploadCloud,
   X,
+  XCircle,
   ZoomIn,
   // ── Status & Alerts ──
   AlertCircle,
@@ -170,6 +172,8 @@ import {
   TrendingUp,
   // ── Surfaces ──
   Circle,
+  CalendarPlus,
+  MousePointerClick,
   Unlock,
 } from 'lucide-angular';
 
@@ -217,6 +221,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     provideCoreAuth(),
+    { provide: LOCALE_ID, useValue: 'es' },
     MessageService,
     ConfirmationService,
     importProvidersFrom(
@@ -248,6 +253,7 @@ export const appConfig: ApplicationConfig = {
         Edit3,
         Eraser,
         Eye,
+        Filter,
         Pencil,
         Play,
         Plus,
@@ -262,6 +268,7 @@ export const appConfig: ApplicationConfig = {
         Upload,
         UploadCloud,
         X,
+        XCircle,
         ZoomIn,
         // ── Status & Alerts ──
         AlertCircle,
@@ -314,6 +321,7 @@ export const appConfig: ApplicationConfig = {
         CalendarCheck,
         CalendarClock,
         CalendarDays,
+        CalendarPlus,
         CalendarX,
         Clock,
         History,
@@ -360,6 +368,7 @@ export const appConfig: ApplicationConfig = {
         Bus,
         Car,
         Circle,
+        MousePointerClick,
         FlaskConical,
         Gauge,
         GraduationCap,

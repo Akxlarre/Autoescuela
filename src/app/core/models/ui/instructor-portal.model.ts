@@ -178,7 +178,6 @@ export interface LiquidacionKpis {
   horasTeoriaMes: number;
   horasPracticaMes: number;
   totalHorasMes: number;
-  anticiposMes: number; // CLP
 }
 
 export interface SessionDetailRow {

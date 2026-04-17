@@ -69,11 +69,12 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
           data-llm-description="Promociones próximas a iniciar"
         />
         <app-kpi-card-variant
-          label="Alumnos totales"
-          [value]="facade.totalAlumnos()"
-          icon="users"
+          label="Canceladas"
+          [value]="facade.canceladas()"
+          icon="ban"
+          color="warning"
           [loading]="facade.isLoading()"
-          data-llm-description="Total de alumnos en todas las promociones"
+          data-llm-description="Promociones canceladas"
         />
       </div>
 
@@ -107,14 +108,13 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
             <option [value]="null">Todos los estados</option>
             <option value="planned">Planificada</option>
             <option value="in_progress">En curso</option>
-            <option value="finished">Finalizada</option>
             <option value="cancelled">Cancelada</option>
           </select>
         </div>
       </div>
 
       <!-- ── Content (Grillet) ─────────────────────────────────────────────── -->
-      <div class="card p-6 flex flex-col min-h-[400px]">
+      <div class="card p-6 flex flex-col min-h-100">
         <h2 class="text-base font-semibold mb-4" style="color: var(--text-primary)">
           Historial de Promociones
         </h2>
@@ -418,7 +418,6 @@ export class AdminProfesionalPromocionesComponent {
     const map: Record<string, string> = {
       planned: 'Planificada',
       in_progress: 'En curso',
-      finished: 'Finalizada',
       cancelled: 'Cancelada',
     };
     return map[status] ?? status;

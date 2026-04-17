@@ -7,7 +7,12 @@ import {
   signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormsModule,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 
 // PrimeNG
 import { InputTextModule } from 'primeng/inputtext';
@@ -53,28 +58,37 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         <!-- Body Scrolleable -->
         <div class="flex-1 overflow-y-auto px-6 py-8">
           <div class="grid grid-cols-1 gap-6 max-w-xl mx-auto">
-            
             <!-- Tipo de Mantenimiento -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-text-muted uppercase tracking-wider">
+              <label
+                for="mf-type"
+                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+              >
                 Tipo de Servicio <span class="text-error">*</span>
               </label>
               <p-select
+                inputId="mf-type"
                 formControlName="type"
                 [options]="typeOptions"
                 placeholder="Seleccionar tipo"
+                aria-required="true"
                 styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
               ></p-select>
             </div>
 
             <!-- Kilometraje -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-text-muted uppercase tracking-wider">
+              <label
+                for="mf-km"
+                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+              >
                 Kilometraje al momento <span class="text-error">*</span>
               </label>
               <p-inputNumber
+                inputId="mf-km"
                 formControlName="km_at_time"
                 placeholder="Ej: 45000"
+                aria-required="true"
                 inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
               />
             </div>
@@ -82,10 +96,14 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             <!-- Taller / Fecha -->
             <div class="grid grid-cols-2 gap-4">
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                <label
+                  for="mf-workshop"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
                   Taller / Proveedor
                 </label>
                 <input
+                  id="mf-workshop"
                   pInputText
                   formControlName="workshop"
                   placeholder="Ej: Nissan Center"
@@ -93,12 +111,17 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
                 />
               </div>
               <div class="flex flex-col gap-1.5">
-                <label class="text-xs font-semibold text-text-muted uppercase tracking-wider">
+                <label
+                  for="mf-date"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
                   Fecha Realización <span class="text-error">*</span>
                 </label>
                 <input
+                  id="mf-date"
                   type="date"
                   formControlName="completed_date"
+                  aria-required="true"
                   class="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
                 />
               </div>
@@ -106,10 +129,14 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 
             <!-- Costo -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-text-muted uppercase tracking-wider">
+              <label
+                for="mf-cost"
+                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+              >
                 Costo Total ($)
               </label>
               <p-inputNumber
+                inputId="mf-cost"
                 formControlName="cost"
                 mode="currency"
                 currency="CLP"
@@ -121,10 +148,14 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 
             <!-- Observaciones -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-xs font-semibold text-text-muted uppercase tracking-wider">
+              <label
+                for="mf-desc"
+                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+              >
                 Observaciones / Detalles
               </label>
               <textarea
+                id="mf-desc"
                 pTextarea
                 formControlName="description"
                 rows="4"
@@ -141,18 +172,16 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         </div>
 
         <!-- Footer Fixed -->
-        <div class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3" style="border-color: var(--border-subtle);">
-          <button
-            type="button"
-            class="h-11 px-6 rounded-xl border bg-transparent cursor-pointer font-medium hover:bg-subtle transition-all"
-            style="color: var(--text-secondary); border-color: var(--border-strong);"
-            (click)="onCancel()"
-          >
+        <div
+          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3"
+          style="border-color: var(--border-subtle);"
+        >
+          <button type="button" class="btn-secondary h-11 px-6" (click)="onCancel()">
             Cancelar
           </button>
           <button
             type="submit"
-            class="h-11 px-8 rounded-xl bg-ds-brand text-white border-none cursor-pointer font-semibold shadow-sm hover:opacity-90 transition-all flex items-center gap-2"
+            class="btn-primary h-11 px-8 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             [disabled]="form.invalid || isSaving()"
           >
             @if (isSaving()) {

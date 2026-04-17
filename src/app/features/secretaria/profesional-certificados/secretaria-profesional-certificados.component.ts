@@ -1,32 +1,46 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
+import { CertificacionProfesionalContentComponent } from '@shared/components/certificacion-profesional-content/certificacion-profesional-content.component';
 
+/**
+ * SecretariaProfesionalCertificadosComponent — Smart component.
+ * Ruta: /app/secretaria/profesional/certificados
+ *
+ * La secretaria siempre ve su propia sede (branchId del usuario autenticado,
+ * ya filtrado en BranchFacade por defecto).
+ */
 @Component({
   selector: 'app-secretaria-profesional-certificados',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CertificacionProfesionalContentComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Clase Profesional — Certificados</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /secretaria/profesional/certificados</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
-        >
-          PLANO
-        </span>
-      </div>
-      <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
-      >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
-          mock/web/src/pages/secretaria/profesional/certificados.astro
-        </code>
-      </div>
-    </div>
+    <app-certificacion-profesional-content
+      [promociones]="facade.promociones()"
+      [cursos]="facade.cursos()"
+      [selectedPromocionId]="facade.selectedPromocionId()"
+      [selectedCursoId]="facade.selectedCursoId()"
+      [alumnos]="facade.alumnos()"
+      [kpis]="facade.kpis()"
+      [log]="facade.log()"
+      [isLoading]="facade.isLoading()"
+      [isLoadingAlumnos]="facade.isLoadingAlumnos()"
+      [generatingId]="facade.generatingId()"
+      (promocionSelected)="facade.selectPromocion($event)"
+      (cursoSelected)="facade.selectCurso($event)"
+      (generarCertificado)="facade.generarCertificado($event)"
+      (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
+      (enviarEmail)="facade.enviarEmail($event)"
+      (generarPendientes)="facade.generarPendientes()"
+      (enviarEmailsMasivo)="facade.enviarEmailsMasivo()"
+      (exportar)="facade.exportar()"
+    />
   `,
 })
-export class SecretariaProfesionalCertificadosComponent {}
+export class SecretariaProfesionalCertificadosComponent implements OnInit {
+  protected readonly facade = inject(CertificacionProfesionalFacade);
+
+  ngOnInit(): void {
+    void this.facade.initialize();
+  }
+}

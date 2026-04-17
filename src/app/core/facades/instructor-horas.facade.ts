@@ -9,8 +9,6 @@ import type {
   WeekSchedule,
 } from '@core/models/ui/instructor-portal.model';
 
-const AMOUNT_PER_HOUR_DEFAULT = 5_000;
-
 @Injectable({
   providedIn: 'root',
 })
@@ -23,7 +21,6 @@ export class InstructorHorasFacade {
   private _sessionDetails = signal<SessionDetailRow[]>([]);
   private _weeklySchedule = signal<WeekSchedule | null>(null);
   private _monthlyTarget = signal<{
-    totalAmount: number;
     completedHours: number;
     targetHours: number;
     projectedHours: number;
@@ -36,11 +33,8 @@ export class InstructorHorasFacade {
       categoryLabel: string;
       quantity: number;
       hours: number;
-      amount: number;
     }[]
   >([]);
-  private _anticiposMes = signal<number>(0);
-  private _amountPerHour = signal<number>(AMOUNT_PER_HOUR_DEFAULT);
 
   private _isLoading = signal<boolean>(false);
   private _error = signal<string | null>(null);
@@ -61,7 +55,6 @@ export class InstructorHorasFacade {
       horasTeoriaMes: currentMonthData?.theoryHours || 0,
       horasPracticaMes: currentMonthData?.practicalHours || 0,
       totalHorasMes: currentMonthData?.totalEquivalentHours || 0,
-      anticiposMes: this._anticiposMes(),
     };
   });
 
@@ -75,14 +68,11 @@ export class InstructorHorasFacade {
 
     this._isLoading.set(true);
     try {
-      // Fase 1 (paralelo): horas, anticipos y tarifa por hora + proyección
       await Promise.all([
         this.fetchMonthlyHours(),
-        this.fetchAdvancesTotal(),
         this.fetchMonthlyTarget(),
+        this.fetchSessionsLog(),
       ]);
-      // Fase 2: log de sesiones usa _amountPerHour seteado en fase 1
-      await this.fetchSessionsLog();
     } finally {
       this._isLoading.set(false);
       this._initialized = true;
@@ -93,46 +83,15 @@ export class InstructorHorasFacade {
     try {
       await Promise.all([
         this.fetchMonthlyHours(),
-        this.fetchAdvancesTotal(),
         this.fetchMonthlyTarget(),
+        this.fetchSessionsLog(),
       ]);
-      await this.fetchSessionsLog();
     } catch {
       // Fail silencioso — datos stale siguen visibles
     }
   }
 
   // ── Queries privadas ───────────────────────────────────────────────────────
-
-  private async fetchAdvancesTotal(): Promise<void> {
-    const instructorId = await this.profileFacade.getInstructorId();
-    if (!instructorId) return;
-
-    try {
-      const now = new Date();
-      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-        .toISOString()
-        .split('T')[0];
-      const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        .toISOString()
-        .split('T')[0];
-
-      const { data, error } = await this.supabase.client
-        .from('instructor_advances')
-        .select('amount')
-        .eq('instructor_id', instructorId)
-        .eq('status', 'pending')
-        .gte('date', firstOfMonth)
-        .lte('date', lastOfMonth);
-
-      if (error) throw error;
-
-      const total = (data || []).reduce((sum, row) => sum + (row.amount || 0), 0);
-      this._anticiposMes.set(total);
-    } catch (err: any) {
-      console.error('Error fetching advances:', err);
-    }
-  }
 
   private async fetchMonthlyTarget(): Promise<void> {
     const instructorId = await this.profileFacade.getInstructorId();
@@ -144,27 +103,19 @@ export class InstructorHorasFacade {
       const month = now.getMonth();
       const start = new Date(year, month, 1).toISOString();
       const end = new Date(year, month + 1, 0, 23, 59, 59).toISOString();
-      const period = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-      const [sessionsResult, paymentResult] = await Promise.all([
-        this.supabase.client
-          .from('class_b_sessions')
-          .select('id, status, duration_min')
-          .eq('instructor_id', instructorId)
-          .gte('scheduled_at', start)
-          .lte('scheduled_at', end),
-        this.supabase.client
-          .from('instructor_monthly_payments')
-          .select('amount_per_hour')
-          .eq('instructor_id', instructorId)
-          .eq('period', period)
-          .maybeSingle(),
-      ]);
+      const { data: sessions, error: sessionsError } = await this.supabase.client
+        .from('class_b_sessions')
+        .select('id, status, duration_min')
+        .eq('instructor_id', instructorId)
+        .gte('scheduled_at', start)
+        .lte('scheduled_at', end);
 
-      const sessions = sessionsResult.data || [];
-      const completed = sessions.filter((s) => s.status === 'completed');
-      // Meta = todas las sesiones no canceladas del mes
-      const nonCancelled = sessions.filter((s) => s.status !== 'cancelled');
+      if (sessionsError) throw sessionsError;
+
+      const allSessions = sessions || [];
+      const completed = allSessions.filter((s) => s.status === 'completed');
+      const nonCancelled = allSessions.filter((s) => s.status !== 'cancelled');
 
       const completedHours = completed.reduce((sum, s) => sum + (s.duration_min || 45) / 60, 0);
       const targetHours = nonCancelled.reduce((sum, s) => sum + (s.duration_min || 45) / 60, 0);
@@ -175,11 +126,7 @@ export class InstructorHorasFacade {
       const projectedHours =
         dayOfMonth > 0 ? Math.round((completedHours / dayOfMonth) * daysInMonth * 10) / 10 : 0;
 
-      const amountPerHour = paymentResult.data?.amount_per_hour ?? AMOUNT_PER_HOUR_DEFAULT;
-      this._amountPerHour.set(amountPerHour);
-
       this._monthlyTarget.set({
-        totalAmount: Math.round(completedHours * amountPerHour),
         completedHours: Math.round(completedHours * 10) / 10,
         targetHours: Math.round(targetHours * 10) / 10,
         projectedHours,
@@ -211,7 +158,6 @@ export class InstructorHorasFacade {
 
       if (error) throw error;
 
-      const amountPerHour = this._amountPerHour();
       const byDate = new Map<string, { quantity: number; totalMin: number }>();
       for (const row of data || []) {
         const dateKey = (row.scheduled_at as string).split('T')[0];
@@ -229,7 +175,6 @@ export class InstructorHorasFacade {
           categoryLabel: 'Clase Práctica',
           quantity: info.quantity,
           hours,
-          amount: Math.round(hours * amountPerHour),
         };
       });
 

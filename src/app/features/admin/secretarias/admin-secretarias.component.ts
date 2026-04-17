@@ -48,30 +48,36 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
         />
       </div>
 
-      <!-- ── KPI Cards: Densidad Inteligente (2 col en móvil, 3 en desktop) ── -->
-      <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-        <app-kpi-card-variant
-          label="Total Secretarias"
-          [value]="facade.totalSecretarias()"
-          icon="users"
-          [loading]="facade.isLoading()"
-          data-llm-description="Total de secretarias registradas"
-        />
-        <app-kpi-card-variant
-          label="Activas"
-          [value]="facade.activas()"
-          icon="check-circle"
-          color="success"
-          [loading]="facade.isLoading()"
-          data-llm-description="Secretarias activas"
-        />
-        <app-kpi-card-variant
-          label="Inactivas"
-          [value]="facade.inactivas()"
-          icon="user-x"
-          [loading]="facade.isLoading()"
-          data-llm-description="Secretarias inactivas"
-        />
+      <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
+      <div class="bento-grid mb-6">
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Total Secretarias"
+            [value]="facade.totalSecretarias()"
+            icon="users"
+            [loading]="facade.isLoading()"
+            data-llm-description="Total de secretarias registradas"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Activas"
+            [value]="facade.activas()"
+            icon="check-circle"
+            color="success"
+            [loading]="facade.isLoading()"
+            data-llm-description="Secretarias activas"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Inactivas"
+            [value]="facade.inactivas()"
+            icon="user-x"
+            [loading]="facade.isLoading()"
+            data-llm-description="Secretarias inactivas"
+          />
+        </div>
       </div>
 
       <!-- ── Search + Filters ───────────────────────────────────────────────── -->

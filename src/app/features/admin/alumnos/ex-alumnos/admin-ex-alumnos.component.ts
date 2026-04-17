@@ -15,13 +15,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AdminStatsPanelComponent } from './components/stats/admin-ex-alumnos-stats.component';
-import {
-  AdminExAlumnosCommentsComponent,
-} from './components/comments/admin-ex-alumnos-comments.component';
-import type {
-  SectionHeroAction,
-  SectionHeroChip,
-} from '@core/models/ui/section-hero.model';
+import { AdminExAlumnosCommentsComponent } from './components/comments/admin-ex-alumnos-comments.component';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-admin-ex-alumnos',
@@ -51,96 +46,116 @@ import type {
 
       <!-- ── Bento Grid ── -->
       <div class="bento-grid">
-        <!-- KPIs Row: Direct children of bento-grid with bento-square class -->
-        <app-kpi-card-variant
-          class="bento-square"
-          label="TOTAL EGRESADOS"
-          [value]="facade.totalEgresados()"
-          icon="graduation-cap"
-          [loading]="facade.isLoading()"
-        />
-        <app-kpi-card-variant
-          class="bento-square"
-          label="CLASE B"
-          [value]="facade.egresadosClaseB()"
-          icon="car"
-          [loading]="facade.isLoading()"
-        />
-        <app-kpi-card-variant
-          class="bento-square"
-          label="PROFESIONAL"
-          [value]="facade.egresadosProfesional()"
-          icon="award"
-          color="success"
-          [loading]="facade.isLoading()"
-        />
-        <app-kpi-card-variant
-          class="bento-square"
-          label="DEUDA PENDIENTE"
-          [value]="facade.conAbonoPendiente()"
-          icon="circle-alert"
-          color="warning"
-          [accent]="true"
-          [loading]="facade.isLoading()"
-        />
+        <!-- KPIs Row -->
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="TOTAL EGRESADOS"
+            [value]="facade.totalEgresados()"
+            icon="graduation-cap"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="CLASE B"
+            [value]="facade.egresadosClaseB()"
+            icon="car"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="PROFESIONAL"
+            [value]="facade.egresadosProfesional()"
+            icon="award"
+            color="success"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="DEUDA PENDIENTE"
+            [value]="facade.conAbonoPendiente()"
+            icon="circle-alert"
+            color="warning"
+            [accent]="true"
+            [loading]="facade.isLoading()"
+          />
+        </div>
 
         <!-- Archivo Histórico (Main Area) -->
         <div class="bento-card bento-hero overflow-hidden !p-0 bg-bg-surface flex flex-col h-full">
           <!-- Header for Table Card -->
-          <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/20">
+          <div
+            class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/20"
+          >
             <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand">
+              <div
+                class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"
+              >
                 <app-icon name="archive" [size]="18" />
               </div>
               <h2 class="text-base font-bold text-text-primary m-0">Registro Histórico</h2>
             </div>
-            
+
             <div class="flex items-center gap-2">
-               <!-- Filtros compactos -->
-               <div class="hidden lg:flex items-center gap-2">
-                  <div class="filter-group">
-                    <app-icon name="calendar" [size]="12" class="text-text-muted" />
-                    <select class="filter-select" [ngModel]="filtroAnio()" (ngModelChange)="filtroAnio.set($event)">
-                      <option value="">Años</option>
-                      @for (year of availableYears(); track year) { <option [value]="year">{{ year }}</option> }
-                    </select>
-                  </div>
-                  <div class="filter-group">
-                    <app-icon name="award" [size]="12" class="text-text-muted" />
-                    <select class="filter-select" [ngModel]="filtroLicencia()" (ngModelChange)="filtroLicencia.set($event)">
-                      <option value="">Licencia</option>
-                      @for (lic of availableLicencias(); track lic) { <option [value]="lic">{{ lic }}</option> }
-                    </select>
-                  </div>
-               </div>
-               <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
-               <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
-               <button 
-                 type="button"
-                 class="p-2 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors flex items-center justify-center"
-                 (click)="clearFilters()"
-                 pTooltip="Limpiar Filtros"
-                 aria-label="Limpiar todos los filtros"
-               >
-                 <app-icon name="filter-x" [size]="16" />
-               </button>
+              <!-- Filtros compactos -->
+              <div class="hidden lg:flex items-center gap-2">
+                <div class="filter-group">
+                  <app-icon name="calendar" [size]="12" class="text-text-muted" />
+                  <select
+                    class="filter-select"
+                    [ngModel]="filtroAnio()"
+                    (ngModelChange)="filtroAnio.set($event)"
+                  >
+                    <option value="">Años</option>
+                    @for (year of availableYears(); track year) {
+                      <option [value]="year">{{ year }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="filter-group">
+                  <app-icon name="award" [size]="12" class="text-text-muted" />
+                  <select
+                    class="filter-select"
+                    [ngModel]="filtroLicencia()"
+                    (ngModelChange)="filtroLicencia.set($event)"
+                  >
+                    <option value="">Licencia</option>
+                    @for (lic of availableLicencias(); track lic) {
+                      <option [value]="lic">{{ lic }}</option>
+                    }
+                  </select>
+                </div>
+              </div>
+              <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
+              <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
+              <button
+                type="button"
+                class="p-2 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors flex items-center justify-center"
+                (click)="clearFilters()"
+                pTooltip="Limpiar Filtros"
+                aria-label="Limpiar todos los filtros"
+              >
+                <app-icon name="filter-x" [size]="16" />
+              </button>
             </div>
           </div>
 
           <!-- Búsqueda -->
           <div class="px-5 py-4 border-b border-border-subtle/50 bg-bg-surface/30">
-             <div class="relative w-full max-w-md">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
-                  <app-icon name="search" [size]="14" />
-                </span>
-                <input
-                  type="text"
-                  class="search-input"
-                  placeholder="Buscar por Nombre o RUT..."
-                  [ngModel]="searchTerm()"
-                  (ngModelChange)="searchTerm.set($event)"
-                />
-             </div>
+            <div class="relative w-full max-w-md">
+              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
+                <app-icon name="search" [size]="14" />
+              </span>
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Buscar por Nombre o RUT..."
+                [ngModel]="searchTerm()"
+                (ngModelChange)="searchTerm.set($event)"
+              />
+            </div>
           </div>
 
           <!-- Tabla -->
@@ -157,12 +172,20 @@ import type {
               </thead>
               <tbody class="divide-y divide-border-subtle">
                 @if (facade.isLoading()) {
-                  @for (_ of [1,2,3,4,5]; track $index) {
+                  @for (_ of [1, 2, 3, 4, 5]; track $index) {
                     <tr>
-                      <td class="py-4 px-5"><app-skeleton-block variant="text" width="160px" height="12px" /></td>
-                      <td class="py-4 px-5"><app-skeleton-block variant="rect" width="60px" height="24px" /></td>
-                      <td class="py-4 px-5"><app-skeleton-block variant="text" width="100px" height="12px" /></td>
-                      <td class="py-4 px-5"><app-skeleton-block variant="rect" width="80px" height="24px" /></td>
+                      <td class="py-4 px-5">
+                        <app-skeleton-block variant="text" width="160px" height="12px" />
+                      </td>
+                      <td class="py-4 px-5">
+                        <app-skeleton-block variant="rect" width="60px" height="24px" />
+                      </td>
+                      <td class="py-4 px-5">
+                        <app-skeleton-block variant="text" width="100px" height="12px" />
+                      </td>
+                      <td class="py-4 px-5">
+                        <app-skeleton-block variant="rect" width="80px" height="24px" />
+                      </td>
                       <td></td>
                     </tr>
                   }
@@ -189,24 +212,31 @@ import type {
                       <td class="py-4 px-5">
                         @if (egresado.saldoPendiente > 0) {
                           <span class="status-chip status-chip--warn">
-                             Debe {{ egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0' }}
+                            Debe
+                            {{ egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0' }}
                           </span>
                         } @else {
                           <span class="status-chip status-chip--success">
-                             <app-icon name="check" [size]="10" class="mr-1" /> Al día
+                            <app-icon name="check" [size]="10" class="mr-1" /> Al día
                           </span>
                         }
                       </td>
                       <td class="py-4 px-5 text-right">
-                         <app-icon name="chevron-right" [size]="16" class="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <app-icon
+                          name="chevron-right"
+                          [size]="16"
+                          class="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                        />
                       </td>
                     </tr>
                   } @empty {
                     <tr>
                       <td colspan="5" class="py-20 text-center">
                         <div class="flex flex-col items-center gap-3 opacity-30">
-                           <app-icon name="search-x" [size]="48" />
-                           <p class="text-sm font-medium">No se encontraron egresados con estos criterios</p>
+                          <app-icon name="search-x" [size]="48" />
+                          <p class="text-sm font-medium">
+                            No se encontraron egresados con estos criterios
+                          </p>
                         </div>
                       </td>
                     </tr>
@@ -229,10 +259,10 @@ import type {
         />
 
         <!-- Comentarios y Feedback (Mitad derecha) -->
-        <app-admin-ex-alumnos-comments 
-          class="bento-wide" 
-          [comentarios]="facade.surveys()" 
-          [avgRate]="facade.avgSatisfaction()" 
+        <app-admin-ex-alumnos-comments
+          class="bento-wide"
+          [comentarios]="facade.surveys()"
+          [avgRate]="facade.avgSatisfaction()"
         />
       </div>
     </div>
@@ -308,8 +338,16 @@ import type {
       background: var(--bg-subtle);
       border: 1px solid var(--border-subtle);
     }
-    .inas-badge[data-licencia*="B"] { color: var(--color-primary); background: var(--color-primary-tint); border-color: var(--color-primary); }
-    .inas-badge[data-licencia*="A"] { color: var(--state-warning); background: var(--state-warning-bg); border-color: var(--state-warning-border); }
+    .inas-badge[data-licencia*='B'] {
+      color: var(--color-primary);
+      background: var(--color-primary-tint);
+      border-color: var(--color-primary);
+    }
+    .inas-badge[data-licencia*='A'] {
+      color: var(--state-warning);
+      background: var(--state-warning-bg);
+      border-color: var(--state-warning-border);
+    }
 
     .status-chip {
       display: inline-flex;
@@ -319,8 +357,16 @@ import type {
       font-size: 11px;
       font-weight: 700;
     }
-    .status-chip--warn { color: var(--state-warning); background: var(--state-warning-bg); border: 1px solid var(--state-warning-border); }
-    .status-chip--success { color: var(--state-success); background: var(--state-success-bg); border: 1px solid var(--state-success-border); }
+    .status-chip--warn {
+      color: var(--state-warning);
+      background: var(--state-warning-bg);
+      border: 1px solid var(--state-warning-border);
+    }
+    .status-chip--success {
+      color: var(--state-success);
+      background: var(--state-success-bg);
+      border: 1px solid var(--state-success-border);
+    }
   `,
 })
 export class AdminExAlumnosComponent implements OnInit {
@@ -376,14 +422,10 @@ export class AdminExAlumnosComponent implements OnInit {
       );
     }
     if (this.filtroAnio()) {
-      results = results.filter(
-        (e: EgresadoTableRow) => String(e.anio) === this.filtroAnio(),
-      );
+      results = results.filter((e: EgresadoTableRow) => String(e.anio) === this.filtroAnio());
     }
     if (this.filtroLicencia()) {
-      results = results.filter(
-        (e: EgresadoTableRow) => e.licencia === this.filtroLicencia(),
-      );
+      results = results.filter((e: EgresadoTableRow) => e.licencia === this.filtroLicencia());
     }
     return results;
   });
@@ -394,17 +436,11 @@ export class AdminExAlumnosComponent implements OnInit {
       .egresados()
       .map((e: EgresadoTableRow) => e.anio)
       .filter((y): y is number => y !== null);
-    return [...new Set(years)]
-      .sort((a: number, b: number) => Number(b) - Number(a))
-      .map(String);
+    return [...new Set(years)].sort((a: number, b: number) => Number(b) - Number(a)).map(String);
   });
 
   protected readonly availableLicencias = computed<string[]>(() =>
-    [
-      ...new Set(
-        this.facade.egresados().map((e: EgresadoTableRow) => e.licencia),
-      ),
-    ].sort(),
+    [...new Set(this.facade.egresados().map((e: EgresadoTableRow) => e.licencia))].sort(),
   );
 
   ngOnInit(): void {
@@ -418,9 +454,9 @@ export class AdminExAlumnosComponent implements OnInit {
   }
 
   protected clearFilters(): void {
-     this.searchTerm.set('');
-     this.filtroAnio.set('');
-     this.filtroLicencia.set('');
-     this.filtroEstado.set('');
+    this.searchTerm.set('');
+    this.filtroAnio.set('');
+    this.filtroLicencia.set('');
+    this.filtroEstado.set('');
   }
 }

@@ -303,11 +303,25 @@ async function handleLoadSchedule(supabase: any, body: any) {
 // de insertar. Retorna { success: true } o { success: false, conflictingSlots }.
 // ══════════════════════════════════════════════════════════════════════════════
 
+// Límite máximo de slots reservables por sesión.
+// Clase B tiene un máximo de 20 clases prácticas en el plan más extenso;
+// este techo previene ataques DoS que agoten la agenda de un instructor.
+const MAX_SLOT_HOLDS_PER_SESSION = 20;
+
 async function handleReserveSlots(supabase: any, body: any) {
   const { sessionToken, instructorId, slotIds } = body;
 
   if (!sessionToken || !instructorId || !slotIds?.length) {
     return errorResponse('sessionToken, instructorId and slotIds are required');
+  }
+
+  // Guard DoS: rechazar si el cliente envía más slots de los que el curso permite.
+  // OWASP A04 / CWE-400 — evita que un atacante bloquee toda la agenda con un solo request.
+  if (slotIds.length > MAX_SLOT_HOLDS_PER_SESSION) {
+    return errorResponse(
+      `Too many slots requested. Maximum allowed per session is ${MAX_SLOT_HOLDS_PER_SESSION}.`,
+      400,
+    );
   }
 
   // 1. Limpiar holds expirados de todas las sesiones y los anteriores de esta sesión
@@ -569,6 +583,9 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
         psych_test_answers: psychTestAnswers,
         psych_test_status: 'completed',
         psych_test_completed_at: new Date().toISOString(),
+        birth_date: personalData.birthDate ?? null,
+        gender: personalData.gender ?? null,
+        address: personalData.address ?? null,
         // psych_test_result: null — el psicólogo lo actualiza manualmente desde el admin.
       })
       .select('id')
@@ -605,15 +622,7 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleInitiatePayment(supabase: any, body: any) {
-  const {
-    branchId,
-    personalData,
-    paymentMode,
-    instructorId,
-    selectedSlotIds,
-    sessionToken,
-    amount,
-  } = body;
+  const { branchId, personalData, paymentMode, instructorId, selectedSlotIds, sessionToken } = body;
 
   if (
     !branchId ||
@@ -682,6 +691,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
 
     const courseBasePrice = course.base_price ?? 0;
     const isPartial = paymentMode === 'partial';
+    const serverAmount = isPartial ? Math.ceil(courseBasePrice / 2) : courseBasePrice;
 
     // 3. Create enrollment as pending_payment (sin número — se asigna al confirmar)
     const { data: enrollment, error: enrollError } = await supabase
@@ -747,6 +757,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
           selectedSlotIds,
           amount,
           carnetStoragePath: body.carnetStoragePath ?? null,
+          amount: serverAmount,
         },
         enrollment_id: enrollment.id,
       },
@@ -758,7 +769,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
     const returnUrl = `${appUrl}/inscripcion/retorno`;
     const buyOrder = `PAY-${enrollment.id}`;
 
-    const wpResponse = await webpayCreate(buyOrder, sessionToken, amount ?? 0, returnUrl);
+    const wpResponse = await webpayCreate(buyOrder, sessionToken, serverAmount, returnUrl);
 
     // Guardar transbank_token para poder hacer el commit en confirm-payment
     await supabase
@@ -989,6 +1000,15 @@ async function moveCarnetPhoto(
   tempPath: string,
   enrollmentId: number,
 ): Promise<void> {
+  // Security: validate tempPath is confined to the expected upload prefix.
+  // Prevents an attacker from supplying an arbitrary path (e.g. another student's
+  // contract) and causing service_role to move/delete it (OWASP A01 - Path Traversal).
+  const ALLOWED_PREFIX = 'public-uploads/carnet/';
+  if (!tempPath.startsWith(ALLOWED_PREFIX) || tempPath.includes('..')) {
+    console.error(`moveCarnetPhoto: rejected invalid tempPath: "${tempPath}"`);
+    return;
+  }
+
   const finalPath = `students/${enrollmentId}/id_photo`;
 
   const { error: moveError } = await supabase.storage.from('documents').move(tempPath, finalPath);
@@ -998,16 +1018,13 @@ async function moveCarnetPhoto(
     return;
   }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from('documents').getPublicUrl(finalPath);
-
+  // Bucket privado: guardar path relativo en DB (no URL pública).
   const { error: dbError } = await supabase.from('student_documents').upsert(
     {
       enrollment_id: enrollmentId,
       type: 'id_photo',
       file_name: 'foto-carnet.jpg',
-      storage_url: publicUrl,
+      storage_url: finalPath,
       status: 'approved',
       uploaded_at: new Date().toISOString(),
     },

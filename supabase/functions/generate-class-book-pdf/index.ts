@@ -210,22 +210,25 @@ Deno.serve(async (req: Request) => {
       return jsonRes({ error: `Upload failed: ${uploadError.message}` }, 500);
     }
 
-    const { data: urlData } = supabase.storage.from('documents').getPublicUrl(storagePath);
-
-    // ── Update class_book record ──
+    // ── Update class_book record — guardamos el path relativo (bucket privado) ──
     await supabase.from('class_book').upsert(
       {
         promotion_course_id,
         branch_id: branch?.id ?? null,
         period: promo.code,
-        pdf_url: urlData.publicUrl,
+        pdf_url: storagePath,
         generated_at: new Date().toISOString(),
         status: 'active',
       },
       { onConflict: 'promotion_course_id' },
     );
 
-    return jsonRes({ pdfUrl: urlData.publicUrl });
+    // Generar signed URL (TTL 1h) para visualización inmediata en el cliente.
+    const { data: signedData } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+
+    return jsonRes({ pdfUrl: signedData?.signedUrl ?? null, pdfPath: storagePath });
   } catch (err) {
     console.error('generate-class-book-pdf error:', err);
     return jsonRes({ error: err instanceof Error ? err.message : 'Internal error' }, 500);
