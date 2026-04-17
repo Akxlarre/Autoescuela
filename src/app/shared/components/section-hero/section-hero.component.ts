@@ -124,7 +124,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         <div class="flex flex-col gap-2">
           @if (contextLine()) {
             <!-- section-eyebrow hereda text-secondary → rgba(255,255,255,0.78) aquí -->
-            <p class="section-eyebrow m-0 break-words">{{ contextLine() }}</p>
+            <p class="section-eyebrow m-0 wrap-break-word">{{ contextLine() }}</p>
           }
           <!-- Sin text-text-primary: hereda color blanco de .surface-hero via cascade. -->
           <h1

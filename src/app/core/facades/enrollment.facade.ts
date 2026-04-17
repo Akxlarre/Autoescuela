@@ -1055,6 +1055,17 @@ export class EnrollmentFacade {
         .eq('enrollment_id', draft.enrollmentId)
         .eq('status', 'reserved');
 
+      // Crear cuenta Auth del alumno y enviarle correo de invitación.
+      // Fire-and-forget: no bloquea la confirmación si el correo falla.
+      const pd = this._personalData();
+      if (draft.userId && pd?.email) {
+        this.supabase.client.functions
+          .invoke('activate-student-account', {
+            body: { userId: draft.userId, email: pd.email },
+          })
+          .catch((err) => console.error('activate-student-account error:', err));
+      }
+
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
 

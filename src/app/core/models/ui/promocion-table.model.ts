@@ -74,7 +74,9 @@ export interface PromocionAlumno {
   enrollmentStatus: string;
 }
 
-/** Payload para editar promoción (nombre no editable, se auto-genera). */
+/** Payload para editar promoción. */
 export interface EditarPromocionPayload {
+  name: string;
+  code: string;
   status: PromocionStatus;
 }

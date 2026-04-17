@@ -34,7 +34,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   template: `
     <nav
       #sidebarEl
-      class="flex h-full min-h-0 w-[240px] flex-col border-r border-border-subtle bg-surface py-4 shadow-[var(--shadow-layout-sidebar)]"
+      class="flex h-full min-h-0 w-60 flex-col border-r border-border-subtle bg-surface py-4 shadow-(--shadow-layout-sidebar)"
       aria-label="Navegación principal"
     >
       <!-- Brand -->
@@ -57,7 +57,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                 [routerLink]="item.routerLink"
                 routerLinkActive="!bg-brand-muted !text-brand"
                 [routerLinkActiveOptions]="{ exact: true }"
-                class="flex items-center gap-3 rounded-md px-4 py-2.5 text-sm font-medium text-text-secondary no-underline transition-[var(--transition-color)] hover:bg-brand-muted hover:text-brand"
+                class="flex items-center gap-3 rounded-md px-4 py-2.5 text-sm font-medium text-text-secondary no-underline transition-(--transition-color) hover:bg-brand-muted hover:text-brand"
                 [attr.aria-label]="item.label"
                 [attr.data-llm-nav]="item.routerLink"
                 (click)="layout.closeSidebar()"
