@@ -223,6 +223,15 @@
             Subir Contrato Firmado
           </label>
 
+          @if (uploadError()) {
+            <div
+              class="flex items-center gap-2 px-3 py-2 rounded-lg bg-state-error-bg border border-state-error-border text-state-error text-xs"
+            >
+              <app-icon name="circle-alert" [size]="14" class="shrink-0" />
+              {{ uploadError() }}
+            </div>
+          }
+
           @if (!data().signedContract) {
             <label
               class="block cursor-pointer group"

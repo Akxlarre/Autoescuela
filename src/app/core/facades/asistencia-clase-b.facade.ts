@@ -3,24 +3,21 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { todayIso } from '@core/utils/date.utils';
 import type {
   AsistenciaClaseBKpis,
   AlertaFaltaConsecutiva,
   ClasePracticaRow,
   ClasePracticaStatus,
   ClaseTeoricoRow,
+  FinishClassPayload,
   InstructorOption,
   NuevaClaseTeoricaPayload,
   TeoriaAlumnoAsistencia,
   TeoriaAlumnoElegible,
   TeoriaAsistenciaStatus,
+  VehicleOption,
 } from '@core/models/ui/asistencia-clase-b.model';
-
-/** Returns today's date as YYYY-MM-DD string in local time. */
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 /** Builds start-of-day and end-of-day ISO strings for a given YYYY-MM-DD. */
 function dayRange(iso: string): { start: string; end: string } {
@@ -76,6 +73,10 @@ export class AsistenciaClaseBFacade {
   private readonly _teoriaAlumnos = signal<TeoriaAlumnoAsistencia[]>([]);
   private readonly _isLoadingTeoriaAlumnos = signal(false);
 
+  // Practical class drawer state
+  private readonly _selectedPractica = signal<ClasePracticaRow | null>(null);
+  private readonly _vehiclesPorSede = signal<VehicleOption[]>([]);
+
   // New theory session drawer state
   private readonly _alumnosElegibles = signal<TeoriaAlumnoElegible[]>([]);
   private readonly _isLoadingElegibles = signal(false);
@@ -97,6 +98,8 @@ export class AsistenciaClaseBFacade {
   readonly isLoadingTeoriaAlumnos = this._isLoadingTeoriaAlumnos.asReadonly();
   readonly alumnosElegibles = this._alumnosElegibles.asReadonly();
   readonly isLoadingElegibles = this._isLoadingElegibles.asReadonly();
+  readonly selectedPractica = this._selectedPractica.asReadonly();
+  readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
 
   /** Lista deduplicada de instructores para el filtro de la tabla de prácticas. */
   readonly instructores = computed<InstructorOption[]>(() => {
@@ -149,7 +152,6 @@ export class AsistenciaClaseBFacade {
         const u = row.students?.users;
         return {
           studentId: row.student_id,
-          enrollmentId: row.student_id, // used as key for the drawer
           alumnoName: `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim(),
           email: u?.email ?? '',
           status: mapTeoriaStatus(row.status),
@@ -199,18 +201,18 @@ export class AsistenciaClaseBFacade {
     }
   }
 
-  /** Guarda la asistencia de todos los alumnos de una clase teórica. */
+  /** Guarda la asistencia de todos los alumnos de una clase teórica. Retorna true si tuvo éxito. */
   async saveTeoriaAsistencia(
     claseId: number,
-    registros: { enrollmentId: number; status: TeoriaAsistenciaStatus; justificacion?: string }[],
-  ): Promise<void> {
+    registros: { studentId: number; status: TeoriaAsistenciaStatus; justificacion?: string }[],
+  ): Promise<boolean> {
     this._isSaving.set(true);
     try {
       const recordedBy = this.authFacade.currentUser()?.dbId ?? null;
 
       const upserts = registros.map((r) => ({
         theory_session_b_id: claseId,
-        student_id: r.enrollmentId, // enrollmentId is studentId in theory context
+        student_id: r.studentId,
         status: mapTeoriaStatusToDb(r.status),
         justification: r.justificacion ?? null,
         recorded_by: recordedBy,
@@ -224,15 +226,17 @@ export class AsistenciaClaseBFacade {
 
       this._teoriaAlumnos.update((rows) =>
         rows.map((r) => {
-          const reg = registros.find((x) => x.enrollmentId === r.enrollmentId);
+          const reg = registros.find((x) => x.studentId === r.studentId);
           return reg
             ? { ...r, status: reg.status, justificacion: reg.justificacion ?? r.justificacion }
             : r;
         }),
       );
       this.toast.success('Asistencia registrada');
+      return true;
     } catch {
       this.toast.error('Error al registrar la asistencia');
+      return false;
     } finally {
       this._isSaving.set(false);
     }
@@ -362,7 +366,6 @@ export class AsistenciaClaseBFacade {
       this._alertas.update((rows) =>
         rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: false } : r)),
       );
-      this._kpis.update((k) => (k ? { ...k, horariosEliminados: k.horariosEliminados + 1 } : k));
       this.toast.success('Horario eliminado');
     } catch {
       this.toast.error('Error al eliminar el horario');
@@ -385,9 +388,6 @@ export class AsistenciaClaseBFacade {
 
       this._alertas.update((rows) =>
         rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, horarioActivo: true } : r)),
-      );
-      this._kpis.update((k) =>
-        k ? { ...k, horariosEliminados: Math.max(0, k.horariosEliminados - 1) } : k,
       );
       this.toast.success('Horario reactivado');
     } catch {
@@ -623,8 +623,12 @@ export class AsistenciaClaseBFacade {
         enrollment_id,
         scheduled_at,
         start_time,
+        end_time,
         status,
         instructor_id,
+        class_number,
+        km_start,
+        vehicles(id, license_plate, brand, model, current_km),
         instructors!class_b_sessions_instructor_id_fkey(
           id,
           users!inner(first_names, paternal_last_name)
@@ -632,6 +636,7 @@ export class AsistenciaClaseBFacade {
         enrollments(
           id,
           branch_id,
+          branches(name),
           students!inner(
             id,
             users!inner(first_names, paternal_last_name)
@@ -673,21 +678,177 @@ export class AsistenciaClaseBFacade {
 
         const attendance = row.class_b_practice_attendance?.[0];
         const sessionBranchId = row.enrollments?.branch_id ?? 0;
+        const branchName =
+          row.enrollments?.branches?.name ?? branchMap.get(sessionBranchId) ?? 'Sin sede';
 
         return {
           id: row.id,
           enrollmentId: row.enrollment_id,
-          horaInicio: toHHmm(row.start_time ?? row.scheduled_at),
+          studentId: row.enrollments?.students?.id ?? null,
+          classNumber: row.class_number ?? null,
+          horaInicio: toHHmm(row.scheduled_at),
+          horaInicioReal: row.start_time ? toHHmm(row.start_time) : null,
+          horaFinReal: row.end_time ? toHHmm(row.end_time) : null,
           instructorId: row.instructor_id,
           instructorName: instName,
           alumnoName,
           status: mapPracticaStatus(row.status, attendance?.status),
           justificacion: attendance?.justification ?? null,
           branchId: sessionBranchId,
-          branchName: branchMap.get(sessionBranchId) ?? 'Sin sede',
+          branchName,
           scheduledAt: row.scheduled_at ?? '',
+          kmStart: row.km_start ?? null,
+          vehiclePlate: row.vehicles?.license_plate ?? null,
+          vehicleBrand: row.vehicles?.brand ?? null,
+          vehicleModel: row.vehicles?.model ?? null,
+          vehicleId: row.vehicles?.id ?? null,
+          vehicleCurrentKm: row.vehicles?.current_km ?? null,
         };
       });
+  }
+
+  /** Carga los vehículos disponibles de una sede para el selector del drawer. */
+  async loadVehiclesByBranch(branchId: number): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('vehicles')
+      .select('id, license_plate, brand, model, current_km')
+      .eq('branch_id', branchId)
+      .order('license_plate', { ascending: true });
+
+    if (error) return;
+
+    this._vehiclesPorSede.set(
+      (data ?? []).map((v: any) => ({
+        id: v.id,
+        plate: v.license_plate,
+        brand: v.brand ?? null,
+        model: v.model ?? null,
+        currentKm: v.current_km ?? null,
+      })),
+    );
+  }
+
+  /** Establece la clase práctica seleccionada para los drawers de inicio/finalización. */
+  selectPractica(row: ClasePracticaRow | null): void {
+    this._selectedPractica.set(row);
+  }
+
+  /** Inicia una clase práctica (establece status in_progress + km_start, opcionalmente cambia el vehículo). */
+  async startClass(sessionId: number, kmStart: number, vehicleId?: number): Promise<void> {
+    this._isSaving.set(true);
+    try {
+      const startTime = new Date().toTimeString().split(' ')[0]; // "HH:MM:SS"
+      const horaInicioReal = startTime.slice(0, 5); // "HH:MM"
+      const payload: Record<string, unknown> = {
+        status: 'in_progress',
+        start_time: startTime,
+        km_start: kmStart,
+      };
+      if (vehicleId !== undefined) payload['vehicle_id'] = vehicleId;
+
+      const { error } = await this.supabase.client
+        .from('class_b_sessions')
+        .update(payload)
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      this._clasesPracticas.update((rows) =>
+        rows.map((r) =>
+          r.id === sessionId ? { ...r, status: 'en_curso' as const, kmStart, horaInicioReal } : r,
+        ),
+      );
+      // Sync selectedPractica so the finalize drawer has fresh data
+      const current = this._selectedPractica();
+      if (current?.id === sessionId) {
+        this._selectedPractica.set({
+          ...current,
+          status: 'en_curso',
+          kmStart,
+          horaInicioReal,
+          ...(vehicleId !== undefined ? { vehicleId } : {}),
+        });
+      }
+      this.toast.success('Clase iniciada');
+    } catch {
+      this.toast.error('Error al iniciar la clase');
+      throw new Error('startClass failed');
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /** Finaliza una clase práctica: km_end + grade + checklist + asistencia + firmas opcionales. */
+  async finishClass(payload: FinishClassPayload): Promise<void> {
+    this._isSaving.set(true);
+    try {
+      const recordedBy = this.authFacade.currentUser()?.dbId ?? null;
+
+      // 1. Update session
+      const { error } = await this.supabase.client
+        .from('class_b_sessions')
+        .update({
+          status: 'completed',
+          end_time: new Date().toTimeString().split(' ')[0],
+          km_end: payload.kmEnd,
+          completed_at: new Date().toISOString(),
+          evaluation_grade: payload.grade,
+          notes: payload.observations ?? null,
+          evaluation_checklist: payload.checklist ?? null,
+          signature_timestamp:
+            payload.studentSignature || payload.instructorSignature
+              ? new Date().toISOString()
+              : null,
+          student_signature: !!payload.studentSignature,
+          instructor_signature: !!payload.instructorSignature,
+        })
+        .eq('id', payload.sessionId);
+
+      if (error) throw error;
+
+      // 3. Update vehicle odometer (source of truth for next class's km_start)
+      const vehicleId = this._selectedPractica()?.vehicleId;
+      if (vehicleId) {
+        await this.supabase.client
+          .from('vehicles')
+          .update({ current_km: payload.kmEnd })
+          .eq('id', vehicleId);
+      }
+
+      // 4. Register practice attendance
+      if (payload.studentId) {
+        await this.supabase.client.from('class_b_practice_attendance').upsert(
+          {
+            class_b_session_id: payload.sessionId,
+            student_id: payload.studentId,
+            status: 'present',
+            recorded_by: recordedBy,
+          },
+          { onConflict: 'class_b_session_id,student_id' },
+        );
+      }
+
+      const finHHmm = new Date().toTimeString().slice(0, 5);
+      this._clasesPracticas.update((rows) =>
+        rows.map((r) =>
+          r.id === payload.sessionId
+            ? { ...r, status: 'presente' as const, horaFinReal: finHHmm }
+            : r,
+        ),
+      );
+      this.computeKpis(
+        this._clasesTeorias(),
+        this._clasesPracticas(),
+        this._alertas(),
+        this._selectedDate(),
+      );
+      this.toast.success('Clase finalizada', 'Evaluación y asistencia registradas.');
+    } catch {
+      this.toast.error('Error al finalizar la clase');
+      throw new Error('finishClass failed');
+    } finally {
+      this._isSaving.set(false);
+    }
   }
 
   /** Fetch consecutive absence alerts. */
@@ -802,16 +963,19 @@ export class AsistenciaClaseBFacade {
     const clasesConAlumno = practicas.filter((p) => p.alumnoName !== null).length;
 
     const tasaAsistencia = clasesConAlumno > 0 ? (presentes / clasesConAlumno) * 100 : 100;
-    const alumnosEnRiesgo = alertas.filter((a) => a.faltasConsecutivas >= 1).length;
-    const horariosEliminados = alertas.filter((a) => !a.horarioActivo).length;
+    const clasesEnCurso = practicas.filter((p) => p.status === 'en_curso').length;
+    const now = new Date().toISOString();
+    const pendientesPorIniciar = practicas.filter(
+      (p) => p.status === 'pendiente' && p.alumnoName !== null && p.scheduledAt < now,
+    ).length;
 
     this._kpis.set({
       tasaAsistencia: Math.round(tasaAsistencia * 10) / 10,
-      tasaAsistenciaTrend: 0, // Would require historical data comparison
+      tasaAsistenciaTrend: 0,
       inasistenciasHoy: ausentes,
       totalClasesHoy: totalClases,
-      alumnosEnRiesgo,
-      horariosEliminados,
+      clasesEnCurso,
+      pendientesPorIniciar,
     });
   }
 }

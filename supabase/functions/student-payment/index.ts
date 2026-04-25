@@ -513,13 +513,16 @@ async function handleConfirmPayment(supabase: any, body: any) {
     // 3. Crear class_b_sessions como 'scheduled' directamente (pago ya confirmado)
     // Se crean aquí y no en initiate-payment para evitar sesiones huérfanas si el
     // alumno abandona Transbank sin completar el pago.
-    const sessions = (snapshot.selectedSlotIds ?? []).map((slotId: string) => ({
+    // Segunda mitad del pago parcial → siempre clases 7-12.
+    const sortedSlotIds = [...(snapshot.selectedSlotIds ?? [])].sort();
+    const sessions = sortedSlotIds.map((slotId: string, i: number) => ({
       enrollment_id: attempt.enrollment_id,
       instructor_id: snapshot.instructorId,
       vehicle_id: snapshot.vehicleId ?? null,
       scheduled_at: slotId,
       duration_min: 45,
       status: 'scheduled',
+      class_number: i + 7,
     }));
 
     if (sessions.length > 0) {

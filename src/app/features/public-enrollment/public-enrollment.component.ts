@@ -317,7 +317,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
               @case ('schedule') {
                 <app-assignment-step
                   [data]="step2Data()"
-                  [loading]="facade.isLoading()"
+                  [loading]="facade.isLoading() || facade.isSubmitting()"
                   [hidePaymentMode]="true"
                   [stepNumber]="4"
                   (dataChange)="onAssignmentDataChange($event)"
@@ -346,6 +346,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                   [loading]="facade.isLoading()"
                   [stepNumber]="6"
                   [isPublic]="true"
+                  (dataChange)="onContractDataChange($event)"
                   (generateContract)="onGenerateContract()"
                   (next)="onContractNext()"
                   (back)="facade.goBack()"
@@ -831,10 +832,11 @@ export class PublicEnrollmentComponent {
     }
   }
 
-  onGenerateContract(): void {
+  async onGenerateContract(): Promise<void> {
     this._contractStatus.set('generating');
-    // TBD: llamar Edge Function para generar PDF de contrato
-    setTimeout(() => this._contractStatus.set('generated'), 1000);
+    const url = await this.facade.generateContractPreview();
+    this._contractPdfUrl.set(url);
+    this._contractStatus.set(url ? 'generated' : 'error');
   }
 
   /** Confirma contrato y avanza al paso de pago (no envía aún). */

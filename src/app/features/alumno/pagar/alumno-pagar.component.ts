@@ -387,7 +387,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                           : '1.5px solid var(--color-border)'
                       "
                       [style.opacity]="!selectable && !selected ? '0.35' : '1'"
-                      (click)="facade.toggleSlot(slot.id)"
+                      (click)="handleToggleSlot(slot.id)"
                       [attr.aria-pressed]="selected"
                       [attr.aria-label]="
                         slot.startTime + ' a ' + slot.endTime + (selected ? ' (seleccionado)' : '')
@@ -409,6 +409,51 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                       }
                     </button>
                   }
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Resumen de clases seleccionadas -->
+          @if (facade.selectedCount() > 0) {
+            <div class="card overflow-hidden">
+              <div
+                class="flex items-center justify-between px-4 py-2.5 border-b"
+                style="background: var(--bg-surface-elevated); border-color: var(--color-border)"
+              >
+                <span class="text-xs font-bold uppercase tracking-widest text-text-muted">
+                  Clases seleccionadas
+                </span>
+                <span
+                  class="text-xs font-black px-2 py-0.5 rounded-full"
+                  [style.background]="
+                    facade.selectionComplete()
+                      ? 'var(--color-success-muted)'
+                      : 'var(--color-warning-muted)'
+                  "
+                  [style.color]="
+                    facade.selectionComplete() ? 'var(--color-success)' : 'var(--color-warning)'
+                  "
+                >
+                  {{ facade.selectedCount() }} / {{ facade.requiredCount }}
+                </span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 p-3">
+                @for (slot of selectedSlotsDisplay(); track slot.label) {
+                  <div
+                    class="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                    style="background: var(--color-success-muted)"
+                  >
+                    <app-icon
+                      name="calendar-check"
+                      [size]="12"
+                      style="color: var(--color-success)"
+                      class="shrink-0"
+                    />
+                    <span class="text-xs font-medium" style="color: var(--color-success)">{{
+                      slot.label
+                    }}</span>
+                  </div>
                 }
               </div>
             </div>
@@ -598,6 +643,33 @@ export class AlumnoPagarComponent implements OnInit {
   }
 
   protected nextWeek(): void {
+    if (this.currentWeekIndex() < this.weeks().length - 1) {
+      this.currentWeekIndex.update((n) => n + 1);
+      this.selectedDayIndex.set(0);
+    }
+  }
+
+  /** Wrapper que llama al facade y avanza al siguiente día si se añadió un slot. */
+  protected handleToggleSlot(slotId: string): void {
+    const countBefore = this.facade.selectedCount();
+    this.facade.toggleSlot(slotId);
+    if (this.facade.selectedCount() > countBefore) {
+      setTimeout(() => this.advanceToNextAvailableDay(), 450);
+    }
+  }
+
+  private advanceToNextAvailableDay(): void {
+    const weekDays = this.currentWeekDays();
+    const grid = this.facade.scheduleGrid();
+    for (let i = this.selectedDayIndex() + 1; i < weekDays.length; i++) {
+      const hasAvailable = grid?.slots.some(
+        (s) => s.date === weekDays[i].date && s.status !== 'occupied',
+      );
+      if (hasAvailable) {
+        this.selectedDayIndex.set(i);
+        return;
+      }
+    }
     if (this.currentWeekIndex() < this.weeks().length - 1) {
       this.currentWeekIndex.update((n) => n + 1);
       this.selectedDayIndex.set(0);

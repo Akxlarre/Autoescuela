@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { calcAge } from '@core/utils/age.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -330,10 +331,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
                 highlights: ['contrato', 'email'],
               },
               {
-                text: 'El alumno puede comenzar sus clases teóricas desde hoy.',
-                highlights: ['clases teóricas'],
-              },
-              {
                 text: 'Las clases prácticas están agendadas según el horario acordado.',
                 highlights: ['clase práctica'],
               },
@@ -421,7 +418,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     }
 
     // Verificar si hay borradores pendientes antes de iniciar wizard limpio
-    const drafts = await this.enrollment.loadActiveDrafts();
+    const branch = this.activeBranchId();
+    const drafts = await this.enrollment.loadActiveDrafts(branch);
 
     if (drafts.length > 0) {
       this._viewMode.set('draft-list');
@@ -650,7 +648,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         }
       } else if (this.enrollment.contractAccepted()) {
         // Re-entry: contract already accepted in a prior session — skip upload
-        await this.enrollment.confirmEnrollment();
+        const number = await this.enrollment.confirmEnrollment();
+        if (number) this.enrollment.goToStep(6);
       }
     } finally {
       this._isSaving.set(false);
@@ -673,19 +672,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   }
 
   onDownloadContract(): void {
-    const url = this.enrollment.contractFileUrl();
-    if (url) window.open(url, '_blank');
+    void this.enrollment.openContractPdf();
   }
 
   // ── Utils ─────────────────────────────────────────────────────────────────
   private calcAge(birthDate: string): number {
-    if (!birthDate) return 25;
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
+    return calcAge(birthDate) ?? 25;
   }
 
   private paymentMethodLabel(method: string | null): string {

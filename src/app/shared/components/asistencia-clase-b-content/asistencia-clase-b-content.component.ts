@@ -3,6 +3,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { todayIso } from '@core/utils/date.utils';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type {
   AlertaFaltaConsecutiva,
@@ -12,11 +13,6 @@ import type {
   ClaseTeoricoRow,
   InstructorOption,
 } from '@core/models/ui/asistencia-clase-b.model';
-
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 type StatusFilter = ClasePracticaStatus | 'todos';
 
@@ -74,18 +70,19 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           [loading]="isLoading()"
         />
         <app-kpi-card-variant
-          label="Alumnos en Riesgo"
-          [value]="kpis()?.alumnosEnRiesgo ?? 0"
-          suffix=" alumnos"
-          icon="alert-triangle"
-          color="warning"
+          label="Clases en Curso"
+          [value]="kpis()?.clasesEnCurso ?? 0"
+          suffix=" en curso"
+          icon="play-circle"
+          color="success"
           [loading]="isLoading()"
         />
         <app-kpi-card-variant
-          label="Horarios Eliminados"
-          [value]="kpis()?.horariosEliminados ?? 0"
-          suffix=" esta semana"
-          icon="calendar-x"
+          label="Pendientes por Iniciar"
+          [value]="kpis()?.pendientesPorIniciar ?? 0"
+          suffix=" sin iniciar"
+          icon="clock-alert"
+          [color]="(kpis()?.pendientesPorIniciar ?? 0) > 0 ? 'warning' : 'default'"
           [loading]="isLoading()"
         />
       </div>
@@ -184,6 +181,275 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           }
         </section>
       }
+
+      <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
+      <section class="card p-5 flex flex-col gap-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <app-icon name="calendar-check" [size]="18" [style.color]="'var(--color-primary)'" />
+            <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Selector de fecha -->
+            <div class="flex items-center gap-1.5">
+              <app-icon name="calendar" [size]="14" [style.color]="'var(--text-muted)'" />
+              <input
+                type="date"
+                class="text-xs rounded-md border px-2 py-1.5 focus:outline-none"
+                [style.border-color]="'var(--border-subtle)'"
+                [style.background]="'var(--bg-surface)'"
+                [style.color]="'var(--text-secondary)'"
+                [value]="selectedDate()"
+                data-llm-description="Selector de fecha para clases prácticas"
+                (change)="onDateChange($event)"
+              />
+              @if (isFutureDate()) {
+                <span
+                  class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style="background: color-mix(in srgb, var(--state-warning) 12%, transparent); color: var(--state-warning)"
+                >
+                  Solo lectura
+                </span>
+              }
+            </div>
+            <button
+              class="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
+              data-llm-action="export-excel"
+              (click)="exportExcel.emit()"
+            >
+              <app-icon name="download" [size]="14" />
+              Exportar
+            </button>
+            <button
+              class="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+              data-llm-action="refresh-attendance"
+              (click)="refreshRequested.emit()"
+            >
+              <app-icon name="refresh-cw" [size]="14" />
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="flex flex-wrap items-center gap-2">
+          @for (f of statusFilters; track f.value) {
+            <button
+              class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+              [style.background]="
+                activeStatusFilter() === f.value ? 'var(--color-primary)' : 'transparent'
+              "
+              [style.color]="activeStatusFilter() === f.value ? '#fff' : 'var(--text-secondary)'"
+              [style.border-color]="
+                activeStatusFilter() === f.value ? 'var(--color-primary)' : 'var(--border-subtle)'
+              "
+              (click)="activeStatusFilter.set(f.value)"
+            >
+              {{ f.label }}
+              @if (countByStatus(f.value) > 0) {
+                <span class="ml-1 opacity-80">({{ countByStatus(f.value) }})</span>
+              }
+            </button>
+          }
+
+          <!-- Filtro instructor -->
+          <div class="ml-auto">
+            <select
+              class="text-xs rounded-md border px-2.5 py-1.5 bg-surface text-secondary focus:outline-none cursor-pointer"
+              [style.border-color]="'var(--border-subtle)'"
+              [value]="selectedInstructorId() ?? ''"
+              (change)="onInstructorFilterChange($event)"
+            >
+              <option value="" class="cursor-pointer">Todos los instructores</option>
+              @for (inst of instructores(); track inst.id) {
+                <option [value]="inst.id" class="cursor-pointer">{{ inst.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        @if (isLoading()) {
+          <div class="flex flex-col gap-2">
+            @for (i of [1, 2, 3, 4, 5]; track i) {
+              <app-skeleton-block variant="rect" width="100%" height="44px" />
+            }
+          </div>
+        } @else if (filteredPracticas().length === 0) {
+          <p class="text-sm text-secondary text-center py-6">
+            No hay registros que coincidan con los filtros seleccionados.
+          </p>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
+                    Agendada
+                  </th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                    Inicio
+                  </th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">Fin</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    Instructor
+                  </th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Alumno</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Vehículo</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Estado</th>
+                  <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of filteredPracticas(); track row.id) {
+                  <tr
+                    class="border-b transition-colors hover:bg-surface-elevated"
+                    [style.border-color]="'var(--border-subtle)'"
+                  >
+                    <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                      {{ row.horaInicio }}
+                    </td>
+                    <td class="py-3 pr-4 whitespace-nowrap">
+                      @if (row.horaInicioReal) {
+                        <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
+                    </td>
+                    <td class="py-3 pr-4 whitespace-nowrap">
+                      @if (row.horaFinReal) {
+                        <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
+                    </td>
+                    <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
+                    <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
+                    <td class="py-3 pr-4">
+                      @if (row.alumnoName) {
+                        <span
+                          class="text-secondary"
+                          [style.color]="
+                            row.status === 'ausente' ? 'var(--color-primary)' : undefined
+                          "
+                        >
+                          {{ row.alumnoName }}
+                        </span>
+                      } @else {
+                        <span class="text-muted italic">Sin agendar</span>
+                      }
+                    </td>
+                    <td class="py-3 pr-4">
+                      @if (row.vehiclePlate) {
+                        <div class="flex flex-col">
+                          <span class="text-xs font-medium text-primary">{{
+                            row.vehiclePlate
+                          }}</span>
+                          @if (row.vehicleBrand || row.vehicleModel) {
+                            <span class="text-xs text-muted">
+                              {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
+                            </span>
+                          }
+                        </div>
+                      } @else {
+                        <span class="text-muted">—</span>
+                      }
+                    </td>
+                    <td class="py-3 pr-4">
+                      <span
+                        class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
+                        [style.background]="statusBadgeBg(row.status)"
+                        [style.color]="statusBadgeColor(row.status)"
+                      >
+                        <app-icon [name]="statusBadgeIcon(row.status)" [size]="11" />
+                        {{ statusBadgeLabel(row.status) }}
+                      </span>
+                    </td>
+                    <td class="py-3 text-right">
+                      <div class="flex items-center justify-end gap-2">
+                        @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
+                          <!-- Iniciar clase -->
+                          <button
+                            class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
+                            [style.color]="'var(--color-primary)'"
+                            [style.border-color]="'var(--color-primary)'"
+                            [style.background]="'color-mix(in srgb, var(--color-primary) 8%, transparent)'"
+                            [disabled]="isSaving()"
+                            title="Iniciar clase"
+                            data-llm-action="iniciar-clase-practica"
+                            (click)="iniciarClase.emit(row)"
+                          >
+                            <app-icon name="play" [size]="12" />
+                            Iniciar
+                          </button>
+                          <!-- Marcar inasistencia (solo si ya pasó la hora) -->
+                          @if (isPastStartTime(row.scheduledAt)) {
+                            <button
+                              class="p-1.5 rounded-md transition-colors cursor-pointer"
+                              title="Marcar inasistencia"
+                              [style.color]="'var(--state-error)'"
+                              [disabled]="isSaving()"
+                              data-llm-action="mark-ausente"
+                              (click)="
+                                markAttendance.emit({ sessionId: row.id, status: 'ausente' })
+                              "
+                            >
+                              <app-icon name="x-circle" [size]="16" />
+                            </button>
+                          }
+                        }
+                        @if (row.status === 'en_curso') {
+                          <span class="indicator-live text-xs text-secondary">En clase</span>
+                          <!-- Finalizar clase -->
+                          <button
+                            class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
+                            [style.color]="'var(--state-success)'"
+                            [style.border-color]="'var(--state-success)'"
+                            [style.background]="'color-mix(in srgb, var(--state-success) 8%, transparent)'"
+                            [disabled]="isSaving()"
+                            title="Finalizar clase"
+                            data-llm-action="finalizar-clase-practica"
+                            (click)="finalizarClase.emit(row)"
+                          >
+                            <app-icon name="flag" [size]="12" />
+                            Finalizar
+                          </button>
+                        }
+                        @if (row.status === 'ausente' && !row.justificacion) {
+                          <button
+                            class="text-xs font-medium hover:underline"
+                            [style.color]="'var(--color-primary)'"
+                            [disabled]="isSaving()"
+                            data-llm-action="justify-absence"
+                            (click)="openJustifyModal(row.id)"
+                          >
+                            Justificar
+                          </button>
+                        }
+                        @if (row.justificacion) {
+                          <span
+                            class="text-xs italic truncate max-w-40"
+                            [title]="row.justificacion"
+                            [style.color]="'var(--text-muted)'"
+                          >
+                            {{ row.justificacion }}
+                          </span>
+                        }
+                        @if (row.status === 'presente') {
+                          <span class="text-xs font-medium" [style.color]="'var(--state-success)'">
+                            Finalizada
+                          </span>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
 
       <!-- ── Clases Teóricas (Zoom) ──────────────────────────────────────── -->
       <section class="card p-5 flex flex-col gap-4">
@@ -305,211 +571,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           </div>
         }
       </section>
-
-      <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
-      <section class="card p-5 flex flex-col gap-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <app-icon name="calendar-check" [size]="18" [style.color]="'var(--color-primary)'" />
-            <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
-          </div>
-          <div class="flex items-center gap-2">
-            <!-- Selector de fecha -->
-            <div class="flex items-center gap-1.5">
-              <app-icon name="calendar" [size]="14" [style.color]="'var(--text-muted)'" />
-              <input
-                type="date"
-                class="text-xs rounded-md border px-2 py-1.5 focus:outline-none"
-                [style.border-color]="'var(--border-subtle)'"
-                [style.background]="'var(--bg-surface)'"
-                [style.color]="'var(--text-secondary)'"
-                [value]="selectedDate()"
-                data-llm-description="Selector de fecha para clases prácticas"
-                (change)="onDateChange($event)"
-              />
-              @if (isFutureDate()) {
-                <span
-                  class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  style="background: color-mix(in srgb, var(--state-warning) 12%, transparent); color: var(--state-warning)"
-                >
-                  Solo lectura
-                </span>
-              }
-            </div>
-            <button
-              class="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
-              data-llm-action="export-excel"
-              (click)="exportExcel.emit()"
-            >
-              <app-icon name="download" [size]="14" />
-              Exportar
-            </button>
-            <button
-              class="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
-              data-llm-action="refresh-attendance"
-              (click)="refreshRequested.emit()"
-            >
-              <app-icon name="refresh-cw" [size]="14" />
-              Actualizar
-            </button>
-          </div>
-        </div>
-
-        <!-- Filtros -->
-        <div class="flex flex-wrap items-center gap-2">
-          @for (f of statusFilters; track f.value) {
-            <button
-              class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
-              [style.background]="
-                activeStatusFilter() === f.value ? 'var(--color-primary)' : 'transparent'
-              "
-              [style.color]="activeStatusFilter() === f.value ? '#fff' : 'var(--text-secondary)'"
-              [style.border-color]="
-                activeStatusFilter() === f.value ? 'var(--color-primary)' : 'var(--border-subtle)'
-              "
-              (click)="activeStatusFilter.set(f.value)"
-            >
-              {{ f.label }}
-              @if (countByStatus(f.value) > 0) {
-                <span class="ml-1 opacity-80">({{ countByStatus(f.value) }})</span>
-              }
-            </button>
-          }
-
-          <!-- Filtro instructor -->
-          <div class="ml-auto">
-            <select
-              class="text-xs rounded-md border px-2.5 py-1.5 bg-surface text-secondary focus:outline-none"
-              [style.border-color]="'var(--border-subtle)'"
-              [value]="selectedInstructorId() ?? ''"
-              (change)="onInstructorFilterChange($event)"
-            >
-              <option value="">Todos los instructores</option>
-              @for (inst of instructores(); track inst.id) {
-                <option [value]="inst.id">{{ inst.name }}</option>
-              }
-            </select>
-          </div>
-        </div>
-
-        <!-- Tabla -->
-        @if (isLoading()) {
-          <div class="flex flex-col gap-2">
-            @for (i of [1, 2, 3, 4, 5]; track i) {
-              <app-skeleton-block variant="rect" width="100%" height="44px" />
-            }
-          </div>
-        } @else if (filteredPracticas().length === 0) {
-          <p class="text-sm text-secondary text-center py-6">
-            No hay registros que coincidan con los filtros seleccionados.
-          </p>
-        } @else {
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
-                    Hora
-                  </th>
-                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
-                    Instructor
-                  </th>
-                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Alumno</th>
-                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Estado</th>
-                  <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of filteredPracticas(); track row.id) {
-                  <tr
-                    class="border-b transition-colors hover:bg-surface-elevated"
-                    [style.border-color]="'var(--border-subtle)'"
-                  >
-                    <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
-                      {{ row.horaInicio }}
-                    </td>
-                    <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
-                    <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
-                    <td class="py-3 pr-4">
-                      @if (row.alumnoName) {
-                        <span
-                          class="text-secondary"
-                          [style.color]="
-                            row.status === 'ausente' ? 'var(--color-primary)' : undefined
-                          "
-                        >
-                          {{ row.alumnoName }}
-                        </span>
-                      } @else {
-                        <span class="text-muted italic">Sin agendar</span>
-                      }
-                    </td>
-                    <td class="py-3 pr-4">
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
-                        [style.background]="statusBadgeBg(row.status)"
-                        [style.color]="statusBadgeColor(row.status)"
-                      >
-                        <app-icon [name]="statusBadgeIcon(row.status)" [size]="11" />
-                        {{ statusBadgeLabel(row.status) }}
-                      </span>
-                    </td>
-                    <td class="py-3 text-right">
-                      <div class="flex items-center justify-end gap-2">
-                        @if (
-                          row.status === 'pendiente' &&
-                          row.alumnoName &&
-                          isPastStartTime(row.scheduledAt)
-                        ) {
-                          <button
-                            class="p-1.5 rounded-md transition-colors"
-                            title="Marcar inasistencia"
-                            [style.color]="'var(--state-error)'"
-                            [disabled]="isSaving()"
-                            data-llm-action="mark-ausente"
-                            (click)="markAttendance.emit({ sessionId: row.id, status: 'ausente' })"
-                          >
-                            <app-icon name="x-circle" [size]="16" />
-                          </button>
-                        }
-                        @if (row.status === 'ausente' && !row.justificacion) {
-                          <button
-                            class="text-xs font-medium hover:underline"
-                            [style.color]="'var(--color-primary)'"
-                            [disabled]="isSaving()"
-                            data-llm-action="justify-absence"
-                            (click)="openJustifyModal(row.id)"
-                          >
-                            Justificar
-                          </button>
-                        }
-                        @if (row.justificacion) {
-                          <span
-                            class="text-xs italic truncate max-w-40"
-                            [title]="row.justificacion"
-                            [style.color]="'var(--text-muted)'"
-                          >
-                            {{ row.justificacion }}
-                          </span>
-                        }
-                        @if (row.status === 'en_curso') {
-                          <span class="indicator-live text-xs text-secondary">En clase</span>
-                        }
-                        @if (row.status === 'presente') {
-                          <span class="text-xs font-medium" [style.color]="'var(--state-success)'">
-                            Finalizada
-                          </span>
-                        }
-                      </div>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        }
-      </section>
     </div>
 
     <!-- ── Modal de justificación ─────────────────────────────────────────── -->
@@ -590,6 +651,10 @@ export class AsistenciaClaseBContentComponent {
   readonly exportExcel = output<void>();
   readonly refreshRequested = output<void>();
   readonly scheduleNewClass = output<void>();
+  /** Emite la fila para abrir el drawer de iniciar clase. */
+  readonly iniciarClase = output<ClasePracticaRow>();
+  /** Emite la fila para abrir el drawer de finalizar clase. */
+  readonly finalizarClase = output<ClasePracticaRow>();
 
   // ── Local state ─────────────────────────────────────────────────────────────
   protected readonly today = new Date();

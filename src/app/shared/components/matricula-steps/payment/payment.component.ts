@@ -26,6 +26,7 @@ export class PaymentComponent {
 
   discountAmountInput = signal('');
   discountReason = signal('');
+  discountError = signal<string | null>(null);
 
   setPaymentMethod(method: PaymentMethod): void {
     this.dataChange.emit({ ...this.data(), paymentMethod: method });
@@ -39,7 +40,15 @@ export class PaymentComponent {
 
   applyManualDiscount(): void {
     const amount = parseFloat(this.discountAmountInput()) || 0;
+    const maxDiscount = this.data().pricing.amountDue;
     if (amount <= 0) return;
+    if (amount > maxDiscount) {
+      this.discountError.set(
+        `El descuento no puede superar el monto a pagar ($${maxDiscount.toLocaleString('es-CL')}).`,
+      );
+      return;
+    }
+    this.discountError.set(null);
     this.dataChange.emit({
       ...this.data(),
       selectedDiscountId: null,
@@ -52,6 +61,7 @@ export class PaymentComponent {
   }
 
   clearDiscount(): void {
+    this.discountError.set(null);
     this.dataChange.emit({
       ...this.data(),
       selectedDiscountId: null,

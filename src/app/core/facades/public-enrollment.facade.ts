@@ -487,13 +487,18 @@ export class PublicEnrollmentFacade {
    * alumno tome los mismos slots mientras se completa el wizard y el pago.
    */
   async confirmSchedule(): Promise<void> {
-    const reserved = await this.reserveSlots();
-    if (!reserved) return; // error ya seteado en reserveSlots()
+    this._isSubmitting.set(true);
+    try {
+      const reserved = await this.reserveSlots();
+      if (!reserved) return; // error ya seteado en reserveSlots()
 
-    this.updateStepStatus('schedule', 'completed');
-    this._currentStep.set('documents');
-    this.updateStepStatus('documents', 'active');
-    this.saveDraft();
+      this.updateStepStatus('schedule', 'completed');
+      this._currentStep.set('documents');
+      this.updateStepStatus('documents', 'active');
+      this.saveDraft();
+    } finally {
+      this._isSubmitting.set(false);
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -551,31 +556,45 @@ export class PublicEnrollmentFacade {
   // ══════════════════════════════════════════════════════════════════════════════
 
   /**
-   * Sube la foto de carnet a Storage en la ruta temporal
-   * `public-uploads/carnet/{sessionToken}` usando el cliente anónimo.
-   * La Edge Function moverá el archivo al destino final
-   * `students/{enrollmentId}/id_photo` al confirmar la matrícula.
+   * Sube la foto de carnet al bucket 'documents' usando un Signed Upload URL
+   * generado por la Edge Function (service_role). El cliente anónimo nunca
+   * interactúa directamente con storage.objects — usa el token firmado.
+   *
+   * Flujo de 3 pasos:
+   *   1. Edge Function emite signedUrl + token para public-uploads/carnet/{sessionToken}
+   *   2. Cliente sube el archivo a esa URL firmada (TTL 5 min)
+   *   3. Al confirmar la matrícula, la EF mueve el archivo al destino final
    */
   async uploadCarnetPhoto(file: File): Promise<boolean> {
     this._isLoading.set(true);
     this._error.set(null);
 
     try {
-      const path = `public-uploads/carnet/${this._sessionToken()}`;
+      // 1. Pedir URL firmada a la Edge Function
+      const { data: urlData, error: urlError } = await this.supabase.client.functions.invoke(
+        'public-enrollment',
+        { body: { action: 'get-carnet-upload-url', sessionToken: this._sessionToken() } },
+      );
 
+      if (urlError || !urlData?.token || !urlData?.path) {
+        this._error.set('Error al preparar la subida. Intenta de nuevo.');
+        return false;
+      }
+
+      // 2. Subir directamente con el token firmado (sin políticas RLS anon)
       const { error } = await this.supabase.client.storage
         .from('documents')
-        .upload(path, file, { upsert: true, contentType: file.type });
+        .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: file.type });
 
       if (error) {
         this._error.set('Error al subir la foto: ' + error.message);
         return false;
       }
 
-      this._carnetStoragePath.set(path);
+      this._carnetStoragePath.set(urlData.path);
 
-      // Crear blob URL local para el preview (bucket privado: no usamos publicUrl).
-      // Revocar la anterior si existía para evitar memory leaks.
+      // Blob URL local para preview — no dependemos de Storage (bucket privado).
+      // Revocar la anterior para evitar memory leaks.
       const prev = this._carnetPreviewUrl();
       if (prev) URL.revokeObjectURL(prev);
       this._carnetPreviewUrl.set(URL.createObjectURL(file));
@@ -585,6 +604,54 @@ export class PublicEnrollmentFacade {
     } catch {
       this._error.set('Error inesperado al subir la foto');
       return false;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
+
+  /**
+   * Genera una vista previa del contrato en PDF usando la Edge Function `public-enrollment`
+   * con acción `generate-contract-preview`. No requiere enrollment_id.
+   * Retorna una signed URL (TTL 1h) o null en error.
+   */
+  async generateContractPreview(): Promise<string | null> {
+    const pd = this._personalData();
+    const branch = this._selectedBranch();
+    if (!pd || !branch) return null;
+
+    const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
+    const course = this._courses().find((c) => c.license_class === licenseClass);
+    if (!course) return null;
+
+    this._isLoading.set(true);
+    this._error.set(null);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('public-enrollment', {
+        body: {
+          action: 'generate-contract-preview',
+          sessionToken: this._sessionToken(),
+          personalData: {
+            rut: pd.rut,
+            firstNames: pd.firstNames,
+            paternalLastName: pd.paternalLastName,
+            maternalLastName: pd.maternalLastName ?? null,
+            email: pd.email,
+            phone: pd.phone ?? null,
+            birthDate: pd.birthDate ?? null,
+            address: pd.address ?? null,
+          },
+          branchId: branch.id,
+          courseId: course.id,
+        },
+      });
+      if (error || !data?.pdfUrl) {
+        this._error.set('Error al generar el contrato. Inténtalo de nuevo.');
+        return null;
+      }
+      return data.pdfUrl as string;
+    } catch {
+      this._error.set('Error inesperado al generar el contrato.');
+      return null;
     } finally {
       this._isLoading.set(false);
     }
@@ -1032,7 +1099,11 @@ export class PublicEnrollmentFacade {
     this._psychTestAnswers.set(draft.psychTestAnswers ?? Array(81).fill(null));
     this._carnetStoragePath.set(draft.carnetStoragePath ?? null);
 
-    // Restaurar paso actual y marcar anteriores como completados
+    // Restaurar paso actual y marcar anteriores como completados.
+    // psych-test-intro es una pantalla intermedia sin entrada en el steps array;
+    // se trata como equivalente a psych-test para el cálculo del progreso.
+    const effectiveStep: PublicWizardStep =
+      draft.currentStep === 'psych-test-intro' ? 'psych-test' : draft.currentStep;
     this._currentStep.set(draft.currentStep);
     const stepOrder: PublicWizardStep[] =
       draft.flowType === 'professional'
@@ -1047,7 +1118,7 @@ export class PublicEnrollmentFacade {
             'payment',
             'confirmation',
           ];
-    const currentIdx = stepOrder.indexOf(draft.currentStep);
+    const currentIdx = stepOrder.indexOf(effectiveStep);
     this._steps.update((steps) =>
       steps.map((s) => {
         const idx = stepOrder.indexOf(s.id);
@@ -1224,15 +1295,17 @@ export class PublicEnrollmentFacade {
 
   private savePendingPaymentRef(ref: PendingPaymentRef): void {
     try {
-      localStorage.setItem(this.PENDING_KEY, JSON.stringify(ref));
+      // sessionStorage: cleared when the tab closes; persists across the Webpay POST redirect
+      // within the same tab. Shorter attack window than localStorage for this sensitive ref.
+      sessionStorage.setItem(this.PENDING_KEY, JSON.stringify(ref));
     } catch {
-      // localStorage no disponible
+      // sessionStorage no disponible (SSR, modo privado extremo)
     }
   }
 
   private clearPendingPaymentRef(): void {
     try {
-      localStorage.removeItem(this.PENDING_KEY);
+      sessionStorage.removeItem(this.PENDING_KEY);
     } catch {
       // ignore
     }

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
   effect,
@@ -12,6 +13,7 @@ import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade'
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { todayIso } from '@core/utils/date.utils';
 import type {
   TeoriaAlumnoAsistencia,
   TeoriaAsistenciaStatus,
@@ -68,6 +70,10 @@ type LocalStatus = TeoriaAsistenciaStatus;
       cursor: pointer;
       transition: all 0.15s;
       text-align: center;
+    }
+    .status-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
   `,
   template: `
@@ -144,6 +150,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
             <button
               class="text-xs font-medium"
               style="color: var(--color-primary); background: none; border: none; cursor: pointer"
+              [disabled]="facade.isSaving()"
               (click)="markAllPresente()"
             >
               Todos presentes
@@ -163,7 +170,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
           </p>
         } @else {
           <div class="flex flex-col gap-2">
-            @for (alumno of localAlumnos(); track alumno.enrollmentId) {
+            @for (alumno of localAlumnos(); track alumno.studentId) {
               <div
                 class="rounded-xl border p-3 flex flex-col gap-2"
                 [style.border-color]="statusBorderColor(alumno.status)"
@@ -199,24 +206,27 @@ type LocalStatus = TeoriaAsistenciaStatus;
                       <button
                         class="status-btn"
                         style="background: transparent; color: var(--state-success); border-color: var(--state-success)"
+                        [disabled]="facade.isSaving()"
                         data-llm-action="mark-presente-teoria"
-                        (click)="setStatus(alumno.enrollmentId, 'presente')"
+                        (click)="setStatus(alumno.studentId, 'presente')"
                       >
                         Presente
                       </button>
                       <button
                         class="status-btn"
                         style="background: transparent; color: var(--state-error); border-color: var(--state-error)"
+                        [disabled]="facade.isSaving()"
                         data-llm-action="mark-ausente-teoria"
-                        (click)="setStatus(alumno.enrollmentId, 'ausente')"
+                        (click)="setStatus(alumno.studentId, 'ausente')"
                       >
                         Ausente
                       </button>
                       <button
                         class="status-btn"
                         style="background: transparent; color: var(--state-warning); border-color: var(--state-warning)"
+                        [disabled]="facade.isSaving()"
                         data-llm-action="mark-justificado-teoria"
-                        (click)="setStatus(alumno.enrollmentId, 'justificado')"
+                        (click)="setStatus(alumno.studentId, 'justificado')"
                       >
                         Justificado
                       </button>
@@ -228,8 +238,9 @@ type LocalStatus = TeoriaAsistenciaStatus;
                         <button
                           class="status-btn"
                           style="background: transparent; color: var(--state-success); border-color: var(--state-success)"
+                          [disabled]="facade.isSaving()"
                           data-llm-action="mark-presente-teoria"
-                          (click)="setStatus(alumno.enrollmentId, 'presente')"
+                          (click)="setStatus(alumno.studentId, 'presente')"
                         >
                           Cambiar a Presente
                         </button>
@@ -238,8 +249,9 @@ type LocalStatus = TeoriaAsistenciaStatus;
                         <button
                           class="status-btn"
                           style="background: transparent; color: var(--state-error); border-color: var(--state-error)"
+                          [disabled]="facade.isSaving()"
                           data-llm-action="mark-ausente-teoria"
-                          (click)="setStatus(alumno.enrollmentId, 'ausente')"
+                          (click)="setStatus(alumno.studentId, 'ausente')"
                         >
                           Cambiar a Ausente
                         </button>
@@ -248,8 +260,9 @@ type LocalStatus = TeoriaAsistenciaStatus;
                         <button
                           class="status-btn"
                           style="background: transparent; color: var(--state-warning); border-color: var(--state-warning)"
+                          [disabled]="facade.isSaving()"
                           data-llm-action="mark-justificado-teoria"
-                          (click)="setStatus(alumno.enrollmentId, 'justificado')"
+                          (click)="setStatus(alumno.studentId, 'justificado')"
                         >
                           Justificar
                         </button>
@@ -264,7 +277,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                       class="field-input text-xs"
                       placeholder="Motivo de justificación..."
                       [value]="alumno.justificacion ?? ''"
-                      (input)="setJustificacion(alumno.enrollmentId, $any($event.target).value)"
+                      (input)="setJustificacion(alumno.studentId, $any($event.target).value)"
                       data-llm-description="Motivo de justificación de inasistencia teórica"
                     />
                   }
@@ -322,23 +335,21 @@ type LocalStatus = TeoriaAsistenciaStatus;
 export class AsistenciaTeoriaDrawerComponent implements OnInit {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly clase = this.facade.teoriaDrawerClase;
   protected readonly zoomLink = signal('');
   protected readonly savedOk = signal(false);
 
-  private readonly todayIso = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  })();
+  private readonly todayIsoVal = todayIso();
 
   /** true cuando la fecha de la sesión seleccionada es posterior a hoy → modo solo lectura */
-  protected readonly isFutureDate = computed(() => this.facade.selectedDate() > this.todayIso);
+  protected readonly isFutureDate = computed(() => this.facade.selectedDate() > this.todayIsoVal);
 
   /**
    * Copia local editable de los alumnos del drawer.
-   * Se sincroniza reactivamente via effect() cuando el facade termina de cargar,
-   * porque la carga es async y puede llegar después de que ngOnInit se ejecuta.
+   * Se sincroniza reactivamente via effect() cuando el facade termina de cargar.
+   * Sin guard condicional: si la sesión tiene 0 alumnos, resetea correctamente a vacío.
    */
   protected readonly localAlumnos = signal<TeoriaAlumnoAsistencia[]>([]);
 
@@ -346,14 +357,13 @@ export class AsistenciaTeoriaDrawerComponent implements OnInit {
     () => this.localAlumnos().filter((a) => a.status === 'presente').length,
   );
 
+  private successTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
-    // Sync when facade finishes loading — handles both the case where data
-    // arrives before or after this component is created.
     effect(() => {
+      // B2: sin guard `if (loaded.length > 0)` — sincroniza siempre, incluso con array vacío
       const loaded = this.facade.teoriaAlumnos();
-      if (loaded.length > 0) {
-        this.localAlumnos.set(loaded.map((a) => ({ ...a })));
-      }
+      this.localAlumnos.set(loaded.map((a) => ({ ...a })));
     });
   }
 
@@ -362,19 +372,19 @@ export class AsistenciaTeoriaDrawerComponent implements OnInit {
     if (c?.zoomLink) this.zoomLink.set(c.zoomLink);
   }
 
-  protected setStatus(enrollmentId: number, status: LocalStatus): void {
+  protected setStatus(studentId: number, status: LocalStatus): void {
     this.localAlumnos.update((rows) =>
       rows.map((r) =>
-        r.enrollmentId === enrollmentId
+        r.studentId === studentId
           ? { ...r, status, justificacion: status !== 'justificado' ? null : r.justificacion }
           : r,
       ),
     );
   }
 
-  protected setJustificacion(enrollmentId: number, justificacion: string): void {
+  protected setJustificacion(studentId: number, justificacion: string): void {
     this.localAlumnos.update((rows) =>
-      rows.map((r) => (r.enrollmentId === enrollmentId ? { ...r, justificacion } : r)),
+      rows.map((r) => (r.studentId === studentId ? { ...r, justificacion } : r)),
     );
   }
 
@@ -394,17 +404,25 @@ export class AsistenciaTeoriaDrawerComponent implements OnInit {
     const c = this.clase();
     if (!c) return;
     const registros = this.localAlumnos().map((a) => ({
-      enrollmentId: a.enrollmentId,
+      studentId: a.studentId,
       status: a.status,
       justificacion: a.justificacion ?? undefined,
     }));
-    await this.facade.saveTeoriaAsistencia(c.id, registros);
-    if (!this.facade.error()) {
+    // B1: usa el boolean retornado por el facade para determinar el éxito real
+    const ok = await this.facade.saveTeoriaAsistencia(c.id, registros);
+    if (ok) {
       this.savedOk.set(true);
-      setTimeout(() => {
+      // B3: guardar handle y cancelar si el componente se destruye antes del timeout
+      this.successTimeoutHandle = setTimeout(() => {
+        this.successTimeoutHandle = null;
         this.savedOk.set(false);
         this.onClose();
       }, 1500);
+      this.destroyRef.onDestroy(() => {
+        if (this.successTimeoutHandle !== null) {
+          clearTimeout(this.successTimeoutHandle);
+        }
+      });
     }
   }
 
