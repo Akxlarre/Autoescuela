@@ -11,6 +11,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
 import { toISODate, to24hTime } from '@core/utils/date.utils';
+import { calcAge } from '@core/utils/age.utils';
 import type { Course } from '@core/models/dto/course.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import type {
@@ -180,6 +181,20 @@ export class EnrollmentFacade {
   readonly contractAccepted = computed(() => this._enrollment()?.contract_accepted ?? false);
   readonly paymentStatus = computed(() => this._enrollment()?.payment_status ?? null);
   readonly contractFileUrl = this._contractFileUrl.asReadonly();
+
+  /** Genera una signed URL temporal (1h) para el contrato firmado y la abre en una pestaña nueva. */
+  async openContractPdf(): Promise<void> {
+    const path = this._contractFileUrl();
+    if (!path) return;
+    const { data, error } = await this.supabase.client.storage
+      .from('documents')
+      .createSignedUrl(path, 3600);
+    if (error || !data) {
+      this._error.set('No se pudo abrir el contrato. Intenta de nuevo.');
+      return;
+    }
+    window.open(data.signedUrl, '_blank');
+  }
   /** Precio base del enrollment ya persisitido en BD (fallback cuando courseOptions aún no cargó). */
   readonly enrollmentBasePrice = computed(() => this._enrollment()?.base_price ?? 0);
 
@@ -201,11 +216,11 @@ export class EnrollmentFacade {
   });
 
   /** Categorías ocultas: se oculta cualquier categoría sin cursos cargados.
-   *  Singular siempre visible (cursos de tipo "otros" no tienen license_class). */
+   *  Singular siempre oculto: el alta en cursos singulares se gestiona desde Contabilidad > Cursos Singulares. */
   readonly hiddenCourseCategories = computed<CourseCategory[]>(() => {
     const courses = this.courseOptions();
     const available = new Set(courses.map((c) => c.category));
-    const checked: CourseCategory[] = ['non-professional', 'professional'];
+    const checked: CourseCategory[] = ['non-professional', 'professional', 'singular'];
     return checked.filter((cat) => !available.has(cat));
   });
 
@@ -786,13 +801,15 @@ export class EnrollmentFacade {
 
         // slotId = TIMESTAMPTZ original de v_class_b_schedule_availability
         // (ej: "2026-03-10T12:00:00+00:00") — se persiste directamente sin transformación
-        const sessions = slots.map((slotId) => ({
+        const sortedSlots = [...slots].sort();
+        const sessions = sortedSlots.map((slotId, i) => ({
           enrollment_id: draft.enrollmentId,
           instructor_id: instructorId,
           vehicle_id: vehicleId,
           scheduled_at: slotId,
           duration_min: 45,
           status: 'reserved',
+          class_number: i + 1,
         }));
 
         // Delete previous reserved sessions for this enrollment
@@ -899,9 +916,11 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
-      // Use a fixed key (without file.name) to avoid invalid characters (spaces, accents).
-      // The original file name is preserved in the DB record (file_name column).
-      const ext = file.name.split('.').pop() ?? 'pdf';
+      // Whitelist extension before building storage path (defense-in-depth; the
+      // component already validates, but the facade must not trust its caller).
+      const ALLOWED_EXTS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
+      const rawExt = file.name.split('.').pop()?.toLowerCase() ?? '';
+      const ext = ALLOWED_EXTS.has(rawExt) ? rawExt : 'pdf';
       const filePath = `contracts/${draft.enrollmentId}/contract.${ext}`;
 
       // Upload to Supabase Storage
@@ -1113,11 +1132,16 @@ export class EnrollmentFacade {
   /**
    * Carga los borradores activos (no expirados) para la sucursal dada.
    * Retorna DraftSummary[] con info suficiente para la lista de selección.
+   *
+   * Nota de seguridad: la RLS de `enrollments` filtra automáticamente por sede
+   * para secretarias (via `branch_visible`). Para admins la RLS es permisiva
+   * (ven todas las sedes), por lo que `branchId` es el único guard de scope.
+   * El componente DEBE siempre pasar `activeBranchId()`.
    */
-  async loadActiveDrafts(): Promise<DraftSummary[]> {
+  async loadActiveDrafts(branchId?: number): Promise<DraftSummary[]> {
     this._error.set(null);
 
-    const { data, error } = await this.supabase.client
+    let query = this.supabase.client
       .from('enrollments')
       .select(
         `id, current_step, created_at, expires_at,
@@ -1128,8 +1152,13 @@ export class EnrollmentFacade {
          courses!inner(name)`,
       )
       .eq('status', 'draft')
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false });
+      .gt('expires_at', new Date().toISOString());
+
+    if (branchId != null) {
+      query = query.eq('branch_id', branchId) as typeof query;
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       this._error.set('Error al cargar borradores: ' + error.message);
@@ -1334,15 +1363,14 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
-      // Eliminar carpeta completa del estudiante en storage antes de borrar registros BD
-      const folderPrefix = `students/${enrollmentId}/`;
-      const { data: storageFiles } = await this.supabase.client.storage
-        .from('documents')
-        .list(folderPrefix);
-
-      if (storageFiles && storageFiles.length > 0) {
-        const filePaths = storageFiles.map((f) => `${folderPrefix}${f.name}`);
-        await this.supabase.client.storage.from('documents').remove(filePaths);
+      // Eliminar archivos de storage: carpeta de documentos del alumno + contrato
+      const foldersToClean = [`students/${enrollmentId}/`, `contracts/${enrollmentId}/`];
+      for (const prefix of foldersToClean) {
+        const { data: files } = await this.supabase.client.storage.from('documents').list(prefix);
+        if (files && files.length > 0) {
+          const paths = files.map((f) => `${prefix}${f.name}`);
+          await this.supabase.client.storage.from('documents').remove(paths);
+        }
       }
 
       // Eliminar datos asociados en orden (respetando FKs)
@@ -1351,6 +1379,11 @@ export class EnrollmentFacade {
         .delete()
         .eq('enrollment_id', enrollmentId)
         .eq('status', 'reserved');
+
+      await this.supabase.client
+        .from('license_validations')
+        .delete()
+        .eq('enrollment_id', enrollmentId);
 
       await this.supabase.client
         .from('discount_applications')
@@ -1808,14 +1841,7 @@ export class EnrollmentFacade {
   }
 
   private calculateAge(birthDate: string): number {
-    const today = new Date();
-    const birth = new Date(birthDate);
-    let age = today.getFullYear() - birth.getFullYear();
-    const monthDiff = today.getMonth() - birth.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-      age--;
-    }
-    return age;
+    return calcAge(birthDate) ?? 0;
   }
 
   private isStep2Complete(): boolean {

@@ -176,8 +176,10 @@ export class CertificacionClaseBFacade {
 
   // ── Fetch privado ──
 
+  // Bug fix: sequential so fetchLog can use cert IDs from freshly loaded _alumnos
   private async fetchData(): Promise<void> {
-    await Promise.all([this.fetchAlumnos(), this.fetchLog()]);
+    await this.fetchAlumnos();
+    await this.fetchLog();
   }
 
   private async fetchAlumnos(): Promise<void> {
@@ -196,7 +198,7 @@ export class CertificacionClaseBFacade {
           id,
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
         ),
-        certificates(id, folio, status)
+        certificates(id, folio, status, created_at)
       `,
       )
       .eq('certificate_enabled', true)
@@ -226,7 +228,19 @@ export class CertificacionClaseBFacade {
       (progressData ?? []).map((p: any) => [p.enrollment_id as number, p]),
     );
 
-    // Step 3: Qué certificados ya fueron enviados por email.
+    // Step 3: Clases prácticas completadas (con evaluación) por matrícula.
+    const { data: completedSessions } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('enrollment_id')
+      .in('enrollment_id', enrollmentIds)
+      .not('evaluation_grade', 'is', null);
+
+    const practiceCountMap = new Map<number, number>();
+    for (const s of (completedSessions ?? []) as any[]) {
+      practiceCountMap.set(s.enrollment_id, (practiceCountMap.get(s.enrollment_id) ?? 0) + 1);
+    }
+
+    // Step 4: Qué certificados ya fueron enviados por email.
     const certIds = enrollments
       .filter((e: any) => e.certificates?.length > 0)
       .map((e: any) => e.certificates[0].id as number);
@@ -243,7 +257,7 @@ export class CertificacionClaseBFacade {
       }
     }
 
-    // Step 4: Mapeo DTO → UI model.
+    // Step 5: Mapeo DTO → UI model.
     const rows: CertificacionAlumnoRow[] = enrollments.map((e: any) => {
       const student = e.students;
       const user = student.users;
@@ -257,24 +271,29 @@ export class CertificacionClaseBFacade {
       const pctAsistenciaTeoria: number | null =
         rawPct !== null && rawPct !== undefined ? Number(rawPct) : null;
 
+      // Folio only shown when PDF exists; year derived from issuance date, not today's date
+      const hasPdf = !!e.certificate_b_pdf_url;
+      const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
+
       return {
         enrollmentId: e.id,
         studentId: student.id,
         nombre,
         rut: formatRut(user.rut || ''),
         curso: e.courses?.name || 'Clase B',
-        clasesCompletadas: 12,
+        clasesCompletadas: Math.min(practiceCountMap.get(e.id) ?? 0, 12),
         clasesTotales: 12,
         fechaTermino: progress?.last_practice_session
           ? new Date(progress.last_practice_session).toISOString().split('T')[0]
           : null,
         pctAsistenciaTeoria,
         certificadoId: cert?.id ?? null,
-        certificadoFolio: cert
-          ? `CERT-${new Date().getFullYear()}-${String(cert.folio).padStart(4, '0')}`
-          : null,
+        certificadoFolio:
+          cert && hasPdf && certYear
+            ? `CERT-${certYear}-${String(cert.folio).padStart(4, '0')}`
+            : null,
         storagePath: e.certificate_b_pdf_url ?? null,
-        certificadoStatus: e.certificate_b_pdf_url ? 'generado' : 'pendiente',
+        certificadoStatus: hasPdf ? 'generado' : 'pendiente',
         emailEnviado: cert ? emailSentSet.has(cert.id) : false,
       } satisfies CertificacionAlumnoRow;
     });
@@ -291,10 +310,17 @@ export class CertificacionClaseBFacade {
   }
 
   private async fetchLog(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    // Scope log to the certs already in view — avoids unreliable deep-nested PostgREST filters
+    const certIds = this._alumnos()
+      .map((a) => a.certificadoId)
+      .filter((id): id is number => id !== null);
 
-    // Get issuance log with certificate → enrollment → branch for filtering
-    let query = this.supabase.client
+    if (certIds.length === 0) {
+      this._log.set([]);
+      return;
+    }
+
+    const { data, error } = await this.supabase.client
       .from('certificate_issuance_log')
       .select(
         `
@@ -302,10 +328,7 @@ export class CertificacionClaseBFacade {
         action,
         created_at,
         certificates!inner(
-          id,
-          type,
           enrollments!inner(
-            branch_id,
             students!inner(
               users!inner(first_names, paternal_last_name)
             )
@@ -314,26 +337,17 @@ export class CertificacionClaseBFacade {
         users!certificate_issuance_log_user_id_fkey(first_names, paternal_last_name)
       `,
       )
-      .eq('certificates.type', 'class_b')
+      .in('certificate_id', certIds)
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (branchId !== null) {
-      query = query.eq('certificates.enrollments.branch_id', branchId);
-    }
-
-    const { data, error } = await query;
-
-    // If the nested filter errors or returns nothing, just set empty
     if (error || !data) {
       this._log.set([]);
       return;
     }
 
     const rows: CertificacionLogRow[] = data.map((row: any) => {
-      const cert = row.certificates;
-      const enrollment = cert?.enrollments;
-      const student = enrollment?.students;
+      const student = row.certificates?.enrollments?.students;
       const studentUser = student?.users;
       const actionUser = row.users;
 

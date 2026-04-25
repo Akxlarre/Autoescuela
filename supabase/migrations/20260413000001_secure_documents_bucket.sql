@@ -33,7 +33,7 @@ CREATE POLICY "documents_authenticated_read"
       FROM public.users u
       JOIN public.roles r ON r.id = u.role_id
       WHERE u.supabase_uid = auth.uid()
-        AND r.name IN ('admin', 'secretary', 'instructor', 'relator')
+        AND r.name IN ('admin', 'secretary')
     )
   );
 

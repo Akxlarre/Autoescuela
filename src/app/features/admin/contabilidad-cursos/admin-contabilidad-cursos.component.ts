@@ -82,12 +82,7 @@ const BILLING_LABEL: Record<string, string> = {
   selector: 'app-admin-contabilidad-cursos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    SectionHeroComponent,
-    KpiCardVariantComponent,
-    IconComponent,
-    BentoGridLayoutDirective,
-  ],
+  imports: [SectionHeroComponent, KpiCardVariantComponent, IconComponent, BentoGridLayoutDirective],
   template: `
     <div
       class="bento-grid"
@@ -131,10 +126,10 @@ const BILLING_LABEL: Record<string, string> = {
       <div class="bento-square">
         <app-kpi-card-variant
           [value]="facade.kpis().ingresosEstimados"
-          label="Ingresos Estimados"
+          label="Ingresos"
           icon="dollar-sign"
           prefix="$"
-          subValue="cursos activos + finalizados"
+          subValue="cursos no cancelados"
           color="success"
           [loading]="facade.isLoading()"
         />
@@ -153,10 +148,10 @@ const BILLING_LABEL: Record<string, string> = {
                 Listado de Cursos
               </h2>
             </div>
-            
+
             <div class="flex flex-wrap items-center gap-2">
               <!-- Filtro tipo -->
-              <div class="filter-select-wrapper flex-1 min-w-[140px]">
+              <div class="filter-select-wrapper flex-1 min-w-35">
                 <select
                   class="filter-select"
                   (change)="onFiltroTipo($event)"
@@ -169,7 +164,7 @@ const BILLING_LABEL: Record<string, string> = {
               </div>
 
               <!-- Filtro estado -->
-              <div class="filter-select-wrapper flex-1 min-w-[140px]">
+              <div class="filter-select-wrapper flex-1 min-w-35">
                 <select
                   class="filter-select"
                   (change)="onFiltroEstado($event)"
@@ -310,7 +305,7 @@ const BILLING_LABEL: Record<string, string> = {
                   <!-- Footer: Acciones full-width -->
                   <div class="px-4 pb-4 flex gap-2">
                     <button
-                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold border transition-colors"
+                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
                       style="border-color: var(--border-muted); color: var(--text-secondary)"
                       data-llm-action="view-curso-singular"
                       (click)="onVerDetalle(curso)"
@@ -319,7 +314,7 @@ const BILLING_LABEL: Record<string, string> = {
                       Ver detalle
                     </button>
                     <button
-                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold transition-colors"
+                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold transition-colors cursor-pointer"
                       style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success)"
                       data-llm-action="registrar-cobro-singular"
                       (click)="onRegistrarCobro(curso)"
@@ -458,7 +453,9 @@ const BILLING_LABEL: Record<string, string> = {
                         <span
                           class="text-sm font-bold"
                           [style.color]="
-                            curso.estado !== 'upcoming' ? 'var(--state-success)' : 'var(--text-muted)'
+                            curso.estado !== 'upcoming'
+                              ? 'var(--state-success)'
+                              : 'var(--text-muted)'
                           "
                           >{{
                             curso.estado !== 'upcoming' ? formatCLP(curso.ingresoEstimado) : '—'
@@ -468,7 +465,7 @@ const BILLING_LABEL: Record<string, string> = {
                       <td class="py-3 px-4 text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
-                            class="p-1.5 rounded transition-colors"
+                            class="p-1.5 rounded transition-colors cursor-pointer"
                             style="color: var(--text-muted)"
                             title="Ver detalle"
                             data-llm-action="view-curso-singular"
@@ -486,7 +483,7 @@ const BILLING_LABEL: Record<string, string> = {
                             <app-icon name="eye" [size]="16" />
                           </button>
                           <button
-                            class="p-1.5 rounded transition-colors"
+                            class="p-1.5 rounded transition-colors cursor-pointer"
                             style="color: var(--text-muted)"
                             title="Registrar cobro"
                             data-llm-action="registrar-cobro-singular"

@@ -8,6 +8,7 @@
 -- ============================================================
 
 -- 1. Upsert del bucket forzando configuración correcta
+-- NOTA: public se omite del DO UPDATE para no revertir 20260413000001_secure_documents_bucket.sql
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
   'documents',
@@ -22,7 +23,6 @@ VALUES (
   ]
 )
 ON CONFLICT (id) DO UPDATE SET
-  public            = EXCLUDED.public,
   file_size_limit   = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 

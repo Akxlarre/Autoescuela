@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, OnInit, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AsistenciaClaseBContentComponent } from '@shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component';
 import { AsistenciaTeoriaDrawerComponent } from './asistencia-teoria-drawer.component';
 import { AgendarTeoriaDrawerComponent } from './agendar-teoria-drawer.component';
-import type { ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
+import { AdminIniciarClaseDrawerComponent } from './admin-iniciar-clase-drawer.component';
+import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-drawer.component';
+import type { ClasePracticaRow, ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
 
 /**
  * AdminAsistenciaComponent — Smart component.
@@ -38,10 +40,12 @@ import type { ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
       (exportExcel)="onExportExcel()"
       (refreshRequested)="onRefresh()"
       (scheduleNewClass)="openAgendarDrawer()"
+      (iniciarClase)="openIniciarClaseDrawer($event)"
+      (finalizarClase)="openFinalizarClaseDrawer($event)"
     />
   `,
 })
-export class AdminAsistenciaComponent implements OnInit {
+export class AdminAsistenciaComponent {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -63,8 +67,6 @@ export class AdminAsistenciaComponent implements OnInit {
       previousBranchId = branchId;
     });
   }
-
-  ngOnInit(): void {}
 
   protected async openTeoriaDrawer(clase: ClaseTeoricoRow): Promise<void> {
     await this.facade.openTeoriaDrawer(clase);
@@ -89,5 +91,23 @@ export class AdminAsistenciaComponent implements OnInit {
 
   protected onExportExcel(): void {
     // TODO: exportación Excel
+  }
+
+  protected openIniciarClaseDrawer(row: ClasePracticaRow): void {
+    this.facade.selectPractica(row);
+    this.layoutDrawer.open(
+      AdminIniciarClaseDrawerComponent,
+      `Iniciar Clase — ${row.alumnoName ?? 'Alumno'}`,
+      'play',
+    );
+  }
+
+  protected openFinalizarClaseDrawer(row: ClasePracticaRow): void {
+    this.facade.selectPractica(row);
+    this.layoutDrawer.open(
+      AdminFinalizarClaseDrawerComponent,
+      `Finalizar Clase — ${row.alumnoName ?? 'Alumno'}`,
+      'flag',
+    );
   }
 }

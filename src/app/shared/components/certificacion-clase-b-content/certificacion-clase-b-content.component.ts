@@ -148,7 +148,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-[var(--border-default)]">
+                <tr class="border-b border-(--border-default)">
                   <th
                     class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
                   >
@@ -200,7 +200,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                 @for (alumno of filteredAlumnos(); track alumno.enrollmentId) {
                   <!-- Fila principal -->
                   <tr
-                    class="border-b border-[var(--border-default)] last:border-b-0 transition-colors"
+                    class="border-b border-(--border-default) last:border-b-0 transition-colors"
                     [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
                   >
                     <td class="px-4 py-3 font-medium text-primary">
@@ -317,7 +317,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
 
                   <!-- Fila de confirmación inline — visible solo si teoría < 100 % -->
                   @if (pendingConfirmId() === alumno.enrollmentId) {
-                    <tr class="border-b border-[var(--border-default)]">
+                    <tr class="border-b border-(--border-default)">
                       <td colspan="9" class="px-4 pb-4 pt-0">
                         <div
                           class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
@@ -337,7 +337,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                             de asistencia a sus clases teóricas. Las prácticas están completas
                             (12/12). ¿Confirmar generación del certificado de todos modos?
                           </p>
-                          <div class="flex items-center gap-2 flex-shrink-0">
+                          <div class="flex items-center gap-2 shrink-0">
                             <button
                               class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                               data-llm-action="confirm-generate-certificate-partial-theory"
@@ -397,7 +397,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
-                  <tr class="border-b border-[var(--border-default)]">
+                  <tr class="border-b border-(--border-default)">
                     <th
                       class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
                     >
@@ -423,7 +423,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                 <tbody>
                   @for (entry of log(); track entry.id) {
                     <tr
-                      class="border-b border-[var(--border-default)] last:border-b-0 hover:bg-[var(--bg-subtle)] transition-colors"
+                      class="border-b border-(--border-default) last:border-b-0 hover:bg-(--bg-subtle) transition-colors"
                     >
                       <td class="px-4 py-3 text-muted text-xs font-mono">
                         {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
