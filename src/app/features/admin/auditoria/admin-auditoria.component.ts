@@ -3,6 +3,7 @@ import {
   Component,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -11,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { AuditoriaFacade } from '@core/facades/auditoria.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -89,7 +91,7 @@ const ACTION_OPTIONS = [
               optionLabel="label"
               optionValue="value"
               placeholder="Todas"
-              [style]="{ height: '38px', width: '100%' }"
+              styleClass="w-full"
               aria-label="Filtrar por secretaria"
               data-llm-description="Filtrar logs por secretaria específica"
             />
@@ -104,7 +106,7 @@ const ACTION_OPTIONS = [
               optionLabel="label"
               optionValue="value"
               placeholder="Todas las acciones"
-              [style]="{ height: '38px', width: '100%' }"
+              styleClass="w-full"
               aria-label="Filtrar por tipo de acción"
               data-llm-description="Filtrar logs por tipo de acción"
             />
@@ -119,7 +121,7 @@ const ACTION_OPTIONS = [
               optionLabel="label"
               optionValue="value"
               placeholder="Todos los módulos"
-              [style]="{ height: '38px', width: '100%' }"
+              styleClass="w-full"
               aria-label="Filtrar por módulo"
               data-llm-description="Filtrar logs por módulo del sistema"
             />
@@ -441,7 +443,15 @@ const ACTION_OPTIONS = [
 })
 export class AdminAuditoriaComponent implements OnInit {
   protected readonly facade = inject(AuditoriaFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
+
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
+  }
 
   // ── Filtros locales (UI state) ──────────────────────────────────────────────
   protected readonly fechaDesde = signal<string | null>(null);
@@ -492,7 +502,7 @@ export class AdminAuditoriaComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    void this.facade.initialize();
+    /* lifecycle hook kept — effect() handles initialization */
   }
 
   protected applyFilters(): void {

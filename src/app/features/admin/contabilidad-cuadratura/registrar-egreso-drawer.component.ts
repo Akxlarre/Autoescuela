@@ -10,6 +10,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SelectModule } from 'primeng/select';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 
 /**
@@ -22,29 +23,27 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
   selector: 'app-registrar-egreso-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule],
   template: `
     <div class="flex flex-col h-full">
       <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
       <div class="flex-1 overflow-y-auto p-5">
         <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
-
           <!-- Tipo de egreso -->
           <div class="flex flex-col gap-1.5">
             <label for="egr-tipo" class="field-label">
               TIPO DE EGRESO <span style="color: var(--state-error)">*</span>
             </label>
-            <select
-              id="egr-tipo"
+            <p-select
               formControlName="tipo"
-              class="field-input field-select"
+              [options]="tipoOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar tipo..."
+              styleClass="w-full"
               data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
               [class.field-input--error]="isInvalid('tipo')"
-            >
-              <option value="" disabled>Seleccionar tipo...</option>
-              <option value="gasto">Gasto Varios</option>
-              <option value="anticipo">Anticipo a Instructor</option>
-            </select>
+            />
             @if (isInvalid('tipo')) {
               <span class="field-error">Seleccione un tipo de egreso.</span>
             }
@@ -125,8 +124,10 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
       </div>
 
       <!-- ── Footer fijo ─────────────────────────────────────────────── -->
-      <div class="p-5 border-t bg-surface flex items-center justify-end gap-3 sticky bottom-0 z-20"
-           style="border-color: var(--border-muted)">
+      <div
+        class="p-5 border-t bg-surface flex items-center justify-end gap-3 sticky bottom-0 z-20"
+        style="border-color: var(--border-muted)"
+      >
         <button
           type="button"
           class="btn-secondary"
@@ -217,6 +218,11 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
   `,
 })
 export class RegistrarEgresoDrawerComponent {
+  readonly tipoOptions = [
+    { label: 'Gasto Varios', value: 'gasto' },
+    { label: 'Anticipo a Instructor', value: 'anticipo' },
+  ];
+
   // ── Injections ───────────────────────────────────────────────────────────────
   protected readonly facade = inject(CuadraturaFacade);
   private readonly fb = inject(FormBuilder);

@@ -74,7 +74,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               placeholder="Selecciona una promoción..."
               [showClear]="true"
               styleClass="w-full"
-              [style]="{ height: '40px' }"
               data-llm-description="Selector de promoción de clase profesional finalizada"
             />
           }
@@ -101,7 +100,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               [disabled]="!selectedPromocionId()"
               [showClear]="true"
               styleClass="w-full"
-              [style]="{ height: '40px' }"
               data-llm-description="Selector de curso dentro de la promoción seleccionada"
             />
           }

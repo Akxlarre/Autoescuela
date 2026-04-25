@@ -92,11 +92,8 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
       <!-- ═══ Toggle modo ═══ -->
       <div class="mb-4 flex gap-2">
         <button
-          class="tab-btn flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors"
-          [class.border-brand]="mode() === 'attendance'"
-          [class.text-primary]="mode() === 'attendance' && !isFuture()"
-          [class.border-border]="mode() !== 'attendance'"
-          [class.text-secondary]="mode() !== 'attendance' || isFuture()"
+          class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+          [class]="mode() === 'attendance' && !isFuture() ? 'bg-brand/10 border-brand text-brand' : 'bg-surface border-border text-secondary hover:bg-surface-elevated hover:text-primary'"
           [class.opacity-50]="isFuture()"
           [disabled]="isFuture()"
           (click)="!isFuture() && mode.set('attendance')"
@@ -106,11 +103,8 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
           Asistencia
         </button>
         <button
-          class="tab-btn flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors"
-          [class.border-brand]="mode() === 'edit'"
-          [class.text-primary]="mode() === 'edit'"
-          [class.border-border]="mode() !== 'edit'"
-          [class.text-secondary]="mode() !== 'edit'"
+          class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+          [class]="mode() === 'edit' ? 'bg-brand/10 border-brand text-brand' : 'bg-surface border-border text-secondary hover:bg-surface-elevated hover:text-primary'"
           (click)="mode.set('edit')"
           data-llm-action="switch-to-edit-mode"
         >

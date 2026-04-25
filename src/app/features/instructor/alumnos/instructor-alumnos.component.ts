@@ -21,6 +21,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { SelectModule } from 'primeng/select';
 import { StudentDrawerDetailComponent } from './components/student-drawer-detail.component';
 import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
@@ -49,6 +50,7 @@ const PAGE_SIZE = 9;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    SelectModule,
     DatePipe,
     TagModule,
     SectionHeroComponent,
@@ -150,18 +152,15 @@ const PAGE_SIZE = 9;
               </div>
 
               <!-- Sort Tool -->
-              <div class="sort-tool">
-                <app-icon name="arrow-up-down" [size]="14" class="text-text-muted" />
-                <select
-                  class="sort-tool__select"
-                  [ngModel]="sortBy()"
-                  (ngModelChange)="sortBy.set($event)"
-                >
-                  <option value="name">Nombre A-Z</option>
-                  <option value="progress">Mayor Progreso</option>
-                  <option value="nextClass">Próxima Clase</option>
-                </select>
-              </div>
+              <p-select
+                [options]="sortOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="sortBy()"
+                (ngModelChange)="sortBy.set($event)"
+                styleClass="w-44"
+                data-llm-description="sort student list by field"
+              />
             </div>
           </div>
         </div>
@@ -413,25 +412,6 @@ const PAGE_SIZE = 9;
         opacity: 0.6;
       }
 
-      .sort-tool {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
-        border-radius: var(--radius-md);
-        background: var(--bg-elevated);
-        border: 1px solid var(--border-subtle);
-      }
-      .sort-tool__select {
-        background: transparent;
-        border: none;
-        outline: none;
-        font-size: var(--text-xs);
-        font-weight: var(--font-semibold);
-        color: var(--text-secondary);
-        cursor: pointer;
-      }
-
       /* ══ Student Card ══ */
       .student-card {
         background: var(--bg-surface);
@@ -564,6 +544,12 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   public searchTerm = signal('');
   public filterStatus = signal<'all' | 'active' | 'completed'>('all');
   public sortBy = signal<'name' | 'progress' | 'nextClass'>('name');
+
+  readonly sortOptions = [
+    { label: 'Nombre A-Z', value: 'name' },
+    { label: 'Mayor Progreso', value: 'progress' },
+    { label: 'Próxima Clase', value: 'nextClass' },
+  ];
   public currentPage = signal(0);
 
   readonly skeletonItems = [1, 2, 3, 4, 5, 6, 7, 8, 9];

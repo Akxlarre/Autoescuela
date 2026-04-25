@@ -163,6 +163,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
 | `SectionHeroChip`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
 | `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |
+| `LicenseGroup`, `CertificateState`, `AttendanceSemaphore`, `StudentHomeHero`, `StudentHomeProgress`, `StudentHomeAttendance`, `StudentHomeGrades`, `StudentHomeCertificate`, `StudentHomeSideWidgets`, `StudentHomeSnapshot` | `ui` | `src/app/core/models/ui/student-home.model.ts` |
 | `UserRole`, `User` | `ui` | `src/app/core/models/ui/user.model.ts` |
 | `MaintenanceRow`, `MaintenanceKpis`, `ScheduledMaintenance`, `VehicleAgendaSlot` | `ui` | `src/app/core/models/ui/vehicle-detail.model.ts` |
 | `VehicleType`, `VehicleStatus`, `DocStatus`, `VehicleDocSummary`, `VehicleTableRow`, `FlotaKpis` | `ui` | `src/app/core/models/ui/vehicle-table.model.ts` |

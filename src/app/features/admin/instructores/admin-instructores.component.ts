@@ -501,9 +501,14 @@ export class AdminInstructoresComponent {
       this.facade.initialize();
     });
 
-    afterNextRender(() => {
-      if (this.listCard()) {
-        setTimeout(() => this.gsap.animateBentoGrid(this.listCard()!.nativeElement), 50);
+    effect(() => {
+      const isReady = !this.facade.isLoading();
+      const el = this.listCard()?.nativeElement;
+      
+      if (isReady && el) {
+        Promise.resolve().then(() => {
+          this.gsap.animateBentoGrid(el);
+        });
       }
     });
   }

@@ -9,8 +9,10 @@ import {
   afterNextRender,
 } from '@angular/core';
 import { SlicePipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { SelectModule } from 'primeng/select';
 import { AdminPreInscritosFacade } from '@core/facades/admin-pre-inscritos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -28,7 +30,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
   selector: 'app-admin-pre-inscrito-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TagModule, TooltipModule, IconComponent, SlicePipe],
+  imports: [FormsModule, TagModule, TooltipModule, IconComponent, SlicePipe, SelectModule],
   template: `
     @if (facade.selected(); as p) {
       <!-- ── Header info ────────────────────────────────────────────── -->
@@ -585,19 +587,16 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   No hay promociones activas para clase {{ facade.selected()?.licencia }}.
                 </p>
               } @else {
-                <select
-                  class="w-full border border-border rounded-lg px-3 py-2.5 text-sm text-primary bg-surface focus:outline-none cursor-pointer"
+                <p-select
+                  [ngModel]="selectedPromoId() || null"
+                  (ngModelChange)="onPromoChange($event)"
+                  [options]="promoSelectOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="— Seleccionar promoción —"
+                  styleClass="w-full"
                   data-llm-description="select promotion for professional enrollment"
-                  [value]="selectedPromoId()"
-                  (change)="onPromoChange($any($event.target).value)"
-                >
-                  <option value="">— Seleccionar promoción —</option>
-                  @for (promo of facade.promociones(); track promo.id) {
-                    <option [value]="promo.id">
-                      {{ promo.name }} ({{ promo.code }}) · {{ promo.startDate | slice: 0 : 10 }}
-                    </option>
-                  }
-                </select>
+                />
               }
             </div>
 
@@ -655,17 +654,15 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   <label class="text-xs text-secondary uppercase tracking-wide"
                     >Licencia previa</label
                   >
-                  <select
-                    class="w-full border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface focus:outline-none cursor-pointer"
-                    [value]="formCurrentLicense()"
-                    (change)="formCurrentLicense.set($any($event.target).value)"
-                  >
-                    <option value="">— Sin licencia —</option>
-                    <option value="B">Clase B</option>
-                    <option value="A2">A2</option>
-                    <option value="A3">A3</option>
-                    <option value="A4">A4</option>
-                  </select>
+                  <p-select
+                    [ngModel]="formCurrentLicense() || null"
+                    (ngModelChange)="formCurrentLicense.set($event ?? '')"
+                    [options]="licenciaOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="— Sin licencia —"
+                    styleClass="w-full"
+                  />
                 </div>
                 <div class="space-y-1">
                   <label class="text-xs text-secondary uppercase tracking-wide"
@@ -972,6 +969,20 @@ export class AdminPreInscritoDrawerComponent {
 
   // ── Form matrícula ───────────────────────────────────────────────────────
   readonly selectedPromoId = signal<number | ''>('');
+
+  readonly promoSelectOptions = computed(() =>
+    this.facade.promociones().map((p) => ({
+      label: `${p.name} (${p.code}) · ${p.startDate.slice(0, 10)}`,
+      value: p.id,
+    })),
+  );
+
+  readonly licenciaOptions = [
+    { label: 'Clase B', value: 'B' },
+    { label: 'A2', value: 'A2' },
+    { label: 'A3', value: 'A3' },
+    { label: 'A4', value: 'A4' },
+  ];
   readonly selectedPromoCourseId = signal<number | null>(null);
   readonly selectedCourseId = signal<number | null>(null);
   readonly formCurrentLicense = signal('');
@@ -1100,13 +1111,10 @@ export class AdminPreInscritoDrawerComponent {
     }
   }
 
-  onPromoChange(value: string): void {
-    const id = value ? +value : '';
-    this.selectedPromoId.set(id);
+  onPromoChange(value: number): void {
+    this.selectedPromoId.set(value);
     this.selectedPromoCourseId.set(null);
     this.selectedCourseId.set(null);
-    const p = this.facade.selected();
-    if (id === '' && p) void this.facade.cargarPromocionesParaLicencia(p.licencia);
   }
 
   async submitEvaluation(preInscritoId: number): Promise<void> {

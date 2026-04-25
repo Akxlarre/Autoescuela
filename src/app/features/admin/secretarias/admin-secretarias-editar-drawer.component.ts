@@ -112,7 +112,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione sede"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Sede de trabajo asignada a la secretaria"
           />

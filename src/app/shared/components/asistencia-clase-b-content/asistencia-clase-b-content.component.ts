@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -40,7 +42,14 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   selector: 'app-asistencia-clase-b-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, KpiCardVariantComponent, SkeletonBlockComponent, IconComponent],
+  imports: [
+    FormsModule,
+    SelectModule,
+    SectionHeroComponent,
+    KpiCardVariantComponent,
+    SkeletonBlockComponent,
+    IconComponent,
+  ],
   template: `
     <!-- ── Section Hero ────────────────────────────────────────────────────── -->
     <app-section-hero
@@ -378,17 +387,15 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 
           <!-- Filtro instructor -->
           <div class="ml-auto">
-            <select
-              class="text-xs rounded-md border px-2.5 py-1.5 bg-surface text-secondary focus:outline-none"
-              [style.border-color]="'var(--border-subtle)'"
-              [value]="selectedInstructorId() ?? ''"
-              (change)="onInstructorFilterChange($event)"
-            >
-              <option value="">Todos los instructores</option>
-              @for (inst of instructores(); track inst.id) {
-                <option [value]="inst.id">{{ inst.name }}</option>
-              }
-            </select>
+            <p-select
+              [options]="instructorSelectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="selectedInstructorId()"
+              (ngModelChange)="selectedInstructorId.set($event)"
+              styleClass="w-48"
+              data-llm-description="filter attendance by instructor"
+            />
           </div>
         </div>
 
@@ -607,6 +614,11 @@ export class AsistenciaClaseBContentComponent {
   protected readonly activeStatusFilter = signal<StatusFilter>('todos');
   protected readonly selectedInstructorId = signal<number | null>(null);
 
+  readonly instructorSelectOptions = computed(() => [
+    { label: 'Todos los instructores', value: null },
+    ...this.instructores().map((i) => ({ label: i.name, value: i.id })),
+  ]);
+
   // Justify modal
   protected readonly justifyModalOpen = signal(false);
   protected readonly justifySessionId = signal<number | null>(null);
@@ -645,11 +657,6 @@ export class AsistenciaClaseBContentComponent {
 
   protected onHeroAction(id: string): void {
     if (id === 'refresh') this.refreshRequested.emit();
-  }
-
-  protected onInstructorFilterChange(event: Event): void {
-    const val = (event.target as HTMLSelectElement).value;
-    this.selectedInstructorId.set(val ? Number(val) : null);
   }
 
   protected countByStatus(filter: StatusFilter): number {

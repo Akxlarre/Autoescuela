@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 
 // Facades
 import { FlotaFacade } from '@core/facades/flota.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 
 // Shared Components
@@ -40,15 +41,18 @@ import { VehicleDocumentsDrawerComponent } from './vehicle-documents-drawer/vehi
     />
   `,
 })
-export class AdminFlotaComponent implements OnInit {
+export class AdminFlotaComponent {
   protected readonly facade = inject(FlotaFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  // Filtro local adicional si el facade no lo hace (aunque FlotaFacade suele hacerlo)
   protected readonly localSearchTerm = signal('');
 
-  ngOnInit(): void {
-    this.facade.init();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   protected onLocalSearch(term: string): void {
@@ -59,7 +63,11 @@ export class AdminFlotaComponent implements OnInit {
 
   protected openVehicleForm(id?: number): void {
     this.facade.selectVehicle(id ?? null);
-    this.layoutDrawer.open(VehicleFormDrawerComponent, id ? 'Editar Vehículo' : 'Nuevo Vehículo', 'car');
+    this.layoutDrawer.open(
+      VehicleFormDrawerComponent,
+      id ? 'Editar Vehículo' : 'Nuevo Vehículo',
+      'car',
+    );
   }
 
   protected openAgenda(id: number): void {
@@ -69,6 +77,10 @@ export class AdminFlotaComponent implements OnInit {
 
   protected openDocuments(id: number): void {
     this.facade.selectVehicle(id);
-    this.layoutDrawer.open(VehicleDocumentsDrawerComponent, 'Documentación del Vehículo', 'file-text');
+    this.layoutDrawer.open(
+      VehicleDocumentsDrawerComponent,
+      'Documentación del Vehículo',
+      'file-text',
+    );
   }
 }

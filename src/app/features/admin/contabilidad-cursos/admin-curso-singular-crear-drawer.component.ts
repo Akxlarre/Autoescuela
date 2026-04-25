@@ -1,19 +1,16 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'app-admin-curso-singular-crear-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, IconComponent],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, SelectModule],
   template: `
     <div class="p-6 space-y-6">
       <form [formGroup]="form" (ngSubmit)="onGuardar()" class="space-y-4">
@@ -39,26 +36,25 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Tipo *
             </label>
-            <select
+            <p-select
               formControlName="tipo"
-              class="h-10 px-3 text-sm rounded-lg border bg-base text-text-primary border-border-subtle focus:border-brand"
-            >
-              <option value="sence">SENCE</option>
-              <option value="particular">Particular</option>
-            </select>
+              [options]="tipoOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
           </div>
           <div class="flex flex-col gap-1">
             <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Facturación *
             </label>
-            <select
+            <p-select
               formControlName="billingType"
-              class="h-10 px-3 text-sm rounded-lg border bg-base text-text-primary border-border-subtle focus:border-brand"
-            >
-              <option value="sence_franchise">Franquicia SENCE</option>
-              <option value="boleta">Boleta</option>
-              <option value="factura">Factura</option>
-            </select>
+              [options]="billingTypeOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
           </div>
         </div>
 
@@ -124,7 +120,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 
         <!-- Error global -->
         @if (facade.error()) {
-          <div class="p-3 rounded-lg bg-state-error-subtle text-state-error text-xs flex items-center gap-2">
+          <div
+            class="p-3 rounded-lg bg-state-error-subtle text-state-error text-xs flex items-center gap-2"
+          >
             <app-icon name="alert-circle" [size]="14" />
             <span>{{ facade.error() }}</span>
           </div>
@@ -145,7 +143,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               <span>Crear curso singular</span>
             }
           </button>
-          
+
           <button
             type="button"
             (click)="onCancelar()"
@@ -159,6 +157,17 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   `,
 })
 export class AdminCursoSingularCrearDrawerComponent {
+  readonly tipoOptions = [
+    { label: 'SENCE', value: 'sence' },
+    { label: 'Particular', value: 'particular' },
+  ];
+
+  readonly billingTypeOptions = [
+    { label: 'Franquicia SENCE', value: 'sence_franchise' },
+    { label: 'Boleta', value: 'boleta' },
+    { label: 'Factura', value: 'factura' },
+  ];
+
   protected readonly facade = inject(CursosSingularesFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 

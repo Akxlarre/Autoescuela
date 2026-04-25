@@ -18,6 +18,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { AdminPreInscritoDrawerComponent } from './admin-pre-inscrito-drawer.component';
 import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.model';
 
@@ -26,6 +28,8 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
+    SelectModule,
     TableModule,
     TagModule,
     TooltipModule,
@@ -91,32 +95,24 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
           (input)="searchQuery.set($any($event.target).value)"
         />
 
-        <select
-          class="border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface focus:outline-none cursor-pointer"
+        <p-select
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="filterStatus()"
+          (ngModelChange)="filterStatus.set($event)"
+          styleClass="w-full sm:w-48"
           data-llm-description="filter pre-inscribed students by status"
-          [value]="filterStatus()"
-          (change)="filterStatus.set($any($event.target).value)"
-        >
-          <option value="">Todos los estados</option>
-          <option value="pending_review">Sin evaluar</option>
-          <option value="approved">Aptos</option>
-          <option value="rejected">Rechazados</option>
-          <option value="enrolled">Matriculados</option>
-          <option value="expired">Vencidos</option>
-        </select>
-
-        <select
-          class="border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface focus:outline-none cursor-pointer"
+        />
+        <p-select
+          [options]="licenciaOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="filterLicencia()"
+          (ngModelChange)="filterLicencia.set($event)"
+          styleClass="w-full sm:w-36"
           data-llm-description="filter pre-inscribed students by license class"
-          [value]="filterLicencia()"
-          (change)="filterLicencia.set($any($event.target).value)"
-        >
-          <option value="">Todas las clases</option>
-          <option value="A2">A2</option>
-          <option value="A3">A3</option>
-          <option value="A4">A4</option>
-          <option value="A5">A5</option>
-        </select>
+        />
 
         @if (searchQuery() || filterStatus() || filterLicencia()) {
           <button
@@ -256,6 +252,23 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
   protected readonly searchQuery = signal('');
   protected readonly filterStatus = signal('');
   protected readonly filterLicencia = signal('');
+
+  readonly statusOptions = [
+    { label: 'Todos los estados', value: '' },
+    { label: 'Sin evaluar', value: 'pending_review' },
+    { label: 'Aptos', value: 'approved' },
+    { label: 'Rechazados', value: 'rejected' },
+    { label: 'Matriculados', value: 'enrolled' },
+    { label: 'Vencidos', value: 'expired' },
+  ];
+
+  readonly licenciaOptions = [
+    { label: 'Todas las clases', value: '' },
+    { label: 'A2', value: 'A2' },
+    { label: 'A3', value: 'A3' },
+    { label: 'A4', value: 'A4' },
+    { label: 'A5', value: 'A5' },
+  ];
   protected readonly skeletonRows = Array(6).fill(0);
 
   protected readonly filtered = computed(() => {

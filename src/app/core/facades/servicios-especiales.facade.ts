@@ -5,6 +5,7 @@
  */
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { ServiceCatalog } from '@core/models/dto/service-catalog.model';
 import type { SpecialServiceSale } from '@core/models/dto/special-service-sale.model';
@@ -76,6 +77,7 @@ function mapVentaDto(
 export class ServiciosEspecialesFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -85,6 +87,7 @@ export class ServiciosEspecialesFacade {
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   // ── Estado expuesto ─────────────────────────────────────────────────────────
   public readonly catalogo = this._catalogo.asReadonly();
@@ -110,17 +113,33 @@ export class ServiciosEspecialesFacade {
 
   // ── SWR ─────────────────────────────────────────────────────────────────────
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
+
     this._initialized = true;
+    this._lastBranchId = branchId;
     this._isLoading.set(true);
     try {
       await this.fetchData();
     } finally {
       this._isLoading.set(false);
     }
+  }
+
+  private getActiveBranchId(forceSpecific = false): number | null {
+    const user = this.auth.currentUser();
+    const selected = this.branchFacade.selectedBranchId();
+
+    if (user?.role === 'admin') {
+      // Si forceSpecific es true (para INSERTs), y no hay selección, usamos la sede del usuario admin
+      if (forceSpecific && selected === null) return user.branchId ?? null;
+      return selected;
+    }
+    return user?.branchId ?? null;
   }
 
   private async refreshSilently(): Promise<void> {
@@ -132,6 +151,18 @@ export class ServiciosEspecialesFacade {
   }
 
   private async fetchData(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let ventasQuery: any = this.supabase.client
+      .from('special_service_sales')
+      .select('*, service_catalog(name)')
+      .order('sale_date', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (branchId !== null) ventasQuery = ventasQuery.eq('branch_id', branchId);
+
     const [catalogoResult, ventasResult] = await Promise.all([
       this.supabase.client
         .from('service_catalog')
@@ -139,12 +170,7 @@ export class ServiciosEspecialesFacade {
         .eq('active', true)
         .order('created_at', { ascending: true }),
 
-      this.supabase.client
-        .from('special_service_sales')
-        .select('*, service_catalog(name)')
-        .order('sale_date', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(200),
+      ventasQuery,
     ]);
 
     if (catalogoResult.error) throw catalogoResult.error;
@@ -164,19 +190,23 @@ export class ServiciosEspecialesFacade {
   // ── Métodos de acción ────────────────────────────────────────────────────────
   openRegistrarVentaDrawer(servicio?: ServicioEspecial): void {
     this._selectedServicio.set(servicio ?? null);
-    import(
-      '../../shared/components/servicios-especiales-content/drawers/registrar-venta-drawer.component'
-    ).then((m) => {
-      this.layoutDrawer.open(m.RegistrarVentaDrawerComponent, 'Registrar Venta de Servicio', 'receipt');
-    });
+    import('../../shared/components/servicios-especiales-content/drawers/registrar-venta-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(
+          m.RegistrarVentaDrawerComponent,
+          'Registrar Venta de Servicio',
+          'receipt',
+        );
+      },
+    );
   }
 
   openAgregarServicioDrawer(): void {
-    import(
-      '../../shared/components/servicios-especiales-content/drawers/agregar-servicio-drawer.component'
-    ).then((m) => {
-      this.layoutDrawer.open(m.AgregarServicioDrawerComponent, 'Agregar Nuevo Servicio', 'plus');
-    });
+    import('../../shared/components/servicios-especiales-content/drawers/agregar-servicio-drawer.component').then(
+      (m) => {
+        this.layoutDrawer.open(m.AgregarServicioDrawerComponent, 'Agregar Nuevo Servicio', 'plus');
+      },
+    );
   }
 
   async registrarVenta(data: VentaFormData): Promise<boolean> {
@@ -192,6 +222,7 @@ export class ServiciosEspecialesFacade {
       paid: data.cobrado,
       status: 'pending',
       registered_by: registeredBy,
+      branch_id: this.getActiveBranchId(true),
       metadata: null,
     });
 

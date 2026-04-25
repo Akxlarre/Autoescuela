@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -31,7 +32,7 @@ import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.mo
   selector: 'app-agendar-teoria-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, SkeletonBlockComponent],
+  imports: [FormsModule, IconComponent, SkeletonBlockComponent, SelectModule],
   styles: `
     .field-label {
       display: block;
@@ -78,17 +79,16 @@ import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.mo
         @if (showBranchSelector()) {
           <div class="flex flex-col gap-1.5">
             <label class="field-label">Sede</label>
-            <select
-              class="field-select"
+            <p-select
               [ngModel]="selectedBranchId()"
               (ngModelChange)="onBranchChange($event)"
+              [options]="branchSelectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Selecciona una sede"
+              styleClass="w-full"
               data-llm-description="Selector de sede para la clase teórica"
-            >
-              <option [ngValue]="null" disabled>Selecciona una sede</option>
-              @for (branch of branches(); track branch.id) {
-                <option [ngValue]="branch.id">{{ branch.name }}</option>
-              }
-            </select>
+            />
           </div>
         }
 
@@ -265,6 +265,10 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
   // Derived
   protected readonly branches = this.branchFacade.branches;
   protected readonly showBranchSelector = computed(() => this.fixedBranchId() === null);
+
+  protected readonly branchSelectOptions = computed(() =>
+    this.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
 
   protected readonly allSelected = computed(
     () => this.localAlumnos().length > 0 && this.localAlumnos().every((a) => a.selected),

@@ -106,8 +106,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
             optionLabel="label"
             optionValue="value"
             placeholder="Todas las sedes"
-            [style]="{ height: '40px', 'min-width': '160px' }"
-            panelStyleClass="filter-select-panel"
+            [style]="{ 'min-width': '160px' }"
             aria-label="Filtrar por sede"
             data-llm-description="Filtro de secretarias por sede"
           />
@@ -117,8 +116,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
-            [style]="{ height: '40px', 'min-width': '160px' }"
-            panelStyleClass="filter-select-panel"
+            [style]="{ 'min-width': '160px' }"
             aria-label="Filtrar por estado"
             data-llm-description="Filtro de secretarias por estado"
           />

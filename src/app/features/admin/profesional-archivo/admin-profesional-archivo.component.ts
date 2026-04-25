@@ -56,7 +56,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             [ngModel]="facade.selectedPromocionId()"
             (ngModelChange)="onPromoChange($event)"
             styleClass="w-full"
-            [style]="{ height: '40px' }"
             data-llm-description="select archived professional promotion"
           />
         }

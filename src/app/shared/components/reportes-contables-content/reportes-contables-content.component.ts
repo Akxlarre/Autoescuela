@@ -6,8 +6,9 @@ import {
   linkedSignal,
   output,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
@@ -26,7 +27,13 @@ import {
 @Component({
   selector: 'app-reportes-contables-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, KpiCardVariantComponent],
+  imports: [
+    IconComponent,
+    SectionHeroComponent,
+    KpiCardVariantComponent,
+    FormsModule,
+    SelectModule,
+  ],
   styles: [
     `
       /* ── Filter bar ───────────────────────────────────────────────────── */
@@ -204,16 +211,15 @@ import {
         <!-- Rango -->
         <div>
           <label class="filter-label">Rango</label>
-          <select
-            class="filter-control"
-            [value]="localRango()"
-            (change)="onRangoChange($any($event.target).value)"
+          <p-select
+            [ngModel]="localRango()"
+            (ngModelChange)="onRangoChange($event)"
+            [options]="rangos"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
             data-llm-description="selector de rango de fechas para el reporte contable"
-          >
-            @for (opt of rangos; track opt.value) {
-              <option [value]="opt.value">{{ opt.label }}</option>
-            }
-          </select>
+          />
         </div>
 
         <!-- Desde -->

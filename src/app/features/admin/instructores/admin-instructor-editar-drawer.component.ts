@@ -167,7 +167,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione sede"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Sede de trabajo del instructor"
           />
@@ -201,7 +201,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione clase"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Clase de licencia del instructor"
           />
@@ -251,7 +251,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione tipo"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Tipo de instructor"
           />
@@ -274,7 +274,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionValue="value"
             placeholder="Sin vehículo asignado"
             [showClear]="true"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             data-llm-description="Vehículo asignado al instructor"
           />
           <span class="text-xs" style="color: var(--text-muted)">

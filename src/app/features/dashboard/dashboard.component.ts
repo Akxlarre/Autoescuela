@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   afterNextRender,
   ElementRef,
@@ -17,6 +18,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
@@ -188,6 +190,7 @@ export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
   private readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
@@ -232,15 +235,21 @@ export class DashboardComponent {
     })),
   );
   constructor() {
-    // Iniciar la carga de datos con patrón SWR
-    void this.dashboardFacade.initialize();
-    void this.dashboardAlertsFacade.initialize();
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking reactivo
+      void this.dashboardFacade.initialize();
+      void this.dashboardAlertsFacade.initialize();
+    });
 
-    afterNextRender(() => {
-      if (this.bentoGrid()) {
-        setTimeout(() => {
-          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
-        }, 50);
+    // SWR Lifecycle Hook: animar grid cuando sale de loading (o de inmediato si hubo hit map de caché)
+    effect(() => {
+      const isReady = !this.loading();
+      const el = this.bentoGrid()?.nativeElement;
+      
+      if (isReady && el) {
+        Promise.resolve().then(() => {
+          this.gsap.animateBentoGrid(el);
+        });
       }
     });
   }

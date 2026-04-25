@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { toISODate } from '@core/utils/date.utils';
 import type {
@@ -35,7 +36,12 @@ function mapExpenseToEgreso(e: Expense): EgresoRow {
 }
 
 function mapAdvanceToEgreso(a: InstructorAdvance): EgresoRow {
-  return { id: a.id, tipo: 'advance', descripcion: a.reason ?? a.description ?? 'Anticipo instructor', monto: a.amount };
+  return {
+    id: a.id,
+    tipo: 'advance',
+    descripcion: a.reason ?? a.description ?? 'Anticipo instructor',
+    monto: a.amount,
+  };
 }
 
 // ─── Facade ───────────────────────────────────────────────────────────────────
@@ -44,6 +50,7 @@ function mapAdvanceToEgreso(a: InstructorAdvance): EgresoRow {
 export class CuadraturaFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
@@ -55,8 +62,9 @@ export class CuadraturaFacade {
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSaving = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
-  
+
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
   private _realtimeChannel: any | null = null;
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
@@ -68,11 +76,17 @@ export class CuadraturaFacade {
   readonly isSaving = this._isSaving.asReadonly();
   readonly error = this._error.asReadonly();
 
-  readonly ingresosEfectivoHoy = computed(() => this._pagosHoy().reduce((sum, p) => sum + p.claseB, 0));
-  readonly otrosIngresosHoy = computed(() => this._pagosHoy().reduce((sum, p) => sum + p.claseA + p.otros, 0));
+  readonly ingresosEfectivoHoy = computed(() =>
+    this._pagosHoy().reduce((sum, p) => sum + p.claseB, 0),
+  );
+  readonly otrosIngresosHoy = computed(() =>
+    this._pagosHoy().reduce((sum, p) => sum + p.claseA + p.otros, 0),
+  );
   readonly totalIngresosHoy = computed(() => this._pagosHoy().reduce((sum, p) => sum + p.total, 0));
   readonly totalEgresosHoy = computed(() => this._gastosHoy().reduce((sum, e) => sum + e.monto, 0));
-  readonly saldoTeoricoEfectivo = computed(() => this.fondoInicial() + this.ingresosEfectivoHoy() - this.totalEgresosHoy());
+  readonly saldoTeoricoEfectivo = computed(
+    () => this.fondoInicial() + this.ingresosEfectivoHoy() - this.totalEgresosHoy(),
+  );
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
@@ -80,10 +94,26 @@ export class CuadraturaFacade {
     if (this._realtimeChannel) return;
     this._realtimeChannel = this.supabase.client
       .channel('cuadratura-hoy-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => void this.refreshSilently())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => void this.refreshSilently())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'instructor_advances' }, () => void this.refreshSilently())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_closings' }, () => void this.refreshSilently())
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payments' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'expenses' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'instructor_advances' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cash_closings' },
+        () => void this.refreshSilently(),
+      )
       .subscribe();
   }
 
@@ -94,17 +124,25 @@ export class CuadraturaFacade {
     }
   }
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
+
   async initialize(): Promise<void> {
     this.setupRealtime();
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
-    
+
     this._isLoading.set(true);
     try {
       await this.fetchAll();
       this._initialized = true;
+      this._lastBranchId = branchId;
     } catch {
       this._error.set('Error al cargar datos de cuadratura.');
     } finally {
@@ -127,7 +165,7 @@ export class CuadraturaFacade {
 
   private async fetchAll(): Promise<void> {
     const today = toISODate(new Date());
-    const branchId = this.auth.currentUser()?.branchId ?? null;
+    const branchId = this.getActiveBranchId();
     await Promise.all([
       this.fetchPayments(today, branchId),
       this.fetchExpensesAndAdvances(today, branchId),
@@ -138,7 +176,7 @@ export class CuadraturaFacade {
   private async fetchPayments(today: string, branchId: number | null): Promise<void> {
     const start = `${today}T00:00:00`;
     const end = `${today}T23:59:59`;
-    
+
     let query: any = this.supabase.client
       .from('payments')
       .select('*, enrollments!inner(branch_id)')
@@ -148,7 +186,7 @@ export class CuadraturaFacade {
     if (branchId) {
       query = query.eq('enrollments.branch_id', branchId);
     }
-    
+
     // El ordenamiento y limitación siempre al final de la cadena de filtros
     const { data } = await query.order('created_at', { ascending: true });
     this._pagosHoy.set((data ?? []).map(mapPaymentToIngreso));
@@ -159,10 +197,10 @@ export class CuadraturaFacade {
     if (branchId) {
       expQuery = expQuery.eq('branch_id', branchId);
     }
-    
+
     const [expRes, advRes] = await Promise.all([
       expQuery,
-      this.supabase.client.from('instructor_advances').select('*').eq('date', today)
+      this.supabase.client.from('instructor_advances').select('*').eq('date', today),
     ]);
     const gastos = (expRes.data ?? []).map(mapExpenseToEgreso);
     const anticipos = (advRes.data ?? []).map(mapAdvanceToEgreso);
@@ -170,7 +208,11 @@ export class CuadraturaFacade {
   }
 
   private async checkCajaStatus(today: string, branchId: number | null): Promise<void> {
-    let query: any = this.supabase.client.from('cash_closings').select('*').eq('date', today).eq('closed', true);
+    let query: any = this.supabase.client
+      .from('cash_closings')
+      .select('*')
+      .eq('date', today)
+      .eq('closed', true);
     if (branchId) query = query.eq('branch_id', branchId);
     const { data } = await query.maybeSingle();
     this._cajaYaCerrada.set(data !== null);
@@ -181,12 +223,19 @@ export class CuadraturaFacade {
     this._isSaving.set(true);
     try {
       if (row.enrollmentId !== null) {
-        const { data: enr } = await this.supabase.client.from('enrollments').select('total_paid, pending_balance').eq('id', row.enrollmentId).maybeSingle();
+        const { data: enr } = await this.supabase.client
+          .from('enrollments')
+          .select('total_paid, pending_balance')
+          .eq('id', row.enrollmentId)
+          .maybeSingle();
         if (enr) {
-          await this.supabase.client.from('enrollments').update({
-            total_paid: Math.max(0, (enr.total_paid ?? 0) - row.total),
-            pending_balance: (enr.pending_balance ?? 0) + row.total,
-          }).eq('id', row.enrollmentId);
+          await this.supabase.client
+            .from('enrollments')
+            .update({
+              total_paid: Math.max(0, (enr.total_paid ?? 0) - row.total),
+              pending_balance: (enr.pending_balance ?? 0) + row.total,
+            })
+            .eq('id', row.enrollmentId);
         }
       }
       await this.supabase.client.from('payments').delete().eq('id', row.id);
@@ -224,9 +273,20 @@ export class CuadraturaFacade {
     try {
       const today = toISODate(new Date());
       if (datos.tipo === 'gasto') {
-        await this.supabase.client.from('expenses').insert({ date: today, amount: datos.monto, description: datos.descripcion, branch_id: user.branchId, registered_by: user.dbId });
+        await this.supabase.client.from('expenses').insert({
+          date: today,
+          amount: datos.monto,
+          description: datos.descripcion,
+          branch_id: this.getActiveBranchId(),
+          registered_by: user.dbId,
+        });
       } else {
-        await this.supabase.client.from('instructor_advances').insert({ date: today, amount: datos.monto, reason: datos.descripcion, registered_by: user.dbId });
+        await this.supabase.client.from('instructor_advances').insert({
+          date: today,
+          amount: datos.monto,
+          reason: datos.descripcion,
+          registered_by: user.dbId,
+        });
       }
       this.toast.success('Egreso registrado correctamente.');
       void this.refreshSilently();
@@ -247,16 +307,32 @@ export class CuadraturaFacade {
       const today = toISODate(new Date());
       const pagos = this._pagosHoy();
       await this.supabase.client.from('cash_closings').insert({
-        date: today, branch_id: user.branchId, closed_by: user.dbId, closed_at: new Date().toISOString(), status: 'closed', closed: true,
+        date: today,
+        branch_id: this.getActiveBranchId(),
+        closed_by: user.dbId,
+        closed_at: new Date().toISOString(),
+        status: 'closed',
+        closed: true,
         cash_amount: pagos.reduce((s, p) => s + p.claseB, 0),
         transfer_amount: pagos.reduce((s, p) => s + p.claseA, 0),
         card_amount: pagos.reduce((s, p) => s + p.otros, 0),
         voucher_amount: pagos.reduce((s, p) => s + p.sence, 0),
-        total_income: this.totalIngresosHoy(), total_expenses: this.totalEgresosHoy(), balance: this.saldoTeoricoEfectivo(),
-        payments_count: pagos.length, arqueo_amount: payload.arqueoTotal, difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
-        qty_bill_20000: payload.bill20000, qty_bill_10000: payload.bill10000, qty_bill_5000: payload.bill5000,
-        qty_bill_2000: payload.bill2000, qty_bill_1000: payload.bill1000, qty_coin_500: payload.coin500,
-        qty_coin_100: payload.coin100, qty_coin_50: payload.coin50, qty_coin_10: payload.coin10, notes: payload.notes || null,
+        total_income: this.totalIngresosHoy(),
+        total_expenses: this.totalEgresosHoy(),
+        balance: this.saldoTeoricoEfectivo(),
+        payments_count: pagos.length,
+        arqueo_amount: payload.arqueoTotal,
+        difference: payload.arqueoTotal - this.saldoTeoricoEfectivo(),
+        qty_bill_20000: payload.bill20000,
+        qty_bill_10000: payload.bill10000,
+        qty_bill_5000: payload.bill5000,
+        qty_bill_2000: payload.bill2000,
+        qty_bill_1000: payload.bill1000,
+        qty_coin_500: payload.coin500,
+        qty_coin_100: payload.coin100,
+        qty_coin_50: payload.coin50,
+        qty_coin_10: payload.coin10,
+        notes: payload.notes || null,
       });
       this.toast.success('Caja cerrada correctamente.');
       void this.refreshSilently();

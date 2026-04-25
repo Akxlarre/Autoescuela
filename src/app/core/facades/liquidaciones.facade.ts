@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
   LiquidacionRow,
@@ -43,6 +44,7 @@ function getAvatarColor(name: string): string {
 export class LiquidacionesFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
@@ -156,6 +158,12 @@ export class LiquidacionesFacade {
     }
   }
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
+
   // ── Carga de datos ────────────────────────────────────────────────────────
 
   /**
@@ -165,7 +173,7 @@ export class LiquidacionesFacade {
   async initialize(): Promise<void> {
     const mes = this._mesActual();
     const anio = this._anioActual();
-    const branchId = this.auth.currentUser()?.branchId ?? null;
+    const branchId = this.getActiveBranchId();
 
     // Aseguramos suscripción realtime una sola vez
     this.setupRealtime();
@@ -200,7 +208,7 @@ export class LiquidacionesFacade {
     try {
       const mes = this._mesActual();
       const anio = this._anioActual();
-      const branchId = this.auth.currentUser()?.branchId ?? null;
+      const branchId = this.getActiveBranchId();
       await this.fetchLiquidacionesData(mes, anio, branchId);
       this._lastMonth = mes;
       this._lastYear = anio;

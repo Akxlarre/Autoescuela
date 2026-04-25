@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
 
 /**
@@ -19,9 +20,11 @@ import type { AlertModel } from '@core/models/ui/dashboard.model';
 export class DashboardAlertsFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   // ── 1. ESTADO PRIVADO ──────────────────────────────────────────────────────
   private _activeAlerts = signal<AlertModel[]>([]);
@@ -40,8 +43,15 @@ export class DashboardAlertsFacade {
    * SWR Initialization:
    * First call triggers isLoading(true). Subsequent calls refresh silently.
    */
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
+
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
@@ -49,8 +59,9 @@ export class DashboardAlertsFacade {
     this._isLoading.set(true);
     this._error.set(null);
     try {
-      await this.fetchAlertsData();
+      await this.fetchAlertsData(branchId);
       this._initialized = true;
+      this._lastBranchId = branchId;
     } catch {
       this._error.set('Error al cargar alertas');
     } finally {
@@ -60,7 +71,7 @@ export class DashboardAlertsFacade {
 
   private async refreshSilently(): Promise<void> {
     try {
-      await this.fetchAlertsData();
+      await this.fetchAlertsData(this.getActiveBranchId());
     } catch {
       // Swallowed
     }
@@ -71,9 +82,12 @@ export class DashboardAlertsFacade {
     return this.initialize();
   }
 
-  private async fetchAlertsData(): Promise<void> {
+  private async fetchAlertsData(branchId: number | null): Promise<void> {
     try {
-      const alerts = await Promise.all([this.checkExpiredDocuments(), this.checkPendingPayments()]);
+      const alerts = await Promise.all([
+        this.checkExpiredDocuments(branchId),
+        this.checkPendingPayments(branchId),
+      ]);
       this._activeAlerts.set(alerts.flat());
     } catch (err) {
       console.error('[DashboardAlertsFacade] fetchAlertsData error:', err);
@@ -87,7 +101,7 @@ export class DashboardAlertsFacade {
    * Query 1: Documentos de vehículos vencidos o por vencer.
    * Lee `alert_config` para obtener `advance_days`, luego consulta `vehicle_documents`.
    */
-  private async checkExpiredDocuments(): Promise<AlertModel[]> {
+  private async checkExpiredDocuments(branchId: number | null): Promise<AlertModel[]> {
     const alerts: AlertModel[] = [];
 
     // Obtener configuración de anticipación de alertas
@@ -103,10 +117,12 @@ export class DashboardAlertsFacade {
     const todayStr = today.toISOString().split('T')[0];
 
     // Documentos ya vencidos
-    const { count: expiredCount } = await this.supabase.client
+    let expiredQuery: any = this.supabase.client
       .from('vehicle_documents')
-      .select('id', { count: 'exact', head: true })
+      .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
       .lt('expiry_date', todayStr);
+    if (branchId !== null) expiredQuery = expiredQuery.eq('vehicles.branch_id', branchId);
+    const { count: expiredCount } = await expiredQuery;
 
     if (expiredCount && expiredCount > 0) {
       alerts.push({
@@ -122,11 +138,13 @@ export class DashboardAlertsFacade {
     futureDate.setDate(futureDate.getDate() + advanceDays);
     const futureDateStr = futureDate.toISOString().split('T')[0];
 
-    const { count: soonCount } = await this.supabase.client
+    let soonQuery: any = this.supabase.client
       .from('vehicle_documents')
-      .select('id', { count: 'exact', head: true })
+      .select('id, vehicles!inner(branch_id)', { count: 'exact', head: true })
       .gte('expiry_date', todayStr)
       .lte('expiry_date', futureDateStr);
+    if (branchId !== null) soonQuery = soonQuery.eq('vehicles.branch_id', branchId);
+    const { count: soonCount } = await soonQuery;
 
     if (soonCount && soonCount > 0) {
       alerts.push({
@@ -143,12 +161,14 @@ export class DashboardAlertsFacade {
   /**
    * Query 2: Matrículas activas con saldo pendiente.
    */
-  private async checkPendingPayments(): Promise<AlertModel[]> {
-    const { count } = await this.supabase.client
+  private async checkPendingPayments(branchId: number | null): Promise<AlertModel[]> {
+    let query: any = this.supabase.client
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active')
       .gt('pending_balance', 0);
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+    const { count } = await query;
 
     if (count && count > 0) {
       return [

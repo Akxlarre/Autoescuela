@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -29,7 +31,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     KpiCardVariantComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
-    ShortCurrencyPipe
+    ShortCurrencyPipe,
+    FormsModule,
+    SelectModule,
   ],
   template: `
     <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
@@ -178,17 +182,14 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
       <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h2 class="text-lg font-semibold text-text-primary m-0">Historial de Ventas</h2>
         <div class="flex items-center gap-2">
-          <select
-            class="h-9 px-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none"
-            style="focus-ring-color:var(--ds-brand)"
-            [value]="filtroServicio()"
-            (change)="onFiltroChange($event)"
-          >
-            <option value="todos">Todos los servicios</option>
-            @for (s of catalogo(); track s.id) {
-              <option [value]="s.id">{{ s.nombre }}</option>
-            }
-          </select>
+          <p-select
+            [ngModel]="filtroServicio()"
+            (ngModelChange)="filtroServicio.set($event)"
+            [options]="filtroOptions()"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
           <button
             type="button"
             class="h-9 px-3 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
@@ -205,23 +206,59 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
         <table class="w-full text-sm">
           <thead>
             <tr style="border-bottom:1px solid var(--border-subtle)">
-              <th class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Cliente</th>
-              <th class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Servicio</th>
-              <th class="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Monto</th>
-              <th class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Estado</th>
-              <th class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Cobro</th>
-              <th class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Fecha</th>
-              <th class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted">Acción</th>
+              <th
+                class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Cliente
+              </th>
+              <th
+                class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Servicio
+              </th>
+              <th
+                class="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Monto
+              </th>
+              <th
+                class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Estado
+              </th>
+              <th
+                class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Cobro
+              </th>
+              <th
+                class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Fecha
+              </th>
+              <th
+                class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+              >
+                Acción
+              </th>
             </tr>
           </thead>
           <tbody>
             @for (venta of ventasFiltradas(); track venta.id) {
-              <tr class="transition-colors hover:bg-bg-subtle/50" style="border-bottom:1px solid var(--border-subtle)">
+              <tr
+                class="transition-colors hover:bg-bg-subtle/50"
+                style="border-bottom:1px solid var(--border-subtle)"
+              >
                 <td class="py-3 px-4">
                   <p class="font-medium text-text-primary m-0">{{ venta.cliente }}</p>
                   <p class="text-[10px] text-text-muted font-mono m-0 uppercase">{{ venta.rut }}</p>
                   @if (venta.resultado) {
-                    <span class="text-xs font-medium" [style.color]="venta.resultado === 'Apto' ? 'var(--state-success)' : 'var(--state-error)'">
+                    <span
+                      class="text-xs font-medium"
+                      [style.color]="
+                        venta.resultado === 'Apto' ? 'var(--state-success)' : 'var(--state-error)'
+                      "
+                    >
                       {{ venta.resultado === 'Apto' ? '✓' : '✗' }} {{ venta.resultado }}
                     </span>
                   }
@@ -231,36 +268,50 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   \${{ venta.precio.toLocaleString('es-CL') }}
                 </td>
                 <td class="py-3 px-4 text-center">
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                    [style]="venta.estado === 'completado'
-                      ? 'background:var(--state-success-bg);color:var(--state-success)'
-                      : 'background:var(--state-warning-bg);color:var(--state-warning)'">
+                  <span
+                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                    [style]="
+                      venta.estado === 'completado'
+                        ? 'background:var(--state-success-bg);color:var(--state-success)'
+                        : 'background:var(--state-warning-bg);color:var(--state-warning)'
+                    "
+                  >
                     {{ venta.estado === 'completado' ? 'Completado' : 'Pendiente' }}
                   </span>
                 </td>
                 <td class="py-3 px-4 text-center">
                   @if (venta.cobrado) {
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border"
-                      style="background:var(--state-success-bg);color:var(--state-success);border-color:var(--state-success)">
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border"
+                      style="background:var(--state-success-bg);color:var(--state-success);border-color:var(--state-success)"
+                    >
                       Cobrado
                     </span>
                   } @else {
-                    <button type="button" class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
-                      (click)="cobroRegistrado.emit(venta.id)">
+                    <button
+                      type="button"
+                      class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                      (click)="cobroRegistrado.emit(venta.id)"
+                    >
                       Cobrar
                     </button>
                   }
                 </td>
                 <td class="py-3 px-4 text-text-muted">{{ venta.fecha }}</td>
                 <td class="py-3 px-4 text-center">
-                  <button type="button" class="text-xs font-medium text-text-muted hover:text-text-primary transition-colors">
+                  <button
+                    type="button"
+                    class="text-xs font-medium text-text-muted hover:text-text-primary transition-colors"
+                  >
                     Ver
                   </button>
                 </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="py-10 text-center text-text-muted text-sm">No hay ventas registradas.</td>
+                <td colspan="7" class="py-10 text-center text-text-muted text-sm">
+                  No hay ventas registradas.
+                </td>
               </tr>
             }
           </tbody>
@@ -274,34 +325,50 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <div class="flex items-start justify-between gap-2">
               <div class="flex flex-col gap-0.5">
                 <span class="font-bold text-text-primary">{{ venta.cliente }}</span>
-                <span class="text-[10px] text-text-muted font-mono uppercase tracking-tighter">{{ venta.rut }}</span>
+                <span class="text-[10px] text-text-muted font-mono uppercase tracking-tighter">{{
+                  venta.rut
+                }}</span>
               </div>
-              <span class="text-sm font-black text-text-primary">\${{ venta.precio.toLocaleString('es-CL') }}</span>
+              <span class="text-sm font-black text-text-primary"
+                >\${{ venta.precio.toLocaleString('es-CL') }}</span
+              >
             </div>
-            
+
             <div class="flex items-center gap-2">
-              <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-bg-subtle">{{ venta.servicio }}</span>
+              <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-bg-subtle">{{
+                venta.servicio
+              }}</span>
               <span class="text-[10px] text-text-muted">{{ venta.fecha }}</span>
             </div>
 
             <div class="flex items-center justify-between pt-3 border-t border-border-subtle/50">
-               <span class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                 [style]="venta.estado === 'completado'
-                   ? 'background:var(--state-success-bg);color:var(--state-success)'
-                   : 'background:var(--state-warning-bg);color:var(--state-warning)'">
-                 {{ venta.estado }}
-               </span>
+              <span
+                class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                [style]="
+                  venta.estado === 'completado'
+                    ? 'background:var(--state-success-bg);color:var(--state-success)'
+                    : 'background:var(--state-warning-bg);color:var(--state-warning)'
+                "
+              >
+                {{ venta.estado }}
+              </span>
 
-               <div class="flex items-center gap-2">
-                  @if (venta.cobrado) {
-                    <span class="text-[10px] font-bold text-state-success uppercase px-2 py-1 bg-state-success-bg border border-state-success rounded">Pagado</span>
-                  } @else {
-                    <button type="button" class="text-[10px] font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
-                      (click)="cobroRegistrado.emit(venta.id)">
-                      Cobrar
-                    </button>
-                  }
-               </div>
+              <div class="flex items-center gap-2">
+                @if (venta.cobrado) {
+                  <span
+                    class="text-[10px] font-bold text-state-success uppercase px-2 py-1 bg-state-success-bg border border-state-success rounded"
+                    >Pagado</span
+                  >
+                } @else {
+                  <button
+                    type="button"
+                    class="text-[10px] font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
+                    (click)="cobroRegistrado.emit(venta.id)"
+                  >
+                    Cobrar
+                  </button>
+                }
+              </div>
             </div>
           </div>
         } @empty {
@@ -332,6 +399,11 @@ export class ServiciosEspecialesContentComponent {
   protected readonly filtroServicio = signal('todos');
 
   // ── Computed ────────────────────────────────────────────────────────────────
+  protected readonly filtroOptions = computed(() => [
+    { label: 'Todos los servicios', value: 'todos' },
+    ...this.catalogo().map((s) => ({ label: s.nombre, value: String(s.id) })),
+  ]);
+
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();
     const all = this.ventas();
@@ -351,10 +423,6 @@ export class ServiciosEspecialesContentComponent {
   // ── Handlers ───────────────────────────────────────────────────────────────
   protected onHeroAction(actionId: string): void {
     if (actionId === 'registrar-venta') this.requestRegistrarVenta.emit(undefined);
-  }
-
-  protected onFiltroChange(event: Event): void {
-    this.filtroServicio.set((event.target as HTMLSelectElement).value);
   }
 
   protected getServiceIconStyle(color: ServicioColor): string {

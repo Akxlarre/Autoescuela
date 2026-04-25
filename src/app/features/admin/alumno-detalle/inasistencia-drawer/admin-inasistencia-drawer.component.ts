@@ -3,12 +3,13 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { SelectModule } from 'primeng/select';
 
 @Component({
   selector: 'app-admin-inasistencia-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
@@ -51,21 +52,17 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             <label for="inas-type" class="field-label">
               TIPO DE JUSTIFICACIÓN <span style="color: var(--state-error)">*</span>
             </label>
-            <select
-              id="inas-type"
+            <p-select
               formControlName="document_type"
-              class="field-input field-select"
+              [options]="tipoJustificacionOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Selecciona un tipo..."
+              styleClass="w-full"
               aria-required="true"
               data-llm-description="Categoría del documento que justifica la inasistencia"
               [class.field-input--error]="isInvalid('document_type')"
-            >
-              <option value="" disabled>Selecciona un tipo...</option>
-              <option value="Justificación Médica">Justificación Médica</option>
-              <option value="Permiso Personal">Permiso Personal</option>
-              <option value="Emergencia Familiar">Emergencia Familiar</option>
-              <option value="Accidente">Accidente</option>
-              <option value="Otro">Otro</option>
-            </select>
+            />
             @if (isInvalid('document_type')) {
               <span class="field-error">Selecciona un tipo de justificación.</span>
             }
@@ -216,6 +213,14 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   `,
 })
 export class AdminInasistenciaDrawerComponent {
+  readonly tipoJustificacionOptions = [
+    { label: 'Justificación Médica', value: 'Justificación Médica' },
+    { label: 'Permiso Personal', value: 'Permiso Personal' },
+    { label: 'Emergencia Familiar', value: 'Emergencia Familiar' },
+    { label: 'Accidente', value: 'Accidente' },
+    { label: 'Otro', value: 'Otro' },
+  ];
+
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);

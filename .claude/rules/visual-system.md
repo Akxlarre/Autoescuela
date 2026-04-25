@@ -100,11 +100,28 @@ El proyecto utiliza un patrón estricto de **Single-Component Skeleton** para ev
 }
 ```
 
-## Bento Grid
+## Bento Grid (Arquitectura de Página)
 
-- Contenedor: `.bento-grid` + directiva `[appBentoGridLayout]`
-- Hijos: `.bento-square`, `.bento-wide`, `.bento-tall`, `.bento-feature`, `.bento-hero`
-- Solo **UN** `.card-accent` por sección bento
+- **Regla Root (OBLIGATORIO):** Todo Smart Component (página completa en `features/`) debe usar `.bento-grid` con la directiva `[appBentoGridLayout]` como **contenedor raíz** del template.
+- **PROHIBIDO:** Usar `.page-wide`, `.page-content` o wrappers adicionales como raíz en los Smart Components. Estos shells son solo para páginas estáticas o stubs de legacy.
+- **Jerarquía Plana:** Todos los bloques principales (`app-section-hero`, `kpis`, `tablas/listados`) deben ser **hijos directos** del `.bento-grid`.
+- **PROHIBIDO:** Envolver el Hero o los KPIs en `divs` adicionales con márgenes manuales (`mb-6`, `mt-4`). El espaciado lo dicta el `gap` del grid.
+- **Clases de Celda:**
+    - `.bento-hero` → Para el `app-section-hero`.
+    - `.bento-square` (o `.bento-1x1`) → Para `app-kpi-card` o mini-widgets.
+    - `.bento-banner` (o `.bento-wide`) → Para tablas, listados o bloques de ancho completo.
+- **GSAP:** El método `animateBentoGrid()` del `GsapAnimationsService` requiere que los hijos sean directos para que el stagger funcione correctamente.
+
+```html
+<!-- ✅ CORRECTO (Flat structure) -->
+<div class="bento-grid" appBentoGridLayout>
+  <app-section-hero class="bento-hero" ... />
+  <div class="bento-square"> <app-kpi-card ... /> </div>
+  <div class="bento-banner card"> <app-table ... /> </div>
+</div>
+```
+
+- Solo **UN** `.card-accent` por sección bento (usualmente en la primera KPI o en el Hero).
 - SCSS canónico: `src/styles/layout/_bento-grid.scss`
 
 ## Cards

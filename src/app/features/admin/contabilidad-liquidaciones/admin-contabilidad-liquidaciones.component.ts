@@ -1,10 +1,6 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-  OnInit,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LiquidacionesContentComponent } from '@shared/components/liquidaciones-content/liquidaciones-content.component';
 import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 
@@ -28,11 +24,14 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
     </div>
   `,
 })
-export class AdminContabilidadLiquidacionesComponent implements OnInit {
+export class AdminContabilidadLiquidacionesComponent {
   protected readonly facade = inject(LiquidacionesFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
-  ngOnInit(): void {
-    this.facade.initialize();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 }
-

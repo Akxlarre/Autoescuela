@@ -20,6 +20,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { formatCLP, toISODate } from '@core/utils/date.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
+import { SelectModule } from 'primeng/select';
 
 /** Validador a nivel de FormGroup: suma de canales debe igualar total_amount. */
 function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | null {
@@ -47,7 +48,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
   selector: 'app-registrar-pago-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <div class="flex-1 overflow-y-auto p-5">
@@ -70,20 +71,16 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   No hay alumnos con saldo pendiente. El pago se registrará sin matrícula asociada.
                 </p>
               } @else {
-                <select
-                  id="pago-enrollment"
+                <p-select
                   formControlName="enrollment_id"
-                  class="field-input field-select"
+                  [options]="enrollmentOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Selecciona un alumno..."
+                  styleClass="w-full"
                   data-llm-description="Selecciona el alumno al que se le asocia el pago"
                   [class.field-input--error]="isInvalid('enrollment_id')"
-                >
-                  <option [ngValue]="null" disabled>Selecciona un alumno...</option>
-                  @for (alumno of facade.alumnosConDeuda(); track alumno.enrollmentId) {
-                    <option [ngValue]="alumno.enrollmentId">
-                      {{ alumno.alumno }} — {{ alumno.rut }}
-                    </option>
-                  }
-                </select>
+                />
                 @if (isInvalid('enrollment_id')) {
                   <span class="field-error">Selecciona un alumno.</span>
                 }
@@ -200,23 +197,16 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             <label for="pago-type" class="field-label">
               CONCEPTO <span style="color: var(--state-error)">*</span>
             </label>
-            <select
-              id="pago-type"
+            <p-select
               formControlName="type"
-              class="field-input field-select"
+              [options]="tipoConceptoOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Selecciona un concepto..."
+              styleClass="w-full"
               data-llm-description="Tipo de pago que se está registrando"
               [class.field-input--error]="isInvalid('type')"
-            >
-              <option value="" disabled>Selecciona un concepto...</option>
-              <option value="Matrícula">Matrícula</option>
-              <option value="Mensualidad 1/4">Mensualidad 1/4</option>
-              <option value="Mensualidad 2/4">Mensualidad 2/4</option>
-              <option value="Mensualidad 3/4">Mensualidad 3/4</option>
-              <option value="Mensualidad 4/4">Mensualidad 4/4</option>
-              <option value="Abono">Abono</option>
-              <option value="Pago Total">Pago Total</option>
-              <option value="Otro">Otro</option>
-            </select>
+            />
             @if (isInvalid('type')) {
               <span class="field-error">Selecciona un concepto.</span>
             }
@@ -527,6 +517,17 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
   `,
 })
 export class RegistrarPagoDrawerComponent {
+  readonly tipoConceptoOptions = [
+    { label: 'Matrícula', value: 'Matrícula' },
+    { label: 'Mensualidad 1/4', value: 'Mensualidad 1/4' },
+    { label: 'Mensualidad 2/4', value: 'Mensualidad 2/4' },
+    { label: 'Mensualidad 3/4', value: 'Mensualidad 3/4' },
+    { label: 'Mensualidad 4/4', value: 'Mensualidad 4/4' },
+    { label: 'Abono', value: 'Abono' },
+    { label: 'Pago Total', value: 'Pago Total' },
+    { label: 'Otro', value: 'Otro' },
+  ];
+
   // ── Outputs ────────────────────────────────────────────────────────────────
   readonly saved = output<void>();
 
@@ -542,6 +543,13 @@ export class RegistrarPagoDrawerComponent {
 
   /** Modo global: drawer abierto sin matrícula preseleccionada. */
   protected readonly modoGlobal = computed(() => this.facade.enrollmentSeleccionado() === null);
+
+  protected readonly enrollmentOptions = computed(() =>
+    this.facade.alumnosConDeuda().map((a) => ({
+      label: `${a.alumno} — ${a.rut}`,
+      value: a.enrollmentId,
+    })),
+  );
 
   /** Alumno seleccionado en el dropdown (solo modo global). */
   protected get selectedAlumno(): AlumnoDeudor | null {

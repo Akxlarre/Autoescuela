@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 import type {
   AgendaWeekData,
   AgendaWeekKpis,
@@ -84,6 +85,7 @@ interface RawVehicle {
 export class AgendaFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
 
@@ -107,6 +109,7 @@ export class AgendaFacade {
 
   /** SWR: evita re-fetch completo con skeleton en re-visitas */
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   /** Realtime: canal de suscripción a cambios en class_b_sessions */
   private realtimeChannel: RealtimeChannel | null = null;
@@ -156,16 +159,26 @@ export class AgendaFacade {
    * Llamar desde el Smart component en ngOnInit.
    */
   async initialize(): Promise<void> {
-    if (this._initialized) {
-      // SWR: datos cacheados ya visibles, refrescar en background
+    const branchId = this.getActiveBranchId();
+    this.ensureRealtime();
+
+    if (this._initialized && branchId === this._lastBranchId) {
+      // SWR: datos cacheados, refrescar silenciosamente
       this.refreshSilently();
-      this.ensureRealtime();
       return;
     }
+
     this._initialized = true;
+    this._lastBranchId = branchId;
     await Promise.all([this.loadLookupMaps(), this.loadInstructors()]);
     await this.loadWeek();
     this.subscribeRealtime();
+  }
+
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
   }
 
   /**
@@ -205,6 +218,7 @@ export class AgendaFacade {
 
   /** Fetch compartido: obtiene y setea weekData sin tocar isLoading. */
   private async fetchWeekData(): Promise<void> {
+    const branchId = this.getActiveBranchId();
     const weekStart = this._weekStart();
     const weekEnd = addDays(weekStart, 4);
     const rangeStart = `${weekStart}T00:00:00Z`;
@@ -212,10 +226,18 @@ export class AgendaFacade {
 
     const [slotsResult, sessionsResult] = await Promise.all([
       this.fetchAvailableSlots(rangeStart, rangeEnd),
-      this.fetchSessions(rangeStart, rangeEnd),
+      this.fetchSessions(rangeStart, rangeEnd, branchId),
     ]);
 
-    this._weekData.set(this.buildWeekData(weekStart, weekEnd, slotsResult, sessionsResult));
+    // La vista v_class_b_schedule_availability no expone branch_id:
+    // filtramos client-side por los instructores de la sede activa.
+    const branchInstructorIds = new Set(this._instructors().map((i) => i.id));
+    const filteredSlots =
+      branchId !== null
+        ? slotsResult.filter((s) => branchInstructorIds.has(s.instructor_id))
+        : slotsResult;
+
+    this._weekData.set(this.buildWeekData(weekStart, weekEnd, filteredSlots, sessionsResult));
   }
 
   goToNextWeek(): void {
@@ -242,12 +264,11 @@ export class AgendaFacade {
   }
 
   async loadAgendableStudents(): Promise<void> {
-    const branchId = this.auth.currentUser()?.branchId;
-    if (!branchId) return;
+    const branchId = this.getActiveBranchId();
 
     this._studentsLoading.set(true);
     try {
-      const { data, error } = await this.supabase.client
+      let query = this.supabase.client
         .from('enrollments')
         .select(
           `
@@ -256,11 +277,14 @@ export class AgendaFacade {
           students!inner (
             users!inner ( first_names, paternal_last_name )
           ),
-          class_b_sessions ( id, stel atus )
+          class_b_sessions ( id, status )
         `,
         )
-        .eq('status', 'active')
-        .eq('branch_id', branchId);
+        .eq('status', 'active');
+
+      if (branchId !== null) query = query.eq('branch_id', branchId);
+
+      const { data, error } = await query;
 
       if (error || !data) return;
 
@@ -386,14 +410,19 @@ export class AgendaFacade {
     return (data as RawSlot[]) ?? [];
   }
 
-  private async fetchSessions(rangeStart: string, rangeEnd: string): Promise<RawSession[]> {
-    const { data } = await this.supabase.client
+  private async fetchSessions(
+    rangeStart: string,
+    rangeEnd: string,
+    branchId: number | null,
+  ): Promise<RawSession[]> {
+    let query = this.supabase.client
       .from('class_b_sessions')
       .select(
         `
         id, enrollment_id, instructor_id, vehicle_id,
         class_number, scheduled_at, status,
         enrollments!inner (
+          branch_id,
           students!inner (
             users!inner ( first_names, paternal_last_name )
           )
@@ -403,21 +432,25 @@ export class AgendaFacade {
       .gte('scheduled_at', rangeStart)
       .lt('scheduled_at', rangeEnd)
       .neq('status', 'cancelled');
+
+    if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
+
+    const { data } = await query;
     return (data as unknown as RawSession[]) ?? [];
   }
 
   private async loadLookupMaps(): Promise<void> {
-    const branchId = this.auth.currentUser()?.branchId;
+    const branchId = this.getActiveBranchId();
+
+    let vehicleQuery: any = this.supabase.client.from('vehicles').select('id, license_plate');
+    if (branchId !== null) vehicleQuery = vehicleQuery.eq('branch_id', branchId);
 
     const [instrResult, vehResult] = await Promise.all([
       this.supabase.client
         .from('instructors')
         .select('id, users!inner ( first_names, paternal_last_name )')
         .eq('active', true),
-      this.supabase.client
-        .from('vehicles')
-        .select('id, license_plate')
-        .eq('branch_id', branchId ?? 0),
+      vehicleQuery,
     ]);
 
     this.instructorMap.clear();
@@ -434,11 +467,17 @@ export class AgendaFacade {
   }
 
   private async loadInstructors(): Promise<void> {
-    const { data } = await this.supabase.client
+    const branchId = this.getActiveBranchId();
+
+    let query: any = this.supabase.client
       .from('instructors')
       .select('id, users!inner ( first_names, paternal_last_name )')
       .eq('active', true)
       .neq('type', 'theory');
+
+    if (branchId !== null) query = query.eq('users.branch_id', branchId);
+
+    const { data } = await query;
 
     const filters: AgendaInstructorFilter[] = ((data as unknown as RawInstructor[]) ?? []).map(
       (i) => ({

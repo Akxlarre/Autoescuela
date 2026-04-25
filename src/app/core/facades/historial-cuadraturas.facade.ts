@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 import type { CashClosing } from '@core/models/dto/cash-closing.model';
@@ -94,6 +95,7 @@ export function exportarHistorialCSV(cierres: HistorialCierre[]): void {
 export class HistorialCuadraturasFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
@@ -119,6 +121,14 @@ export class HistorialCuadraturasFacade {
   readonly error = this._error.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
   readonly anioActual = this._anioActual.asReadonly();
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
 
   // ── Navegación ────────────────────────────────────────────────────────────
 
@@ -166,7 +176,7 @@ export class HistorialCuadraturasFacade {
   async initialize(): Promise<void> {
     const mes = this._mesActual();
     const anio = this._anioActual();
-    const branchId = this.auth.currentUser()?.branchId ?? null;
+    const branchId = this.getActiveBranchId();
 
     const isSameContext =
       this._initialized &&
@@ -196,7 +206,7 @@ export class HistorialCuadraturasFacade {
     try {
       const mes = this._mesActual();
       const anio = this._anioActual();
-      const branchId = this.auth.currentUser()?.branchId ?? null;
+      const branchId = this.getActiveBranchId();
       await this.fetchHistorialData(mes, anio, branchId);
       this._lastMonth = mes;
       this._lastYear = anio;

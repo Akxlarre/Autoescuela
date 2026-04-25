@@ -36,20 +36,35 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         transition: all 0.3s ease !important;
       }
 
-      /* Top bar: wrap si no hay espacio */
+      /* Top bar: stack vertical en móvil para evitar overlaps */
       .flex.items-start.justify-between.gap-4 {
-        flex-wrap: wrap !important;
-        gap: 0.5rem !important;
-        align-items: flex-start !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 1rem !important;
       }
 
-      /* Botones de acción: reducir padding para ahorrar espacio */
+      /* Contenedor de botón Volver: ancho completo */
+      .flex-1.min-w-0.flex.items-center {
+        width: 100% !important;
+        flex: none !important;
+      }
+
+      /* Grupo de acciones: alineación izquierda y gap consistente en móvil */
+      [role="group"] {
+        justify-content: flex-start !important;
+        width: 100% !important;
+        gap: 0.5rem !important;
+      }
+
+      /* Botones de acción: consistencia en móvil */
       [role="group"] button,
       [role="group"] a {
-        padding-left: 0.625rem !important;
-        padding-right: 0.625rem !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
         font-size: 0.75rem !important;
-        gap: 0.25rem !important;
+        min-height: 2.25rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
       }
 
       /* Título más pequeño pero legible */
@@ -98,7 +113,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           @if (backRoute()) {
             <a
               [routerLink]="backRoute()"
-              class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm"
+              class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm shrink-0 whitespace-nowrap"
               [attr.aria-label]="'Volver a ' + backLabel()"
               data-llm-nav="back"
             >
@@ -114,7 +129,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         </div>
         @if (actions().length) {
           <div
-            class="flex flex-wrap items-start gap-2"
+            class="flex flex-wrap items-start justify-end gap-2"
             role="group"
             aria-label="Acciones principales"
           >
@@ -122,7 +137,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               @if (action.route) {
                 <a
                   [routerLink]="action.route"
-                  class="no-underline"
+                  class="no-underline whitespace-nowrap flex-shrink-0"
                   [class.btn-primary]="action.primary"
                   [class.btn-secondary]="!action.primary"
                   [attr.data-llm-nav]="action.id"
@@ -135,6 +150,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               } @else {
                 <button
                   type="button"
+                  class="whitespace-nowrap flex-shrink-0"
                   [class.btn-primary]="action.primary"
                   [class.btn-secondary]="!action.primary"
                   [attr.data-llm-action]="action.id"

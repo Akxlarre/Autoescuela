@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ServiciosEspecialesContentComponent } from '@shared/components/servicios-especiales-content/servicios-especiales-content.component';
 
 /**
@@ -27,11 +28,15 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
     </div>
   `,
 })
-export class AdminServiciosEspecialesComponent implements OnInit {
+export class AdminServiciosEspecialesComponent {
   protected readonly facade = inject(ServiciosEspecialesFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
-  ngOnInit(): void {
-    void this.facade.initialize();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   protected onExportar(): void {
