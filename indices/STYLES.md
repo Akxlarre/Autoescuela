@@ -18,6 +18,20 @@
 | `postcss.config.json` | **Configuración PostCSS activa** para Tailwind v4. Angular `@angular/build:application` solo lee JSON (`postcss.config.json` / `.postcssrc.json`). Declara `@tailwindcss/postcss` como plugin. **CRÍTICO: nunca renombrar a .mjs/.js o Tailwind dejará de procesar CSS.** | `postcss.config.json` (root) | ✅ Estable |
 | `postcss.config.mjs` | Legado — Angular lo ignora. Solo referencia para entender la configuración. No modificar: usar `postcss.config.json`. | `postcss.config.mjs` (root) | ⚠️ Legado |
 
+## Component Utility Classes (`tailwind.css`)
+
+Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE estas clases en lugar de componer Tailwind ad-hoc.
+
+| Clase | Apariencia | Cuándo usar |
+|-------|-----------|-------------|
+| `btn-primary` | Fondo brand, texto blanco. Dentro de `surface-hero` se invierte (blanco + brand text) por cascade. | CTA principal de la sección |
+| `btn-secondary` | Borde sutil, fondo translúcido. **Afectado por cascade `surface-hero`** → glass blanco. | Acción secundaria estándar |
+| `btn-danger-ghost` | **Fondo blanco puro, borde rojo-300, texto rojo-600**. Usa `theme()` — **inmune a cascade** de `surface-hero`. Hover: rojo-50. | Acción destructiva en heroes/cabeceras |
+| `btn-danger-solid` | **Fondo rojo-600, texto blanco**. Hover: rojo-700. Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
+| `btn-neutral` | **Fondo gris-100, texto gris-700**. Hover: gris-200. Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales (sin dependencia de cascade) |
+
+> **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
+
 ## Layout
 
 | Archivo | Clases principales | Ubicación | README | Estado |

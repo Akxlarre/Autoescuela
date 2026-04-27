@@ -188,3 +188,98 @@
     opacity: 0.7;
   }
 }
+
+/* Botón peligro outline — hero/cabecera. Fondo blanco, borde y texto rojo vibrante. */
+@utility btn-danger-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: 1px solid theme(colors.red.300);
+  border-radius: var(--btn-primary-radius);
+  background: theme(colors.white);
+  padding: var(--btn-primary-padding-y) var(--btn-primary-padding-x);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: theme(colors.red.600);
+  box-shadow: 0 1px 2px theme(colors.black / 5%);
+  transition: var(--transition-btn);
+
+  &:hover:enabled {
+    background: theme(colors.red.50);
+  }
+
+  &:active:enabled {
+    scale: var(--btn-press-scale-value, 0.97);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}
+
+/* Botón peligro sólido — acción destructiva principal (ej: confirmar archivado). */
+@utility btn-danger-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--btn-primary-radius);
+  background: theme(colors.red.600);
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: theme(colors.white);
+  box-shadow: 0 1px 2px theme(colors.black / 5%);
+  transition: var(--transition-btn);
+
+  &:hover:enabled {
+    background: theme(colors.red.700);
+  }
+
+  &:active:enabled {
+    scale: var(--btn-press-scale-value, 0.97);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+}
+
+/* Botón neutro — cancelar/cerrar sin dependencia de tokens de superficie. */
+@utility btn-neutral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--btn-primary-radius);
+  background: theme(colors.gray.100);
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: theme(colors.gray.700);
+  transition: var(--transition-btn);
+
+  &:hover:enabled {
+    background: theme(colors.gray.200);
+  }
+
+  &:active:enabled {
+    scale: var(--btn-press-scale-value, 0.97);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+}

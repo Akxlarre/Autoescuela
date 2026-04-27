@@ -28,53 +28,55 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
   selector: 'app-section-hero',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: [`
-    :host-context(.force-compact) {
-      .surface-hero {
-        padding: 1.25rem !important;
-        min-height: unset !important;
-        transition: all 0.3s ease !important;
-      }
+  styles: [
+    `
+      :host-context(.force-compact) {
+        .surface-hero {
+          padding: 1.25rem !important;
+          min-height: unset !important;
+          transition: all 0.3s ease !important;
+        }
 
-      /* Top bar: wrap si no hay espacio */
-      .flex.items-start.justify-between.gap-4 {
-        flex-wrap: wrap !important;
-        gap: 0.5rem !important;
-        align-items: flex-start !important;
-      }
+        /* Top bar: wrap si no hay espacio */
+        .flex.items-start.justify-between.gap-4 {
+          flex-wrap: wrap !important;
+          gap: 0.5rem !important;
+          align-items: flex-start !important;
+        }
 
-      /* Botones de acción: reducir padding para ahorrar espacio */
-      [role="group"] button,
-      [role="group"] a {
-        padding-left: 0.625rem !important;
-        padding-right: 0.625rem !important;
-        font-size: 0.75rem !important;
-        gap: 0.25rem !important;
-      }
+        /* Botones de acción: reducir padding para ahorrar espacio */
+        [role='group'] button,
+        [role='group'] a {
+          padding-left: 0.625rem !important;
+          padding-right: 0.625rem !important;
+          font-size: 0.75rem !important;
+          gap: 0.25rem !important;
+        }
 
-      /* Título más pequeño pero legible */
-      h1 {
-        font-size: 1.375rem !important;
-        line-height: 1.2 !important;
-      }
+        /* Título más pequeño pero legible */
+        h1 {
+          font-size: 1.375rem !important;
+          line-height: 1.2 !important;
+        }
 
-      /* Reducir espaciados internos */
-      .flex.flex-col.gap-3.relative.z-10 {
-        gap: 0.375rem !important;
-      }
+        /* Reducir espaciados internos */
+        .flex.flex-col.gap-3.relative.z-10 {
+          gap: 0.375rem !important;
+        }
 
-      /* Ajustar badge de ícono */
-      .w-12.h-12 {
-        width: 36px !important;
-        height: 36px !important;
-      }
+        /* Ajustar badge de ícono */
+        .w-12.h-12 {
+          width: 36px !important;
+          height: 36px !important;
+        }
 
-      /* Eliminar el spacer */
-      .flex-1[aria-hidden="true"] {
-        display: none !important;
+        /* Eliminar el spacer */
+        .flex-1[aria-hidden='true'] {
+          display: none !important;
+        }
       }
-    }
-  `],
+    `,
+  ],
   host: {
     // HOST = único grid item. bento-hero va aquí, nunca en el div interno.
     class: 'block min-h-0 bento-hero',
@@ -135,8 +137,14 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               } @else {
                 <button
                   type="button"
-                  [class.btn-primary]="action.primary"
-                  [class.btn-secondary]="!action.primary"
+                  [class]="
+                    action.danger
+                      ? 'btn-danger-ghost'
+                      : action.primary
+                        ? 'btn-primary'
+                        : 'btn-secondary'
+                  "
+                  [disabled]="action.disabled ?? false"
                   [attr.data-llm-action]="action.id"
                   (click)="onActionClick(action.id)"
                 >

@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 import type {
   AlumnoTableRow,
   AlumnoExpediente,
@@ -60,11 +61,14 @@ const VENCER_THRESHOLD_DAYS = 7;
 export class AdminAlumnosFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
   private readonly _alumnos = signal<AlumnoTableRow[]>([]);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+  private readonly _isArchiving = signal(false);
+  private readonly _trashView = signal(false);
 
   private _initialized = false;
   private _lastBranchId: number | null = null;
@@ -75,6 +79,8 @@ export class AdminAlumnosFacade {
   readonly alumnos = this._alumnos.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+  readonly isArchiving = this._isArchiving.asReadonly();
+  readonly trashView = this._trashView.asReadonly();
 
   readonly totalAlumnos = computed(() => this._alumnos().length);
   readonly activos = computed(() => this._alumnos().filter((a) => a.status === 'Activo').length);
@@ -153,20 +159,105 @@ export class AdminAlumnosFacade {
     this._drawerMode.set(mode);
   }
 
+  async setTrashView(value: boolean): Promise<void> {
+    if (this._trashView() === value) return;
+    this._trashView.set(value);
+    this._initialized = false;
+    await this.initialize();
+  }
+
+  async restaurarAlumno(studentId: number): Promise<void> {
+    this._isArchiving.set(true);
+    try {
+      const { error } = await this.supabase.client
+        .from('students')
+        .update({ status: 'active' })
+        .eq('id', studentId);
+
+      if (error) throw error;
+      this.toast.success('Alumno restaurado correctamente.');
+      await this.refreshSilently();
+    } catch {
+      this.toast.error('No se pudo restaurar al alumno. Inténtalo de nuevo.');
+      throw new Error('restaurar_failed');
+    } finally {
+      this._isArchiving.set(false);
+    }
+  }
+
   clearError(): void {
     this._error.set(null);
   }
 
+  /**
+   * Verifica si un alumno tiene historial de pagos o clases prácticas.
+   * Se usa para decidir qué modal de confirmación mostrar antes de archivar.
+   */
+  async checkHistorial(studentId: number): Promise<{ hasHistory: boolean }> {
+    const { data: enrollmentRows } = await this.supabase.client
+      .from('enrollments')
+      .select('id')
+      .eq('student_id', studentId)
+      .neq('status', 'draft');
+
+    const enrollmentIds: number[] = (enrollmentRows ?? []).map((e: { id: number }) => e.id);
+
+    if (enrollmentIds.length === 0) return { hasHistory: false };
+
+    const [paymentsResult, classesResult] = await Promise.all([
+      this.supabase.client
+        .from('payments')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds),
+      this.supabase.client
+        .from('class_b_sessions')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds),
+    ]);
+
+    return {
+      hasHistory: (paymentsResult.count ?? 0) > 0 || (classesResult.count ?? 0) > 0,
+    };
+  }
+
+  /**
+   * Soft-delete: actualiza students.status = 'archived'.
+   * El alumno desaparece del listado principal pero sus datos se preservan.
+   */
+  async archivarAlumno(studentId: number): Promise<void> {
+    this._isArchiving.set(true);
+    try {
+      const { error } = await this.supabase.client
+        .from('students')
+        .update({ status: 'archived' })
+        .eq('id', studentId);
+
+      if (error) throw error;
+      this.toast.success('Alumno archivado correctamente.');
+      await this.refreshSilently();
+    } catch {
+      this.toast.error('No se pudo archivar al alumno. Inténtalo de nuevo.');
+      throw new Error('archivar_failed');
+    } finally {
+      this._isArchiving.set(false);
+    }
+  }
+
   private async fetchAlumnosData(branchId: number | null): Promise<void> {
     try {
-      let query: any = this.supabase.client.from('students').select(`
+      let query: any = this.supabase.client
+        .from('students')
+        .select(
+          `
           id, status, address,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id),
           enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at,
             courses(id, name),
             student_documents(type, status)
           )
-        `);
+        `,
+        )
+        [this._trashView() ? 'eq' : 'neq']('status', 'archived');
 
       if (branchId !== null) {
         query = query.eq('users.branch_id', branchId);

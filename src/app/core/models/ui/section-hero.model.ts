@@ -18,4 +18,7 @@ export interface SectionHeroAction {
   primary: boolean;
   /** Si se define, se usa routerLink; si no, se emite actionClick. */
   route?: string;
+  disabled?: boolean;
+  /** Aplica estilo de peligro (error token) al botón. */
+  danger?: boolean;
 }

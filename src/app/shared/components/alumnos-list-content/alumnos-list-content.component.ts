@@ -96,8 +96,13 @@ interface AlumnoKpiItem {
     SectionHeroComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de alumnos"
-      [class.force-compact]="layoutDrawer.isOpen()">
+    <div
+      class="bento-grid"
+      appBentoGridLayout
+      #bentoGrid
+      aria-label="Panel de alumnos"
+      [class.force-compact]="layoutDrawer.isOpen()"
+    >
       <app-section-hero
         title="Alumnos"
         subtitle="Listado de alumnos de la escuela"
@@ -414,34 +419,56 @@ interface AlumnoKpiItem {
                       <div
                         class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all"
                       >
-                        <!-- Ver Ficha -->
-                        <button
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                          pTooltip="Ver ficha"
-                          [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
-                        >
-                          <app-icon name="eye" [size]="16" />
-                        </button>
-                        <!-- Certificado -->
-                        <button
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                          pTooltip="Certificado"
-                          [routerLink]="[basePath() + '/certificados']"
-                          [queryParams]="{ alumno: alumno.id }"
-                        >
-                          <app-icon name="award" [size]="16" />
-                        </button>
-                        <!-- RF-086: Exportar Ficha PDF -->
-                        <button
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                          pTooltip="Exportar Ficha PDF"
-                          (click)="exportarFicha(alumno.id)"
-                        >
-                          <app-icon name="download" [size]="16" />
-                        </button>
+                        @if (trashView()) {
+                          <!-- Vista Papelera: solo Restaurar -->
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            style="color: var(--state-success)"
+                            pTooltip="Restaurar alumno"
+                            (click)="restaurarRequested.emit(alumno.id)"
+                            data-llm-action="restore-student-row"
+                          >
+                            <app-icon name="rotate-ccw" [size]="16" />
+                          </button>
+                        } @else {
+                          <!-- Vista Normal: Ver / Certificado / PDF / Archivar -->
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            pTooltip="Ver ficha"
+                            [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                          >
+                            <app-icon name="eye" [size]="16" />
+                          </button>
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            pTooltip="Certificado"
+                            [routerLink]="[basePath() + '/certificados']"
+                            [queryParams]="{ alumno: alumno.id }"
+                          >
+                            <app-icon name="award" [size]="16" />
+                          </button>
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            pTooltip="Exportar Ficha PDF"
+                            (click)="exportarFicha(alumno.id)"
+                          >
+                            <app-icon name="download" [size]="16" />
+                          </button>
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                            style="color: var(--state-error)"
+                            pTooltip="Archivar alumno"
+                            (click)="archivarRequested.emit(alumno.id)"
+                            data-llm-action="archive-student-row"
+                          >
+                            <app-icon name="trash-2" [size]="16" />
+                          </button>
+                        }
                       </div>
                     </td>
                   </tr>
@@ -531,31 +558,56 @@ interface AlumnoKpiItem {
                     <div
                       class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
                     >
-                      <button
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                        pTooltip="Ver ficha"
-                        [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
-                      >
-                        <app-icon name="eye" [size]="16" />
-                      </button>
-                      <button
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                        pTooltip="Certificado"
-                        [routerLink]="[basePath() + '/certificados']"
-                        [queryParams]="{ alumno: alumno.id }"
-                      >
-                        <app-icon name="award" [size]="16" />
-                      </button>
-                      <button
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                        pTooltip="Exportar Ficha PDF"
-                        (click)="exportarFicha(alumno.id)"
-                      >
-                        <app-icon name="download" [size]="16" />
-                      </button>
+                      @if (trashView()) {
+                        <!-- Vista Papelera: solo Restaurar -->
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                          style="color: var(--state-success)"
+                          pTooltip="Restaurar alumno"
+                          (click)="restaurarRequested.emit(alumno.id)"
+                          data-llm-action="restore-student-card"
+                        >
+                          <app-icon name="rotate-ccw" [size]="16" />
+                        </button>
+                      } @else {
+                        <!-- Vista Normal -->
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                          pTooltip="Ver ficha"
+                          [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                        >
+                          <app-icon name="eye" [size]="16" />
+                        </button>
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                          pTooltip="Certificado"
+                          [routerLink]="[basePath() + '/certificados']"
+                          [queryParams]="{ alumno: alumno.id }"
+                        >
+                          <app-icon name="award" [size]="16" />
+                        </button>
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                          pTooltip="Exportar Ficha PDF"
+                          (click)="exportarFicha(alumno.id)"
+                        >
+                          <app-icon name="download" [size]="16" />
+                        </button>
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                          style="color: var(--state-error)"
+                          pTooltip="Archivar alumno"
+                          (click)="archivarRequested.emit(alumno.id)"
+                          data-llm-action="archive-student-card"
+                        >
+                          <app-icon name="trash-2" [size]="16" />
+                        </button>
+                      }
                     </div>
                   </div>
                 } @empty {
@@ -681,11 +733,15 @@ export class AlumnosListContentComponent {
   readonly alumnos = input<AlumnoTableRow[]>([]);
   readonly isLoading = input(false);
   readonly alumnosPorVencer = input<AlumnoTableRow[]>([]);
+  readonly trashView = input(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
   readonly claseOnlineAction = output<'zoom' | 'asistencia'>();
   readonly preInscritosRequested = output<void>();
+  readonly archivarRequested = output<string>();
+  readonly restaurarRequested = output<string>();
+  readonly trashViewToggled = output<void>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
@@ -698,6 +754,7 @@ export class AlumnosListContentComponent {
 
   readonly heroActions = computed((): SectionHeroAction[] => {
     const path = this.basePath();
+    const isTrash = this.trashView();
     return [
       { id: 'enviar-zoom', label: 'Zoom', icon: 'video', primary: false },
       {
@@ -714,6 +771,13 @@ export class AlumnosListContentComponent {
         route: `${path}/ex-alumnos`,
       },
       { id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false },
+      {
+        id: 'papelera',
+        label: 'Papelera',
+        icon: 'trash-2',
+        primary: false,
+        danger: isTrash,
+      },
       {
         id: 'nueva-matricula',
         label: 'Nueva Matrícula',
@@ -878,6 +942,9 @@ export class AlumnosListContentComponent {
         break;
       case 'preinscritos':
         this.preInscritosRequested.emit();
+        break;
+      case 'papelera':
+        this.trashViewToggled.emit();
         break;
       case 'nueva-matricula':
         this.openNuevaMatriculaDrawer();

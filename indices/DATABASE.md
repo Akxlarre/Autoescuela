@@ -8,7 +8,7 @@
 | `branches` | M1 - Usuarios | `id`, `slug`, `has_professional` (BOOL, def false) | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `20260403110000`: añadida `has_professional`; branch 2 (Conductores Chillán) = true |
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida |
-| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida |
+| `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. |
 | `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks`, `is_convalidation` (BOOL, default false) | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `cc_class_b` + `cc_class_b_sence` agregados para branch 2 (`20260311100000`) · `is_convalidation` + cursos `conv_a4`/`conv_a3` agregados (`20260313100000`). Los cursos con `is_convalidation=true` NO generan enrollments ni cuentan contra cupo. |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |

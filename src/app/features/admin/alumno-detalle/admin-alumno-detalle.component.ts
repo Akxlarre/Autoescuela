@@ -1,12 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
+import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { Button } from 'primeng/button';
+import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
@@ -26,6 +35,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     AdminFichaTecnicaComponent,
     AdminHistorialPagosComponent,
     BentoGridLayoutDirective,
+    EliminarAlumnoModalComponent,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
@@ -304,6 +314,16 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         />
       }
     </div>
+
+    <!-- Modal de confirmación para archivar alumno -->
+    <app-eliminar-alumno-modal
+      [visible]="deleteModalVisible()"
+      [alumnoNombre]="facade.alumno()?.nombre ?? ''"
+      [hasHistory]="deleteHasHistory()"
+      [isDeleting]="alumnosFacade.isArchiving()"
+      (confirmado)="onConfirmArchivar()"
+      (cancelado)="onCancelArchivar()"
+    />
   `,
   styles: `
     .kpi-label {
@@ -379,8 +399,14 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
 })
 export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
+  protected readonly alumnosFacade = inject(AdminAlumnosFacade);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  // ── Estado del modal de borrado ──────────────────────────────────────────────
+  protected readonly deleteModalVisible = signal(false);
+  protected readonly deleteHasHistory = signal(false);
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -409,6 +435,13 @@ export class AdminAlumnoDetalleComponent implements OnInit {
         disabled: !canEmitCert,
       },
       { id: 'editar-alumno', label: 'Editar Perfil', icon: 'user-pen', primary: true },
+      {
+        id: 'eliminar-alumno',
+        label: 'Eliminar Alumno',
+        icon: 'trash-2',
+        primary: false,
+        danger: true,
+      },
     ];
   });
 
@@ -445,6 +478,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       case 'generar-certificado':
         console.log('[Detalle] Generar Certificado');
         break;
+      case 'eliminar-alumno':
+        void this.requestArchivar();
+        break;
     }
   }
 
@@ -478,5 +514,36 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       'Editar Perfil del Alumno',
       'user-pen',
     );
+  }
+
+  // ── Flujo de archivado ───────────────────────────────────────────────────────
+  private get studentId(): number | null {
+    const id = this.route.snapshot.paramMap.get('id');
+    return id && !isNaN(Number(id)) ? Number(id) : null;
+  }
+
+  protected async requestArchivar(): Promise<void> {
+    const id = this.studentId;
+    if (id === null) return;
+    const { hasHistory } = await this.alumnosFacade.checkHistorial(id);
+    this.deleteHasHistory.set(hasHistory);
+    this.deleteModalVisible.set(true);
+  }
+
+  protected async onConfirmArchivar(): Promise<void> {
+    const id = this.studentId;
+    if (id === null) return;
+    try {
+      await this.alumnosFacade.archivarAlumno(id);
+      void this.router.navigate(['/app/admin/alumnos']);
+    } finally {
+      this.deleteModalVisible.set(false);
+      this.deleteHasHistory.set(false);
+    }
+  }
+
+  protected onCancelArchivar(): void {
+    this.deleteModalVisible.set(false);
+    this.deleteHasHistory.set(false);
   }
 }
