@@ -21,7 +21,6 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       basePath="/app/secretaria"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
-      [alumnosPorVencer]="facade.alumnosPorVencer()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       (refreshRequested)="facade.initialize()"

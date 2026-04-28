@@ -109,17 +109,6 @@ interface AlumnoKpiItem {
         [actions]="heroActions()"
         (actionClick)="handleHeroAction($event)"
       />
-    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de alumnos"
-      [class.force-compact]="layoutDrawer.isOpen()">
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Alumnos"
-          subtitle="Listado de alumnos de la escuela"
-          [chips]="heroChips()"
-          [actions]="heroActions()"
-          (actionClick)="handleHeroAction($event)"
-        />
-      </div>
 
       <!-- KPIs — usando el mismo patrón que el Dashboard -->
       @for (kpi of alumnosKpis(); track kpi.id) {

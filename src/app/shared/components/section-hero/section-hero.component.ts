@@ -69,6 +69,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           width: 36px !important;
           height: 36px !important;
         }
+      }
 
       /* ── Solid brand-dark hero ────────────────────────────────────
          surface-hero provee el token cascade (texto/botones blancos).
