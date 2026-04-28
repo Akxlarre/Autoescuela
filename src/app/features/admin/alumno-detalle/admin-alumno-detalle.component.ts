@@ -20,7 +20,9 @@ import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-in
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
 import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
+import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
 @Component({
   selector: 'app-admin-alumno-detalle',
@@ -34,6 +36,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     Button,
     AdminFichaTecnicaComponent,
     AdminHistorialPagosComponent,
+    AdminReprogramarClaseDrawerComponent,
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
   ],
@@ -303,6 +306,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           class="bento-hero w-full h-full block"
           [clases]="facade.clasesPracticas()"
           (imprimirFicha)="imprimirFicha()"
+          (reprogramarRequested)="openReprogramarDrawer($event)"
         />
 
         <!-- Bento Item 6: Historial de Pagos (Tall) -->
@@ -513,6 +517,17 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       AdminEditarPerfilDrawerComponent,
       'Editar Perfil del Alumno',
       'user-pen',
+    );
+  }
+
+  protected openReprogramarDrawer(clase: ClasePracticaUI): void {
+    const enrollmentId = this.facade.alumno()?.enrollmentId;
+    if (enrollmentId == null) return;
+    this.facade.setReprogramarTarget(clase.sessionId, clase.numero, enrollmentId);
+    this.layoutDrawer.open(
+      AdminReprogramarClaseDrawerComponent,
+      'Reprogramar Clase',
+      'calendar-clock',
     );
   }
 
