@@ -6,6 +6,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 const ESTADO_LABEL: Record<string, string> = {
   active: 'Activo',
@@ -41,9 +42,21 @@ const PAYMENT_LABEL: Record<string, string> = {
   selector: 'app-admin-curso-singular-detalle-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
   template: `
-    <div class="flex flex-col gap-5 p-1">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <div class="grid grid-cols-3 gap-3">
+            <app-skeleton-block variant="text" width="100%" height="50px" />
+            <app-skeleton-block variant="text" width="100%" height="50px" />
+            <app-skeleton-block variant="text" width="100%" height="50px" />
+          </div>
+          <app-skeleton-block variant="rect" width="100%" height="120px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       @if (facade.selectedCurso(); as curso) {
         <!-- ── Ficha del curso ──────────────────────────────────────────────── -->
         <div class="card card-tinted p-4 flex flex-col gap-4">
@@ -272,7 +285,8 @@ const PAYMENT_LABEL: Record<string, string> = {
           <p class="text-sm" style="color: var(--text-muted)">Sin curso seleccionado.</p>
         </div>
       }
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
 })
 export class AdminCursoSingularDetalleDrawerComponent {

@@ -8,6 +8,8 @@ import {
   afterNextRender,
   ElementRef,
   viewChild,
+  OnInit,
+  AfterViewInit,
 } from '@angular/core';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -21,6 +23,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { AdminInstructorCrearDrawerComponent } from './admin-instructor-crear-drawer.component';
 import { AdminInstructorVerDrawerComponent } from './admin-instructor-ver-drawer.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 type FilterTab = 'all' | 'active' | 'expiring';
 
@@ -28,11 +31,11 @@ type FilterTab = 'all' | 'active' | 'expiring';
   selector: 'app-admin-instructores',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent],
+  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
   template: `
-    <div class="page-wide">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="mb-6">
+      <div class="bento-banner" #heroRef>
         <app-section-hero
           title="Instructores"
           subtitle="Gestión de instructores Clase B con licencias y vehículos"
@@ -42,7 +45,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       </div>
 
       <!-- ── Filter Tabs ──────────────────────────────────────────────────── -->
-      <div class="flex items-center gap-2 mb-6">
+      <div class="bento-banner flex items-center gap-2">
         <span class="text-sm font-medium" style="color: var(--text-secondary)">Filtros:</span>
         <button
           class="filter-pill"
@@ -80,7 +83,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       </div>
 
       <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
-      <div class="card p-0 overflow-hidden shadow-sm dual-viewport-container" #listCard>
+      <div class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container" #listCard>
         <div class="viewport-content bg-surface">
           <!-- VISTA Desktop: Tabla clásica -->
           <div class="desktop-view hide-on-squeeze overflow-x-auto">
@@ -488,11 +491,14 @@ type FilterTab = 'all' | 'active' | 'expiring';
     }
   `,
 })
-export class AdminInstructoresComponent {
+export class AdminInstructoresComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(InstructoresFacade);
   private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly listCard = viewChild<ElementRef<HTMLElement>>('listCard');
 
   constructor() {
@@ -501,12 +507,28 @@ export class AdminInstructoresComponent {
       this.facade.initialize();
     });
 
-    afterNextRender(() => {
-      if (this.listCard()) {
-        setTimeout(() => this.gsap.animateBentoGrid(this.listCard()!.nativeElement), 50);
+    effect(() => {
+      const isReady = !this.facade.isLoading();
+      const el = this.listCard()?.nativeElement;
+
+      if (isReady && el) {
+        Promise.resolve().then(() => {
+          this.gsap.animateBentoGrid(el);
+        });
       }
     });
   }
+
+  ngOnInit(): void {}
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+  }
+
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [

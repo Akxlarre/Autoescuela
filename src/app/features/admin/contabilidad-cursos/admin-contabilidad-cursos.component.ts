@@ -21,6 +21,8 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { AdminCursoSingularDetalleDrawerComponent } from './admin-curso-singular-detalle-drawer.component';
 import { AdminCursoSingularCobroDrawerComponent } from './admin-curso-singular-cobro-drawer.component';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { AdminCursoSingularCrearDrawerComponent } from './admin-curso-singular-crear-drawer.component';
 
 // ── Helpers de presentación ────────────────────────────────────────────────────
@@ -82,6 +84,14 @@ const BILLING_LABEL: Record<string, string> = {
   selector: 'app-admin-contabilidad-cursos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    FormsModule,
+    SelectModule,
+    SectionHeroComponent,
+    KpiCardVariantComponent,
+    IconComponent,
+    BentoGridLayoutDirective,
+  ],
   imports: [SectionHeroComponent, KpiCardVariantComponent, IconComponent, BentoGridLayoutDirective],
   template: `
     <div
@@ -148,6 +158,26 @@ const BILLING_LABEL: Record<string, string> = {
                 Listado de Cursos
               </h2>
             </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <p-select
+                [options]="tipoOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="_filtroTipo()"
+                (ngModelChange)="_filtroTipo.set($event)"
+                styleClass="flex-1 min-w-36"
+                data-llm-description="Filtro por tipo de curso: SENCE o Particular"
+              />
+              <p-select
+                [options]="estadoOptions"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="_filtroEstado()"
+                (ngModelChange)="_filtroEstado.set($event)"
+                styleClass="flex-1 min-w-36"
+                data-llm-description="Filtro por estado del curso: Activo, Próximo, Finalizado, Cancelado"
+              />
 
             <div class="flex flex-wrap items-center gap-2">
               <!-- Filtro tipo -->
@@ -556,43 +586,6 @@ const BILLING_LABEL: Record<string, string> = {
       </div>
     </div>
   `,
-  styles: `
-    .filter-select-wrapper {
-      position: relative;
-    }
-    .filter-select {
-      width: 100%;
-      height: 38px;
-      padding: 0 32px 0 12px;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--text-primary);
-      background-color: var(--bg-base);
-      border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      cursor: pointer;
-      appearance: none;
-      transition: all var(--duration-fast);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 10px center;
-    }
-    .filter-select:hover {
-      border-color: var(--ds-brand);
-      background-color: var(--bg-subtle);
-    }
-    .filter-select:focus {
-      outline: none;
-      border-color: var(--ds-brand);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 15%, transparent);
-    }
-
-    @media (max-width: 640px) {
-      .filter-select-wrapper {
-        flex: 1 1 calc(50% - 4px);
-      }
-    }
-  `,
 })
 export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(CursosSingularesFacade);
@@ -621,8 +614,23 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   protected readonly skeletonRows = [1, 2, 3, 4];
 
   // ── Filtros ────────────────────────────────────────────────────────────────
-  private readonly _filtroTipo = signal<string>('');
-  private readonly _filtroEstado = signal<string>('');
+  protected readonly _filtroTipo = signal<string>('');
+
+  readonly tipoOptions = [
+    { label: 'Todos los tipos', value: '' },
+    { label: 'SENCE', value: 'sence' },
+    { label: 'Particular', value: 'particular' },
+  ];
+
+  readonly estadoOptions = [
+    { label: 'Todos los estados', value: '' },
+    { label: 'Activo', value: 'active' },
+    { label: 'Próximo', value: 'upcoming' },
+    { label: 'Finalizado', value: 'completed' },
+    { label: 'Cancelado', value: 'cancelled' },
+  ];
+
+  protected readonly _filtroEstado = signal<string>('');
 
   /** Cursos filtrados según los selects activos. */
   protected readonly cursosFiltrados = computed<CursoSingularRow[]>(() => {
@@ -682,14 +690,6 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
         'graduation-cap',
       );
     }
-  }
-
-  protected onFiltroTipo(event: Event): void {
-    this._filtroTipo.set((event.target as HTMLSelectElement).value);
-  }
-
-  protected onFiltroEstado(event: Event): void {
-    this._filtroEstado.set((event.target as HTMLSelectElement).value);
   }
 
   protected onVerDetalle(curso: CursoSingularRow): void {

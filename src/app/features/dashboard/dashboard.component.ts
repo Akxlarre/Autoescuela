@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   afterNextRender,
   ElementRef,
@@ -9,6 +10,8 @@ import {
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardComponent } from '@shared/components/kpi-card/kpi-card.component';
@@ -17,6 +20,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
@@ -60,6 +64,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   imports: [
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ScrollRevealDirective,
+    AnimateInDirective,
     IconComponent,
     KpiCardVariantComponent,
     AlertCardComponent,
@@ -110,6 +116,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       <div
         class="bento-wide bento-card bento-activity-lg"
         appCardHover
+        appScrollReveal
         data-col-span="6"
         data-col-start="1"
         data-row-span="2"
@@ -164,6 +171,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       <div
         class="bento-wide bento-card bento-alerts-lg flex flex-col gap-3"
         appCardHover
+        [appScrollReveal]="{ delay: 0.1 }"
         data-col-span="6"
         data-col-start="7"
         data-row-span="2"
@@ -174,8 +182,12 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         </div>
 
         <div class="flex flex-col gap-3">
-          @for (alert of alerts(); track alert.id) {
-            <app-alert-card [severity]="alert.severity" [title]="alert.title">
+          @for (alert of alerts(); track alert.id; let i = $index) {
+            <app-alert-card 
+              [severity]="alert.severity" 
+              [title]="alert.title"
+              [appAnimateIn]="{ delay: 0.2 + (i * 0.05) }"
+            >
               {{ alert.description }}
             </app-alert-card>
           }
@@ -188,6 +200,7 @@ export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
   private readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
@@ -232,15 +245,21 @@ export class DashboardComponent {
     })),
   );
   constructor() {
-    // Iniciar la carga de datos con patrón SWR
-    void this.dashboardFacade.initialize();
-    void this.dashboardAlertsFacade.initialize();
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking reactivo
+      void this.dashboardFacade.initialize();
+      void this.dashboardAlertsFacade.initialize();
+    });
 
-    afterNextRender(() => {
-      if (this.bentoGrid()) {
-        setTimeout(() => {
-          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
-        }, 50);
+    // SWR Lifecycle Hook: animar grid cuando sale de loading (o de inmediato si hubo hit map de caché)
+    effect(() => {
+      const isReady = !this.loading();
+      const el = this.bentoGrid()?.nativeElement;
+      
+      if (isReady && el) {
+        Promise.resolve().then(() => {
+          this.gsap.animateBentoGrid(el);
+        });
       }
     });
   }

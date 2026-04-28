@@ -14,6 +14,7 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 /** Agrupa un array de días por semana (lunes como inicio). */
 function groupByWeek(days: WeekDay[]): WeekDay[][] {
@@ -45,19 +46,21 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
   selector: 'app-alumno-pagar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, AsyncBtnComponent, SkeletonBlockComponent],
+  imports: [SectionHeroComponent, IconComponent, AsyncBtnComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
   template: `
-    <div class="px-6 py-6 pb-20 space-y-6">
+    <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
-      <app-section-hero
-        title="Agendar y Pagar"
-        subtitle="Completa el pago de tu matrícula y agenda tus clases restantes"
-        icon="calendar-check"
-        [actions]="[]"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          title="Agendar y Pagar"
+          subtitle="Completa el pago de tu matrícula y agenda tus clases restantes"
+          icon="calendar-check"
+          [actions]="[]"
+        />
+      </div>
 
       <!-- ── Stepper ── -->
-      <div class="card px-6 py-4">
+      <div class="bento-banner card px-6 py-4">
         <div class="flex items-center">
           @for (s of steps; track s.n; let last = $last) {
             <!-- Nodo del paso -->
@@ -103,7 +106,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
       <!-- ── Error global ── -->
       @if (facade.error()) {
         <div
-          class="flex items-start gap-3 p-4 rounded-lg"
+          class="bento-banner flex items-start gap-3 p-4 rounded-lg"
           style="background: var(--color-error-muted)"
           role="alert"
         >
@@ -129,14 +132,14 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
            ════════════════════════════════════ -->
       @if (facade.step() === 1) {
         @if (facade.isLoading()) {
-          <div class="card p-6 flex flex-col gap-4">
+          <div class="bento-banner card p-6 flex flex-col gap-4">
             <app-skeleton-block variant="text" width="60%" height="24px" />
             <app-skeleton-block variant="text" width="100%" height="16px" />
             <app-skeleton-block variant="text" width="100%" height="16px" />
             <app-skeleton-block variant="rect" width="100%" height="80px" />
           </div>
         } @else if (facade.status()?.hasPaymentPending === false) {
-          <div class="card p-8 flex flex-col items-center gap-4 text-center">
+          <div class="bento-banner card p-8 flex flex-col items-center gap-4 text-center">
             <div
               class="w-14 h-14 rounded-full flex items-center justify-center"
               style="background: var(--color-success-muted)"
@@ -151,7 +154,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
             </div>
           </div>
         } @else if (facade.enrollment(); as enroll) {
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div class="bento-banner grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <!-- Columna izquierda: monto + detalles -->
             <div class="flex flex-col gap-4">
               <div class="card-tinted rounded-xl p-6 flex flex-col gap-1 text-center">
@@ -256,7 +259,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
            STEP 2 — Selección de horarios
            ════════════════════════════════════ -->
       @if (facade.step() === 2) {
-        <div class="flex flex-col gap-4">
+        <div class="bento-banner flex flex-col gap-4">
           <!-- Subencabezado + contador -->
           <div class="flex items-center justify-between">
             <p class="text-sm text-text-muted">
@@ -484,7 +487,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
            STEP 3 — Confirmación y pago
            ════════════════════════════════════ -->
       @if (facade.step() === 3) {
-        <div class="flex flex-col gap-4">
+        <div class="bento-banner flex flex-col gap-4">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <!-- Horarios seleccionados -->
             <div class="card p-5 flex flex-col gap-3">

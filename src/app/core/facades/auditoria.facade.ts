@@ -1,5 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import {
@@ -27,6 +29,8 @@ const PAGE_SIZE = 25;
 @Injectable({ providedIn: 'root' })
 export class AuditoriaFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -45,6 +49,7 @@ export class AuditoriaFacade {
   });
 
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   // ── Estado público ──────────────────────────────────────────────────────────
   readonly logs = this._logs.asReadonly();
@@ -65,17 +70,28 @@ export class AuditoriaFacade {
   // ── Inicialización ──────────────────────────────────────────────────────────
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+
+    if (this._initialized && branchId === this._lastBranchId) {
       await this.fetchLogs();
       return;
     }
+
     this._initialized = true;
+    this._lastBranchId = branchId;
+    this._currentPage.set(1);
     this._isLoading.set(true);
     try {
       await Promise.all([this.fetchSecretarias(), this.fetchLogs()]);
     } finally {
       this._isLoading.set(false);
     }
+  }
+
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
   }
 
   // ── Filtros ─────────────────────────────────────────────────────────────────
@@ -113,6 +129,8 @@ export class AuditoriaFacade {
       const f = this._filters();
       const offset = (this._currentPage() - 1) * PAGE_SIZE;
 
+      const branchId = this.getActiveBranchId();
+
       // Construir query base: audit_log JOIN users (solo secretarias)
       let query = this.supabase.client
         .from('audit_log')
@@ -130,6 +148,7 @@ export class AuditoriaFacade {
             first_names,
             paternal_last_name,
             email,
+            branch_id,
             roles!inner ( name )
           )
         `,
@@ -138,6 +157,8 @@ export class AuditoriaFacade {
         .eq('users.roles.name', 'secretary')
         .order('created_at', { ascending: false })
         .range(offset, offset + PAGE_SIZE - 1);
+
+      if (branchId !== null) query = query.eq('users.branch_id', branchId);
 
       // Filtros opcionales
       if (f.fechaDesde) {
@@ -171,7 +192,7 @@ export class AuditoriaFacade {
       if (error) throw error;
 
       this._totalCount.set(count ?? 0);
-      this._logs.set((data ?? []).map((row) => this.mapToRow(row)));
+      this._logs.set((data ?? []).map((row: any) => this.mapToRow(row)));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al cargar el log de auditoría';
       this._error.set(msg);
@@ -182,16 +203,23 @@ export class AuditoriaFacade {
   }
 
   private async fetchSecretarias(): Promise<void> {
-    const { data, error } = await this.supabase.client
+    const branchId = this.getActiveBranchId();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = this.supabase.client
       .from('users')
       .select('id, first_names, paternal_last_name, email, roles!inner(name)')
       .eq('roles.name', 'secretary')
       .order('first_names');
 
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+
+    const { data, error } = await query;
+
     if (error || !data) return;
 
     this._secretarias.set(
-      data.map((u) => ({
+      data.map((u: any) => ({
         id: u.id,
         nombre: `${u.first_names} ${u.paternal_last_name}`,
         email: u.email,

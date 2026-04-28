@@ -1,20 +1,33 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, output, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-editar-perfil-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
-      <div class="flex-1 overflow-y-auto p-5">
-        <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
-          <!-- Nombres -->
+      <app-drawer-content-loader class="flex-1 overflow-y-auto p-5">
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5 w-full">
+            <app-skeleton-block variant="text" width="100%" height="70px" />
+            <app-skeleton-block variant="text" width="100%" height="70px" />
+            <app-skeleton-block variant="text" width="100%" height="70px" />
+            <app-skeleton-block variant="text" width="100%" height="70px" />
+            <app-skeleton-block variant="text" width="100%" height="70px" />
+          </div>
+        </ng-template>
+
+        <ng-template #content>
+          <form [formGroup]="form" class="flex flex-col gap-5 w-full" (ngSubmit)="onSubmit()">
+            <!-- Nombres -->
           <div class="flex flex-col gap-1.5">
             <label for="edit-first-names" class="field-label">
               NOMBRES <span style="color: var(--state-error)">*</span>
@@ -117,8 +130,9 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               Datos actualizados correctamente.
             </div>
           }
-        </form>
-      </div>
+          </form>
+        </ng-template>
+      </app-drawer-content-loader>
 
       <!-- ── Footer ── -->
       <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">

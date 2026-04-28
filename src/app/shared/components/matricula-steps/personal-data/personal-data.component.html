@@ -57,21 +57,14 @@
 
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-text-secondary" for="gender">Sexo</label>
-            <div class="relative">
-              <select
-                id="gender"
-                name="gender"
-                [ngModel]="data().gender"
-                (ngModelChange)="emitField('gender', $event)"
-                class="w-full h-11 pl-4 pr-10 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all appearance-none"
-              >
-                <option value="M">Masculino</option>
-                <option value="F">Femenino</option>
-              </select>
-              <div class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                <app-icon name="chevron-down" [size]="16" class="text-text-muted" />
-              </div>
-            </div>
+            <p-select
+              [ngModel]="data().gender"
+              (ngModelChange)="emitField('gender', $event)"
+              [options]="genderOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+            />
           </div>
         </div>
 

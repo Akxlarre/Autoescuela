@@ -46,6 +46,9 @@ import { PaymentComponent } from '@shared/components/matricula-steps/payment/pay
 import { ContractComponent } from '@shared/components/matricula-steps/contract/contract.component';
 import { ConfirmationComponent } from '@shared/components/matricula-steps/confirmation/confirmation.component';
 import { DraftListComponent } from '@shared/components/matricula-steps/draft-list/draft-list.component';
+import { BranchGateComponent } from '@shared/components/branch-gate/branch-gate.component';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 
 const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   rut: '',
@@ -87,6 +90,9 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     ContractComponent,
     ConfirmationComponent,
     DraftListComponent,
+    BranchGateComponent,
+    ScrollRevealDirective,
+    AnimateInDirective,
   ],
   styleUrls: ['./secretaria-matricula.component.scss'],
   templateUrl: './secretaria-matricula.component.html',
@@ -95,7 +101,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  protected readonly branchFacade = inject(BranchFacade);
   readonly enrollment = inject(EnrollmentFacade);
   readonly docs = inject(EnrollmentDocumentsFacade);
   readonly payment = inject(EnrollmentPaymentFacade);
@@ -166,8 +172,10 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Vista: 'draft-list' muestra borradores pendientes, 'wizard' el stepper ──
-  private readonly _viewMode = signal<'loading' | 'draft-list' | 'wizard'>('loading');
+  // ── Vista: 'branch-gate' fuerza elección de sede antes de arrancar el wizard ──
+  private readonly _viewMode = signal<'loading' | 'branch-gate' | 'draft-list' | 'wizard'>(
+    'loading',
+  );
   readonly viewMode = this._viewMode.asReadonly();
 
   // ── Estado de guardado (spinner en botones Next) ──────────────────────────
@@ -405,18 +413,28 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this.branchFacade.setRequiresSpecificBranch(false);
   }
 
+  /** Llamado por BranchGateComponent cuando el admin elige una sede. */
+  onBranchSelectedFromGate(id: number): void {
+    this.branchFacade.selectBranch(id);
+    void this.initWizard();
+  }
+
   private async initWizard(): Promise<void> {
     this._viewMode.set('loading');
 
-    // Esperar a que el usuario esté resuelto antes de leer su rol o branchId.
     await this.auth.whenReady;
 
-    // Admin: requerir sede concreta en el topbar (deshabilita "Todas las escuelas")
-    // y auto-seleccionar la primera si no hay ninguna elegida.
     if (this.auth.currentUser()?.role === 'admin') {
       this.branchFacade.setRequiresSpecificBranch(true);
+
+      // Si no hay sede elegida, mostrar la gate antes de arrancar el wizard.
+      if (this.branchFacade.selectedBranchId() === null) {
+        this._viewMode.set('branch-gate');
+        return;
+      }
     }
 
+    const drafts = await this.enrollment.loadActiveDrafts();
     // Verificar si hay borradores pendientes antes de iniciar wizard limpio
     const branch = this.activeBranchId();
     const drafts = await this.enrollment.loadActiveDrafts(branch);

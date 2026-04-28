@@ -5,6 +5,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 const SPEC_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -24,9 +25,28 @@ const SPEC_LABELS: Record<string, string> = {
   selector: 'app-admin-relator-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedRelator(); as rel) {
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <div class="flex items-center gap-4">
+              <app-skeleton-block variant="circle" width="56px" height="56px" />
+              <div class="flex flex-col gap-2 flex-1">
+                <app-skeleton-block variant="text" width="70%" height="18px" />
+                <app-skeleton-block variant="text" width="40%" height="13px" />
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" class="col-span-2" />
+            </div>
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
       <!-- ── Avatar + nombre ─────────────────────────────────────────────── -->
       <div class="flex items-center gap-4 mb-6">
         <div
@@ -219,6 +239,8 @@ const SPEC_LABELS: Record<string, string> = {
           Editar relator
         </button>
       </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

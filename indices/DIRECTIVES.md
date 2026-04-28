@@ -6,9 +6,10 @@
 
 | Directiva | Selector | Propósito | Inputs | Estado |
 |-----------|----------|-----------|--------|--------|
-| `AnimateInDirective` | `[appAnimateIn]` | Fade+slide de entrada para elementos bajo `@if` | — | ✅ Estable |
+| `AnimateInDirective` | `[appAnimateIn]` | Fade+slide de entrada para elementos bajo `@if` | `appAnimateIn: { useBlur?, delay? } \| ''` | ✅ Estable |
 | `CardHoverDirective` | `[appCardHover]` | Efecto hover GSAP sobre `.card` (sombra + y:-2px) | — | ✅ Estable |
 | `BentoGridLayoutDirective` | `[appBentoGridLayout]` | FLIP animado para reflows del bento-grid | — | ✅ Estable |
+| `ScrollRevealDirective` | `[appScrollReveal]` | ScrollTrigger reveal (fade+slide) al entrar al viewport. Acepta `{ y, delay, threshold }`. Auto-cleanup vía `DestroyRef`. Respeta `prefers-reduced-motion`. | `appScrollReveal: { y?, delay?, threshold? } \| ''` | ✅ Estable |
 
 ## Directivas de Auth / RBAC
 

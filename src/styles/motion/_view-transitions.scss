@@ -44,29 +44,35 @@
    se note el cambio. Movimiento vertical + ligero scale para sensación de profundidad. */
 
 ::view-transition-old(main-content) {
-  animation: vt-page-out var(--duration-page-out, 200ms) var(--ease-in) both;
+  animation: vt-page-out var(--duration-page-out, 150ms) var(--ease-in) both;
 }
 
 ::view-transition-new(main-content) {
-  animation: vt-page-in var(--duration-page-in, 320ms) var(--ease-out) 60ms both;
+  animation: vt-page-in var(--duration-page-in, 220ms) var(--ease-out) both;
 }
 
+/* Salida: opacity + slight upward lift (-6px) da sensación de capas/profundidad.
+   La nueva página entra desde abajo (+4px), creando el efecto Z-axis clásico de apps premium. */
 @keyframes vt-page-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
   to {
     opacity: 0;
-    transform: translateY(-10px) scale(0.98);
+    transform: translateY(-6px);
   }
 }
 
 @keyframes vt-page-in {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.99);
+    transform: translateY(4px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 

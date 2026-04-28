@@ -10,7 +10,7 @@
 |------------|------------|---------|
 | **SWR** | Cualquier Facade con datos que persisten entre navegaciones | Agenda, Dashboard, Alumnos |
 | **SWR + Realtime** | Recursos compartidos con alta contención multi-usuario | Agenda (slots), Notificaciones |
-| **Solo fetch** | Datos que cambian en cada vista y no se revisitan | Detalle de alumno (por `:id`) |
+| **Solo fetch** | Datos que cambian  en cada vista y no se revisitan | Detalle de alumno (por `:id`) |
 
 ## Implementación en Facades
 
@@ -49,7 +49,7 @@ async initialize(): Promise<void> {
  * Refresca datos sin mostrar skeleton.
  * Usado por: SWR re-entry, Realtime events, post-action refresh.
  */
-private async refreshSilently(): Promise<void> {
+private async refreshSilently(): {Promise<void> 
   try {
     await this.fetchData();
   } catch {

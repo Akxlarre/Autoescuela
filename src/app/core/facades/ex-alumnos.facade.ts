@@ -1,5 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 
 // ── Tipos internos (DTO de Supabase) ──────────────────────────────────────────
@@ -38,6 +40,11 @@ interface EgresadoRow {
 @Injectable({ providedIn: 'root' })
 export class ExAlumnosFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
+
+  private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   // ── Estado privado ───────────────────────────────────────────────────────────
   private readonly _egresados = signal<EgresadoTableRow[]>([]);
@@ -81,21 +88,43 @@ export class ExAlumnosFacade {
   readonly _surveys = signal<any[]>([]);
   readonly surveys = this._surveys.asReadonly();
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
+
   // ── Acción principal ─────────────────────────────────────────────────────────
   async loadEgresados(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+
+    if (this._initialized && branchId === this._lastBranchId) {
+      void this.refreshSilently();
+      return;
+    }
+
     this._isLoading.set(true);
     this._error.set(null);
+    try {
+      await Promise.all([this.loadEgresadosList(), this.loadStatistics(), this.loadSurveys()]);
+      this._initialized = true;
+      this._lastBranchId = branchId;
+    } finally {
+      this._isLoading.set(false);
+    }
+  }
 
-    await Promise.all([
-      this.loadEgresadosList(),
-      this.loadStatistics(),
-      this.loadSurveys()
-    ]);
-    this._isLoading.set(false);
+  private async refreshSilently(): Promise<void> {
+    try {
+      await Promise.all([this.loadEgresadosList(), this.loadStatistics(), this.loadSurveys()]);
+    } catch {
+      // Swallowed
+    }
   }
 
   private async loadEgresadosList(): Promise<void> {
-    const { data, error } = await this.supabase.client
+    const branchId = this.getActiveBranchId();
+    let query: any = this.supabase.client
       .from('enrollments')
       .select(
         `
@@ -116,6 +145,8 @@ export class ExAlumnosFacade {
       )
       .eq('status', 'completed')
       .order('updated_at', { ascending: false });
+    if (branchId !== null) query = query.eq('branch_id', branchId);
+    const { data, error } = await query;
 
     if (error) {
       this._error.set(error.message);
@@ -167,7 +198,7 @@ export class ExAlumnosFacade {
       if (exams) {
         // Como no hay exam_type en BD todavía, mostramos la tasa general para ambos por ahora
         const approvalRate = this.calculateRate(exams);
-        
+
         this.municipalApprovalRate.set(approvalRate);
         this.psychoApprovalRate.set(approvalRate);
         this.totalExamenes.set(exams.length);
@@ -206,9 +237,7 @@ export class ExAlumnosFacade {
 
   private async loadSurveys(): Promise<void> {
     try {
-      const { data, error } = await this.supabase.client
-        .from('student_surveys')
-        .select(`
+      const { data, error } = await this.supabase.client.from('student_surveys').select(`
           id,
           satisfaction_rating,
           comments,
@@ -226,19 +255,19 @@ export class ExAlumnosFacade {
       const total = data.length;
       if (total > 0) {
         const sumRating = data.reduce((acc, s) => acc + s.satisfaction_rating, 0);
-        const licenseSuccess = data.filter(s => s.obtained_license).length;
+        const licenseSuccess = data.filter((s) => s.obtained_license).length;
 
         this.avgSatisfaction.set(Number((sumRating / total).toFixed(1)));
         this.licenseSuccessRate.set(Math.round((licenseSuccess / total) * 100));
-        
+
         // Mapear para la UI con tipado seguro
-        const mappedSurveys = (data as any[]).map(s => {
+        const mappedSurveys = (data as any[]).map((s) => {
           const user = s.enrollments?.students?.users;
           return {
             nombre: user ? `${user.first_names} ${user.paternal_last_name}` : 'Alumno Anónimo',
             rating: s.satisfaction_rating,
             texto: s.comments || 'Sin comentario',
-            iniciales: user ? (user.first_names[0] + user.paternal_last_name[0]) : 'AA'
+            iniciales: user ? user.first_names[0] + user.paternal_last_name[0] : 'AA',
           };
         });
         this._surveys.set(mappedSurveys);
@@ -250,7 +279,7 @@ export class ExAlumnosFacade {
 
   private calculateRate(exams: any[]): number {
     if (exams.length === 0) return 0;
-    const passed = exams.filter(e => e.passed === true).length;
+    const passed = exams.filter((e) => e.passed === true).length;
     return Math.round((passed / exams.length) * 100);
   }
 

@@ -5,16 +5,29 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-secretarias-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, IconComponent, StatBoxComponent],
+  imports: [DatePipe, IconComponent, StatBoxComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
-      <!-- Avatar + nombre -->
-      <div
+      <app-drawer-content-loader class="flex-col h-full flex p-5 pb-0">
+        <ng-template #skeletons>
+        <div class="flex flex-col gap-6 w-full">
+          <div class="flex justify-center"><app-skeleton-block variant="circle" width="64px" height="64px" /></div>
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+        </div>
+        </ng-template>
+        <ng-template #content>
+        <div class="flex flex-col h-full w-full">
+          <!-- Avatar + nombre -->
+          <div
         class="flex flex-col items-center gap-3 pb-6 mb-6"
         style="border-bottom: 1px solid var(--border-subtle);"
       >
@@ -114,6 +127,9 @@ import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-edita
           Editar secretaria
         </button>
       </div>
+        </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

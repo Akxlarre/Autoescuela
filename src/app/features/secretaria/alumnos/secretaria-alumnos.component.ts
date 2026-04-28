@@ -13,7 +13,7 @@ import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
       basePath="/app/secretaria"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
-      [alumnosPorVencer]="facade.alumnosPorVencer()"
+      [alumnosPorVencer]="facade.alumnosPorVencer().length"
       (refreshRequested)="facade.initialize()"
     />
   `,

@@ -5,6 +5,10 @@ import {
   input,
   output,
   signal,
+  inject,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { SlicePipe } from '@angular/common';
 import { TableModule } from 'primeng/table';
@@ -16,6 +20,8 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
   DmsTab,
   StudentWithDocsRow,
@@ -45,56 +51,64 @@ import type {
     IconComponent,
     SkeletonBlockComponent,
     CardHoverDirective,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <!-- ── SKELETON ─────────────────────────────────────────────────── -->
-    @if (isLoading()) {
-      <div class="flex flex-col gap-6 p-6">
-        <app-skeleton-block variant="rect" width="100%" height="120px" />
-        <div class="flex gap-3">
-          <app-skeleton-block variant="rect" width="120px" height="36px" />
-          <app-skeleton-block variant="rect" width="120px" height="36px" />
-          <app-skeleton-block variant="rect" width="120px" height="36px" />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── SKELETON ─────────────────────────────────────────────────── -->
+      @if (isLoading()) {
+        <div class="bento-banner flex flex-col gap-6 p-6">
+          <app-skeleton-block variant="rect" width="100%" height="120px" />
+          <div class="flex gap-3">
+            <app-skeleton-block variant="rect" width="120px" height="36px" />
+            <app-skeleton-block variant="rect" width="120px" height="36px" />
+            <app-skeleton-block variant="rect" width="120px" height="36px" />
+          </div>
+          <app-skeleton-block variant="rect" width="100%" height="300px" />
+          <app-skeleton-block variant="rect" width="100%" height="200px" />
         </div>
-        <app-skeleton-block variant="rect" width="100%" height="300px" />
-        <app-skeleton-block variant="rect" width="100%" height="200px" />
-      </div>
-    } @else {
+      } @else {
+        <!-- ── HERO ──────────────────────────────────────────────────────── -->
+        <div class="bento-banner" #heroRef>
+          <app-section-hero
+            title="Repositorio de Documentos"
+            subtitle="Documentos legales de alumnos y de la escuela, centralizados"
+            contextLine="DMS"
+            [actions]="heroActions()"
+            (actionClick)="onHeroAction($event)"
+          />
+        </div>
 
-    <!-- ── HERO ──────────────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Repositorio de Documentos"
-      subtitle="Documentos legales de alumnos y de la escuela, centralizados"
-      contextLine="DMS"
-      [actions]="heroActions()"
-      (actionClick)="onHeroAction($event)"
-    />
-
-    <!-- ── TABS ──────────────────────────────────────────────────────── -->
-    <div class="px-6 pt-5 pb-0">
-      <nav class="flex gap-1 border-b" style="border-color: var(--border-subtle);" aria-label="Secciones DMS">
-        @for (tab of tabs; track tab.id) {
-          <button
-            type="button"
-            class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all duration-150 border-b-2 relative -mb-px cursor-pointer"
-            [style]="activeTab() === tab.id
-              ? 'color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-tint);'
-              : 'color: var(--text-secondary); border-color: transparent; background: transparent;'"
-            (click)="setActiveTab(tab.id)"
+        <!-- ── TABS ──────────────────────────────────────────────────────── -->
+        <div class="bento-banner px-6 pt-5 pb-0">
+          <nav
+            class="flex gap-1 border-b"
+            style="border-color: var(--border-subtle);"
+            aria-label="Secciones DMS"
           >
-            <span class="flex items-center gap-2">
-              <app-icon [name]="tab.icon" [size]="15" />
-              {{ tab.label }}
-            </span>
-          </button>
-        }
-      </nav>
-    </div>
+            @for (tab of tabs; track tab.id) {
+              <button
+                type="button"
+                class="px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all duration-150 border-b-2 relative -mb-px cursor-pointer"
+                [style]="
+                  activeTab() === tab.id
+                    ? 'color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-tint);'
+                    : 'color: var(--text-secondary); border-color: transparent; background: transparent;'
+                "
+                (click)="setActiveTab(tab.id)"
+              >
+                <span class="flex items-center gap-2">
+                  <app-icon [name]="tab.icon" [size]="15" />
+                  {{ tab.label }}
+                </span>
+              </button>
+            }
+          </nav>
+        </div>
 
-    <!-- ── PANEL CONTENIDO ────────────────────────────────────────────── -->
-    <div class="p-6 flex flex-col gap-6">
-
-      @switch (activeTab()) {
+        <!-- ── PANEL CONTENIDO ────────────────────────────────────────────── -->
+        <div class="bento-banner p-6 flex flex-col gap-6">
+          @switch (activeTab()) {
 
         <!-- ══ TAB: DOCUMENTOS DEL ALUMNO ══════════════════════════════ -->
         @case ('students') {
@@ -445,10 +459,23 @@ import type {
       </app-alert-card>
 
     </div>
-    } <!-- end @else !isLoading -->
+    } <!-- end @else -->
+    </div>
   `,
 })
-export class DmsListContentComponent {
+export class DmsListContentComponent implements AfterViewInit {
+  // ── Internal ────────────────────────────────────────────────────────────────
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+  }
+  
   // ── Inputs ────────────────────────────────────────────────────────────────
   readonly basePath = input.required<string>();
   readonly studentsWithDocs = input<StudentWithDocsRow[]>([]);

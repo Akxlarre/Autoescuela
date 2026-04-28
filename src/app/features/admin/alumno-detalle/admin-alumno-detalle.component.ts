@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -6,6 +15,7 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { Button } from 'primeng/button';
 import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
@@ -28,7 +38,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     BentoGridLayoutDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Estado de Carga ── -->
       @if (facade.isLoading()) {
         <div class="bento-hero">
@@ -72,16 +82,18 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
 
         <!-- ── Vista Principal ── -->
       } @else if (facade.alumno(); as alumno) {
-        <app-section-hero
-          [title]="alumno.nombre"
-          [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
-          icon="user"
-          backRoute="/app/admin/alumnos"
-          backLabel="Listado de Alumnos"
-          [actions]="heroActions()"
-          [chips]="heroChips()"
-          (actionClick)="handleHeroAction($event)"
-        />
+        <div class="bento-banner" #heroRef>
+          <app-section-hero
+            [title]="alumno.nombre"
+            [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
+            icon="user"
+            backRoute="/app/admin/alumnos"
+            backLabel="Listado de Alumnos"
+            [actions]="heroActions()"
+            [chips]="heroChips()"
+            (actionClick)="handleHeroAction($event)"
+          />
+        </div>
 
         <!-- Bento Item 1: Info Personal -->
         <div class="bento-card bento-tall">
@@ -377,10 +389,14 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     }
   `,
 })
-export class AdminAlumnoDetalleComponent implements OnInit {
+export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -431,6 +447,14 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     if (id && !isNaN(Number(id))) {
       void this.facade.initialize(Number(id));
     }
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────

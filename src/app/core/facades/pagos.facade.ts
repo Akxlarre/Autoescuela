@@ -1,5 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
   AlumnoDeudor,
@@ -31,15 +33,27 @@ function resolveMetodo(row: {
 }
 
 const METODOS_CONFIG: { key: string; metodo: string; color: string; icono: string }[] = [
-  { key: 'transfer_amount', metodo: 'Transferencia', color: 'var(--color-primary)', icono: 'landmark' },
+  {
+    key: 'transfer_amount',
+    metodo: 'Transferencia',
+    color: 'var(--color-primary)',
+    icono: 'landmark',
+  },
   { key: 'cash_amount', metodo: 'Efectivo', color: 'var(--state-success)', icono: 'banknote' },
-  { key: 'card_amount', metodo: 'Débito/Crédito', color: 'var(--color-purple)', icono: 'credit-card' },
+  {
+    key: 'card_amount',
+    metodo: 'Débito/Crédito',
+    color: 'var(--color-purple)',
+    icono: 'credit-card',
+  },
   { key: 'voucher_amount', metodo: 'WebPay', color: 'var(--state-warning)', icono: 'monitor' },
 ];
 
 @Injectable({ providedIn: 'root' })
 export class PagosFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
   showSuccess(summary: string, detail?: string): void {
@@ -67,6 +81,7 @@ export class PagosFacade {
   private readonly _isLoadingDetalle = signal<boolean>(false);
 
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
   private _realtimeChannel: any | null = null;
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
@@ -110,18 +125,26 @@ export class PagosFacade {
     }
   }
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
+
   async initialize(): Promise<void> {
     this.setupRealtime();
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
-    
+
     this._isLoading.set(true);
     this._error.set(null);
     try {
       await this.fetchAll();
       this._initialized = true;
+      this._lastBranchId = branchId;
     } catch {
       this._error.set('Error al cargar datos financieros.');
     } finally {
@@ -142,97 +165,170 @@ export class PagosFacade {
     const [year, month] = today.split('-');
     const firstOfMonth = `${year}-${month}-01`;
     const lastOfMonth = toISODate(new Date(Number(year), Number(month), 0));
+    const branchId = this.getActiveBranchId();
 
     await Promise.all([
-      this.fetchIngresosHoy(today),
-      this.fetchIngresosMes(firstOfMonth, lastOfMonth),
-      this.fetchBoletasMes(firstOfMonth, lastOfMonth),
-      this.fetchPagosPendientes(),
-      this.fetchAlumnosConDeuda(),
-      this.fetchPagosRecientes(),
-      this.fetchMetodosPagoMes(firstOfMonth, lastOfMonth),
+      this.fetchIngresosHoy(today, branchId),
+      this.fetchIngresosMes(firstOfMonth, lastOfMonth, branchId),
+      this.fetchBoletasMes(firstOfMonth, lastOfMonth, branchId),
+      this.fetchPagosPendientes(branchId),
+      this.fetchAlumnosConDeuda(branchId),
+      this.fetchPagosRecientes(branchId),
+      this.fetchMetodosPagoMes(firstOfMonth, lastOfMonth, branchId),
     ]);
   }
 
-  private async fetchIngresosHoy(today: string): Promise<void> {
-    const { data } = await this.supabase.client.from('payments').select('total_amount').eq('payment_date', today);
-    this._ingresosHoy.set((data ?? []).reduce((acc, r) => acc + (r.total_amount ?? 0), 0));
+  private async fetchIngresosHoy(today: string, branchId: number | null): Promise<void> {
+    let q: any = this.supabase.client
+      .from('payments')
+      .select('total_amount, enrollments!inner(branch_id)')
+      .eq('payment_date', today);
+    if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+    const { data } = await q;
+    this._ingresosHoy.set(
+      (data ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0),
+    );
   }
 
-  private async fetchIngresosMes(first: string, last: string): Promise<void> {
-    const { data } = await this.supabase.client.from('payments').select('total_amount').gte('payment_date', first).lte('payment_date', last);
-    this._ingresosMes.set((data ?? []).reduce((acc, r) => acc + (r.total_amount ?? 0), 0));
+  private async fetchIngresosMes(
+    first: string,
+    last: string,
+    branchId: number | null,
+  ): Promise<void> {
+    let q: any = this.supabase.client
+      .from('payments')
+      .select('total_amount, enrollments!inner(branch_id)')
+      .gte('payment_date', first)
+      .lte('payment_date', last);
+    if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+    const { data } = await q;
+    this._ingresosMes.set(
+      (data ?? []).reduce((acc: number, r: any) => acc + (r.total_amount ?? 0), 0),
+    );
   }
 
-  private async fetchBoletasMes(first: string, last: string): Promise<void> {
-    const { count } = await this.supabase.client.from('payments').select('id', { count: 'exact', head: true }).gte('payment_date', first).lte('payment_date', last);
+  private async fetchBoletasMes(
+    first: string,
+    last: string,
+    branchId: number | null,
+  ): Promise<void> {
+    let q: any = this.supabase.client
+      .from('payments')
+      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .gte('payment_date', first)
+      .lte('payment_date', last);
+    if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+    const { count } = await q;
     this._boletasMes.set(count ?? 0);
   }
 
-  private async fetchPagosPendientes(): Promise<void> {
-    const { data } = await this.supabase.client.from('enrollments').select('pending_balance').gt('pending_balance', 0).neq('status', 'draft');
-    this._pagosPendientesTotales.set((data ?? []).reduce((acc, r) => acc + (r.pending_balance ?? 0), 0));
+  private async fetchPagosPendientes(branchId: number | null): Promise<void> {
+    let q: any = this.supabase.client
+      .from('enrollments')
+      .select('pending_balance')
+      .gt('pending_balance', 0)
+      .neq('status', 'draft');
+    if (branchId !== null) q = q.eq('branch_id', branchId);
+    const { data } = await q;
+    this._pagosPendientesTotales.set(
+      (data ?? []).reduce((acc: number, r: any) => acc + (r.pending_balance ?? 0), 0),
+    );
   }
 
-  private async fetchAlumnosConDeuda(): Promise<void> {
-    const { data } = await this.supabase.client
+  private async fetchAlumnosConDeuda(branchId: number | null): Promise<void> {
+    let q: any = this.supabase.client
       .from('enrollments')
-      .select('id, base_price, discount, total_paid, pending_balance, students!inner(users!inner(first_names, paternal_last_name, rut))')
+      .select(
+        'id, base_price, discount, total_paid, pending_balance, students!inner(users!inner(first_names, paternal_last_name, rut))',
+      )
       .gt('pending_balance', 0)
       .neq('status', 'draft')
       .order('pending_balance', { ascending: false });
+    if (branchId !== null) q = q.eq('branch_id', branchId);
+    const { data } = await q;
 
-    this._alumnosConDeuda.set((data ?? []).map((row: any) => ({
-      enrollmentId: row.id,
-      alumno: `${row.students?.users?.first_names ?? ''} ${row.students?.users?.paternal_last_name ?? ''}`.trim(),
-      rut: row.students?.users?.rut ?? '—',
-      totalAPagar: (row.base_price ?? 0) - (row.discount ?? 0),
-      pagado: row.total_paid ?? 0,
-      saldo: row.pending_balance ?? 0,
-    })));
+    this._alumnosConDeuda.set(
+      (data ?? []).map((row: any) => ({
+        enrollmentId: row.id,
+        alumno:
+          `${row.students?.users?.first_names ?? ''} ${row.students?.users?.paternal_last_name ?? ''}`.trim(),
+        rut: row.students?.users?.rut ?? '—',
+        totalAPagar: (row.base_price ?? 0) - (row.discount ?? 0),
+        pagado: row.total_paid ?? 0,
+        saldo: row.pending_balance ?? 0,
+      })),
+    );
   }
 
-  private async fetchPagosRecientes(): Promise<void> {
-    const { data } = await this.supabase.client
+  private async fetchPagosRecientes(branchId: number | null): Promise<void> {
+    let q: any = this.supabase.client
       .from('payments')
-      .select('id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, enrollments(students(users(first_names, paternal_last_name)))')
+      .select(
+        'id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, enrollments!inner(branch_id, students(users(first_names, paternal_last_name)))',
+      )
       .order('created_at', { ascending: false })
       .limit(50);
+    if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+    const { data } = await q;
 
-    this._pagosRecientes.set((data ?? []).map((row: any) => {
-      const { metodo, icono } = resolveMetodo(row);
-      return {
-        id: row.id,
-        fecha: row.payment_date,
-        alumno: `${row.enrollments?.students?.users?.first_names ?? ''} ${row.enrollments?.students?.users?.paternal_last_name ?? ''}`.trim(),
-        concepto: row.type,
-        monto: row.total_amount ?? 0,
-        metodo,
-        metodoIcono: icono,
-        nroDocumento: row.document_number,
-        estado: row.status,
-      };
-    }));
+    this._pagosRecientes.set(
+      (data ?? []).map((row: any) => {
+        const { metodo, icono } = resolveMetodo(row);
+        return {
+          id: row.id,
+          fecha: row.payment_date,
+          alumno:
+            `${row.enrollments?.students?.users?.first_names ?? ''} ${row.enrollments?.students?.users?.paternal_last_name ?? ''}`.trim(),
+          concepto: row.type,
+          monto: row.total_amount ?? 0,
+          metodo,
+          metodoIcono: icono,
+          nroDocumento: row.document_number,
+          estado: row.status,
+        };
+      }),
+    );
   }
 
-  private async fetchMetodosPagoMes(first: string, last: string): Promise<void> {
-    const { data } = await this.supabase.client.from('payments').select('transfer_amount, cash_amount, card_amount, voucher_amount').gte('payment_date', first).lte('payment_date', last);
-    const totals = METODOS_CONFIG.map(cfg => ({
+  private async fetchMetodosPagoMes(
+    first: string,
+    last: string,
+    branchId: number | null,
+  ): Promise<void> {
+    let q: any = this.supabase.client
+      .from('payments')
+      .select(
+        'transfer_amount, cash_amount, card_amount, voucher_amount, enrollments!inner(branch_id)',
+      )
+      .gte('payment_date', first)
+      .lte('payment_date', last);
+    if (branchId !== null) q = q.eq('enrollments.branch_id', branchId);
+    const { data } = await q;
+    const totals = METODOS_CONFIG.map((cfg) => ({
       ...cfg,
-      total: (data ?? []).reduce((acc, r: any) => acc + (r[cfg.key] ?? 0), 0)
+      total: (data ?? []).reduce((acc: number, r: any) => acc + (r[cfg.key] ?? 0), 0),
     }));
     const grandTotal = totals.reduce((acc, m) => acc + m.total, 0);
 
-    this._metodosPagoMes.set(totals.filter(m => m.total > 0).map(m => ({
-      metodo: m.metodo,
-      total: m.total,
-      porcentaje: grandTotal > 0 ? Math.round((m.total / grandTotal) * 100) : 0,
-      color: m.color,
-      icono: m.icono,
-    })).sort((a, b) => b.porcentaje - a.porcentaje));
+    this._metodosPagoMes.set(
+      totals
+        .filter((m) => m.total > 0)
+        .map((m) => ({
+          metodo: m.metodo,
+          total: m.total,
+          porcentaje: grandTotal > 0 ? Math.round((m.total / grandTotal) * 100) : 0,
+          color: m.color,
+          icono: m.icono,
+        }))
+        .sort((a, b) => b.porcentaje - a.porcentaje),
+    );
   }
 
-  async registrarNuevoPago(enrollmentId: number | null, payload: any, montosActuales: any): Promise<void> {
+  async registrarNuevoPago(
+    enrollmentId: number | null,
+    payload: any,
+    montosActuales: any,
+  ): Promise<void> {
     const { error: insertError } = await this.supabase.client.from('payments').insert({
       enrollment_id: enrollmentId,
       type: payload.type,
@@ -248,19 +344,25 @@ export class PagosFacade {
     if (insertError) throw insertError;
 
     if (enrollmentId !== null && montosActuales !== null) {
-      await this.supabase.client.from('enrollments').update({
-        total_paid: montosActuales.total_paid + payload.total_amount,
-        pending_balance: Math.max(0, montosActuales.pending_balance - payload.total_amount),
-        payment_status: (montosActuales.pending_balance - payload.total_amount) <= 0 ? 'paid' : 'partial'
-      }).eq('id', enrollmentId);
-      
+      await this.supabase.client
+        .from('enrollments')
+        .update({
+          total_paid: montosActuales.total_paid + payload.total_amount,
+          pending_balance: Math.max(0, montosActuales.pending_balance - payload.total_amount),
+          payment_status:
+            montosActuales.pending_balance - payload.total_amount <= 0 ? 'paid' : 'partial',
+        })
+        .eq('id', enrollmentId);
+
       // Refrescamos los detalles del estado de cuenta específicos para este enrollment
       void this.cargarEstadoCuenta(enrollmentId);
     }
     void this.refreshSilently();
   }
 
-  seleccionarEnrollment(enrollmentId: number): void { this._enrollmentSeleccionado.set(enrollmentId); }
+  seleccionarEnrollment(enrollmentId: number): void {
+    this._enrollmentSeleccionado.set(enrollmentId);
+  }
 
   seleccionarParaPago(enrollmentId: number | null): void {
     this._enrollmentSeleccionado.set(enrollmentId);
@@ -274,30 +376,63 @@ export class PagosFacade {
   async cargarEstadoCuenta(enrollmentId: number): Promise<void> {
     this._isLoadingDetalle.set(true);
     try {
-      await Promise.all([this.fetchEstadoCuentaResumen(enrollmentId), this.fetchEstadoCuentaHistorial(enrollmentId)]);
+      await Promise.all([
+        this.fetchEstadoCuentaResumen(enrollmentId),
+        this.fetchEstadoCuentaHistorial(enrollmentId),
+      ]);
     } finally {
       this._isLoadingDetalle.set(false);
     }
   }
 
   private async fetchEstadoCuentaResumen(enrollmentId: number): Promise<void> {
-    const { data } = await this.supabase.client.from('enrollments').select('id, base_price, discount, total_paid, pending_balance, payment_status, students!inner(users!inner(first_names, paternal_last_name, rut, email, phone)), courses!inner(name)').eq('id', enrollmentId).maybeSingle();
+    const { data } = await this.supabase.client
+      .from('enrollments')
+      .select(
+        'id, base_price, discount, total_paid, pending_balance, payment_status, students!inner(users!inner(first_names, paternal_last_name, rut, email, phone)), courses!inner(name)',
+      )
+      .eq('id', enrollmentId)
+      .maybeSingle();
     if (!data) return;
     const user = (data as any).students?.users;
     this._estadoCuentaResumen.set({
       enrollmentId: data.id,
       alumno: `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim(),
-      rut: user?.rut ?? '—', email: user?.email, telefono: user?.phone, curso: (data as any).courses?.name,
-      basePrice: data.base_price ?? 0, descuento: data.discount ?? 0, totalACurso: (data.base_price ?? 0) - (data.discount ?? 0),
-      totalPagado: data.total_paid ?? 0, saldoPendiente: data.pending_balance ?? 0, paymentStatus: data.payment_status,
+      rut: user?.rut ?? '—',
+      email: user?.email,
+      telefono: user?.phone,
+      curso: (data as any).courses?.name,
+      basePrice: data.base_price ?? 0,
+      descuento: data.discount ?? 0,
+      totalACurso: (data.base_price ?? 0) - (data.discount ?? 0),
+      totalPagado: data.total_paid ?? 0,
+      saldoPendiente: data.pending_balance ?? 0,
+      paymentStatus: data.payment_status,
     });
   }
 
   private async fetchEstadoCuentaHistorial(enrollmentId: number): Promise<void> {
-    const { data } = await this.supabase.client.from('payments').select('id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status').eq('enrollment_id', enrollmentId).order('created_at', { ascending: false });
-    this._estadoCuentaHistorial.set((data ?? []).map((row: any) => {
-      const { metodo, icono } = resolveMetodo(row);
-      return { id: row.id, fecha: row.payment_date, concepto: row.type, metodo, metodoIcono: icono, nroDocumento: row.document_number, monto: row.total_amount, estado: row.status };
-    }));
+    const { data } = await this.supabase.client
+      .from('payments')
+      .select(
+        'id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status',
+      )
+      .eq('enrollment_id', enrollmentId)
+      .order('created_at', { ascending: false });
+    this._estadoCuentaHistorial.set(
+      (data ?? []).map((row: any) => {
+        const { metodo, icono } = resolveMetodo(row);
+        return {
+          id: row.id,
+          fecha: row.payment_date,
+          concepto: row.type,
+          metodo,
+          metodoIcono: icono,
+          nroDocumento: row.document_number,
+          monto: row.total_amount,
+          estado: row.status,
+        };
+      }),
+    );
   }
 }

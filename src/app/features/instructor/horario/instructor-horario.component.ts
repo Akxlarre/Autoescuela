@@ -34,15 +34,17 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
-      <app-section-hero
-        #heroRef
-        title="Mi Horario"
-        [subtitle]="weekLabel()"
-        backRoute="/app/instructor/dashboard"
-        backLabel="Dashboard"
-        [actions]="heroActions"
-        [chips]="heroChips()"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Mi Horario"
+          [subtitle]="weekLabel()"
+          backRoute="/app/instructor/dashboard"
+          backLabel="Dashboard"
+          [actions]="heroActions"
+          [chips]="heroChips()"
+        />
+      </div>
 
       <!-- KPIs -->
       <div class="bento-square">

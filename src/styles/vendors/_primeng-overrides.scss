@@ -618,6 +618,7 @@ app-main-layout p-toast.p-toast-top-center,
 /* Select (Dropdown) Centering Fix & Premium Overlay */
 .p-select {
   align-items: center;
+  min-height: 2.5rem;
   border: 1px solid var(--border-strong) !important;
 }
 .p-select:hover {
@@ -633,6 +634,8 @@ app-main-layout p-toast.p-toast-top-center,
   align-items: center;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
+  padding-left: var(--space-3) !important;
+  padding-right: var(--space-2) !important;
   height: 100%;
 }
 

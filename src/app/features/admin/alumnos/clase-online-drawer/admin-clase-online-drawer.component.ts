@@ -14,14 +14,24 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { ClaseOnlineFacade } from '@core/facades/clase-online.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-clase-online-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, FormsModule],
+  imports: [IconComponent, SkeletonBlockComponent, FormsModule, DrawerContentLoaderComponent],
   template: `
-    <div class="flex flex-col h-full bg-surface">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="rect" width="100%" height="60px" />
+          <app-skeleton-block variant="rect" width="100%" height="48px" />
+          <app-skeleton-block variant="rect" width="100%" height="48px" />
+          <app-skeleton-block variant="rect" width="100%" height="48px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <div class="flex-1 overflow-y-auto p-5">
         <!-- Sesión info -->
         @if (facade.isLoading()) {
@@ -198,7 +208,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           {{ alumnosFacade.drawerMode() === 'zoom' ? 'Guardar enlace' : 'Registrar asistencia' }}
         </button>
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     .field-label {

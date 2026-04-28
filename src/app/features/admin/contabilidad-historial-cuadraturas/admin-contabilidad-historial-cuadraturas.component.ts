@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { HistorialCuadraturasFacade } from '@core/facades/historial-cuadraturas.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { HistorialCuadraturasContentComponent } from '@shared/components/historial-cuadraturas-content/historial-cuadraturas-content.component';
 
 @Component({
@@ -21,10 +22,14 @@ import { HistorialCuadraturasContentComponent } from '@shared/components/histori
     />
   `,
 })
-export class AdminContabilidadHistorialCuadraturasComponent implements OnInit {
+export class AdminContabilidadHistorialCuadraturasComponent {
   protected readonly facade = inject(HistorialCuadraturasFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
-  ngOnInit(): void {
-    this.facade.initialize();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 }

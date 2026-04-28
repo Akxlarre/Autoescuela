@@ -1,15 +1,12 @@
-import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { CuadraturaContentComponent } from '@shared/components/cuadratura-content/cuadratura-content.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { RegistrarEgresoDrawerComponent } from './registrar-egreso-drawer.component';
-import type {
-  CierrePayload,
-  IngresoRow,
-  EgresoRow,
-} from '@core/models/ui/cuadratura.model';
+import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadratura.model';
 
 @Component({
   selector: 'app-admin-contabilidad-cuadratura',
@@ -34,13 +31,17 @@ import type {
     />
   `,
 })
-export class AdminContabilidadCuadraturaComponent implements OnInit {
+export class AdminContabilidadCuadraturaComponent {
   protected readonly facade = inject(CuadraturaFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly pagosFacade = inject(PagosFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
-  ngOnInit(): void {
-    this.facade.initialize();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   protected async onGuardarCierre(payload: CierrePayload): Promise<void> {

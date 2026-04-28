@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, inject, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, effect, viewChild, ElementRef, afterNextRender, Injector } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { LayoutService } from '@core/services/ui/layout.service';
@@ -16,6 +16,7 @@ import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms-viewer-modal.component';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * AppShellComponent — layout principal de rutas protegidas.
@@ -155,12 +156,13 @@ import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms
         <!-- Shifting container for main content and drawer -->
         <div class="flex flex-1 min-w-0 w-full overflow-hidden relative">
           <main
+            #mainContent
             class="shell-content flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 w-full max-w-full"
             style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"
           >
-            <router-outlet />
+            <router-outlet (activate)="onRouteActivate()" />
           </main>
 
           <!-- Layout-shifting Drawer -->
@@ -179,6 +181,32 @@ export class AppShellComponent {
   private readonly notificationsFacade = inject(NotificationsFacade);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly injector = inject(Injector);
+
+  private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
+
+  onRouteActivate(): void {
+    // afterNextRender garantiza que el DOM del componente enrutado está
+    // completamente insertado y renderizado antes de disparar la animación.
+    // Reemplaza el setTimeout(50) frágil que podía fallar en dispositivos lentos.
+    afterNextRender(
+      () => {
+        const contentEl = this.mainContent()?.nativeElement;
+        if (!contentEl) return;
+
+        const componentRoot = Array.from(contentEl.children).find(
+          (el) => el.tagName.toLowerCase() !== 'router-outlet'
+        );
+
+        if (componentRoot) {
+          const containerToAnimate = componentRoot.querySelector('.bento-grid') || componentRoot;
+          this.gsap.animateBentoGrid(containerToAnimate as HTMLElement);
+        }
+      },
+      { injector: this.injector },
+    );
+  }
 
   constructor() {
     // Premium Feel: Si abrimos el layout drawer global y estamos en pantallas

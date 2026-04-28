@@ -16,14 +16,29 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-sesion-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SkeletonBlockComponent, IconComponent, AsyncBtnComponent, StatBoxComponent],
+  imports: [FormsModule, SkeletonBlockComponent, IconComponent, AsyncBtnComponent, StatBoxComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedSesion(); as sesion) {
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <div class="grid grid-cols-2 gap-3">
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+            </div>
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
       <!-- ═══ Header de la sesión ═══ -->
       <div class="mb-4 rounded-lg border border-border bg-surface p-4">
         <div class="flex items-center justify-between">
@@ -92,11 +107,8 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
       <!-- ═══ Toggle modo ═══ -->
       <div class="mb-4 flex gap-2">
         <button
-          class="tab-btn flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors"
-          [class.border-brand]="mode() === 'attendance'"
-          [class.text-primary]="mode() === 'attendance' && !isFuture()"
-          [class.border-border]="mode() !== 'attendance'"
-          [class.text-secondary]="mode() !== 'attendance' || isFuture()"
+          class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+          [class]="mode() === 'attendance' && !isFuture() ? 'bg-brand/10 border-brand text-brand' : 'bg-surface border-border text-secondary hover:bg-surface-elevated hover:text-primary'"
           [class.opacity-50]="isFuture()"
           [disabled]="isFuture()"
           (click)="!isFuture() && mode.set('attendance')"
@@ -106,11 +118,8 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
           Asistencia
         </button>
         <button
-          class="tab-btn flex-1 rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors"
-          [class.border-brand]="mode() === 'edit'"
-          [class.text-primary]="mode() === 'edit'"
-          [class.border-border]="mode() !== 'edit'"
-          [class.text-secondary]="mode() !== 'edit'"
+          class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+          [class]="mode() === 'edit' ? 'bg-brand/10 border-brand text-brand' : 'bg-surface border-border text-secondary hover:bg-surface-elevated hover:text-primary'"
           (click)="mode.set('edit')"
           data-llm-action="switch-to-edit-mode"
         >
@@ -305,6 +314,8 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
           />
         </div>
       }
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

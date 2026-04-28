@@ -16,7 +16,7 @@ import { AdminClaseOnlineDrawerComponent } from './clase-online-drawer/admin-cla
       basePath="/app/admin"
       [alumnos]="facade.alumnos()"
       [isLoading]="facade.isLoading()"
-      [alumnosPorVencer]="facade.alumnosPorVencer()"
+      [alumnosPorVencer]="facade.alumnosPorVencer().length"
       (refreshRequested)="facade.initialize()"
       (claseOnlineAction)="openClaseOnlineDrawer($event)"
       (preInscritosRequested)="navigateToPreInscritos()"

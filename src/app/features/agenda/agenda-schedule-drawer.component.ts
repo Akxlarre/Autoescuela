@@ -8,8 +8,8 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import type { AgendableStudent } from '@core/models/ui/agenda.model';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 /**
  * AgendaScheduleDrawerComponent — Smart component cargado dinámicamente vía
@@ -28,7 +28,7 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
     IconComponent,
     SkeletonBlockComponent,
     AsyncBtnComponent,
-    AnimateInDirective,
+    DrawerContentLoaderComponent,
   ],
   host: {
     class: 'flex flex-col h-full',
@@ -36,10 +36,19 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
   template: `
     <div class="flex flex-col h-full">
       <!-- Contenido Principal -->
-      <div class="flex-1 flex flex-col gap-6 p-1">
+      <app-drawer-content-loader class="flex-1 overflow-y-auto p-1">
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-6 w-full">
+            <app-skeleton-block variant="text" width="100%" height="120px" />
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+          </div>
+        </ng-template>
+
+        <ng-template #content>
+          <div class="flex flex-col gap-6 h-full w-full">
         <!-- Slot seleccionado (solo lectura) -->
         @if (slot(); as s) {
-          <div class="slot-hero card p-0 overflow-hidden" appAnimateIn>
+          <div class="slot-hero card p-0 overflow-hidden">
             <!-- Franja de disponibilidad -->
             <div class="slot-hero-badge">
               <app-icon name="check-circle" [size]="12" />
@@ -109,7 +118,7 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
 
         <!-- Detalle del alumno seleccionado -->
         @if (selectedStudent()) {
-          <div class="card p-4 flex flex-col gap-3" appAnimateIn>
+          <div class="card p-4 flex flex-col gap-3">
             <div class="flex items-center gap-2">
               <div class="w-1.5 h-1.5 rounded-full bg-brand"></div>
               <span class="text-xs font-bold text-text-primary uppercase tracking-wider">
@@ -143,7 +152,9 @@ import type { AgendableStudent } from '@core/models/ui/agenda.model';
             <p class="text-xs font-medium m-0 leading-tight">{{ facade.error() }}</p>
           </div>
         }
-      </div>
+          </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
       <!-- Acciones (Sticky Footer) -->
       <div class="flex items-center justify-between gap-4 pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"

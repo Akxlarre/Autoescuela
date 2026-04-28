@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '../icon/icon.component';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
  * KpiCardComponent — Molécula de métrica (KPI).
@@ -48,10 +49,11 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'app-kpi-card',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, CardHoverDirective],
   styleUrl: './kpi-card.component.scss',
   template: `
     <div
+      appCardHover
       class="kpi-card card card-tinted flex flex-col gap-2 h-full"
       [class.card-accent]="accent()"
       [class.kpi-card--md]="size() === 'md'"

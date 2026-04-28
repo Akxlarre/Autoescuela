@@ -131,47 +131,49 @@ function formatCLP(value: number): string {
   `,
   template: `
     <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Historial de Cuadraturas"
-      subtitle="Registro y visualización del calendario financiero mensual para arqueo de caja."
-      icon="calendar"
-      [backRoute]="backRoute()"
-      [backLabel]="backLabel()"
-      [actions]="heroActions"
-      (actionClick)="onHeroAction($event)"
-      class="mb-6"
-    >
-      <div
-        class="flex items-center bg-white/10 border border-white/20 backdrop-blur-md rounded-xl overflow-hidden"
+    <div class="bento-banner">
+      <app-section-hero
+        title="Historial de Cuadraturas"
+        subtitle="Registro y visualización del calendario financiero mensual para arqueo de caja."
+        icon="calendar"
+        [backRoute]="backRoute()"
+        [backLabel]="backLabel()"
+        [actions]="heroActions"
+        (actionClick)="onHeroAction($event)"
+        class="mb-6"
       >
-        <button
-          class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
-          style="color: white; border-right: 1px solid rgba(255, 255, 255, 0.1)"
-          (click)="mesAnterior.emit()"
-          aria-label="Mes anterior"
-          data-llm-action="historial-mes-anterior"
+        <div
+          class="flex items-center bg-white/10 border border-white/20 backdrop-blur-md rounded-xl overflow-hidden"
         >
-          <app-icon name="chevron-left" [size]="16" />
-        </button>
-
-        <span
-          class="text-sm font-bold px-4 text-white uppercase tracking-wide"
-          style="min-width: 140px; text-align: center"
-        >
-          {{ mesLabel() }}
-        </span>
-
-        <button
-          class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
-          style="color: white; border-left: 1px solid rgba(255, 255, 255, 0.1)"
-          (click)="mesSiguiente.emit()"
-          aria-label="Mes siguiente"
-          data-llm-action="historial-mes-siguiente"
-        >
-          <app-icon name="chevron-right" [size]="16" />
-        </button>
-      </div>
-    </app-section-hero>
+          <button
+            class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
+            style="color: white; border-right: 1px solid rgba(255, 255, 255, 0.1)"
+            (click)="mesAnterior.emit()"
+            aria-label="Mes anterior"
+            data-llm-action="historial-mes-anterior"
+          >
+            <app-icon name="chevron-left" [size]="16" />
+          </button>
+  
+          <span
+            class="text-sm font-bold px-4 text-white uppercase tracking-wide"
+            style="min-width: 140px; text-align: center"
+          >
+            {{ mesLabel() }}
+          </span>
+  
+          <button
+            class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
+            style="color: white; border-left: 1px solid rgba(255, 255, 255, 0.1)"
+            (click)="mesSiguiente.emit()"
+            aria-label="Mes siguiente"
+            data-llm-action="historial-mes-siguiente"
+          >
+            <app-icon name="chevron-right" [size]="16" />
+          </button>
+        </div>
+      </app-section-hero>
+    </div>
 
     <!-- ── Calendario ─────────────────────────────────────────────────────────── -->
     <div

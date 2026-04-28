@@ -1,10 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  inject,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { todayIso } from '@core/utils/date.utils';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
   AlertaFaltaConsecutiva,
   AsistenciaClaseBKpis,
@@ -36,21 +51,31 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   selector: 'app-asistencia-clase-b-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, KpiCardVariantComponent, SkeletonBlockComponent, IconComponent],
+  imports: [
+    FormsModule,
+    SelectModule,
+    SectionHeroComponent,
+    KpiCardVariantComponent,
+    SkeletonBlockComponent,
+    IconComponent,
+    BentoGridLayoutDirective,
+  ],
   template: `
-    <!-- ── Section Hero ────────────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Control de Asistencia"
-      icon="clipboard-check"
-      [subtitle]="todayLabel"
-      [actions]="heroActions"
-      variant="compact"
-      (actionClick)="onHeroAction($event)"
-    />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Section Hero ────────────────────────────────────────────────────── -->
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Control de Asistencia"
+          icon="clipboard-check"
+          [subtitle]="todayLabel"
+          [actions]="heroActions"
+          variant="compact"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
-    <div class="flex flex-col gap-6 p-4 md:p-6">
       <!-- ── KPIs ────────────────────────────────────────────────────────── -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bento-banner grid grid-cols-2 lg:grid-cols-4 gap-4">
         <app-kpi-card-variant
           label="Tasa de Asistencia"
           [value]="kpis()?.tasaAsistencia ?? 0"
@@ -87,9 +112,10 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         />
       </div>
 
-      <!-- ── Alertas críticas ────────────────────────────────────────────── -->
+      <!-- ── Alertas ────────────────────────────────────────────────────────── -->
       @if (!isLoading() && alertas().length > 0) {
-        <section class="card p-5 flex flex-col gap-4">
+        <div class="bento-banner flex flex-col gap-4">
+        <section class="bento-banner card p-5 flex flex-col gap-4">
           <div class="flex items-center gap-2">
             <app-icon name="alert-triangle" [size]="18" [style.color]="'var(--state-warning)'" />
             <h2 class="text-sm font-semibold text-primary">Alertas y Acciones Urgentes</h2>
@@ -180,10 +206,134 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             </div>
           }
         </section>
+        </div>
       }
 
+      <!-- ── Grid Inferior (Teoria + Práctica) ────────────────────────────── -->
+      <div class="bento-banner grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Columna Izquierda: Clases Teóricas (1/3) -->
+        <section class="bento-banner card p-0 flex flex-col overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <app-icon name="video" [size]="18" [style.color]="'var(--color-primary)'" />
+            <h2 class="text-sm font-semibold text-primary">Clases Teóricas (Zoom Automático)</h2>
+            @if (clasesTeorias().length > 0) {
+              <span
+                class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                [style.background]="'color-mix(in srgb, var(--color-primary) 12%, transparent)'"
+                [style.color]="'var(--color-primary)'"
+              >
+                {{ clasesTeorias().length }}
+              </span>
+            }
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Selector de fecha -->
+            <div class="flex items-center gap-1.5">
+              <app-icon name="calendar" [size]="14" [style.color]="'var(--text-muted)'" />
+              <input
+                type="date"
+                class="text-xs rounded-md border px-2 py-1.5 focus:outline-none"
+                [style.border-color]="'var(--border-subtle)'"
+                [style.background]="'var(--bg-surface)'"
+                [style.color]="'var(--text-secondary)'"
+                [value]="selectedDate()"
+                data-llm-description="Selector de fecha para clases teóricas"
+                (change)="onDateChange($event)"
+              />
+              @if (isFutureDate()) {
+                <span
+                  class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style="background: color-mix(in srgb, var(--state-warning) 12%, transparent); color: var(--state-warning)"
+                >
+                  Solo lectura
+                </span>
+              }
+            </div>
+            <button
+              class="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+              data-llm-action="schedule-new-theory-class"
+              (click)="scheduleNewClass.emit()"
+            >
+              <app-icon name="calendar-plus" [size]="14" />
+              Agendar nueva clase
+            </button>
+          </div>
+        </div>
+
+        @if (isLoading()) {
+          <div class="flex flex-col gap-2">
+            @for (i of [1, 2]; track i) {
+              <app-skeleton-block variant="rect" width="100%" height="48px" />
+            }
+          </div>
+        } @else if (clasesTeorias().length === 0) {
+          <p class="text-sm text-secondary text-center py-4">
+            No hay clases teóricas programadas para hoy.
+          </p>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Hora</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Tema</th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    Instructor
+                  </th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    Inscritos
+                  </th>
+                  <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    Estado Enlace
+                  </th>
+                  <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (clase of clasesTeorias(); track clase.id) {
+                  <tr
+                    class="border-b transition-colors hover:bg-surface-elevated"
+                    [style.border-color]="'var(--border-subtle)'"
+                  >
+                    <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                      {{ clase.horaInicio }} – {{ clase.horaFin }}
+                    </td>
+                    <td class="py-3 pr-4 text-secondary text-xs">{{ clase.branchName }}</td>
+                    <td class="py-3 pr-4 text-secondary">{{ clase.tema }}</td>
+                    <td class="py-3 pr-4 text-secondary">{{ clase.instructorName }}</td>
+                    <td class="py-3 pr-4 text-secondary">{{ clase.inscritosCount }} alumnos</td>
+                    <td class="py-3 pr-4">
+                      <span
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full"
+                        [style.background]="zoomBadgeBg(clase.zoomLinkStatus)"
+                        [style.color]="zoomBadgeColor(clase.zoomLinkStatus)"
+                      >
+                        <app-icon [name]="zoomBadgeIcon(clase.zoomLinkStatus)" [size]="12" />
+                        {{ zoomBadgeLabel(clase.zoomLinkStatus) }}
+                      </span>
+                    </td>
+                    <td class="py-3 text-right">
+                      <button
+                        class="text-xs font-medium hover:underline cursor-pointer"
+                        [style.color]="'var(--color-primary)'"
+                        data-llm-action="view-attendance-list"
+                        (click)="viewAtendanceList.emit(clase)"
+                      >
+                        Ver Detalle
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
       <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
-      <section class="card p-5 flex flex-col gap-4">
+      <section class="bento-banner lg:col-span-2 card p-5 flex flex-col gap-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <app-icon name="calendar-check" [size]="18" [style.color]="'var(--color-primary)'" />
@@ -254,6 +404,15 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 
           <!-- Filtro instructor -->
           <div class="ml-auto">
+            <p-select
+              [options]="instructorSelectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="selectedInstructorId()"
+              (ngModelChange)="selectedInstructorId.set($event)"
+              styleClass="w-48"
+              data-llm-description="filter attendance by instructor"
+            />
             <select
               class="text-xs rounded-md border px-2.5 py-1.5 bg-surface text-secondary focus:outline-none cursor-pointer"
               [style.border-color]="'var(--border-subtle)'"
@@ -627,7 +786,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     }
   `,
 })
-export class AsistenciaClaseBContentComponent {
+export class AsistenciaClaseBContentComponent implements AfterViewInit {
+  // ── Internal ────────────────────────────────────────────────────────────────
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
   // ── Inputs ──────────────────────────────────────────────────────────────────
   readonly kpis = input<AsistenciaClaseBKpis | null>(null);
   readonly clasesTeorias = input<ClaseTeoricoRow[]>([]);
@@ -672,6 +835,11 @@ export class AsistenciaClaseBContentComponent {
   protected readonly activeStatusFilter = signal<StatusFilter>('todos');
   protected readonly selectedInstructorId = signal<number | null>(null);
 
+  readonly instructorSelectOptions = computed(() => [
+    { label: 'Todos los instructores', value: null },
+    ...this.instructores().map((i) => ({ label: i.name, value: i.id })),
+  ]);
+
   // Justify modal
   protected readonly justifyModalOpen = signal(false);
   protected readonly justifySessionId = signal<number | null>(null);
@@ -710,11 +878,6 @@ export class AsistenciaClaseBContentComponent {
 
   protected onHeroAction(id: string): void {
     if (id === 'refresh') this.refreshRequested.emit();
-  }
-
-  protected onInstructorFilterChange(event: Event): void {
-    const val = (event.target as HTMLSelectElement).value;
-    this.selectedInstructorId.set(val ? Number(val) : null);
   }
 
   protected countByStatus(filter: StatusFilter): number {
@@ -857,10 +1020,18 @@ export class AsistenciaClaseBContentComponent {
   }
 
   protected submitJustification(): void {
-    const sessionId = this.justifySessionId();
-    const reason = this.justifyReason().trim();
-    if (!sessionId || !reason) return;
-    this.justifyAbsence.emit({ sessionId, reason });
-    this.closeJustifyModal();
+    const id = this.justifySessionId();
+    if (id) {
+      this.justifyAbsence.emit({ sessionId: id, reason: this.justifyReason() });
+      this.closeJustifyModal();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

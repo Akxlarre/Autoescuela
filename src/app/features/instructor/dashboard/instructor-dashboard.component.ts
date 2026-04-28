@@ -22,6 +22,9 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -33,21 +36,26 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     TagModule,
     SectionHeroComponent,
     KpiCardVariantComponent,
+    SkeletonBlockComponent,
+    BentoGridLayoutDirective,
+    ScrollRevealDirective,
+    AnimateInDirective,
+    CardHoverDirective,
     EmptyStateComponent,
     AlertCardComponent,
     IconComponent,
-    SkeletonBlockComponent,
-    BentoGridLayoutDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <app-section-hero
-        #heroRef
-        title="Mi Día"
-        subtitle="Resumen de tus clases programadas para hoy"
-        [actions]="heroActions"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Mi Día"
+          subtitle="Resumen de tus clases programadas para hoy"
+          [actions]="heroActions"
+        />
+      </div>
       <div class="bento-square">
         <app-kpi-card-variant
           label="Clases de Hoy"
@@ -70,7 +78,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             </div>
           </div>
         } @else {
-          <div class="bento-card flex flex-col gap-2 h-full">
+          <div class="bento-card flex flex-col gap-2 h-full" appCardHover>
             <div class="flex items-start justify-between gap-3 mb-2">
               <span class="text-xs font-semibold" style="color: var(--color-primary)">PRÓXIMA</span>
             </div>
@@ -111,7 +119,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       </div>
 
       <!-- Main grid: clases + sidebar -->
-      <div class="bento-banner">
+      <div class="bento-banner" appScrollReveal>
         <div class="grid lg:grid-cols-3 gap-6">
           <!-- Lista de clases del día (col-span-2) -->
           <div class="lg:col-span-2">
@@ -136,7 +144,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 </div>
               } @else if (clasesFacade.error()) {
                 <div class="p-6">
-                  <app-alert-card title="Error al cargar clases" severity="error">{{
+                  <app-alert-card title="Error al cargar clases" severity="error" appAnimateIn>{{
                     clasesFacade.error()
                   }}</app-alert-card>
                 </div>
@@ -249,9 +257,9 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           </div>
 
           <!-- Sidebar -->
-          <div class="space-y-4">
+          <div class="space-y-4" [appScrollReveal]="{ delay: 0.1 }">
             <!-- Próximas Clases -->
-            <div class="card p-6">
+            <div class="card p-6" appCardHover>
               <h3 class="text-sm font-bold uppercase tracking-wider text-text-muted mb-4">
                 Próximas Clases
               </h3>
@@ -274,7 +282,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             </div>
 
             <!-- Recordatorio -->
-            <app-alert-card title="Recordatorio" severity="info">
+            <app-alert-card title="Recordatorio" severity="info" appAnimateIn>
               Recuerda completar las fichas técnicas después de cada clase práctica.
             </app-alert-card>
           </div>

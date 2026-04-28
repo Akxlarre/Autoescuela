@@ -7,6 +7,7 @@ import {
   linkedSignal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { BranchSelectorComponent } from '@shared/components/branch-selector/branch-selector.component';
@@ -33,6 +34,7 @@ interface CategoryMeta {
   selector: 'app-personal-data-step',
   imports: [
     FormsModule,
+    SelectModule,
     IconComponent,
     AsyncBtnComponent,
     EmailInputComponent,
@@ -43,6 +45,11 @@ interface CategoryMeta {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PersonalDataComponent {
+  readonly genderOptions = [
+    { label: 'Masculino', value: 'M' },
+    { label: 'Femenino', value: 'F' },
+  ];
+
   data = input.required<EnrollmentPersonalData>();
   loading = input<boolean>(false);
   hiddenCategories = input<CourseCategory[]>([]);

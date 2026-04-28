@@ -17,6 +17,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -33,6 +34,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     SkeletonBlockComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
+    ScrollRevealDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
@@ -65,22 +67,24 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             <app-skeleton-block variant="rect" width="100%" height="120px" />
           </div>
         } @else if (facade.studentDetail(); as detail) {
-          <app-section-hero
-            [contextLine]="heroContextLine"
-            [title]="detail.name"
-            [subtitle]="detail.courseName"
-            [chips]="heroChips()"
-            [actions]="heroActions"
-            backRoute="/app/instructor/alumnos"
-            backLabel="Mis Alumnos"
-          />
+          <div class="bento-banner">
+            <app-section-hero
+              [contextLine]="heroContextLine"
+              [title]="detail.name"
+              [subtitle]="detail.courseName"
+              [chips]="heroChips()"
+              [actions]="heroActions"
+              backRoute="/app/instructor/alumnos"
+              backLabel="Mis Alumnos"
+            />
+          </div>
         }
 
         <!-- ── Contenido principal ── -->
         <div class="bento-banner">
           <div class="flex flex-col gap-6">
             <!-- 3-Card Grid — skeleton inline -->
-            <div class="grid md:grid-cols-3 gap-4">
+            <div class="grid md:grid-cols-3 gap-4" appScrollReveal>
               @if (facade.detailLoading()) {
                 <app-skeleton-block variant="rect" width="100%" height="160px" />
                 <app-skeleton-block variant="rect" width="100%" height="160px" />
@@ -228,7 +232,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             @if (facade.detailLoading()) {
               <app-skeleton-block variant="rect" width="100%" height="320px" />
             } @else if (facade.studentDetail(); as detail) {
-              <div class="card p-0 overflow-hidden">
+              <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
                 <!-- Cabecera de tabla -->
                 <div class="px-4 md:px-6 py-4 border-b" style="border-color: var(--border-subtle)">
                   <h3 class="text-base md:text-lg font-bold" [style.color]="'var(--text-primary)'">

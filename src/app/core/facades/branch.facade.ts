@@ -59,6 +59,16 @@ export class BranchFacade {
     return this._branches().find((b) => b.id === id)?.name ?? '—';
   });
 
+  /**
+   * Motivo por el que el selector está restringido.
+   * null cuando no hay restricción activa (estado normal).
+   */
+  readonly lockReason = computed<string | null>(() => {
+    if (this._professionalOnly()) return 'Solo sedes con Clase Profesional';
+    if (this._requiresSpecificBranch()) return 'Se requiere una sede para esta vista';
+    return null;
+  });
+
   // ── 3. MÉTODOS DE ACCIÓN ──────────────────────────────────────────────────
 
   /**
@@ -106,14 +116,10 @@ export class BranchFacade {
   /**
    * Activa o desactiva el requisito de sede concreta.
    * Cuando es true, el botón "Todas las escuelas" del topbar queda deshabilitado.
-   * Si se activa y no hay sede seleccionada, auto-selecciona la primera disponible.
+   * NO auto-selecciona — el BranchGateComponent delega la elección explícita al usuario.
    */
   setRequiresSpecificBranch(value: boolean): void {
     this._requiresSpecificBranch.set(value);
-    if (value && this._selectedBranchId() === null) {
-      const first = this._branches()[0];
-      if (first) this._selectedBranchId.set(first.id);
-    }
   }
 
   /**

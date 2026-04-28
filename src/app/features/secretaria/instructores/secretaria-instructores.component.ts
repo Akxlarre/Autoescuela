@@ -16,6 +16,7 @@ import { AdminInstructorCrearDrawerComponent } from '../../admin/instructores/ad
 import { AdminInstructorVerDrawerComponent } from '../../admin/instructores/admin-instructor-ver-drawer.component';
 import { AdminInstructorEditarDrawerComponent } from '../../admin/instructores/admin-instructor-editar-drawer.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 type FilterTab = 'all' | 'active' | 'expiring';
 
@@ -26,12 +27,12 @@ type FilterTab = 'all' | 'active' | 'expiring';
     SectionHeroComponent,
     IconComponent,
     SkeletonBlockComponent,
-    SkeletonBlockComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <div class="page-wide">
+    <div class="bento-grid" appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="mb-6">
+      <div class="bento-banner">
         <app-section-hero
           title="Instructores"
           subtitle="Gestión de instructores Clase B con licencias y vehículos"
@@ -41,7 +42,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       </div>
 
       <!-- ── Filter Tabs ──────────────────────────────────────────────────── -->
-      <div class="flex items-center gap-2 mb-6">
+      <div class="bento-banner flex items-center gap-2">
         <span class="text-sm font-medium" style="color: var(--text-secondary)">Filtros:</span>
         <button
           class="filter-pill"
@@ -76,7 +77,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       </div>
 
       <!-- ── Table ────────────────────────────────────────────────────────── -->
-      <div class="card overflow-hidden">
+      <div class="bento-banner card overflow-hidden">
         <div class="overflow-x-auto">
           <table class="instructor-table">
             <thead>

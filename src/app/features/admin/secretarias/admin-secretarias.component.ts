@@ -5,6 +5,9 @@ import {
   effect,
   inject,
   signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +25,8 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 @Component({
   selector: 'app-admin-secretarias',
@@ -35,11 +40,12 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
     KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <div class="page-wide">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="mb-6">
+      <div class="bento-banner" #heroRef>
         <app-section-hero
           title="Gestión de Secretarias"
           subtitle="Control de acceso y gestión de personal de secretaría"
@@ -49,7 +55,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       </div>
 
       <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      <div class="bento-grid mb-6">
+      <div class="bento-banner grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div class="bento-square">
           <app-kpi-card-variant
             label="Total Secretarias"
@@ -81,7 +87,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       </div>
 
       <!-- ── Search + Filters ───────────────────────────────────────────────── -->
-      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-6 flex-wrap">
+      <div class="bento-banner flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
         <div class="relative flex-1 min-w-[240px]">
           <span
             class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -106,8 +112,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
             optionLabel="label"
             optionValue="value"
             placeholder="Todas las sedes"
-            [style]="{ height: '40px', 'min-width': '160px' }"
-            panelStyleClass="filter-select-panel"
+            [style]="{ 'min-width': '160px' }"
             aria-label="Filtrar por sede"
             data-llm-description="Filtro de secretarias por sede"
           />
@@ -117,8 +122,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
-            [style]="{ height: '40px', 'min-width': '160px' }"
-            panelStyleClass="filter-select-panel"
+            [style]="{ 'min-width': '160px' }"
             aria-label="Filtrar por estado"
             data-llm-description="Filtro de secretarias por estado"
           />
@@ -126,7 +130,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       </div>
 
       <!-- ── Content (List + Sidebar) ───────────────────────────────────────── -->
-      <div class="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+      <div class="bento-banner grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         <!-- Lista de Secretarias -->
         <div class="card p-6 flex flex-col">
           <h2 class="text-base font-semibold mb-4" style="color: var(--text-primary)">
@@ -437,7 +441,11 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
     }
   `,
 })
-export class AdminSecretariasComponent {
+export class AdminSecretariasComponent implements AfterViewInit {
+  // ── Internal ────────────────────────────────────────────────────────────────
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
   protected readonly facade = inject(SecretariasFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
@@ -556,5 +564,13 @@ export class AdminSecretariasComponent {
 
   protected goToAuditoria(): void {
     void this.router.navigate(['/app/admin/auditoria']);
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }
