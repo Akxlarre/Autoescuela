@@ -434,7 +434,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       }
     }
 
-    const drafts = await this.enrollment.loadActiveDrafts();
     // Verificar si hay borradores pendientes antes de iniciar wizard limpio
     const branch = this.activeBranchId();
     const drafts = await this.enrollment.loadActiveDrafts(branch);

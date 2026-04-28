@@ -92,7 +92,6 @@ const BILLING_LABEL: Record<string, string> = {
     IconComponent,
     BentoGridLayoutDirective,
   ],
-  imports: [SectionHeroComponent, KpiCardVariantComponent, IconComponent, BentoGridLayoutDirective],
   template: `
     <div
       class="bento-grid"
@@ -178,35 +177,6 @@ const BILLING_LABEL: Record<string, string> = {
                 styleClass="flex-1 min-w-36"
                 data-llm-description="Filtro por estado del curso: Activo, Próximo, Finalizado, Cancelado"
               />
-
-            <div class="flex flex-wrap items-center gap-2">
-              <!-- Filtro tipo -->
-              <div class="filter-select-wrapper flex-1 min-w-35">
-                <select
-                  class="filter-select"
-                  (change)="onFiltroTipo($event)"
-                  data-llm-description="Filtro por tipo de curso: SENCE o Particular"
-                >
-                  <option value="">Todos los tipos</option>
-                  <option value="sence">SENCE</option>
-                  <option value="particular">Particular</option>
-                </select>
-              </div>
-
-              <!-- Filtro estado -->
-              <div class="filter-select-wrapper flex-1 min-w-35">
-                <select
-                  class="filter-select"
-                  (change)="onFiltroEstado($event)"
-                  data-llm-description="Filtro por estado del curso: Activo, Próximo, Finalizado, Cancelado"
-                >
-                  <option value="">Todos los estados</option>
-                  <option value="active">Activo</option>
-                  <option value="upcoming">Próximo</option>
-                  <option value="completed">Finalizado</option>
-                  <option value="cancelled">Cancelado</option>
-                </select>
-              </div>
             </div>
           </div>
 
