@@ -2,6 +2,12 @@
  * Centralized date and currency utilities for the project (Target: es-CL).
  */
 
+/** Returns today's date as YYYY-MM-DD string in local time. */
+export function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Returns a date string in YYYY-MM-DD format (ISO local).
  * Replaces the 'en-CA' locale trick.

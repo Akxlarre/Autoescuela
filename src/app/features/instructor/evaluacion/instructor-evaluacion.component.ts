@@ -235,7 +235,7 @@ export class InstructorEvaluacionComponent implements OnInit {
   private studentSignature: string | null = null;
   private instructorSignature: string | null = null;
 
-  readonly gradeOptions = [1, 2, 3, 4, 5];
+  readonly gradeOptions = [3, 4, 5, 6, 7];
 
   constructor() {
     this.evalForm = this.fb.group({
@@ -296,7 +296,10 @@ export class InstructorEvaluacionComponent implements OnInit {
         instructorSignature: this.instructorSignature,
       };
       await this.clasesFacade.saveEvaluation(data);
-      this.clasesFacade.showSuccess('Evaluación guardada', 'La evaluación se ha registrado con éxito.');
+      this.clasesFacade.showSuccess(
+        'Evaluación guardada',
+        'La evaluación se ha registrado con éxito.',
+      );
       this.goBack();
     } catch {
       this.clasesFacade.showError('Error al guardar la evaluación', 'Por favor intenta de nuevo.');

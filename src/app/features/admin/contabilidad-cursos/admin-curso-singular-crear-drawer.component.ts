@@ -1,9 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  inject,
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -13,7 +8,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   selector: 'app-admin-curso-singular-crear-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent],
   template: `
     <div class="p-6 space-y-6">
       <form [formGroup]="form" (ngSubmit)="onGuardar()" class="space-y-4">
@@ -124,7 +119,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 
         <!-- Error global -->
         @if (facade.error()) {
-          <div class="p-3 rounded-lg bg-state-error-subtle text-state-error text-xs flex items-center gap-2">
+          <div
+            class="p-3 rounded-lg bg-state-error-subtle text-state-error text-xs flex items-center gap-2"
+          >
             <app-icon name="alert-circle" [size]="14" />
             <span>{{ facade.error() }}</span>
           </div>
@@ -134,7 +131,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         <div class="flex flex-col pt-4 gap-3">
           <button
             type="submit"
-            class="h-11 rounded-xl bg-brand text-white font-bold shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+            class="h-11 rounded-xl bg-brand text-white font-bold shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             [disabled]="form.invalid || facade.isSaving()"
           >
             @if (facade.isSaving()) {
@@ -145,11 +142,11 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               <span>Crear curso singular</span>
             }
           </button>
-          
+
           <button
             type="button"
             (click)="onCancelar()"
-            class="h-11 rounded-xl bg-elevated text-text-secondary font-semibold hover:bg-subtle transition-colors"
+            class="h-11 rounded-xl bg-elevated text-text-secondary font-semibold hover:bg-subtle transition-colors cursor-pointer"
           >
             Cancelar
           </button>

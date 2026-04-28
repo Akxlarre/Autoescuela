@@ -36,11 +36,29 @@ export class ContractComponent {
   readonly acceptedFormats = CONTRACT_ACCEPTED_FORMATS;
   readonly maxSizeMb = CONTRACT_MAX_SIZE_MB;
 
+  readonly uploadError = signal<string | null>(null);
+
+  private static readonly ALLOWED_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
-    if (file.size > this.maxSizeMb * 1024 * 1024) return;
+
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!ContractComponent.ALLOWED_EXTENSIONS.has(ext)) {
+      this.uploadError.set(`Formato no permitido. Usa: ${this.acceptedFormats}`);
+      input.value = '';
+      return;
+    }
+
+    if (file.size > this.maxSizeMb * 1024 * 1024) {
+      this.uploadError.set(`El archivo supera el tamaño máximo de ${this.maxSizeMb} MB.`);
+      input.value = '';
+      return;
+    }
+
+    this.uploadError.set(null);
     const upload: SignedContractUpload = {
       status: 'uploaded',
       file,

@@ -54,6 +54,7 @@ export class CertificacionProfesionalFacade {
   private readonly _error = signal<string | null>(null);
   private readonly _generatingId = signal<number | null>(null);
   private _initialized = false;
+  private _alumnosFetchToken = 0;
 
   // ── Estado público (readonly) ──
   public readonly promociones = this._promociones.asReadonly();
@@ -102,6 +103,7 @@ export class CertificacionProfesionalFacade {
 
   /** Recarga completa al cambiar sede. Limpia selección actual. */
   async reload(): Promise<void> {
+    ++this._alumnosFetchToken; // cancel any in-flight fetchAlumnos
     this._initialized = false;
     this._selectedPromocionId.set(null);
     this._selectedCursoId.set(null);
@@ -151,10 +153,12 @@ export class CertificacionProfesionalFacade {
     const result = await this.invokeGenerateCertificate(enrollmentId);
     if (!result) return;
     this.toast.success('Certificado profesional generado correctamente');
-    // Refrescar alumnos e historial sin skeleton
+    // Refresh alumnos first so fetchLog picks up the new cert ID
     const cursoId = this._selectedCursoId();
-    if (cursoId !== null) void this.fetchAlumnos(cursoId);
-    void this.fetchLog();
+    if (cursoId !== null) {
+      await this.fetchAlumnos(cursoId);
+      void this.fetchLog();
+    }
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
   }
 
@@ -247,7 +251,14 @@ export class CertificacionProfesionalFacade {
    * Aplica filtro de sede de BranchFacade.
    */
   private async fetchAlumnos(promotionCourseId: number): Promise<void> {
+    const token = ++this._alumnosFetchToken;
     const branchId = this.branchFacade.selectedBranchId();
+
+    // Promotion info from already-loaded _promociones (no extra query)
+    const promoId = this._selectedPromocionId();
+    const promo = promoId !== null ? this._promociones().find((p) => p.id === promoId) : null;
+    const promocionLabel = promo ? `${promo.code} — ${promo.name}` : '';
+    const fechaInicio = promo?.startDate ?? null;
 
     // ── Step 1: Enrollments del curso ──
     let enrollmentQuery = this.supabase.client
@@ -263,7 +274,7 @@ export class CertificacionProfesionalFacade {
           users!inner(first_names, paternal_last_name, maternal_last_name, rut)
         ),
         courses!inner(name, license_class),
-        certificates(id, folio, status)
+        certificates(id, folio, status, created_at)
       `,
       )
       .eq('promotion_course_id', promotionCourseId)
@@ -381,6 +392,10 @@ export class CertificacionProfesionalFacade {
         nota: notaPromedio !== null && notaPromedio >= NOTA_MIN,
       };
 
+      // Folio only shown when PDF exists; year derived from issuance date, not today's date
+      const hasPdf = !!e.certificate_professional_pdf_url;
+      const certYear = cert?.created_at ? new Date(cert.created_at).getFullYear() : null;
+
       return {
         enrollmentId: e.id,
         studentId: student.id,
@@ -388,8 +403,8 @@ export class CertificacionProfesionalFacade {
         rut: formatRut(user.rut || ''),
         curso: e.courses?.name ?? 'Clase Profesional',
         licenseClass: e.courses?.license_class ?? 'A4',
-        promocion: '',
-        fechaInicio: null,
+        promocion: promocionLabel,
+        fechaInicio,
         fechaTermino: null,
         pctAsistenciaTeoria,
         pctAsistenciaPractica,
@@ -398,11 +413,12 @@ export class CertificacionProfesionalFacade {
         elegibilidad,
         elegible: elegibilidad.teoria && elegibilidad.pago && elegibilidad.nota,
         certificadoId: cert?.id ?? null,
-        certificadoFolio: cert
-          ? `CERT-PROF-${new Date().getFullYear()}-${String(cert.folio).padStart(4, '0')}`
-          : null,
+        certificadoFolio:
+          cert && hasPdf && certYear
+            ? `CERT-PROF-${certYear}-${String(cert.folio).padStart(4, '0')}`
+            : null,
         storagePath: e.certificate_professional_pdf_url ?? null,
-        certificadoStatus: e.certificate_professional_pdf_url ? 'generado' : 'pendiente',
+        certificadoStatus: hasPdf ? 'generado' : 'pendiente',
         emailEnviado: cert ? emailSentSet.has(cert.id) : false,
       } satisfies CertificacionProfesionalAlumnoRow;
     });
@@ -414,11 +430,17 @@ export class CertificacionProfesionalFacade {
       return a.nombre.localeCompare(b.nombre);
     });
 
+    // Discard result if a newer fetch was started (e.g., branch changed mid-flight)
+    if (this._alumnosFetchToken !== token) return;
     this._alumnos.set(rows);
   }
 
   private async fetchLog(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    // Scope to known cert IDs when available — avoids unreliable deep-nested PostgREST filters.
+    // Falls back to type filter on initial load (before any course is selected).
+    const certIds = this._alumnos()
+      .map((a) => a.certificadoId)
+      .filter((id): id is number => id !== null);
 
     let query = this.supabase.client
       .from('certificate_issuance_log')
@@ -428,10 +450,7 @@ export class CertificacionProfesionalFacade {
         action,
         created_at,
         certificates!inner(
-          id,
-          type,
           enrollments!inner(
-            branch_id,
             students!inner(
               users!inner(first_names, paternal_last_name)
             )
@@ -440,12 +459,14 @@ export class CertificacionProfesionalFacade {
         users!certificate_issuance_log_user_id_fkey(first_names, paternal_last_name)
       `,
       )
-      .eq('certificates.type', 'professional')
       .order('created_at', { ascending: false })
       .limit(50);
 
-    if (branchId !== null) {
-      query = query.eq('certificates.enrollments.branch_id', branchId);
+    if (certIds.length > 0) {
+      query = query.in('certificate_id', certIds);
+    } else {
+      // No course selected yet — filter by type (1-level deep, supported by PostgREST)
+      query = query.eq('certificates.type', 'professional');
     }
 
     const { data, error } = await query;
@@ -455,8 +476,7 @@ export class CertificacionProfesionalFacade {
     }
 
     const rows: CertificacionProfesionalLogRow[] = (data as any[]).map((row) => {
-      const cert = row.certificates;
-      const student = cert?.enrollments?.students;
+      const student = row.certificates?.enrollments?.students;
       const actionUser = row.users;
       return {
         id: row.id,

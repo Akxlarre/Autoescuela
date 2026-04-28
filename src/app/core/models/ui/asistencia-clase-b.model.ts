@@ -3,6 +3,9 @@
  * Consolida clases teóricas (grupales/Zoom) y prácticas (individuales).
  */
 
+import type { EvaluationChecklistItem } from './instructor-portal.model';
+export type { EvaluationChecklistItem };
+
 export type ClasePracticaStatus = 'presente' | 'ausente' | 'en_curso' | 'pendiente';
 export type ZoomLinkStatus = 'sent' | 'pending' | 'not_configured';
 export type NivelAlerta = 'warning' | 'danger';
@@ -17,10 +20,10 @@ export interface AsistenciaClaseBKpis {
   inasistenciasHoy: number;
   /** Total de clases programadas para hoy. */
   totalClasesHoy: number;
-  /** Alumnos con ≥1 falta consecutiva en prácticas. */
-  alumnosEnRiesgo: number;
-  /** Horarios desactivados manualmente en la semana en curso. */
-  horariosEliminados: number;
+  /** Clases prácticas con status en_curso en este momento. */
+  clasesEnCurso: number;
+  /** Clases pendientes cuya hora ya pasó y aún no se han iniciado. */
+  pendientesPorIniciar: number;
 }
 
 /** Fila de clase teórica grupal (Zoom). */
@@ -42,7 +45,14 @@ export interface ClasePracticaRow {
   /** ID de class_b_sessions */
   id: number;
   enrollmentId: number | null;
+  studentId: number | null;
+  classNumber: number | null;
+  /** Hora agendada originalmente (scheduled_at). */
   horaInicio: string; // "09:00"
+  /** Hora real en que se inició la clase (start_time). null si aún no inició. */
+  horaInicioReal: string | null;
+  /** Hora real en que se finalizó la clase (end_time). null si aún no finalizó. */
+  horaFinReal: string | null;
   instructorId: number;
   instructorName: string;
   /** null cuando el slot no tiene alumno agendado */
@@ -53,6 +63,13 @@ export interface ClasePracticaRow {
   branchName: string;
   /** ISO datetime string of the scheduled start (to compare with current time). */
   scheduledAt: string;
+  kmStart: number | null;
+  vehiclePlate: string | null;
+  vehicleBrand: string | null;
+  vehicleModel: string | null;
+  vehicleId: number | null;
+  /** Kilometraje actual del vehículo (vehicles.current_km) al momento de cargar la sesión. */
+  vehicleCurrentKm: number | null;
 }
 
 /** Alerta por faltas consecutivas en prácticas. */
@@ -74,6 +91,15 @@ export interface AlertaFaltaConsecutiva {
 export interface InstructorOption {
   id: number;
   name: string;
+}
+
+/** Opción de vehículo para el selector en el drawer de iniciar clase. */
+export interface VehicleOption {
+  id: number;
+  plate: string;
+  brand: string | null;
+  model: string | null;
+  currentKm: number | null;
 }
 
 /** Estado de asistencia de un alumno en una clase teórica grupal. */
@@ -99,10 +125,22 @@ export interface NuevaClaseTeoricaPayload {
   enrollmentIds: number[];
 }
 
+/** Payload para finalizar una clase práctica desde admin/secretaria. */
+export interface FinishClassPayload {
+  sessionId: number;
+  studentId: number | null;
+  kmEnd: number;
+  grade: number;
+  observations: string;
+  checklist: EvaluationChecklistItem[];
+  studentSignature: string | null;
+  instructorSignature: string | null;
+}
+
 /** Alumno con su estado de asistencia para el drawer de una clase teórica. */
 export interface TeoriaAlumnoAsistencia {
+  /** PK de la tabla students — clave primaria usada para upsert de asistencia. */
   studentId: number;
-  enrollmentId: number;
   alumnoName: string;
   email: string;
   status: TeoriaAsistenciaStatus;

@@ -125,6 +125,7 @@ import {
   Phone,
   // ── Media & UI ──
   Camera,
+  ClockAlert,
   Image,
   Keyboard,
   Monitor,
@@ -346,6 +347,7 @@ export const appConfig: ApplicationConfig = {
         Phone,
         // ── Media & UI ──
         Camera,
+        ClockAlert,
         Image,
         Keyboard,
         Monitor,

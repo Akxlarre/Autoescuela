@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AdminCursoSingularInscribirDrawerComponent } from './admin-curso-singular-inscribir-drawer.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
@@ -54,7 +56,7 @@ const PAYMENT_LABEL: Record<string, string> = {
               <div class="flex items-center gap-1.5 mt-1">
                 <app-icon name="calendar" [size]="12" color="var(--text-muted)" />
                 <p class="text-xs font-medium" style="color: var(--text-muted)">
-                   Inicio: {{ formatChileanDate(curso.inicio) }}
+                  Inicio: {{ formatChileanDate(curso.inicio) }}
                 </p>
               </div>
             </div>
@@ -96,9 +98,9 @@ const PAYMENT_LABEL: Record<string, string> = {
           />
 
           <app-stat-box
-            label="Ingreso Est."
-            [value]="formatCLP(curso.estado !== 'upcoming' ? curso.ingresoEstimado : 0)"
-            [variant]="curso.estado !== 'upcoming' ? 'success' : 'default'"
+            label="Ingresos"
+            [value]="formatCLP(curso.ingresoEstimado)"
+            [variant]="curso.ingresoEstimado > 0 ? 'success' : 'default'"
             [compact]="true"
             [useMono]="true"
           />
@@ -111,14 +113,115 @@ const PAYMENT_LABEL: Record<string, string> = {
           />
         </div>
 
+        <!-- ── Acciones de estado ──────────────────────────────────────────── -->
+        @if (curso.estado === 'active' || curso.estado === 'upcoming') {
+          <div class="card p-4 flex flex-col gap-3">
+            <p
+              class="text-xs font-semibold uppercase tracking-wide"
+              style="color: var(--text-muted)"
+            >
+              Cambiar estado
+            </p>
+
+            @if (confirmingAction() === null) {
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer border"
+                  style="border-color: var(--state-success); color: var(--state-success)"
+                  [disabled]="facade.isSaving()"
+                  (click)="confirmingAction.set('completed')"
+                  data-llm-action="marcar-curso-singular-finalizado"
+                >
+                  <app-icon name="check-circle" [size]="13" color="var(--state-success)" />
+                  Marcar como finalizado
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer border"
+                  style="border-color: var(--state-error); color: var(--state-error)"
+                  [disabled]="facade.isSaving()"
+                  (click)="confirmingAction.set('cancelled')"
+                  data-llm-action="cancelar-curso-singular"
+                >
+                  <app-icon name="x-circle" [size]="13" color="var(--state-error)" />
+                  Cancelar curso
+                </button>
+              </div>
+            } @else {
+              <div
+                class="rounded-lg p-3 flex items-center justify-between gap-3"
+                [style.background]="
+                  confirmingAction() === 'completed'
+                    ? 'color-mix(in srgb, var(--state-success) 10%, transparent)'
+                    : 'color-mix(in srgb, var(--state-error) 10%, transparent)'
+                "
+              >
+                <p class="text-xs font-medium" style="color: var(--text-primary)">
+                  @if (confirmingAction() === 'completed') {
+                    ¿Marcar el curso como finalizado?
+                  } @else {
+                    ¿Cancelar el curso? Esta acción no se puede revertir.
+                  }
+                </p>
+                <div class="flex gap-2 shrink-0">
+                  <button
+                    type="button"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border"
+                    style="border-color: var(--border-muted); color: var(--text-muted)"
+                    [disabled]="facade.isSaving()"
+                    (click)="confirmingAction.set(null)"
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-white"
+                    [style.background]="
+                      confirmingAction() === 'completed'
+                        ? 'var(--state-success)'
+                        : 'var(--state-error)'
+                    "
+                    [disabled]="facade.isSaving()"
+                    (click)="onConfirmarCambioEstado(curso.id)"
+                    data-llm-action="confirmar-cambio-estado-curso-singular"
+                  >
+                    @if (facade.isSaving()) {
+                      Guardando…
+                    } @else if (confirmingAction() === 'completed') {
+                      Sí, finalizar
+                    } @else {
+                      Sí, cancelar
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
         <!-- ── Inscriptos ───────────────────────────────────────────────────── -->
         <div class="card p-0 overflow-hidden">
           <div
-            class="px-4 py-3 border-b flex items-center gap-2"
+            class="px-4 py-3 border-b flex items-center justify-between gap-2"
             style="border-color: var(--border-muted)"
           >
-            <app-icon name="users" [size]="16" color="var(--text-muted)" />
-            <p class="text-sm font-semibold" style="color: var(--text-primary)">Inscriptos</p>
+            <div class="flex items-center gap-2">
+              <app-icon name="users" [size]="16" color="var(--text-muted)" />
+              <p class="text-sm font-semibold" style="color: var(--text-primary)">Inscritos</p>
+            </div>
+            @if (curso.estado !== 'cancelled' && curso.inscritos < curso.cupos) {
+              <button
+                type="button"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                style="background: var(--ds-brand); color: white"
+                (click)="onInscribir()"
+                data-llm-action="abrir-inscripcion-curso-singular"
+              >
+                <app-icon name="user-plus" [size]="13" color="white" />
+                Inscribir alumno
+              </button>
+            }
           </div>
 
           @if (facade.isLoadingInscriptos()) {
@@ -174,8 +277,29 @@ const PAYMENT_LABEL: Record<string, string> = {
 })
 export class AdminCursoSingularDetalleDrawerComponent {
   protected readonly facade = inject(CursosSingularesFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly formatCLP = formatCLP;
   protected readonly formatChileanDate = formatChileanDate;
+
+  protected readonly confirmingAction = signal<'completed' | 'cancelled' | null>(null);
+
+  protected async onConfirmarCambioEstado(cursoId: number): Promise<void> {
+    const action = this.confirmingAction();
+    if (!action) return;
+    const ok =
+      action === 'completed'
+        ? await this.facade.marcarCursoFinalizado(cursoId)
+        : await this.facade.cancelarCurso(cursoId);
+    if (ok) this.confirmingAction.set(null);
+  }
+
+  protected onInscribir(): void {
+    this.layoutDrawer.push(
+      AdminCursoSingularInscribirDrawerComponent,
+      'Inscribir Alumno',
+      'user-plus',
+    );
+  }
 
   protected fichaItems(
     curso: ReturnType<typeof this.facade.selectedCurso>,

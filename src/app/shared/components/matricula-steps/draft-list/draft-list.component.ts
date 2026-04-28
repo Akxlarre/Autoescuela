@@ -24,7 +24,15 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
       <!-- Lista de borradores -->
       <div class="draft-list">
         @for (draft of drafts(); track draft.enrollmentId) {
-          <div class="draft-card" [class.draft-card--active]="draft.currentStep > 1">
+          <div
+            class="draft-card"
+            [class.draft-card--active]="draft.currentStep > 1"
+            role="button"
+            tabindex="0"
+            data-llm-action="resume-enrollment-draft"
+            (click)="resume.emit(draft.enrollmentId)"
+            (keydown.enter)="resume.emit(draft.enrollmentId)"
+          >
             <!-- Arriba: Identidad e Info básica -->
             <div class="draft-card__top">
               <div class="draft-avatar">
@@ -45,13 +53,19 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
             <!-- Centro: Progreso visual (Stepper compacto) -->
             <div class="draft-card__middle">
               <div class="draft-stepper">
-                @for (step of stepNumbers; track step) {
+                @for (step of stepNumbers; track step; let last = $last) {
                   <div
-                    class="step-bar"
-                    [class.step-bar--active]="step === draft.currentStep"
-                    [class.step-bar--completed]="step < draft.currentStep"
-                    [class.step-bar--pending]="step > draft.currentStep"
+                    class="step-node"
+                    [class.step-node--completed]="step < draft.currentStep"
+                    [class.step-node--active]="step === draft.currentStep"
+                    [class.step-node--pending]="step > draft.currentStep"
                   ></div>
+                  @if (!last) {
+                    <div
+                      class="step-connector"
+                      [class.step-connector--filled]="step < draft.currentStep"
+                    ></div>
+                  }
                 }
               </div>
               <p class="draft-status">
@@ -76,7 +90,7 @@ import type { DraftSummary, EnrollmentWizardStep } from '@core/models/ui/enrollm
                 type="button"
                 class="btn-discard"
                 data-llm-action="discard-enrollment-draft"
-                (click)="discard.emit(draft.enrollmentId)"
+                (click)="$event.stopPropagation(); discard.emit(draft.enrollmentId)"
               >
                 <app-icon name="trash-2" [size]="14" />
                 Descartar
