@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { toISODate, getChileDateTimeRange } from '@core/utils/date.utils';
 import type {
@@ -49,6 +50,7 @@ function mapAdvanceToEgreso(a: InstructorAdvance): EgresoRow {
 export class CuadraturaFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
@@ -62,6 +64,7 @@ export class CuadraturaFacade {
   private readonly _error = signal<string | null>(null);
 
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
   private _realtimeChannel: any | null = null;
 
   // ── 2. ESTADO EXPUESTO (Público) ──────────────────────────────────────────
@@ -121,9 +124,16 @@ export class CuadraturaFacade {
     }
   }
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
+
   async initialize(): Promise<void> {
     this.setupRealtime();
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
@@ -132,6 +142,7 @@ export class CuadraturaFacade {
     try {
       await this.fetchAll();
       this._initialized = true;
+      this._lastBranchId = branchId;
     } catch {
       this._error.set('Error al cargar datos de cuadratura.');
     } finally {
@@ -154,7 +165,7 @@ export class CuadraturaFacade {
 
   private async fetchAll(): Promise<void> {
     const today = toISODate(new Date());
-    const branchId = this.auth.currentUser()?.branchId ?? null;
+    const branchId = this.getActiveBranchId();
     await Promise.all([
       this.fetchPayments(today, branchId),
       this.fetchExpensesAndAdvances(today, branchId),
@@ -163,7 +174,8 @@ export class CuadraturaFacade {
   }
 
   private async fetchPayments(today: string, branchId: number | null): Promise<void> {
-    const { start, end } = getChileDateTimeRange(today);
+    const start = `${today}T00:00:00`;
+    const end = `${today}T23:59:59`;
 
     let query: any = this.supabase.client
       .from('payments')
@@ -266,7 +278,7 @@ export class CuadraturaFacade {
           date: today,
           amount: datos.monto,
           description: datos.descripcion,
-          branch_id: user.branchId,
+          branch_id: this.getActiveBranchId(),
           registered_by: user.dbId,
         });
       } else {
@@ -297,7 +309,7 @@ export class CuadraturaFacade {
       const pagos = this._pagosHoy();
       await this.supabase.client.from('cash_closings').insert({
         date: today,
-        branch_id: user.branchId,
+        branch_id: this.getActiveBranchId(),
         closed_by: user.dbId,
         closed_at: new Date().toISOString(),
         status: 'closed',

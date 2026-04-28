@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import type { User } from '@core/models/ui/user.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { mapAuthError } from '@core/utils/auth-errors.utils';
 
 /**
  * AuthFacade - Facade de autenticación con Supabase.
@@ -137,7 +138,7 @@ export class AuthFacade {
       }
     }
 
-    return { error: error ?? null };
+    return { error: error ? new Error(mapAuthError(error)) : null };
   }
 
   async signUp(
@@ -156,13 +157,13 @@ export class AuthFacade {
             session: result.data.session ?? undefined,
           }
         : null,
-      error: (result.error as Error) ?? null,
+      error: result.error ? new Error(mapAuthError(result.error)) : null,
     };
   }
 
   async resetPasswordForEmail(email: string): Promise<{ error: Error | null }> {
     const { error } = await this.supabase.resetPasswordForEmail(email);
-    return { error: (error as Error) ?? null };
+    return { error: error ? new Error(mapAuthError(error)) : null };
   }
 
   logout(): void {
@@ -185,7 +186,11 @@ export class AuthFacade {
 
     if (dbError) {
       console.error('Error clearing first_login via RPC:', dbError);
-      return { error: new Error('Password updated but login flag failed. Please contact admin.') };
+      return {
+        error: new Error(
+          'Contraseña actualizada, pero hubo un error al sincronizar. Por favor, contacta al administrador.',
+        ),
+      };
     }
 
     // SOLO si el RPC fue exitoso, actualizamos el estado del Signal en el cliente.

@@ -1,5 +1,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from './auth.facade';
+import { BranchFacade } from './branch.facade';
 import type {
   StudentWithDocsRow,
   DmsStudentDocRow,
@@ -113,6 +115,8 @@ interface RawTemplate {
 @Injectable({ providedIn: 'root' })
 export class DmsFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerService);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly toast = inject(ToastService);
@@ -165,6 +169,7 @@ export class DmsFacade {
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   // Sub-ruta: detalle de alumno
   private readonly _studentDetail = signal<{ name: string; rut: string; studentId: number } | null>(
@@ -210,15 +215,25 @@ export class DmsFacade {
    * re-visitas revalidan silenciosamente.
    */
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this.getActiveBranchId();
+
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
+
     this._initialized = true;
+    this._lastBranchId = branchId;
     this._isLoading.set(true);
     this._error.set(null);
     await this.fetchAllData();
     this._isLoading.set(false);
+  }
+
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
   }
 
   async refreshSilently(): Promise<void> {
@@ -486,33 +501,35 @@ export class DmsFacade {
   // ── Helpers Privados ─────────────────────────────────────────────────────────
 
   private async fetchAllData(): Promise<void> {
+    const branchId = this.getActiveBranchId();
+
     try {
+      let schoolDocsQuery: any = this.supabase.client
+        .from('school_documents')
+        .select(
+          `
+          id, type, file_name, storage_url, description,
+          branch_id, created_at,
+          users(first_names, paternal_last_name)
+        `,
+        )
+        .order('created_at', { ascending: false });
+      if (branchId !== null) schoolDocsQuery = schoolDocsQuery.eq('branch_id', branchId);
+
+      let studentsQuery: any = this.supabase.client
+        .from('students')
+        .select('id, users!inner(id, rut, first_names, paternal_last_name)');
+      if (branchId !== null) studentsQuery = studentsQuery.eq('users.branch_id', branchId);
+
       const [vDocsRes, schoolDocsRes, templatesRes, studentsRes] = await Promise.all([
-        // Últimos 5 docs de alumnos (para la card "Últimos subidos")
         this.supabase.client
           .from('v_dms_student_documents')
           .select('*')
           .order('document_at', { ascending: false })
           .limit(100),
 
-        // Documentos institucionales
-        this.supabase.client
-          .from('school_documents')
-          .select(
-            `
-            id,
-            type,
-            file_name,
-            storage_url,
-            description,
-            branch_id,
-            created_at,
-            users(first_names, paternal_last_name)
-          `,
-          )
-          .order('created_at', { ascending: false }),
+        schoolDocsQuery,
 
-        // Plantillas activas
         this.supabase.client
           .from('document_templates')
           .select(
@@ -522,10 +539,7 @@ export class DmsFacade {
           .order('category', { ascending: true })
           .order('name', { ascending: true }),
 
-        // Alumnos con info para cruzar con docs
-        this.supabase.client
-          .from('students')
-          .select('id, users!inner(id, rut, first_names, paternal_last_name)'),
+        studentsQuery,
       ]);
 
       // Construir mapa studentId → info
@@ -541,8 +555,11 @@ export class DmsFacade {
         }
       }
 
-      // Procesar docs de alumnos
-      const allVDocs = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
+      // Procesar docs de alumnos — filtrar por sede si aplica
+      const allVDocsRaw = (vDocsRes.data ?? []) as unknown as RawVDmsDoc[];
+      const allVDocs =
+        branchId !== null ? allVDocsRaw.filter((d) => studentMap.has(d.student_id)) : allVDocsRaw;
+
       const recentDocs = allVDocs.slice(0, 5).map((d) => {
         const student = studentMap.get(d.student_id);
         return this.mapVDocToStudentDocRow(

@@ -5,8 +5,11 @@ import {
   inject,
   OnInit,
   signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute,Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
@@ -14,6 +17,7 @@ import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { Button } from 'primeng/button';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
@@ -41,7 +45,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     EliminarAlumnoModalComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Estado de Carga ── -->
       @if (facade.isLoading()) {
         <div class="bento-hero">
@@ -85,16 +89,18 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- ── Vista Principal ── -->
       } @else if (facade.alumno(); as alumno) {
-        <app-section-hero
-          [title]="alumno.nombre"
-          [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
-          icon="user"
-          backRoute="/app/admin/alumnos"
-          backLabel="Listado de Alumnos"
-          [actions]="heroActions()"
-          [chips]="heroChips()"
-          (actionClick)="handleHeroAction($event)"
-        />
+        <div class="bento-banner" #heroRef>
+          <app-section-hero
+            [title]="alumno.nombre"
+            [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
+            icon="user"
+            backRoute="/app/admin/alumnos"
+            backLabel="Listado de Alumnos"
+            [actions]="heroActions()"
+            [chips]="heroChips()"
+            (actionClick)="handleHeroAction($event)"
+          />
+        </div>
 
         <!-- Bento Item 1: Info Personal -->
         <div class="bento-card bento-tall">
@@ -401,12 +407,16 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     }
   `,
 })
-export class AdminAlumnoDetalleComponent implements OnInit {
+export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   protected readonly alumnosFacade = inject(AdminAlumnosFacade);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   // ── Estado del modal de borrado ──────────────────────────────────────────────
   protected readonly deleteModalVisible = signal(false);
@@ -468,6 +478,14 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     if (id && !isNaN(Number(id))) {
       void this.facade.initialize(Number(id));
     }
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────

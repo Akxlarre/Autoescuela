@@ -12,6 +12,8 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { DmsFacade } from '@core/facades/dms.facade';
 import type { TemplateCategory } from '@core/models/ui/dms.model';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 /**
  * DmsTemplateDrawerComponent — Contenido para el drawer de nuevas plantillas.
@@ -27,9 +29,20 @@ import type { TemplateCategory } from '@core/models/ui/dms.model';
     AlertCardComponent,
     SelectModule,
     FormsModule,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
   ],
   template: `
-    <div class="flex flex-col gap-6 h-full py-2">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-5">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="rect" width="100%" height="140px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <div class="flex-1 flex flex-col gap-5">
 
         <!-- Nombre -->
@@ -135,7 +148,8 @@ import type { TemplateCategory } from '@core/models/ui/dms.model';
           (click)="onSubmit()"
         ></app-async-btn>
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
 })
 export class DmsTemplateDrawerComponent {

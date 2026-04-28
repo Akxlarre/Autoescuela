@@ -13,6 +13,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { RelatorOption } from '@core/models/ui/promocion-table.model';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 const COURSE_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -100,9 +102,17 @@ function generatePromoName(startIso: string): string {
   selector: 'app-admin-promocion-crear-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, IconComponent, AsyncBtnComponent],
+  imports: [FormsModule, SelectModule, IconComponent, AsyncBtnComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <div class="flex flex-col gap-6 p-1">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-5">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <!-- ── Fecha de inicio (primero — determina nombre y código) ───── -->
       <section>
         <h3 class="text-base font-semibold mb-3" style="color: var(--text-primary)">
@@ -294,7 +304,8 @@ function generatePromoName(startIso: string): string {
           data-llm-action="submit-crear-promocion"
         />
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     .form-input {

@@ -1,13 +1,8 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  computed,
-  inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
 import type { TemplateCard } from '@core/models/ui/dms.model';
 
@@ -19,9 +14,7 @@ import type { TemplateCard } from '@core/models/ui/dms.model';
   selector: 'app-admin-documentos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    DmsListContentComponent,
-  ],
+  imports: [DmsListContentComponent],
   template: `
     <!-- Contenido principal -->
     <app-dms-list-content
@@ -44,17 +37,21 @@ import type { TemplateCard } from '@core/models/ui/dms.model';
     />
   `,
 })
-export class AdminDocumentosComponent implements OnInit {
+export class AdminDocumentosComponent {
   readonly facade = inject(DmsFacade);
   private readonly authFacade = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
-  ngOnInit(): void {
-    void this.facade.initialize();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -78,14 +75,18 @@ export class AdminDocumentosComponent implements OnInit {
   async onDeleteStudentDoc(payload: { id: string; source: string }): Promise<void> {
     const confirmed = await this.facade.confirm({
       title: 'Eliminar documento',
-      message: '¿Estás seguro de que quieres eliminar este documento? Esta acción no se puede deshacer.',
+      message:
+        '¿Estás seguro de que quieres eliminar este documento? Esta acción no se puede deshacer.',
       severity: 'danger',
       confirmLabel: 'Eliminar',
       cancelLabel: 'Cancelar',
     });
     if (!confirmed) return;
     try {
-      await this.facade.deleteStudentDocument(payload.id, payload.source as 'student_document' | 'digital_contract');
+      await this.facade.deleteStudentDocument(
+        payload.id,
+        payload.source as 'student_document' | 'digital_contract',
+      );
     } catch (err) {
       console.error('Error al eliminar documento:', err);
     }

@@ -84,6 +84,9 @@ import { Button } from 'primeng/button';
             [branches]="branchFacade.branches()"
             [selectedBranchId]="branchFacade.selectedBranchId()"
             [showAllOption]="true"
+            [allOptionDisabled]="branchFacade.requiresSpecificBranch()"
+            [disabledBranchIds]="branchFacade.disabledBranchIds()"
+            [lockReason]="branchFacade.lockReason()"
             (branchChange)="branchFacade.selectBranch($event)"
             data-llm-description="Branch filter for admin — selects which school's data to show"
           />

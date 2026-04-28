@@ -19,6 +19,7 @@ import {
   ChartDataGroup,
 } from '@shared/components/horizontal-bar-chart/horizontal-bar-chart.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -33,18 +34,21 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     IconComponent,
     HorizontalBarChartComponent,
     BentoGridLayoutDirective,
+    ScrollRevealDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <app-section-hero
-        #heroRef
-        title="Mis Horas"
-        subtitle="Registro de horas trabajadas del mes actual"
-        backRoute="/app/instructor/dashboard"
-        backLabel="Dashboard"
-        [actions]="heroActions"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Mis Horas"
+          subtitle="Registro de horas trabajadas del mes actual"
+          backRoute="/app/instructor/dashboard"
+          backLabel="Dashboard"
+          [actions]="heroActions"
+        />
+      </div>
 
       @if (facade.isLoading()) {
         <!-- KPI Skeletons como hijos directos del bento-grid -->
@@ -98,7 +102,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         <div class="bento-banner">
           <div class="flex flex-col gap-6">
             <!-- Breakdown Chart -->
-            <div class="card p-6">
+            <div class="card p-6" appScrollReveal>
               <h3 class="text-base font-bold text-text-primary mb-4 border-b border-divider pb-2">
                 Desglose de Horas Realizadas
               </h3>
@@ -106,7 +110,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             </div>
 
             <!-- Daily Logs Table -->
-            <div class="card p-0 overflow-hidden">
+            <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
               <div
                 class="px-6 py-4 border-b border-divider bg-surface-hover flex justify-between items-center"
               >

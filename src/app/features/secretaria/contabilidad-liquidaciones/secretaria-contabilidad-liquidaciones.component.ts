@@ -12,7 +12,6 @@ import type { LiquidacionRow, PagoInstructorPayload } from '@core/models/ui/liqu
       <app-liquidaciones-content
         [liquidaciones]="facade.liquidaciones()"
         [isLoading]="facade.isLoading()"
-        [isSaving]="facade.isSaving()"
         [kpis]="facade.kpis()"
         [mesActual]="facade.mesActual()"
         [anioActual]="facade.anioActual()"

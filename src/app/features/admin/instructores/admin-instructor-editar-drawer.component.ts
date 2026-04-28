@@ -15,14 +15,26 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, DatePickerModule, IconComponent],
+  imports: [FormsModule, SelectModule, DatePickerModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedInstructor(); as inst) {
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
       <!-- ── Mini-header ─────────────────────────────────────────────────── -->
       <div
         class="flex items-center gap-3 rounded-lg p-3 mb-5"
@@ -167,7 +179,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione sede"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Sede de trabajo del instructor"
           />
@@ -201,7 +213,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione clase"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Clase de licencia del instructor"
           />
@@ -251,7 +263,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionLabel="label"
             optionValue="value"
             placeholder="Seleccione tipo"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             aria-required="true"
             data-llm-description="Tipo de instructor"
           />
@@ -274,7 +286,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
             optionValue="value"
             placeholder="Sin vehículo asignado"
             [showClear]="true"
-            [style]="{ width: '100%', height: '40px' }"
+            styleClass="w-full"
             data-llm-description="Vehículo asignado al instructor"
           />
           <span class="text-xs" style="color: var(--text-muted)">
@@ -391,6 +403,8 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
           }
         </button>
       </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

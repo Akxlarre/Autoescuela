@@ -687,20 +687,6 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'notas',
-            loadComponent: () =>
-              import('./features/alumno/notas/alumno-notas.component').then(
-                (m) => m.AlumnoNotasComponent,
-              ),
-          },
-          {
-            path: 'certificado',
-            loadComponent: () =>
-              import('./features/alumno/certificado/alumno-certificado.component').then(
-                (m) => m.AlumnoCertificadoComponent,
-              ),
-          },
-          {
             path: 'pagos',
             loadComponent: () =>
               import('./features/alumno/pagos/alumno-pagos.component').then(
@@ -729,24 +715,10 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'asistencia',
-            loadComponent: () =>
-              import('./features/alumno/asistencia/alumno-asistencia.component').then(
-                (m) => m.AlumnoAsistenciaComponent,
-              ),
-          },
-          {
             path: 'horario',
             loadComponent: () =>
               import('./features/alumno/horario/alumno-horario.component').then(
                 (m) => m.AlumnoHorarioComponent,
-              ),
-          },
-          {
-            path: 'progreso',
-            loadComponent: () =>
-              import('./features/alumno/progreso/alumno-progreso.component').then(
-                (m) => m.AlumnoProgresoComponent,
               ),
           },
           {

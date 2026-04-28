@@ -4,13 +4,14 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
-  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
@@ -20,6 +21,8 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { SelectModule } from 'primeng/select';
+import { FormsModule } from '@angular/forms';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { RentabilidadCursosComponent } from './rentabilidad-cursos.component';
@@ -42,6 +45,8 @@ const POR_PAGINA = 5;
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    FormsModule,
+    SelectModule,
     SectionHeroComponent,
     KpiCardVariantComponent,
     SkeletonBlockComponent,
@@ -52,15 +57,16 @@ const POR_PAGINA = 5;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        #heroRef
-        title="Gestión de Pagos"
-        subtitle="Registro y seguimiento financiero"
-        icon="wallet"
-        [actions]="heroActions"
-        [chips]="heroChips()"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Gestión de Pagos"
+          subtitle="Registro y seguimiento financiero"
+          icon="wallet"
+          [actions]="heroActions"
+          [chips]="heroChips()"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
       <div class="bento-square">
@@ -309,46 +315,24 @@ const POR_PAGINA = 5;
                   </div>
 
                   <div class="flex flex-col sm:flex-row gap-3">
-                    <!-- Select Estado -->
-                    <div class="relative">
-                      <select
-                        class="w-full sm:w-auto text-sm pl-4 pr-10 py-2.5 rounded-lg appearance-none cursor-pointer focus:outline-none focus:border-brand transition-colors bg-base hover:border-text-muted"
-                        style="border: 1px solid var(--border-muted); color: var(--text-primary);"
-                        [value]="filtroEstado()"
-                        (change)="onFiltroEstado($event)"
-                      >
-                        <option value="todos">Todos los estados</option>
-                        <option value="completado">Completado</option>
-                        <option value="pendiente">Pendiente</option>
-                      </select>
-                      <div
-                        class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
-                      >
-                        <app-icon name="chevron-down" [size]="16" color="var(--text-muted)" />
-                      </div>
-                    </div>
-
-                    <!-- Select Método -->
-                    <div class="relative">
-                      <select
-                        class="w-full sm:w-auto text-sm pl-4 pr-10 py-2.5 rounded-lg appearance-none cursor-pointer focus:outline-none focus:border-brand transition-colors bg-base hover:border-text-muted"
-                        style="border: 1px solid var(--border-muted); color: var(--text-primary);"
-                        [value]="filtroMetodo()"
-                        (change)="onFiltroMetodo($event)"
-                      >
-                        <option value="todos">Todos los métodos</option>
-                        <option value="Transferencia">Transferencia</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Débito/Crédito">Débito/Crédito</option>
-                        <option value="WebPay">WebPay</option>
-                        <option value="Mixto">Mixto</option>
-                      </select>
-                      <div
-                        class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none"
-                      >
-                        <app-icon name="chevron-down" [size]="16" color="var(--text-muted)" />
-                      </div>
-                    </div>
+                    <p-select
+                      [options]="estadoOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="filtroEstado()"
+                      (ngModelChange)="filtroEstado.set($event)"
+                      styleClass="w-full sm:w-44"
+                      data-llm-description="filter payments by status"
+                    />
+                    <p-select
+                      [options]="metodoOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="filtroMetodo()"
+                      (ngModelChange)="filtroMetodo.set($event)"
+                      styleClass="w-full sm:w-48"
+                      data-llm-description="filter payments by payment method"
+                    />
                   </div>
                 </div>
               </div>
@@ -627,8 +611,9 @@ const POR_PAGINA = 5;
     `,
   ],
 })
-export class AdminPagosComponent implements OnInit, AfterViewInit {
+export class AdminPagosComponent implements AfterViewInit {
   protected readonly facade = inject(PagosFacade);
+  private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly gsap = inject(GsapAnimationsService);
@@ -678,6 +663,21 @@ export class AdminPagosComponent implements OnInit, AfterViewInit {
   protected readonly searchQuery = signal('');
   protected readonly filtroEstado = signal('todos');
   protected readonly filtroMetodo = signal('todos');
+
+  readonly estadoOptions = [
+    { label: 'Todos los estados', value: 'todos' },
+    { label: 'Completado', value: 'completado' },
+    { label: 'Pendiente', value: 'pendiente' },
+  ];
+
+  readonly metodoOptions = [
+    { label: 'Todos los métodos', value: 'todos' },
+    { label: 'Transferencia', value: 'Transferencia' },
+    { label: 'Efectivo', value: 'Efectivo' },
+    { label: 'Débito/Crédito', value: 'Débito/Crédito' },
+    { label: 'WebPay', value: 'WebPay' },
+    { label: 'Mixto', value: 'Mixto' },
+  ];
   protected readonly paginaActual = signal(1);
 
   // ── Computed: tabla filtrada y paginada ──────────────────────────────────────
@@ -724,8 +724,11 @@ export class AdminPagosComponent implements OnInit, AfterViewInit {
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
-  ngOnInit(): void {
-    this.facade.initialize();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.initialize();
+    });
   }
 
   ngAfterViewInit(): void {
@@ -755,16 +758,6 @@ export class AdminPagosComponent implements OnInit, AfterViewInit {
 
   protected onSearch(event: Event): void {
     this.searchQuery.set((event.target as HTMLInputElement).value);
-    this.paginaActual.set(1);
-  }
-
-  protected onFiltroEstado(event: Event): void {
-    this.filtroEstado.set((event.target as HTMLSelectElement).value);
-    this.paginaActual.set(1);
-  }
-
-  protected onFiltroMetodo(event: Event): void {
-    this.filtroMetodo.set((event.target as HTMLSelectElement).value);
     this.paginaActual.set(1);
   }
 

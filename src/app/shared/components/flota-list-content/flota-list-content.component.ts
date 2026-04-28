@@ -3,13 +3,13 @@ import {
   Component,
   ElementRef,
   OnInit,
-  afterNextRender,
   computed,
   inject,
   input,
   output,
   signal,
   viewChild,
+  AfterViewInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -75,13 +75,15 @@ import type { VehicleTableRow, FlotaKpis, VehicleType, VehicleStatus } from '@co
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de flota">
 
       <!-- HERO -->
-      <app-section-hero
-        title="Gestión de Flota"
-        subtitle="Control de vehículos, disponibilidad y mantenimientos."
-        [chips]="heroChips()"
-        [actions]="heroActions()"
-        (actionClick)="handleHeroAction($event)"
-      />
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Gestión de Flota"
+          subtitle="Control de vehículos, disponibilidad y mantenimientos."
+          [chips]="heroChips()"
+          [actions]="heroActions()"
+          (actionClick)="handleHeroAction($event)"
+        />
+      </div>
 
       <!-- KPIs -->
       <div class="bento-square">
@@ -418,6 +420,7 @@ export class FlotaListContentComponent {
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
 
   searchTerm = '';
   selectedType: VehicleType | null = null;
@@ -445,12 +448,12 @@ export class FlotaListContentComponent {
     { id: 'new-vehicle', label: 'Nuevo Vehículo', icon: 'plus', primary: true },
   ]);
 
-  constructor() {
-    afterNextRender(() => {
-      if (this.bentoGrid()) {
-        setTimeout(() => this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement), 50);
-      }
-    });
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   handleHeroAction(actionId: string): void {

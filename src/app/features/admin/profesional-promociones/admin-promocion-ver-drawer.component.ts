@@ -11,6 +11,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 const COURSE_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -30,10 +31,26 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
   selector: 'app-admin-promocion-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
   template: `
     @if (promo(); as p) {
-      <div class="flex flex-col gap-6 p-1">
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <div class="flex flex-col gap-2">
+              <app-skeleton-block variant="text" width="60%" height="24px" />
+              <app-skeleton-block variant="text" width="40%" height="14px" />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+            </div>
+            <app-skeleton-block variant="text" width="100%" height="100px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
         <!-- ── Header ──────────────────────────────────────────────── -->
         <div>
           <div class="flex items-center gap-3 mb-2">
@@ -349,7 +366,8 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
             Editar promoción
           </button>
         </div>
-      </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

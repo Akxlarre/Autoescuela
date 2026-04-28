@@ -9,6 +9,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -34,17 +35,19 @@ function toCompact(amount: number): { value: number; suffix: string } {
   selector: 'app-alumno-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, KpiCardVariantComponent, IconComponent, SkeletonBlockComponent],
+  imports: [SectionHeroComponent, KpiCardVariantComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
   template: `
-    <div class="px-6 py-6 pb-20 space-y-6">
+    <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
-      <app-section-hero
-        title="Pagos y Clases"
-        subtitle="Paga tu saldo pendiente y agenda tus clases restantes"
-        icon="wallet"
-        [actions]="heroActions()"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          title="Pagos y Clases"
+          subtitle="Paga tu saldo pendiente y agenda tus clases restantes"
+          icon="wallet"
+          [actions]="heroActions()"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       @if (facade.error()) {
         <div
@@ -58,7 +61,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
       } @else {
         <!-- ── KPI Grid ── -->
         @if (facade.enrollment(); as enroll) {
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bento-banner grid grid-cols-1 sm:grid-cols-3 gap-4">
             <app-kpi-card-variant
               label="Total Curso"
               [value]="toCompact(enroll.basePrice).value"
@@ -92,7 +95,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
           </div>
 
           <!-- Info matrícula -->
-          <div class="flex items-center gap-2 text-xs text-text-muted">
+          <div class="bento-banner flex items-center gap-2 text-xs text-text-muted">
             <app-icon name="info" [size]="12" />
             <span>
               Matrícula N°&nbsp;{{ enroll.number }} · {{ enroll.courseName }} ·
@@ -101,14 +104,14 @@ function toCompact(amount: number): { value: number; suffix: string } {
           </div>
         } @else if (facade.isLoading()) {
           <!-- Skeleton KPIs mientras carga -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bento-banner grid grid-cols-1 sm:grid-cols-3 gap-4">
             @for (i of [1, 2, 3]; track i) {
               <app-kpi-card-variant label="" [value]="0" [loading]="true" icon="wallet" />
             }
           </div>
         } @else if (!facade.status()?.hasPaymentPending && facade.status() !== null) {
           <!-- Sin deuda pendiente y sin enrollment (ya completado) -->
-          <div class="card p-6 flex items-center gap-4">
+          <div class="bento-banner card p-6 flex items-center gap-4">
             <div
               class="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
               style="background: var(--color-success-muted)"
@@ -123,7 +126,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
         }
 
         <!-- ── Historial de pagos ── -->
-        <div class="card p-5 flex flex-col gap-3">
+        <div class="bento-banner card p-5 flex flex-col gap-3">
           <h2 class="text-sm font-semibold text-text-primary uppercase tracking-wide">
             Historial de pagos
           </h2>

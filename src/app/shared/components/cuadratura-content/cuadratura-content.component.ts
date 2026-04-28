@@ -6,12 +6,17 @@ import {
   input,
   output,
   signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { formatCLP } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type {
   CierrePayload,
@@ -38,21 +43,25 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
   selector: 'app-cuadratura-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent],
+  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, BentoGridLayoutDirective],
   template: `
     <div 
       class="bento-grid p-6 pb-12"
+      appBentoGridLayout
+      #bentoGrid
       [class.items-start]="!layoutDrawer.isOpen()"
       [class.force-compact]="layoutDrawer.isOpen()"
     >
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        title="Cuadratura Diaria"
-        [contextLine]="fechaHoy()"
-        [chips]="heroChips()"
-        [actions]="heroActions()"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Cuadratura Diaria"
+          [contextLine]="fechaHoy()"
+          [chips]="heroChips()"
+          [actions]="heroActions()"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <!-- ─ Columna izquierda (2/3): Tablas de Registro de Sistema ─────────────────── -->
       <div class="bento-feature flex flex-col gap-6">
@@ -306,7 +315,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
       </div>
 
       <!-- ─ Columna derecha (1/3): Panel Interactivo (Sticky Checkout) ───────────────────────── -->
-      <div class="bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col">
+      <div class="bento-banner bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col">
         
         <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
         <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
@@ -516,7 +525,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
     }
   `,
 })
-export class CuadraturaContentComponent {
+export class CuadraturaContentComponent implements AfterViewInit {
   // ── Inputs (datos del facade, pasados por el smart component) ─────────────
   readonly pagosHoy = input.required<IngresoRow[]>();
   readonly gastosHoy = input.required<EgresoRow[]>();
@@ -528,6 +537,9 @@ export class CuadraturaContentComponent {
   readonly isLoading = input<boolean>(false);
   readonly isSaving = input<boolean>(false);
   
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
@@ -671,5 +683,13 @@ export class CuadraturaContentComponent {
       notes: this.notas(),
       arqueoTotal: this.totalArqueo(),
     });
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

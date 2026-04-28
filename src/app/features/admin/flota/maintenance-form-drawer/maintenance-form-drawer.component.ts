@@ -30,6 +30,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { FlotaDetalleFacade } from '@core/facades/flota-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 /**
  * MaintenanceFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -50,10 +52,25 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
     TextareaModule,
     DatePickerModule,
     IconComponent,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex-1 flex flex-col min-h-0 bg-surface">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-5 px-6 py-8">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <div class="grid grid-cols-2 gap-4">
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+          </div>
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="100px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <form [formGroup]="form" class="flex-1 flex flex-col min-h-0" (ngSubmit)="onSubmit()">
         <!-- Body Scrolleable -->
         <div class="flex-1 overflow-y-auto px-6 py-8">
@@ -191,7 +208,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           </button>
         </div>
       </form>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
 })
 export class MaintenanceFormDrawerComponent {

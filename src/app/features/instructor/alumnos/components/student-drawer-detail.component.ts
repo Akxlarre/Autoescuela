@@ -4,6 +4,8 @@ import { RouterLink } from '@angular/router';
 import { TagModule } from 'primeng/tag';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 const AVATAR_PALETTES = [
   { bg: 'linear-gradient(135deg,#6366f1,#8b5cf6)', text: '#fff' },
@@ -25,9 +27,23 @@ function avatarPalette(name: string) {
   selector: 'app-student-drawer-detail',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, RouterLink, TagModule, IconComponent],
+  imports: [DatePipe, RouterLink, TagModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <div class="space-y-6 p-6">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-5 p-6">
+          <div class="flex items-center gap-4">
+            <app-skeleton-block variant="circle" width="64px" height="64px" />
+            <div class="flex flex-col gap-2 flex-1">
+              <app-skeleton-block variant="text" width="60%" height="18px" />
+              <app-skeleton-block variant="text" width="40%" height="14px" />
+            </div>
+          </div>
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="100px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       @if (facade.activeStudent(); as detail) {
         <!-- Avatar + estado -->
         <div class="flex items-center gap-4">
@@ -116,7 +132,8 @@ function avatarPalette(name: string) {
           Ver Ficha Técnica Completa
         </a>
       }
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: [`
     .drawer-contact-link {

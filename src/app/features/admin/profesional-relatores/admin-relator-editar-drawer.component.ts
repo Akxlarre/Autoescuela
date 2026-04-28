@@ -11,6 +11,8 @@ import { FormsModule } from '@angular/forms';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 const SPEC_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -23,9 +25,17 @@ const SPEC_COLORS: Record<string, string> = {
   selector: 'app-admin-relator-editar-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <!-- ── Información Personal ───────────────────────────────────────────── -->
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
     <h3 class="section-title">Información Personal</h3>
     <div class="flex flex-col gap-4 mb-6">
       <!-- Nombres -->

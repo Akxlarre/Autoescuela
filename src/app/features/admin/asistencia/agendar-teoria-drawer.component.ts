@@ -9,6 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -16,6 +17,7 @@ import { todayIso } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.model';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 /**
  * AgendarTeoriaDrawerComponent — Smart.
@@ -32,7 +34,7 @@ import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.mo
   selector: 'app-agendar-teoria-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, SkeletonBlockComponent],
+  imports: [FormsModule, IconComponent, SkeletonBlockComponent, SelectModule, DrawerContentLoaderComponent],
   styles: `
     .field-label {
       display: block;
@@ -72,24 +74,33 @@ import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.mo
     }
   `,
   template: `
-    <div class="flex flex-col h-full" style="background: var(--bg-surface)">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="40px" />
+          <app-skeleton-block variant="text" width="100%" height="40px" />
+          <app-skeleton-block variant="text" width="100%" height="120px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <!-- ── Formulario ──────────────────────────────────────────────────── -->
       <div class="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
         <!-- Sede (solo si admin sin sede fija) -->
         @if (showBranchSelector()) {
           <div class="flex flex-col gap-1.5">
             <label class="field-label">Sede</label>
-            <select
-              class="field-select"
+            <p-select
               [ngModel]="selectedBranchId()"
               (ngModelChange)="onBranchChange($event)"
+              [options]="branchSelectOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Selecciona una sede"
+              styleClass="w-full"
               data-llm-description="Selector de sede para la clase teórica"
-            >
-              <option [ngValue]="null" disabled>Selecciona una sede</option>
-              @for (branch of branches(); track branch.id) {
-                <option [ngValue]="branch.id">{{ branch.name }}</option>
-              }
-            </select>
+            />
           </div>
         }
 
@@ -243,7 +254,8 @@ import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.mo
           Agendar Clase
         </button>
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
 })
 export class AgendarTeoriaDrawerComponent implements OnInit {
@@ -266,6 +278,10 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
   // Derived
   protected readonly branches = this.branchFacade.branches;
   protected readonly showBranchSelector = computed(() => this.fixedBranchId() === null);
+
+  protected readonly branchSelectOptions = computed(() =>
+    this.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
 
   protected readonly allSelected = computed(
     () => this.localAlumnos().length > 0 && this.localAlumnos().every((a) => a.selected),

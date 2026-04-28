@@ -77,19 +77,34 @@ import type { BranchOption } from '@core/models/ui/branch.model';
               <span>Sede activa</span>
             </div>
 
+            <!-- Razón de bloqueo (cuando el selector está restringido) -->
+            @if (lockReason()) {
+              <div class="branch-panel__reason">
+                <app-icon name="info" [size]="11" />
+                <span>{{ lockReason() }}</span>
+              </div>
+            }
+
             <!-- Opción: Todas las escuelas -->
             @if (showAllOption()) {
               <button
                 type="button"
                 role="option"
                 class="branch-panel__item"
-                [class.branch-panel__item--selected]="selectedBranchId() === null"
+                [class.branch-panel__item--selected]="
+                  selectedBranchId() === null && !allOptionDisabled()
+                "
+                [class.branch-panel__item--disabled]="allOptionDisabled()"
+                [disabled]="allOptionDisabled()"
+                [attr.title]="allOptionDisabled() ? lockReason() : null"
                 (click)="select(null)"
                 data-llm-action="select-branch-all"
               >
                 <span class="branch-panel__item-dot branch-panel__item-dot--all"></span>
                 <span class="branch-panel__item-label">Todas las escuelas</span>
-                @if (selectedBranchId() === null) {
+                @if (allOptionDisabled()) {
+                  <app-icon name="lock" [size]="11" class="branch-panel__item-lock" />
+                } @else if (selectedBranchId() === null) {
                   <app-icon name="check" [size]="13" class="branch-panel__item-check" />
                 }
               </button>
@@ -107,12 +122,17 @@ import type { BranchOption } from '@core/models/ui/branch.model';
                 role="option"
                 class="branch-panel__item"
                 [class.branch-panel__item--selected]="selectedBranchId() === branch.id"
+                [class.branch-panel__item--disabled]="disabledBranchIds().includes(branch.id)"
+                [disabled]="disabledBranchIds().includes(branch.id)"
+                [attr.title]="disabledBranchIds().includes(branch.id) ? lockReason() : null"
                 (click)="select(branch.id)"
                 [attr.data-llm-action]="'select-branch-' + branch.slug"
               >
                 <span class="branch-panel__item-dot"></span>
                 <span class="branch-panel__item-label">{{ branch.name }}</span>
-                @if (selectedBranchId() === branch.id) {
+                @if (disabledBranchIds().includes(branch.id)) {
+                  <app-icon name="lock" [size]="11" class="branch-panel__item-lock" />
+                } @else if (selectedBranchId() === branch.id) {
                   <app-icon name="check" [size]="13" class="branch-panel__item-check" />
                 }
               </button>
@@ -367,6 +387,37 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         flex-shrink: 0;
         color: var(--color-primary);
       }
+
+      /* Item deshabilitado */
+      .branch-panel__item--disabled,
+      .branch-panel__item--disabled:hover {
+        opacity: 0.45;
+        cursor: not-allowed;
+        background: transparent;
+        color: var(--text-secondary);
+      }
+
+      /* Ícono lock en items deshabilitados */
+      .branch-panel__item-lock {
+        flex-shrink: 0;
+        color: var(--text-muted);
+      }
+
+      /* Razón de bloqueo — badge informativo bajo el header */
+      .branch-panel__reason {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin: 0 6px 4px;
+        padding: 5px 8px;
+        border-radius: var(--radius-md);
+        background: var(--state-warning-bg, rgba(234, 179, 8, 0.08));
+        color: var(--state-warning-text, #92400e);
+        font-size: 10px;
+        font-weight: var(--font-medium);
+        font-family: var(--font-body);
+        line-height: 1.4;
+      }
     `,
   ],
 })
@@ -377,6 +428,12 @@ export class BranchSelectorComponent implements OnDestroy {
   readonly showAllOption = input(false);
   /** true = dropdown compacto (topbar). false = pills horizontales (wizard). */
   readonly topbarMode = input(true);
+  /** IDs de sedes deshabilitadas (ej: sedes sin Clase Profesional en vistas profesional-only). */
+  readonly disabledBranchIds = input<number[]>([]);
+  /** Deshabilita la opción "Todas las escuelas" (ej: en vistas que requieren sede concreta). */
+  readonly allOptionDisabled = input(false);
+  /** Texto de contexto que explica por qué el selector está restringido. */
+  readonly lockReason = input<string | null>(null);
 
   readonly branchChange = output<number | null>();
 

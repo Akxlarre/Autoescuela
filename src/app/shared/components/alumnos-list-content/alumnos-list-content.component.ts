@@ -5,11 +5,10 @@ import {
   input,
   output,
   signal,
-  effect,
   inject,
   viewChild,
   ElementRef,
-  afterNextRender,
+  AfterViewInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -110,6 +109,17 @@ interface AlumnoKpiItem {
         [actions]="heroActions()"
         (actionClick)="handleHeroAction($event)"
       />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de alumnos"
+      [class.force-compact]="layoutDrawer.isOpen()">
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Alumnos"
+          subtitle="Listado de alumnos de la escuela"
+          [chips]="heroChips()"
+          [actions]="heroActions()"
+          (actionClick)="handleHeroAction($event)"
+        />
+      </div>
 
       <!-- KPIs — usando el mismo patrón que el Dashboard -->
       @for (kpi of alumnosKpis(); track kpi.id) {
@@ -132,7 +142,7 @@ interface AlumnoKpiItem {
       <div class="bento-square">
         <app-action-kpi-card
           label="Por Vencer"
-          [value]="alumnosPorVencer().length"
+          [value]="alumnosPorVencer()"
           icon="alert-triangle"
           size="md"
           color="error"
@@ -727,13 +737,13 @@ interface AlumnoKpiItem {
     `,
   ],
 })
-export class AlumnosListContentComponent {
+export class AlumnosListContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────
-  readonly basePath = input.required<string>();
-  readonly alumnos = input<AlumnoTableRow[]>([]);
+  readonly alumnos = input.required<AlumnoTableRow[]>();
   readonly isLoading = input(false);
-  readonly alumnosPorVencer = input<AlumnoTableRow[]>([]);
   readonly trashView = input(false);
+  readonly basePath = input<string>('/app/secretaria');
+  readonly alumnosPorVencer = input<number>(0);
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
@@ -744,9 +754,10 @@ export class AlumnosListContentComponent {
   readonly trashViewToggled = output<void>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
-  private readonly gsap = inject(GsapAnimationsService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
 
   readonly heroChips = computed((): SectionHeroChip[] => [
     { label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' },
@@ -831,17 +842,14 @@ export class AlumnosListContentComponent {
   ];
   expedienteOpciones = ['Completo', 'Parcial', 'Pendiente'];
 
-  constructor() {
-    // 1. Initial page load animation
-    afterNextRender(() => {
-      // Stagger only the KPIs on load; the main table card
-      // is handled by the View Transitions API (vt-page-in)
-      if (this.bentoGrid()) {
-        setTimeout(() => {
-          this.gsap.animateBentoGrid(this.bentoGrid()!.nativeElement);
-        }, 50);
-      }
-    });
+  constructor() {}
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   filteredAlumnos(): AlumnoTableRow[] {

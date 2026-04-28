@@ -24,15 +24,17 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <app-section-hero
-        #heroRef
-        title="Notificaciones"
-        subtitle="Centro de alertas y mensajes importantes"
-        backRoute="/app/instructor/dashboard"
-        backLabel="Dashboard"
-        [actions]="heroActions"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Notificaciones"
+          subtitle="Centro de alertas y mensajes importantes"
+          backRoute="/app/instructor/dashboard"
+          backLabel="Dashboard"
+          [actions]="heroActions"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <div class="bento-banner">
         <div class="card p-0 overflow-hidden divide-y divide-divider">

@@ -25,5 +25,10 @@
       "Read(//tmp/**)",
       "Bash(echo \"EXIT:$?\")"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "supabase",
+    "typescript",
+    "angular"
+  ]
 }

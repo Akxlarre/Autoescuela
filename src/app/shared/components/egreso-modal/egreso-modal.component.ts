@@ -10,12 +10,13 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SelectModule } from 'primeng/select';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 
 @Component({
   selector: 'app-egreso-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule],
   template: `
     @if (isOpen()) {
       <!-- Backdrop -->
@@ -79,27 +80,15 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
             >
               Tipo de Egreso <span style="color: var(--state-error)">*</span>
             </label>
-            <select
-              id="egreso-tipo"
+            <p-select
               formControlName="tipo"
-              class="w-full text-sm px-3 py-2.5 rounded-lg"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-primary);
-                outline: none;
-              "
+              [options]="tipoOptions"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar tipo..."
+              styleClass="w-full"
               data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
-              [style.borderColor]="
-                form.get('tipo')?.invalid && form.get('tipo')?.touched
-                  ? 'var(--state-error)'
-                  : 'var(--border-muted)'
-              "
-            >
-              <option value="">Seleccionar tipo...</option>
-              <option value="gasto">Gasto Varios</option>
-              <option value="anticipo">Anticipo a Instructor</option>
-            </select>
+            />
             @if (form.get('tipo')?.invalid && form.get('tipo')?.touched) {
               <p class="text-xs" style="color: var(--state-error)">Seleccione un tipo de egreso.</p>
             }
@@ -249,6 +238,11 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
   `,
 })
 export class EgresoModalComponent {
+  readonly tipoOptions = [
+    { label: 'Gasto Varios', value: 'gasto' },
+    { label: 'Anticipo a Instructor', value: 'anticipo' },
+  ];
+
   private readonly fb = inject(FormBuilder);
 
   // ── Inputs ────────────────────────────────────────────────────────────────

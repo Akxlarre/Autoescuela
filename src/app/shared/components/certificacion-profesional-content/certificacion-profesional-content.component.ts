@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  inject,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -7,6 +18,8 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type {
   CertificacionProfesionalAlumnoRow,
@@ -43,20 +56,23 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
     SkeletonBlockComponent,
     IconComponent,
     EmptyStateComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <!-- ── Section Hero ──────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Certificados Clase Profesional"
-      subtitle="Certificación de finalización — Escuela de Conductores Profesionales"
-      icon="shield-check"
-      [actions]="heroActions"
-      variant="compact"
-    />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Section Hero ──────────────────────────────────────────────── -->
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Certificados Clase Profesional"
+          subtitle="Certificación de finalización — Escuela de Conductores Profesionales"
+          icon="shield-check"
+          [actions]="heroActions"
+          variant="compact"
+        />
+      </div>
 
-    <div class="flex flex-col gap-6 p-4 md:p-6">
       <!-- ── Selección en cascada ───────────────────────────────────── -->
-      <div class="card flex flex-wrap items-end gap-4">
+      <div class="bento-banner card flex flex-wrap items-end gap-4">
         <!-- Selector de Promoción -->
         <div class="flex flex-col gap-1.5 min-w-55 flex-1">
           <label class="text-xs font-semibold uppercase tracking-wider text-muted">
@@ -74,7 +90,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               placeholder="Selecciona una promoción..."
               [showClear]="true"
               styleClass="w-full"
-              [style]="{ height: '40px' }"
               data-llm-description="Selector de promoción de clase profesional finalizada"
             />
           }
@@ -101,7 +116,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               [disabled]="!selectedPromocionId()"
               [showClear]="true"
               styleClass="w-full"
-              [style]="{ height: '40px' }"
               data-llm-description="Selector de curso dentro de la promoción seleccionada"
             />
           }
@@ -110,7 +124,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
 
       <!-- ── Estado: sin promoción seleccionada ────────────────────── -->
       @if (!selectedPromocionId()) {
-        <div class="card p-8">
+        <div class="bento-banner card p-8">
           <app-empty-state
             icon="filter"
             message="Selecciona una promoción"
@@ -120,7 +134,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
 
         <!-- ── Estado: promoción seleccionada, sin curso ─────────────── -->
       } @else if (!selectedCursoId()) {
-        <div class="card p-8">
+        <div class="bento-banner card p-8">
           <app-empty-state
             icon="book-open"
             message="Selecciona un curso"
@@ -131,7 +145,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
         <!-- ── Contenido principal (curso seleccionado) ───────────────── -->
       } @else {
         <!-- ── KPIs ──────────────────────────────────────────────────── -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bento-banner grid grid-cols-2 lg:grid-cols-4 gap-4">
           <app-kpi-card-variant
             label="Total Alumnos"
             [value]="kpis()?.totalAlumnos ?? 0"
@@ -161,7 +175,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
         </div>
 
         <!-- ── Toolbar ────────────────────────────────────────────────── -->
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="bento-banner flex flex-wrap items-center gap-3">
           @if (pendientesCount() > 0) {
             <button
               class="btn-primary flex items-center gap-2 text-sm"
@@ -203,7 +217,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
         </div>
 
         <!-- ── Tabla principal ────────────────────────────────────────── -->
-        <div class="card overflow-hidden">
+        <div class="bento-banner card overflow-hidden">
           @if (isLoadingAlumnos()) {
             <div class="p-6 flex flex-col gap-4">
               @for (_ of skeletonRows; track $index) {
@@ -500,7 +514,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
       <!-- end @else (curso seleccionado) -->
 
       <!-- ── Historial de Emisiones — siempre visible ───────────────── -->
-      <div>
+      <div class="bento-banner">
         <h2 class="flex items-center gap-2 text-lg font-semibold text-primary mb-4">
           <app-icon name="scroll" [size]="20" />
           Historial de Emisiones (Log)
@@ -574,7 +588,11 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
     </div>
   `,
 })
-export class CertificacionProfesionalContentComponent {
+export class CertificacionProfesionalContentComponent implements AfterViewInit {
+  // ── Internal ────────────────────────────────────────────────────────────────
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
   // ── Inputs ──
   /** Lista de promociones finalizadas para el selector (ordenada por fecha DESC). */
   readonly promociones = input<PromocionCertOption[]>([]);
@@ -612,6 +630,7 @@ export class CertificacionProfesionalContentComponent {
    * null = ninguna confirmación pendiente.
    */
   readonly pendingConfirmId = signal<number | null>(null);
+  readonly logVisible = signal<boolean>(false);
 
   readonly heroActions: SectionHeroAction[] = [];
 
@@ -662,6 +681,18 @@ export class CertificacionProfesionalContentComponent {
 
   cancelarGenerar(): void {
     this.pendingConfirmId.set(null);
+  }
+
+  protected closeLog(): void {
+    this.logVisible.set(false);
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   // ── Helpers de color ──

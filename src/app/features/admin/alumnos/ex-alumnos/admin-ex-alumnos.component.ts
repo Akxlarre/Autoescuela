@@ -1,14 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -25,6 +27,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
   imports: [
     CurrencyPipe,
     FormsModule,
+    SelectModule,
     KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -101,32 +104,24 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             <div class="flex items-center gap-2">
               <!-- Filtros compactos -->
               <div class="hidden lg:flex items-center gap-2">
-                <div class="filter-group">
-                  <app-icon name="calendar" [size]="12" class="text-text-muted" />
-                  <select
-                    class="filter-select"
-                    [ngModel]="filtroAnio()"
-                    (ngModelChange)="filtroAnio.set($event)"
-                  >
-                    <option value="">Años</option>
-                    @for (year of availableYears(); track year) {
-                      <option [value]="year">{{ year }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="filter-group">
-                  <app-icon name="award" [size]="12" class="text-text-muted" />
-                  <select
-                    class="filter-select"
-                    [ngModel]="filtroLicencia()"
-                    (ngModelChange)="filtroLicencia.set($event)"
-                  >
-                    <option value="">Licencia</option>
-                    @for (lic of availableLicencias(); track lic) {
-                      <option [value]="lic">{{ lic }}</option>
-                    }
-                  </select>
-                </div>
+                <p-select
+                  [options]="yearSelectOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="filtroAnio()"
+                  (ngModelChange)="filtroAnio.set($event)"
+                  styleClass="w-32"
+                  data-llm-description="filter ex-students by graduation year"
+                />
+                <p-select
+                  [options]="licenciaSelectOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="filtroLicencia()"
+                  (ngModelChange)="filtroLicencia.set($event)"
+                  styleClass="w-32"
+                  data-llm-description="filter ex-students by license class"
+                />
               </div>
               <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
               <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
@@ -284,33 +279,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
     }
 
-    .filter-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 4px 10px;
-      transition: all var(--duration-fast);
-    }
-    .filter-group:hover {
-      border-color: var(--ds-brand);
-      background: var(--bg-elevated);
-    }
-
-    .filter-select {
-      background: transparent;
-      border: none;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      color: var(--text-secondary);
-      cursor: pointer;
-      outline: none;
-      padding: 0;
-    }
-
     .th-col {
       text-align: left;
       padding: 12px 20px;
@@ -369,8 +337,9 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     }
   `,
 })
-export class AdminExAlumnosComponent implements OnInit {
+export class AdminExAlumnosComponent {
   protected readonly facade = inject(ExAlumnosFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   // ── Hero Config ─────────────────────────────────────────────────────────────
   protected readonly heroActions: SectionHeroAction[] = [
@@ -431,6 +400,16 @@ export class AdminExAlumnosComponent implements OnInit {
   });
 
   // ── Opciones de filtros dinámicas ────────────────────────────────────────────
+  readonly yearSelectOptions = computed(() => [
+    { label: 'Todos los años', value: '' },
+    ...this.availableYears().map((y) => ({ label: y, value: y })),
+  ]);
+
+  readonly licenciaSelectOptions = computed(() => [
+    { label: 'Todas las licencias', value: '' },
+    ...this.availableLicencias().map((l) => ({ label: l, value: l })),
+  ]);
+
   protected readonly availableYears = computed<string[]>(() => {
     const years = this.facade
       .egresados()
@@ -443,8 +422,11 @@ export class AdminExAlumnosComponent implements OnInit {
     [...new Set(this.facade.egresados().map((e: EgresadoTableRow) => e.licencia))].sort(),
   );
 
-  ngOnInit(): void {
-    void this.facade.loadEgresados();
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId();
+      void this.facade.loadEgresados();
+    });
   }
 
   protected handleHeroAction(actionId: string): void {

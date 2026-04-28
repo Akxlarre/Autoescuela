@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 type StatusConfig = {
   label: string;
@@ -24,15 +25,27 @@ type StatusConfig = {
   selector: 'app-agenda-slot-detail-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, AnimateInDirective, StatBoxComponent],
+  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
   host: {
     class: 'flex flex-col h-full',
   },
   template: `
     @if (slot(); as s) {
-      <div class="flex flex-col h-full" appAnimateIn>
-        <!-- Contenido -->
-        <div class="flex-1 flex flex-col gap-5 py-2">
+      <app-drawer-content-loader class="flex-col h-full flex">
+        <ng-template #skeletons>
+        <div class="flex flex-col gap-5 py-2">
+          <app-skeleton-block variant="text" width="100px" height="24px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <div class="grid grid-cols-2 gap-3">
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+          </div>
+        </div>
+        </ng-template>
+        <ng-template #content>
+        <div class="flex flex-col h-full w-full">
+          <!-- Contenido -->
+          <div class="flex-1 flex flex-col gap-5 py-2">
           <!-- ── Estado ─────────────────────────────────────────── -->
           <div
             class="status-pill"
@@ -94,7 +107,9 @@ type StatusConfig = {
             Cerrar detalle
           </button>
         </div>
-      </div>
+        </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

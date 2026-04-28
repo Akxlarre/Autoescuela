@@ -278,12 +278,8 @@ const ALUMNO_NAV: NavGroup[] = [
   {
     group: 'Mi Progreso',
     items: [
-      { label: 'Mi Dashboard', icon: 'layout-dashboard', routerLink: '/app/alumno/dashboard' },
+      { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/alumno/dashboard' },
       { label: 'Notificaciones', icon: 'bell', routerLink: '/app/alumno/notificaciones' },
-      { label: 'Mi Certificado', icon: 'award', routerLink: '/app/alumno/certificado' },
-      { label: 'Mis Notas', icon: 'star', routerLink: '/app/alumno/notas' },
-      { label: 'Mi Progreso', icon: 'trending-up', routerLink: '/app/alumno/progreso' },
-      { label: 'Mi Asistencia', icon: 'clipboard-check', routerLink: '/app/alumno/asistencia' },
     ],
   },
   {

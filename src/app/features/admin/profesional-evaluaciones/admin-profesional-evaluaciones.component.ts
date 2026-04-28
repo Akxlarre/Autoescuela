@@ -5,18 +5,20 @@ import {
   OnDestroy,
   inject,
   computed,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SelectModule } from 'primeng/select';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { TooltipModule } from 'primeng/tooltip';
-import { ConfirmDialogModule } from 'primeng/confirmdialog';
-import { ConfirmationService } from 'primeng/api';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { EvaluacionesProfesionalFacade } from '@core/facades/evaluaciones-profesional.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { SelectModule } from 'primeng/select';
 import { GRADE_PASS } from '@core/utils/professional-modules';
 
 @Component({
@@ -26,274 +28,282 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
   imports: [
     FormsModule,
     SelectModule,
-    InputNumberModule,
-    TooltipModule,
-    ConfirmDialogModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <p-confirmDialog />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Hero ═══ -->
+      <app-section-hero
+        #heroRef
+        title="Evaluaciones"
+        subtitle="Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75"
+        icon="graduation-cap"
+        [actions]="[]"
+      />
 
-    <!-- ═══ Hero ═══ -->
-    <app-section-hero
-      title="Evaluaciones"
-      subtitle="Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75"
-      [actions]="[]"
-    />
-
-    <!-- ═══ Selectores ═══ -->
-    <section class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div>
-        <label class="mb-1 block text-xs font-medium text-secondary">Promoción</label>
-        <p-select
-          [options]="facade.promociones()"
-          optionLabel="name"
-          optionValue="id"
-          placeholder="Seleccionar promoción"
-          [ngModel]="facade.selectedPromocionId()"
-          (ngModelChange)="onPromoChange($event)"
-          styleClass="w-full"
-          [style]="{ height: '40px' }"
-          data-llm-description="select promotion to view grades"
-        />
+      <!-- ═══ Filtros / Selectores ═══ -->
+      <div
+        class="bento-banner rounded-xl border border-border bg-surface p-4 shadow-sm flex flex-col sm:flex-row gap-4 items-end"
+      >
+        <div class="flex-1">
+          <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-secondary"
+            >Promoción</label
+          >
+          <p-select
+            [options]="promoSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccionar promoción"
+            [ngModel]="facade.selectedPromocionId()"
+            (ngModelChange)="onPromoChange($event)"
+            styleClass="w-full"
+            data-llm-description="select promotion to view grades"
+          />
+        </div>
+        <div class="flex-1">
+          <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-secondary"
+            >Curso</label
+          >
+          <p-select
+            [options]="cursoOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccionar curso"
+            [ngModel]="facade.selectedCursoId()"
+            (ngModelChange)="onCursoChange($event)"
+            [disabled]="!facade.selectedPromocionId() || facade.cursos().length === 0"
+            styleClass="w-full"
+            data-llm-description="select course to view grades"
+          />
+        </div>
       </div>
-      <div>
-        <label class="mb-1 block text-xs font-medium text-secondary">Curso</label>
-        <p-select
-          [options]="cursoOptions()"
-          optionLabel="label"
-          optionValue="value"
-          placeholder="Seleccionar curso"
-          [disabled]="!facade.selectedPromocionId() || facade.cursos().length === 0"
-          [ngModel]="facade.selectedCursoId()"
-          (ngModelChange)="onCursoChange($event)"
-          styleClass="w-full"
-          [style]="{ height: '40px' }"
-          data-llm-description="select course to view grades"
-        />
-      </div>
-    </section>
 
-    <!-- ═══ Estado vacío ═══ -->
-    @if (!facade.selectedCursoId() && !facade.isLoading()) {
-      <div class="mt-10 flex flex-col items-center gap-3 text-center text-secondary">
-        <app-icon name="file-spreadsheet" [size]="48" />
-        <p class="text-sm">Selecciona una promoción y un curso para ver la grilla de notas.</p>
-      </div>
-    }
-
-    <!-- ═══ Skeleton ═══ -->
-    @if (facade.isLoading()) {
-      <div class="mt-6 space-y-2">
-        @for (i of skeletonRows; track $index) {
-          <app-skeleton-block variant="text" width="100%" height="48px" />
-        }
-      </div>
-    }
-
-    <!-- ═══ Grilla de notas ═══ -->
-    @if (facade.grilla() && !facade.isLoading()) {
-      @let g = facade.grilla()!;
-
-      <!-- Header info -->
-      <div class="mt-6 mb-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <p class="text-sm font-semibold text-primary">
-            {{ g.promotionName }} · {{ g.courseName }} · {{ g.totalAlumnos }} alumnos
+      <!-- ═══ Estado vacío ═══ -->
+      @if (!facade.selectedCursoId() && !facade.isLoading()) {
+        <div
+          class="bento-banner py-12 flex flex-col items-center gap-3 text-center text-secondary border border-dashed border-border rounded-xl"
+        >
+          <div class="bg-surface p-4 rounded-full shadow-sm mb-2">
+            <app-icon name="file-spreadsheet" [size]="48" color="var(--text-muted)" />
+          </div>
+          <p class="text-sm font-medium">
+            Selecciona una promoción y un curso para ver la grilla de notas.
           </p>
-          @if (g.confirmed) {
-            <span
-              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              [style]="confirmedBadgeStyle"
-            >
-              <app-icon name="check-circle" [size]="12" />
-              Notas confirmadas
-            </span>
+        </div>
+      }
+
+      <!-- ═══ Skeleton ═══ -->
+      @if (facade.isLoading()) {
+        <div class="bento-banner space-y-2 mt-4">
+          @for (i of skeletonRows; track $index) {
+            <app-skeleton-block variant="text" width="100%" height="48px" />
           }
         </div>
-      </div>
+      }
 
-      <!-- Escala de notas -->
-      <p class="mb-3 text-xs text-muted">
-        Escala de notas: 10–100 · Pasa el cursor sobre cada columna para ver el contenido del
-        módulo.
-      </p>
-
-      <!-- Tabla responsive -->
-      <div class="overflow-x-auto rounded-lg border border-[var(--p-content-border-color)]">
-        <table class="w-full border-collapse text-sm">
-          <!-- Encabezados -->
-          <thead>
-            <tr class="border-b border-[var(--p-content-border-color)] bg-[var(--p-surface-100)]">
-              <th
-                class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-secondary"
-                style="min-width:220px"
+      <!-- ═══ Grilla de notas ═══ -->
+      @if (facade.grilla() && !facade.isLoading()) {
+        @let g = facade.grilla()!;
+        <div
+          class="bento-banner rounded-xl border border-border bg-surface flex flex-col overflow-hidden"
+        >
+          <!-- Header info -->
+          <div class="p-4 border-b border-border flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-lg flex items-center justify-center bg-brand/10 text-brand"
               >
-                Alumno
-              </th>
-              @for (name of g.moduleNames; track $index) {
-                <th
-                  class="px-2 py-3 text-center text-xs font-semibold uppercase tracking-wide text-secondary"
-                  style="min-width:90px"
-                  [pTooltip]="name"
-                  tooltipPosition="top"
-                >
-                  Módulo {{ $index + 1 }}
-                </th>
-              }
-              <th
-                class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-secondary"
-                style="min-width:90px"
+                <app-icon name="list-checks" [size]="20" />
+              </div>
+              <div>
+                <p class="text-sm font-bold text-primary">
+                  {{ g.courseName }}
+                </p>
+                <p class="text-xs text-secondary mt-0.5">
+                  {{ g.promotionName }} ·
+                  <span class="font-semibold">{{ g.totalAlumnos }} alumnos</span>
+                </p>
+              </div>
+            </div>
+
+            @if (g.confirmed) {
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-success/15 text-success border border-success/30"
               >
-                Promedio
-              </th>
-            </tr>
-          </thead>
-
-          <!-- Filas de alumnos -->
-          <tbody>
-            @for (fila of g.filas; track fila.enrollmentId) {
-              <tr
-                class="border-b border-[var(--p-content-border-color)] transition-colors hover:bg-[var(--p-surface-50)]"
+                <app-icon name="lock" [size]="12" /> Confirmadas
+              </span>
+            } @else {
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600 border border-amber-500/30"
               >
-                <!-- Alumno -->
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <div
-                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                      [style]="avatarStyle"
-                    >
-                      {{ fila.initials }}
-                    </div>
-                    <div>
-                      <p class="font-medium text-primary">{{ fila.nombre }}</p>
-                      <p class="text-xs text-muted">{{ fila.rut }}</p>
-                    </div>
-                  </div>
-                </td>
-
-                <!-- Celdas de módulos -->
-                @for (nota of fila.notas; track $index) {
-                  <td class="px-2 py-2 text-center">
-                    @if (g.confirmed) {
-                      <!-- Vista solo lectura -->
-                      <span
-                        class="inline-block rounded-md px-2 py-1 text-sm font-semibold"
-                        style="min-width:56px"
-                        [style]="getGradeReadonlyStyle(nota.passed)"
-                      >
-                        {{ nota.grade !== null ? nota.grade : '—' }}
-                      </span>
-                    } @else {
-                      <!-- Input editable -->
-                      <p-inputnumber
-                        [ngModel]="nota.grade"
-                        (ngModelChange)="onGradeChange(fila.enrollmentId, $index, $event)"
-                        [max]="100"
-                        [minFractionDigits]="0"
-                        [maxFractionDigits]="1"
-                        [useGrouping]="false"
-                        (onKeyDown)="onGradeKeyDown($event)"
-                        (onBlur)="onGradeBlur(fila.enrollmentId, $index, nota.grade)"
-                        placeholder="—"
-                        inputStyleClass="text-center font-semibold text-sm"
-                        [inputStyle]="getCellInputStyle(nota.grade)"
-                        styleClass="w-[72px]"
-                        data-llm-description="module grade input scale 10 to 100"
-                      />
-                    }
-                  </td>
-                }
-
-                <!-- Promedio -->
-                <td class="px-3 py-2 text-center">
-                  @if (fila.promedio !== null) {
-                    <span
-                      class="inline-block rounded-full px-3 py-1 text-sm font-bold"
-                      style="min-width:56px"
-                      [style]="getPromedioStyle(fila.promedioAprobado)"
-                    >
-                      {{ fila.promedio }}
-                    </span>
-                  } @else {
-                    <span class="text-muted">—</span>
-                  }
-                </td>
-              </tr>
+                <app-icon name="edit-3" [size]="12" /> En edición
+              </span>
             }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- ═══ Footer: leyenda + acciones ═══ -->
-      <footer class="mt-4 flex items-center justify-between">
-        <!-- Leyenda -->
-        <div class="flex items-center gap-4 text-xs text-secondary">
-          <span class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full" [style]="legendPassDotStyle"></span>
-            Aprobado (≥{{ gradePass }})
-          </span>
-          <span class="flex items-center gap-1.5">
-            <span class="h-2.5 w-2.5 rounded-full" [style]="legendFailDotStyle"></span>
-            Reprobado (&lt;{{ gradePass }})
-          </span>
-        </div>
-
-        <!-- Botones de acción -->
-        @if (!g.confirmed) {
-          <div class="flex items-center gap-3">
-            <button
-              class="rounded-lg border border-[var(--p-content-border-color)] px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-[var(--p-surface-100)]"
-              [disabled]="facade.isSaving() || !facade.hayDirty()"
-              (click)="guardarBorrador()"
-              data-llm-action="save-draft-grades"
-            >
-              @if (facade.isSaving()) {
-                <app-icon name="loader-2" [size]="14" class="mr-1 animate-spin" />
-              }
-              Guardar borrador
-            </button>
-            <button
-              class="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
-              [style]="confirmBtnStyle"
-              [disabled]="facade.isSaving() || !todasConNota()"
-              (click)="confirmarNotas()"
-              data-llm-action="confirm-grades"
-            >
-              Confirmar notas
-            </button>
           </div>
-        }
-      </footer>
-    }
+
+          <!-- Tabla responsive -->
+          <div class="overflow-x-auto w-full max-w-[100vw]">
+            <table class="w-full border-collapse text-sm">
+              <!-- Encabezados -->
+              <thead>
+                <tr class="border-b border-border bg-surface-elevated">
+                  <th
+                    class="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-secondary"
+                    style="min-width:220px"
+                  >
+                    Alumno
+                  </th>
+                  @for (name of g.moduleNames; track $index) {
+                    <th
+                      class="px-2 py-3 justify-center items-center text-[11px] font-bold uppercase tracking-wider text-secondary"
+                      style="min-width:90px"
+                      [title]="name"
+                    >
+                      <span class="truncate block text-center max-w-[90px] mx-auto"
+                        >Mod {{ $index + 1 }}</span
+                      >
+                    </th>
+                  }
+                  <th
+                    class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-secondary"
+                    style="min-width:90px"
+                  >
+                    Promedio
+                  </th>
+                </tr>
+              </thead>
+
+              <!-- Filas de alumnos -->
+              <tbody>
+                @for (fila of g.filas; track fila.enrollmentId) {
+                  <tr class="border-b border-border/50 transition-colors hover:bg-surface-hover">
+                    <!-- Alumno -->
+                    <td class="px-4 py-3">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
+                        >
+                          {{ fila.initials }}
+                        </div>
+                        <div>
+                          <p class="font-bold text-primary text-xs">{{ fila.nombre }}</p>
+                          <p class="text-[11px] text-muted">{{ fila.rut }}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <!-- Celdas de módulos -->
+                    @for (nota of fila.notas; track $index) {
+                      <td class="px-2 py-2 text-center">
+                        @if (g.confirmed) {
+                          <!-- Vista solo lectura -->
+                          <span
+                            class="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-bold min-w-[56px] border"
+                            [class]="getReadonlyClasses(nota.passed)"
+                          >
+                            {{ nota.grade !== null ? nota.grade : '—' }}
+                          </span>
+                        } @else {
+                          <!-- Input editable (HTML Nativo) -->
+                          <input
+                            type="number"
+                            [ngModel]="nota.grade"
+                            (ngModelChange)="onGradeChange(fila.enrollmentId, $index, $event)"
+                            max="100"
+                            min="10"
+                            (keydown)="onGradeKeyDown($event)"
+                            (blur)="onGradeBlur(fila.enrollmentId, $index, nota.grade)"
+                            placeholder="—"
+                            class="w-[64px] text-center font-bold text-xs px-2 py-1.5 rounded-md border appearance-none outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+                            [class]="getInputClasses(nota.grade)"
+                            data-llm-description="module grade input scale 10 to 100"
+                          />
+                        }
+                      </td>
+                    }
+
+                    <!-- Promedio -->
+                    <td class="px-4 py-2 text-right">
+                      @if (fila.promedio !== null) {
+                        <span
+                          class="inline-flex items-center justify-center rounded-full px-3 py-1 mt-0.5 text-xs font-bold border"
+                          [class]="getPromedioClasses(fila.promedioAprobado)"
+                        >
+                          {{ fila.promedio }}
+                        </span>
+                      } @else {
+                        <span class="text-muted inline-block w-full text-center">—</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Footer: leyenda + acciones -->
+          <div
+            class="p-4 bg-surface-elevated border-t border-border flex items-center justify-between flex-wrap gap-4"
+          >
+            <!-- Leyenda -->
+            <div class="flex items-center gap-4 text-xs font-medium text-secondary">
+              <span class="flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-success"></span> Aprobado (≥{{ gradePass }})
+              </span>
+              <span class="flex items-center gap-1.5">
+                <span class="h-2 w-2 rounded-full bg-error"></span> Reprobado (&lt;{{ gradePass }})
+              </span>
+            </div>
+
+            <!-- Botones de acción -->
+            @if (!g.confirmed) {
+              <div class="flex items-center gap-3">
+                <button
+                  class="btn-outline flex items-center gap-2"
+                  [disabled]="facade.isSaving() || !facade.hayDirty()"
+                  (click)="guardarBorrador()"
+                  data-llm-action="save-draft-grades"
+                >
+                  <app-icon name="save" [size]="14" />
+                  Guardar
+                </button>
+                <button
+                  class="btn-primary flex items-center gap-2"
+                  [disabled]="facade.isSaving() || !todasConNota()"
+                  (click)="confirmarNotas()"
+                  data-llm-action="confirm-grades"
+                >
+                  <app-icon name="check-circle" [size]="14" />
+                  Confirmar Final
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
   `,
 })
-export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy {
+export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly facade = inject(EvaluacionesProfesionalFacade);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly confirmationService = inject(ConfirmationService);
+  private readonly confirmModalService = inject(ConfirmModalService);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   protected readonly gradePass = GRADE_PASS;
   protected readonly skeletonRows = Array.from({ length: 6 });
 
-  // ── Estilos estáticos via tokens CSS ────────────────────────────────────────
-  protected readonly avatarStyle = {
-    background: 'var(--p-primary-100)',
-    color: 'var(--p-primary-700)',
-  };
-  protected readonly confirmedBadgeStyle = {
-    background: 'var(--p-green-100)',
-    color: 'var(--p-green-700)',
-  };
-  protected readonly legendPassDotStyle = { background: 'var(--p-green-500)' };
-  protected readonly legendFailDotStyle = { background: 'var(--p-red-400)' };
-  protected readonly confirmBtnStyle = {
-    background: 'var(--p-primary-500)',
-  };
-
   // ── Computed ────────────────────────────────────────────────────────────────
+  protected readonly promoSelectOptions = computed(() =>
+    this.facade.promociones().map((p) => ({ label: p.name, value: p.id })),
+  );
+
   protected readonly cursoOptions = computed(() =>
     this.facade.cursos().map((c) => ({
       label: `${c.courseCode} — ${c.courseName}`,
@@ -312,76 +322,47 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  protected onPromoChange(id: number): void {
-    this.facade.selectPromocion(id);
+  protected onPromoChange(id: string): void {
+    const numId = Number(id);
+    if (!isNaN(numId)) this.facade.selectPromocion(numId);
   }
 
-  protected onCursoChange(id: number): void {
-    this.facade.selectCurso(id);
+  protected onCursoChange(id: string): void {
+    const numId = Number(id);
+    if (!isNaN(numId)) this.facade.selectCurso(numId);
   }
 
-  protected onGradeChange(enrollmentId: number, moduleIndex: number, value: number | null): void {
-    this.facade.setNota(enrollmentId, moduleIndex, value);
+  protected onGradeChange(enrollmentId: number, moduleIndex: number, value: string | null): void {
+    const numValue = value && value.trim() ? Number(value) : null;
+    this.facade.setNota(enrollmentId, moduleIndex, numValue);
   }
 
   // ── Helpers de estilo dinámico ───────────────────────────────────────────────
-  /** Estilo para celda de input editable según nota */
-  protected getCellInputStyle(grade: number | null): Record<string, string> {
-    const base = { width: '72px' };
-    if (grade === null) return base;
-    return grade >= GRADE_PASS
-      ? {
-          ...base,
-          background: 'var(--p-green-50)',
-          color: 'var(--p-green-700)',
-          borderColor: 'var(--p-green-200)',
-        }
-      : {
-          ...base,
-          background: 'var(--p-red-50)',
-          color: 'var(--p-red-700)',
-          borderColor: 'var(--p-red-200)',
-        };
+  protected getInputClasses(grade: number | null): string {
+    if (grade === null) return 'bg-surface border-border text-primary';
+    return grade >= this.gradePass
+      ? 'bg-success/10 text-success-dark border-success/30'
+      : 'bg-error/10 text-error-dark border-error/30';
   }
 
-  /** Estilo para celda readonly (grilla confirmada) */
-  protected getGradeReadonlyStyle(passed: boolean | null): Record<string, string> {
-    if (passed === true) {
-      return {
-        background: 'var(--p-green-50)',
-        color: 'var(--p-green-700)',
-        border: '1px solid var(--p-green-200)',
-      };
-    }
-    if (passed === false) {
-      return {
-        background: 'var(--p-red-50)',
-        color: 'var(--p-red-700)',
-        border: '1px solid var(--p-red-200)',
-      };
-    }
-    return { color: 'var(--p-text-muted-color)' };
+  protected getReadonlyClasses(passed: boolean | null): string {
+    if (passed === true) return 'bg-success/15 text-success border-success/20';
+    if (passed === false) return 'bg-error/15 text-error border-error/20';
+    return 'bg-surface border-border text-muted';
   }
 
-  /** Estilo para badge de promedio */
-  protected getPromedioStyle(passed: boolean | null): Record<string, string> {
-    if (passed === true) return { background: 'var(--p-green-100)', color: 'var(--p-green-800)' };
-    if (passed === false) return { background: 'var(--p-red-100)', color: 'var(--p-red-800)' };
-    return {};
+  protected getPromedioClasses(passed: boolean | null): string {
+    if (passed === true) return 'bg-success text-white border-success-dark';
+    if (passed === false) return 'bg-error text-white border-error-dark';
+    return 'bg-border text-secondary border-border-subtle';
   }
 
-  /** Verifica que todos los alumnos tengan nota en todos los módulos */
   protected todasConNota(): boolean {
     const g = this.facade.grilla();
     if (!g) return false;
     return g.filas.every((f) => f.notas.every((n) => n.grade !== null));
   }
 
-  /**
-   * Impide tipear más de 4 caracteres en la celda de nota (ej: "100." o "75.5").
-   * Bloquea en tiempo real antes de que PrimeNG procese el valor — evita ver "101".
-   */
-  /** Al salir del campo, clampea a 10 si el valor quedó por debajo del mínimo. */
   protected onGradeBlur(enrollmentId: number, moduleIndex: number, grade: number | null): void {
     if (grade !== null && grade < 10) {
       this.facade.setNota(enrollmentId, moduleIndex, 10);
@@ -405,27 +386,43 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
     ];
     if (allowed.includes(event.key) || event.ctrlKey || event.metaKey) return;
 
+    // Prevent non-numeric entries
+    if (!/^[0-9]$/.test(event.key)) {
+      event.preventDefault();
+      return;
+    }
+
     const start = input.selectionStart ?? input.value.length;
     const end = input.selectionEnd ?? input.value.length;
     const preview = input.value.slice(0, start) + event.key + input.value.slice(end);
 
-    if (preview.length > 4) event.preventDefault();
+    if (preview.length > 3) event.preventDefault(); // Max 100
   }
 
   protected guardarBorrador(): void {
     this.facade.guardarBorrador();
   }
 
-  protected confirmarNotas(): void {
-    this.confirmationService.confirm({
-      header: 'Confirmar notas',
+  protected async confirmarNotas(): Promise<void> {
+    const confirmed = await this.confirmModalService.confirm({
+      title: 'Confirmar notas',
       message:
-        '¿Estás seguro de confirmar las notas? Esta acción es <strong>irreversible</strong>: las notas quedarán bloqueadas.',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Sí, confirmar',
-      rejectLabel: 'Cancelar',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => this.facade.confirmarNotas(),
+        '¿Estás seguro de confirmar las notas? Esta acción es irreversible: las notas quedarán bloqueadas y no podrán editarse.',
+      confirmLabel: 'Sí, confirmar notas',
+      cancelLabel: 'Cancelar',
+      severity: 'danger',
     });
+
+    if (confirmed) {
+      this.facade.confirmarNotas();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }
