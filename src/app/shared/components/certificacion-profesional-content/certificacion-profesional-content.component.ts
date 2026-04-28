@@ -466,8 +466,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                               <span class="font-semibold" style="color: var(--state-warning)">
                                 Asistencia práctica incompleta:
                               </span>
-                              Estudiante
-                              {{ alumno.nombre.split(' ').at(1) || alumno.nombre }} registra
+                              {{ alumno.nombre }} registra
                               <strong>{{ alumno.pctAsistenciaPractica ?? 0 }}%</strong>
                               de asistencia a clases prácticas. ¿Confirmar generación del
                               certificado de todos modos?

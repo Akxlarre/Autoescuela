@@ -81,7 +81,9 @@
                 </div>
                 <p class="text-xs text-text-secondary leading-relaxed">
                   Abono inicial — reservas las primeras
-                  <strong class="text-text-primary">{{ data().totalSessions / 2 }} clases</strong>
+                  <strong class="text-text-primary"
+                    >{{ ceilHalf(data().totalSessions) }} clases</strong
+                  >
                   (50% del curso).
                 </p>
               </label>
@@ -116,7 +118,7 @@
                 <button
                   type="button"
                   (click)="emitField('instructorId', instructor.id)"
-                  class="flex items-center gap-3 p-4 border-2 rounded-xl transition-all text-left hover:border-brand/40"
+                  class="flex items-center gap-3 p-4 border-2 rounded-xl transition-all text-left hover:border-brand/40 cursor-pointer"
                   [class.border-brand]="data().instructorId === instructor.id"
                   [class.bg-brand-muted]="data().instructorId === instructor.id"
                   [class.border-border-default]="data().instructorId !== instructor.id"
@@ -206,7 +208,7 @@
                     type="button"
                     (click)="prevWeek()"
                     [disabled]="!hasPrevWeek()"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-bg-subtle disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <app-icon name="chevron-left" [size]="16" class="text-text-secondary" />
                   </button>
@@ -215,7 +217,7 @@
                     type="button"
                     (click)="nextWeek()"
                     [disabled]="!hasNextWeek()"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-bg-subtle disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                   >
                     <app-icon name="chevron-right" [size]="16" class="text-text-secondary" />
                   </button>
@@ -227,7 +229,7 @@
                     <button
                       type="button"
                       (click)="selectDay(i)"
-                      class="flex-1 min-w-20 py-3 px-2 border-b-2 text-center transition-all hover:bg-bg-subtle"
+                      class="flex-1 min-w-20 py-3 px-2 border-b-2 text-center transition-all hover:bg-bg-subtle cursor-pointer"
                       [class.border-brand]="selectedDayIndex() === i"
                       [class.bg-surface]="selectedDayIndex() === i"
                       [class.text-brand]="selectedDayIndex() === i"
@@ -257,7 +259,7 @@
                         type="button"
                         (click)="selectSlot(slot.id)"
                         [disabled]="!isSlotSelectable(slot.id)"
-                        class="p-3 border rounded-lg text-xs font-medium transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed"
+                        class="p-3 border rounded-lg text-xs font-medium transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                         [class.bg-brand]="data().slotSelection.selectedSlotIds.includes(slot.id)"
                         [class.text-surface]="
                           data().slotSelection.selectedSlotIds.includes(slot.id)
@@ -301,6 +303,57 @@
                   </span>
                 </div>
               </div>
+
+              <!-- Resumen de clases seleccionadas -->
+              @if (selectedSlotsDisplay().length > 0) {
+                <div
+                  class="mt-3 rounded-2xl border border-border-default overflow-hidden"
+                  style="background: var(--bg-surface)"
+                >
+                  <div
+                    class="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle"
+                    style="background: var(--bg-surface-elevated)"
+                  >
+                    <span class="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                      Clases seleccionadas
+                    </span>
+                    <span
+                      class="text-xs font-black px-2 py-0.5 rounded-full"
+                      [style.background]="
+                        data().slotSelection.isComplete
+                          ? 'var(--color-success-muted)'
+                          : 'var(--color-warning-muted)'
+                      "
+                      [style.color]="
+                        data().slotSelection.isComplete
+                          ? 'var(--color-success)'
+                          : 'var(--color-warning)'
+                      "
+                    >
+                      {{ data().slotSelection.currentCount }} /
+                      {{ data().slotSelection.requiredCount }}
+                    </span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 p-3">
+                    @for (slot of selectedSlotsDisplay(); track slot.id) {
+                      <div
+                        class="flex items-center gap-2 px-2 py-1.5 rounded-lg"
+                        style="background: var(--color-success-muted)"
+                      >
+                        <app-icon
+                          name="calendar-check"
+                          [size]="12"
+                          style="color: var(--color-success)"
+                          class="shrink-0"
+                        />
+                        <span class="text-xs font-medium" style="color: var(--color-success)">{{
+                          slot.label
+                        }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
             }
           </div>
         }
@@ -426,7 +479,9 @@
     </div>
 
     <!-- Acciones Inferiores -->
-    <div class="p-4 sm:p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
+    <div
+      class="p-4 sm:p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between"
+    >
       <button
         type="button"
         (click)="onBack()"

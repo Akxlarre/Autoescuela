@@ -13,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { todayIso } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.model';
@@ -296,7 +297,9 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
       this.scheduledDate().length > 0 &&
       this.startTime().length > 0 &&
       this.endTime().length > 0 &&
-      this.topic().trim().length > 0
+      this.endTime() > this.startTime() &&
+      this.topic().trim().length > 0 &&
+      this.selectedCount() > 0
     );
   });
 
@@ -367,9 +370,4 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
     this.facade.clearElegibles();
     this.layoutDrawer.close();
   }
-}
-
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

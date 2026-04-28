@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import type { InscriptoCursoSingular } from '@core/models/ui/cursos-singulares.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -43,7 +43,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               {{ curso.nombre }}
             </p>
             <p class="text-xs mt-0.5 font-medium" style="color: var(--text-muted)">
-              Precio: <strong style="color: var(--text-secondary)">{{ formatCLP(curso.precio) }}</strong> · 
+              Precio:
+              <strong style="color: var(--text-secondary)">{{ formatCLP(curso.precio) }}</strong> ·
               {{ billingLabel(curso.billingType) }}
             </p>
           </div>
@@ -69,12 +70,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             [compact]="true"
           />
 
-          <app-stat-box
-            label="Cobrados"
-            [value]="cobrados()"
-            variant="success"
-            [compact]="true"
-          />
+          <app-stat-box label="Cobrados" [value]="cobrados()" variant="success" [compact]="true" />
 
           <app-stat-box
             label="Total"
@@ -146,7 +142,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                     </span>
                   } @else {
                     <button
-                      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity"
+                      class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-opacity cursor-pointer"
                       style="background: var(--color-primary); color: #fff"
                       [disabled]="facade.isSaving()"
                       [style.opacity]="facade.isSaving() ? '0.6' : '1'"
@@ -197,11 +193,10 @@ export class AdminCursoSingularCobroDrawerComponent {
   protected readonly facade = inject(CursosSingularesFacade);
   protected readonly formatCLP = formatCLP;
 
-  /** ID del inscripto que se está guardando (para spinner local). */
+  private readonly _guardandoId = signal<number | null>(null);
   protected readonly guardandoId = computed(() =>
-    this.facade.isSaving() ? this._lastGuardandoId : null,
+    this.facade.isSaving() ? this._guardandoId() : null,
   );
-  private _lastGuardandoId: number | null = null;
 
   protected readonly pendientes = computed(
     () => this.facade.inscriptos().filter((i) => i.paymentStatus !== 'paid').length,
@@ -218,9 +213,9 @@ export class AdminCursoSingularCobroDrawerComponent {
   });
 
   protected async onMarcarPagado(alumno: InscriptoCursoSingular): Promise<void> {
-    this._lastGuardandoId = alumno.enrollmentId;
+    this._guardandoId.set(alumno.enrollmentId);
     await this.facade.marcarEnrollmentPagado(alumno.enrollmentId);
-    this._lastGuardandoId = null;
+    this._guardandoId.set(null);
   }
 
   protected billingLabel(bt: string): string {

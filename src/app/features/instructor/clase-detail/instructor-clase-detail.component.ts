@@ -253,7 +253,7 @@ import {
                     <div
                       class="flex gap-2 sm:gap-4 p-2 bg-surface-base rounded-2xl shadow-inner border border-border-default/50 w-max mx-auto"
                     >
-                      @for (grade of [1, 2, 3, 4, 5]; track grade) {
+                      @for (grade of [3, 4, 5, 6, 7]; track grade) {
                         <button
                           class="w-12 h-12 sm:w-16 sm:h-16 flex flex-col items-center justify-center font-display font-bold text-lg sm:text-2xl rounded-xl transition-all duration-300"
                           [class.bg-brand]="selectedGrade() === grade"

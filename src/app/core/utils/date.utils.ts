@@ -2,14 +2,21 @@
  * Centralized date and currency utilities for the project (Target: es-CL).
  */
 
+/** Returns today's date as YYYY-MM-DD string in local time. */
+export function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Returns a date string in YYYY-MM-DD format (ISO local).
  * Replaces the 'en-CA' locale trick.
  */
 export function toISODate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
+  const d =
+    typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
   if (isNaN(d.getTime())) return '';
-  
+
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
@@ -38,12 +45,13 @@ export function to24hTime(date: Date | string): string {
  */
 export function formatChileanDate(
   date: Date | string | null | undefined,
-  options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' }
+  options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' },
 ): string {
   if (!date) return '—';
-  const d = typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
+  const d =
+    typeof date === 'string' ? new Date(date.includes('T') ? date : date + 'T12:00:00') : date;
   if (isNaN(d.getTime())) return '—';
-  
+
   return d.toLocaleDateString('es-CL', options);
 }
 
@@ -65,7 +73,7 @@ export function buildDayLabel(dateStr: string): string {
   const dayName = d.toLocaleDateString('es-CL', { weekday: 'short' });
   const dayNum = d.toLocaleDateString('es-CL', { day: 'numeric' });
   const month = d.toLocaleDateString('es-CL', { month: 'short' });
-  
+
   return `${capitalize(dayName)} ${dayNum} ${capitalize(month).replace('.', '')}`;
 }
 

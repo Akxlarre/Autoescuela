@@ -13,6 +13,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, ReactiveFormsModule, IconComponent, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [ReactiveFormsModule, IconComponent],
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
@@ -145,7 +146,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         <div class="flex flex-col pt-4 gap-3">
           <button
             type="submit"
-            class="h-11 rounded-xl bg-brand text-white font-bold shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+            class="h-11 rounded-xl bg-brand text-white font-bold shadow-lg shadow-brand/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             [disabled]="form.invalid || facade.isSaving()"
           >
             @if (facade.isSaving()) {
@@ -160,7 +161,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
           <button
             type="button"
             (click)="onCancelar()"
-            class="h-11 rounded-xl bg-elevated text-text-secondary font-semibold hover:bg-subtle transition-colors"
+            class="h-11 rounded-xl bg-elevated text-text-secondary font-semibold hover:bg-subtle transition-colors cursor-pointer"
           >
             Cancelar
           </button>

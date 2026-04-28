@@ -33,6 +33,7 @@
   transition: var(--transition-card);
   position: relative;
   overflow: hidden;
+  cursor: pointer;
 
   &:hover {
     box-shadow: var(--shadow-md);
@@ -46,7 +47,7 @@
   }
 
   &--active {
-    border-left: 3px solid var(--brand);
+    border-left: 3px solid var(--ds-brand);
   }
 }
 
@@ -60,8 +61,8 @@
   width: 44px;
   height: 44px;
   border-radius: var(--radius-full);
-  background: var(--brand-muted);
-  color: var(--brand);
+  background: var(--color-primary-tint);
+  color: var(--ds-brand);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -113,24 +114,44 @@
 .draft-stepper {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0;
   margin-bottom: var(--space-2);
 }
 
-.step-bar {
-  height: 6px;
-  flex: 1;
+.step-node {
+  flex-shrink: 0;
   border-radius: var(--radius-full);
-  background: var(--bg-subtle);
-  transition: background-color var(--duration-normal) var(--ease-standard);
+  transition: all var(--duration-normal) var(--ease-standard);
 
   &--completed {
-    background: var(--brand-muted);
+    width: 8px;
+    height: 8px;
+    background: var(--ds-brand);
   }
 
   &--active {
-    background: var(--brand);
-    box-shadow: 0 0 8px var(--accent-glow);
+    width: 13px;
+    height: 13px;
+    background: var(--ds-brand);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 25%, transparent);
+  }
+
+  &--pending {
+    width: 7px;
+    height: 7px;
+    background: var(--text-muted);
+    opacity: 0.35;
+  }
+}
+
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+  transition: background-color var(--duration-normal) var(--ease-standard);
+
+  &--filled {
+    background: var(--ds-brand);
   }
 }
 
@@ -179,7 +200,7 @@
 }
 
 .btn-resume {
-  background: var(--brand);
+  background: var(--ds-brand);
   color: var(--color-primary-text);
   border: none;
 

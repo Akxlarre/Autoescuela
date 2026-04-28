@@ -27,6 +27,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { type EnrollmentData, buildStructuredPdf } from '../_shared/contract-pdf.ts';
 
 // ─── CORS headers ───
 
@@ -67,12 +68,21 @@ function getWebpayConfig() {
   const env = Deno.env.get('TRANSBANK_ENV') ?? 'integration';
   const isProduction = env === 'production';
 
+  if (isProduction) {
+    const commerceCode = Deno.env.get('TRANSBANK_COMMERCE_CODE');
+    const apiKey = Deno.env.get('TRANSBANK_API_KEY');
+    if (!commerceCode || !apiKey) {
+      throw new Error(
+        'TRANSBANK_COMMERCE_CODE and TRANSBANK_API_KEY are required when TRANSBANK_ENV=production',
+      );
+    }
+    return { baseUrl: 'https://webpay3g.transbank.cl', commerceCode, apiKey };
+  }
+
   return {
-    baseUrl: isProduction ? 'https://webpay3g.transbank.cl' : 'https://webpay3gint.transbank.cl',
-    commerceCode: isProduction
-      ? Deno.env.get('TRANSBANK_COMMERCE_CODE')!
-      : INTEGRATION_COMMERCE_CODE,
-    apiKey: isProduction ? Deno.env.get('TRANSBANK_API_KEY')! : INTEGRATION_API_KEY,
+    baseUrl: 'https://webpay3gint.transbank.cl',
+    commerceCode: INTEGRATION_COMMERCE_CODE,
+    apiKey: INTEGRATION_API_KEY,
   };
 }
 
@@ -192,6 +202,10 @@ Deno.serve(async (req: Request) => {
         return await handleInitiatePayment(supabase, body);
       case 'confirm-payment':
         return await handleConfirmPayment(supabase, body);
+      case 'get-carnet-upload-url':
+        return await handleGetCarnetUploadUrl(supabase, body);
+      case 'generate-contract-preview':
+        return await handleGenerateContractPreview(supabase, body);
       default:
         return errorResponse(`Unknown action: ${action}`);
     }
@@ -486,13 +500,15 @@ async function handleSubmitClaseB(supabase: any, body: any) {
       .single();
 
     // 6. Create class_b_sessions from selected slots
-    const sessions = selectedSlotIds.map((slotId: string) => ({
+    const sortedSlots = [...selectedSlotIds].sort();
+    const sessions = sortedSlots.map((slotId: string, i: number) => ({
       enrollment_id: enrollment.id,
       instructor_id: instructorId,
       vehicle_id: va?.vehicle_id ?? null,
       scheduled_at: slotId,
       duration_min: 45,
       status: 'scheduled',
+      class_number: i + 1,
     }));
 
     const { error: sessionsError } = await supabase.from('class_b_sessions').insert(sessions);
@@ -561,9 +577,14 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
     return errorResponse('Missing required fields for pre-inscription');
   }
 
-  // Validar respuestas del test psicológico (81 booleanos obligatorios)
+  // Validar respuestas del test psicológico (81 booleanos obligatorios, ninguno null)
   if (!Array.isArray(psychTestAnswers) || psychTestAnswers.length !== 81) {
     return errorResponse('Se requieren las 81 respuestas del test psicológico');
+  }
+  if (!psychTestAnswers.every((a: unknown) => a === true || a === false)) {
+    return errorResponse(
+      'Todas las respuestas del test deben ser Sí o No (sin preguntas sin responder)',
+    );
   }
 
   try {
@@ -627,16 +648,29 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
 async function handleInitiatePayment(supabase: any, body: any) {
   const { branchId, personalData, paymentMode, instructorId, selectedSlotIds, sessionToken } = body;
 
-  if (
-    !branchId ||
-    !personalData ||
-    !paymentMode ||
-    !instructorId ||
-    !selectedSlotIds?.length ||
-    !sessionToken
-  ) {
-    return errorResponse('Missing required fields for initiate-payment');
+  // ── Validate required fields with specific messages ──────────────────────────
+  const missing: string[] = [];
+  if (!branchId) missing.push('branchId');
+  if (!personalData) missing.push('personalData');
+  if (!paymentMode) missing.push('paymentMode');
+  if (!instructorId) missing.push('instructorId');
+  if (!selectedSlotIds?.length) missing.push('selectedSlotIds');
+  if (!sessionToken) missing.push('sessionToken');
+  if (missing.length) {
+    console.error('[initiate-payment] Missing fields:', missing.join(', '));
+    return errorResponse(`Campos requeridos faltantes: ${missing.join(', ')}`, 400);
   }
+
+  console.log(
+    '[initiate-payment] START — branchId:',
+    branchId,
+    'paymentMode:',
+    paymentMode,
+    'slots:',
+    selectedSlotIds?.length,
+    'rut:',
+    personalData?.rut,
+  );
 
   try {
     // ── Idempotencia: verificar si ya existe un intento para esta sesión ──────
@@ -647,6 +681,10 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .maybeSingle();
 
     if (existing?.status === 'confirmed' && existing.enrollment_id) {
+      console.log(
+        '[initiate-payment] Idempotent — already confirmed, enrollment:',
+        existing.enrollment_id,
+      );
       const { data: enrollment } = await supabase
         .from('enrollments')
         .select('number')
@@ -663,23 +701,31 @@ async function handleInitiatePayment(supabase: any, body: any) {
     }
 
     if (existing?.status === 'pending' && existing.enrollment_id) {
-      // Intento ya iniciado — devolver el enrollment existente para reintentar
-      // el redirect a Webpay desde el frontend sin crear duplicados.
+      console.log(
+        '[initiate-payment] Idempotent — already pending, enrollment:',
+        existing.enrollment_id,
+      );
       return jsonResponse({
         success: true,
         enrollmentId: existing.enrollment_id,
-        webpayUrl: null, // TODO: re-obtener URL de Webpay si venció el token anterior
+        webpayUrl: null,
         webpayToken: null,
         idempotent: true,
       });
     }
 
     // 1. Find or create user/student
+    console.log('[initiate-payment] Step 1 — findOrCreateUser');
     const userId = await findOrCreateUser(supabase, personalData, branchId);
+    console.log('[initiate-payment] Step 1 — userId:', userId);
+
+    console.log('[initiate-payment] Step 1b — findOrCreateStudent');
     const studentId = await findOrCreateStudent(supabase, userId, personalData);
+    console.log('[initiate-payment] Step 1b — studentId:', studentId);
 
     // 2. Find Clase B course for this branch
-    const { data: course } = await supabase
+    console.log('[initiate-payment] Step 2 — querying course for branchId:', branchId);
+    const { data: course, error: courseError } = await supabase
       .from('courses')
       .select('id, base_price')
       .eq('branch_id', branchId)
@@ -690,13 +736,22 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .limit(1)
       .single();
 
+    if (courseError) console.error('[initiate-payment] Course query error:', courseError);
     if (!course) return errorResponse('No se encontró curso Clase B activo para esta sede', 404);
+    console.log(
+      '[initiate-payment] Step 2 — courseId:',
+      course.id,
+      'base_price:',
+      course.base_price,
+    );
 
     const courseBasePrice = course.base_price ?? 0;
     const isPartial = paymentMode === 'partial';
     const serverAmount = isPartial ? Math.ceil(courseBasePrice / 2) : courseBasePrice;
+    console.log('[initiate-payment] Amount:', serverAmount, '(isPartial:', isPartial, ')');
 
     // 3. Create enrollment as pending_payment (sin número — se asigna al confirmar)
+    console.log('[initiate-payment] Step 3 — inserting enrollment');
     const { data: enrollment, error: enrollError } = await supabase
       .from('enrollments')
       .insert({
@@ -716,24 +771,26 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .single();
 
     if (enrollError) {
-      console.error('enrollment insert error:', enrollError);
+      console.error('[initiate-payment] Enrollment insert error:', enrollError);
       return errorResponse('Error al crear matrícula: ' + enrollError.message, 500);
     }
+    console.log('[initiate-payment] Step 3 — enrollmentId:', enrollment.id);
 
     // 4. Get vehicle assignment for instructor (guardado en snapshot para confirm-payment)
-    const { data: va } = await supabase
+    console.log('[initiate-payment] Step 4 — vehicle assignment for instructorId:', instructorId);
+    const { data: va, error: vaError } = await supabase
       .from('vehicle_assignments')
       .select('vehicle_id')
       .eq('instructor_id', instructorId)
       .is('end_date', null)
       .limit(1)
       .single();
+    if (vaError) console.warn('[initiate-payment] No vehicle assignment found:', vaError.message);
+    console.log('[initiate-payment] Step 4 — vehicleId:', va?.vehicle_id ?? null);
 
     // 5. Registrar payment_attempt con draft_snapshot completo
-    // Las class_b_sessions NO se crean aquí para evitar sesiones huérfanas si el
-    // alumno abandona Transbank. Se crean en confirm-payment tras el commit exitoso.
-    // carnetStoragePath se incluye para que confirm-payment pueda mover la foto.
-    await supabase.from('payment_attempts').upsert(
+    console.log('[initiate-payment] Step 5 — upserting payment_attempt');
+    const { error: paError } = await supabase.from('payment_attempts').upsert(
       {
         session_token: sessionToken,
         status: 'pending',
@@ -752,14 +809,24 @@ async function handleInitiatePayment(supabase: any, body: any) {
       },
       { onConflict: 'session_token' },
     );
+    if (paError) console.error('[initiate-payment] payment_attempt upsert error:', paError);
 
-    // 7. Iniciar transacción Webpay Plus
+    // 6. Iniciar transacción Webpay Plus
     const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:4200';
     const returnUrl = `${appUrl}/inscripcion/retorno`;
     const tokenSuffix = sessionToken.replace(/-/g, '').slice(0, 8).toUpperCase();
     const buyOrder = `PAY-${enrollment.id}-${tokenSuffix}`;
+    console.log(
+      '[initiate-payment] Step 6 — webpayCreate buyOrder:',
+      buyOrder,
+      'amount:',
+      serverAmount,
+      'returnUrl:',
+      returnUrl,
+    );
 
     const wpResponse = await webpayCreate(buyOrder, sessionToken, serverAmount, returnUrl);
+    console.log('[initiate-payment] Step 6 — Webpay token received, url:', wpResponse.url);
 
     // Guardar transbank_token para poder hacer el commit en confirm-payment
     await supabase
@@ -767,6 +834,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .update({ transbank_token: wpResponse.token })
       .eq('session_token', sessionToken);
 
+    console.log('[initiate-payment] SUCCESS — enrollmentId:', enrollment.id);
     return jsonResponse({
       success: true,
       enrollmentId: enrollment.id,
@@ -774,8 +842,9 @@ async function handleInitiatePayment(supabase: any, body: any) {
       webpayToken: wpResponse.token,
     });
   } catch (err) {
-    console.error('initiate-payment error:', err);
-    return errorResponse('Error interno al iniciar el pago', 500);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[initiate-payment] UNCAUGHT ERROR:', message, err);
+    return errorResponse(`Error interno al iniciar el pago: ${message}`, 500);
   }
 }
 
@@ -886,13 +955,15 @@ async function handleConfirmPayment(supabase: any, body: any) {
     // 4. Crear class_b_sessions como 'scheduled' directamente (pago ya confirmado)
     // Se crean aquí y no en initiate-payment para evitar sesiones huérfanas si el
     // alumno abandona Transbank sin completar el pago.
-    const sessionRows = (snapshot.selectedSlotIds ?? []).map((slotId: string) => ({
+    const sortedSlotIds = [...(snapshot.selectedSlotIds ?? [])].sort();
+    const sessionRows = sortedSlotIds.map((slotId: string, i: number) => ({
       enrollment_id: attempt.enrollment_id,
       instructor_id: snapshot.instructorId,
       vehicle_id: snapshot.vehicleId ?? null,
       scheduled_at: slotId,
       duration_min: 45,
       status: 'scheduled',
+      class_number: i + 1,
     }));
 
     if (sessionRows.length > 0) {
@@ -987,6 +1058,43 @@ async function handleConfirmPayment(supabase: any, body: any) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Action: get-carnet-upload-url
+//
+// Emite una URL firmada (TTL 5 min) para que el cliente anónimo suba
+// directamente al bucket 'documents' sin necesitar políticas RLS anon.
+//
+// El cliente usa supabase.storage.from('documents').uploadToSignedUrl()
+// con el token y el path retornados aquí.
+//
+// Seguridad:
+//   - sessionToken validado con regex — solo UUID/timestamp-random
+//   - Path fijado al prefijo seguro public-uploads/carnet/{token}
+//   - TTL de 300 s es suficiente para seleccionar y subir una foto
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function handleGetCarnetUploadUrl(supabase: any, body: any) {
+  const { sessionToken } = body;
+
+  const TOKEN_RE = /^[0-9a-zA-Z\-]+$/;
+  if (!sessionToken || !TOKEN_RE.test(sessionToken)) {
+    return errorResponse('sessionToken inválido');
+  }
+
+  const path = `public-uploads/carnet/${sessionToken}`;
+
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .createSignedUploadUrl(path, { upsert: true });
+
+  if (error) {
+    console.error('createSignedUploadUrl error:', error);
+    return errorResponse('Error al generar URL de subida', 500);
+  }
+
+  return jsonResponse({ signedUrl: data.signedUrl, token: data.token, path });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Shared helpers
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -1006,11 +1114,28 @@ async function moveCarnetPhoto(
   tempPath: string,
   enrollmentId: number,
 ): Promise<void> {
-  // Security: validate tempPath is confined to the expected upload prefix.
-  // Prevents an attacker from supplying an arbitrary path (e.g. another student's
-  // contract) and causing service_role to move/delete it (OWASP A01 - Path Traversal).
+  // Security: validate tempPath is confined to the expected upload prefix and that the
+  // token segment is a safe opaque identifier — no slashes, dots or encoded traversal
+  // sequences. Defends against path traversal even via URL-encoded variants (%2e%2e,
+  // %2f) that a naive startsWith+includes('..') check would miss. (OWASP A01)
   const ALLOWED_PREFIX = 'public-uploads/carnet/';
-  if (!tempPath.startsWith(ALLOWED_PREFIX) || tempPath.includes('..')) {
+  const TOKEN_RE = /^[0-9a-zA-Z\-]+$/; // UUID v4 or fallback timestamp-random token
+  const tokenSegment = tempPath.slice(ALLOWED_PREFIX.length);
+  const decodedPath = (() => {
+    try {
+      return decodeURIComponent(tempPath);
+    } catch {
+      return '';
+    }
+  })();
+
+  if (
+    !tempPath.startsWith(ALLOWED_PREFIX) ||
+    tempPath.includes('..') ||
+    decodedPath.includes('..') ||
+    tokenSegment.includes('/') ||
+    !TOKEN_RE.test(tokenSegment)
+  ) {
     console.error(`moveCarnetPhoto: rejected invalid tempPath: "${tempPath}"`);
     return;
   }
@@ -1089,7 +1214,49 @@ async function inviteStudentToAuth(supabase: any, userId: number, email: string)
 }
 
 async function findOrCreateUser(supabase: any, personalData: any, branchId: number) {
-  const { rut, firstNames, paternalLastName, maternalLastName, email, phone } = personalData;
+  const {
+    rut: rawRut,
+    firstNames,
+    paternalLastName,
+    maternalLastName,
+    email,
+    phone,
+  } = personalData;
+
+  // Strip dots only for regex validation (DB stores RUTs in dotted format "12.345.678-9").
+  const rutForValidation =
+    typeof rawRut === 'string' ? rawRut.replace(/\./g, '').toUpperCase() : rawRut;
+  // Canonical DB format: dotted with uppercase K, e.g. "12.345.678-9".
+  const rut =
+    typeof rawRut === 'string'
+      ? (() => {
+          const clean = rawRut.replace(/[^0-9kK]/g, '');
+          const body = clean.slice(0, -1);
+          const dv = clean.slice(-1).toUpperCase();
+          const rev = body.split('').reverse().join('');
+          const withDots = rev
+            .replace(/(\d{3})(?=\d)/g, '$1.')
+            .split('')
+            .reverse()
+            .join('');
+          return `${withDots}-${dv}`;
+        })()
+      : rawRut;
+
+  // Server-side validation — defense in depth regardless of client-side checks.
+  if (
+    !rutForValidation ||
+    typeof rutForValidation !== 'string' ||
+    !/^\d{7,8}-[\dkK]$/.test(rutForValidation)
+  ) {
+    throw new Error(`RUT inválido: "${rawRut}"`);
+  }
+  if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Email inválido');
+  }
+  if (!firstNames?.trim() || !paternalLastName?.trim()) {
+    throw new Error('Nombre y apellido paterno son requeridos');
+  }
 
   const { data: existingUser } = await supabase
     .from('users')
@@ -1261,4 +1428,87 @@ function courseTypeToLicenseClass(courseType: string): string {
     class_b: 'B',
   };
   return map[courseType] ?? courseType;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Action: generate-contract-preview
+// Genera un PDF de contrato a partir de los datos del wizard (sin enrollment_id),
+// lo sube temporalmente a Storage y retorna una signed URL válida por 1 hora.
+// Path: contracts/previews/{sessionToken}/Contrato_Preview.pdf
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function handleGenerateContractPreview(supabase: any, body: any) {
+  const { sessionToken, personalData, branchId, courseId } = body;
+
+  if (!sessionToken || !personalData || !branchId || !courseId) {
+    return errorResponse('sessionToken, personalData, branchId and courseId are required');
+  }
+
+  // Fetch course and branch from DB
+  const [{ data: course, error: courseErr }, { data: branch, error: branchErr }] =
+    await Promise.all([
+      supabase
+        .from('courses')
+        .select('name, license_class, duration_weeks, practical_hours, theory_hours, base_price')
+        .eq('id', courseId)
+        .single(),
+      supabase.from('branches').select('name, address').eq('id', branchId).single(),
+    ]);
+
+  if (courseErr || !course) return errorResponse('Course not found');
+  if (branchErr || !branch) return errorResponse('Branch not found');
+
+  // Build EnrollmentData in memory (no DB record needed for preview)
+  const data: EnrollmentData = {
+    id: 0,
+    number: null,
+    base_price: course.base_price ?? null,
+    discount: 0,
+    created_at: new Date().toISOString(),
+    student: {
+      birth_date: personalData.birthDate ?? null,
+      address: personalData.address ?? null,
+      user: {
+        rut: personalData.rut ?? '',
+        first_names: personalData.firstNames ?? '',
+        paternal_last_name: personalData.paternalLastName ?? '',
+        maternal_last_name: personalData.maternalLastName ?? null,
+        email: personalData.email ?? '',
+        phone: personalData.phone ?? null,
+      },
+    },
+    course: {
+      name: course.name,
+      license_class: course.license_class,
+      duration_weeks: course.duration_weeks ?? null,
+      practical_hours: course.practical_hours ?? null,
+      theory_hours: course.theory_hours ?? null,
+    },
+    branch: {
+      name: branch.name,
+      address: branch.address ?? null,
+    },
+    convalidation: null,
+  };
+
+  const pdfBytes = buildStructuredPdf(data);
+
+  const storagePath = `contracts/previews/${sessionToken}/Contrato_Preview.pdf`;
+  const { error: uploadError } = await supabase.storage
+    .from('documents')
+    .upload(storagePath, pdfBytes, { contentType: 'application/pdf', upsert: true });
+
+  if (uploadError) {
+    return errorResponse(`Storage upload failed: ${uploadError.message}`, 500);
+  }
+
+  const { data: signedData, error: signErr } = await supabase.storage
+    .from('documents')
+    .createSignedUrl(storagePath, 3600);
+
+  if (signErr || !signedData?.signedUrl) {
+    return errorResponse('Failed to create signed URL', 500);
+  }
+
+  return jsonResponse({ pdfUrl: signedData.signedUrl });
 }

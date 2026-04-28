@@ -20,6 +20,7 @@ import type {
 import type { BranchOption } from '@core/models/ui/branch.model';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
+import { calcAge } from '@core/utils/age.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 
 interface CategoryMeta {
@@ -193,13 +194,6 @@ export class PersonalDataComponent {
   // ── Private helpers ───────────────────────────────────────────────────────
 
   private calcAge(birthDate: string): number | null {
-    if (!birthDate) return null;
-    const birth = new Date(birthDate);
-    if (isNaN(birth.getTime())) return null;
-    const today = new Date();
-    let age = today.getFullYear() - birth.getFullYear();
-    const m = today.getMonth() - birth.getMonth();
-    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-    return age;
+    return calcAge(birthDate);
   }
 }

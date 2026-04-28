@@ -56,6 +56,7 @@ export class AssignmentComponent {
       newIds = oldIds;
     }
 
+    const wasAdded = newIds.length > oldIds.length;
     const newCount = newIds.length;
     this.dataChange.emit({
       ...current,
@@ -66,7 +67,49 @@ export class AssignmentComponent {
         isComplete: newCount === current.slotSelection.requiredCount,
       },
     });
+
+    if (wasAdded) setTimeout(() => this.advanceToNextAvailableDay(), 450);
   }
+
+  /** Mueve la selección al siguiente día con slots disponibles. Si no hay en la semana actual, avanza a la siguiente. */
+  private advanceToNextAvailableDay(): void {
+    const weekDays = this.currentWeekDays();
+    const grid = this.data().scheduleGrid;
+    for (let i = this.selectedDayIndex() + 1; i < weekDays.length; i++) {
+      const hasAvailable = grid?.slots.some(
+        (s) => s.date === weekDays[i].date && s.status !== 'occupied',
+      );
+      if (hasAvailable) {
+        this.selectedDayIndex.set(i);
+        return;
+      }
+    }
+    if (this.hasNextWeek()) {
+      this.currentWeekIndex.update((i) => i + 1);
+      this.selectedDayIndex.set(0);
+    }
+  }
+
+  /** Slots seleccionados con etiqueta de fecha y hora para mostrar resumen. */
+  readonly selectedSlotsDisplay = computed(() => {
+    const grid = this.data().scheduleGrid;
+    const ids = this.data().slotSelection.selectedSlotIds;
+    if (!grid || ids.length === 0) return [];
+    return ids
+      .map((id) => {
+        const slot = grid.slots.find((s) => s.id === id);
+        if (!slot) return { id, label: id };
+        const date = new Date(id.includes('T') ? id : id + 'T12:00:00Z');
+        const dayLabel = date.toLocaleDateString('es-CL', {
+          weekday: 'short',
+          day: '2-digit',
+          month: '2-digit',
+          timeZone: 'America/Santiago',
+        });
+        return { id, label: `${dayLabel} · ${slot.startTime} – ${slot.endTime}` };
+      })
+      .sort((a, b) => a.id.localeCompare(b.id));
+  });
 
   selectedDayIndex = signal(0);
   currentWeekIndex = signal(0);
@@ -143,6 +186,8 @@ export class AssignmentComponent {
     d.setDate(d.getDate() + diff);
     return d.toISOString().split('T')[0];
   }
+
+  readonly ceilHalf = (n: number): number => Math.ceil(n / 2);
 
   onNext(): void {
     this.next.emit();
