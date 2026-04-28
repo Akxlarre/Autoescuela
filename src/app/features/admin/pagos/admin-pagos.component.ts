@@ -57,15 +57,16 @@ const POR_PAGINA = 5;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        #heroRef
-        title="Gestión de Pagos"
-        subtitle="Registro y seguimiento financiero"
-        icon="wallet"
-        [actions]="heroActions"
-        [chips]="heroChips()"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Gestión de Pagos"
+          subtitle="Registro y seguimiento financiero"
+          icon="wallet"
+          [actions]="heroActions"
+          [chips]="heroChips()"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
       <div class="bento-square">

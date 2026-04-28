@@ -13,7 +13,6 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
       <app-liquidaciones-content
         [liquidaciones]="facade.liquidaciones()"
         [isLoading]="facade.isLoading()"
-        [isSaving]="facade.isSaving()"
         [kpis]="facade.kpis()"
         [mesActual]="facade.mesActual()"
         [anioActual]="facade.anioActual()"

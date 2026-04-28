@@ -6,6 +6,9 @@ import {
   input,
   output,
   signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -13,6 +16,8 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type {
@@ -54,7 +59,13 @@ function formatCLP(value: number): string {
   selector: 'app-liquidaciones-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, KpiCardVariantComponent],
+  imports: [
+    IconComponent,
+    SkeletonBlockComponent,
+    SectionHeroComponent,
+    KpiCardVariantComponent,
+    BentoGridLayoutDirective,
+  ],
   styles: [
     `
       .liq-table th {
@@ -230,52 +241,60 @@ function formatCLP(value: number): string {
   ],
   template: `
     <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Liquidaciones de Instructores"
-      subtitle="Nómina mensual y registro de pagos"
-      [actions]="heroActions"
-      class="block mb-6"
-      [class.force-compact]="layoutDrawer.isOpen()"
-    />
+    <div class="bento-banner" #heroRef>
+      <app-section-hero
+        title="Liquidaciones de Instructores"
+        subtitle="Nómina mensual y registro de pagos"
+        [actions]="heroActions"
+        class="block mb-6"
+        [class.force-compact]="layoutDrawer.isOpen()"
+      />
+    </div>
 
     <!-- ── KPIs: 3 tarjetas uniformes (mismo patrón bento canónico) ── -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+    <div class="bento-grid mb-5" appBentoGridLayout #bentoGrid>
       <!-- KPI 1: Total Nómina -->
-      <app-kpi-card-variant
-        [value]="kpis().totalNomina"
-        label="Total Nómina"
-        icon="banknote"
-        color="default"
-        [accent]="true"
-        prefix="$ "
-        subValue="Suma bruta del periodo"
-        [loading]="isLoading()"
-      />
+      <div class="bento-square">
+        <app-kpi-card-variant
+          [value]="kpis().totalNomina"
+          label="Total Nómina"
+          icon="banknote"
+          color="default"
+          [accent]="true"
+          prefix="$ "
+          subValue="Suma bruta del periodo"
+          [loading]="isLoading()"
+        />
+      </div>
 
       <!-- KPI 2: Anticipos -->
-      <app-kpi-card-variant
-        [value]="kpis().totalAnticipos"
-        label="Anticipos a Descontar"
-        icon="trending-down"
-        color="error"
-        [accent]="true"
-        [prefix]="kpis().totalAnticipos > 0 ? '-$ ' : '$ '"
-        subValue="Total de adelantos entregados"
-        [loading]="isLoading()"
-      />
+      <div class="bento-square">
+        <app-kpi-card-variant
+          [value]="kpis().totalAnticipos"
+          label="Anticipos a Descontar"
+          icon="trending-down"
+          color="error"
+          [accent]="true"
+          [prefix]="kpis().totalAnticipos > 0 ? '-$ ' : '$ '"
+          subValue="Total de adelantos entregados"
+          [loading]="isLoading()"
+        />
+      </div>
 
       <!-- KPI 3: Estado Pagos — usa progressPercent integrado en kpi-card-variant -->
-      <app-kpi-card-variant
-        [value]="kpis().totalPagados"
-        label="Estado de Pagos"
-        icon="check-circle"
-        color="success"
-        [accent]="true"
-        [suffix]="'/' + kpis().totalInstructores"
-        [subValue]="(kpis().totalInstructores - kpis().totalPagados) + ' pendientes'"
-        [progressPercent]="progresoPagos()"
-        [loading]="isLoading()"
-      />
+      <div class="bento-square">
+        <app-kpi-card-variant
+          [value]="kpis().totalPagados"
+          label="Progreso de Pagos"
+          icon="check-circle"
+          color="success"
+          [accent]="true"
+          [suffix]="' / ' + kpis().totalInstructores"
+          [subValue]="progresoPagos().toFixed(1) + '% de la nómina pagada'"
+          [progressPercent]="progresoPagos()"
+          [loading]="isLoading()"
+        />
+      </div>
     </div>
 
     <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
@@ -733,17 +752,11 @@ function formatCLP(value: number): string {
     <!-- El modal ha sido migrado a LayoutDrawer -->
   `,
 })
-export class LiquidacionesContentComponent {
+export class LiquidacionesContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────────
-  liquidaciones = input<LiquidacionRow[]>([]);
-  isLoading = input(false);
-  isSaving = input(false);
-  kpis = input<LiquidacionesKpis>({
-    totalNomina: 0,
-    totalAnticipos: 0,
-    totalPagados: 0,
-    totalInstructores: 0,
-  });
+  liquidaciones = input.required<LiquidacionRow[]>();
+  kpis = input.required<LiquidacionesKpis>();
+  isLoading = input<boolean>(false);
   mesActual = input<number>(new Date().getMonth() + 1);
   anioActual = input<number>(new Date().getFullYear());
 
@@ -756,6 +769,10 @@ export class LiquidacionesContentComponent {
   protected readonly query = signal('');
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly facade = inject(LiquidacionesFacade);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
@@ -819,5 +836,13 @@ export class LiquidacionesContentComponent {
 
   protected onDeshacer(row: LiquidacionRow): void {
     this.deshacer.emit(row);
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

@@ -8,7 +8,6 @@ import {
   computed,
   effect,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -18,6 +17,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AdminPreInscritoDrawerComponent } from './admin-pre-inscrito-drawer.component';
@@ -36,28 +36,18 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
     IconComponent,
     SkeletonBlockComponent,
     KpiCardVariantComponent,
+    SectionHeroComponent,
   ],
   template: `
     <div class="space-y-6 p-4 md:p-6">
-      <!-- Header -->
-      <div class="surface-hero rounded-xl p-6 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <button
-            type="button"
-            class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors cursor-pointer"
-            data-llm-action="back-to-alumnos"
-            (click)="goBack()"
-          >
-            <app-icon name="arrow-left" [size]="18" color="white" />
-          </button>
-          <div>
-            <h1 class="text-xl font-bold text-white">Pre-inscritos Clase Profesional</h1>
-            <p class="text-sm text-white/70 mt-0.5">
-              Gestión de pre-inscripciones online pendientes de revisión
-            </p>
-          </div>
-        </div>
-      </div>
+      <app-section-hero
+        title="Pre-inscritos Clase Profesional"
+        subtitle="Gestión de pre-inscripciones online pendientes de revisión"
+        icon="users"
+        backRoute="/app/admin/alumnos"
+        backLabel="Alumnos"
+        [actions]="[]"
+      />
 
       <!-- KPIs -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -247,7 +237,6 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(AdminPreInscritosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
-  private readonly router = inject(Router);
 
   protected readonly searchQuery = signal('');
   protected readonly filterStatus = signal('');
@@ -301,10 +290,6 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.facade.select(null);
     this.facade.resetPromocionesCache();
-  }
-
-  protected goBack(): void {
-    void this.router.navigate(['/app/admin/alumnos']);
   }
 
   protected openDrawer(row: PreInscritoTableRow): void {

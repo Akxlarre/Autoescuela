@@ -16,6 +16,7 @@ import type {
   TeoriaAlumnoAsistencia,
   TeoriaAsistenciaStatus,
 } from '@core/models/ui/asistencia-clase-b.model';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 type LocalStatus = TeoriaAsistenciaStatus;
 
@@ -34,7 +35,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
   selector: 'app-asistencia-teoria-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, SkeletonBlockComponent],
+  imports: [FormsModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   styles: `
     .field-label {
       display: block;
@@ -71,7 +72,16 @@ type LocalStatus = TeoriaAsistenciaStatus;
     }
   `,
   template: `
-    <div class="flex flex-col h-full" style="background: var(--bg-surface)">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="rect" width="100%" height="52px" />
+          <app-skeleton-block variant="rect" width="100%" height="52px" />
+          <app-skeleton-block variant="rect" width="100%" height="52px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <!-- ── Info de la sesión ──────────────────────────────────────────────── -->
       <div class="flex flex-col gap-4 p-5 border-b" style="border-color: var(--border-subtle)">
         @if (clase()) {
@@ -316,7 +326,8 @@ type LocalStatus = TeoriaAsistenciaStatus;
           </button>
         }
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
 })
 export class AsistenciaTeoriaDrawerComponent implements OnInit {

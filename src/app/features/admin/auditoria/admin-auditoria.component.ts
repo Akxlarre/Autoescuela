@@ -6,6 +6,9 @@ import {
   effect,
   inject,
   signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +19,8 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 
@@ -36,11 +41,12 @@ const ACTION_OPTIONS = [
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <div class="page-wide">
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="mb-6">
+      <div class="bento-banner" #heroRef>
         <app-section-hero
           title="Log de Auditoría"
           subtitle="Registro inmutable de todas las acciones de las secretarias"
@@ -50,7 +56,7 @@ const ACTION_OPTIONS = [
       </div>
 
       <!-- ── Filtros ──────────────────────────────────────────────────────── -->
-      <div class="card p-5 mb-5">
+      <div class="bento-banner card p-5">
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
           <!-- Fecha desde -->
           <div class="flex flex-col gap-1">
@@ -162,7 +168,7 @@ const ACTION_OPTIONS = [
       </div>
 
       <!-- ── Tabla ─────────────────────────────────────────────────────────── -->
-      <div class="card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden">
         <!-- Header tabla -->
         <div
           class="grid audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide"
@@ -307,7 +313,7 @@ const ACTION_OPTIONS = [
 
       <!-- ── Banner informativo ─────────────────────────────────────────────── -->
       <div
-        class="flex items-start gap-3 mt-5 p-4 rounded-lg text-sm"
+        class="bento-banner flex items-start gap-3 p-4 rounded-lg text-sm"
         style="
           background: color-mix(in srgb, var(--state-warning) 8%, transparent);
           border: 1px solid color-mix(in srgb, var(--state-warning) 25%, transparent);
@@ -441,9 +447,13 @@ const ACTION_OPTIONS = [
     }
   `,
 })
-export class AdminAuditoriaComponent implements OnInit {
+export class AdminAuditoriaComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(AuditoriaFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly router = inject(Router);
 
   constructor() {
@@ -503,6 +513,14 @@ export class AdminAuditoriaComponent implements OnInit {
 
   ngOnInit(): void {
     /* lifecycle hook kept — effect() handles initialization */
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   protected applyFilters(): void {

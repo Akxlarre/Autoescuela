@@ -43,13 +43,15 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        #heroRef
-        title="Gestión de Relatores"
-        subtitle="Administración de instructores teóricos para cursos profesionales"
-        [actions]="heroActions()"
-        (actionClick)="handleHeroAction($event)"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Gestión de Relatores"
+          subtitle="Administración de instructores teóricos para cursos profesionales"
+          [actions]="heroActions()"
+          (actionClick)="handleHeroAction($event)"
+        />
+      </div>
 
       <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
       <div class="bento-square">

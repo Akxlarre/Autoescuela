@@ -21,6 +21,11 @@ import { PagosFacade } from '@core/facades/pagos.facade';
 import { formatCLP, toISODate } from '@core/utils/date.utils';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SelectModule } from 'primeng/select';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 
 /** Validador a nivel de FormGroup: suma de canales debe igualar total_amount. */
 function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | null {
@@ -48,14 +53,31 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
   selector: 'app-registrar-pago-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    SelectModule,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+    AsyncBtnComponent,
+    AnimateInDirective,
+  ],
   template: `
-    <div class="flex flex-col h-full bg-surface">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <div class="flex-1 overflow-y-auto p-5">
         <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
           <!-- ── MODO GLOBAL: selector de alumno ────────────────────────────── -->
           @if (facade.enrollmentSeleccionado() === null) {
-            <div class="flex flex-col gap-1.5">
+            <div class="flex flex-col gap-1.5" appAnimateIn>
               <label for="pago-enrollment" class="field-label">
                 ALUMNO / MATRÍCULA <span style="color: var(--state-error)">*</span>
               </label>
@@ -88,7 +110,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
 
               <!-- Info del alumno seleccionado -->
               @if (selectedAlumno; as alumno) {
-                <div class="alumno-info-card" style="margin-top: 4px">
+                <div class="alumno-info-card" style="margin-top: 4px" appAnimateIn>
                   <div class="flex flex-col gap-0.5">
                     <span
                       class="text-xs font-semibold uppercase tracking-wide"
@@ -122,7 +144,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
 
           <!-- ── MODO CONTEXTUAL: info del alumno preseleccionado ───────────── -->
           @if (facade.enrollmentSeleccionado() !== null && facade.estadoCuentaResumen(); as ctx) {
-            <div class="alumno-info-card">
+            <div class="alumno-info-card" appAnimateIn>
               <div class="flex flex-col gap-0.5">
                 <span
                   class="text-xs font-semibold uppercase tracking-wide"
@@ -149,7 +171,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           } @else if (facade.enrollmentSeleccionado() !== null) {
             <!-- Fallback if details not loaded yet or row source -->
             @if (selectedFromList; as alumno) {
-              <div class="alumno-info-card">
+              <div class="alumno-info-card" appAnimateIn>
                 <div class="flex flex-col gap-0.5">
                   <span
                     class="text-xs font-semibold uppercase tracking-wide"
@@ -174,69 +196,71 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             }
           }
 
-          <!-- Fecha de pago -->
-          <div class="flex flex-col gap-1.5">
-            <label for="pago-date" class="field-label">
-              FECHA DE PAGO <span style="color: var(--state-error)">*</span>
-            </label>
-            <input
-              id="pago-date"
-              type="date"
-              formControlName="payment_date"
-              class="field-input"
-              data-llm-description="Fecha en que se realiza el pago"
-              [class.field-input--error]="isInvalid('payment_date')"
-            />
-            @if (isInvalid('payment_date')) {
-              <span class="field-error">Este campo es obligatorio.</span>
-            }
-          </div>
-
-          <!-- Tipo / Concepto -->
-          <div class="flex flex-col gap-1.5">
-            <label for="pago-type" class="field-label">
-              CONCEPTO <span style="color: var(--state-error)">*</span>
-            </label>
-            <p-select
-              formControlName="type"
-              [options]="tipoConceptoOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Selecciona un concepto..."
-              styleClass="w-full"
-              data-llm-description="Tipo de pago que se está registrando"
-              [class.field-input--error]="isInvalid('type')"
-            />
-            @if (isInvalid('type')) {
-              <span class="field-error">Selecciona un concepto.</span>
-            }
-          </div>
-
-          <!-- Monto total -->
-          <div class="flex flex-col gap-1.5">
-            <label for="pago-total" class="field-label">
-              MONTO TOTAL <span style="color: var(--state-error)">*</span>
-            </label>
-            <div class="input-prefix-wrapper">
-              <span class="input-prefix">$</span>
+          <div class="flex flex-col gap-5" [appAnimateIn]="{ useBlur: true, delay: 0.1 }">
+            <!-- Fecha de pago -->
+            <div class="flex flex-col gap-1.5">
+              <label for="pago-date" class="field-label">
+                FECHA DE PAGO <span style="color: var(--state-error)">*</span>
+              </label>
               <input
-                id="pago-total"
-                type="number"
-                formControlName="total_amount"
-                class="field-input field-input--prefixed"
-                placeholder="0"
-                min="1"
-                data-llm-description="Monto total del pago en pesos chilenos"
-                [class.field-input--error]="isInvalid('total_amount')"
+                id="pago-date"
+                type="date"
+                formControlName="payment_date"
+                class="field-input"
+                data-llm-description="Fecha en que se realiza el pago"
+                [class.field-input--error]="isInvalid('payment_date')"
               />
+              @if (isInvalid('payment_date')) {
+                <span class="field-error">Este campo es obligatorio.</span>
+              }
             </div>
-            @if (isInvalid('total_amount')) {
-              <span class="field-error">Ingresa un monto válido mayor a 0.</span>
-            }
+
+            <!-- Tipo / Concepto -->
+            <div class="flex flex-col gap-1.5">
+              <label for="pago-type" class="field-label">
+                CONCEPTO <span style="color: var(--state-error)">*</span>
+              </label>
+              <p-select
+                formControlName="type"
+                [options]="tipoConceptoOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona un concepto..."
+                styleClass="w-full"
+                data-llm-description="Tipo de pago que se está registrando"
+                [class.field-input--error]="isInvalid('type')"
+              />
+              @if (isInvalid('type')) {
+                <span class="field-error">Selecciona un concepto.</span>
+              }
+            </div>
+
+            <!-- Monto total -->
+            <div class="flex flex-col gap-1.5">
+              <label for="pago-total" class="field-label">
+                MONTO TOTAL <span style="color: var(--state-error)">*</span>
+              </label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">$</span>
+                <input
+                  id="pago-total"
+                  type="number"
+                  formControlName="total_amount"
+                  class="field-input field-input--prefixed"
+                  placeholder="0"
+                  min="1"
+                  data-llm-description="Monto total del pago en pesos chilenos"
+                  [class.field-input--error]="isInvalid('total_amount')"
+                />
+              </div>
+              @if (isInvalid('total_amount')) {
+                <span class="field-error">Ingresa un monto válido mayor a 0.</span>
+              }
+            </div>
           </div>
 
           <!-- Desglose de métodos de pago -->
-          <div class="flex flex-col gap-3">
+          <div class="flex flex-col gap-3" [appAnimateIn]="{ useBlur: true, delay: 0.15 }">
             <span class="field-label">DESGLOSE DE PAGO</span>
             <div class="grid grid-cols-2 gap-3">
               <!-- Efectivo -->
@@ -326,6 +350,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                 class="balance-card"
                 [class.balance-card--ok]="balanceStatus.ok"
                 [class.balance-card--warn]="!balanceStatus.ok"
+                appAnimateIn
               >
                 <div class="flex items-center gap-2">
                   @if (balanceStatus.ok) {
@@ -357,7 +382,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           </div>
 
           <!-- N° Documento (opcional) -->
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" [appAnimateIn]="{ useBlur: true, delay: 0.2 }">
             <label for="pago-doc" class="field-label">N° DOCUMENTO (OPCIONAL)</label>
             <input
               id="pago-doc"
@@ -374,6 +399,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             <div
               class="flex items-start gap-2 p-3 rounded-lg"
               style="background: color-mix(in srgb, var(--state-error) 8%, transparent)"
+              appAnimateIn
             >
               <app-icon name="circle-alert" [size]="15" color="var(--state-error)" />
               <p class="text-sm" style="color: var(--state-error)">{{ saveError() }}</p>
@@ -393,24 +419,20 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           >
             Cancelar
           </button>
-          <button
-            type="button"
-            class="btn-primary"
-            [disabled]="form.invalid || isSaving()"
-            (click)="onSubmit()"
-            data-llm-action="guardar-pago"
-          >
-            @if (isSaving()) {
-              <app-icon name="loader-2" [size]="14" class="animate-spin" />
-              Guardando...
-            } @else {
-              <app-icon name="check" [size]="14" />
-              Guardar Pago
-            }
-          </button>
+
+          <app-async-btn
+            variant="primary"
+            label="Guardar Pago"
+            loadingLabel="Guardando..."
+            icon="check"
+            [loading]="isSaving()"
+            [disabled]="form.invalid"
+            (clicked)="onSubmit()"
+          />
         </div>
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     /* ── Alumno info ── */

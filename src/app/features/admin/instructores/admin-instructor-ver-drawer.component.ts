@@ -5,14 +5,29 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-instructor-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LowerCasePipe, IconComponent, StatBoxComponent],
+  imports: [LowerCasePipe, IconComponent, StatBoxComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedInstructor(); as inst) {
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <div class="flex justify-center"><app-skeleton-block variant="circle" width="64px" height="64px" /></div>
+            <app-skeleton-block variant="text" width="60%" height="20px" />
+            <div class="grid grid-cols-2 gap-3">
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+            </div>
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
       <!-- ── Header con nombre y tipo ────────────────────────────────────── -->
       <div
         class="flex flex-col items-center gap-3 pb-6 mb-6"
@@ -259,6 +274,8 @@ import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-
           Ver clases activas ({{ inst.activeClassesCount }})
         </button>
       </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

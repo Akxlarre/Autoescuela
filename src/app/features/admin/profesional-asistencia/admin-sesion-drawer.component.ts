@@ -16,14 +16,29 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-sesion-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SkeletonBlockComponent, IconComponent, AsyncBtnComponent, StatBoxComponent],
+  imports: [FormsModule, SkeletonBlockComponent, IconComponent, AsyncBtnComponent, StatBoxComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedSesion(); as sesion) {
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <div class="grid grid-cols-2 gap-3">
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+            </div>
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
       <!-- ═══ Header de la sesión ═══ -->
       <div class="mb-4 rounded-lg border border-border bg-surface p-4">
         <div class="flex items-center justify-between">
@@ -299,6 +314,8 @@ import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model'
           />
         </div>
       }
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

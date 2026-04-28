@@ -46,6 +46,8 @@ import { ContractComponent } from '@shared/components/matricula-steps/contract/c
 import { ConfirmationComponent } from '@shared/components/matricula-steps/confirmation/confirmation.component';
 import { DraftListComponent } from '@shared/components/matricula-steps/draft-list/draft-list.component';
 import { BranchGateComponent } from '@shared/components/branch-gate/branch-gate.component';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 
 const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   rut: '',
@@ -88,6 +90,8 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     ConfirmationComponent,
     DraftListComponent,
     BranchGateComponent,
+    ScrollRevealDirective,
+    AnimateInDirective,
   ],
   styleUrls: ['./secretaria-matricula.component.scss'],
   templateUrl: './secretaria-matricula.component.html',

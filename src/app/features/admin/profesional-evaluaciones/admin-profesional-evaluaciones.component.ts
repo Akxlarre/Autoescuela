@@ -5,6 +5,9 @@ import {
   OnDestroy,
   inject,
   computed,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -14,6 +17,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SelectModule } from 'primeng/select';
 import { GRADE_PASS } from '@core/utils/professional-modules';
 
@@ -30,9 +34,10 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
     BentoGridLayoutDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
-      <!-- ═══ Hero ═══ -->
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Hero ═══ -->
       <app-section-hero
+        #heroRef
         title="Evaluaciones"
         subtitle="Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75"
         icon="graduation-cap"
@@ -282,10 +287,14 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
     </div>
   `,
 })
-export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy {
+export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly facade = inject(EvaluacionesProfesionalFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly confirmModalService = inject(ConfirmModalService);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   protected readonly gradePass = GRADE_PASS;
   protected readonly skeletonRows = Array.from({ length: 6 });
@@ -407,5 +416,13 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
     if (confirmed) {
       this.facade.confirmarNotas();
     }
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

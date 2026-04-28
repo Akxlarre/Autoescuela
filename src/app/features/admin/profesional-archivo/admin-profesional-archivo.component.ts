@@ -5,6 +5,9 @@ import {
   OnInit,
   computed,
   inject,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,6 +19,8 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 @Component({
   selector: 'app-admin-profesional-archivo',
@@ -30,18 +35,22 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <!-- ═══ Hero ═══ -->
-    <app-section-hero
-      title="Archivo · Clase Profesional"
-      subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
-      [actions]="[]"
-    />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ═══ Hero ═══ -->
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Archivo · Clase Profesional"
+          subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
+          [actions]="[]"
+        />
+      </div>
 
-    <!-- ═══ Selectores en cascada ═══ -->
-    <section class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-      <div>
+      <!-- ═══ Selectores en cascada ═══ -->
+      <section class="bento-banner grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
         <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted"
           >Promoción finalizada</label
         >
@@ -79,13 +88,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       </div>
     </section>
 
-    <!-- ═══ Info de la promoción seleccionada ═══ -->
-    @if (selectedPromocion()) {
-      @let promo = selectedPromocion()!;
-      <div
-        class="mt-4 flex flex-wrap items-center gap-4 rounded-lg border border-border px-4 py-3 bg-surface"
-      >
-        <app-icon name="archive" [size]="16" color="var(--text-muted)" />
+      <!-- ═══ Info de la promoción seleccionada ═══ -->
+      @if (selectedPromocion()) {
+        @let promo = selectedPromocion()!;
+        <div
+          class="bento-banner flex flex-wrap items-center gap-4 rounded-lg border border-border px-4 py-3 bg-surface"
+        >
+          <app-icon name="archive" [size]="16" color="var(--text-muted)" />
         <div class="flex-1 min-w-0">
           <span class="text-sm font-semibold text-primary">{{ promo.name }}</span>
           <span
@@ -117,12 +126,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           }
         </div>
       </div>
-    }
+      }
 
-    <!-- ═══ Estado vacío (nada seleccionado) ═══ -->
-    @if (!facade.isLoading() && !facade.selectedPromocionId()) {
-      <div class="mt-16 flex flex-col items-center gap-4 text-center">
-        @if (facade.promociones().length === 0) {
+      <!-- ═══ Estado vacío (nada seleccionado) ═══ -->
+      @if (!facade.isLoading() && !facade.selectedPromocionId()) {
+        <div class="bento-banner flex flex-col items-center gap-4 text-center py-16">
+          @if (facade.promociones().length === 0) {
           <app-icon name="folder-open" [size]="52" color="var(--text-muted)" />
           <div>
             <p class="text-sm font-medium text-primary">No hay promociones archivadas</p>
@@ -140,57 +149,63 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           </div>
         }
       </div>
-    }
+      }
 
-    <!-- ═══ Seleccionada promoción pero sin curso ═══ -->
-    @if (facade.selectedPromocionId() && !facade.selectedCursoId() && !facade.isLoadingAlumnos()) {
-      <div class="mt-12 flex flex-col items-center gap-3 text-center">
-        <app-icon name="book-open" [size]="44" color="var(--text-muted)" />
+      <!-- ═══ Seleccionada promoción pero sin curso ═══ -->
+      @if (facade.selectedPromocionId() && !facade.selectedCursoId() && !facade.isLoadingAlumnos()) {
+        <div class="bento-banner flex flex-col items-center gap-3 text-center py-12">
+          <app-icon name="book-open" [size]="44" color="var(--text-muted)" />
         <p class="text-sm text-muted">Selecciona un curso para ver el historial de alumnos.</p>
       </div>
-    }
+      }
 
-    <!-- ═══ KPIs (cuando hay curso seleccionado) ═══ -->
-    @if (facade.selectedCursoId()) {
-      <section class="grid grid-cols-2 gap-4 mt-6 md:grid-cols-4">
-        <app-kpi-card-variant
-          label="Total alumnos"
-          [value]="facade.kpis().totalAlumnos"
-          icon="users"
-          [loading]="facade.isLoadingAlumnos()"
-          data-llm-description="Total de alumnos en el curso archivado"
-        />
-        <app-kpi-card-variant
-          label="Aprobados"
-          [value]="facade.kpis().aprobados"
-          icon="check-circle"
-          color="success"
-          [loading]="facade.isLoadingAlumnos()"
-          data-llm-description="Alumnos que aprobaron el curso"
-        />
-        <app-kpi-card-variant
-          label="Reprobados"
-          [value]="facade.kpis().reprobados"
-          icon="x-circle"
-          color="error"
-          [loading]="facade.isLoadingAlumnos()"
-          data-llm-description="Alumnos que reprobaron el curso"
-        />
-        <app-kpi-card-variant
-          label="% Aprobación"
-          [value]="facade.kpis().pctAprobacion"
-          suffix="%"
-          icon="trending-up"
-          [loading]="facade.isLoadingAlumnos()"
-          data-llm-description="Porcentaje de aprobación del curso"
-        />
-      </section>
-    }
+      <!-- ═══ KPIs (cuando hay curso seleccionado) ═══ -->
+      @if (facade.selectedCursoId()) {
+          <div class="bento-square">
+            <app-kpi-card-variant
+              label="Total alumnos"
+              [value]="facade.kpis().totalAlumnos"
+              icon="users"
+              [loading]="facade.isLoadingAlumnos()"
+              data-llm-description="Total de alumnos en el curso archivado"
+            />
+          </div>
+          <div class="bento-square">
+            <app-kpi-card-variant
+              label="Aprobados"
+              [value]="facade.kpis().aprobados"
+              icon="check-circle"
+              color="success"
+              [loading]="facade.isLoadingAlumnos()"
+              data-llm-description="Alumnos que aprobaron el curso"
+            />
+          </div>
+          <div class="bento-square">
+            <app-kpi-card-variant
+              label="Reprobados"
+              [value]="facade.kpis().reprobados"
+              icon="x-circle"
+              color="error"
+              [loading]="facade.isLoadingAlumnos()"
+              data-llm-description="Alumnos que reprobaron el curso"
+            />
+          </div>
+          <div class="bento-square">
+            <app-kpi-card-variant
+              label="% Aprobación"
+              [value]="facade.kpis().pctAprobacion"
+              suffix="%"
+              icon="trending-up"
+              [loading]="facade.isLoadingAlumnos()"
+              data-llm-description="Porcentaje de aprobación del curso"
+            />
+          </div>
+      }
 
-    <!-- ═══ Tabla de alumnos ═══ -->
-    @if (facade.selectedCursoId()) {
-      <section class="mt-6">
-        <div class="mb-3 flex items-center justify-between">
+      <!-- ═══ Tabla de alumnos ═══ -->
+      @if (facade.selectedCursoId()) {
+        <section class="bento-banner">
+          <div class="mb-3 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
             <h2 class="text-sm font-semibold text-primary">Resultados por alumno</h2>
@@ -388,8 +403,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             </div>
           </div>
         }
-      </section>
-    }
+        </section>
+      }
+    </div>
   `,
   styles: `
     .archivo-table {
@@ -542,9 +558,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     }
   `,
 })
-export class AdminProfesionalArchivoComponent implements OnInit, OnDestroy {
+export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly facade = inject(ArchivoFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   protected readonly skeletonRows = Array.from({ length: 5 });
 
@@ -561,6 +581,14 @@ export class AdminProfesionalArchivoComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.branchFacade.setProfessionalOnly(true);
     void this.facade.initialize();
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   ngOnDestroy(): void {

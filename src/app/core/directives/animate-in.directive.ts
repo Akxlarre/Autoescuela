@@ -3,6 +3,7 @@ import {
   ElementRef,
   inject,
   afterNextRender,
+  input,
 } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
@@ -19,10 +20,13 @@ export class AnimateInDirective {
   private el = inject(ElementRef<HTMLElement>);
   private gsap = inject(GsapAnimationsService);
 
+  readonly appAnimateIn = input<{ useBlur?: boolean; delay?: number } | ''>('');
+
   constructor() {
     // Esperar al siguiente frame para asegurar que el elemento está en el DOM y renderizado
     afterNextRender(() => {
-      this.gsap.animateSkeletonToContent(this.el.nativeElement);
+      const options = this.appAnimateIn() === '' ? {} : (this.appAnimateIn() as any);
+      this.gsap.animateSkeletonToContent(this.el.nativeElement, options);
     });
   }
 }

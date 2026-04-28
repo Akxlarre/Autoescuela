@@ -5,23 +5,37 @@ import {
   computed,
   effect,
   inject,
-  signal,
+  signal
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SecretariasFacade } from '@core/facades/secretarias.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-secretarias-editar-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, IconComponent],
+  imports: [FormsModule, SelectModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
-      <!-- Mini-header con la secretaria que se está editando -->
-      <div
+      <app-drawer-content-loader class="flex-col h-full flex p-5 pb-0">
+        <ng-template #skeletons>
+        <div class="flex flex-col gap-4 w-full">
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+        </div>
+        </ng-template>
+        <ng-template #content>
+        <div class="flex flex-col h-full w-full">
+          <!-- Mini-header con la secretaria que se está editando -->
+          <div
         class="flex items-center gap-3 rounded-lg p-3 mb-5"
         style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
       >
@@ -219,6 +233,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           }
         </button>
       </div>
+      </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `
@@ -301,6 +318,7 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
   protected readonly facade = inject(SecretariasFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
+
   // ── Campos ─────────────────────────────────────────────────────────────────
   protected readonly nombres = signal('');
   protected readonly paterno = signal('');
@@ -351,6 +369,7 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
   }
 
   constructor() {
+
     // Pre-rellenar campos cuando cambia la secretaria seleccionada
     effect(() => {
       const sec = this.facade.selectedSecretaria();

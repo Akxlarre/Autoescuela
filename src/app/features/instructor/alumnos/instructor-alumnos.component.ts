@@ -64,12 +64,14 @@ const PAGE_SIZE = 9;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ══ HERO ══ -->
-      <app-section-hero
-        #heroRef
-        title="Mis Alumnos"
-        subtitle="Gestiona y haz seguimiento a tus alumnos asignados"
-        [actions]="heroActions"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Mis Alumnos"
+          subtitle="Gestiona y haz seguimiento a tus alumnos asignados"
+          [actions]="heroActions"
+        />
+      </div>
 
       <!-- ══ KPIs ══ -->
       <div class="bento-square">

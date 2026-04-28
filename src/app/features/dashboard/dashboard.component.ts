@@ -10,6 +10,8 @@ import {
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardComponent } from '@shared/components/kpi-card/kpi-card.component';
@@ -62,6 +64,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   imports: [
     BentoGridLayoutDirective,
     CardHoverDirective,
+    ScrollRevealDirective,
+    AnimateInDirective,
     IconComponent,
     KpiCardVariantComponent,
     AlertCardComponent,
@@ -112,6 +116,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       <div
         class="bento-wide bento-card bento-activity-lg"
         appCardHover
+        appScrollReveal
         data-col-span="6"
         data-col-start="1"
         data-row-span="2"
@@ -166,6 +171,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       <div
         class="bento-wide bento-card bento-alerts-lg flex flex-col gap-3"
         appCardHover
+        [appScrollReveal]="{ delay: 0.1 }"
         data-col-span="6"
         data-col-start="7"
         data-row-span="2"
@@ -176,8 +182,12 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         </div>
 
         <div class="flex flex-col gap-3">
-          @for (alert of alerts(); track alert.id) {
-            <app-alert-card [severity]="alert.severity" [title]="alert.title">
+          @for (alert of alerts(); track alert.id; let i = $index) {
+            <app-alert-card 
+              [severity]="alert.severity" 
+              [title]="alert.title"
+              [appAnimateIn]="{ delay: 0.2 + (i * 0.05) }"
+            >
               {{ alert.description }}
             </app-alert-card>
           }

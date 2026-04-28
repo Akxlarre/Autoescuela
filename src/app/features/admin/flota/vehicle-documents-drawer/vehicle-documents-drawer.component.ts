@@ -5,6 +5,8 @@ import { CommonModule } from '@angular/common';
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 /**
  * VehicleDocumentsDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -13,10 +15,18 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 @Component({
   selector: 'app-vehicle-documents-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex-1 flex flex-col min-h-0 bg-surface">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4 px-6 py-6">
+          <app-skeleton-block variant="rect" width="100%" height="72px" />
+          <app-skeleton-block variant="rect" width="100%" height="72px" />
+          <app-skeleton-block variant="rect" width="100%" height="72px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <!-- Header Info -->
       <div
         class="shrink-0 px-6 py-4 border-b flex items-center justify-between"
@@ -92,7 +102,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           Cerrar Panel
         </button>
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     .badge-success {

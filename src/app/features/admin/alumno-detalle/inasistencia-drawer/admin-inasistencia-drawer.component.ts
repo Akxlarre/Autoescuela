@@ -1,21 +1,33 @@
 import { ChangeDetectionStrategy, Component, inject, output, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SelectModule } from 'primeng/select';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-inasistencia-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
-      <div class="flex-1 overflow-y-auto p-5">
-        <form [formGroup]="form" class="flex flex-col gap-6" (ngSubmit)="onSubmit()">
-          <!-- Info Alumno -->
+      <app-drawer-content-loader class="flex-1 overflow-y-auto p-5">
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-6 w-full">
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+          </div>
+        </ng-template>
+
+        <ng-template #content>
+          <form [formGroup]="form" class="flex flex-col gap-6 w-full" (ngSubmit)="onSubmit()">
+            <!-- Info Alumno -->
           <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
             <div
               class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted"
@@ -127,7 +139,8 @@ import { SelectModule } from 'primeng/select';
             </p>
           }
         </form>
-      </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
       <!-- ── Footer ── -->
       <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
@@ -155,7 +168,7 @@ import { SelectModule } from 'primeng/select';
         </button>
       </div>
     </div>
-  `,
+    `,
   styles: `
     .field-label {
       font-size: var(--text-xs);

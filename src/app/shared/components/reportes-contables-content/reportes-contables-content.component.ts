@@ -191,15 +191,17 @@ import {
   ],
   template: `
     <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
-    <app-section-hero
-      title="Reportes Contables"
-      subtitle="RF-030 / RF-031 · Resumen financiero y Total Neto por rango de fechas"
-      icon="bar-chart-2"
-      [actions]="heroActions"
-      [chips]="heroChips()"
-      (actionClick)="onHeroAction($event)"
-      class="block mb-5"
-    />
+    <div class="bento-banner">
+      <app-section-hero
+        title="Reportes Contables"
+        subtitle="RF-030 / RF-031 · Resumen financiero y Total Neto por rango de fechas"
+        icon="bar-chart-2"
+        [actions]="heroActions"
+        [chips]="heroChips()"
+        (actionClick)="onHeroAction($event)"
+        class="block mb-5"
+      />
+    </div>
 
     <!-- ── Contenido ─────────────────────────────────────────────────────── -->
     <div class="px-4 sm:px-6 pb-6 flex flex-col gap-5">

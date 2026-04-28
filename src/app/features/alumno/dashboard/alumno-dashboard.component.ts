@@ -12,6 +12,8 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
@@ -31,18 +33,22 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
     SectionHeroComponent,
     SkeletonBlockComponent,
     RouterLink,
+    ScrollRevealDirective,
+    AnimateInDirective,
   ],
   template: `
     <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mi progreso">
       <!-- ── HERO ──────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        icon="graduation-cap"
-        [title]="heroTitle()"
-        [contextLine]="heroContextLine()"
-        [chips]="heroChips()"
-        [actions]="heroActions()"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          icon="graduation-cap"
+          [title]="heroTitle()"
+          [contextLine]="heroContextLine()"
+          [chips]="heroChips()"
+          [actions]="heroActions()"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <!-- ── KPI 1 — Prácticas ─────────────────────────────────────────────── -->
       <div class="bento-square">
@@ -294,7 +300,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
             >
               @if (grades()?.finalExamGrade !== null) {
                 <span class="text-xl font-bold" style="color: var(--ds-brand)">
-                  {{ grades()?.finalExamGrade }}
+                   {{ grades()?.finalExamGrade }}
                 </span>
               } @else {
                 <app-icon name="star" [size]="20" style="color: var(--text-muted)" />
@@ -367,7 +373,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           @if (certificate()?.state === 'locked' && certificate()?.blockingReason) {
             <p class="text-xs text-text-muted m-0">{{ certificate()?.blockingReason }}</p>
           } @else if (certificate()?.state === 'enabled') {
-            <app-alert-card severity="success" title="Tu certificado está listo para ser generado">
+            <app-alert-card severity="success" title="Tu certificado está listo para ser generado" appAnimateIn>
               Solicita a la secretaría que lo emita.
             </app-alert-card>
           } @else if (certificate()?.state === 'issued') {
@@ -393,7 +399,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
       </div>
 
       <!-- ── BANNER ASISTENCIA (full width) ────────────────────────────────── -->
-      <div class="bento-banner bento-card flex flex-col gap-3" appCardHover>
+      <div class="bento-banner bento-card flex flex-col gap-3" appCardHover appScrollReveal>
         <div class="flex items-center gap-2">
           <app-icon name="calendar-check" [size]="16" style="color: var(--ds-brand)" />
           <h2 class="m-0 font-semibold text-text-primary text-sm">Asistencia reciente</h2>
@@ -449,6 +455,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
                   ? 'Riesgo de pérdida de avance'
                   : 'Inasistencia reciente'
               "
+              appAnimateIn
             >
               {{
                 (attendance()?.consecutiveAbsences ?? 0) >= 2
@@ -463,7 +470,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
       </div>
 
       <!-- ── WIDGET FINAL 1 — Módulos / Nota ──────────────────────────────── -->
-      <div class="bento-square">
+      <div class="bento-square" [appScrollReveal]="{ delay: 0.1 }">
         @if (loading()) {
           <app-kpi-card-variant label="Nota" [value]="0" icon="star" [loading]="true" />
         } @else if (hasGrade()) {
@@ -489,7 +496,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
       </div>
 
       <!-- ── WIDGET FINAL 2 — Certificado ──────────────────────────────────── -->
-      <div class="bento-square">
+      <div class="bento-square" [appScrollReveal]="{ delay: 0.2 }">
         @if (loading()) {
           <app-kpi-card-variant label="Certificado" [value]="0" icon="award" [loading]="true" />
         } @else {

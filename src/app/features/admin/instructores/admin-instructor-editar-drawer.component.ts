@@ -15,14 +15,26 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, DatePickerModule, IconComponent],
+  imports: [FormsModule, SelectModule, DatePickerModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selectedInstructor(); as inst) {
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+          </div>
+        </ng-template>
+        <ng-template #content>
       <!-- ── Mini-header ─────────────────────────────────────────────────── -->
       <div
         class="flex items-center gap-3 rounded-lg p-3 mb-5"
@@ -391,6 +403,8 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
           }
         </button>
       </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
   styles: `

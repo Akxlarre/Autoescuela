@@ -12,6 +12,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 /**
  * RegistrarEgresoDrawerComponent — Panel lateral para registrar un egreso/retiro.
@@ -23,9 +25,18 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
   selector: 'app-registrar-egreso-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <div class="flex flex-col h-full">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
       <div class="flex-1 overflow-y-auto p-5">
         <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
@@ -153,7 +164,8 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
           }
         </button>
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     /* ── Fields ── */

@@ -79,13 +79,15 @@ interface CellSummary {
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Agenda semanal">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       @if (showHero()) {
-        <app-section-hero
-          contextLine="Gestión de horarios"
-          title="Agenda Semanal"
-          [subtitle]="weekSubtitle()"
-          [actions]="heroActions"
-          (actionClick)="onHeroAction($event)"
-        />
+        <div class="bento-banner">
+          <app-section-hero
+            contextLine="Gestión de horarios"
+            title="Agenda Semanal"
+            [subtitle]="weekSubtitle()"
+            [actions]="heroActions"
+            (actionClick)="onHeroAction($event)"
+          />
+        </div>
       }
 
       <!-- ── KPIs ──────────────────────────────────────────────────────────── -->

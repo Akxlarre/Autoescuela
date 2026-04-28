@@ -6,14 +6,10 @@ import {
   inject,
   afterNextRender,
   viewChild,
+  OnDestroy,
 } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
-/**
- * SkeletonBlockComponent — Átomo de loading placeholder.
- * 
- * Ahora usa GSAP para un shimmer sincronizado y de alta performance.
- */
 @Component({
   selector: 'app-skeleton-block',
   standalone: true,
@@ -27,23 +23,27 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       [style.width]="width()"
       [style.height]="variant() === 'text' ? '1em' : height()"
       aria-hidden="true"
-    >
-      <!-- El shimmer se inyecta dinámicamente vía GSAP -->
-    </div>
+    ></div>
   `,
-  styles: []
+  styles: [],
 })
-export class SkeletonBlockComponent {
+export class SkeletonBlockComponent implements OnDestroy {
   readonly variant = input<'rect' | 'circle' | 'text'>('rect');
   readonly width = input('100%');
   readonly height = input('16px');
 
   private readonly block = viewChild.required<ElementRef<HTMLElement>>('block');
   private readonly gsap = inject(GsapAnimationsService);
+  private shimmerTimeline: gsap.core.Timeline | null = null;
 
   constructor() {
     afterNextRender(() => {
-      this.gsap.createShimmer(this.block().nativeElement);
+      this.shimmerTimeline = this.gsap.createShimmer(this.block().nativeElement);
     });
+  }
+
+  ngOnDestroy(): void {
+    this.shimmerTimeline?.kill();
+    this.shimmerTimeline = null;
   }
 }

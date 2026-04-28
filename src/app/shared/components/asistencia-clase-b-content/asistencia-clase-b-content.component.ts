@@ -1,11 +1,24 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  inject,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
   AlertaFaltaConsecutiva,
   AsistenciaClaseBKpis,
@@ -49,21 +62,24 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <!-- ── Section Hero ────────────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Control de Asistencia"
-      icon="clipboard-check"
-      [subtitle]="todayLabel"
-      [actions]="heroActions"
-      variant="compact"
-      (actionClick)="onHeroAction($event)"
-    />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Section Hero ────────────────────────────────────────────────────── -->
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Control de Asistencia"
+          icon="clipboard-check"
+          [subtitle]="todayLabel"
+          [actions]="heroActions"
+          variant="compact"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
-    <div class="flex flex-col gap-6 p-4 md:p-6">
       <!-- ── KPIs ────────────────────────────────────────────────────────── -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bento-banner grid grid-cols-2 lg:grid-cols-4 gap-4">
         <app-kpi-card-variant
           label="Tasa de Asistencia"
           [value]="kpis()?.tasaAsistencia ?? 0"
@@ -99,9 +115,10 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         />
       </div>
 
-      <!-- ── Alertas críticas ────────────────────────────────────────────── -->
+      <!-- ── Alertas ────────────────────────────────────────────────────────── -->
       @if (!isLoading() && alertas().length > 0) {
-        <section class="card p-5 flex flex-col gap-4">
+        <div class="bento-banner flex flex-col gap-4">
+        <section class="bento-banner card p-5 flex flex-col gap-4">
           <div class="flex items-center gap-2">
             <app-icon name="alert-triangle" [size]="18" [style.color]="'var(--state-warning)'" />
             <h2 class="text-sm font-semibold text-primary">Alertas y Acciones Urgentes</h2>
@@ -192,10 +209,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             </div>
           }
         </section>
+        </div>
       }
 
-      <!-- ── Clases Teóricas (Zoom) ──────────────────────────────────────── -->
-      <section class="card p-5 flex flex-col gap-4">
+      <!-- ── Grid Inferior (Teoria + Práctica) ────────────────────────────── -->
+      <div class="bento-banner grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Columna Izquierda: Clases Teóricas (1/3) -->
+        <section class="bento-banner card p-0 flex flex-col overflow-hidden">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <app-icon name="video" [size]="18" [style.color]="'var(--color-primary)'" />
@@ -316,7 +336,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       </section>
 
       <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
-      <section class="card p-5 flex flex-col gap-4">
+      <section class="bento-banner lg:col-span-2 card p-5 flex flex-col gap-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <app-icon name="calendar-check" [size]="18" [style.color]="'var(--color-primary)'" />
@@ -573,7 +593,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     }
   `,
 })
-export class AsistenciaClaseBContentComponent {
+export class AsistenciaClaseBContentComponent implements AfterViewInit {
+  // ── Internal ────────────────────────────────────────────────────────────────
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
   // ── Inputs ──────────────────────────────────────────────────────────────────
   readonly kpis = input<AsistenciaClaseBKpis | null>(null);
   readonly clasesTeorias = input<ClaseTeoricoRow[]>([]);
@@ -799,10 +823,18 @@ export class AsistenciaClaseBContentComponent {
   }
 
   protected submitJustification(): void {
-    const sessionId = this.justifySessionId();
-    const reason = this.justifyReason().trim();
-    if (!sessionId || !reason) return;
-    this.justifyAbsence.emit({ sessionId, reason });
-    this.closeJustifyModal();
+    const id = this.justifySessionId();
+    if (id) {
+      this.justifyAbsence.emit({ sessionId: id, reason: this.justifyReason() });
+      this.closeJustifyModal();
+    }
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

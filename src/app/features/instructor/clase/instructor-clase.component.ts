@@ -27,13 +27,15 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
-      <app-section-hero
-        title="Iniciar Clase"
-        subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
-        backRoute="/app/instructor/dashboard"
-        backLabel="Dashboard"
-        [actions]="heroActions"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          title="Iniciar Clase"
+          subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
+          backRoute="/app/instructor/dashboard"
+          backLabel="Dashboard"
+          [actions]="heroActions"
+        />
+      </div>
 
       <div class="bento-banner">
         <div class="max-w-3xl mx-auto flex flex-col gap-6">

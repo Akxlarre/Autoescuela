@@ -1,4 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+  inject,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -6,6 +17,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type {
@@ -36,19 +48,21 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     SelectModule,
   ],
   template: `
-    <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
-    <app-section-hero
-      title="Servicios Especiales"
-      subtitle="Punto de venta de servicios complementarios — alumnos y clientes externos"
-      icon="receipt"
-      [backRoute]="backRoute()"
-      backLabel="Inicio"
-      [actions]="heroActions"
-      (actionClick)="onHeroAction($event)"
-    />
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Servicios Especiales"
+          subtitle="Punto de venta de servicios complementarios — alumnos y clientes externos"
+          icon="receipt"
+          [backRoute]="backRoute()"
+          backLabel="Inicio"
+          [actions]="heroActions"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
-    <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
-    <div class="bento-grid mt-4 mb-6" appBentoGridLayout>
+      <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
       <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis().ventasMes"
@@ -99,107 +113,112 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
           [loading]="isLoading()"
         />
       </div>
-    </div>
 
-    <!-- ── Catálogo de Servicios ──────────────────────────────────────────────── -->
-    <section class="card mb-6">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-text-primary m-0">Catálogo de Servicios</h2>
-        <button
-          type="button"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
-          data-llm-action="open-nuevo-servicio-drawer"
-          (click)="requestNuevoServicio.emit()"
-        >
-          <app-icon name="plus" [size]="14" />
-          Agregar servicio
-        </button>
+      <!-- ── Catálogo de Servicios ──────────────────────────────────────────────── -->
+      <div class="bento-banner">
+        <section class="card">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-text-primary m-0">Catálogo de Servicios</h2>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+              data-llm-action="open-nuevo-servicio-drawer"
+              (click)="requestNuevoServicio.emit()"
+            >
+              <app-icon name="plus" [size]="14" />
+              Agregar servicio
+            </button>
+          </div>
+
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            @for (servicio of catalogo(); track servicio.id) {
+              <div class="card flex flex-col gap-3">
+                <div class="flex items-start justify-between">
+                  <div
+                    class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                    [style]="getServiceIconStyle(servicio.color)"
+                  >
+                    <app-icon [name]="servicio.icono" [size]="18" />
+                  </div>
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full"
+                    [style]="
+                      servicio.activo
+                        ? 'background:var(--state-success-bg,rgba(34,197,94,.1));color:var(--state-success)'
+                        : 'background:var(--bg-subtle);color:var(--text-muted)'
+                    "
+                  >
+                    {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </div>
+                <div class="flex-1">
+                  <h3 class="font-semibold text-text-primary text-sm m-0 mb-1">
+                    {{ servicio.nombre }}
+                  </h3>
+                  <p class="text-xs text-text-muted m-0 leading-relaxed">
+                    {{ servicio.descripcion }}
+                  </p>
+                </div>
+                <div
+                  class="flex items-center justify-between pt-3"
+                  style="border-top:1px solid var(--border-subtle)"
+                >
+                  <span class="text-base font-bold text-text-primary"
+                    >\${{ servicio.precio.toLocaleString('es-CL') }}</span
+                  >
+                  <button
+                    type="button"
+                    class="text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                    [attr.data-llm-action]="'vender-' + servicio.id"
+                    (click)="requestRegistrarVenta.emit(servicio)"
+                  >
+                    Vender
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Tarjeta agregar nuevo servicio -->
+            <button
+              type="button"
+              class="flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors"
+              style="border: 2px dashed var(--border-default)"
+              data-llm-action="open-nuevo-servicio-drawer-card"
+              (click)="requestNuevoServicio.emit()"
+            >
+              <app-icon name="plus" [size]="28" />
+              <span class="text-sm font-medium">Agregar servicio</span>
+              <span class="text-xs">Ej. "Uso de Simulador"</span>
+            </button>
+          </div>
+        </section>
       </div>
 
-      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        @for (servicio of catalogo(); track servicio.id) {
-          <div class="card flex flex-col gap-3">
-            <div class="flex items-start justify-between">
-              <div
-                class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                [style]="getServiceIconStyle(servicio.color)"
-              >
-                <app-icon [name]="servicio.icono" [size]="18" />
-              </div>
-              <span
-                class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full"
-                [style]="
-                  servicio.activo
-                    ? 'background:var(--state-success-bg,rgba(34,197,94,.1));color:var(--state-success)'
-                    : 'background:var(--bg-subtle);color:var(--text-muted)'
-                "
-              >
-                {{ servicio.activo ? 'Activo' : 'Inactivo' }}
-              </span>
-            </div>
-            <div class="flex-1">
-              <h3 class="font-semibold text-text-primary text-sm m-0 mb-1">
-                {{ servicio.nombre }}
-              </h3>
-              <p class="text-xs text-text-muted m-0 leading-relaxed">{{ servicio.descripcion }}</p>
-            </div>
-            <div
-              class="flex items-center justify-between pt-3"
-              style="border-top:1px solid var(--border-subtle)"
-            >
-              <span class="text-base font-bold text-text-primary"
-                >\${{ servicio.precio.toLocaleString('es-CL') }}</span
-              >
+      <!-- ── Historial de Ventas ────────────────────────────────────────────────── -->
+      <div class="bento-banner">
+        <section class="card">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+            <h2 class="text-lg font-semibold text-text-primary m-0">Historial de Ventas</h2>
+            <div class="flex items-center gap-2">
+              <p-select
+                [ngModel]="filtroServicio()"
+                (ngModelChange)="filtroServicio.set($event)"
+                [options]="filtroOptions()"
+                optionLabel="label"
+                optionValue="value"
+                styleClass="w-full"
+              />
               <button
                 type="button"
-                class="text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
-                [attr.data-llm-action]="'vender-' + servicio.id"
-                (click)="requestRegistrarVenta.emit(servicio)"
+                class="h-9 px-3 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                data-llm-action="exportar-historial"
+                (click)="exportarHistorial.emit()"
               >
-                Vender
+                Exportar
               </button>
             </div>
           </div>
-        }
-
-        <!-- Tarjeta agregar nuevo servicio -->
-        <button
-          type="button"
-          class="flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors"
-          style="border: 2px dashed var(--border-default)"
-          data-llm-action="open-nuevo-servicio-drawer-card"
-          (click)="requestNuevoServicio.emit()"
-        >
-          <app-icon name="plus" [size]="28" />
-          <span class="text-sm font-medium">Agregar servicio</span>
-          <span class="text-xs">Ej. "Uso de Simulador"</span>
-        </button>
-      </div>
-    </section>
-
-    <!-- ── Historial de Ventas ────────────────────────────────────────────────── -->
-    <section class="card">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <h2 class="text-lg font-semibold text-text-primary m-0">Historial de Ventas</h2>
-        <div class="flex items-center gap-2">
-          <p-select
-            [ngModel]="filtroServicio()"
-            (ngModelChange)="filtroServicio.set($event)"
-            [options]="filtroOptions()"
-            optionLabel="label"
-            optionValue="value"
-            styleClass="w-full"
-          />
-          <button
-            type="button"
-            class="h-9 px-3 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
-            data-llm-action="exportar-historial"
-            (click)="exportarHistorial.emit()"
-          >
-            Exportar
-          </button>
-        </div>
-      </div>
+          <!-- (Contenido de la tabla sigue igual...) -->
 
       <!-- Vista Desktop: Tabla (Visible en SM+) -->
       <div class="hidden sm:block overflow-x-auto">
@@ -379,15 +398,20 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
         }
       </div>
     </section>
+  </div>
   `,
 })
-export class ServiciosEspecialesContentComponent {
+export class ServiciosEspecialesContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────────
   readonly catalogo = input.required<ServicioEspecial[]>();
   readonly ventas = input.required<VentaServicio[]>();
   readonly kpis = input.required<ServiciosEspecialesKpis>();
   readonly isLoading = input<boolean>(false);
   readonly backRoute = input<string>('/app/dashboard');
+
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly heroRef = viewChild<ElementRef>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
   readonly requestRegistrarVenta = output<ServicioEspecial | undefined>();
@@ -434,5 +458,13 @@ export class ServiciosEspecialesContentComponent {
         'background:var(--state-success-bg,rgba(34,197,94,.12));color:var(--state-success,#16a34a)',
     };
     return map[color];
+  }
+
+  ngAfterViewInit(): void {
+    const hero = this.heroRef();
+    const grid = this.bentoGrid();
+
+    if (hero) this.gsap.animateHero(hero.nativeElement);
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

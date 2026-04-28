@@ -6,7 +6,8 @@ import {
   signal,
   computed,
   effect,
-  afterNextRender,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { SlicePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -16,8 +17,11 @@ import { SelectModule } from 'primeng/select';
 import { AdminPreInscritosFacade } from '@core/facades/admin-pre-inscritos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { PAYMENT_METHODS, type PaymentMethod } from '@core/models/ui/enrollment-payment.model';
 import { EPQ_QUESTIONS } from '@core/utils/epq-questions.const';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
   EvaluarTestPayload,
   CompletarMatriculaPayload,
@@ -30,7 +34,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
   selector: 'app-admin-pre-inscrito-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TagModule, TooltipModule, IconComponent, SlicePipe, SelectModule],
+  imports: [FormsModule, TagModule, TooltipModule, IconComponent, SlicePipe, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
     @if (facade.selected(); as p) {
       <!-- ── Header info ────────────────────────────────────────────── -->
@@ -115,9 +119,19 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
         </button>
       </div>
 
-      <!-- ─── TAB: DATOS PERSONALES ──────────────────────────────────── -->
+      <app-drawer-content-loader class="flex-col h-full flex pb-0">
+        <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="120px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+        </div>
+        </ng-template>
+        <ng-template #content>
+        <div class="flex flex-col h-full w-full">
+        <!-- ─── TAB: DATOS PERSONALES ──────────────────────────────────── -->
       @if (activeTab() === 'datos') {
-        <div class="space-y-4">
+        <div class="space-y-4" #tabContent>
           <div class="grid grid-cols-2 gap-3">
             <div class="card">
               <span class="text-xs text-secondary uppercase tracking-wide">Nombre</span>
@@ -201,7 +215,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
       <!-- ─── TAB: TEST PSICOLÓGICO ──────────────────────────────────── -->
       @if (activeTab() === 'test') {
-        <div class="space-y-4">
+        <div class="space-y-4" #tabContent>
           <!-- Resultado actual -->
           @if (p.psychResult !== null && !showReEvaluate()) {
             <div
@@ -374,7 +388,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
       <!-- ─── TAB: COMPLETAR MATRÍCULA ───────────────────────────────── -->
       @if (activeTab() === 'matricula') {
-        <div class="space-y-4">
+        <div class="space-y-4" #tabContent>
           @if (p.status !== 'approved' && p.status !== 'pending_contract') {
             <div class="flex flex-col items-center justify-center py-10 gap-3">
               <app-icon name="lock" [size]="32" color="var(--color-text-muted)" />
@@ -926,6 +940,9 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
           }
         </div>
       }
+        </div>
+        </ng-template>
+      </app-drawer-content-loader>
     }
   `,
 })
@@ -933,9 +950,22 @@ export class AdminPreInscritoDrawerComponent {
   protected readonly facade = inject(AdminPreInscritosFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly tabContent = viewChild<ElementRef>('tabContent');
+
+  readonly contentVisible = signal(false);
 
   constructor() {
-    afterNextRender(() => this.cdr.detectChanges());
+    // Animación escalonada al cambiar de tab
+    effect(() => {
+      const tab = this.activeTab();
+      setTimeout(() => {
+        const el = this.tabContent()?.nativeElement;
+        if (el) {
+          this.gsap.animateBentoGrid(el);
+        }
+      }, 50);
+    });
 
     // Auto-poblar precio base cuando se selecciona un curso
     effect(() => {

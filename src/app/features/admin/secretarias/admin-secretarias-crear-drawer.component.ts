@@ -13,14 +13,25 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-secretarias-crear-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, IconComponent],
+  imports: [FormsModule, SelectModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <!-- Info rol -->
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
     <div
       class="flex items-start gap-3 rounded-lg p-3 mb-5"
       style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 20%, transparent);"
@@ -219,6 +230,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         }
       </button>
     </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     .section-title {

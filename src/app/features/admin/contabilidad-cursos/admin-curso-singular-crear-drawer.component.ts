@@ -5,14 +5,27 @@ import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-curso-singular-crear-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [CommonModule, ReactiveFormsModule, IconComponent, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <div class="p-6 space-y-6">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-4">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <div class="grid grid-cols-2 gap-3">
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+            <app-skeleton-block variant="text" width="100%" height="60px" />
+          </div>
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <form [formGroup]="form" (ngSubmit)="onGuardar()" class="space-y-4">
         <!-- Nombre -->
         <div class="flex flex-col gap-1">
@@ -153,7 +166,8 @@ import { SelectModule } from 'primeng/select';
           </button>
         </div>
       </form>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
 })
 export class AdminCursoSingularCrearDrawerComponent {

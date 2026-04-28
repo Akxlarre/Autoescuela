@@ -51,9 +51,16 @@
   animation: vt-page-in var(--duration-page-in, 220ms) var(--ease-out) both;
 }
 
+/* Salida: opacity + slight upward lift (-6px) da sensación de capas/profundidad.
+   La nueva página entra desde abajo (+4px), creando el efecto Z-axis clásico de apps premium. */
 @keyframes vt-page-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
   to {
     opacity: 0;
+    transform: translateY(-6px);
   }
 }
 

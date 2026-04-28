@@ -36,14 +36,16 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <app-section-hero
-        #heroRef
-        title="Ensayos Teóricos"
-        subtitle="Consulta los puntajes de preparación para el examen municipal"
-        backRoute="/app/instructor/dashboard"
-        backLabel="Dashboard"
-        [actions]="[]"
-      />
+      <div class="bento-banner">
+        <app-section-hero
+          #heroRef
+          title="Ensayos Teóricos"
+          subtitle="Consulta los puntajes de preparación para el examen municipal"
+          backRoute="/app/instructor/dashboard"
+          backLabel="Dashboard"
+          [actions]="[]"
+        />
+      </div>
 
       <!-- KPIs -->
       <div class="bento-square">

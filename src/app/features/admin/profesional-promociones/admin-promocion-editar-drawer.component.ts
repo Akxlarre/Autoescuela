@@ -13,14 +13,24 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
 @Component({
   selector: 'app-admin-promocion-editar-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, IconComponent, AsyncBtnComponent],
+  imports: [FormsModule, SelectModule, IconComponent, AsyncBtnComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
   template: `
-    <div class="flex flex-col gap-6 p-1">
+    <app-drawer-content-loader>
+      <ng-template #skeletons>
+        <div class="flex flex-col gap-5">
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+          <app-skeleton-block variant="text" width="100%" height="80px" />
+          <app-skeleton-block variant="text" width="100%" height="60px" />
+        </div>
+      </ng-template>
+      <ng-template #content>
       <!-- ── Información general ───────────────────────────────────── -->
       <section>
         <h3 class="text-sm font-semibold mb-4" style="color: var(--text-primary)">
@@ -154,7 +164,8 @@ import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
           data-llm-action="submit-editar-promocion"
         />
       </div>
-    </div>
+      </ng-template>
+    </app-drawer-content-loader>
   `,
   styles: `
     .form-input {

@@ -42,12 +42,14 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
-      <app-section-hero
-        title="Libro de Clases"
-        subtitle="Libro de control de clases — Clase Profesional"
-        [actions]="heroActions()"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-banner" #heroRef>
+        <app-section-hero
+          title="Libro de Clases"
+          subtitle="Libro de control de clases — Clase Profesional"
+          [actions]="heroActions()"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <!-- ═══ Filtros ═══ -->
       <div class="bento-banner card p-4">
@@ -767,6 +769,7 @@ export class AdminLibroDeClasesComponent implements OnInit, AfterViewInit, OnDes
   private readonly gsap = inject(GsapAnimationsService);
 
   @ViewChild('bentoGrid') private readonly bentoGrid!: ElementRef<HTMLElement>;
+  @ViewChild('heroRef') private readonly heroRef!: ElementRef<HTMLElement>;
 
   readonly MODULE_COUNT = MODULE_COUNT;
 
@@ -863,6 +866,7 @@ export class AdminLibroDeClasesComponent implements OnInit, AfterViewInit, OnDes
   }
 
   ngAfterViewInit(): void {
+    if (this.heroRef) this.gsap.animateHero(this.heroRef.nativeElement);
     this.gsap.animateBentoGrid(this.bentoGrid.nativeElement);
   }
 
