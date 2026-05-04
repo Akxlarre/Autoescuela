@@ -3,6 +3,8 @@
 // Shared PDF generation utilities for contract documents.
 // Used by: generate-contract-pdf, public-enrollment (preview action).
 
+import { escapePdfWinAnsi, wrapLines as wrapTextToLines, assemblePdf } from './pdf-utils.ts';
+
 // ─── Types ───
 
 export interface EnrollmentData {
@@ -51,94 +53,6 @@ export function formatDate(dateStr: string | null): string {
 export function formatCurrency(amount: number | null): string {
   if (amount === null || amount === undefined) return '$0';
   return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
-}
-
-/**
- * Converts a character to its WinAnsi (Latin-1) octal escape for PDF strings.
- * Characters U+00A0–U+00FF map directly to their codepoint (same as Latin-1).
- * This fixes the accented characters bug (ñ, é, á, etc. were showing as "?").
- */
-export function escapePdfWinAnsi(str: string): string {
-  let out = '';
-  for (let i = 0; i < str.length; i++) {
-    const c = str.charCodeAt(i);
-    if (c === 92) out += '\\\\';
-    else if (c === 40) out += '\\(';
-    else if (c === 41) out += '\\)';
-    else if (c >= 32 && c <= 126) out += str[i];
-    else if (c >= 160 && c <= 255) out += `\\${c.toString(8).padStart(3, '0')}`;
-    // else: skip unsupported chars
-  }
-  return out;
-}
-
-export function wrapTextToLines(text: string, maxChars: number): string[] {
-  const result: string[] = [];
-  const words = text.trim().split(/\s+/);
-  let line = '';
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (candidate.length > maxChars) {
-      if (line) result.push(line);
-      line = word;
-    } else {
-      line = candidate;
-    }
-  }
-  if (line) result.push(line);
-  return result;
-}
-
-/**
- * Assembles a PDF 1.4 document from page content streams.
- * Uses two fonts: F1=Helvetica, F2=Helvetica-Bold.
- */
-export function assemblePdf(pageStreams: string[], W: number, H: number): Uint8Array {
-  const fixedObjs: string[] = [
-    `1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj`,
-    ``, // pages — filled below
-    `3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj`,
-    `4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj`,
-  ];
-
-  const pageObjs: string[] = [];
-  const pageIds: number[] = [];
-
-  for (let i = 0; i < pageStreams.length; i++) {
-    const stream = pageStreams[i];
-    const contentId = 5 + i * 2;
-    const pageId = 6 + i * 2;
-    pageObjs.push(
-      `${contentId} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj`,
-    );
-    pageObjs.push(
-      `${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Contents ${contentId} 0 R /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> >>\nendobj`,
-    );
-    pageIds.push(pageId);
-  }
-
-  fixedObjs[1] = `2 0 obj\n<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>\nendobj`;
-
-  const allObjs = [...fixedObjs, ...pageObjs];
-  const totalObjs = allObjs.length;
-
-  let pdf = '%PDF-1.4\n';
-  const offsets: number[] = [];
-  for (const obj of allObjs) {
-    offsets.push(pdf.length);
-    pdf += obj + '\n';
-  }
-
-  const xrefPos = pdf.length;
-  pdf += `xref\n0 ${totalObjs + 1}\n`;
-  pdf += '0000000000 65535 f \n';
-  for (const off of offsets) {
-    pdf += `${off.toString().padStart(10, '0')} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${totalObjs + 1} /Root 1 0 R >>\n`;
-  pdf += `startxref\n${xrefPos}\n%%EOF\n`;
-
-  return new TextEncoder().encode(pdf);
 }
 
 /**

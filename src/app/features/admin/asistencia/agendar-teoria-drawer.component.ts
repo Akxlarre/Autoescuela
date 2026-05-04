@@ -34,7 +34,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-agendar-teoria-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, SkeletonBlockComponent, SelectModule, DrawerContentLoaderComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    SkeletonBlockComponent,
+    SelectModule,
+    DrawerContentLoaderComponent,
+  ],
   styles: `
     .field-label {
       display: block;
@@ -85,175 +91,220 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
       <ng-template #content>
-      <!-- ── Formulario ──────────────────────────────────────────────────── -->
-      <div class="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-        <!-- Sede (solo si admin sin sede fija) -->
-        @if (showBranchSelector()) {
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Sede</label>
-            <p-select
-              [ngModel]="selectedBranchId()"
-              (ngModelChange)="onBranchChange($event)"
-              [options]="branchSelectOptions()"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Selecciona una sede"
-              styleClass="w-full"
-              data-llm-description="Selector de sede para la clase teórica"
-            />
-          </div>
-        }
+        <!-- ── Formulario ──────────────────────────────────────────────────── -->
+        <div class="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+          <!-- Sede (solo si admin sin sede fija) -->
+          @if (showBranchSelector()) {
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label">Sede</label>
+              <p-select
+                [ngModel]="selectedBranchId()"
+                (ngModelChange)="onBranchChange($event)"
+                [options]="branchSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona una sede"
+                styleClass="w-full"
+                data-llm-description="Selector de sede para la clase teórica"
+              />
+            </div>
+          }
 
-        <!-- Fecha -->
-        <div class="flex flex-col gap-1.5">
-          <label class="field-label">Fecha</label>
-          <input
-            type="date"
-            class="field-input"
-            [ngModel]="scheduledDate()"
-            (ngModelChange)="scheduledDate.set($event)"
-            data-llm-description="Fecha de la clase teórica"
-          />
-        </div>
-
-        <!-- Hora inicio / fin -->
-        <div class="grid grid-cols-2 gap-3">
+          <!-- Fecha -->
           <div class="flex flex-col gap-1.5">
-            <label class="field-label">Hora inicio</label>
+            <label class="field-label">Fecha</label>
             <input
-              type="time"
+              type="date"
               class="field-input"
-              [ngModel]="startTime()"
-              (ngModelChange)="startTime.set($event)"
-              data-llm-description="Hora de inicio de la clase teórica"
+              [ngModel]="scheduledDate()"
+              (ngModelChange)="scheduledDate.set($event)"
+              data-llm-description="Fecha de la clase teórica"
             />
           </div>
+
+          <!-- Hora inicio / fin -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label">Hora inicio</label>
+              <input
+                type="time"
+                class="field-input"
+                [ngModel]="startTime()"
+                (ngModelChange)="startTime.set($event)"
+                data-llm-description="Hora de inicio de la clase teórica"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label">Hora fin</label>
+              <input
+                type="time"
+                class="field-input"
+                [ngModel]="endTime()"
+                (ngModelChange)="endTime.set($event)"
+                [style.border-color]="endTimeError() ? 'var(--state-error)' : ''"
+                data-llm-description="Hora de fin de la clase teórica"
+              />
+              @if (endTimeError()) {
+                <p class="text-xs font-medium" style="color: var(--state-error)">
+                  Debe ser posterior a la hora de inicio.
+                </p>
+              }
+            </div>
+          </div>
+
+          <!-- Tema -->
           <div class="flex flex-col gap-1.5">
-            <label class="field-label">Hora fin</label>
+            <label class="field-label">Tema</label>
             <input
-              type="time"
+              type="text"
               class="field-input"
-              [ngModel]="endTime()"
-              (ngModelChange)="endTime.set($event)"
-              data-llm-description="Hora de fin de la clase teórica"
+              placeholder="Ej: Legislación de Tránsito"
+              [ngModel]="topic()"
+              (ngModelChange)="topic.set($event)"
+              data-llm-description="Tema de la clase teórica"
             />
           </div>
-        </div>
 
-        <!-- Tema -->
-        <div class="flex flex-col gap-1.5">
-          <label class="field-label">Tema</label>
-          <input
-            type="text"
-            class="field-input"
-            placeholder="Ej: Legislación de Tránsito"
-            [ngModel]="topic()"
-            (ngModelChange)="topic.set($event)"
-            data-llm-description="Tema de la clase teórica"
-          />
-        </div>
+          <!-- Zoom link (opcional) -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label">Enlace Zoom (opcional)</label>
+            <input
+              type="url"
+              class="field-input"
+              placeholder="https://zoom.us/j/..."
+              [ngModel]="zoomLink()"
+              (ngModelChange)="zoomLink.set($event)"
+              data-llm-description="URL del enlace Zoom (opcional)"
+            />
+          </div>
 
-        <!-- Zoom link (opcional) -->
-        <div class="flex flex-col gap-1.5">
-          <label class="field-label">Enlace Zoom (opcional)</label>
-          <input
-            type="url"
-            class="field-input"
-            placeholder="https://zoom.us/j/..."
-            [ngModel]="zoomLink()"
-            (ngModelChange)="zoomLink.set($event)"
-            data-llm-description="URL del enlace Zoom (opcional)"
-          />
-        </div>
+          <!-- Alumnos -->
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <label class="field-label mb-0">Alumnos</label>
+              @if (!facade.isLoadingElegibles() && localAlumnos().length > 0) {
+                <button
+                  class="text-xs font-medium"
+                  style="color: var(--color-primary); background: none; border: none; cursor: pointer"
+                  (click)="toggleAll()"
+                >
+                  {{ allSelected() ? 'Desmarcar todos' : 'Marcar todos' }}
+                </button>
+              }
+            </div>
 
-        <!-- Alumnos -->
-        <div class="flex flex-col gap-2">
-          <div class="flex items-center justify-between">
-            <label class="field-label mb-0">Alumnos</label>
-            @if (!facade.isLoadingElegibles() && localAlumnos().length > 0) {
-              <button
-                class="text-xs font-medium"
-                style="color: var(--color-primary); background: none; border: none; cursor: pointer"
-                (click)="toggleAll()"
+            @if (!selectedBranchId()) {
+              <p class="text-xs py-4 text-center" style="color: var(--text-muted)">
+                Selecciona una sede para ver alumnos disponibles.
+              </p>
+            } @else if (facade.isLoadingElegibles()) {
+              <div class="flex flex-col gap-2">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                }
+              </div>
+            } @else if (localAlumnos().length === 0) {
+              <p class="text-xs py-4 text-center" style="color: var(--text-muted)">
+                No hay alumnos con matrícula activa en esta sede.
+              </p>
+            } @else {
+              <div
+                class="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border p-2"
+                [style.border-color]="'var(--border-subtle)'"
               >
-                {{ allSelected() ? 'Desmarcar todos' : 'Marcar todos' }}
-              </button>
+                @for (alumno of localAlumnos(); track alumno.enrollmentId) {
+                  <label
+                    class="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:bg-surface-elevated"
+                  >
+                    <input
+                      type="checkbox"
+                      [checked]="alumno.selected"
+                      (change)="toggleAlumno(alumno.enrollmentId)"
+                      class="accent-(--ds-brand)"
+                    />
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-medium truncate" style="color: var(--text-primary)">
+                        {{ alumno.alumnoName }}
+                      </p>
+                      <p class="text-xs truncate" style="color: var(--text-muted)">
+                        {{ alumno.email }}
+                      </p>
+                    </div>
+                  </label>
+                }
+              </div>
+              <p class="text-xs" style="color: var(--text-muted)">
+                {{ selectedCount() }} de {{ localAlumnos().length }} seleccionados
+              </p>
             }
           </div>
-
-          @if (!selectedBranchId()) {
-            <p class="text-xs py-4 text-center" style="color: var(--text-muted)">
-              Selecciona una sede para ver alumnos disponibles.
-            </p>
-          } @else if (facade.isLoadingElegibles()) {
-            <div class="flex flex-col gap-2">
-              @for (_ of [1, 2, 3]; track $index) {
-                <app-skeleton-block variant="rect" width="100%" height="40px" />
-              }
-            </div>
-          } @else if (localAlumnos().length === 0) {
-            <p class="text-xs py-4 text-center" style="color: var(--text-muted)">
-              No hay alumnos con matrícula activa en esta sede.
-            </p>
-          } @else {
-            <div
-              class="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border p-2"
-              [style.border-color]="'var(--border-subtle)'"
-            >
-              @for (alumno of localAlumnos(); track alumno.enrollmentId) {
-                <label
-                  class="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:bg-surface-elevated"
-                >
-                  <input
-                    type="checkbox"
-                    [checked]="alumno.selected"
-                    (change)="toggleAlumno(alumno.enrollmentId)"
-                    class="accent-[var(--ds-brand)]"
-                  />
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium truncate" style="color: var(--text-primary)">
-                      {{ alumno.alumnoName }}
-                    </p>
-                    <p class="text-xs truncate" style="color: var(--text-muted)">
-                      {{ alumno.email }}
-                    </p>
-                  </div>
-                </label>
-              }
-            </div>
-            <p class="text-xs" style="color: var(--text-muted)">
-              {{ selectedCount() }} de {{ localAlumnos().length }} seleccionados
-            </p>
-          }
         </div>
-      </div>
 
-      <!-- ── Footer ─────────────────────────────────────────────────────────── -->
-      <div
-        class="p-4 border-t flex items-center justify-end gap-2"
-        style="border-color: var(--border-subtle); background: var(--bg-subtle)"
-      >
-        <button
-          class="px-4 py-2 rounded-lg text-sm font-medium"
-          style="background: transparent; color: var(--text-muted); border: none; cursor: pointer"
-          (click)="onClose()"
-          data-llm-action="cerrar-agendar-teoria-drawer"
-        >
-          Cancelar
-        </button>
-        <button
-          class="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
-          style="background: var(--ds-brand); color: #fff; border: none; cursor: pointer"
-          [disabled]="!canSave() || facade.isSaving()"
-          data-llm-action="guardar-nueva-clase-teoria"
-          (click)="onSave()"
-        >
-          @if (facade.isSaving()) {
-            <app-icon name="loader" [size]="14" />
+        <!-- Banner resultado email -->
+        @if (showEmailResult()) {
+          @if (facade.emailResult(); as result) {
+            <div
+              class="mx-5 mb-2 flex items-center gap-2 px-4 py-3 rounded-xl"
+              [style.background]="
+                result.errors.length === 0
+                  ? 'color-mix(in srgb, var(--state-success) 12%, transparent)'
+                  : 'color-mix(in srgb, var(--state-warning) 12%, transparent)'
+              "
+            >
+              <app-icon
+                [name]="result.errors.length === 0 ? 'mail-check' : 'mail-warning'"
+                [size]="16"
+                [style.color]="
+                  result.errors.length === 0 ? 'var(--state-success)' : 'var(--state-warning)'
+                "
+              />
+              <span
+                class="text-sm font-medium"
+                [style.color]="
+                  result.errors.length === 0 ? 'var(--state-success)' : 'var(--state-warning)'
+                "
+              >
+                @if (result.errors.length === 0) {
+                  Clase agendada · Correos con enlace Zoom enviados a
+                  {{ result.sent }} alumno{{ result.sent !== 1 ? 's' : '' }}.
+                } @else {
+                  Clase agendada · {{ result.sent }} correo{{
+                    result.sent !== 1 ? 's' : ''
+                  }}
+                  enviado{{ result.sent !== 1 ? 's' : '' }}, {{ result.errors.length }} fallido{{
+                    result.errors.length !== 1 ? 's' : ''
+                  }}.
+                }
+              </span>
+            </div>
           }
-          Agendar Clase
-        </button>
-      </div>
+        }
+
+        <!-- ── Footer ─────────────────────────────────────────────────────────── -->
+        <div
+          class="p-4 border-t flex items-center justify-end gap-2"
+          style="border-color: var(--border-subtle); background: var(--bg-subtle)"
+        >
+          <button
+            class="px-4 py-2 rounded-lg text-sm font-medium"
+            style="background: transparent; color: var(--text-muted); border: none; cursor: pointer"
+            (click)="onClose()"
+            data-llm-action="cerrar-agendar-teoria-drawer"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+            [disabled]="!canSave() || facade.isSaving()"
+            data-llm-action="guardar-nueva-clase-teoria"
+            (click)="onSave()"
+          >
+            @if (facade.isSaving()) {
+              <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+            }
+            {{ saveLabel() }}
+          </button>
+        </div>
       </ng-template>
     </app-drawer-content-loader>
   `,
@@ -303,6 +354,23 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
     );
   });
 
+  protected readonly willSendEmail = computed(
+    () => this.zoomLink().trim().length > 0 && this.selectedCount() > 0,
+  );
+
+  protected readonly saveLabel = computed(() =>
+    this.willSendEmail() ? 'Agendar clase y enviar enlace' : 'Agendar Clase',
+  );
+
+  protected readonly endTimeError = computed(
+    () =>
+      this.startTime().length > 0 &&
+      this.endTime().length > 0 &&
+      this.endTime() <= this.startTime(),
+  );
+
+  protected readonly showEmailResult = signal(false);
+
   constructor() {
     // Sync local alumnos when facade loads them
     effect(() => {
@@ -350,6 +418,9 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
       .filter((a) => a.selected)
       .map((a) => a.enrollmentId);
 
+    const sendingEmail = this.willSendEmail();
+    this.facade.clearEmailResult();
+
     const success = await this.facade.crearClaseTeorica({
       branchId,
       scheduledDate: this.scheduledDate(),
@@ -362,7 +433,15 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
 
     if (success) {
       this.facade.clearElegibles();
-      this.layoutDrawer.close();
+      if (sendingEmail) {
+        this.showEmailResult.set(true);
+        setTimeout(() => {
+          this.showEmailResult.set(false);
+          this.layoutDrawer.close();
+        }, 2500);
+      } else {
+        this.layoutDrawer.close();
+      }
     }
   }
 

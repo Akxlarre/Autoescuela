@@ -25,8 +25,8 @@ export class ReportesContablesFacade {
   private readonly _reporte = signal<ReporteContable | null>(null);
   private readonly _filtros = signal<FiltrosReporte>(
     (() => {
-      const [desde, hasta] = computeDateRange('mes_anterior');
-      return { rango: 'mes_anterior', desde, hasta };
+      const [desde, hasta] = computeDateRange('mes_actual');
+      return { rango: 'mes_actual', desde, hasta };
     })(),
   );
   private _initialized = false;

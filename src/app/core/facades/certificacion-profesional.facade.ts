@@ -53,6 +53,10 @@ export class CertificacionProfesionalFacade {
   private readonly _isLoadingAlumnos = signal(false);
   private readonly _error = signal<string | null>(null);
   private readonly _generatingId = signal<number | null>(null);
+  private readonly _sendingEmailId = signal<number | null>(null);
+  private readonly _sendingMasivo = signal(false);
+  private readonly _isExporting = signal(false);
+  private readonly _generatingPendientes = signal(false);
   private _initialized = false;
   private _alumnosFetchToken = 0;
 
@@ -67,6 +71,11 @@ export class CertificacionProfesionalFacade {
   public readonly isLoadingAlumnos = this._isLoadingAlumnos.asReadonly();
   public readonly error = this._error.asReadonly();
   public readonly generatingId = this._generatingId.asReadonly();
+  public readonly sendingEmailId = this._sendingEmailId.asReadonly();
+  public readonly sendingMasivo = this._sendingMasivo.asReadonly();
+  public readonly isExporting = this._isExporting.asReadonly();
+  /** true mientras se están generando los certificados pendientes en lote. */
+  public readonly isGeneratingPendientes = this._generatingPendientes.asReadonly();
 
   // ── KPIs computed ──
   public readonly kpis = computed<CertificacionProfesionalKpis>(() => {
@@ -177,20 +186,145 @@ export class CertificacionProfesionalFacade {
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
   }
 
-  async enviarEmail(_enrollmentId: number): Promise<void> {
-    this.toast.info('Envío de email pendiente de implementación');
+  async enviarEmail(enrollmentId: number): Promise<void> {
+    this._sendingEmailId.set(enrollmentId);
+    try {
+      const { error } = await this.supabase.client.functions.invoke('send-certificate-email', {
+        body: { enrollment_id: enrollmentId, type: 'professional' },
+      });
+      if (error) {
+        this.toast.error('Error al enviar el email del certificado');
+        return;
+      }
+      this.toast.success('Email enviado correctamente');
+      const cursoId = this._selectedCursoId();
+      if (cursoId !== null) await this.fetchAlumnos(cursoId);
+    } catch {
+      this.toast.error('Error al enviar el email del certificado');
+    } finally {
+      this._sendingEmailId.set(null);
+    }
   }
 
   async generarPendientes(): Promise<void> {
-    this.toast.info('Generación masiva pendiente de implementación');
+    const elegibles = this._alumnos().filter(
+      (a) => a.certificadoStatus === 'pendiente' && a.elegible,
+    );
+    if (elegibles.length === 0) return;
+
+    this._generatingPendientes.set(true);
+    let generados = 0;
+    const errores: string[] = [];
+
+    for (const alumno of elegibles) {
+      this._generatingId.set(alumno.enrollmentId);
+      try {
+        const { data, error } = await this.supabase.client.functions.invoke(
+          'generate-certificate-professional-pdf',
+          { body: { enrollment_id: alumno.enrollmentId } },
+        );
+        if (error || !data?.pdfUrl) {
+          errores.push(alumno.nombre);
+        } else {
+          generados++;
+        }
+      } catch {
+        errores.push(alumno.nombre);
+      }
+    }
+
+    this._generatingId.set(null);
+    this._generatingPendientes.set(false);
+
+    if (errores.length === 0) {
+      this.toast.success(
+        `${generados} certificado${generados !== 1 ? 's' : ''} generado${generados !== 1 ? 's' : ''} correctamente`,
+      );
+    } else {
+      this.toast.warning(
+        `${generados} generado${generados !== 1 ? 's' : ''}, ${errores.length} con error`,
+      );
+    }
+
+    const cursoId = this._selectedCursoId();
+    if (cursoId !== null) {
+      await this.fetchAlumnos(cursoId);
+      void this.fetchLog();
+    }
   }
 
   async enviarEmailsMasivo(): Promise<void> {
-    this.toast.info('Envío masivo de emails pendiente de implementación');
+    const eligible = this._alumnos().filter(
+      (a) => a.certificadoStatus === 'generado' && !a.emailEnviado,
+    );
+    if (eligible.length === 0) {
+      this.toast.info('No hay certificados pendientes de envío');
+      return;
+    }
+    this._sendingMasivo.set(true);
+    let sent = 0;
+    let failed = 0;
+    try {
+      for (const alumno of eligible) {
+        const { error } = await this.supabase.client.functions.invoke('send-certificate-email', {
+          body: { enrollment_id: alumno.enrollmentId, type: 'professional' },
+        });
+        if (error) failed++;
+        else sent++;
+      }
+      if (sent > 0)
+        this.toast.success(`${sent} email${sent > 1 ? 's' : ''} enviado${sent > 1 ? 's' : ''}`);
+      if (failed > 0)
+        this.toast.error(`${failed} email${failed > 1 ? 's' : ''} no se pudieron enviar`);
+      const cursoId = this._selectedCursoId();
+      if (cursoId !== null) await this.fetchAlumnos(cursoId);
+    } finally {
+      this._sendingMasivo.set(false);
+    }
   }
 
   async exportar(): Promise<void> {
-    this.toast.info('Exportación pendiente de implementación');
+    this._isExporting.set(true);
+    try {
+      const {
+        data: { session },
+      } = await this.supabase.client.auth.getSession();
+      const token = session?.access_token ?? '';
+      const branchId = this.branchFacade.selectedBranchId();
+      const functionsUrl = (this.supabase.client.functions as any).url as string;
+      const anonKey = (this.supabase.client as any).supabaseKey as string;
+
+      const response = await fetch(`${functionsUrl}/export-certificates-zip`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ type: 'professional', branch_id: branchId }),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        this.toast.error((err as any).error ?? 'Error al exportar los certificados');
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `certificados-profesional-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      this.toast.success('Certificados exportados correctamente');
+    } catch {
+      this.toast.error('Error al exportar los certificados');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 
   // ── Fetch privados ──
@@ -271,7 +405,7 @@ export class CertificacionProfesionalFacade {
         certificate_professional_pdf_url,
         students!inner(
           id,
-          users!inner(first_names, paternal_last_name, maternal_last_name, rut)
+          users!inner(first_names, paternal_last_name, maternal_last_name, rut, email)
         ),
         courses!inner(name, license_class),
         certificates(id, folio, status, created_at)
@@ -420,6 +554,7 @@ export class CertificacionProfesionalFacade {
         storagePath: e.certificate_professional_pdf_url ?? null,
         certificadoStatus: hasPdf ? 'generado' : 'pendiente',
         emailEnviado: cert ? emailSentSet.has(cert.id) : false,
+        email: user.email ?? null,
       } satisfies CertificacionProfesionalAlumnoRow;
     });
 
@@ -452,7 +587,7 @@ export class CertificacionProfesionalFacade {
         certificates!inner(
           enrollments!inner(
             students!inner(
-              users!inner(first_names, paternal_last_name)
+              users!inner(first_names, paternal_last_name, maternal_last_name)
             )
           )
         ),
@@ -483,7 +618,13 @@ export class CertificacionProfesionalFacade {
         fecha: row.created_at,
         accion: row.action,
         alumnoNombre: student?.users
-          ? `${student.users.first_names} ${student.users.paternal_last_name}`
+          ? [
+              student.users.paternal_last_name,
+              student.users.maternal_last_name,
+              student.users.first_names,
+            ]
+              .filter(Boolean)
+              .join(' ')
           : '—',
         usuarioNombre: actionUser
           ? `${actionUser.first_names} ${actionUser.paternal_last_name}`

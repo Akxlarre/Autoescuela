@@ -542,7 +542,12 @@ async function handleSubmitClaseB(supabase: any, body: any) {
       await moveCarnetPhoto(supabase, body.carnetStoragePath, enrollment.id);
     }
 
-    // 10. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
+    // 10. Mover preview del contrato a ruta permanente y registrar en digital_contracts
+    if (sessionToken) {
+      await moveContractPreview(supabase, sessionToken, enrollment.id);
+    }
+
+    // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
     void inviteStudentToAuth(supabase, userId, personalData.email);
 
     return jsonResponse({
@@ -1017,6 +1022,9 @@ async function handleConfirmPayment(supabase: any, body: any) {
       await moveCarnetPhoto(supabase, carnetStoragePath, attempt.enrollment_id);
     }
 
+    // 9b. Mover preview del contrato a ruta permanente y registrar en digital_contracts
+    await moveContractPreview(supabase, attempt.session_token, attempt.enrollment_id);
+
     // 10. Obtener nombres de sede y curso para la respuesta enriquecida
     const [{ data: courseData }, { data: branchData }] = await Promise.all([
       supabase.from('courses').select('name').eq('id', enrollmentRow?.course_id).maybeSingle(),
@@ -1164,6 +1172,54 @@ async function moveCarnetPhoto(
 
   if (dbError) {
     console.error('carnet photo student_documents error:', dbError);
+  }
+}
+
+/**
+ * Mueve el preview del contrato desde la ruta temporal de sesión al destino permanente
+ * vinculado al enrollment y registra la fila en digital_contracts.
+ *
+ * Flujo de 2 etapas del contrato:
+ *   Etapa 1 (wizard público): EF genera contracts/previews/{sessionToken}/Contrato_Preview.pdf
+ *   Etapa 2 (esta función):  move → contracts/{enrollmentId}/contrato.pdf
+ *                            + INSERT en digital_contracts (file_url, file_name)
+ *
+ * Falla silenciosamente — si el usuario no generó el preview, no hay archivo que mover
+ * y el admin podrá generarlo desde la ficha usando generate-contract-pdf.
+ */
+async function moveContractPreview(
+  supabase: any,
+  sessionToken: string,
+  enrollmentId: number,
+): Promise<void> {
+  const TOKEN_RE = /^[0-9a-zA-Z\-]+$/;
+  if (!sessionToken || !TOKEN_RE.test(sessionToken)) {
+    console.error(`moveContractPreview: rejected invalid sessionToken: "${sessionToken}"`);
+    return;
+  }
+
+  const sourcePath = `contracts/previews/${sessionToken}/Contrato_Preview.pdf`;
+  const destPath = `contracts/${enrollmentId}/contract.pdf`;
+
+  const { error: moveError } = await supabase.storage.from('documents').move(sourcePath, destPath);
+
+  if (moveError) {
+    // Falla silenciosa — el preview puede no existir si el usuario omitió ese paso
+    console.warn('moveContractPreview: move failed (preview may not exist):', moveError.message);
+    return;
+  }
+
+  const { error: dbError } = await supabase.from('digital_contracts').upsert(
+    {
+      enrollment_id: enrollmentId,
+      file_url: destPath,
+      file_name: 'Contrato_Matricula.pdf',
+    },
+    { onConflict: 'enrollment_id' },
+  );
+
+  if (dbError) {
+    console.error('moveContractPreview: digital_contracts upsert error:', dbError.message);
   }
 }
 

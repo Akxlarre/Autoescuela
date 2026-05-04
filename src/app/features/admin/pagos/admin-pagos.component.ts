@@ -629,12 +629,6 @@ export class AdminPagosComponent implements AfterViewInit {
       primary: false,
     },
     {
-      id: 'view-pending',
-      label: 'Ver Pendientes',
-      icon: 'clock',
-      primary: false,
-    },
-    {
       id: 'register-payment',
       label: 'Registrar Pago',
       icon: 'plus',
@@ -742,13 +736,6 @@ export class AdminPagosComponent implements AfterViewInit {
   protected onHeroAction(actionId: string): void {
     if (actionId === 'register-payment') {
       this.openDrawer(null);
-    } else if (actionId === 'view-pending') {
-      this.filtroEstado.set('pendiente');
-      this.paginaActual.set(1);
-
-      // Asegurar que scroll al listado
-      const hero = this.heroRef();
-      if (hero) hero.nativeElement.scrollIntoView({ behavior: 'smooth' });
     } else if (actionId === 'generate-report') {
       console.info('Generar reporte - a implementar');
     }

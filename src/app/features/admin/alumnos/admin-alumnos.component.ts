@@ -8,12 +8,13 @@ import {
   computed,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { AlumnosListContentComponent } from '@shared/components/alumnos-list-content/alumnos-list-content.component';
+import {
+  AlumnosListContentComponent,
+  type AlumnoExportRequest,
+} from '@shared/components/alumnos-list-content/alumnos-list-content.component';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
-import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { AdminClaseOnlineDrawerComponent } from './clase-online-drawer/admin-clase-online-drawer.component';
 import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 
 @Component({
@@ -28,12 +29,15 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       [isLoading]="facade.isLoading()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
+      [isExporting]="facade.isExporting()"
       (refreshRequested)="facade.initialize()"
-      (claseOnlineAction)="openClaseOnlineDrawer($event)"
       (preInscritosRequested)="navigateToPreInscritos()"
       (archivarRequested)="requestArchivar($event)"
       (trashViewToggled)="onTrashViewToggled()"
       (restaurarRequested)="onRestaurar($event)"
+      (exportRequested)="onExport($event)"
+      [isGeneratingFicha]="facade.isGeneratingFicha()"
+      (fichaExportRequested)="onExportarFicha($event)"
     />
 
     <app-eliminar-alumno-modal
@@ -49,7 +53,6 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 export class AdminAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly router = inject(Router);
 
   // ── Estado del modal de borrado ──────────────────────────────────────────
@@ -102,13 +105,6 @@ export class AdminAlumnosComponent implements OnInit {
 
   // ── Otros handlers ───────────────────────────────────────────────────────
 
-  protected openClaseOnlineDrawer(mode: 'zoom' | 'asistencia'): void {
-    this.facade.setDrawerMode(mode);
-    const title = mode === 'zoom' ? 'Enviar Enlace Zoom' : 'Registrar Asistencia';
-    const icon = mode === 'zoom' ? 'video' : 'check-circle';
-    this.layoutDrawer.open(AdminClaseOnlineDrawerComponent, title, icon);
-  }
-
   protected navigateToPreInscritos(): void {
     void this.router.navigate(['/app/admin/alumnos/pre-inscritos']);
   }
@@ -119,5 +115,13 @@ export class AdminAlumnosComponent implements OnInit {
 
   protected async onRestaurar(alumnoId: string): Promise<void> {
     await this.facade.restaurarAlumno(Number(alumnoId));
+  }
+
+  protected onExport(req: AlumnoExportRequest): void {
+    void this.facade.exportAlumnos(req);
+  }
+
+  protected onExportarFicha(enrollmentId: number): void {
+    void this.facade.exportarFicha(enrollmentId);
   }
 }

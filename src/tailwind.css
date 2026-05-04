@@ -144,12 +144,12 @@
   box-shadow: var(--btn-primary-shadow);
   transition: var(--transition-btn);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: var(--btn-primary-bg-hover);
     box-shadow: var(--btn-primary-shadow-hover);
   }
 
-  &:active:enabled {
+  &:active:not(:disabled) {
     scale: var(--btn-press-scale-value, 0.97);
   }
 
@@ -175,11 +175,11 @@
   color: var(--btn-secondary-text, var(--text-secondary));
   transition: var(--transition-btn);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: var(--btn-secondary-bg-hover);
   }
 
-  &:active:enabled {
+  &:active:not(:disabled) {
     scale: var(--btn-press-scale-value, 0.97);
   }
 
@@ -207,11 +207,11 @@
   box-shadow: 0 1px 2px theme(colors.black / 5%);
   transition: var(--transition-btn);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: theme(colors.red.50);
   }
 
-  &:active:enabled {
+  &:active:not(:disabled) {
     scale: var(--btn-press-scale-value, 0.97);
   }
 
@@ -239,11 +239,11 @@
   box-shadow: 0 1px 2px theme(colors.black / 5%);
   transition: var(--transition-btn);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: theme(colors.red.700);
   }
 
-  &:active:enabled {
+  &:active:not(:disabled) {
     scale: var(--btn-press-scale-value, 0.97);
   }
 
@@ -270,11 +270,11 @@
   color: theme(colors.gray.700);
   transition: var(--transition-btn);
 
-  &:hover:enabled {
+  &:hover:not(:disabled) {
     background: theme(colors.gray.200);
   }
 
-  &:active:enabled {
+  &:active:not(:disabled) {
     scale: var(--btn-press-scale-value, 0.97);
   }
 
