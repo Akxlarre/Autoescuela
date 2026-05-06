@@ -17,7 +17,6 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import * as XLSX from 'npm:xlsx@0.18.5';
 import { PDFDocument, rgb, StandardFonts } from 'npm:pdf-lib@1.17.1';
 
 const corsHeaders = {
@@ -106,8 +105,8 @@ function mapRow(s: RawRow): AlumnoRow {
   const enrollment =
     s.enrollments.length > 0
       ? s.enrollments.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      )[0]
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        )[0]
       : null;
   return {
     nombre: `${u.paternal_last_name} ${u.maternal_last_name} ${u.first_names}`.trim(),
@@ -146,7 +145,7 @@ function matchesFilters(
 
 // ── Generadores de archivo ────────────────────────────────────────────────────
 
-function buildExcel(rows: AlumnoRow[]): Uint8Array {
+function buildExcelPayload(rows: AlumnoRow[]): { headers: string[]; rows: (string | number)[][] } {
   const headers = [
     'Nombre',
     'RUT',
@@ -159,33 +158,19 @@ function buildExcel(rows: AlumnoRow[]): Uint8Array {
     'Expediente',
     'Saldo Pendiente',
   ];
-  const data = [
-    headers,
-    ...rows.map((r) => [
-      r.nombre,
-      r.rut,
-      r.email,
-      r.telefono,
-      r.curso,
-      r.nroExpediente,
-      r.fechaIngreso,
-      r.estado,
-      r.expediente,
-      r.saldoPendiente,
-    ]),
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [20, 14, 28, 14, 20, 14, 14, 16, 12, 16].map((w) => ({ wch: w }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
-  // base64 es el tipo más portable en Deno — evita cualquier ambigüedad con Buffer/Uint8Array shims
-  const b64 = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' }) as string;
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+  const data = rows.map((r) => [
+    r.nombre,
+    r.rut,
+    r.email,
+    r.telefono,
+    r.curso,
+    r.nroExpediente,
+    r.fechaIngreso,
+    r.estado,
+    r.expediente,
+    r.saldoPendiente,
+  ]);
+  return { headers, rows: data };
 }
 
 async function buildPdf(rows: AlumnoRow[], fecha: string): Promise<Uint8Array> {
@@ -367,23 +352,22 @@ Deno.serve(async (req: Request) => {
 
     // ── Generar archivo ───────────────────────────────────────────────────────
     const fecha = new Date().toISOString().slice(0, 10);
-    let fileBytes: Uint8Array;
-    let contentType: string;
 
     if (format === 'excel') {
-      fileBytes = buildExcel(rows);
-      contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    } else {
-      fileBytes = await buildPdf(rows, fecha);
-      contentType = 'application/pdf';
+      const payload = buildExcelPayload(rows);
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
+    const fileBytes = await buildPdf(rows, fecha);
     return new Response(fileBytes, {
       status: 200,
       headers: {
         ...corsHeaders,
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="alumnos_${fecha}.${format === 'excel' ? 'xlsx' : 'pdf'}"`,
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="alumnos_${fecha}.pdf"`,
       },
     });
   } catch (err) {

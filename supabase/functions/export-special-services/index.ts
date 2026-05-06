@@ -6,13 +6,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import * as XLSX from 'npm:xlsx@0.18.5';
-import {
-  escapePdfWinAnsi,
-  textWidth,
-  assemblePdf,
-  wrapLines
-} from '../_shared/pdf-utils.ts';
+import { escapePdfWinAnsi, textWidth, assemblePdf, wrapLines } from '../_shared/pdf-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,7 +19,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     const { format, branch_id } = await req.json();
@@ -41,30 +35,29 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     if (format === 'excel') {
-      const rows = sales.map(s => ({
-        'Cliente': s.client_name,
-        'RUT': s.client_rut,
-        'Servicio': s.service_catalog?.name,
-        'Monto': s.price,
-        'Estado': s.status === 'completed' ? 'Completado' : 'Pendiente',
-        'Pagado': s.paid ? 'Sí' : 'No',
-        'Fecha': s.sale_date,
-        'Sede': s.branches?.name
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
-      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-
-      return new Response(buf, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      const headers = ['Cliente', 'RUT', 'Servicio', 'Monto', 'Estado', 'Pagado', 'Fecha', 'Sede'];
+      const rows = sales.map((s) => [
+        s.client_name ?? '',
+        s.client_rut ?? '',
+        s.service_catalog?.name ?? '',
+        s.price,
+        s.status === 'completed' ? 'Completado' : 'Pendiente',
+        s.paid ? 'Sí' : 'No',
+        s.sale_date ?? '',
+        s.branches?.name ?? '',
+      ]);
+      return new Response(JSON.stringify({ headers, rows }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (format === 'pdf') {
-      const W = 595, H = 842;
-      const ML = 40, MR = 40, MT = 50, MB = 50;
+      const W = 595,
+        H = 842;
+      const ML = 40,
+        MR = 40,
+        MT = 50,
+        MB = 50;
 
       let ops = '';
       const pages: string[] = [];
@@ -130,12 +123,11 @@ Deno.serve(async (req) => {
       pages.push(ops);
       const pdfBytes = assemblePdf(pages, W, H);
       return new Response(pdfBytes, {
-        headers: { ...corsHeaders, 'Content-Type': 'application/pdf' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/pdf' },
       });
     }
 
     return new Response('Invalid format', { status: 400 });
-
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
