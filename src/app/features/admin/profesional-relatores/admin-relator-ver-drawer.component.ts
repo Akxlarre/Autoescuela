@@ -47,198 +47,205 @@ const SPEC_LABELS: Record<string, string> = {
           </div>
         </ng-template>
         <ng-template #content>
-      <!-- ── Avatar + nombre ─────────────────────────────────────────────── -->
-      <div class="flex items-center gap-4 mb-6">
-        <div
-          class="flex items-center justify-center w-14 h-14 rounded-full shrink-0 text-base font-bold"
-          style="background: var(--color-primary-tint); color: var(--color-primary);"
-        >
-          {{ rel.initials }}
-        </div>
-        <div>
-          <h2 class="text-base font-semibold" style="color: var(--text-primary)">
-            {{ rel.nombre }}
-          </h2>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted)">{{ rel.rut }}</p>
-          <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-            @for (spec of rel.specializations; track spec) {
-              <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
-            }
-            @if (rel.estado === 'activo') {
-              <span
-                class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success);"
-              >
-                <app-icon name="check-circle" [size]="10" />
-                Activo
-              </span>
-            } @else {
-              <span
-                class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                style="background: var(--bg-elevated); color: var(--text-muted);"
-              >
-                Inactivo
-              </span>
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- ── Información personal ───────────────────────────────────────── -->
-      <h3 class="section-title">Información Personal</h3>
-      <div class="grid grid-cols-2 gap-3 mb-6">
-        <app-stat-box
-          label="RUT"
-          [value]="rel.rut"
-          variant="surface"
-          [compact]="true"
-          icon="id-card"
-        />
-        <app-stat-box
-          label="TELÉFONO"
-          [value]="rel.phone || '—'"
-          variant="surface"
-          [compact]="true"
-          icon="phone"
-        />
-        <app-stat-box
-          label="CORREO ELECTRÓNICO"
-          [value]="rel.email || '—'"
-          variant="surface"
-          [compact]="true"
-          icon="at-sign"
-          class="col-span-2"
-        />
-      </div>
-
-      <!-- ── Especialidades ─────────────────────────────────────────────── -->
-      <h3 class="section-title">Especialidades</h3>
-      <div class="flex flex-col gap-2 mb-6">
-        @for (spec of rel.specializations; track spec) {
-          <div
-            class="flex items-center gap-3 p-3 rounded-lg"
-            style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-          >
-            <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
-            <span class="text-sm" style="color: var(--text-primary)">{{ specLabel(spec) }}</span>
-          </div>
-        } @empty {
-          <p class="text-sm" style="color: var(--text-muted)">Sin especialidades registradas.</p>
-        }
-      </div>
-
-      <!-- ── Info registro ───────────────────────────────────────────────── -->
-      @if (rel.registrationDate) {
-        <div
-          class="flex items-center gap-2 p-3 rounded-lg mb-6"
-          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-        >
-          <app-icon name="calendar" [size]="14" color="var(--text-muted)" />
-          <span class="text-xs" style="color: var(--text-muted)">
-            Fecha de registro: {{ rel.registrationDate }}
-          </span>
-        </div>
-      }
-
-      <!-- ── Cursos asignados ───────────────────────────────────────────── -->
-      <h3 class="section-title">
-        Cursos asignados
-        @if (!facade.isLoadingCursos() && facade.cursosAsignados().length > 0) {
-          <span
-            class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
-            style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent); color: var(--ds-brand);"
-          >
-            {{ facade.cursosAsignados().length }}
-          </span>
-        }
-      </h3>
-
-      @if (facade.isLoadingCursos()) {
-        <div class="flex flex-col gap-3 mb-6">
-          @for (_ of [1, 2]; track $index) {
+          <!-- ── Avatar + nombre ─────────────────────────────────────────────── -->
+          <div class="flex items-center gap-4 mb-6">
             <div
-              class="flex items-center gap-3 p-3 rounded-lg"
-              style="border: 1px solid var(--border-subtle);"
+              class="flex items-center justify-center w-14 h-14 rounded-full shrink-0 text-base font-bold"
+              style="background: var(--color-primary-tint); color: var(--color-primary);"
             >
-              <app-skeleton-block variant="rect" width="28px" height="22px" />
-              <div class="flex-1 flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="160px" height="13px" />
-                <app-skeleton-block variant="text" width="100px" height="11px" />
-              </div>
-              <app-skeleton-block variant="rect" width="60px" height="20px" />
+              {{ rel.initials }}
             </div>
-          }
-        </div>
-      } @else if (facade.cursosAsignados().length === 0) {
-        <div
-          class="flex items-center gap-2 p-4 rounded-lg mb-6"
-          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
-        >
-          <app-icon name="calendar-x" [size]="15" color="var(--text-muted)" />
-          <span class="text-sm" style="color: var(--text-muted)">
-            Sin cursos asignados actualmente.
-          </span>
-        </div>
-      } @else {
-        <!-- Cabecera tabla -->
-        <div class="courses-header mb-1">
-          <span>PROMOCIÓN</span>
-          <span>CURSO</span>
-          <span>ALUMNOS</span>
-          <span>ESTADO</span>
-        </div>
-        <div
-          class="flex flex-col mb-6"
-          style="border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;"
-        >
-          @for (curso of facade.cursosAsignados(); track curso.id; let last = $last) {
-            <div
-              class="courses-row"
-              [style.border-bottom]="last ? 'none' : '1px solid var(--border-subtle)'"
-            >
-              <!-- Promoción -->
-              <div class="flex flex-col min-w-0">
-                <span class="text-xs font-semibold truncate" style="color: var(--text-primary)">
-                  {{ curso.promotionName }}
-                </span>
-                <span class="text-xs" style="color: var(--text-muted)">
-                  Código: {{ curso.promotionCode }}
-                </span>
-              </div>
-
-              <!-- Curso badge -->
-              <div class="flex flex-col gap-0.5">
-                <span class="spec-badge" [style.background]="specColor(curso.courseCode)">
-                  {{ curso.courseCode }}
-                </span>
-                @if (curso.role) {
-                  <span class="text-xs" style="color: var(--text-muted); white-space: nowrap;">
-                    {{ roleLabel(curso.role) }}
+            <div>
+              <h2 class="text-base font-semibold" style="color: var(--text-primary)">
+                {{ rel.nombre }}
+              </h2>
+              <p class="text-xs mt-0.5" style="color: var(--text-muted)">{{ rel.rut }}</p>
+              <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+                @for (spec of rel.specializations; track spec) {
+                  <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
+                }
+                @if (rel.estado === 'activo') {
+                  <span
+                    class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
+                    style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success);"
+                  >
+                    <app-icon name="check-circle" [size]="10" />
+                    Activo
+                  </span>
+                } @else {
+                  <span
+                    class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                    style="background: var(--bg-elevated); color: var(--text-muted);"
+                  >
+                    Inactivo
                   </span>
                 }
               </div>
+            </div>
+          </div>
 
-              <!-- Alumnos -->
-              <span class="text-xs" style="color: var(--text-secondary)">
-                {{ curso.enrolledStudents }} / {{ curso.maxStudents }}
-              </span>
+          <!-- ── Información personal ───────────────────────────────────────── -->
+          <h3 class="section-title">Información Personal</h3>
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <app-stat-box
+              label="RUT"
+              [value]="rel.rut"
+              variant="surface"
+              [compact]="true"
+              icon="id-card"
+            />
+            <app-stat-box
+              label="TELÉFONO"
+              [value]="rel.phone || '—'"
+              variant="surface"
+              [compact]="true"
+              icon="phone"
+            />
+            <app-stat-box
+              label="CORREO ELECTRÓNICO"
+              [value]="rel.email || '—'"
+              variant="surface"
+              [compact]="true"
+              icon="at-sign"
+              class="col-span-2"
+            />
+          </div>
 
-              <!-- Estado -->
-              <span class="status-badge" [class]="'status-badge--' + (curso.status ?? 'planned')">
-                {{ statusLabel(curso.status) }}
+          <!-- ── Especialidades ─────────────────────────────────────────────── -->
+          <h3 class="section-title">Especialidades</h3>
+          <div class="flex flex-col gap-2 mb-6">
+            @for (spec of rel.specializations; track spec) {
+              <div
+                class="flex items-center gap-3 p-3 rounded-lg"
+                style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+              >
+                <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
+                <span class="text-sm" style="color: var(--text-primary)">{{
+                  specLabel(spec)
+                }}</span>
+              </div>
+            } @empty {
+              <p class="text-sm" style="color: var(--text-muted)">
+                Sin especialidades registradas.
+              </p>
+            }
+          </div>
+
+          <!-- ── Info registro ───────────────────────────────────────────────── -->
+          @if (rel.registrationDate) {
+            <div
+              class="flex items-center gap-2 p-3 rounded-lg mb-6"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+            >
+              <app-icon name="calendar" [size]="14" color="var(--text-muted)" />
+              <span class="text-xs" style="color: var(--text-muted)">
+                Fecha de registro: {{ rel.registrationDate }}
               </span>
             </div>
           }
-        </div>
-      }
 
-      <!-- ── Acciones ───────────────────────────────────────────────────── -->
-      <div style="border-top: 1px solid var(--border-subtle);" class="pt-4">
-        <button class="edit-btn" (click)="editar()" data-llm-action="editar-relator">
-          <app-icon name="edit" [size]="15" />
-          Editar relator
-        </button>
-      </div>
+          <!-- ── Cursos asignados ───────────────────────────────────────────── -->
+          <h3 class="section-title">
+            Cursos asignados
+            @if (!facade.isLoadingCursos() && facade.cursosAsignados().length > 0) {
+              <span
+                class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
+                style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent); color: var(--ds-brand);"
+              >
+                {{ facade.cursosAsignados().length }}
+              </span>
+            }
+          </h3>
+
+          @if (facade.isLoadingCursos()) {
+            <div class="flex flex-col gap-3 mb-6">
+              @for (_ of [1, 2]; track $index) {
+                <div
+                  class="flex items-center gap-3 p-3 rounded-lg"
+                  style="border: 1px solid var(--border-subtle);"
+                >
+                  <app-skeleton-block variant="rect" width="28px" height="22px" />
+                  <div class="flex-1 flex flex-col gap-1.5">
+                    <app-skeleton-block variant="text" width="160px" height="13px" />
+                    <app-skeleton-block variant="text" width="100px" height="11px" />
+                  </div>
+                  <app-skeleton-block variant="rect" width="60px" height="20px" />
+                </div>
+              }
+            </div>
+          } @else if (facade.cursosAsignados().length === 0) {
+            <div
+              class="flex items-center gap-2 p-4 rounded-lg mb-6"
+              style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+            >
+              <app-icon name="calendar-x" [size]="15" color="var(--text-muted)" />
+              <span class="text-sm" style="color: var(--text-muted)">
+                Sin cursos asignados actualmente.
+              </span>
+            </div>
+          } @else {
+            <!-- Cabecera tabla -->
+            <div class="courses-header mb-1">
+              <span>PROMOCIÓN</span>
+              <span>CURSO</span>
+              <span>ALUMNOS</span>
+              <span>ESTADO</span>
+            </div>
+            <div
+              class="flex flex-col mb-6"
+              style="border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;"
+            >
+              @for (curso of facade.cursosAsignados(); track curso.id; let last = $last) {
+                <div
+                  class="courses-row"
+                  [style.border-bottom]="last ? 'none' : '1px solid var(--border-subtle)'"
+                >
+                  <!-- Promoción -->
+                  <div class="flex flex-col min-w-0">
+                    <span class="text-xs font-semibold truncate" style="color: var(--text-primary)">
+                      {{ curso.promotionName }}
+                    </span>
+                    <span class="text-xs" style="color: var(--text-muted)">
+                      Código: {{ curso.promotionCode }}
+                    </span>
+                  </div>
+
+                  <!-- Curso badge -->
+                  <div class="flex flex-col gap-0.5">
+                    <span class="spec-badge" [style.background]="specColor(curso.courseCode)">
+                      {{ curso.courseCode }}
+                    </span>
+                    @if (curso.role) {
+                      <span class="text-xs" style="color: var(--text-muted); white-space: nowrap;">
+                        {{ roleLabel(curso.role) }}
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Alumnos -->
+                  <span class="text-xs" style="color: var(--text-secondary)">
+                    {{ curso.enrolledStudents }} / {{ curso.maxStudents }}
+                  </span>
+
+                  <!-- Estado -->
+                  <span
+                    class="status-badge"
+                    [class]="'status-badge--' + (curso.status ?? 'planned')"
+                  >
+                    {{ statusLabel(curso.status) }}
+                  </span>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ── Acciones ───────────────────────────────────────────────────── -->
+          <div style="border-top: 1px solid var(--border-subtle);" class="pt-4">
+            <button class="edit-btn" (click)="editar()" data-llm-action="editar-relator">
+              <app-icon name="edit" [size]="15" />
+              Editar relator
+            </button>
+          </div>
         </ng-template>
       </app-drawer-content-loader>
     }
@@ -378,6 +385,6 @@ export class AdminRelatorVerDrawerComponent {
   }
 
   protected editar(): void {
-    this.layoutDrawer.open(AdminRelatorEditarDrawerComponent, 'Editar relator', 'edit');
+    this.layoutDrawer.push(AdminRelatorEditarDrawerComponent, 'Editar relator', 'edit');
   }
 }

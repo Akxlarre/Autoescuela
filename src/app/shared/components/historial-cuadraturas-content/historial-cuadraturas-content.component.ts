@@ -388,7 +388,6 @@ export class HistorialCuadraturasContentComponent {
   // ── Outputs ───────────────────────────────────────────────────────────────
   mesAnterior = output<void>();
   mesSiguiente = output<void>();
-  volverAHoy = output<void>();
   exportarCSV = output<void>();
 
   // ── Constantes y Configuración de Hero ─────────────────────────────────────
@@ -396,7 +395,6 @@ export class HistorialCuadraturasContentComponent {
   protected readonly skeletonCells = Array.from({ length: 35 });
   
   protected readonly heroActions: SectionHeroAction[] = [
-    { id: 'volver_hoy', label: 'Volver a Hoy', primary: true },
     { id: 'exportar_csv', label: 'Exportar CSV', icon: 'download', primary: false },
   ];
 
@@ -475,9 +473,7 @@ export class HistorialCuadraturasContentComponent {
   }
 
   protected onHeroAction(actionId: string): void {
-    if (actionId === 'volver_hoy') {
-      this.volverAHoy.emit();
-    } else if (actionId === 'exportar_csv') {
+    if (actionId === 'exportar_csv') {
       this.exportarCSV.emit();
     }
   }

@@ -34,6 +34,10 @@ export class CertificacionClaseBFacade {
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   private readonly _generatingId = signal<number | null>(null);
+  private readonly _sendingEmailId = signal<number | null>(null);
+  private readonly _sendingMasivo = signal(false);
+  private readonly _isExporting = signal(false);
+  private readonly _generatingPendientes = signal(false);
   private _initialized = false;
 
   // ── Estado público (readonly) ──
@@ -43,6 +47,14 @@ export class CertificacionClaseBFacade {
   public readonly error = this._error.asReadonly();
   /** ID del enrollment cuyo certificado se está generando actualmente. null = ninguno. */
   public readonly generatingId = this._generatingId.asReadonly();
+  /** ID del enrollment cuyo correo se está enviando actualmente. null = ninguno. */
+  public readonly sendingEmailId = this._sendingEmailId.asReadonly();
+  /** true mientras el envío masivo está en curso. */
+  public readonly sendingMasivo = this._sendingMasivo.asReadonly();
+  /** true mientras el ZIP de exportación se está generando en la Edge Function. */
+  public readonly isExporting = this._isExporting.asReadonly();
+  /** true mientras se están generando los certificados pendientes en lote. */
+  public readonly isGeneratingPendientes = this._generatingPendientes.asReadonly();
 
   // ── KPIs computed ──
   public readonly kpis = computed<CertificacionKpis>(() => {
@@ -158,20 +170,165 @@ export class CertificacionClaseBFacade {
     return data.signedUrl;
   }
 
-  async enviarEmail(_enrollmentId: number): Promise<void> {
-    this.toast.info('Envío de email pendiente de implementación');
+  async enviarEmail(enrollmentId: number): Promise<void> {
+    this._sendingEmailId.set(enrollmentId);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'send-certificate-email',
+        { body: { enrollment_id: enrollmentId } },
+      );
+      if (error || !data?.success) {
+        this.toast.error('No se pudo enviar el certificado por correo');
+        return;
+      }
+      this.toast.success('Certificado enviado', `Correo enviado a ${data.recipientEmail}`);
+      void this.refreshSilently();
+    } catch {
+      this.toast.error('Error al enviar el correo');
+    } finally {
+      this._sendingEmailId.set(null);
+    }
   }
 
   async generarPendientes(): Promise<void> {
-    this.toast.info('Generación masiva pendiente de implementación');
+    const pendientes = this._alumnos().filter((a) => a.certificadoStatus === 'pendiente');
+    if (pendientes.length === 0) return;
+
+    this._generatingPendientes.set(true);
+    let generados = 0;
+    const errores: string[] = [];
+
+    for (const alumno of pendientes) {
+      this._generatingId.set(alumno.enrollmentId);
+      try {
+        const { data, error } = await this.supabase.client.functions.invoke(
+          'generate-certificate-b-pdf',
+          { body: { enrollment_id: alumno.enrollmentId } },
+        );
+        if (error || !data?.pdfUrl) {
+          errores.push(alumno.nombre);
+        } else {
+          generados++;
+        }
+      } catch {
+        errores.push(alumno.nombre);
+      }
+    }
+
+    this._generatingId.set(null);
+    this._generatingPendientes.set(false);
+
+    if (errores.length === 0) {
+      this.toast.success(
+        `${generados} certificado${generados !== 1 ? 's' : ''} generado${generados !== 1 ? 's' : ''} correctamente`,
+      );
+    } else {
+      this.toast.warning(
+        `${generados} generado${generados !== 1 ? 's' : ''}, ${errores.length} con error`,
+      );
+    }
+
+    void this.refreshSilently();
   }
 
   async enviarEmailsMasivo(): Promise<void> {
-    this.toast.info('Envío masivo de emails pendiente de implementación');
+    const pendientes = this._alumnos().filter(
+      (a) => a.certificadoStatus === 'generado' && !a.emailEnviado && a.email,
+    );
+    if (pendientes.length === 0) return;
+
+    this._sendingMasivo.set(true);
+    let enviados = 0;
+    const errores: string[] = [];
+
+    for (const alumno of pendientes) {
+      try {
+        const { data, error } = await this.supabase.client.functions.invoke(
+          'send-certificate-email',
+          { body: { enrollment_id: alumno.enrollmentId } },
+        );
+        if (error || !data?.success) {
+          errores.push(alumno.nombre);
+        } else {
+          enviados++;
+        }
+      } catch {
+        errores.push(alumno.nombre);
+      }
+    }
+
+    this._sendingMasivo.set(false);
+    void this.refreshSilently();
+
+    if (errores.length === 0) {
+      this.toast.success(
+        'Certificados enviados',
+        `Se enviaron ${enviados} correo${enviados !== 1 ? 's' : ''} exitosamente.`,
+      );
+    } else {
+      this.toast.error(
+        `${enviados} enviado${enviados !== 1 ? 's' : ''}, ${errores.length} fallido${errores.length !== 1 ? 's' : ''}`,
+        `Fallaron: ${errores.join(', ')}`,
+      );
+    }
   }
 
   async exportar(): Promise<void> {
-    this.toast.info('Exportación pendiente de implementación');
+    this._isExporting.set(true);
+    try {
+      const branchId = this.branchFacade.selectedBranchId();
+      const body: Record<string, unknown> = {};
+      if (branchId !== null) body['branch_id'] = branchId;
+
+      // functions.invoke() corrompe respuestas binarias en el SDK de Supabase.
+      // Usamos fetch() directo para preservar el ZIP intacto.
+      const { data: sessionData } = await this.supabase.client.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        this.toast.error('No hay sesión activa');
+        return;
+      }
+
+      const functionsUrl = (this.supabase.client.functions as any).url as string;
+      const anonKey = (this.supabase.client as any).supabaseKey as string;
+
+      const response = await fetch(`${functionsUrl}/export-certificates-zip`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: anonKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const msg: string = errData.error ?? '';
+        if (msg.includes('No hay certificados')) {
+          this.toast.info('No hay certificados generados para exportar');
+        } else {
+          this.toast.error('No se pudo exportar los certificados');
+        }
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `certificados-clase-b-${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      this.toast.success('Certificados exportados', 'El ZIP se ha descargado correctamente');
+    } catch {
+      this.toast.error('Error al exportar los certificados');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 
   // ── Fetch privado ──
@@ -196,7 +353,7 @@ export class CertificacionClaseBFacade {
         courses!inner(name, type),
         students!inner(
           id,
-          users!inner(first_names, paternal_last_name, maternal_last_name, rut)
+          users!inner(first_names, paternal_last_name, maternal_last_name, rut, email)
         ),
         certificates(id, folio, status, created_at)
       `,
@@ -295,6 +452,7 @@ export class CertificacionClaseBFacade {
         storagePath: e.certificate_b_pdf_url ?? null,
         certificadoStatus: hasPdf ? 'generado' : 'pendiente',
         emailEnviado: cert ? emailSentSet.has(cert.id) : false,
+        email: user.email ?? '',
       } satisfies CertificacionAlumnoRow;
     });
 
@@ -330,7 +488,7 @@ export class CertificacionClaseBFacade {
         certificates!inner(
           enrollments!inner(
             students!inner(
-              users!inner(first_names, paternal_last_name)
+              users!inner(first_names, paternal_last_name, maternal_last_name)
             )
           )
         ),
@@ -356,7 +514,13 @@ export class CertificacionClaseBFacade {
         fecha: row.created_at,
         accion: row.action,
         alumnoNombre: studentUser
-          ? `${studentUser.first_names} ${studentUser.paternal_last_name}`
+          ? [
+              studentUser.paternal_last_name,
+              studentUser.maternal_last_name,
+              studentUser.first_names,
+            ]
+              .filter(Boolean)
+              .join(' ')
           : '—',
         usuarioNombre: actionUser
           ? `${actionUser.first_names} ${actionUser.paternal_last_name}`

@@ -16,7 +16,6 @@ import { HistorialCuadraturasContentComponent } from '@shared/components/histori
       backLabel="Cuadratura"
       (mesAnterior)="facade.mesAnterior()"
       (mesSiguiente)="facade.mesSiguiente()"
-      (volverAHoy)="facade.volverAHoy()"
       (exportarCSV)="facade.exportarCSV()"
     />
   `,

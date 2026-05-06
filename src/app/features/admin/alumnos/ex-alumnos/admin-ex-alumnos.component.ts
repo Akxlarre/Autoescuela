@@ -19,6 +19,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { AdminStatsPanelComponent } from './components/stats/admin-ex-alumnos-stats.component';
 import { AdminExAlumnosCommentsComponent } from './components/comments/admin-ex-alumnos-comments.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 @Component({
   selector: 'app-admin-ex-alumnos',
@@ -34,232 +35,230 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     SectionHeroComponent,
     AdminStatsPanelComponent,
     AdminExAlumnosCommentsComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <div class="page-wide flex flex-col min-h-0 gap-8 overflow-y-auto pb-10">
-      <!-- ── Hero ── -->
+    <div class="bento-grid" appBentoGridLayout>
+      <!-- ── Hero (bento-hero via host) ── -->
       <app-section-hero
         title="Gestión de Ex-Alumnos"
         subtitle="Archivo histórico, búsqueda avanzada y seguimiento financiero"
         icon="graduation-cap"
+        backRoute="/app/admin/alumnos"
+        backLabel="Alumnos"
         [actions]="heroActions"
         [chips]="heroChips()"
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- ── Bento Grid ── -->
-      <div class="bento-grid">
-        <!-- KPIs Row -->
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="TOTAL EGRESADOS"
-            [value]="facade.totalEgresados()"
-            icon="graduation-cap"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="CLASE B"
-            [value]="facade.egresadosClaseB()"
-            icon="car"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="PROFESIONAL"
-            [value]="facade.egresadosProfesional()"
-            icon="award"
-            color="success"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="DEUDA PENDIENTE"
-            [value]="facade.conAbonoPendiente()"
-            icon="circle-alert"
-            color="warning"
-            [accent]="true"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-
-        <!-- Archivo Histórico (Main Area) -->
-        <div class="bento-card bento-hero overflow-hidden !p-0 bg-bg-surface flex flex-col h-full">
-          <!-- Header for Table Card -->
-          <div
-            class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/20"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"
-              >
-                <app-icon name="archive" [size]="18" />
-              </div>
-              <h2 class="text-base font-bold text-text-primary m-0">Registro Histórico</h2>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <!-- Filtros compactos -->
-              <div class="hidden lg:flex items-center gap-2">
-                <p-select
-                  [options]="yearSelectOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  [ngModel]="filtroAnio()"
-                  (ngModelChange)="filtroAnio.set($event)"
-                  styleClass="w-32"
-                  data-llm-description="filter ex-students by graduation year"
-                />
-                <p-select
-                  [options]="licenciaSelectOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  [ngModel]="filtroLicencia()"
-                  (ngModelChange)="filtroLicencia.set($event)"
-                  styleClass="w-32"
-                  data-llm-description="filter ex-students by license class"
-                />
-              </div>
-              <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
-              <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
-              <button
-                type="button"
-                class="p-2 rounded-lg text-text-muted hover:text-brand hover:bg-brand/10 transition-colors flex items-center justify-center"
-                (click)="clearFilters()"
-                pTooltip="Limpiar Filtros"
-                aria-label="Limpiar todos los filtros"
-              >
-                <app-icon name="filter-x" [size]="16" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Búsqueda -->
-          <div class="px-5 py-4 border-b border-border-subtle/50 bg-bg-surface/30">
-            <div class="relative w-full max-w-md">
-              <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
-                <app-icon name="search" [size]="14" />
-              </span>
-              <input
-                type="text"
-                class="search-input"
-                placeholder="Buscar por Nombre o RUT..."
-                [ngModel]="searchTerm()"
-                (ngModelChange)="searchTerm.set($event)"
-              />
-            </div>
-          </div>
-
-          <!-- Tabla -->
-          <div class="flex-1 min-h-0 overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-              <thead>
-                <tr class="bg-bg-elevated/10">
-                  <th class="th-col">EGRESADO</th>
-                  <th class="th-col">LICENCIA</th>
-                  <th class="th-col">AÑO / SEDE</th>
-                  <th class="th-col">ESTADO CUENTA</th>
-                  <th class="w-10"></th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-border-subtle">
-                @if (facade.isLoading()) {
-                  @for (_ of [1, 2, 3, 4, 5]; track $index) {
-                    <tr>
-                      <td class="py-4 px-5">
-                        <app-skeleton-block variant="text" width="160px" height="12px" />
-                      </td>
-                      <td class="py-4 px-5">
-                        <app-skeleton-block variant="rect" width="60px" height="24px" />
-                      </td>
-                      <td class="py-4 px-5">
-                        <app-skeleton-block variant="text" width="100px" height="12px" />
-                      </td>
-                      <td class="py-4 px-5">
-                        <app-skeleton-block variant="rect" width="80px" height="24px" />
-                      </td>
-                      <td></td>
-                    </tr>
-                  }
-                } @else {
-                  @for (egresado of filteredEgresados(); track egresado.id) {
-                    <tr class="table-row group">
-                      <td class="py-4 px-5">
-                        <div class="flex flex-col gap-0.5">
-                          <span class="font-bold text-text-primary">{{ egresado.nombre }}</span>
-                          <span class="text-xs text-text-muted">{{ egresado.rut }}</span>
-                        </div>
-                      </td>
-                      <td class="py-4 px-5">
-                        <span class="inas-badge" [attr.data-licencia]="egresado.licencia">
-                          {{ egresado.licencia }}
-                        </span>
-                      </td>
-                      <td class="py-4 px-5">
-                        <div class="flex flex-col gap-0.5 text-xs">
-                          <span class="font-bold text-text-primary">{{ egresado.anio }}</span>
-                          <span class="text-text-muted italic">{{ egresado.sede }}</span>
-                        </div>
-                      </td>
-                      <td class="py-4 px-5">
-                        @if (egresado.saldoPendiente > 0) {
-                          <span class="status-chip status-chip--warn">
-                            Debe
-                            {{ egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0' }}
-                          </span>
-                        } @else {
-                          <span class="status-chip status-chip--success">
-                            <app-icon name="check" [size]="10" class="mr-1" /> Al día
-                          </span>
-                        }
-                      </td>
-                      <td class="py-4 px-5 text-right">
-                        <app-icon
-                          name="chevron-right"
-                          [size]="16"
-                          class="text-text-muted opacity-0 group-hover:opacity-100 transition-opacity"
-                        />
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="5" class="py-20 text-center">
-                        <div class="flex flex-col items-center gap-3 opacity-30">
-                          <app-icon name="search-x" [size]="48" />
-                          <p class="text-sm font-medium">
-                            No se encontraron egresados con estos criterios
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Estadísticas Detalladas (Mitad izquierda) -->
-        <app-admin-stats-panel
-          class="bento-wide"
-          [municipalRate]="facade.municipalApprovalRate()"
-          [psychoRate]="facade.psychoApprovalRate()"
-          [totalExams]="facade.totalExamenes()"
-          [egresadosTotal]="facade.annualEgresadosTotal()"
-          [licensesTotal]="facade.annualLicensesTotal()"
-          [successRate]="facade.successConversionRate()"
-        />
-
-        <!-- Comentarios y Feedback (Mitad derecha) -->
-        <app-admin-ex-alumnos-comments
-          class="bento-wide"
-          [comentarios]="facade.surveys()"
-          [avgRate]="facade.avgSatisfaction()"
+      <!-- KPIs Row -->
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="TOTAL EGRESADOS"
+          [value]="facade.totalEgresados()"
+          icon="graduation-cap"
+          [loading]="facade.isLoading()"
         />
       </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="CLASE B"
+          [value]="facade.egresadosClaseB()"
+          icon="car"
+          [loading]="facade.isLoading()"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="PROFESIONAL"
+          [value]="facade.egresadosProfesional()"
+          icon="award"
+          color="success"
+          [loading]="facade.isLoading()"
+        />
+      </div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          label="DEUDA PENDIENTE"
+          [value]="facade.conAbonoPendiente()"
+          icon="circle-alert"
+          color="warning"
+          [accent]="true"
+          [loading]="facade.isLoading()"
+        />
+      </div>
+
+      <!-- Archivo Histórico — full width, 1 row -->
+      <div class="bento-banner card p-0! overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-surface">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center"
+              style="color: var(--ds-brand)"
+            >
+              <app-icon name="archive" [size]="18" />
+            </div>
+            <h2 class="text-sm font-bold text-primary m-0">Registro Histórico</h2>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="hidden lg:flex items-center gap-2">
+              <p-select
+                [options]="yearSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="filtroAnio()"
+                (ngModelChange)="filtroAnio.set($event)"
+                styleClass="w-32"
+                data-llm-description="filter ex-students by graduation year"
+              />
+              <p-select
+                [options]="licenciaSelectOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="filtroLicencia()"
+                (ngModelChange)="filtroLicencia.set($event)"
+                styleClass="w-32"
+                data-llm-description="filter ex-students by license class"
+              />
+            </div>
+            <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
+            <button
+              type="button"
+              class="p-2 rounded-lg text-muted hover:text-primary transition-colors flex items-center justify-center"
+              style="--hover-color: var(--ds-brand)"
+              (click)="clearFilters()"
+              pTooltip="Limpiar Filtros"
+              aria-label="Limpiar todos los filtros"
+            >
+              <app-icon name="filter-x" [size]="16" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Búsqueda -->
+        <div class="px-5 py-4 border-b border-border-subtle bg-surface">
+          <div class="relative w-full max-w-md">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
+              <app-icon name="search" [size]="14" />
+            </span>
+            <input
+              type="text"
+              class="search-input"
+              placeholder="Buscar por Nombre o RUT..."
+              [ngModel]="searchTerm()"
+              (ngModelChange)="searchTerm.set($event)"
+            />
+          </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="flex-1 min-h-0 overflow-x-auto">
+          <table class="w-full border-collapse text-sm">
+            <thead>
+              <tr class="bg-surface">
+                <th class="th-col">EGRESADO</th>
+                <th class="th-col">LICENCIA</th>
+                <th class="th-col">AÑO / SEDE</th>
+                <th class="th-col">ESTADO CUENTA</th>
+                <th class="w-10"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+              @if (facade.isLoading()) {
+                @for (_ of [1, 2, 3, 4, 5]; track $index) {
+                  <tr>
+                    <td class="py-4 px-5">
+                      <app-skeleton-block variant="text" width="160px" height="12px" />
+                    </td>
+                    <td class="py-4 px-5">
+                      <app-skeleton-block variant="rect" width="60px" height="24px" />
+                    </td>
+                    <td class="py-4 px-5">
+                      <app-skeleton-block variant="text" width="100px" height="12px" />
+                    </td>
+                    <td class="py-4 px-5">
+                      <app-skeleton-block variant="rect" width="80px" height="24px" />
+                    </td>
+                    <td></td>
+                  </tr>
+                }
+              } @else {
+                @for (egresado of filteredEgresados(); track egresado.id) {
+                  <tr class="table-row group">
+                    <td class="py-4 px-5">
+                      <div class="flex flex-col gap-0.5">
+                        <span class="font-bold text-primary">{{ egresado.nombre }}</span>
+                        <span class="text-xs text-muted">{{ egresado.rut }}</span>
+                      </div>
+                    </td>
+                    <td class="py-4 px-5">
+                      <span class="inas-badge" [attr.data-licencia]="egresado.licencia">
+                        {{ egresado.licencia }}
+                      </span>
+                    </td>
+                    <td class="py-4 px-5">
+                      <div class="flex flex-col gap-0.5 text-xs">
+                        <span class="font-bold text-primary">{{ egresado.anio }}</span>
+                        <span class="text-muted italic">{{ egresado.sede }}</span>
+                      </div>
+                    </td>
+                    <td class="py-4 px-5">
+                      @if (egresado.saldoPendiente > 0) {
+                        <span class="status-chip status-chip--warn">
+                          Debe
+                          {{ egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0' }}
+                        </span>
+                      } @else {
+                        <span class="status-chip status-chip--success">
+                          <app-icon name="check" [size]="10" class="mr-1" /> Al día
+                        </span>
+                      }
+                    </td>
+                    <td class="py-4 px-5 text-right">
+                      <app-icon
+                        name="chevron-right"
+                        [size]="16"
+                        class="text-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="5" class="py-20 text-center">
+                      <div class="flex flex-col items-center gap-3 opacity-30">
+                        <app-icon name="search-x" [size]="48" />
+                        <p class="text-sm font-medium text-secondary">
+                          No se encontraron egresados con estos criterios
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Estadísticas Detalladas -->
+      <app-admin-stats-panel
+        class="bento-wide"
+        [municipalRate]="facade.municipalApprovalRate()"
+        [psychoRate]="facade.psychoApprovalRate()"
+        [totalExams]="facade.totalExamenes()"
+        [egresadosTotal]="facade.annualEgresadosTotal()"
+        [licensesTotal]="facade.annualLicensesTotal()"
+        [successRate]="facade.successConversionRate()"
+      />
+
+      <!-- Comentarios y Feedback -->
+      <app-admin-ex-alumnos-comments
+        class="bento-wide"
+        [comentarios]="facade.surveys()"
+        [avgRate]="facade.avgSatisfaction()"
+      />
     </div>
   `,
   styles: `

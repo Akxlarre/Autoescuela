@@ -27,6 +27,7 @@ export interface CertificacionAlumnoRow {
    */
   storagePath: string | null;
   emailEnviado: boolean;
+  email: string;
 }
 
 /** KPIs de certificación. */

@@ -51,6 +51,7 @@ interface RawStudent {
   address: string | null;
   users: RawUser;
   enrollments: RawEnrollment[];
+  standalone_course_enrollments: { id: number }[];
 }
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
@@ -66,6 +67,8 @@ export class AdminAlumnosFacade {
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
   private readonly _alumnos = signal<AlumnoTableRow[]>([]);
   private readonly _isLoading = signal(false);
+  private readonly _isExporting = signal(false);
+  private readonly _isGeneratingFicha = signal<number | false>(false);
   private readonly _error = signal<string | null>(null);
   private readonly _isArchiving = signal(false);
   private readonly _trashView = signal(false);
@@ -78,6 +81,8 @@ export class AdminAlumnosFacade {
   // ── 2. ESTADO PÚBLICO (solo lectura) ────────────────────────────────────
   readonly alumnos = this._alumnos.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
+  readonly isGeneratingFicha = this._isGeneratingFicha.asReadonly();
   readonly error = this._error.asReadonly();
   readonly isArchiving = this._isArchiving.asReadonly();
   readonly trashView = this._trashView.asReadonly();
@@ -185,6 +190,73 @@ export class AdminAlumnosFacade {
     }
   }
 
+  async exportAlumnos(req: {
+    format: 'pdf' | 'excel';
+    search: string;
+    curso: string;
+    estado: string;
+    expediente: string;
+  }): Promise<void> {
+    this._isExporting.set(true);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('export-students', {
+        body: {
+          format: req.format,
+          branch_id: this.branchFacade.selectedBranchId(),
+          search: req.search,
+          curso: req.curso,
+          estado: req.estado,
+          expediente: req.expediente,
+        },
+      });
+      if (error) throw error;
+
+      const ext = req.format === 'excel' ? 'xlsx' : 'pdf';
+      const mime =
+        req.format === 'excel'
+          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          : 'application/pdf';
+      // El SDK v2.98 retorna Blob para respuestas binarias; leerlo como ArrayBuffer
+      // evita comportamiento ambiguo de Blob([otroBlob]) en algunos runtimes
+      const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+      const blob = new Blob([rawBuffer], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `alumnos_${new Date().toISOString().slice(0, 10)}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      this.toast.error('No se pudo exportar la lista. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
+    }
+  }
+
+  async exportarFicha(enrollmentId: number): Promise<void> {
+    this._isGeneratingFicha.set(enrollmentId);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-enrollment-sheet',
+        { body: { enrollment_id: enrollmentId } },
+      );
+      if (error) throw error;
+
+      const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+      const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Ficha_Matricula_${enrollmentId}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      this.toast.error('No se pudo generar la ficha. Inténtalo de nuevo.');
+    } finally {
+      this._isGeneratingFicha.set(false);
+    }
+  }
+
   clearError(): void {
     this._error.set(null);
   }
@@ -254,7 +326,8 @@ export class AdminAlumnosFacade {
           enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at,
             courses(id, name),
             student_documents(type, status)
-          )
+          ),
+          standalone_course_enrollments(id)
         `,
         )
         [this._trashView() ? 'eq' : 'neq']('status', 'archived');
@@ -266,9 +339,18 @@ export class AdminAlumnosFacade {
       const { data, error } = await query.order('id', { ascending: false });
       if (error) throw error;
 
-      const rows = ((data ?? []) as unknown as RawStudent[]).map((s) =>
-        this.mapToAlumnoTableRow(s),
-      );
+      const rawData = (data ?? []) as unknown as RawStudent[];
+      
+      // Filtrar alumnos que SOLO tienen inscripciones a cursos singulares (y cero matrículas regulares/drafts)
+      const validStudents = rawData.filter(s => {
+        const hasRegular = s.enrollments && s.enrollments.length > 0;
+        const hasSingular = s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
+        // Si no tiene regular pero sí singular, es exclusivamente de Curso Singular -> Ocultar
+        if (!hasRegular && hasSingular) return false;
+        return true;
+      });
+
+      const rows = validStudents.map((s) => this.mapToAlumnoTableRow(s));
       this._alumnos.set(rows);
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Error al cargar alumnos');

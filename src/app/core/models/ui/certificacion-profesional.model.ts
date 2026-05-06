@@ -70,6 +70,8 @@ export interface CertificacionProfesionalAlumnoRow {
    */
   storagePath: string | null;
   emailEnviado: boolean;
+  /** Email del alumno — usado para el envío masivo. null si no tiene email registrado. */
+  email: string | null;
 }
 
 /** KPIs de certificación profesional. */

@@ -81,6 +81,9 @@ export class AsistenciaClaseBFacade {
   private readonly _alumnosElegibles = signal<TeoriaAlumnoElegible[]>([]);
   private readonly _isLoadingElegibles = signal(false);
 
+  // Email send result
+  private readonly _emailResult = signal<{ sent: number; errors: string[] } | null>(null);
+
   private _initialized = false;
 
   // ── 2. Estado público ──────────────────────────────────────────────────────
@@ -100,6 +103,7 @@ export class AsistenciaClaseBFacade {
   readonly isLoadingElegibles = this._isLoadingElegibles.asReadonly();
   readonly selectedPractica = this._selectedPractica.asReadonly();
   readonly vehiclesPorSede = this._vehiclesPorSede.asReadonly();
+  readonly emailResult = this._emailResult.asReadonly();
 
   /** Lista deduplicada de instructores para el filtro de la tabla de prácticas. */
   readonly instructores = computed<InstructorOption[]>(() => {
@@ -173,7 +177,7 @@ export class AsistenciaClaseBFacade {
     this._teoriaAlumnos.set([]);
   }
 
-  /** Guarda el enlace Zoom de una clase teórica. */
+  /** Guarda el enlace Zoom de una clase teórica y envía correo a los alumnos inscritos. */
   async saveTeoriaZoomLink(claseId: number, zoomLink: string): Promise<void> {
     this._isSaving.set(true);
     try {
@@ -194,6 +198,22 @@ export class AsistenciaClaseBFacade {
         this._teoriaDrawerClase.set({ ...current, zoomLink, zoomLinkStatus: 'sent' });
       }
       this.toast.success('Enlace Zoom guardado');
+
+      // Enviar correo a los alumnos ya cargados en el drawer
+      const students = this._teoriaAlumnos();
+      if (students.length > 0) {
+        const recipients = students
+          .filter((s) => s.email)
+          .map((s) => ({ name: s.alumnoName, email: s.email }));
+        const clase = this._teoriaDrawerClase();
+        const sessionDate = clase ? `${clase.horaInicio} – ${clase.horaFin}` : '';
+        await this.callSendZoomEmail(
+          zoomLink,
+          clase?.tema ?? 'Clase Teórica',
+          sessionDate,
+          recipients,
+        );
+      }
     } catch {
       this.toast.error('Error al guardar el enlace Zoom');
     } finally {
@@ -472,26 +492,48 @@ export class AsistenciaClaseBFacade {
 
       if (sessionError) throw sessionError;
 
-      // Resolve student_ids from enrollment_ids
+      // Resolve student_ids from enrollment_ids (include emails for Zoom notification)
       if (payload.enrollmentIds.length > 0) {
         const { data: enrollments } = await this.supabase.client
           .from('enrollments')
-          .select('id, student_id')
+          .select('id, student_id, students(users(first_names, paternal_last_name, email))')
           .in('id', payload.enrollmentIds);
 
         if (enrollments && enrollments.length > 0) {
           const attendanceRows = enrollments.map((e: any) => ({
             theory_session_b_id: session.id,
             student_id: e.student_id,
-            status: 'absent', // default, will be marked later
+            status: 'absent',
             recorded_by: recordedBy,
           }));
 
           await this.supabase.client.from('class_b_theory_attendance').insert(attendanceRows);
+
+          // Enviar correo con enlace Zoom si se proporcionó uno
+          if (payload.zoomLink) {
+            const recipients = enrollments
+              .map((e: any) => ({
+                name: `${e.students?.users?.first_names ?? ''} ${e.students?.users?.paternal_last_name ?? ''}`.trim(),
+                email: e.students?.users?.email ?? '',
+              }))
+              .filter((r: { name: string; email: string }) => r.email);
+
+            const sessionDate = `${payload.scheduledDate} · ${payload.startTime} – ${payload.endTime}`;
+            await this.callSendZoomEmail(payload.zoomLink, payload.topic, sessionDate, recipients);
+          }
         }
       }
 
-      this.toast.success('Clase teórica agendada');
+      const emailResult = this._emailResult();
+      if (payload.zoomLink && emailResult && emailResult.sent > 0) {
+        const n = emailResult.sent;
+        this.toast.success(
+          'Clase teórica agendada',
+          `Correos con enlace Zoom enviados a ${n} alumno${n !== 1 ? 's' : ''}.`,
+        );
+      } else {
+        this.toast.success('Clase teórica agendada');
+      }
       await this.refreshSilently();
       return true;
     } catch {
@@ -502,11 +544,68 @@ export class AsistenciaClaseBFacade {
     }
   }
 
+  /** Actualiza tema y horas de una clase teórica existente. */
+  async updateTeoriaInfo(
+    claseId: number,
+    tema: string,
+    startTime: string,
+    endTime: string,
+  ): Promise<boolean> {
+    this._isSaving.set(true);
+    try {
+      const { error } = await this.supabase.client
+        .from('class_b_theory_sessions')
+        .update({ topic: tema, start_time: startTime, end_time: endTime })
+        .eq('id', claseId);
+
+      if (error) throw error;
+
+      this._clasesTeorias.update((rows) =>
+        rows.map((r) =>
+          r.id === claseId ? { ...r, tema, horaInicio: startTime, horaFin: endTime } : r,
+        ),
+      );
+      const current = this._teoriaDrawerClase();
+      if (current?.id === claseId) {
+        this._teoriaDrawerClase.set({ ...current, tema, horaInicio: startTime, horaFin: endTime });
+      }
+      this.toast.success('Clase actualizada');
+      return true;
+    } catch {
+      this.toast.error('Error al actualizar la clase');
+      return false;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
   clearElegibles(): void {
     this._alumnosElegibles.set([]);
   }
 
+  clearEmailResult(): void {
+    this._emailResult.set(null);
+  }
+
   // ── Private helpers ────────────────────────────────────────────────────────
+
+  private async callSendZoomEmail(
+    zoomLink: string,
+    sessionTopic: string,
+    sessionDate: string,
+    recipients: { name: string; email: string }[],
+  ): Promise<void> {
+    if (!zoomLink || recipients.length === 0) return;
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('send-zoom-email', {
+        body: { zoomLink, sessionTopic, sessionDate, recipients },
+      });
+      if (error) throw error;
+      this._emailResult.set(data as { sent: number; errors: string[] });
+    } catch {
+      this._emailResult.set({ sent: 0, errors: recipients.map((r) => r.email) });
+    }
+  }
 
   private async refreshSilently(): Promise<void> {
     try {

@@ -37,7 +37,6 @@ import type { ClasePracticaRow, ClaseTeoricoRow } from '@core/models/ui/asistenc
       (sendReminder)="facade.sendReminder($event)"
       (viewAtendanceList)="openTeoriaDrawer($event)"
       (dateChange)="facade.setDate($event)"
-      (exportExcel)="onExportExcel()"
       (refreshRequested)="onRefresh()"
       (scheduleNewClass)="openAgendarDrawer()"
       (iniciarClase)="openIniciarClaseDrawer($event)"
@@ -87,10 +86,6 @@ export class AdminAsistenciaComponent {
 
   protected async onRefresh(): Promise<void> {
     await this.facade.reload();
-  }
-
-  protected onExportExcel(): void {
-    // TODO: exportación Excel
   }
 
   protected openIniciarClaseDrawer(row: ClasePracticaRow): void {

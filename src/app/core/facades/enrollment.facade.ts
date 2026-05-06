@@ -1363,6 +1363,16 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
+      // 0. Obtener IDs para posible limpieza de registros huérfanos posteriores
+      const { data: enrInfo } = await this.supabase.client
+        .from('enrollments')
+        .select('student_id, students(user_id)')
+        .eq('id', enrollmentId)
+        .single();
+        
+      const studentId = enrInfo?.student_id;
+      const userId = (enrInfo?.students as any)?.user_id;
+
       // Eliminar archivos de storage: carpeta de documentos del alumno + contrato
       const foldersToClean = [`students/${enrollmentId}/`, `contracts/${enrollmentId}/`];
       for (const prefix of foldersToClean) {
@@ -1410,6 +1420,39 @@ export class EnrollmentFacade {
       if (error) {
         this._error.set('Error al descartar borrador: ' + error.message);
         return false;
+      }
+
+      // --- Limpieza de registros huérfanos (Students y Users) ---
+      if (studentId && userId) {
+        // Verificamos si al alumno le quedan otras matrículas
+        const { count: enrollmentsCount } = await this.supabase.client
+          .from('enrollments')
+          .select('id', { count: 'exact', head: true })
+          .eq('student_id', studentId);
+
+        if (enrollmentsCount === 0) {
+          // Sin matrículas activas ni borradores: es seguro eliminar al student
+          await this.supabase.client.from('students').delete().eq('id', studentId);
+
+          // Verificamos si el usuario base (users) ya no tiene más perfiles student
+          const { count: studentsCount } = await this.supabase.client
+            .from('students')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+          if (studentsCount === 0) {
+            // Validamos que su rol principal sea alumno (4) antes de eliminar su user
+            const { data: userRow } = await this.supabase.client
+              .from('users')
+              .select('role_id')
+              .eq('id', userId)
+              .single();
+
+            if (userRow?.role_id === 4) {
+              await this.supabase.client.from('users').delete().eq('id', userId);
+            }
+          }
+        }
       }
 
       // Actualizar lista local de drafts
