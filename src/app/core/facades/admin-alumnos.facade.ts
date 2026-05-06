@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
 import type {
   AlumnoTableRow,
   AlumnoExpediente,
@@ -211,21 +212,21 @@ export class AdminAlumnosFacade {
       });
       if (error) throw error;
 
-      const ext = req.format === 'excel' ? 'xlsx' : 'pdf';
-      const mime =
-        req.format === 'excel'
-          ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-          : 'application/pdf';
-      // El SDK v2.98 retorna Blob para respuestas binarias; leerlo como ArrayBuffer
-      // evita comportamiento ambiguo de Blob([otroBlob]) en algunos runtimes
-      const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
-      const blob = new Blob([rawBuffer], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `alumnos_${new Date().toISOString().slice(0, 10)}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const fecha = new Date().toISOString().slice(0, 10);
+
+      if (req.format === 'excel') {
+        const { headers, rows } = data as { headers: string[]; rows: (string | number)[][] };
+        downloadExcel('Alumnos', headers, rows, `alumnos_${fecha}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `alumnos_${fecha}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch {
       this.toast.error('No se pudo exportar la lista. Inténtalo de nuevo.');
     } finally {
@@ -340,11 +341,12 @@ export class AdminAlumnosFacade {
       if (error) throw error;
 
       const rawData = (data ?? []) as unknown as RawStudent[];
-      
+
       // Filtrar alumnos que SOLO tienen inscripciones a cursos singulares (y cero matrículas regulares/drafts)
-      const validStudents = rawData.filter(s => {
+      const validStudents = rawData.filter((s) => {
         const hasRegular = s.enrollments && s.enrollments.length > 0;
-        const hasSingular = s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
+        const hasSingular =
+          s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
         // Si no tiene regular pero sí singular, es exclusivamente de Curso Singular -> Ocultar
         if (!hasRegular && hasSingular) return false;
         return true;

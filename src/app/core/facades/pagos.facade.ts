@@ -435,4 +435,47 @@ export class PagosFacade {
       }),
     );
   }
+
+  // ── Generación de reporte PDF ────────────────────────────────────────────────
+
+  private readonly _isGeneratingReport = signal<boolean>(false);
+  readonly isGeneratingReport = this._isGeneratingReport.asReadonly();
+
+  async generarReporte(params: {
+    startDate: string;
+    endDate: string;
+    branchId: number | null;
+  }): Promise<void> {
+    this._isGeneratingReport.set(true);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-payment-report',
+        {
+          body: {
+            start_date: params.startDate,
+            end_date: params.endDate,
+            branch_id: params.branchId,
+          },
+        },
+      );
+      if (error) throw error;
+
+      const blob = data instanceof Blob ? data : new Blob([data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Reporte_Pagos_${params.startDate}_${params.endDate}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      this.toast.success('Reporte generado', 'El PDF se descargó correctamente.');
+    } catch (err) {
+      this.toast.error(
+        'Error al generar reporte',
+        err instanceof Error ? err.message : 'Inténtalo de nuevo.',
+      );
+    } finally {
+      this._isGeneratingReport.set(false);
+    }
+  }
 }
