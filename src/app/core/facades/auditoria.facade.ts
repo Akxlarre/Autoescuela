@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import {
   ACTION_LABEL_MAP,
@@ -47,6 +48,9 @@ export class AuditoriaFacade {
     accion: null,
     modulo: null,
   });
+
+  private _isExporting = signal(false);
+  readonly isExporting = this._isExporting.asReadonly();
 
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -225,6 +229,52 @@ export class AuditoriaFacade {
         email: u.email,
       })),
     );
+  }
+
+  // ── Exportación ─────────────────────────────────────────────────────────────
+
+  async exportar(format: 'excel' | 'pdf'): Promise<void> {
+    this._isExporting.set(true);
+    try {
+      const f = this._filters();
+      const branchId = this.getActiveBranchId();
+      const { data, error } = await this.supabase.client.functions.invoke('generate-audit-report', {
+        body: {
+          format,
+          branch_id: branchId,
+          fecha_desde: f.fechaDesde,
+          fecha_hasta: f.fechaHasta,
+          secretaria_id: f.secretariaId,
+          accion: f.accion,
+          modulo: f.modulo,
+        },
+      });
+      if (error) throw error;
+
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      if (format === 'excel') {
+        const { sheetName, rows, filename } = data as {
+          sheetName: string;
+          rows: (string | number)[][];
+          filename: string;
+        };
+        downloadExcel(sheetName, [], rows, filename ?? `Auditoria_${today}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Auditoria_${today}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      this.toast.success('Reporte de auditoría generado correctamente.');
+    } catch {
+      this.toast.error('No se pudo generar el reporte. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 
   // ── Mapeo DTO → UI ──────────────────────────────────────────────────────────
