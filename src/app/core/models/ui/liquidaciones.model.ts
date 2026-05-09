@@ -6,6 +6,7 @@ export interface LiquidacionRow {
   rut: string;
   initials: string;
   avatarColor: string;
+  practicalSessions: number;
   totalHours: number;
   amountPerHour: number;
   totalBaseAmount: number;

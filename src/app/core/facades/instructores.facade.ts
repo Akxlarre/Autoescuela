@@ -4,6 +4,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type {
   InstructorTableRow,
+  InstructorHoraRow,
+  InstructorHorarioSession,
   InstructorType,
   LicenseStatus,
   VehicleOption,
@@ -130,6 +132,14 @@ export class InstructoresFacade {
   private readonly _selectedInstructor = signal<InstructorTableRow | null>(null);
   private readonly _assignmentHistory = signal<VehicleAssignmentHistory[]>([]);
 
+  private readonly _horasMonth = signal<number>(new Date().getMonth() + 1);
+  private readonly _horasYear = signal<number>(new Date().getFullYear());
+  private readonly _horasMensuales = signal<InstructorHoraRow[]>([]);
+  private readonly _isLoadingHoras = signal<boolean>(false);
+
+  private readonly _horario = signal<InstructorHorarioSession[]>([]);
+  private readonly _isLoadingHorario = signal<boolean>(false);
+
   // ── Estado público ─────────────────────────────────────────────────────────
   readonly instructores = this._instructores.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
@@ -139,6 +149,16 @@ export class InstructoresFacade {
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly selectedInstructor = this._selectedInstructor.asReadonly();
   readonly assignmentHistory = this._assignmentHistory.asReadonly();
+  readonly horasMonth = this._horasMonth.asReadonly();
+  readonly horasYear = this._horasYear.asReadonly();
+  readonly horasMensuales = this._horasMensuales.asReadonly();
+  readonly isLoadingHoras = this._isLoadingHoras.asReadonly();
+  readonly isHorasCurrentMonth = computed(() => {
+    const now = new Date();
+    return this._horasMonth() === now.getMonth() + 1 && this._horasYear() === now.getFullYear();
+  });
+  readonly horario = this._horario.asReadonly();
+  readonly isLoadingHorario = this._isLoadingHorario.asReadonly();
 
   // ── KPIs computed ──────────────────────────────────────────────────────────
   readonly totalInstructores = computed<number>(() => this._instructores().length);
@@ -342,6 +362,131 @@ export class InstructoresFacade {
         };
       }),
     );
+  }
+
+  async loadHorasMensuales(): Promise<void> {
+    this._isLoadingHoras.set(true);
+    try {
+      const month = this._horasMonth();
+      const year = this._horasYear();
+      const period = `${year}-${String(month).padStart(2, '0')}`;
+
+      const { data, error } = await this.supabase.client
+        .from('instructor_monthly_hours')
+        .select('instructor_id, practical_sessions, total_equivalent')
+        .eq('period', period);
+
+      if (error) throw error;
+
+      const instructores = this._instructores();
+      const rows: InstructorHoraRow[] = (data ?? []).map(
+        (h: {
+          instructor_id: number;
+          practical_sessions: number | null;
+          total_equivalent: number | null;
+        }) => {
+          const inst = instructores.find((i) => i.id === h.instructor_id);
+          return {
+            instructorId: h.instructor_id,
+            nombre: inst?.nombre ?? `Instructor #${h.instructor_id}`,
+            initials: inst?.initials ?? '?',
+            practicalSessions: h.practical_sessions ?? 0,
+            totalEquivalent: h.total_equivalent ?? 0,
+          };
+        },
+      );
+      rows.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      this._horasMensuales.set(rows);
+    } catch {
+      this._horasMensuales.set([]);
+    } finally {
+      this._isLoadingHoras.set(false);
+    }
+  }
+
+  navHorasAnterior(): void {
+    const month = this._horasMonth();
+    const year = this._horasYear();
+    if (month === 1) {
+      this._horasMonth.set(12);
+      this._horasYear.set(year - 1);
+    } else {
+      this._horasMonth.set(month - 1);
+    }
+    this.loadHorasMensuales();
+  }
+
+  navHorasSiguiente(): void {
+    const now = new Date();
+    if (this._horasYear() === now.getFullYear() && this._horasMonth() >= now.getMonth() + 1) return;
+    const month = this._horasMonth();
+    const year = this._horasYear();
+    if (month === 12) {
+      this._horasMonth.set(1);
+      this._horasYear.set(year + 1);
+    } else {
+      this._horasMonth.set(month + 1);
+    }
+    this.loadHorasMensuales();
+  }
+
+  async loadHorario(instructorId: number): Promise<void> {
+    this._isLoadingHorario.set(true);
+    this._horario.set([]);
+    try {
+      const { data, error } = await this.supabase.client
+        .from('class_b_sessions')
+        .select(
+          `
+          id,
+          scheduled_at,
+          class_number,
+          duration_min,
+          enrollments!inner (
+            students!inner (
+              users!inner ( first_names, paternal_last_name )
+            )
+          ),
+          vehicles ( license_plate )
+        `,
+        )
+        .eq('instructor_id', instructorId)
+        .eq('status', 'scheduled')
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(60);
+
+      if (error) throw error;
+
+      const rows: InstructorHorarioSession[] = (data ?? []).map((s: Record<string, unknown>) => {
+        const enr = s['enrollments'] as {
+          students: { users: { first_names: string; paternal_last_name: string } };
+        } | null;
+        const u = enr?.students?.users;
+        const studentName = u ? `${u.first_names} ${u.paternal_last_name}` : 'Alumno';
+        const vehicle = s['vehicles'] as { license_plate: string } | null;
+        return {
+          id: s['id'] as number,
+          scheduledAt: s['scheduled_at'] as string,
+          classNumber: (s['class_number'] as number | null) ?? null,
+          durationMin: (s['duration_min'] as number | null) ?? 45,
+          studentName,
+          studentInitials: studentName
+            .split(' ')
+            .slice(0, 2)
+            .map((w) => w[0])
+            .join('')
+            .toUpperCase(),
+          vehiclePlate: vehicle?.license_plate ?? null,
+        };
+      });
+
+      this._horario.set(rows);
+    } catch {
+      this._horario.set([]);
+    } finally {
+      this._isLoadingHorario.set(false);
+    }
   }
 
   async crearInstructor(payload: CrearInstructorPayload): Promise<boolean> {

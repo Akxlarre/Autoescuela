@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
 import type {
   LiquidacionRow,
   LiquidacionesKpis,
@@ -51,6 +52,7 @@ export class LiquidacionesFacade {
   private readonly _liquidaciones = signal<LiquidacionRow[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSaving = signal<boolean>(false);
+  private readonly _isExporting = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
   // ── SWR State ────────────────────────────────────────────────────────────
@@ -70,6 +72,7 @@ export class LiquidacionesFacade {
   readonly liquidaciones = this._liquidaciones.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
   readonly error = this._error.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
   readonly anioActual = this._anioActual.asReadonly();
@@ -240,7 +243,7 @@ export class LiquidacionesFacade {
           .select('id, user_id, users(id, first_names, paternal_last_name, rut, branch_id)'),
         this.supabase.client
           .from('instructor_monthly_hours')
-          .select('instructor_id, total_equivalent')
+          .select('instructor_id, practical_sessions, total_equivalent')
           .eq('period', `${anio}-${mm}`),
         this.supabase.client
           .from('instructor_advances')
@@ -257,6 +260,10 @@ export class LiquidacionesFacade {
 
       const hoursMap = new Map<number, number>(
         (hoursRes.data ?? []).map((h) => [h.instructor_id, h.total_equivalent ?? 0]),
+      );
+
+      const sessionsMap = new Map<number, number>(
+        (hoursRes.data ?? []).map((h) => [h.instructor_id, h.practical_sessions ?? 0]),
       );
 
       const advancesMap = new Map<number, number>();
@@ -278,8 +285,6 @@ export class LiquidacionesFacade {
           const totalAdvances = advancesMap.get(instr.id) ?? 0;
           const payment = paymentsMap.get(instr.id);
 
-          // ONLY include instructors that have activity this month:
-          // either they worked hours, got an advance, or have a payment record.
           return totalHours > 0 || totalAdvances > 0 || !!payment;
         })
         .map((instr) => {
@@ -287,6 +292,7 @@ export class LiquidacionesFacade {
           const u = Array.isArray(rawU) ? rawU[0] : rawU;
           const nombre = `${u?.first_names ?? ''} ${u?.paternal_last_name ?? ''}`.trim() || '—';
           const totalHours = hoursMap.get(instr.id) ?? 0;
+          const practicalSessions = sessionsMap.get(instr.id) ?? 0;
           const totalAdvances = advancesMap.get(instr.id) ?? 0;
           const payment = paymentsMap.get(instr.id);
           const amountPerHour = payment?.amount_per_hour ?? AMOUNT_PER_HOUR_DEFAULT;
@@ -300,6 +306,7 @@ export class LiquidacionesFacade {
             rut: u?.rut ?? '—',
             initials: getInitials(nombre),
             avatarColor: getAvatarColor(nombre),
+            practicalSessions,
             totalHours,
             amountPerHour,
             totalBaseAmount,
@@ -372,6 +379,45 @@ export class LiquidacionesFacade {
       return false;
     } finally {
       this._isSaving.set(false);
+    }
+  }
+
+  async exportar(format: 'excel' | 'pdf'): Promise<void> {
+    this._isExporting.set(true);
+    try {
+      const mes = this._mesActual();
+      const anio = this._anioActual();
+      const branchId = this.getActiveBranchId();
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-payroll-report',
+        { body: { format, month: mes, year: anio, branch_id: branchId } },
+      );
+      if (error) throw error;
+
+      const mm = String(mes).padStart(2, '0');
+      const periodo = `${anio}${mm}`;
+      if (format === 'excel') {
+        const { sheetName, rows, filename } = data as {
+          sheetName: string;
+          rows: (string | number)[][];
+          filename: string;
+        };
+        downloadExcel(sheetName, [], rows, filename ?? `Nomina_${periodo}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Nomina_${periodo}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      this.toast.success('Reporte de nómina generado correctamente.');
+    } catch {
+      this.toast.error('No se pudo generar el reporte. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
     }
   }
 

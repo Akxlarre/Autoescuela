@@ -4,6 +4,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { toISODate, getChileDateTimeRange } from '@core/utils/date.utils';
+import { downloadExcel } from '@core/utils/excel.utils';
 import type {
   IngresoRow,
   EgresoRow,
@@ -61,6 +62,7 @@ export class CuadraturaFacade {
   private readonly _cierreHoy = signal<CashClosing | null>(null);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSaving = signal<boolean>(false);
+  private readonly _isExporting = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
   private _initialized = false;
@@ -74,6 +76,7 @@ export class CuadraturaFacade {
   readonly cierreHoy = this._cierreHoy.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
   readonly error = this._error.asReadonly();
 
   readonly ingresosEfectivoHoy = computed(() =>
@@ -297,6 +300,43 @@ export class CuadraturaFacade {
       return false;
     } finally {
       this._isSaving.set(false);
+    }
+  }
+
+  async exportar(format: 'excel' | 'pdf'): Promise<void> {
+    this._isExporting.set(true);
+    try {
+      const today = toISODate(new Date());
+      const branchId = this.getActiveBranchId();
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-cash-closing-report',
+        { body: { format, date: today, branch_id: branchId } },
+      );
+      if (error) throw error;
+
+      const fecha = today.replace(/-/g, '');
+      if (format === 'excel') {
+        const { sheetName, rows, filename } = data as {
+          sheetName: string;
+          rows: (string | number)[][];
+          filename: string;
+        };
+        downloadExcel(sheetName, [], rows, filename ?? `Cuadratura_${fecha}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Cuadratura_${fecha}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      this.toast.success('Reporte generado correctamente.');
+    } catch {
+      this.toast.error('No se pudo generar el reporte. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
     }
   }
 

@@ -27,11 +27,13 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       [cajaYaCerrada]="facade.cajaYaCerrada()"
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving()"
+      [isExporting]="facade.isExporting()"
       (guardarCierre)="onGuardarCierre($event)"
       (abrirIngreso)="openIngresoDrawer()"
       (abrirEgreso)="egresoModalOpen.set(true)"
       (eliminarIngreso)="onEliminarIngreso($event)"
       (eliminarEgreso)="onEliminarEgreso($event)"
+      (exportRequested)="facade.exportar($event)"
     />
 
     <!-- ── Modal: Registrar Egreso ──────────────────────────────────────────── -->
@@ -60,8 +62,6 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   protected openIngresoDrawer(): void {
     this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
   }
-
-
 
   protected async onEgresoGuardado(datos: EgresoFormData): Promise<void> {
     const ok = await this.facade.registrarEgreso(datos);

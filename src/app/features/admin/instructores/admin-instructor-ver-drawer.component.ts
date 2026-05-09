@@ -5,6 +5,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
+import { AdminInstructorHorarioDrawerComponent } from './admin-instructor-horario-drawer.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
@@ -275,7 +276,11 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               <app-icon name="edit" [size]="16" />
               Editar perfil
             </button>
-            <button class="quick-action-btn" data-llm-action="ver-horario-instructor">
+            <button
+              class="quick-action-btn"
+              (click)="verHorario()"
+              data-llm-action="ver-horario-instructor"
+            >
               <app-icon name="calendar" [size]="16" />
               Ver horario
             </button>
@@ -370,5 +375,9 @@ export class AdminInstructorVerDrawerComponent {
 
   protected editar(): void {
     this.layoutDrawer.push(AdminInstructorEditarDrawerComponent, 'Editar instructor', 'edit');
+  }
+
+  protected verHorario(): void {
+    this.layoutDrawer.push(AdminInstructorHorarioDrawerComponent, 'Horario', 'calendar');
   }
 }

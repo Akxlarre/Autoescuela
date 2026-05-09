@@ -14,17 +14,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
-import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
-import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
-import type {
-  LiquidacionRow,
-  LiquidacionesKpis,
-  PagoInstructorPayload,
-} from '@core/models/ui/liquidaciones.model';
+import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -237,18 +230,70 @@ function formatCLP(value: number): string {
           grid-template-columns: repeat(3, 1fr) !important;
         }
       }
+
+      .export-menu {
+        min-width: 200px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-muted);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+        overflow: hidden;
+      }
+
+      .export-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--text-primary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        transition: background var(--duration-fast);
+      }
+
+      .export-menu-item:hover {
+        background: var(--bg-elevated);
+      }
     `,
   ],
   template: `
     <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
-    <div class="bento-banner" #heroRef>
+    <div class="bento-banner relative overflow-visible" #heroRef>
       <app-section-hero
         title="Liquidaciones de Instructores"
         subtitle="Nómina mensual y registro de pagos"
-        [actions]="heroActions"
+        [actions]="heroActions()"
         class="block mb-6"
-        [class.force-compact]="layoutDrawer.isOpen()"
+        [class.force-compact]="isDrawerOpen()"
+        (actionClick)="onHeroAction($event)"
       />
+      @if (exportMenuOpen()) {
+        <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+        <div class="export-menu absolute top-14 right-4 z-20">
+          <button
+            type="button"
+            class="export-menu-item"
+            (click)="requestExport('excel')"
+            data-llm-action="export-nomina-excel"
+          >
+            <app-icon name="table-2" [size]="16" />
+            Exportar como Excel
+          </button>
+          <button
+            type="button"
+            class="export-menu-item"
+            (click)="requestExport('pdf')"
+            data-llm-action="export-nomina-pdf"
+          >
+            <app-icon name="file-text" [size]="16" />
+            Exportar como PDF
+          </button>
+        </div>
+      }
     </div>
 
     <!-- ── KPIs: 3 tarjetas uniformes (mismo patrón bento canónico) ── -->
@@ -333,15 +378,18 @@ function formatCLP(value: number): string {
         </div>
 
         <!-- Buscador -->
-        <div
-          class="flex items-center gap-2 px-3 py-2 rounded-lg sm:min-w-[200px]"
-          style="background:var(--bg-surface-elevated);border:1px solid var(--border-muted);"
-        >
-          <app-icon name="search" [size]="14" color="var(--text-muted)" />
+        <div class="relative w-64">
+          <app-icon
+            name="search"
+            [size]="15"
+            class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style="color:var(--text-muted)"
+          />
           <input
             type="text"
-            placeholder="Buscar instructor..."
-            class="flex-1 text-sm bg-transparent text-primary outline-none placeholder:text-muted"
+            placeholder="Buscar por nombre o RUT..."
+            class="w-full h-9 pl-8 pr-8 text-sm rounded-lg border outline-none transition-colors"
+            style="border-color:var(--border-default);background:var(--bg-surface);color:var(--text-primary)"
             [value]="query()"
             (input)="query.set($any($event.target).value)"
             data-llm-description="Search filter for instructor liquidations by name or RUT"
@@ -349,12 +397,12 @@ function formatCLP(value: number): string {
           />
           @if (query()) {
             <button
-              class="cursor-pointer"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer"
               style="color:var(--text-muted)"
               (click)="query.set('')"
-              aria-label="Limpiar"
+              aria-label="Limpiar búsqueda"
             >
-              <app-icon name="x" [size]="12" />
+              <app-icon name="x" [size]="13" />
             </button>
           }
         </div>
@@ -381,18 +429,19 @@ function formatCLP(value: number): string {
       class="shadow-sm"
     >
       <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
-      @if (!layoutDrawer.isOpen()) {
+      @if (!isDrawerOpen()) {
         <div class="hidden md:block w-full">
           <table
             class="w-full liq-table"
-            [class.compact-mode]="layoutDrawer.isOpen()"
+            [class.compact-mode]="isDrawerOpen()"
             role="table"
             aria-label="Tabla de liquidaciones de instructores"
           >
             <thead>
               <tr style="background:var(--bg-surface-elevated)">
                 <th class="text-left">Instructor</th>
-                <th class="text-right">Horas Realizadas</th>
+                <th class="text-right">Clases Impartidas</th>
+                <th class="text-right">Horas Equivalentes</th>
                 <th class="text-right">Base (Ganado)</th>
                 <th class="text-right">Anticipos (Descuento)</th>
                 <th class="text-right">Total a Pagar</th>
@@ -413,14 +462,14 @@ function formatCLP(value: number): string {
                         </div>
                       </div>
                     </td>
-                    @for (j of [1, 2, 3, 4, 5]; track j) {
+                    @for (j of [1, 2, 3, 4, 5, 6]; track j) {
                       <td><app-skeleton-block variant="text" width="75%" height="13px" /></td>
                     }
                   </tr>
                 }
               } @else if (filtradas().length === 0) {
                 <tr>
-                  <td colspan="6" class="py-12 text-center text-sm text-muted" style="border:none">
+                  <td colspan="7" class="py-12 text-center text-sm text-muted" style="border:none">
                     @if (query()) {
                       No se encontraron instructores para "{{ query() }}".
                     } @else {
@@ -445,7 +494,7 @@ function formatCLP(value: number): string {
                         </div>
                         <div class="min-w-0">
                           <p
-                            class="text-sm font-semibold text-primary leading-tight truncate max-w-[120px] lg:max-w-[200px]"
+                            class="text-sm font-semibold text-primary leading-tight truncate max-w-30 lg:max-w-50"
                           >
                             {{ row.nombre }}
                           </p>
@@ -454,7 +503,17 @@ function formatCLP(value: number): string {
                       </div>
                     </td>
 
-                    <!-- Horas -->
+                    <!-- Clases impartidas -->
+                    <td class="text-right tabular-nums">
+                      <span class="text-sm font-semibold text-primary">{{
+                        row.practicalSessions
+                      }}</span>
+                      <span class="text-xs text-muted ml-1">{{
+                        row.practicalSessions === 1 ? 'clase' : 'clases'
+                      }}</span>
+                    </td>
+
+                    <!-- Horas equivalentes -->
                     <td class="text-right tabular-nums">
                       <span class="text-sm font-semibold" style="color:var(--ds-brand)">{{
                         row.totalHours
@@ -537,7 +596,14 @@ function formatCLP(value: number): string {
               <tfoot>
                 <tr>
                   <td class="text-xs font-bold text-secondary uppercase tracking-wide">
-                    TOTALES — {{ filtradas().length }} instructores
+                    TOTALES — {{ filtradas().length }}
+                    {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
+                  </td>
+                  <td class="text-right tabular-nums">
+                    <span class="text-sm font-bold text-primary">{{ totales().clases }}</span>
+                    <span class="text-xs text-muted ml-1">{{
+                      totales().clases === 1 ? 'clase' : 'clases'
+                    }}</span>
                   </td>
                   <td class="text-right tabular-nums">
                     <span class="text-sm font-bold" style="color:var(--ds-brand)">{{
@@ -558,7 +624,7 @@ function formatCLP(value: number): string {
                     }
                   </td>
                   <td class="text-right tabular-nums">
-                    <span class="text-base font-bold text-primary">{{
+                    <span class="text-base font-bold" style="color:var(--ds-brand)">{{
                       formatCLP(totales().total)
                     }}</span>
                   </td>
@@ -572,9 +638,9 @@ function formatCLP(value: number): string {
 
       <!-- VISTA ADAPTATIVA (Móvil o Desktop con Drawer Abierto) -->
       <div
-        [class.md:hidden]="!layoutDrawer.isOpen()"
+        [class.md:hidden]="!isDrawerOpen()"
         class="flex flex-col gap-4 p-4"
-        [class.adaptive-grid]="layoutDrawer.isOpen()"
+        [class.adaptive-grid]="isDrawerOpen()"
         style="background:var(--bg-surface-elevated)"
       >
         @if (isLoading()) {
@@ -653,9 +719,14 @@ function formatCLP(value: number): string {
                   </span>
                 </div>
                 <div class="flex flex-col gap-1">
-                  <span class="text-[10px] uppercase font-bold text-muted">Horas Registradas</span>
-                  <div class="text-[13px] font-bold text-primary tabular-nums">
-                    {{ row.totalHours }} <span class="font-normal text-muted">hrs</span>
+                  <span class="text-[10px] uppercase font-bold text-muted">Horas Equivalentes</span>
+                  <div class="text-[13px] font-bold tabular-nums" style="color:var(--ds-brand)">
+                    {{ row.totalHours }}
+                    <span class="font-normal text-muted">hrs</span>
+                    <span class="text-[11px] font-normal text-muted ml-1"
+                      >({{ row.practicalSessions }}
+                      {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
+                    >
                   </div>
                 </div>
                 <div
@@ -757,6 +828,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   liquidaciones = input.required<LiquidacionRow[]>();
   kpis = input.required<LiquidacionesKpis>();
   isLoading = input<boolean>(false);
+  isExporting = input<boolean>(false);
   mesActual = input<number>(new Date().getMonth() + 1);
   anioActual = input<number>(new Date().getFullYear());
 
@@ -764,11 +836,15 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   mesAnterior = output<void>();
   mesSiguiente = output<void>();
   deshacer = output<LiquidacionRow>();
+  pagar = output<LiquidacionRow>();
+  exportRequested = output<'excel' | 'pdf'>();
+
+  // ── Inputs adicionales ────────────────────────────────────────────────────
+  isDrawerOpen = input<boolean>(false);
 
   // ── Estado UI interno ───────────────────────────────────────────────────────
   protected readonly query = signal('');
-  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
-  private readonly facade = inject(LiquidacionesFacade);
+  protected readonly exportMenuOpen = signal(false);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly heroRef = viewChild<ElementRef>('heroRef');
@@ -777,14 +853,16 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
 
-  protected readonly heroActions: SectionHeroAction[] = [
+  protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {
       id: 'export',
-      label: 'Exportar Nómina',
-      icon: 'download',
+      label: this.isExporting() ? 'Exportando...' : 'Exportar Nómina',
+      icon: this.isExporting() ? 'loader-circle' : 'download',
+      loading: this.isExporting(),
+      disabled: this.isExporting(),
       primary: false,
     },
-  ];
+  ]);
 
   // ── Computed ─────────────────────────────────────────────────────────────────
 
@@ -816,6 +894,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   protected readonly totales = computed(() => {
     const rows = this.filtradas();
     return {
+      clases: rows.reduce((s, r) => s + r.practicalSessions, 0),
       horas: rows.reduce((s, r) => s + r.totalHours, 0),
       base: rows.reduce((s, r) => s + r.totalBaseAmount, 0),
       anticipos: rows.reduce((s, r) => s + r.totalAdvances, 0),
@@ -830,12 +909,22 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   }
 
   protected abrirModal(row: LiquidacionRow): void {
-    this.facade.seleccionarParaPago(row);
-    this.layoutDrawer.open(PagoInstructorModalComponent, 'Registrar Pago Instructor', 'banknote');
+    this.pagar.emit(row);
   }
 
   protected onDeshacer(row: LiquidacionRow): void {
     this.deshacer.emit(row);
+  }
+
+  protected onHeroAction(actionId: string): void {
+    if (actionId === 'export' && !this.isExporting()) {
+      this.exportMenuOpen.set(!this.exportMenuOpen());
+    }
+  }
+
+  protected requestExport(format: 'excel' | 'pdf'): void {
+    this.exportMenuOpen.set(false);
+    this.exportRequested.emit(format);
   }
 
   ngAfterViewInit(): void {
