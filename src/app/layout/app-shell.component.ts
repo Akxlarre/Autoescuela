@@ -187,12 +187,19 @@ export class AppShellComponent {
   private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
 
   onRouteActivate(): void {
+    // 1. Programmatic Focus Management: Move focus to the main container.
+    // This ensures that keyboard interaction (like pressing Space) doesn't
+    // trigger unintended actions on shell buttons that might have held focus.
+    const contentEl = this.mainContent()?.nativeElement;
+    if (contentEl) {
+      contentEl.focus({ preventScroll: true });
+    }
+
+    // 2. Premium Animation Stagger:
     // afterNextRender garantiza que el DOM del componente enrutado está
     // completamente insertado y renderizado antes de disparar la animación.
-    // Reemplaza el setTimeout(50) frágil que podía fallar en dispositivos lentos.
     afterNextRender(
       () => {
-        const contentEl = this.mainContent()?.nativeElement;
         if (!contentEl) return;
 
         const componentRoot = Array.from(contentEl.children).find(

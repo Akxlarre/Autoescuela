@@ -23,7 +23,9 @@
       "Skill(supabase-data-model)",
       "Read(//mnt/c/Users/Akxlarre/AppData/Local/Temp/claude/C--Users-Akxlarre-Autoescuela/d668136f-07f5-419a-b0ca-b6f3bcdd4c15/tasks/**)",
       "Read(//tmp/**)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   },
   "enabledMcpjsonServers": [

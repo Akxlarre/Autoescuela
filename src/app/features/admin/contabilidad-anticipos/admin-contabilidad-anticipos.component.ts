@@ -31,7 +31,6 @@ function clp(n: number): string {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
-    KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
     AlertCardComponent,

@@ -44,46 +44,47 @@ type FilterTab = 'all' | 'active' | 'expiring';
         />
       </div>
 
-      <!-- ── Filter Tabs ──────────────────────────────────────────────────── -->
-      <div class="bento-banner flex items-center gap-2">
-        <span class="text-sm font-medium" style="color: var(--text-secondary)">Filtros:</span>
-        <button
-          class="filter-pill"
-          [class.filter-pill--active]="activeFilter() === 'all'"
-          (click)="activeFilter.set('all')"
-          data-llm-action="filtro-todos"
-        >
-          Todos ({{ facade.totalInstructores() }})
-        </button>
-        <button
-          class="filter-pill"
-          [class.filter-pill--active]="activeFilter() === 'active'"
-          (click)="activeFilter.set('active')"
-          data-llm-action="filtro-activos"
-        >
-          Activos ({{ facade.activos() }})
-        </button>
-        <button
-          class="filter-pill"
-          [class.filter-pill--warning]="
-            facade.licenciasPorVencer() > 0 && activeFilter() === 'expiring'
-          "
-          [class.filter-pill--warning-idle]="
-            facade.licenciasPorVencer() > 0 && activeFilter() !== 'expiring'
-          "
-          [class.filter-pill--active]="
-            activeFilter() === 'expiring' && facade.licenciasPorVencer() === 0
-          "
-          (click)="activeFilter.set('expiring')"
-          data-llm-action="filtro-licencia-por-vencer"
-        >
-          <app-icon name="alert-triangle" [size]="13" />
-          Licencia por vencer ({{ facade.licenciasPorVencer() }})
-        </button>
-      </div>
-
       <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
       <div class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container" #listCard>
+        
+        <!-- ── Filter Tabs (Toolbar) ──────────────────────────────────────── -->
+        <div class="p-4 md:px-6 border-b border-border-subtle bg-surface flex flex-wrap items-center gap-2">
+          <span class="text-sm font-medium" style="color: var(--text-secondary)">Filtros:</span>
+          <button
+            class="filter-pill whitespace-nowrap"
+            [class.filter-pill--active]="activeFilter() === 'all'"
+            (click)="activeFilter.set('all')"
+            data-llm-action="filtro-todos"
+          >
+            Todos ({{ facade.totalInstructores() }})
+          </button>
+          <button
+            class="filter-pill whitespace-nowrap"
+            [class.filter-pill--active]="activeFilter() === 'active'"
+            (click)="activeFilter.set('active')"
+            data-llm-action="filtro-activos"
+          >
+            Activos ({{ facade.activos() }})
+          </button>
+          <button
+            class="filter-pill whitespace-nowrap"
+            [class.filter-pill--warning]="
+              facade.licenciasPorVencer() > 0 && activeFilter() === 'expiring'
+            "
+            [class.filter-pill--warning-idle]="
+              facade.licenciasPorVencer() > 0 && activeFilter() !== 'expiring'
+            "
+            [class.filter-pill--active]="
+              activeFilter() === 'expiring' && facade.licenciasPorVencer() === 0
+            "
+            (click)="activeFilter.set('expiring')"
+            data-llm-action="filtro-licencia-por-vencer"
+          >
+            <app-icon name="alert-triangle" [size]="13" />
+            Licencia por vencer ({{ facade.licenciasPorVencer() }})
+          </button>
+        </div>
+
         <div class="viewport-content bg-surface">
           <!-- VISTA Desktop: Tabla clásica -->
           <div class="desktop-view hide-on-squeeze overflow-x-auto">

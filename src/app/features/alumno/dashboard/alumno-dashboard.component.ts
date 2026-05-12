@@ -46,6 +46,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           [contextLine]="heroContextLine()"
           [chips]="heroChips()"
           [actions]="heroActions()"
+          [animateOnInit]="false"
           (actionClick)="onHeroAction($event)"
         />
       </div>
@@ -176,10 +177,21 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
         </div>
 
         @if (loading()) {
-          <div class="flex flex-col gap-3">
-            <app-skeleton-block variant="rect" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="12px" />
-            <app-skeleton-block variant="text" width="80%" height="12px" />
+          <div class="flex flex-col gap-6">
+            <!-- Skeleton para el anillo de progreso y leyenda -->
+            <div class="flex items-center gap-4 shrink-0">
+               <app-skeleton-block variant="circle" width="80px" height="80px" />
+               <div class="flex flex-col gap-2 flex-1">
+                  <app-skeleton-block variant="text" width="60%" height="12px" />
+                  <app-skeleton-block variant="text" width="40%" height="10px" />
+               </div>
+            </div>
+            <!-- Skeleton para la cuadrícula de clases -->
+            <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
+               @for (i of [1,2,3,4,5,6,7,8,9,10,11,12]; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="32px" />
+               }
+            </div>
           </div>
         } @else {
           <!-- Anillo de progreso -->

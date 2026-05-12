@@ -3,6 +3,7 @@ import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { CuadraturaContentComponent } from '@shared/components/cuadratura-content/cuadratura-content.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
 import { RegistrarEgresoDrawerComponent } from './registrar-egreso-drawer.component';
@@ -36,6 +37,7 @@ export class AdminContabilidadCuadraturaComponent {
   private readonly branchFacade = inject(BranchFacade);
   private readonly pagosFacade = inject(PagosFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   constructor() {
     effect(() => {
@@ -58,10 +60,27 @@ export class AdminContabilidadCuadraturaComponent {
   }
 
   protected async onEliminarIngreso(row: IngresoRow): Promise<void> {
+    const ref = row.nBoleta ? `boleta ${row.nBoleta}` : `ingreso #${row.id}`;
+    const confirmed = await this.confirmModal.confirm({
+      title: `Eliminar ${ref}`,
+      message: 'Los saldos del día se recalcularán. Esta acción no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
     await this.facade.eliminarIngreso(row);
   }
 
   protected async onEliminarEgreso(row: EgresoRow): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar egreso',
+      message: `Se eliminará "${row.descripcion}". Esta acción no se puede deshacer.`,
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
     await this.facade.eliminarEgreso(row);
   }
 }

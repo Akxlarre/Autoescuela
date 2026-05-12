@@ -518,8 +518,15 @@ app-main-layout p-toast.p-toast-top-center,
   transition:
     background-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard) !important;
-  /* Sin outline en focus: los botones del toolbar no son inputs */
+  /* Accesibilidad Premium: ocultamos el focus ring para clics de ratón
+     pero lo mostramos nítido para navegación por teclado (:focus-visible). */
   outline: none !important;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-border) !important;
+    outline-offset: -2px !important;
+    box-shadow: 0 0 0 4px var(--accent-glow) !important;
+  }
 }
 
 .toolbar-actions .p-button.p-button-secondary {

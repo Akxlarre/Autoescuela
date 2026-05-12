@@ -11,6 +11,7 @@ import type {
 } from '@core/models/ui/cuadratura.model';
 
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 
 @Component({
   selector: 'app-secretaria-contabilidad-cuadratura',
@@ -46,6 +47,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   protected readonly facade = inject(CuadraturaFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   protected readonly egresoModalOpen = signal(false);
 
@@ -61,8 +63,6 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
     this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
   }
 
-
-
   protected async onEgresoGuardado(datos: EgresoFormData): Promise<void> {
     const ok = await this.facade.registrarEgreso(datos);
     if (ok) {
@@ -71,10 +71,27 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   }
 
   protected async onEliminarIngreso(row: IngresoRow): Promise<void> {
+    const ref = row.nBoleta ? `boleta ${row.nBoleta}` : `ingreso #${row.id}`;
+    const confirmed = await this.confirmModal.confirm({
+      title: `Eliminar ${ref}`,
+      message: 'Los saldos del día se recalcularán. Esta acción no se puede deshacer.',
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
     await this.facade.eliminarIngreso(row);
   }
 
   protected async onEliminarEgreso(row: EgresoRow): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar egreso',
+      message: `Se eliminará "${row.descripcion}". Esta acción no se puede deshacer.`,
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
     await this.facade.eliminarEgreso(row);
   }
 }

@@ -40,7 +40,6 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     Button,
     AdminFichaTecnicaComponent,
     AdminHistorialPagosComponent,
-    AdminReprogramarClaseDrawerComponent,
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
   ],

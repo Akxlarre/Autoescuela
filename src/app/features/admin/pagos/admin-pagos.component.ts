@@ -142,7 +142,7 @@ const POR_PAGINA = 5;
             </div>
 
             @if (facade.isLoading()) {
-              <div class="divide-y" style="border-color: var(--border-muted)">
+              <div class="rows-divider">
                 @for (row of [1, 2, 3, 4]; track row) {
                   <div
                     class="p-4 lg:px-6 lg:py-4 flex flex-col gap-3 lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center"
@@ -197,7 +197,7 @@ const POR_PAGINA = 5;
                   <span class="text-right">Saldo</span>
                   <span class="text-right">Acciones</span>
                 </div>
-                <div class="divide-y" style="border-color: var(--border-muted)">
+                <div class="rows-divider">
                   @for (alumno of facade.alumnosConDeuda(); track alumno.enrollmentId) {
                     <div
                       class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
@@ -338,7 +338,7 @@ const POR_PAGINA = 5;
               </div>
 
               @if (facade.isLoading()) {
-                <div class="divide-y" style="border-color: var(--border-muted)">
+                <div class="rows-divider">
                   @for (row of [1, 2, 3, 4, 5]; track row) {
                     <div
                       class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center"
@@ -399,7 +399,7 @@ const POR_PAGINA = 5;
                   <span class="text-center">Estado</span>
                 </div>
 
-                <div class="divide-y" style="border-color: var(--border-muted)">
+                <div class="rows-divider">
                   @for (pago of pagosVisibles(); track pago.id) {
                     <div
                       class="p-4 lg:px-6 lg:py-3.5 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
@@ -552,6 +552,13 @@ const POR_PAGINA = 5;
                         ></div>
                       </div>
                     </div>
+                  } @empty {
+                    <div class="flex flex-col items-center gap-1.5 py-4 text-center">
+                      <app-icon name="pie-chart" [size]="22" color="var(--text-muted)" />
+                      <p class="text-xs" style="color: var(--text-muted)">
+                        Sin pagos registrados este mes.
+                      </p>
+                    </div>
                   }
                 }
               </div>
@@ -577,6 +584,9 @@ const POR_PAGINA = 5;
   `,
   styles: [
     `
+      .rows-divider > * + * {
+        border-top: 1px solid var(--border-muted);
+      }
       .force-compact .hidden.lg\\:grid {
         display: none !important;
       }

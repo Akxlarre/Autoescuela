@@ -25,6 +25,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -78,12 +79,21 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     ════════════════════════════════════════════════════════════════ -->
     <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de control">
       <!-- ── HERO — Section Hero reutilizable ──────────────────────────── -->
-      @if (hero()) {
+      @if (loading() && !hero()) {
+        <app-section-hero
+          [title]="'¡Bienvenido, ' + fallbackName() + '!'"
+          contextLine="Sincronizando resumen del día..."
+          [chips]="[]"
+          [actions]="[]"
+          [animateOnInit]="false"
+        />
+      } @else if (hero()) {
         <app-section-hero
           [title]="heroSectionTitle()"
           [contextLine]="heroContextLine()"
           [chips]="heroChips()"
           [actions]="heroActions()"
+          [animateOnInit]="false"
           (actionClick)="handleQuickAction($event)"
         />
       }
@@ -92,22 +102,30 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
            app-kpi-card encapsula: .kpi-value + .kpi-label + trend + animateCounter()
            Solo 1 card-accent por sección bento → va en la primera KPI.
       ──────────────────────────────────────────────────────────── -->
-      @for (kpi of kpis(); track kpi.id) {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            [label]="kpi.label"
-            [value]="kpi.value"
-            [suffix]="kpi.suffix ?? ''"
-            [prefix]="kpi.prefix ?? ''"
-            [trend]="kpi.trend"
-            [trendLabel]="kpi.trendLabel ?? ''"
-            [subValue]="kpi.subValue ?? ''"
-            [accent]="kpi.accent ?? false"
-            [icon]="kpi.icon"
-            [color]="kpi.color ?? 'default'"
-            [loading]="loading()"
-          />
-        </div>
+      @if (loading()) {
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="bento-square">
+            <app-kpi-card-variant [loading]="true" [label]="''" [value]="0" />
+          </div>
+        }
+      } @else {
+        @for (kpi of kpis(); track kpi.id) {
+          <div class="bento-square">
+            <app-kpi-card-variant
+              [label]="kpi.label"
+              [value]="kpi.value"
+              [suffix]="kpi.suffix ?? ''"
+              [prefix]="kpi.prefix ?? ''"
+              [trend]="kpi.trend"
+              [trendLabel]="kpi.trendLabel ?? ''"
+              [subValue]="kpi.subValue ?? ''"
+              [accent]="kpi.accent ?? false"
+              [icon]="kpi.icon"
+              [color]="kpi.color ?? 'default'"
+              [loading]="loading()"
+            />
+          </div>
+        }
       }
 
       <!-- ── Izquierda: Actividad reciente (comparte altura con Alertas) ───
@@ -201,6 +219,7 @@ export class DashboardComponent {
   private readonly dashboardFacade = inject(DashboardFacade);
   private readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly auth = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
@@ -208,6 +227,7 @@ export class DashboardComponent {
   // ── Estado ────────────────────────────────────────────────────────────────
 
   readonly loading = computed(() => this.dashboardFacade.loading());
+  protected readonly fallbackName = computed(() => this.auth.currentUser()?.name || 'Administrador');
 
   // ── Datos derivados del Facade ────────────────────────────────────────────
 

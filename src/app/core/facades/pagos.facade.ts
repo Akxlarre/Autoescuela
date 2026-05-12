@@ -43,7 +43,7 @@ const METODOS_CONFIG: { key: string; metodo: string; color: string; icono: strin
   {
     key: 'card_amount',
     metodo: 'Débito/Crédito',
-    color: 'var(--color-purple)',
+    color: 'var(--state-info)',
     icono: 'credit-card',
   },
   { key: 'voucher_amount', metodo: 'WebPay', color: 'var(--state-warning)', icono: 'monitor' },

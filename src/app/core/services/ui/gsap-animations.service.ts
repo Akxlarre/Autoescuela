@@ -1,4 +1,4 @@
-import { Injectable, inject, PLATFORM_ID } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -19,11 +19,16 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 })
 export class GsapAnimationsService {
   private platformId = inject(PLATFORM_ID);
+  private ngZone = inject(NgZone);
   private prefersReducedMotion = false;
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
-      gsap.registerPlugin(ScrollTrigger);
+      this.ngZone.runOutsideAngular(() => {
+        gsap.registerPlugin(ScrollTrigger);
+        // Asegura que el ticker de GSAP corra fuera de Angular Zone
+        gsap.ticker.wake();
+      });
 
       // Check user's motion preference
       const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -61,78 +66,93 @@ export class GsapAnimationsService {
    *
    * Detecta automáticamente celdas "hero" por clases semánticas (.card-accent, .bento-banner)
    * y las anima con blur+scale premium. El resto entra en stagger estándar.
-   * No requiere cambios en templates.
    *
    * Jerarquía:
-   *   1. Hero cells (.card-accent, .bento-banner, [data-animate-hero]) → blur+scale, t=0
-   *   2. Grid cells regulares                                          → stagger desde abajo, t=0.08s
+   *   1. Hero cells (.card-accent, .bento-banner, [data-animate-hero]) → blur+scale+fade, t=0
+   *   2. Grid cells regulares                                          → stagger desde abajo + fade, t=0.08s
    *
    * @param containerEl - Elemento contenedor del bento-grid
+   * @param options - Opciones adicionales (ej: skipOpacity si se usa View Transitions)
    */
-  animateBentoGrid(containerEl: HTMLElement | null | undefined): void {
+  animateBentoGrid(
+    containerEl: HTMLElement | null | undefined,
+    options: { skipOpacity?: boolean } = {},
+  ): void {
     if (!containerEl) return;
-    const cells = Array.from(containerEl.children) as HTMLElement[];
+    
+    this.ngZone.runOutsideAngular(() => {
+      const cells = Array.from(containerEl.children) as HTMLElement[];
 
-    if (!this.shouldAnimate()) {
-      gsap.set(cells, { opacity: 1, y: 0, scale: 1, filter: 'none' });
-      return;
-    }
+      if (!this.shouldAnimate()) {
+        gsap.set(cells, { opacity: 1, y: 0, scale: 1, filter: 'none' });
+        return;
+      }
 
-    // Separar en hero vs grid regular usando clases semánticas existentes
-    const heroCells = cells.filter(
-      (el) =>
-        el.classList.contains('card-accent') ||
-        el.classList.contains('bento-banner') ||
-        el.getAttribute('data-animate-hero') === 'true',
-    );
-    const gridCells = cells.filter((el) => !heroCells.includes(el));
+      const { skipOpacity = false } = options;
 
-    // Promover layers antes de animar para evitar layer promotion tardío
-    // opacity excluido: View Transitions API es dueño de la opacidad de entrada
-    heroCells.forEach((el) => (el.style.willChange = 'transform, filter'));
-    gridCells.forEach((el) => (el.style.willChange = 'transform'));
+      // Separar en hero vs grid regular usando clases semánticas existentes
+      const heroCells = cells.filter(
+        (el) =>
+          el.classList.contains('card-accent') ||
+          el.classList.contains('bento-banner') ||
+          el.getAttribute('data-animate-hero') === 'true',
+      );
+      const gridCells = cells.filter((el) => !heroCells.includes(el));
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        heroCells.forEach((el) => (el.style.willChange = ''));
-        gridCells.forEach((el) => (el.style.willChange = ''));
-      },
+      // Promover layers antes de animar
+      heroCells.forEach((el) => (el.style.willChange = 'transform, filter, opacity'));
+      gridCells.forEach((el) => (el.style.willChange = 'transform, opacity'));
+
+      const tl = gsap.timeline({
+        onComplete: () => {
+          heroCells.forEach((el) => (el.style.willChange = ''));
+          gridCells.forEach((el) => (el.style.willChange = ''));
+        },
+      });
+
+      // ── Hero cells: blur+scale premium ──
+      if (heroCells.length > 0) {
+        const fromVars: gsap.TweenVars = { scale: 0.96, filter: 'blur(6px)', y: 12 };
+        if (!skipOpacity) fromVars.opacity = 0;
+
+        tl.fromTo(
+          heroCells,
+          fromVars,
+          {
+            scale: 1,
+            filter: 'blur(0px)',
+            y: 0,
+            opacity: 1,
+            duration: 0.65,
+            ease: 'expo.out',
+            stagger: heroCells.length > 1 ? 0.08 : 0,
+            clearProps: 'filter,transform' + (skipOpacity ? '' : ',opacity'),
+          },
+          0,
+        );
+      }
+
+      // ── Grid cells: y+scale + fade ──
+      if (gridCells.length > 0) {
+        const fromVars: gsap.TweenVars = { y: 24, scale: 0.97 };
+        if (!skipOpacity) fromVars.opacity = 0;
+
+        tl.fromTo(
+          gridCells,
+          fromVars,
+          {
+            y: 0,
+            scale: 1,
+            opacity: 1,
+            duration: 0.55,
+            ease: 'power3.out',
+            stagger: { amount: 0.25, from: 'start' },
+            clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
+          },
+          heroCells.length > 0 ? 0.08 : 0,
+        );
+      }
     });
-
-    // ── Hero cells: blur+scale premium — SIN opacity para no contaminar screenshot de VT ──
-    if (heroCells.length > 0) {
-      tl.fromTo(
-        heroCells,
-        { scale: 0.96, filter: 'blur(6px)', y: 12 },
-        {
-          scale: 1,
-          filter: 'blur(0px)',
-          y: 0,
-          duration: 0.65,
-          ease: 'expo.out',
-          stagger: heroCells.length > 1 ? 0.08 : 0,
-          clearProps: 'filter,transform',
-        },
-        0,
-      );
-    }
-
-    // ── Grid cells: solo y+scale — View Transitions API maneja el fade del área completa ──
-    if (gridCells.length > 0) {
-      tl.fromTo(
-        gridCells,
-        { y: 24, scale: 0.97 },
-        {
-          y: 0,
-          scale: 1,
-          duration: 0.55,
-          ease: 'power3.out',
-          stagger: { amount: 0.25, from: 'start' },
-          clearProps: 'transform',
-        },
-        heroCells.length > 0 ? 0.08 : 0,
-      );
-    }
   }
 
   /**
@@ -180,17 +200,19 @@ export class GsapAnimationsService {
       return;
     }
 
-    const obj = { val: 0 };
-    gsap.to(obj, {
-      val: target,
-      duration: 1.2,
-      ease: 'power2.out',
-      onUpdate: () => {
-        const display = hasDecimals
-          ? obj.val.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-          : Math.round(obj.val).toLocaleString('es-CL');
-        el.textContent = display + suffix;
-      },
+    this.ngZone.runOutsideAngular(() => {
+      const obj = { val: 0 };
+      gsap.to(obj, {
+        val: target,
+        duration: 1.2,
+        ease: 'power2.out',
+        onUpdate: () => {
+          const display = hasDecimals
+            ? obj.val.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+            : Math.round(obj.val).toLocaleString('es-CL');
+          el.textContent = display + suffix;
+        },
+      });
     });
   }
 
@@ -201,44 +223,46 @@ export class GsapAnimationsService {
    * @returns Un timeline de GSAP para control manual si es necesario
    */
   createShimmer(el: HTMLElement): gsap.core.Timeline {
-    // Si ya tiene un shimmer, no crear otro
-    if (el.dataset['gsapShimmer'] === 'true') return gsap.timeline();
-    el.dataset['gsapShimmer'] = 'true';
+    return this.ngZone.runOutsideAngular(() => {
+      // Si ya tiene un shimmer, no crear otro
+      if (el.dataset['gsapShimmer'] === 'true') return gsap.timeline();
+      el.dataset['gsapShimmer'] = 'true';
 
-    // Asegurar que el elemento tenga la estructura necesaria
-    // El brillo es un pseudo-elemento o un div absoluto hijo
-    let shimmerEl = el.querySelector('.gsap-shimmer') as HTMLElement;
-    if (!shimmerEl) {
-      shimmerEl = document.createElement('div');
-      shimmerEl.className = 'gsap-shimmer pointer-events-none absolute inset-0 z-10';
+      // Asegurar que el elemento tenga la estructura necesaria
+      // El brillo es un pseudo-elemento o un div absoluto hijo
+      let shimmerEl = el.querySelector('.gsap-shimmer') as HTMLElement;
+      if (!shimmerEl) {
+        shimmerEl = document.createElement('div');
+        shimmerEl.className = 'gsap-shimmer pointer-events-none absolute inset-0 z-10';
 
-      // UX/UI Improvement: Wider shimmer (150%) for a softer, more elegant sweep
-      shimmerEl.style.width = '150%';
-      // 105deg angle gives a subtle, premium directional flow compared to rigid 90deg
-      shimmerEl.style.background =
-        'linear-gradient(105deg, transparent 0%, var(--shimmer-highlight, rgba(255,255,255,0.2)) 50%, transparent 100%)';
-      shimmerEl.style.transform = 'translateX(-150%)';
+        // UX/UI Improvement: Wider shimmer (150%) for a softer, more elegant sweep
+        shimmerEl.style.width = '150%';
+        // 105deg angle gives a subtle, premium directional flow compared to rigid 90deg
+        shimmerEl.style.background =
+          'linear-gradient(105deg, transparent 0%, var(--shimmer-highlight, rgba(255,255,255,0.2)) 50%, transparent 100%)';
+        shimmerEl.style.transform = 'translateX(-150%)';
 
-      el.classList.add('relative', 'overflow-hidden');
-      el.appendChild(shimmerEl);
-    }
+        el.classList.add('relative', 'overflow-hidden');
+        el.appendChild(shimmerEl);
+      }
 
-    const tl = gsap.timeline({ repeat: -1 });
+      const tl = gsap.timeline({ repeat: -1 });
 
-    if (!this.shouldAnimate()) {
-      gsap.set(shimmerEl, { display: 'none' });
+      if (!this.shouldAnimate()) {
+        gsap.set(shimmerEl, { display: 'none' });
+        return tl;
+      }
+
+      tl.to(shimmerEl, {
+        x: '100%',
+        // Slightly slower duration to match the wider sweep
+        duration: 1.8,
+        ease: 'none',
+        repeatDelay: 0.4,
+      });
+
       return tl;
-    }
-
-    tl.to(shimmerEl, {
-      x: '100%',
-      // Slightly slower duration to match the wider sweep
-      duration: 1.8,
-      ease: 'none',
-      repeatDelay: 0.4,
     });
-
-    return tl;
   }
 
   /**
