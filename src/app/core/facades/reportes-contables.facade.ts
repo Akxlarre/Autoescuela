@@ -5,6 +5,7 @@ import type { FiltrosReporte, ReporteContable } from '@core/models/ui/reportes-c
 import { computeDateRange } from '@core/models/ui/reportes-contables.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
 import {
   buildReporte,
   filterPaymentsByBranch,
@@ -21,18 +22,20 @@ export class ReportesContablesFacade {
 
   // ── 1. Estado privado ──────────────────────────────────────────────────────
   private readonly _isLoading = signal(false);
+  private readonly _isExporting = signal(false);
   private readonly _error = signal<string | null>(null);
   private readonly _reporte = signal<ReporteContable | null>(null);
   private readonly _filtros = signal<FiltrosReporte>(
     (() => {
-      const [desde, hasta] = computeDateRange('mes_anterior');
-      return { rango: 'mes_anterior', desde, hasta };
+      const [desde, hasta] = computeDateRange('mes_actual');
+      return { rango: 'mes_actual', desde, hasta };
     })(),
   );
   private _initialized = false;
 
   // ── 2. Estado público (readonly) ───────────────────────────────────────────
   public readonly isLoading = this._isLoading.asReadonly();
+  public readonly isExporting = this._isExporting.asReadonly();
   public readonly error = this._error.asReadonly();
   public readonly filtros = this._filtros.asReadonly();
 
@@ -98,12 +101,42 @@ export class ReportesContablesFacade {
     }
   }
 
-  exportarExcel(): void {
-    // TODO: implementar exportación a Excel (Edge Function o librería cliente)
-  }
+  async exportar(format: 'excel' | 'pdf'): Promise<void> {
+    this._isExporting.set(true);
+    try {
+      const { desde, hasta } = this._filtros();
+      const branchId = this._effectiveBranchId();
 
-  exportarPDF(): void {
-    // TODO: implementar exportación a PDF (Edge Function o librería cliente)
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-financial-report',
+        { body: { format, desde, hasta, branch_id: branchId } },
+      );
+      if (error) throw error;
+
+      const fileDate = `${desde.replace(/-/g, '')}_${hasta.replace(/-/g, '')}`;
+      if (format === 'excel') {
+        const { sheetName, rows, filename } = data as {
+          sheetName: string;
+          rows: (string | number)[][];
+          filename: string;
+        };
+        downloadExcel(sheetName, [], rows, filename ?? `ReporteContable_${fileDate}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ReporteContable_${fileDate}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      this.toast.success('Reporte generado correctamente.');
+    } catch {
+      this.toast.error('No se pudo generar el reporte. Inténtalo de nuevo.');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 
   // ── Privado ───────────────────────────────────────────────────────────────

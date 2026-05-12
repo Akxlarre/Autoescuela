@@ -36,12 +36,9 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
  * Vista de certificación Clase B:
  *  - Section Hero compacto
  *  - 4 KPIs (Total alumnos, Generados, Pendientes Generación, Pendientes Envío)
- *  - Toolbar con acciones masivas + filtro de estado
- *  - Tabla de alumnos elegibles (certificate_enabled = true)
- *    · Columna "Teoría" con % de asistencia a clases teóricas inscritas
- *    · Generar directo si teoría = 100 % (o sin registro)
- *    · Confirmación inline si teoría < 100 % (requisito flexible)
- *  - Historial de emisiones (log)
+ *  - Toolbar con buscador (nombre/RUT) + filtro de estado + acciones masivas
+ *  - Tabla de alumnos elegibles paginada (PAGE_SIZE=10)
+ *  - Historial de emisiones paginado
  */
 @Component({
   selector: 'app-certificacion-clase-b-content',
@@ -107,51 +104,248 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
         />
       </div>
 
-      <!-- ── Toolbar ─────────────────────────────────────────────────── -->
-      <div class="bento-banner card flex flex-wrap items-center gap-3 p-4">
-        @if (pendientesCount() > 0) {
+      <!-- ── Tabla + Toolbar (card unificado) ────────────────────────── -->
+      <div class="bento-banner card overflow-hidden">
+        <div
+          class="flex flex-wrap items-center gap-3 p-4"
+          style="border-bottom: 1px solid var(--border-default)"
+        >
+          <!-- Buscador -->
+          <div class="relative flex-1 min-w-50 max-w-xs">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style="color: var(--text-muted)"
+            />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o RUT..."
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors"
+              style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+              data-llm-description="Search students by name or RUT"
+              [value]="searchQuery()"
+              (input)="setSearchQuery($any($event.target).value)"
+            />
+          </div>
+
+          <!-- Filtro de estado -->
+          <p-select
+            [options]="estadoOptions"
+            [ngModel]="estadoFilter()"
+            (ngModelChange)="setEstadoFilter($event)"
+            optionLabel="label"
+            optionValue="value"
+            class="h-9"
+            data-llm-description="Filter certificates by status"
+          />
+
+          @if (pendientesCount() > 0) {
+            <button
+              class="btn-primary flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              data-llm-action="generate-pending-certificates"
+              [disabled]="isGeneratingPendientes()"
+              (click)="abrirPanelPendientes()"
+            >
+              @if (isGeneratingPendientes()) {
+                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                Generando...
+              } @else {
+                <app-icon name="file-check" [size]="16" />
+                Generar Pendientes ({{ pendientesCount() }})
+              }
+            </button>
+          }
+
+          @if (alumnosParaEnvioMasivo().length > 0) {
+            <button
+              class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              data-llm-action="send-bulk-emails"
+              [disabled]="sendingMasivo()"
+              (click)="abrirPanelMasivo()"
+            >
+              @if (sendingMasivo()) {
+                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                Enviando...
+              } @else {
+                <app-icon name="send" [size]="16" />
+                Enviar Emails Masivo ({{ alumnosParaEnvioMasivo().length }})
+              }
+            </button>
+          }
+
           <button
-            class="btn-primary flex items-center gap-2 text-sm"
-            data-llm-action="generate-pending-certificates"
-            (click)="generarPendientes.emit()"
+            class="btn-secondary flex items-center gap-2 text-sm ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
+            data-llm-action="export-all-certificates-zip"
+            [disabled]="isExporting()"
+            (click)="exportar.emit()"
           >
-            <app-icon name="file-check" [size]="16" />
-            Generar Pendientes ({{ pendientesCount() }})
+            @if (isExporting()) {
+              <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+              Exportando...
+            } @else {
+              <app-icon name="download" [size]="16" />
+              Exportar todos
+            }
           </button>
+        </div>
+
+        <!-- ── Panel confirmación generar pendientes ────────────────────── -->
+        @if (pendientesPanelVisible()) {
+          <div
+            class="p-5 flex flex-col gap-4"
+            style="border-bottom: 1px solid var(--border-default)"
+          >
+            <div class="flex items-start gap-3">
+              <app-icon
+                name="file-check"
+                [size]="20"
+                style="color: var(--ds-brand); flex-shrink: 0; margin-top: 2px"
+              />
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                  Generar Pendientes — {{ alumnosPendientes().length }} certificado{{
+                    alumnosPendientes().length !== 1 ? 's' : ''
+                  }}
+                </p>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                  Los alumnos con asistencia teórica incompleta recibirán su certificado igualmente.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="rounded-lg border divide-y overflow-hidden"
+              style="border-color: var(--border-subtle)"
+            >
+              @for (alumno of alumnosPendientes(); track alumno.enrollmentId) {
+                <div class="flex items-center gap-3 px-4 py-2.5">
+                  @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
+                    <app-icon
+                      name="alert-triangle"
+                      [size]="14"
+                      style="color: var(--state-warning); flex-shrink: 0"
+                    />
+                  } @else {
+                    <app-icon
+                      name="file-check"
+                      [size]="14"
+                      style="color: var(--state-success); flex-shrink: 0"
+                    />
+                  }
+                  <span
+                    class="text-sm font-medium flex-1 truncate"
+                    style="color: var(--text-primary)"
+                  >
+                    {{ alumno.nombre }}
+                  </span>
+                  @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
+                    <span class="text-xs" style="color: var(--state-warning)">
+                      {{ alumno.pctAsistenciaTeoria }}% teoría
+                    </span>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="flex items-center gap-2 justify-end">
+              <button
+                class="btn-outline cursor-pointer px-4 py-2 text-sm"
+                data-llm-action="cancel-generate-pending-certificates"
+                (click)="cancelarPendientes()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                data-llm-action="confirm-generate-pending-certificates"
+                (click)="confirmarPendientes()"
+              >
+                <app-icon name="file-check" [size]="14" />
+                Generar {{ alumnosPendientes().length }} certificado{{
+                  alumnosPendientes().length !== 1 ? 's' : ''
+                }}
+              </button>
+            </div>
+          </div>
         }
 
-        <button
-          class="btn-secondary text-sm"
-          data-llm-action="send-bulk-emails"
-          (click)="enviarEmailsMasivo.emit()"
-        >
-          <app-icon name="send" [size]="16" />
-          Enviar Emails Masivo
-        </button>
+        <!-- ── Panel confirmación envío masivo ──────────────────────────── -->
+        @if (masivoPanelVisible()) {
+          <div
+            class="p-5 flex flex-col gap-4"
+            style="border-bottom: 1px solid var(--border-default)"
+          >
+            <div class="flex items-start gap-3">
+              <app-icon
+                name="send"
+                [size]="20"
+                style="color: var(--ds-brand); flex-shrink: 0; margin-top: 2px"
+              />
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                  Envío masivo — {{ alumnosParaEnvioMasivo().length }} alumno{{
+                    alumnosParaEnvioMasivo().length !== 1 ? 's' : ''
+                  }}
+                  recibirá{{ alumnosParaEnvioMasivo().length !== 1 ? 'n' : '' }} su certificado por
+                  correo
+                </p>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                  Solo se incluyen alumnos con certificado generado que aún no han recibido el
+                  correo.
+                </p>
+              </div>
+            </div>
 
-        <!-- Filtro de estado -->
-        <p-select
-          [options]="estadoOptions"
-          [ngModel]="estadoFilter()"
-          (ngModelChange)="estadoFilter.set($event)"
-          optionLabel="label"
-          optionValue="value"
-          class="h-9"
-          data-llm-description="Filter certificates by status"
-        />
+            <!-- Lista de destinatarios -->
+            <div
+              class="rounded-lg border divide-y overflow-hidden"
+              style="border-color: var(--border-subtle)"
+            >
+              @for (alumno of alumnosParaEnvioMasivo(); track alumno.enrollmentId) {
+                <div class="flex items-center gap-3 px-4 py-2.5">
+                  <app-icon
+                    name="user"
+                    [size]="14"
+                    style="color: var(--text-muted); flex-shrink: 0"
+                  />
+                  <span
+                    class="text-sm font-medium flex-1 truncate"
+                    style="color: var(--text-primary)"
+                  >
+                    {{ alumno.nombre }}
+                  </span>
+                  <span class="text-xs truncate" style="color: var(--ds-brand)">
+                    {{ alumno.email }}
+                  </span>
+                </div>
+              }
+            </div>
 
-        <button
-          class="btn-secondary text-sm ml-auto"
-          data-llm-action="export-certificates"
-          (click)="exportar.emit()"
-        >
-          <app-icon name="download" [size]="16" />
-          Exportar
-        </button>
-      </div>
+            <!-- Acciones -->
+            <div class="flex items-center gap-2 justify-end">
+              <button
+                class="btn-outline cursor-pointer px-4 py-2 text-sm"
+                data-llm-action="cancel-bulk-email"
+                (click)="cancelarMasivo()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                data-llm-action="confirm-bulk-email"
+                (click)="confirmarMasivo()"
+              >
+                <app-icon name="send" [size]="14" />
+                Enviar a {{ alumnosParaEnvioMasivo().length }} alumno{{
+                  alumnosParaEnvioMasivo().length !== 1 ? 's' : ''
+                }}
+              </button>
+            </div>
+          </div>
+        }
 
-      <!-- ── Tabla principal ─────────────────────────────────────────── -->
-      <div class="bento-banner card overflow-hidden">
+        <!-- ── Tabla principal ─────────────────────────────────────────── -->
         @if (isLoading()) {
           <div class="p-6 flex flex-col gap-4">
             @for (_ of skeletonRows; track $index) {
@@ -160,11 +354,19 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
           </div>
         } @else if (filteredAlumnos().length === 0) {
           <div class="p-8">
-            <app-empty-state
-              icon="award"
-              message="No hay alumnos elegibles para certificación"
-              subtitle="Los alumnos aparecerán aquí cuando completen sus 12 clases prácticas de Clase B"
-            />
+            @if (alumnos().length === 0) {
+              <app-empty-state
+                icon="award"
+                message="No hay alumnos elegibles para certificación"
+                subtitle="Los alumnos aparecerán aquí cuando completen sus 12 clases prácticas de Clase B"
+              />
+            } @else {
+              <app-empty-state
+                icon="filter-x"
+                message="No hay resultados para este filtro"
+                subtitle="Prueba cambiando el filtro de estado o el texto de búsqueda"
+              />
+            }
           </div>
         } @else {
           <div class="overflow-x-auto">
@@ -219,7 +421,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                 </tr>
               </thead>
               <tbody>
-                @for (alumno of filteredAlumnos(); track alumno.enrollmentId) {
+                @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
                   <!-- Fila principal -->
                   <tr
                     class="border-b border-(--border-default) last:border-b-0 transition-colors"
@@ -324,18 +526,75 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                             Ver
                           </button>
                           <button
-                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary opacity-60 cursor-not-allowed"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
                             data-llm-action="send-certificate-email"
-                            disabled
-                            title="Próximamente"
+                            [disabled]="sendingEmailId() === alumno.enrollmentId"
+                            (click)="onClickEmail(alumno)"
                           >
-                            <app-icon name="mail" [size]="13" />
-                            Email
+                            @if (sendingEmailId() === alumno.enrollmentId) {
+                              <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                              Enviando...
+                            } @else if (alumno.emailEnviado) {
+                              <app-icon name="mail-check" [size]="13" />
+                              Reenviar
+                            } @else {
+                              <app-icon name="mail" [size]="13" />
+                              Email
+                            }
                           </button>
                         }
                       </div>
                     </td>
                   </tr>
+
+                  <!-- Fila de confirmación inline — envío de email -->
+                  @if (emailConfirmId() === alumno.enrollmentId) {
+                    <tr class="border-b border-(--border-default)">
+                      <td colspan="9" class="px-4 py-3">
+                        <div
+                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
+                          style="background: color-mix(in srgb, var(--ds-brand) 8%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent)"
+                        >
+                          <app-icon
+                            name="send"
+                            [size]="18"
+                            style="color: var(--ds-brand); flex-shrink: 0"
+                          />
+                          <p class="text-sm flex-1" style="color: var(--text-secondary)">
+                            Se enviará el certificado de
+                            <strong style="color: var(--text-primary)">{{ alumno.nombre }}</strong>
+                            @if (alumno.email) {
+                              al correo
+                              <strong style="color: var(--ds-brand)">{{ alumno.email }}</strong
+                              >.
+                            }
+                            @if (alumno.emailEnviado) {
+                              <span style="color: var(--text-muted)">
+                                (ya fue enviado anteriormente)</span
+                              >
+                            }
+                          </p>
+                          <div class="flex items-center gap-2 shrink-0">
+                            <button
+                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary"
+                              data-llm-action="confirm-send-certificate-email"
+                              (click)="confirmarEmail()"
+                            >
+                              <app-icon name="send" [size]="13" />
+                              Confirmar envío
+                            </button>
+                            <button
+                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-outline"
+                              data-llm-action="cancel-send-certificate-email"
+                              (click)="cancelarEmail()"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  }
 
                   <!-- Fila de confirmación inline — visible solo si teoría < 100 % -->
                   @if (pendingConfirmId() === alumno.enrollmentId) {
@@ -396,6 +655,42 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               </tbody>
             </table>
           </div>
+
+          <!-- Paginación tabla principal -->
+          @if (totalPagesAlumnos() > 1) {
+            <div
+              class="flex items-center justify-between px-4 py-3 border-t"
+              style="border-color: var(--border-default)"
+            >
+              <span class="text-xs" style="color: var(--text-muted)">
+                {{ currentPageAlumnos() * PAGE_SIZE + 1 }}–{{
+                  pageEnd(currentPageAlumnos(), filteredAlumnos().length)
+                }}
+                de {{ filteredAlumnos().length }} alumnos
+              </span>
+              <div class="flex items-center gap-1">
+                <button
+                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  style="color: var(--text-secondary)"
+                  [disabled]="currentPageAlumnos() === 0"
+                  (click)="prevPageAlumnos()"
+                >
+                  <app-icon name="chevron-left" [size]="16" />
+                </button>
+                <span class="text-xs px-3" style="color: var(--text-secondary)">
+                  Pág. {{ currentPageAlumnos() + 1 }} / {{ totalPagesAlumnos() }}
+                </span>
+                <button
+                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  style="color: var(--text-secondary)"
+                  [disabled]="currentPageAlumnos() >= totalPagesAlumnos() - 1"
+                  (click)="nextPageAlumnos()"
+                >
+                  <app-icon name="chevron-right" [size]="16" />
+                </button>
+              </div>
+            </div>
+          }
         }
       </div>
 
@@ -443,7 +738,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                   </tr>
                 </thead>
                 <tbody>
-                  @for (entry of log(); track entry.id) {
+                  @for (entry of pagedLog(); track entry.id) {
                     <tr
                       class="border-b border-(--border-default) last:border-b-0 hover:bg-(--bg-subtle) transition-colors"
                     >
@@ -470,6 +765,42 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                 </tbody>
               </table>
             </div>
+
+            <!-- Paginación log -->
+            @if (totalPagesLog() > 1) {
+              <div
+                class="flex items-center justify-between px-4 py-3 border-t"
+                style="border-color: var(--border-default)"
+              >
+                <span class="text-xs" style="color: var(--text-muted)">
+                  {{ currentPageLog() * PAGE_SIZE + 1 }}–{{
+                    pageEnd(currentPageLog(), log().length)
+                  }}
+                  de {{ log().length }} registros
+                </span>
+                <div class="flex items-center gap-1">
+                  <button
+                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    style="color: var(--text-secondary)"
+                    [disabled]="currentPageLog() === 0"
+                    (click)="prevPageLog()"
+                  >
+                    <app-icon name="chevron-left" [size]="16" />
+                  </button>
+                  <span class="text-xs px-3" style="color: var(--text-secondary)">
+                    Pág. {{ currentPageLog() + 1 }} / {{ totalPagesLog() }}
+                  </span>
+                  <button
+                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    style="color: var(--text-secondary)"
+                    [disabled]="currentPageLog() >= totalPagesLog() - 1"
+                    (click)="nextPageLog()"
+                  >
+                    <app-icon name="chevron-right" [size]="16" />
+                  </button>
+                </div>
+              </div>
+            }
           }
         </div>
       </div>
@@ -481,6 +812,7 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly heroRef = viewChild<ElementRef>('heroRef');
+
   // ── Inputs ──
   readonly alumnos = input<CertificacionAlumnoRow[]>([]);
   readonly kpis = input<CertificacionKpis | null>(null);
@@ -488,6 +820,14 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly isLoading = input(false);
   /** ID del enrollment cuyo certificado se está generando. null = ninguno en curso. */
   readonly generatingId = input<number | null>(null);
+  /** ID del enrollment cuyo correo se está enviando. null = ninguno en curso. */
+  readonly sendingEmailId = input<number | null>(null);
+  /** true mientras el envío masivo está en curso. */
+  readonly sendingMasivo = input(false);
+  /** true mientras la Edge Function genera el ZIP de exportación. */
+  readonly isExporting = input(false);
+  /** true mientras se están generando certificados pendientes en lote. */
+  readonly isGeneratingPendientes = input(false);
 
   // ── Outputs ──
   readonly generarCertificado = output<number>();
@@ -499,12 +839,20 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   // ── Local state ──
   readonly estadoFilter = signal<EstadoFilter>('todos');
-  /**
-   * ID de la matrícula esperando confirmación por asistencia teórica incompleta.
-   * null = ninguna confirmación pendiente.
-   */
+  readonly searchQuery = signal('');
+  readonly currentPageAlumnos = signal(0);
+  readonly currentPageLog = signal(0);
+  /** ID de la matrícula esperando confirmación para generar (teoría incompleta). */
   readonly pendingConfirmId = signal<number | null>(null);
-  readonly logVisible = signal<boolean>(false);
+  /** ID de la matrícula esperando confirmación para enviar email. */
+  readonly emailConfirmId = signal<number | null>(null);
+  /** true = panel de confirmación masiva visible. */
+  readonly masivoPanelVisible = signal(false);
+  /** true = panel de confirmación de generación en lote visible. */
+  readonly pendientesPanelVisible = signal(false);
+
+  // ── Pagination ──
+  readonly PAGE_SIZE = 10;
 
   // ── Hero config ──
   readonly heroActions: SectionHeroAction[] = [];
@@ -521,16 +869,97 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly skeletonRowsSmall = Array.from({ length: 3 });
 
   // ── Computed ──
+
   readonly filteredAlumnos = computed(() => {
     const filter = this.estadoFilter();
+    const query = this.searchQuery().trim().toLowerCase();
     const all = this.alumnos();
-    if (filter === 'todos') return all;
-    return all.filter((a) => a.certificadoStatus === filter);
+
+    let result = filter === 'todos' ? all : all.filter((a) => a.certificadoStatus === filter);
+
+    if (query) {
+      // Normalize: strip diacritics so "Gonza" matches "González"
+      const normalize = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const queryNorm = normalize(query).replace(/[.\-]/g, '');
+      result = result.filter((a) => {
+        const nameMatch = normalize(a.nombre).includes(normalize(query));
+        const rutNorm = a.rut.replace(/[.\-]/g, '').toLowerCase();
+        const rutMatch = rutNorm.includes(queryNorm);
+        return nameMatch || rutMatch;
+      });
+    }
+
+    return result;
+  });
+
+  readonly totalPagesAlumnos = computed(() =>
+    Math.ceil(this.filteredAlumnos().length / this.PAGE_SIZE),
+  );
+
+  readonly pagedAlumnos = computed(() => {
+    const page = this.currentPageAlumnos();
+    const start = page * this.PAGE_SIZE;
+    return this.filteredAlumnos().slice(start, start + this.PAGE_SIZE);
+  });
+
+  readonly totalPagesLog = computed(() => Math.ceil(this.log().length / this.PAGE_SIZE));
+
+  readonly pagedLog = computed(() => {
+    const page = this.currentPageLog();
+    const start = page * this.PAGE_SIZE;
+    return this.log().slice(start, start + this.PAGE_SIZE);
   });
 
   readonly pendientesCount = computed(
     () => this.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,
   );
+
+  /** Alumnos pendientes de certificado — para el panel de confirmación de generación masiva. */
+  readonly alumnosPendientes = computed(() =>
+    this.alumnos().filter((a) => a.certificadoStatus === 'pendiente'),
+  );
+
+  /** Alumnos con certificado generado que aún no recibieron el correo. */
+  readonly alumnosParaEnvioMasivo = computed(() =>
+    this.alumnos().filter(
+      (a) => a.certificadoStatus === 'generado' && !a.emailEnviado && !!a.email,
+    ),
+  );
+
+  // ── Filter/search setters (reset page on change) ──
+
+  setEstadoFilter(value: EstadoFilter): void {
+    this.estadoFilter.set(value);
+    this.currentPageAlumnos.set(0);
+  }
+
+  setSearchQuery(value: string): void {
+    this.searchQuery.set(value);
+    this.currentPageAlumnos.set(0);
+  }
+
+  // ── Pagination navigation ──
+
+  prevPageAlumnos(): void {
+    this.currentPageAlumnos.update((p) => Math.max(0, p - 1));
+  }
+
+  nextPageAlumnos(): void {
+    this.currentPageAlumnos.update((p) => Math.min(this.totalPagesAlumnos() - 1, p + 1));
+  }
+
+  prevPageLog(): void {
+    this.currentPageLog.update((p) => Math.max(0, p - 1));
+  }
+
+  nextPageLog(): void {
+    this.currentPageLog.update((p) => Math.min(this.totalPagesLog() - 1, p + 1));
+  }
+
+  /** Upper bound of the current page range (for "X–Y de N" label). */
+  pageEnd(currentPage: number, total: number): number {
+    return Math.min((currentPage + 1) * this.PAGE_SIZE, total);
+  }
 
   // ── Handlers de generación ──
 
@@ -545,7 +974,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
       this.generarCertificado.emit(alumno.enrollmentId);
       return;
     }
-    // Teoría incompleta: solicitar confirmación al usuario.
     this.pendingConfirmId.set(alumno.enrollmentId);
   }
 
@@ -558,14 +986,54 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  /** Canceló la confirmación. */
+  /** Canceló la confirmación de generación. */
   cancelarGenerar(): void {
     this.pendingConfirmId.set(null);
   }
 
-  /** Canceló la confirmación. */
-  protected closeLog(): void {
-    this.logVisible.set(false);
+  abrirPanelPendientes(): void {
+    this.pendientesPanelVisible.set(true);
+  }
+
+  cancelarPendientes(): void {
+    this.pendientesPanelVisible.set(false);
+  }
+
+  confirmarPendientes(): void {
+    this.pendientesPanelVisible.set(false);
+    this.generarPendientes.emit();
+  }
+
+  abrirPanelMasivo(): void {
+    this.masivoPanelVisible.set(true);
+  }
+
+  cancelarMasivo(): void {
+    this.masivoPanelVisible.set(false);
+  }
+
+  confirmarMasivo(): void {
+    this.masivoPanelVisible.set(false);
+    this.enviarEmailsMasivo.emit();
+  }
+
+  /** Abre la confirmación inline de envío de email. */
+  onClickEmail(alumno: CertificacionAlumnoRow): void {
+    this.emailConfirmId.set(alumno.enrollmentId);
+  }
+
+  /** Confirma y dispara el envío del certificado por email. */
+  confirmarEmail(): void {
+    const id = this.emailConfirmId();
+    if (id !== null) {
+      this.enviarEmail.emit(id);
+      this.emailConfirmId.set(null);
+    }
+  }
+
+  /** Cancela la confirmación de envío de email. */
+  cancelarEmail(): void {
+    this.emailConfirmId.set(null);
   }
 
   ngAfterViewInit(): void {

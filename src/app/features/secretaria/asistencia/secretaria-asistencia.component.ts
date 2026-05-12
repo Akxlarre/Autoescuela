@@ -36,7 +36,6 @@ import type { ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
       (sendReminder)="facade.sendReminder($event)"
       (viewAtendanceList)="openTeoriaDrawer($event)"
       (dateChange)="facade.setDate($event)"
-      (exportExcel)="onExportExcel()"
       (refreshRequested)="onRefresh()"
       (scheduleNewClass)="openAgendarDrawer()"
     />
@@ -75,9 +74,5 @@ export class SecretariaAsistenciaComponent implements OnInit {
 
   protected async onRefresh(): Promise<void> {
     await this.facade.reload();
-  }
-
-  protected onExportExcel(): void {
-    // TODO: implementar exportación Excel
   }
 }

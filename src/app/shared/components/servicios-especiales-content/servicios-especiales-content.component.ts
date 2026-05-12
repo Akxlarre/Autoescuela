@@ -13,6 +13,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { MenuModule } from 'primeng/menu';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -46,6 +47,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     ShortCurrencyPipe,
     FormsModule,
     SelectModule,
+    MenuModule,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -121,7 +123,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <h2 class="text-lg font-semibold text-text-primary m-0">Catálogo de Servicios</h2>
             <button
               type="button"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+              class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
               data-llm-action="open-nuevo-servicio-drawer"
               (click)="requestNuevoServicio.emit()"
             >
@@ -168,7 +170,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   >
                   <button
                     type="button"
-                    class="text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                    class="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
                     [attr.data-llm-action]="'vender-' + servicio.id"
                     (click)="requestRegistrarVenta.emit(servicio)"
                   >
@@ -181,7 +183,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <!-- Tarjeta agregar nuevo servicio -->
             <button
               type="button"
-              class="flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors"
+              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-bg-subtle/50"
               style="border: 2px dashed var(--border-default)"
               data-llm-action="open-nuevo-servicio-drawer-card"
               (click)="requestNuevoServicio.emit()"
@@ -206,16 +208,46 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 [options]="filtroOptions()"
                 optionLabel="label"
                 optionValue="value"
-                styleClass="w-full"
+                styleClass="w-full h-10"
               />
-              <button
-                type="button"
-                class="h-9 px-3 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
-                data-llm-action="exportar-historial"
-                (click)="exportarHistorial.emit()"
-              >
-                Exportar
-              </button>
+              <div class="relative">
+                <button
+                  type="button"
+                  class="btn-secondary h-10 px-4 flex items-center gap-2 disabled:opacity-60"
+                  [disabled]="isExporting()"
+                  (click)="exportMenuOpen.set(!exportMenuOpen())"
+                >
+                  @if (isExporting()) {
+                    <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                  } @else {
+                    <app-icon name="download" [size]="16" />
+                  }
+                  Exportar
+                  <app-icon name="chevron-down" [size]="14" />
+                </button>
+
+                @if (exportMenuOpen()) {
+                  <div class="fixed inset-0 z-40" (click)="exportMenuOpen.set(false)"></div>
+                  <div class="export-menu">
+                    <button
+                      type="button"
+                      class="export-menu-item"
+                      (click)="onExport('excel')"
+                    >
+                      <app-icon name="table-2" [size]="16" />
+                      Exportar como Excel
+                    </button>
+                    <button
+                      type="button"
+                      class="export-menu-item"
+                      (click)="onExport('pdf')"
+                    >
+                      <app-icon name="file-text" [size]="16" />
+                      Exportar como PDF
+                    </button>
+                  </div>
+                }
+              </div>
             </div>
           </div>
           <!-- (Contenido de la tabla sigue igual...) -->
@@ -400,6 +432,46 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     </section>
   </div>
   `,
+  styles: [
+    `
+      .export-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 50;
+        min-width: 200px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+        overflow: hidden;
+      }
+
+      .export-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 14px;
+        color: var(--text-primary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        transition: background var(--duration-fast);
+      }
+
+      .export-menu-item:hover {
+        background: var(--bg-elevated);
+      }
+
+      /* Alineación del selector */
+      :host ::ng-deep .p-select {
+        height: 2.5rem !important;
+      }
+    `,
+  ],
 })
 export class ServiciosEspecialesContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────────
@@ -407,6 +479,7 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly ventas = input.required<VentaServicio[]>();
   readonly kpis = input.required<ServiciosEspecialesKpis>();
   readonly isLoading = input<boolean>(false);
+  readonly isExporting = input<boolean>(false);
   readonly backRoute = input<string>('/app/dashboard');
 
   private readonly gsap = inject(GsapAnimationsService);
@@ -417,10 +490,11 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly requestRegistrarVenta = output<ServicioEspecial | undefined>();
   readonly requestNuevoServicio = output<void>();
   readonly cobroRegistrado = output<number>();
-  readonly exportarHistorial = output<void>();
+  readonly exportarHistorial = output<'excel' | 'pdf'>();
 
   // ── Estado interno ──────────────────────────────────────────────────────────
   protected readonly filtroServicio = signal('todos');
+  protected readonly exportMenuOpen = signal(false);
 
   // ── Computed ────────────────────────────────────────────────────────────────
   protected readonly filtroOptions = computed(() => [
@@ -447,6 +521,11 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   // ── Handlers ───────────────────────────────────────────────────────────────
   protected onHeroAction(actionId: string): void {
     if (actionId === 'registrar-venta') this.requestRegistrarVenta.emit(undefined);
+  }
+
+  protected onExport(format: 'excel' | 'pdf'): void {
+    this.exportMenuOpen.set(false);
+    this.exportarHistorial.emit(format);
   }
 
   protected getServiceIconStyle(color: ServicioColor): string {

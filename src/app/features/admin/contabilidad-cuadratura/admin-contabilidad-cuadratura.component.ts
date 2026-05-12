@@ -24,11 +24,13 @@ import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadr
       [cajaYaCerrada]="facade.cajaYaCerrada()"
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving()"
+      [isExporting]="facade.isExporting()"
       (guardarCierre)="onGuardarCierre($event)"
       (abrirIngreso)="abrirDrawerIngreso()"
       (abrirEgreso)="abrirDrawerEgreso()"
       (eliminarIngreso)="onEliminarIngreso($event)"
       (eliminarEgreso)="onEliminarEgreso($event)"
+      (exportRequested)="facade.exportar($event)"
     />
   `,
 })

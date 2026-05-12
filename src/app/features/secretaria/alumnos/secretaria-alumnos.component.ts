@@ -6,7 +6,10 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { AlumnosListContentComponent } from '@shared/components/alumnos-list-content/alumnos-list-content.component';
+import {
+  AlumnosListContentComponent,
+  type AlumnoExportRequest,
+} from '@shared/components/alumnos-list-content/alumnos-list-content.component';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
@@ -23,10 +26,14 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       [isLoading]="facade.isLoading()"
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
+      [isExporting]="facade.isExporting()"
       (refreshRequested)="facade.initialize()"
       (archivarRequested)="requestArchivar($event)"
       (trashViewToggled)="onTrashViewToggled()"
       (restaurarRequested)="onRestaurar($event)"
+      (exportRequested)="onExport($event)"
+      [isGeneratingFicha]="facade.isGeneratingFicha()"
+      (fichaExportRequested)="onExportarFicha($event)"
     />
 
     <app-eliminar-alumno-modal
@@ -84,5 +91,13 @@ export class SecretariaAlumnosComponent implements OnInit {
 
   protected async onRestaurar(alumnoId: string): Promise<void> {
     await this.facade.restaurarAlumno(Number(alumnoId));
+  }
+
+  protected onExport(req: AlumnoExportRequest): void {
+    void this.facade.exportAlumnos(req);
+  }
+
+  protected onExportarFicha(enrollmentId: number): void {
+    void this.facade.exportarFicha(enrollmentId);
   }
 }

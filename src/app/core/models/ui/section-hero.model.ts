@@ -21,4 +21,6 @@ export interface SectionHeroAction {
   disabled?: boolean;
   /** Aplica estilo de peligro (error token) al botón. */
   danger?: boolean;
+  /** Muestra el ícono con animación de spinner girando. */
+  loading?: boolean;
 }

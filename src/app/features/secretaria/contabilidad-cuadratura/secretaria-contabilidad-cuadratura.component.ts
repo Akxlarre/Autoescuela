@@ -28,11 +28,13 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
       [cajaYaCerrada]="facade.cajaYaCerrada()"
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving()"
+      [isExporting]="facade.isExporting()"
       (guardarCierre)="onGuardarCierre($event)"
       (abrirIngreso)="openIngresoDrawer()"
       (abrirEgreso)="egresoModalOpen.set(true)"
       (eliminarIngreso)="onEliminarIngreso($event)"
       (eliminarEgreso)="onEliminarEgreso($event)"
+      (exportRequested)="facade.exportar($event)"
     />
 
     <!-- ── Modal: Registrar Egreso ──────────────────────────────────────────── -->

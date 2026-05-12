@@ -189,7 +189,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
       [attr.aria-label]="title()"
     >
       <!-- TOP BAR: navegación atrás (izq) + acciones (der) -->
-      <div class="flex items-start justify-between gap-4 relative z-10">
+      <div class="flex flex-wrap items-start justify-between gap-4 relative z-10">
         <div class="flex-1 min-w-0 flex items-center gap-4">
           @if (backRoute()) {
             <a
@@ -205,6 +205,21 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               />
               <span>{{ backLabel() }}</span>
             </a>
+          } @else if (backClickable()) {
+            <button
+              type="button"
+              class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all shadow-sm shrink-0 whitespace-nowrap"
+              [attr.aria-label]="'Volver a ' + backLabel()"
+              data-llm-nav="back"
+              (click)="backClicked.emit()"
+            >
+              <app-icon
+                name="arrow-left"
+                [size]="13"
+                class="transition-transform group-hover:-translate-x-1"
+              />
+              <span>{{ backLabel() }}</span>
+            </button>
           }
           <ng-content />
         </div>
@@ -218,9 +233,14 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
               @if (action.route) {
                 <a
                   [routerLink]="action.route"
-                  class="no-underline whitespace-nowrap flex-shrink-0"
-                  [class.btn-primary]="action.primary"
-                  [class.btn-secondary]="!action.primary"
+                  [class]="
+                    action.danger
+                      ? 'btn-danger-ghost'
+                      : action.primary
+                        ? 'btn-primary'
+                        : 'btn-secondary'
+                  "
+                  class="no-underline whitespace-nowrap shrink-0"
                   [attr.data-llm-nav]="action.id"
                 >
                   @if (action.icon) {
@@ -238,15 +258,17 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                         ? 'btn-primary'
                         : 'btn-secondary'
                   "
+                  class="whitespace-nowrap shrink-0"
                   [disabled]="action.disabled ?? false"
-                  class="whitespace-nowrap flex-shrink-0"
-                  [class.btn-primary]="action.primary"
-                  [class.btn-secondary]="!action.primary"
                   [attr.data-llm-action]="action.id"
                   (click)="onActionClick(action.id)"
                 >
                   @if (action.icon) {
-                    <app-icon [name]="action.icon" [size]="16" />
+                    <app-icon
+                      [name]="action.icon"
+                      [size]="16"
+                      [class.animate-spin]="action.loading"
+                    />
                   }
                   {{ action.label }}
                 </button>
@@ -324,6 +346,10 @@ export class SectionHeroComponent implements AfterViewInit {
   readonly animateOnInit = input<boolean>(true);
 
   readonly actionClick = output<string>();
+  readonly backClicked = output<void>();
+
+  /** Muestra el botón "Volver" como <button> (sin ruta). Útil para vistas inline como Papelera. */
+  readonly backClickable = input<boolean>(false);
 
   private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
 

@@ -17,7 +17,6 @@ import { FormsModule } from '@angular/forms';
 // PrimeNG
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
@@ -50,6 +49,14 @@ import type {
   AlumnoStatus,
 } from '@core/models/ui/alumno-table-row.model';
 
+export interface AlumnoExportRequest {
+  format: 'pdf' | 'excel';
+  search: string;
+  curso: string;
+  estado: string;
+  expediente: string;
+}
+
 interface ExpedienteStatus {
   label: 'Completo' | 'Parcial' | 'Pendiente';
   severity: 'success' | 'warn' | 'danger';
@@ -81,7 +88,6 @@ interface AlumnoKpiItem {
     FormsModule,
     TableModule,
     ButtonModule,
-    InputTextModule,
     SelectModule,
     TagModule,
     TooltipModule,
@@ -104,9 +110,12 @@ interface AlumnoKpiItem {
     >
       <app-section-hero
         title="Alumnos"
-        subtitle="Listado de alumnos de la escuela"
+        [subtitle]="heroSubtitle()"
         [chips]="heroChips()"
         [actions]="heroActions()"
+        [backClickable]="trashView()"
+        backLabel="Alumnos"
+        (backClicked)="trashViewToggled.emit()"
         (actionClick)="handleHeroAction($event)"
       />
 
@@ -156,58 +165,94 @@ interface AlumnoKpiItem {
         #tableCard
       >
         <!-- Toolbar de la tabla -->
-        <div class="toolbar-wrapper">
-          <div class="toolbar-filters">
-            <div class="toolbar-search">
-              <app-icon
-                name="search"
-                [size]="16"
-                class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted z-10 pointer-events-none"
-              />
-              <input
-                pInputText
-                type="text"
-                placeholder="Buscar por nombre, RUT o Nº Expediente..."
-                class="w-full !pl-10 h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
-                [(ngModel)]="searchTerm"
-              />
-            </div>
-
-            <div class="toolbar-dropdowns">
-              <p-select
-                [options]="cursos"
-                [(ngModel)]="selectedCurso"
-                placeholder="Todos los cursos"
-                styleClass="w-full h-10"
-              ></p-select>
-              <p-select
-                [options]="estados"
-                [(ngModel)]="selectedEstado"
-                placeholder="Todos los estados"
-                styleClass="w-full h-10"
-              ></p-select>
-              <p-select
-                [options]="expedienteOpciones"
-                [(ngModel)]="selectedExpediente"
-                placeholder="Expediente: Todos"
-                styleClass="w-full h-10 toolbar-dropdown--full"
-              ></p-select>
-            </div>
+        <div
+          class="flex flex-wrap items-center gap-3 p-4"
+          style="border-bottom: 1px solid var(--border-default)"
+        >
+          <!-- Buscador -->
+          <div class="relative flex-1 min-w-52 max-w-xs">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              style="color: var(--text-muted)"
+            />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, RUT o Nº Expediente..."
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors"
+              style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+              data-llm-description="Search students by name, RUT or file number"
+              [(ngModel)]="searchTerm"
+            />
           </div>
 
-          <div class="toolbar-actions">
-            <button pButton label="Exportar" class="p-button-outlined p-button-sm h-10">
-              <app-icon name="file-text" [size]="14" class="mr-2" />
-            </button>
+          <!-- Filtros -->
+          <p-select
+            [options]="cursos"
+            [(ngModel)]="selectedCurso"
+            optionLabel="label"
+            optionValue="value"
+            class="h-9"
+            data-llm-description="Filter students by course type"
+          />
+          <p-select
+            [options]="estados"
+            [(ngModel)]="selectedEstado"
+            optionLabel="label"
+            optionValue="value"
+            class="h-9"
+            data-llm-description="Filter students by enrollment status"
+          />
+          <p-select
+            [options]="expedienteOpciones"
+            [(ngModel)]="selectedExpediente"
+            optionLabel="label"
+            optionValue="value"
+            class="h-9"
+            data-llm-description="Filter students by file completion status"
+          />
+
+          <!-- Exportar (dropdown) -->
+          <div class="relative ml-auto">
             <button
-              pButton
-              label="Actualizar"
-              class="p-button-outlined p-button-sm h-10"
-              [loading]="isLoading()"
-              (click)="refresh()"
+              type="button"
+              class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60"
+              [disabled]="isExporting()"
+              (click)="exportMenuOpen.set(!exportMenuOpen())"
+              data-llm-action="open-export-menu"
             >
-              <app-icon name="refresh-cw" [size]="14" class="mr-2" />
+              @if (isExporting()) {
+                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+              } @else {
+                <app-icon name="download" [size]="16" />
+              }
+              Exportar
+              <app-icon name="chevron-down" [size]="14" />
             </button>
+            @if (exportMenuOpen()) {
+              <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+              <div class="export-menu">
+                <button
+                  type="button"
+                  class="export-menu-item"
+                  (click)="requestExport('excel')"
+                  data-llm-action="export-students-excel"
+                >
+                  <app-icon name="table-2" [size]="16" />
+                  Exportar como Excel
+                </button>
+                <button
+                  type="button"
+                  class="export-menu-item"
+                  (click)="requestExport('pdf')"
+                  data-llm-action="export-students-pdf"
+                >
+                  <app-icon name="file-text" [size]="16" />
+                  Exportar como PDF
+                </button>
+              </div>
+            }
           </div>
         </div>
 
@@ -364,7 +409,7 @@ interface AlumnoKpiItem {
                         </div>
                         <div class="flex flex-col">
                           <span class="font-bold text-sm text-text-primary"
-                            >{{ alumno.nombre }} {{ alumno.apellido }}</span
+                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
                           >
                           <span class="text-xs text-text-muted">{{ alumno.email }}</span>
                         </div>
@@ -443,19 +488,15 @@ interface AlumnoKpiItem {
                           <button
                             pButton
                             class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                            pTooltip="Certificado"
-                            [routerLink]="[basePath() + '/certificados']"
-                            [queryParams]="{ alumno: alumno.id }"
-                          >
-                            <app-icon name="award" [size]="16" />
-                          </button>
-                          <button
-                            pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
                             pTooltip="Exportar Ficha PDF"
-                            (click)="exportarFicha(alumno.id)"
+                            [disabled]="isGeneratingFicha() === alumno.enrollmentId"
+                            (click)="exportarFicha(alumno)"
                           >
-                            <app-icon name="download" [size]="16" />
+                            @if (isGeneratingFicha() === alumno.enrollmentId) {
+                              <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                            } @else {
+                              <app-icon name="download" [size]="16" />
+                            }
                           </button>
                           <button
                             pButton
@@ -508,7 +549,7 @@ interface AlumnoKpiItem {
                         </div>
                         <div class="flex flex-col min-w-0">
                           <span class="font-bold text-sm text-text-primary truncate"
-                            >{{ alumno.nombre }} {{ alumno.apellido }}</span
+                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
                           >
                           <span class="text-xs text-text-muted truncate">{{ alumno.email }}</span>
                         </div>
@@ -582,19 +623,15 @@ interface AlumnoKpiItem {
                         <button
                           pButton
                           class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                          pTooltip="Certificado"
-                          [routerLink]="[basePath() + '/certificados']"
-                          [queryParams]="{ alumno: alumno.id }"
-                        >
-                          <app-icon name="award" [size]="16" />
-                        </button>
-                        <button
-                          pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                           pTooltip="Exportar Ficha PDF"
-                          (click)="exportarFicha(alumno.id)"
+                          [disabled]="isGeneratingFicha() === alumno.enrollmentId"
+                          (click)="exportarFicha(alumno)"
                         >
-                          <app-icon name="download" [size]="16" />
+                          @if (isGeneratingFicha() === alumno.enrollmentId) {
+                            <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                          } @else {
+                            <app-icon name="download" [size]="16" />
+                          }
                         </button>
                         <button
                           pButton
@@ -650,78 +687,36 @@ interface AlumnoKpiItem {
         }
       }
 
-      /* --- Toolbar Container Queries --- */
-      .toolbar-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        padding: 1rem;
-        border-bottom: 1px solid var(--border-subtle);
-        background-color: var(--surface);
-      }
-      .toolbar-filters {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-        width: 100%;
-      }
-      .toolbar-search {
-        width: 100%;
-        position: relative;
-      }
-      .toolbar-dropdowns {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.75rem;
-        width: 100%;
-      }
-      /* Selector complejo porque PrimeNG injecta clases inner */
-      ::ng-deep .toolbar-dropdown--full {
-        grid-column: span 2;
-      }
-      .toolbar-actions {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        width: 100%;
-      }
-      .toolbar-actions button {
-        flex: 1;
-        justify-content: center;
+      .export-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 20;
+        min-width: 200px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+        overflow: hidden;
       }
 
-      @container listContainer (min-width: 900px) {
-        .toolbar-wrapper {
-          flex-direction: row;
-          align-items: center;
-          justify-content: space-between;
-        }
-        .toolbar-filters {
-          flex-direction: row;
-          align-items: center;
-          flex-wrap: wrap;
-          width: auto;
-          flex: 1;
-        }
-        .toolbar-search {
-          width: 20rem; /* equiv md:w-80 */
-        }
-        .toolbar-dropdowns {
-          display: flex;
-          width: auto;
-        }
-        ::ng-deep .toolbar-dropdowns p-select {
-          min-width: 11rem;
-        }
-        ::ng-deep .toolbar-dropdown--full {
-          grid-column: auto;
-        }
-        .toolbar-actions {
-          width: auto;
-        }
-        .toolbar-actions button {
-          flex: none;
-        }
+      .export-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--text-primary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        transition: background var(--duration-fast);
+      }
+
+      .export-menu-item:hover {
+        background: var(--bg-elevated);
       }
     `,
   ],
@@ -730,23 +725,30 @@ export class AlumnosListContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────
   readonly alumnos = input.required<AlumnoTableRow[]>();
   readonly isLoading = input(false);
+  readonly isExporting = input(false);
+  readonly isGeneratingFicha = input<number | false>(false);
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/secretaria');
   readonly alumnosPorVencer = input<number>(0);
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
-  readonly claseOnlineAction = output<'zoom' | 'asistencia'>();
   readonly preInscritosRequested = output<void>();
   readonly archivarRequested = output<string>();
   readonly restaurarRequested = output<string>();
   readonly trashViewToggled = output<void>();
+  readonly exportRequested = output<AlumnoExportRequest>();
+  readonly fichaExportRequested = output<number>();
 
   // ── Internal UI state ────────────────────────────────────────────────────
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
   private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
+
+  readonly heroSubtitle = computed(() =>
+    this.trashView() ? 'Papelera — Alumnos archivados' : 'Listado de alumnos de la escuela',
+  );
 
   readonly heroChips = computed((): SectionHeroChip[] => [
     { label: `${this.totalAlumnos()} alumnos`, icon: 'users', style: 'default' },
@@ -756,13 +758,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
     const path = this.basePath();
     const isTrash = this.trashView();
     return [
-      { id: 'enviar-zoom', label: 'Zoom', icon: 'video', primary: false },
-      {
-        id: 'registrar-asistencia',
-        label: 'Asistencia',
-        icon: 'check-circle',
-        primary: false,
-      },
       {
         id: 'historial',
         label: 'Ex-Alumnos',
@@ -814,22 +809,37 @@ export class AlumnosListContentComponent implements AfterViewInit {
   ]);
 
   searchTerm = '';
-  selectedCurso: string | null = null;
-  selectedEstado: string | null = null;
-  selectedExpediente: string | null = null;
+  selectedCurso = '';
+  selectedEstado = '';
+  selectedExpediente = '';
   isDrawerOpen = signal(false);
+  readonly exportMenuOpen = signal(false);
 
-  cursos = ['Clase B', 'Clase B + SENCE', 'Clase A2', 'Profesional'];
-  estados = [
-    'Activo',
-    'Finalizado',
-    'Retirado',
-    'Pre-inscrito',
-    'Pendiente Pago',
-    'Docs Pendientes',
-    'Inactivo',
+  readonly cursos = [
+    { label: 'Todos los cursos', value: '' },
+    { label: 'Clase B', value: 'Clase B' },
+    { label: 'Clase B + SENCE', value: 'Clase B + SENCE' },
+    { label: 'Profesional A2', value: 'Profesional A2' },
+    { label: 'Profesional A3', value: 'Profesional A3' },
+    { label: 'Profesional A4', value: 'Profesional A4' },
+    { label: 'Profesional A5', value: 'Profesional A5' },
   ];
-  expedienteOpciones = ['Completo', 'Parcial', 'Pendiente'];
+  readonly estados = [
+    { label: 'Todos los estados', value: '' },
+    { label: 'Activo', value: 'Activo' },
+    { label: 'Finalizado', value: 'Finalizado' },
+    { label: 'Retirado', value: 'Retirado' },
+    { label: 'Pre-inscrito', value: 'Pre-inscrito' },
+    { label: 'Pendiente Pago', value: 'Pendiente Pago' },
+    { label: 'Docs Pendientes', value: 'Docs Pendientes' },
+    { label: 'Inactivo', value: 'Inactivo' },
+  ];
+  readonly expedienteOpciones = [
+    { label: 'Expediente: Todos', value: '' },
+    { label: 'Completo', value: 'Completo' },
+    { label: 'Parcial', value: 'Parcial' },
+    { label: 'Pendiente', value: 'Pendiente' },
+  ];
 
   constructor() {}
 
@@ -914,9 +924,9 @@ export class AlumnosListContentComponent implements AfterViewInit {
 
   resetFilters(): void {
     this.searchTerm = '';
-    this.selectedCurso = null;
-    this.selectedEstado = null;
-    this.selectedExpediente = null;
+    this.selectedCurso = '';
+    this.selectedEstado = '';
+    this.selectedExpediente = '';
   }
 
   openPorVencerDrawer(): void {
@@ -931,12 +941,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
 
   handleHeroAction(actionId: string): void {
     switch (actionId) {
-      case 'enviar-zoom':
-        this.enviarEnlaceZoom();
-        break;
-      case 'registrar-asistencia':
-        this.registrarAsistenciaZoom();
-        break;
       case 'preinscritos':
         this.preInscritosRequested.emit();
         break;
@@ -951,24 +955,23 @@ export class AlumnosListContentComponent implements AfterViewInit {
     }
   }
 
-  // RF-054
-  enviarEnlaceZoom(): void {
-    this.claseOnlineAction.emit('zoom');
-  }
-
   openNuevaMatriculaDrawer(): void {
     this.layoutDrawer.open(SecretariaMatriculaComponent, 'Nueva Matrícula', 'plus');
   }
 
-  // RF-054
-  registrarAsistenciaZoom(): void {
-    this.claseOnlineAction.emit('asistencia');
+  requestExport(format: 'pdf' | 'excel'): void {
+    this.exportMenuOpen.set(false);
+    this.exportRequested.emit({
+      format,
+      search: this.searchTerm,
+      curso: this.selectedCurso,
+      estado: this.selectedEstado,
+      expediente: this.selectedExpediente,
+    });
   }
 
-  // RF-086
-  exportarFicha(id: string): void {
-    alert(
-      `Exportando Ficha de Matricula (${id})...\n\nSe generara un PDF con los datos del alumno y el contrato firmado.\n\n[Mockup — RF-086]`,
-    );
+  exportarFicha(alumno: AlumnoTableRow): void {
+    if (!alumno.enrollmentId) return;
+    this.fichaExportRequested.emit(alumno.enrollmentId);
   }
 }

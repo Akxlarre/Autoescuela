@@ -36,7 +36,8 @@
     "primeng": "^21.1.1",
     "rxjs": "~7.8.0",
     "tailwindcss": "^4.2.1",
-    "tslib": "^2.3.0"
+    "tslib": "^2.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "^2.4.0",

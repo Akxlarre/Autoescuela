@@ -22,11 +22,14 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SelectModule } from 'primeng/select';
+import { DatePickerModule } from 'primeng/datepicker';
+import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
+import { DatePipe } from '@angular/common';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
 import { RentabilidadCursosComponent } from './rentabilidad-cursos.component';
-import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -46,7 +49,10 @@ const POR_PAGINA = 5;
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
+    DatePipe,
     SelectModule,
+    DatePickerModule,
+    DialogModule,
     SectionHeroComponent,
     KpiCardVariantComponent,
     SkeletonBlockComponent,
@@ -131,14 +137,9 @@ const POR_PAGINA = 5;
                   clase 7 cuando corresponda.
                 </p>
               </div>
-              <button
-                class="text-sm font-medium flex items-center gap-1"
-                style="color: var(--text-secondary)"
-                data-llm-action="view-full-account-status"
-              >
-                Ver estado de cuenta completo
-                <app-icon name="arrow-right" [size]="14" />
-              </button>
+              <span class="text-xs" style="color: var(--text-muted)">
+                {{ rangoDeudoresMostrando() }}
+              </span>
             </div>
 
             @if (facade.isLoading()) {
@@ -185,7 +186,7 @@ const POR_PAGINA = 5;
                 </p>
               </div>
             } @else {
-              <div [class.force-compact]="layoutDrawer.isOpen()">
+              <div>
                 <div
                   class="hidden lg:grid px-6 py-2 grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase border-b"
                   style="color: var(--text-muted); background: var(--bg-surface); border-color: var(--border-muted)"
@@ -198,7 +199,7 @@ const POR_PAGINA = 5;
                   <span class="text-right">Acciones</span>
                 </div>
                 <div class="rows-divider">
-                  @for (alumno of facade.alumnosConDeuda(); track alumno.enrollmentId) {
+                  @for (alumno of deudoresVisibles(); track alumno.enrollmentId) {
                     <div
                       class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
                     >
@@ -277,6 +278,38 @@ const POR_PAGINA = 5;
                     </div>
                   }
                 </div>
+                @if (totalPaginasDeudores() > 1) {
+                  <div
+                    class="px-6 py-3 flex items-center justify-between border-t"
+                    style="border-color: var(--border-muted)"
+                  >
+                    <span class="text-xs" style="color: var(--text-muted)">
+                      {{ rangoDeudoresMostrando() }} alumnos
+                    </span>
+                    <div class="flex gap-2">
+                      <button
+                        class="text-sm px-4 py-1.5 rounded-lg border font-medium"
+                        style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
+                        [disabled]="paginaDeudoresActual() <= 1"
+                        [style.opacity]="paginaDeudoresActual() <= 1 ? '0.4' : '1'"
+                        (click)="paginaDeudoresAnterior()"
+                      >
+                        Anterior
+                      </button>
+                      <button
+                        class="text-sm px-4 py-1.5 rounded-lg border font-medium"
+                        style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
+                        [disabled]="paginaDeudoresActual() >= totalPaginasDeudores()"
+                        [style.opacity]="
+                          paginaDeudoresActual() >= totalPaginasDeudores() ? '0.4' : '1'
+                        "
+                        (click)="paginaDeudoresSiguiente()"
+                      >
+                        Siguiente
+                      </button>
+                    </div>
+                  </div>
+                }
               </div>
             }
           </div>
@@ -492,7 +525,7 @@ const POR_PAGINA = 5;
                   <div class="flex gap-2">
                     <button
                       class="text-sm px-4 py-1.5 rounded-lg border font-medium"
-                      style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface);"
+                      style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
                       [disabled]="paginaActual() <= 1"
                       [style.opacity]="paginaActual() <= 1 ? '0.4' : '1'"
                       (click)="paginaAnterior()"
@@ -501,7 +534,7 @@ const POR_PAGINA = 5;
                     </button>
                     <button
                       class="text-sm px-4 py-1.5 rounded-lg border font-medium"
-                      style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface);"
+                      style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
                       [disabled]="paginaActual() >= totalPaginas()"
                       [style.opacity]="paginaActual() >= totalPaginas() ? '0.4' : '1'"
                       (click)="paginaSiguiente()"
@@ -581,6 +614,124 @@ const POR_PAGINA = 5;
         </div>
       </div>
     </div>
+
+    <!-- ── Modal: Configurar Reporte de Pagos ─────────────────────────────────── -->
+    <p-dialog
+      header="Configurar Reporte de Pagos"
+      [visible]="showReportModal()"
+      (visibleChange)="showReportModal.set($event)"
+      [modal]="true"
+      [closable]="true"
+      [dismissableMask]="false"
+      [style]="{ width: '560px' }"
+      [contentStyle]="{ padding: '0.75rem 1.5rem 1.25rem' }"
+    >
+      <div class="flex flex-col gap-4">
+        <!-- Sede: tomada del selector del topbar, sin opción de cambio aquí -->
+        <div
+          class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
+          style="
+            background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
+          "
+        >
+          <app-icon name="building-2" [size]="15" color="var(--color-primary)" />
+          <span class="text-xs" style="color: var(--text-muted)">Sede</span>
+          <span class="text-sm font-semibold" style="color: var(--color-primary)">{{
+            branchFacade.selectedBranchLabel()
+          }}</span>
+        </div>
+
+        <!-- Rango de fechas (inline — evita overlay que cierra al hacer scroll) -->
+        <div class="flex flex-col gap-2">
+          <p
+            class="text-xs font-semibold uppercase tracking-wider"
+            style="color: var(--text-muted)"
+          >
+            Período del reporte
+          </p>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium" style="color: var(--text-secondary)">Desde</label>
+              <p-datepicker
+                [(ngModel)]="reportStartDate"
+                [inline]="true"
+                dateFormat="dd/mm/yy"
+                [maxDate]="reportEndDate"
+                data-llm-description="Fecha de inicio del período del reporte"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium" style="color: var(--text-secondary)">Hasta</label>
+              <p-datepicker
+                [(ngModel)]="reportEndDate"
+                [inline]="true"
+                dateFormat="dd/mm/yy"
+                [minDate]="reportStartDate"
+                [maxDate]="today"
+                data-llm-description="Fecha de fin del período del reporte"
+              />
+            </div>
+          </div>
+          <!-- Resumen textual de fechas seleccionadas -->
+          <div
+            class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg text-sm"
+            style="background: color-mix(in srgb, var(--color-primary) 6%, transparent)"
+          >
+            <span style="color: var(--text-muted)">Desde</span>
+            <span class="font-semibold" style="color: var(--text-primary)">{{
+              reportStartDate | date: 'dd/MM/yyyy'
+            }}</span>
+            <app-icon name="arrow-right" [size]="13" color="var(--text-muted)" />
+            <span style="color: var(--text-muted)">Hasta</span>
+            <span class="font-semibold" style="color: var(--text-primary)">{{
+              reportEndDate | date: 'dd/MM/yyyy'
+            }}</span>
+          </div>
+        </div>
+
+        <!-- Descripción del contenido -->
+        <div
+          class="flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-xs"
+          style="
+            background: color-mix(in srgb, var(--text-muted) 6%, transparent);
+            color: var(--text-muted);
+          "
+        >
+          <app-icon name="file-text" [size]="13" />
+          <span
+            >Incluye pagos del período, KPIs de recaudación y resumen de saldos pendientes
+            actuales.</span
+          >
+        </div>
+      </div>
+
+      <ng-template pTemplate="footer">
+        <div class="flex justify-end gap-2 px-6 py-4">
+          <button
+            class="btn-secondary"
+            (click)="showReportModal.set(false)"
+            [disabled]="facade.isGeneratingReport()"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn-primary"
+            [disabled]="!reportStartDate || !reportEndDate || facade.isGeneratingReport()"
+            (click)="onGenerarReporte()"
+            data-llm-action="generate-payment-report"
+          >
+            @if (facade.isGeneratingReport()) {
+              <app-icon name="loader" [size]="14" class="animate-spin" />
+              Generando...
+            } @else {
+              <app-icon name="download" [size]="14" />
+              Generar PDF
+            }
+          </button>
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [
     `
@@ -623,7 +774,7 @@ const POR_PAGINA = 5;
 })
 export class AdminPagosComponent implements AfterViewInit {
   protected readonly facade = inject(PagosFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  protected readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly gsap = inject(GsapAnimationsService);
@@ -636,12 +787,6 @@ export class AdminPagosComponent implements AfterViewInit {
       id: 'generate-report',
       label: 'Generar Reporte',
       icon: 'file-text',
-      primary: false,
-    },
-    {
-      id: 'view-pending',
-      label: 'Ver Pendientes',
-      icon: 'clock',
       primary: false,
     },
     {
@@ -669,6 +814,12 @@ export class AdminPagosComponent implements AfterViewInit {
     toCompact(this.facade.pagosPendientesTotales()),
   );
 
+  // ── Estado modal: reporte ────────────────────────────────────────────────────
+  protected readonly showReportModal = signal(false);
+  protected reportStartDate: Date = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  protected reportEndDate: Date = new Date();
+  protected readonly today = new Date();
+
   // ── Estado local: búsqueda / filtros / paginación ────────────────────────────
   protected readonly searchQuery = signal('');
   protected readonly filtroEstado = signal('todos');
@@ -688,6 +839,25 @@ export class AdminPagosComponent implements AfterViewInit {
     { label: 'WebPay', value: 'WebPay' },
     { label: 'Mixto', value: 'Mixto' },
   ];
+  protected readonly paginaDeudoresActual = signal(1);
+
+  protected readonly deudoresVisibles = computed(() => {
+    const start = (this.paginaDeudoresActual() - 1) * POR_PAGINA;
+    return this.facade.alumnosConDeuda().slice(start, start + POR_PAGINA);
+  });
+
+  protected readonly totalPaginasDeudores = computed(() =>
+    Math.max(1, Math.ceil(this.facade.alumnosConDeuda().length / POR_PAGINA)),
+  );
+
+  protected readonly rangoDeudoresMostrando = computed(() => {
+    const total = this.facade.alumnosConDeuda().length;
+    if (total === 0) return '';
+    const start = (this.paginaDeudoresActual() - 1) * POR_PAGINA + 1;
+    const end = Math.min(this.paginaDeudoresActual() * POR_PAGINA, total);
+    return `${start}-${end} de ${total}`;
+  });
+
   protected readonly paginaActual = signal(1);
 
   // ── Computed: tabla filtrada y paginada ──────────────────────────────────────
@@ -752,16 +922,18 @@ export class AdminPagosComponent implements AfterViewInit {
   protected onHeroAction(actionId: string): void {
     if (actionId === 'register-payment') {
       this.openDrawer(null);
-    } else if (actionId === 'view-pending') {
-      this.filtroEstado.set('pendiente');
-      this.paginaActual.set(1);
-
-      // Asegurar que scroll al listado
-      const hero = this.heroRef();
-      if (hero) hero.nativeElement.scrollIntoView({ behavior: 'smooth' });
     } else if (actionId === 'generate-report') {
-      console.info('Generar reporte - a implementar');
+      this.showReportModal.set(true);
     }
+  }
+
+  protected async onGenerarReporte(): Promise<void> {
+    await this.facade.generarReporte({
+      startDate: toISODate(this.reportStartDate),
+      endDate: toISODate(this.reportEndDate),
+      branchId: this.branchFacade.selectedBranchId(),
+    });
+    this.showReportModal.set(false);
   }
 
   // ── Handlers de búsqueda / filtros ───────────────────────────────────────────
@@ -772,6 +944,15 @@ export class AdminPagosComponent implements AfterViewInit {
   }
 
   // ── Paginación ───────────────────────────────────────────────────────────────
+
+  protected paginaDeudoresAnterior(): void {
+    if (this.paginaDeudoresActual() > 1) this.paginaDeudoresActual.update((p) => p - 1);
+  }
+
+  protected paginaDeudoresSiguiente(): void {
+    if (this.paginaDeudoresActual() < this.totalPaginasDeudores())
+      this.paginaDeudoresActual.update((p) => p + 1);
+  }
 
   protected paginaAnterior(): void {
     if (this.paginaActual() > 1) this.paginaActual.update((p) => p - 1);

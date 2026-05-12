@@ -9,12 +9,15 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { ActivatedRoute,Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
+import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -101,7 +104,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           />
         </div>
 
-        <!-- Bento Item 1: Info Personal -->
+        <!-- Bento Item 1: Info Personal (común) -->
         <div class="bento-card bento-tall">
           <div class="flex flex-col gap-5">
             <div class="flex items-center gap-4">
@@ -141,111 +144,351 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           </div>
         </div>
 
-        <!-- Bento Item 2: Clases Prácticas -->
-        <div class="bento-card bento-wide">
-          <div class="bento-card__body bento-card__body--spread">
-            <div class="flex items-start justify-between w-full">
-              <div class="flex flex-col">
-                <span class="text-lg font-bold text-text-primary">Clases Prácticas</span>
-                <span class="text-xs text-brand font-medium">
-                  {{ facade.progresoPractico().completadas }} de
-                  {{ facade.progresoPractico().requeridas }} clases
-                </span>
-              </div>
-              <div class="flex flex-col items-end">
-                <span class="kpi-value text-brand" style="font-size: var(--text-3xl)"
-                  >{{ facade.porcentajePracticas() }}%</span
-                >
-                <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                  >Completado</span
-                >
-              </div>
-            </div>
-
-            <div class="w-full mt-4">
-              <div
-                class="progress-track"
-                role="progressbar"
-                [attr.aria-valuenow]="facade.porcentajePracticas()"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              >
-                <div
-                  class="progress-fill-brand transition-all duration-700"
-                  [style.width.%]="facade.porcentajePracticas()"
-                >
-                  @if (facade.porcentajePracticas() > 15) {
-                    <span class="progress-label-inline">
-                      {{ facade.progresoPractico().completadas }} /
-                      {{ facade.progresoPractico().requeridas }}
-                    </span>
-                  }
+        <!-- ── PROGRESO: CLASE B ── -->
+        @if (alumno.licenseGroup === 'class_b') {
+          <!-- Clases Prácticas -->
+          <div class="bento-card bento-wide">
+            <div class="bento-card__body bento-card__body--spread">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col">
+                  <span class="text-lg font-bold text-text-primary">Clases Prácticas</span>
+                  <span class="text-xs text-brand font-medium">
+                    {{ facade.progresoPractico().completadas }} de
+                    {{ facade.progresoPractico().requeridas }} clases
+                  </span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="kpi-value text-brand" style="font-size: var(--text-3xl)"
+                    >{{ facade.porcentajePracticas() }}%</span
+                  >
+                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
+                    >Completado</span
+                  >
                 </div>
               </div>
-              <div
-                class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
-              >
-                <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
-                <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
+              <div class="w-full mt-4">
+                <div
+                  class="progress-track"
+                  role="progressbar"
+                  [attr.aria-valuenow]="facade.porcentajePracticas()"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div
+                    class="progress-fill-brand transition-all duration-700"
+                    [style.width.%]="facade.porcentajePracticas()"
+                  >
+                    @if (facade.porcentajePracticas() > 15) {
+                      <span class="progress-label-inline">
+                        {{ facade.progresoPractico().completadas }} /
+                        {{ facade.progresoPractico().requeridas }}
+                      </span>
+                    }
+                  </div>
+                </div>
+                <div
+                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
+                >
+                  <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
+                  <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Bento Item 3: Clases Teóricas -->
-        <div class="bento-card bento-wide">
-          <div class="bento-card__body bento-card__body--spread">
-            <div class="flex items-start justify-between w-full">
-              <div class="flex flex-col">
-                <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
-                <span class="text-xs text-state-success font-medium">
-                  {{ facade.progresoTeorico().completadas }} de
-                  {{ facade.progresoTeorico().requeridas }} asistidas
-                </span>
-              </div>
-              <div class="flex flex-col items-end">
-                <span class="kpi-value text-state-success" style="font-size: var(--text-3xl)"
-                  >{{ facade.porcentajeTeoricas() }}%</span
-                >
-                <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                  >Asistencia</span
-                >
-              </div>
-            </div>
-
-            <div class="w-full mt-4">
-              <div
-                class="progress-track"
-                role="progressbar"
-                [attr.aria-valuenow]="facade.porcentajeTeoricas()"
-                aria-valuemin="0"
-                aria-valuemax="100"
-              >
-                <div
-                  class="progress-fill-success transition-all duration-700"
-                  [style.width.%]="facade.porcentajeTeoricas()"
-                >
-                  @if (facade.porcentajeTeoricas() > 15) {
-                    <span class="progress-label-inline">
-                      {{ facade.progresoTeorico().completadas }} /
-                      {{ facade.progresoTeorico().requeridas }}
-                    </span>
-                  }
+          <!-- Asistencia Teórica -->
+          <div class="bento-card bento-wide">
+            <div class="bento-card__body bento-card__body--spread">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col">
+                  <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
+                  <span class="text-xs text-state-success font-medium">
+                    {{ facade.progresoTeorico().completadas }} de
+                    {{ facade.progresoTeorico().requeridas }} asistidas
+                  </span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span class="kpi-value text-state-success" style="font-size: var(--text-3xl)"
+                    >{{ facade.porcentajeTeoricas() }}%</span
+                  >
+                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
+                    >Asistencia</span
+                  >
                 </div>
               </div>
-              <div
-                class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
-              >
-                <span class="text-state-success"
-                  >{{ facade.progresoTeorico().completadas }} OK</span
+              <div class="w-full mt-4">
+                <div
+                  class="progress-track"
+                  role="progressbar"
+                  [attr.aria-valuenow]="facade.porcentajeTeoricas()"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
                 >
-                <span class="text-text-muted">{{ restantesTeoricas() }} Pendientes</span>
+                  <div
+                    class="progress-fill-success transition-all duration-700"
+                    [style.width.%]="facade.porcentajeTeoricas()"
+                  >
+                    @if (facade.porcentajeTeoricas() > 15) {
+                      <span class="progress-label-inline">
+                        {{ facade.progresoTeorico().completadas }} /
+                        {{ facade.progresoTeorico().requeridas }}
+                      </span>
+                    }
+                  </div>
+                </div>
+                <div
+                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
+                >
+                  <span class="text-state-success"
+                    >{{ facade.progresoTeorico().completadas }} OK</span
+                  >
+                  <span class="text-text-muted">{{ restantesTeoricas() }} Pendientes</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        }
 
-        <!-- Bento Item 4: Inasistencias (Banner) -->
+        <!-- ── PROGRESO: CLASE PROFESIONAL ── -->
+        @if (alumno.licenseGroup === 'professional') {
+          <!-- Asistencia Teórica Prof -->
+          <div class="bento-card bento-wide">
+            <div class="bento-card__body bento-card__body--spread">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col">
+                  <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
+                  <span class="text-xs text-brand font-medium">
+                    {{ facade.progresoTeoriaProf().asistidas }} de
+                    {{ facade.progresoTeoriaProf().totales }} sesiones
+                  </span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span
+                    class="kpi-value"
+                    style="font-size: var(--text-3xl)"
+                    [class.text-state-success]="facade.elegibilidadProf().teoria"
+                    [class.text-state-error]="
+                      !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
+                    "
+                    [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
+                  >
+                    {{
+                      facade.progresoTeoriaProf().pct !== null
+                        ? facade.progresoTeoriaProf().pct + '%'
+                        : '—'
+                    }}
+                  </span>
+                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
+                    >Mín. 75%</span
+                  >
+                </div>
+              </div>
+              <div class="w-full mt-4">
+                <div
+                  class="progress-track"
+                  role="progressbar"
+                  [attr.aria-valuenow]="facade.progresoTeoriaProf().pct ?? 0"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div
+                    class="transition-all duration-700"
+                    [class.progress-fill-success]="facade.elegibilidadProf().teoria"
+                    [class.progress-fill-warning]="!facade.elegibilidadProf().teoria"
+                    [style.width.%]="facade.progresoTeoriaProf().pct ?? 0"
+                  >
+                    @if ((facade.progresoTeoriaProf().pct ?? 0) > 15) {
+                      <span class="progress-label-inline">
+                        {{ facade.progresoTeoriaProf().asistidas }} /
+                        {{ facade.progresoTeoriaProf().totales }}
+                      </span>
+                    }
+                  </div>
+                </div>
+                <div
+                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
+                >
+                  <span
+                    [class.text-state-success]="facade.elegibilidadProf().teoria"
+                    [class.text-state-error]="
+                      !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
+                    "
+                    [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
+                  >
+                    {{ facade.progresoTeoriaProf().asistidas }} asistidas
+                  </span>
+                  <span class="text-text-muted"
+                    >{{
+                      facade.progresoTeoriaProf().totales - facade.progresoTeoriaProf().asistidas
+                    }}
+                    inasistencias</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Asistencia Práctica Prof -->
+          <div class="bento-card bento-wide">
+            <div class="bento-card__body bento-card__body--spread">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col">
+                  <span class="text-lg font-bold text-text-primary">Asistencia Práctica</span>
+                  <span class="text-xs text-text-secondary font-medium">
+                    {{ facade.progresoPracticaProf().asistidas }} de
+                    {{ facade.progresoPracticaProf().totales }} sesiones
+                  </span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span
+                    class="kpi-value"
+                    style="font-size: var(--text-3xl)"
+                    [class.text-state-success]="facade.elegibilidadProf().practica"
+                    [class.text-state-warning]="
+                      !facade.elegibilidadProf().practica &&
+                      facade.progresoPracticaProf().totales > 0
+                    "
+                    [class.text-text-muted]="facade.progresoPracticaProf().totales === 0"
+                  >
+                    {{
+                      facade.progresoPracticaProf().pct !== null
+                        ? facade.progresoPracticaProf().pct + '%'
+                        : '—'
+                    }}
+                  </span>
+                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
+                    >Req. 100%</span
+                  >
+                </div>
+              </div>
+              <div class="w-full mt-4">
+                <div
+                  class="progress-track"
+                  role="progressbar"
+                  [attr.aria-valuenow]="facade.progresoPracticaProf().pct ?? 0"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div
+                    class="transition-all duration-700"
+                    [class.progress-fill-success]="facade.elegibilidadProf().practica"
+                    [class.progress-fill-warning]="!facade.elegibilidadProf().practica"
+                    [style.width.%]="facade.progresoPracticaProf().pct ?? 0"
+                  >
+                    @if ((facade.progresoPracticaProf().pct ?? 0) > 15) {
+                      <span class="progress-label-inline">
+                        {{ facade.progresoPracticaProf().asistidas }} /
+                        {{ facade.progresoPracticaProf().totales }}
+                      </span>
+                    }
+                  </div>
+                </div>
+                <div
+                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
+                >
+                  <span
+                    [class.text-state-success]="facade.elegibilidadProf().practica"
+                    [class.text-state-warning]="
+                      !facade.elegibilidadProf().practica &&
+                      facade.progresoPracticaProf().totales > 0
+                    "
+                    [class.text-text-muted]="facade.progresoPracticaProf().totales === 0"
+                  >
+                    {{ facade.progresoPracticaProf().asistidas }} asistidas
+                  </span>
+                  <span class="text-text-muted"
+                    >{{
+                      facade.progresoPracticaProf().totales -
+                        facade.progresoPracticaProf().asistidas
+                    }}
+                    inasistencias</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Nota promedio + Elegibilidad Prof -->
+          <div class="bento-card bento-wide">
+            <div class="bento-card__body bento-card__body--spread">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col">
+                  <span class="text-lg font-bold text-text-primary">Nota Promedio</span>
+                  <span class="text-xs text-text-muted font-medium">Módulos del curso</span>
+                </div>
+                <div class="flex flex-col items-end">
+                  <span
+                    class="kpi-value"
+                    style="font-size: var(--text-3xl)"
+                    [class.text-state-success]="facade.elegibilidadProf().nota"
+                    [class.text-state-error]="
+                      !facade.elegibilidadProf().nota && facade.notaPromedioProf() !== null
+                    "
+                    [class.text-text-muted]="facade.notaPromedioProf() === null"
+                  >
+                    {{ facade.notaPromedioProf() !== null ? facade.notaPromedioProf() : '—' }}
+                  </span>
+                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
+                    >Mín. 75 de 100</span
+                  >
+                </div>
+              </div>
+
+              <div class="flex gap-2 mt-4 flex-wrap">
+                <span
+                  class="elig-badge"
+                  [attr.data-met]="facade.elegibilidadProf().teoria"
+                  data-llm-description="criterio elegibilidad: asistencia teórica mínima 75%"
+                >
+                  <app-icon
+                    [name]="facade.elegibilidadProf().teoria ? 'circle-check' : 'circle-x'"
+                    [size]="12"
+                    [ariaHidden]="true"
+                  />
+                  Teoría ≥75%
+                </span>
+                <span
+                  class="elig-badge"
+                  [attr.data-met]="facade.elegibilidadProf().nota"
+                  data-llm-description="criterio elegibilidad: nota promedio mínima 75"
+                >
+                  <app-icon
+                    [name]="facade.elegibilidadProf().nota ? 'circle-check' : 'circle-x'"
+                    [size]="12"
+                    [ariaHidden]="true"
+                  />
+                  Nota ≥75
+                </span>
+                <span
+                  class="elig-badge"
+                  [attr.data-met]="facade.elegibilidadProf().pago"
+                  data-llm-description="criterio elegibilidad: pago completo sin saldo pendiente"
+                >
+                  <app-icon
+                    [name]="facade.elegibilidadProf().pago ? 'circle-check' : 'circle-x'"
+                    [size]="12"
+                    [ariaHidden]="true"
+                  />
+                  Pago completo
+                </span>
+                <span
+                  class="elig-badge"
+                  [attr.data-met]="facade.elegibilidadProf().practica"
+                  data-llm-description="criterio elegibilidad: asistencia práctica 100% (flexible)"
+                >
+                  <app-icon
+                    [name]="facade.elegibilidadProf().practica ? 'circle-check' : 'circle-x'"
+                    [size]="12"
+                    [ariaHidden]="true"
+                  />
+                  Práctica 100%
+                </span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Bento Item 4: Inasistencias (Banner, común) -->
         <div
           class="bento-card bento-banner"
           style="background: var(--state-warning-bg); border-color: var(--state-warning-border)"
@@ -284,7 +527,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <div
                   class="flex items-center gap-3 p-3 rounded-lg bg-bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
                 >
-                  <div class="inas-date-pill !border-none !bg-bg-elevated">
+                  <div class="inas-date-pill border-none! bg-bg-elevated!">
                     <span class="text-[10px] font-bold text-text-secondary">{{ item.fecha }}</span>
                   </div>
                   <div class="flex-1 min-w-0">
@@ -306,15 +549,17 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           }
         </div>
 
-        <!-- Bento Item 5: Ficha Técnica (Feature) -->
-        <app-admin-ficha-tecnica
-          class="bento-hero w-full h-full block"
-          [clases]="facade.clasesPracticas()"
-          (imprimirFicha)="imprimirFicha()"
-          (reprogramarRequested)="openReprogramarDrawer($event)"
-        />
+        <!-- Bento Item 5: Ficha Técnica (solo Clase B) -->
+        @if (alumno.licenseGroup === 'class_b') {
+          <app-admin-ficha-tecnica
+            class="bento-hero w-full h-full block"
+            [clases]="facade.clasesPracticas()"
+            (imprimirFicha)="imprimirFicha()"
+            (reprogramarRequested)="openReprogramarDrawer($event)"
+          />
+        }
 
-        <!-- Bento Item 6: Historial de Pagos (Tall) -->
+        <!-- Bento Item 6: Historial de Pagos (común) -->
         <app-admin-historial-pagos
           class="bento-tall w-full h-full block"
           [pagos]="facade.historialPagos()"
@@ -332,6 +577,16 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       [isDeleting]="alumnosFacade.isArchiving()"
       (confirmado)="onConfirmArchivar()"
       (cancelado)="onCancelArchivar()"
+    />
+
+    <!-- Input oculto para subir contrato firmado (flujo online) -->
+    <input
+      #signedContractInput
+      type="file"
+      accept="application/pdf"
+      class="hidden"
+      aria-hidden="true"
+      (change)="onSignedContractSelected($event)"
     />
   `,
   styles: `
@@ -370,11 +625,46 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       padding-right: 8px;
       min-width: 40px;
     }
+    .progress-fill-warning {
+      height: 100%;
+      background: var(--state-warning);
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+      min-width: 40px;
+    }
     .progress-label-inline {
       font-size: 11px;
       font-weight: var(--font-semibold);
       color: #fff;
       white-space: nowrap;
+    }
+
+    .elig-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: var(--font-bold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+    .elig-badge[data-met='true'] {
+      color: var(--state-success);
+      background: var(--state-success-bg);
+      border-color: var(--state-success-border);
+    }
+    .elig-badge[data-met='false'] {
+      color: var(--state-error);
+      background: var(--state-error-bg);
+      border-color: var(--state-error-border);
     }
 
     .inas-status-badge {
@@ -409,6 +699,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   protected readonly alumnosFacade = inject(AdminAlumnosFacade);
+  private readonly certFacade = inject(CertificacionClaseBFacade);
+  private readonly certProfFacade = inject(CertificacionProfesionalFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -416,6 +709,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
 
   private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+  private readonly signedContractInputRef = viewChild<ElementRef>('signedContractInput');
 
   // ── Estado del modal de borrado ──────────────────────────────────────────────
   protected readonly deleteModalVisible = signal(false);
@@ -435,18 +729,152 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
     const alumno = this.facade.alumno();
     if (!alumno) return [];
 
-    const progreso = this.facade.progresoPractico();
-    const canEmitCert = progreso.completadas >= progreso.requeridas;
+    const certPath = this.facade.certPdfPath();
+    let certAction: SectionHeroAction;
+
+    if (alumno.licenseGroup === 'professional') {
+      if (certPath) {
+        certAction = {
+          id: 'generar-certificado',
+          label: 'Ver Certificado',
+          icon: 'file-check',
+          primary: false,
+        };
+      } else if (this.facade.elegibleProf()) {
+        certAction = {
+          id: 'generar-certificado',
+          label: 'Generar Certificado',
+          icon: 'file-plus',
+          primary: false,
+        };
+      } else {
+        const e = this.facade.elegibilidadProf();
+        const metCount = [e.teoria, e.pago, e.nota].filter(Boolean).length;
+        certAction = {
+          id: 'generar-certificado',
+          label: `Certificado (${metCount}/3 criterios)`,
+          icon: 'file-text',
+          primary: false,
+          disabled: true,
+        };
+      }
+    } else {
+      // Clase B
+      const progreso = this.facade.progresoPractico();
+      const canEmitCert = progreso.completadas >= progreso.requeridas;
+
+      if (certPath) {
+        certAction = {
+          id: 'generar-certificado',
+          label: 'Ver Certificado',
+          icon: 'file-check',
+          primary: false,
+        };
+      } else if (canEmitCert) {
+        certAction = {
+          id: 'generar-certificado',
+          label: 'Generar Certificado',
+          icon: 'file-plus',
+          primary: false,
+        };
+      } else {
+        certAction = {
+          id: 'generar-certificado',
+          label: `Certificado (${progreso.completadas}/${progreso.requeridas})`,
+          icon: 'file-text',
+          primary: false,
+          disabled: true,
+        };
+      }
+    }
+
+    const licensePath = this.facade.licensePdfPath();
+    const isGenerating = this.facade.isGeneratingLicense();
+    let carnetAction: SectionHeroAction;
+
+    if (alumno.licenseGroup === 'class_b') {
+      if (isGenerating) {
+        carnetAction = {
+          id: 'generar-carnet',
+          label: 'Generando...',
+          icon: 'loader-2',
+          primary: false,
+          disabled: true,
+          loading: true,
+        };
+      } else if (licensePath) {
+        carnetAction = {
+          id: 'ver-carnet',
+          label: 'Ver Carnet',
+          icon: 'id-card',
+          primary: false,
+        };
+      } else {
+        carnetAction = {
+          id: 'generar-carnet',
+          label: 'Generar Carnet',
+          icon: 'id-card',
+          primary: false,
+        };
+      }
+    } else {
+      carnetAction = {
+        id: 'generar-carnet',
+        label: 'Generar Carnet',
+        icon: 'id-card',
+        primary: false,
+        disabled: true,
+      };
+    }
+
+    // ── Acciones de Contrato ───────────────────────────────────────────────────
+    const channel = this.facade.registrationChannel();
+    const contractGenerated = this.facade.contractGeneratedPath();
+    const contractSigned = this.facade.contractSignedPath();
+    const contractActions: SectionHeroAction[] = [];
+
+    if (channel === 'presential' && contractGenerated) {
+      // En flujo presencial, file_url ES el contrato firmado que se subió en Step 5
+      contractActions.push({
+        id: 'ver-contrato',
+        label: 'Ver Contrato',
+        icon: 'file-signature',
+        primary: false,
+      });
+    } else if (channel === 'online') {
+      if (contractSigned) {
+        // Ya subieron el contrato firmado → solo "Ver Contrato"
+        contractActions.push({
+          id: 'ver-contrato',
+          label: 'Ver Contrato',
+          icon: 'file-signature',
+          primary: false,
+        });
+      } else if (contractGenerated) {
+        // Contrato generado pero no firmado → Descargar + Subir Firmado
+        contractActions.push({
+          id: 'descargar-contrato',
+          label: 'Descargar Contrato',
+          icon: 'download',
+          primary: false,
+          loading: this.facade.isDownloadingContract(),
+          disabled: this.facade.isDownloadingContract(),
+        });
+        contractActions.push({
+          id: 'subir-contrato-firmado',
+          label: 'Subir Firmado',
+          icon: 'upload',
+          primary: false,
+          loading: this.facade.isUploadingContract(),
+          disabled: this.facade.isUploadingContract(),
+        });
+      }
+    }
 
     return [
-      { id: 'generar-carnet', label: 'Generar Carnet', icon: 'credit-card', primary: false },
-      {
-        id: 'generar-certificado',
-        label: `Certificado (${progreso.completadas}/${progreso.requeridas})`,
-        icon: 'file-text',
-        primary: false,
-        disabled: !canEmitCert,
-      },
+      ...contractActions,
+      carnetAction,
+      certAction,
       { id: 'editar-alumno', label: 'Editar Perfil', icon: 'user-pen', primary: true },
       {
         id: 'eliminar-alumno',
@@ -467,7 +895,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
         style: alumno.estado?.toLowerCase() === 'activo' ? 'success' : 'warning',
         icon: 'circle-check',
       },
-      { label: 'Matrícula ' + alumno.id, style: 'default', icon: 'hash' },
     ];
   });
 
@@ -494,14 +921,106 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
         this.openEditDrawer();
         break;
       case 'generar-carnet':
-        console.log('[Detalle] Generar Carnet');
+      case 'ver-carnet':
+        void this.handleCarnet();
         break;
       case 'generar-certificado':
-        console.log('[Detalle] Generar Certificado');
+        void this.handleCertificado();
         break;
       case 'eliminar-alumno':
         void this.requestArchivar();
         break;
+      case 'ver-contrato':
+        void this.handleVerContrato();
+        break;
+      case 'descargar-contrato':
+        void this.handleDescargarContrato();
+        break;
+      case 'subir-contrato-firmado':
+        this.signedContractInputRef()?.nativeElement.click();
+        break;
+    }
+  }
+
+  private handleVerContrato(): Promise<void> {
+    const channel = this.facade.registrationChannel();
+    const path =
+      channel === 'online' ? this.facade.contractSignedPath() : this.facade.contractGeneratedPath();
+    if (!path) return Promise.resolve();
+    return this.facade.verContrato(path);
+  }
+
+  private handleDescargarContrato(): Promise<void> {
+    const path = this.facade.contractGeneratedPath();
+    if (!path) return Promise.resolve();
+    return this.facade.descargarContrato(path);
+  }
+
+  protected async onSignedContractSelected(event: Event): Promise<void> {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const enrollmentId = this.facade.alumno()?.enrollmentId;
+    if (!enrollmentId) return;
+    await this.facade.subirContratoFirmado(enrollmentId, file);
+    (event.target as HTMLInputElement).value = '';
+  }
+
+  private async handleCertificado(): Promise<void> {
+    const alumno = this.facade.alumno();
+    if (!alumno?.enrollmentId) return;
+
+    const certPath = this.facade.certPdfPath();
+
+    if (alumno.licenseGroup === 'professional') {
+      if (certPath) {
+        await this.certProfFacade.verCertificado(certPath, alumno.nombre);
+        return;
+      }
+      // Práctica incompleta: advertencia (criterio flexible, no bloquea)
+      if (!this.facade.elegibilidadProf().practica) {
+        const pct = this.facade.progresoPracticaProf().pct ?? 0;
+        const confirmed = await this.confirmModal.confirm({
+          title: 'Asistencia práctica incompleta',
+          message: `${alumno.nombre} registra ${pct}% de asistencia práctica. ¿Deseas generar el certificado de todas formas?`,
+          severity: 'warn',
+          confirmLabel: 'Generar igual',
+          cancelLabel: 'Cancelar',
+        });
+        if (!confirmed) return;
+      }
+      await this.certProfFacade.generarCertificado(alumno.enrollmentId);
+      await this.facade.refresh();
+    } else {
+      // Clase B
+      if (certPath) {
+        await this.certFacade.verCertificado(certPath, alumno.nombre);
+        return;
+      }
+      const pctTeoria = this.facade.porcentajeTeoricas();
+      if (pctTeoria < 100) {
+        const confirmed = await this.confirmModal.confirm({
+          title: 'Asistencia teórica incompleta',
+          message: `${alumno.nombre} registra ${pctTeoria}% de asistencia teórica. ¿Deseas generar el certificado de todas formas?`,
+          severity: 'warn',
+          confirmLabel: 'Generar igual',
+          cancelLabel: 'Cancelar',
+        });
+        if (!confirmed) return;
+      }
+      await this.certFacade.generarCertificado(alumno.enrollmentId);
+      await this.facade.refresh();
+    }
+  }
+
+  private async handleCarnet(): Promise<void> {
+    const alumno = this.facade.alumno();
+    if (!alumno?.enrollmentId || alumno.licenseGroup !== 'class_b') return;
+
+    const licensePath = this.facade.licensePdfPath();
+    if (licensePath) {
+      await this.facade.verCarnet(licensePath);
+    } else {
+      await this.facade.generarCarnet(alumno.enrollmentId);
     }
   }
 

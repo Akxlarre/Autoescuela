@@ -1,11 +1,14 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import type {
   AlumnoDetalleUI,
   ClasePracticaUI,
+  ElegibilidadProfUI,
   InasistenciaUI,
   PagoUI,
+  ProgresoAsistenciaProf,
   ProgresoUI,
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
@@ -27,17 +30,21 @@ export interface ReprogramarClasePayload {
   scheduledAt: string;
 }
 
-/** Status de la BD que representa asistencia */
-const STATUS_PRESENTE = 'presente';
+/** Status de la BD que representa asistencia (ambos flujos escriben 'present' en inglés) */
+const STATUS_PRESENTE = 'present';
 
 /** Clases requeridas por defecto para Clase B. */
 const PRACTICAS_REQUERIDAS_B = 12;
 const TEORICAS_REQUERIDAS_B = 8;
 
+const TEORIA_MIN_PROF = 75;
+const NOTA_MIN_PROF = 75;
+
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnoDetalleFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
+  private readonly dmsViewer = inject(DmsViewerService);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
   private readonly _alumno = signal<AlumnoDetalleUI | null>(null);
@@ -52,8 +59,35 @@ export class AdminAlumnoDetalleFacade {
     completadas: 0,
     requeridas: TEORICAS_REQUERIDAS_B,
   });
+  private readonly _certPdfPath = signal<string | null>(null);
+  private readonly _licensePdfPath = signal<string | null>(null);
+  private readonly _isGeneratingLicense = signal(false);
+  private readonly _contractGeneratedPath = signal<string | null>(null);
+  private readonly _contractSignedPath = signal<string | null>(null);
+  private readonly _registrationChannel = signal<'presential' | 'online' | null>(null);
+  private readonly _isUploadingContract = signal(false);
+  private readonly _isDownloadingContract = signal(false);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
+
+  // ── Estado exclusivo de Clase Profesional ──────────────────────────────────
+  private readonly _progresoTeoriaProf = signal<ProgresoAsistenciaProf>({
+    pct: null,
+    asistidas: 0,
+    totales: 0,
+  });
+  private readonly _progresoPracticaProf = signal<ProgresoAsistenciaProf>({
+    pct: null,
+    asistidas: 0,
+    totales: 0,
+  });
+  private readonly _notaPromedioProf = signal<number | null>(null);
+  private readonly _elegibilidadProf = signal<ElegibilidadProfUI>({
+    teoria: false,
+    practica: false,
+    pago: false,
+    nota: false,
+  });
 
   // ── Reprogramar Clase ──────────────────────────────────────────────────────
   private readonly _instructores = signal<InstructorOption[]>([]);
@@ -79,15 +113,33 @@ export class AdminAlumnoDetalleFacade {
   readonly historialPagos = this._historialPagos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
   readonly progresoTeorico = this._progresoTeorico.asReadonly();
+  readonly certPdfPath = this._certPdfPath.asReadonly();
+  readonly licensePdfPath = this._licensePdfPath.asReadonly();
+  readonly isGeneratingLicense = this._isGeneratingLicense.asReadonly();
+  readonly contractGeneratedPath = this._contractGeneratedPath.asReadonly();
+  readonly contractSignedPath = this._contractSignedPath.asReadonly();
+  readonly registrationChannel = this._registrationChannel.asReadonly();
+  readonly isUploadingContract = this._isUploadingContract.asReadonly();
+  readonly isDownloadingContract = this._isDownloadingContract.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
+
+  // Profesional
+  readonly progresoTeoriaProf = this._progresoTeoriaProf.asReadonly();
+  readonly progresoPracticaProf = this._progresoPracticaProf.asReadonly();
+  readonly notaPromedioProf = this._notaPromedioProf.asReadonly();
+  readonly elegibilidadProf = this._elegibilidadProf.asReadonly();
+  readonly elegibleProf = computed(() => {
+    const e = this._elegibilidadProf();
+    return e.teoria && e.pago && e.nota;
+  });
 
   readonly instructores = this._instructores.asReadonly();
   readonly scheduleGrid = this._scheduleGrid.asReadonly();
   readonly isLoadingSchedule = this._isLoadingSchedule.asReadonly();
   readonly reprogramarTarget = this._reprogramarTarget.asReadonly();
 
-  // Computed: porcentajes
+  // Computed: porcentajes Clase B
   readonly porcentajePracticas = computed(() => {
     const p = this._progresoPractico();
     return p.requeridas > 0 ? Math.round((p.completadas / p.requeridas) * 100) : 0;
@@ -102,10 +154,9 @@ export class AdminAlumnoDetalleFacade {
 
   /**
    * Suscribe a cambios en tiempo real para el estudiante actual.
+   * Incluye tablas de Clase B y Clase Profesional para cubrir ambos tipos.
    */
   setupRealtime(studentId: number): void {
-    // Si ya hay un canal, lo cerramos para abrir uno con el nuevo studentId si fuera necesario
-    // Pero como el canal es compartido por tablas, solo nos aseguramos de tener uno activo.
     if (this._realtimeChannel) return;
 
     this._realtimeChannel = this.supabase.client
@@ -118,6 +169,21 @@ export class AdminAlumnoDetalleFacade {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'class_b_sessions' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'professional_theory_attendance' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'professional_practice_attendance' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'professional_module_grades' },
         () => void this.refreshSilently(),
       )
       .on(
@@ -156,6 +222,15 @@ export class AdminAlumnoDetalleFacade {
     this._historialPagos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
     this._progresoTeorico.set({ completadas: 0, requeridas: TEORICAS_REQUERIDAS_B });
+    this._certPdfPath.set(null);
+    this._licensePdfPath.set(null);
+    this._contractGeneratedPath.set(null);
+    this._contractSignedPath.set(null);
+    this._registrationChannel.set(null);
+    this._progresoTeoriaProf.set({ pct: null, asistidas: 0, totales: 0 });
+    this._progresoPracticaProf.set({ pct: null, asistidas: 0, totales: 0 });
+    this._notaPromedioProf.set(null);
+    this._elegibilidadProf.set({ teoria: false, practica: false, pago: false, nota: false });
     this._error.set(null);
     this._isLoading.set(true);
 
@@ -178,6 +253,11 @@ export class AdminAlumnoDetalleFacade {
     }
   }
 
+  /** Refresca la ficha en background (sin skeleton). Útil tras mutaciones externas. */
+  async refresh(): Promise<void> {
+    return this.refreshSilently();
+  }
+
   /** Legacy wrapper */
   async loadDetalle(studentId: number): Promise<void> {
     return this.initialize(studentId);
@@ -192,7 +272,14 @@ export class AdminAlumnoDetalleFacade {
           `
           id, status, created_at,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone),
-          enrollments(id, number, created_at, total_paid, pending_balance, courses!inner(name))
+          enrollments(
+            id, number, created_at, total_paid, pending_balance,
+            license_group, promotion_course_id, registration_channel,
+            certificate_b_pdf_url, certificate_professional_pdf_url,
+            license_pdf_url,
+            courses!inner(name),
+            digital_contracts(file_url, signed_contract_url)
+          )
         `,
         )
         .eq('id', studentId)
@@ -213,6 +300,29 @@ export class AdminAlumnoDetalleFacade {
         : lastEnrollment?.courses?.name;
 
       const enrollmentId = lastEnrollment?.id ?? null;
+      const licenseGroup: 'class_b' | 'professional' =
+        lastEnrollment?.license_group === 'professional' ? 'professional' : 'class_b';
+      const promotionCourseId = (lastEnrollment?.promotion_course_id as number | null) ?? null;
+
+      this._certPdfPath.set(
+        licenseGroup === 'professional'
+          ? (lastEnrollment?.certificate_professional_pdf_url ?? null)
+          : (lastEnrollment?.certificate_b_pdf_url ?? null),
+      );
+      this._licensePdfPath.set(lastEnrollment?.license_pdf_url ?? null);
+
+      const dcRaw = lastEnrollment?.digital_contracts;
+      const dc = Array.isArray(dcRaw) ? dcRaw[0] : dcRaw;
+      this._contractGeneratedPath.set((dc?.file_url as string) ?? null);
+      this._contractSignedPath.set((dc?.signed_contract_url as string) ?? null);
+      const rawChannel = lastEnrollment?.registration_channel;
+
+      let normalized: 'presential' | 'online' | null = null;
+
+      if (rawChannel === 'in_person') normalized = 'presential';
+      else if (rawChannel === 'online') normalized = 'online';
+
+      this._registrationChannel.set(normalized);
 
       this._alumno.set({
         id: s.id,
@@ -231,11 +341,18 @@ export class AdminAlumnoDetalleFacade {
         telefono: u.phone ?? '—',
         fechaIngreso: s.created_at.slice(0, 10),
         estado: this.formatStatus(s.status),
+        licenseGroup,
         totalPagado: lastEnrollment?.total_paid ?? 0,
         saldoPendiente: lastEnrollment?.pending_balance ?? 0,
       });
 
-      // ── Step 2: Queries en paralelo ──
+      // ── Step 2: Queries según tipo de licencia ──
+      if (licenseGroup === 'professional') {
+        await this.fetchProfessionalProgress(enrollmentId, promotionCourseId);
+        return;
+      }
+
+      // ── Clase B: queries en paralelo ──
       const [practiceResult, theoryResult, evidenceResult, sessionResult, paymentsResult] =
         await Promise.all([
           this.supabase.client
@@ -353,6 +470,237 @@ export class AdminAlumnoDetalleFacade {
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Error al cargar la ficha del alumno');
       throw err;
+    }
+  }
+
+  /**
+   * Obtiene progreso académico para alumnos de Clase Profesional:
+   * asistencia teórica/práctica, nota promedio y elegibilidad de certificado.
+   */
+  private async fetchProfessionalProgress(
+    enrollmentId: number | null,
+    promotionCourseId: number | null,
+  ): Promise<void> {
+    if (!enrollmentId || !promotionCourseId) {
+      this._progresoTeoriaProf.set({ pct: null, asistidas: 0, totales: 0 });
+      this._progresoPracticaProf.set({ pct: null, asistidas: 0, totales: 0 });
+      this._notaPromedioProf.set(null);
+      this._elegibilidadProf.set({ teoria: false, practica: false, pago: false, nota: false });
+      this._inasistencias.set([]);
+      this._clasesPracticas.set([]);
+      this._historialPagos.set([]);
+      return;
+    }
+
+    // Sesiones completadas del curso + inasistencias + pagos en paralelo
+    const [theorySessionsRes, practiceSessionsRes, evidenceRes, paymentsRes, gradesRes] =
+      await Promise.all([
+        this.supabase.client
+          .from('professional_theory_sessions')
+          .select('id')
+          .eq('promotion_course_id', promotionCourseId)
+          .eq('status', 'completed'),
+        this.supabase.client
+          .from('professional_practice_sessions')
+          .select('id')
+          .eq('promotion_course_id', promotionCourseId)
+          .eq('status', 'completed'),
+        this.supabase.client
+          .from('absence_evidence')
+          .select('*')
+          .eq('enrollment_id', enrollmentId)
+          .order('document_date', { ascending: false }),
+        this.supabase.client
+          .from('payments')
+          .select('*')
+          .eq('enrollment_id', enrollmentId)
+          .order('payment_date', { ascending: true }),
+        this.supabase.client
+          .from('professional_module_grades')
+          .select('grade')
+          .eq('enrollment_id', enrollmentId),
+      ]);
+
+    const theoryIds = (theorySessionsRes.data ?? []).map((s: any) => s.id as number);
+    const practiceIds = (practiceSessionsRes.data ?? []).map((s: any) => s.id as number);
+
+    // Asistencia de este alumno en esas sesiones
+    const [theoryAttRes, practiceAttRes] = await Promise.all([
+      theoryIds.length > 0
+        ? this.supabase.client
+            .from('professional_theory_attendance')
+            .select('status')
+            .eq('enrollment_id', enrollmentId)
+            .in('theory_session_prof_id', theoryIds)
+        : Promise.resolve({ data: [] as any[] }),
+      practiceIds.length > 0
+        ? this.supabase.client
+            .from('professional_practice_attendance')
+            .select('status')
+            .eq('enrollment_id', enrollmentId)
+            .in('session_id', practiceIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const theoryPresent = (theoryAttRes.data ?? []).filter(
+      (r: any) => r.status === STATUS_PRESENTE,
+    ).length;
+    const practicePresent = (practiceAttRes.data ?? []).filter(
+      (r: any) => r.status === STATUS_PRESENTE,
+    ).length;
+
+    const pctTeoria =
+      theoryIds.length > 0 ? Math.round((theoryPresent / theoryIds.length) * 100) : null;
+    const pctPractica =
+      practiceIds.length > 0 ? Math.round((practicePresent / practiceIds.length) * 100) : null;
+
+    const grades = (gradesRes.data ?? []).map((g: any) => Number(g.grade));
+    const notaPromedio =
+      grades.length > 0 ? Math.round(grades.reduce((a, b) => a + b, 0) / grades.length) : null;
+
+    const pendingBalance = this._alumno()?.saldoPendiente ?? 1;
+    const pagoCorrecto = pendingBalance <= 0;
+
+    this._progresoTeoriaProf.set({
+      pct: pctTeoria,
+      asistidas: theoryPresent,
+      totales: theoryIds.length,
+    });
+    this._progresoPracticaProf.set({
+      pct: pctPractica,
+      asistidas: practicePresent,
+      totales: practiceIds.length,
+    });
+    this._notaPromedioProf.set(notaPromedio);
+    this._elegibilidadProf.set({
+      teoria: pctTeoria !== null && pctTeoria >= TEORIA_MIN_PROF,
+      practica: pctPractica !== null && pctPractica >= 100,
+      pago: pagoCorrecto,
+      nota: notaPromedio !== null && notaPromedio >= NOTA_MIN_PROF,
+    });
+
+    this._inasistencias.set(
+      (evidenceRes.data ?? []).map((e: any) => ({
+        id: e.id,
+        fecha: this.formatDate(e.document_date),
+        documentType: e.document_type ?? '—',
+        description: e.description ?? null,
+        fileUrl: e.file_url ?? null,
+        status: e.status ?? 'pending',
+      })),
+    );
+
+    this._historialPagos.set(
+      (paymentsRes.data ?? []).map((p: any, idx: number) => ({
+        id: p.id,
+        fecha: this.formatDate(p.payment_date),
+        concepto: p.type?.trim() || `Pago #${idx + 1}`,
+        monto: p.total_amount ?? 0,
+        metodo: this.derivePaymentMethod(p),
+        estado: this.formatPaymentStatus(p.status),
+      })),
+    );
+
+    // Clase B específicos: vaciar para no mostrar datos obsoletos
+    this._clasesPracticas.set([]);
+    this._progresoPractico.set({ completadas: 0, requeridas: 0 });
+    this._progresoTeorico.set({ completadas: 0, requeridas: 0 });
+  }
+
+  /** Genera el carnet PDF via Edge Function y lo muestra en el DmsViewer. */
+  async generarCarnet(enrollmentId: number): Promise<void> {
+    this._isGeneratingLicense.set(true);
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-student-license-pdf',
+        { body: { enrollment_id: enrollmentId } },
+      );
+      if (error || !data?.pdfUrl) {
+        this.toast.error('Error al generar el carnet. Intenta de nuevo.');
+        return;
+      }
+      this._licensePdfPath.set(data.pdfPath ?? null);
+      this.dmsViewer.openByUrl(data.pdfUrl, 'Carnet del Alumno');
+    } catch {
+      this.toast.error('Error inesperado al generar el carnet.');
+    } finally {
+      this._isGeneratingLicense.set(false);
+    }
+  }
+
+  /** Abre el carnet ya generado usando una signed URL de corta vida. */
+  async verCarnet(storagePath: string): Promise<void> {
+    const { data, error } = await this.supabase.client.storage
+      .from('documents')
+      .createSignedUrl(storagePath, 3600);
+    if (error || !data?.signedUrl) {
+      this.toast.error('No se pudo abrir el carnet. Intenta de nuevo.');
+      return;
+    }
+    this.dmsViewer.openByUrl(data.signedUrl, 'Carnet del Alumno');
+  }
+
+  /** Abre el contrato (firmado o presencial) usando una signed URL de corta vida. */
+  async verContrato(path: string): Promise<void> {
+    const { data, error } = await this.supabase.client.storage
+      .from('documents')
+      .createSignedUrl(path, 3600);
+    if (error || !data?.signedUrl) {
+      this.toast.error('No se pudo abrir el contrato. Intenta de nuevo.');
+      return;
+    }
+    this.dmsViewer.openByUrl(data.signedUrl, 'Contrato del Alumno');
+  }
+
+  /** Descarga el contrato generado (sin firmar) como PDF. Solo para flujo online. */
+  async descargarContrato(path: string): Promise<void> {
+    this._isDownloadingContract.set(true);
+    try {
+      const { data, error } = await this.supabase.client.storage
+        .from('documents')
+        .createSignedUrl(path, 3600);
+      if (error || !data?.signedUrl) {
+        this.toast.error('No se pudo descargar el contrato.');
+        return;
+      }
+      const blob = await fetch(data.signedUrl).then((r) => r.blob());
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = 'Contrato.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      this.toast.error('No se pudo descargar el contrato.');
+    } finally {
+      this._isDownloadingContract.set(false);
+    }
+  }
+
+  /** Sube el contrato firmado escaneado al storage y actualiza digital_contracts. */
+  async subirContratoFirmado(enrollmentId: number, file: File): Promise<void> {
+    this._isUploadingContract.set(true);
+    try {
+      const path = `contracts/${enrollmentId}/signed_contract.pdf`;
+      const { error: uploadError } = await this.supabase.client.storage
+        .from('documents')
+        .upload(path, file, { contentType: 'application/pdf', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await this.supabase.client
+        .from('digital_contracts')
+        .update({ signed_contract_url: path })
+        .eq('enrollment_id', enrollmentId);
+      if (updateError) throw updateError;
+
+      this._contractSignedPath.set(path);
+      this.toast.success('Contrato firmado subido correctamente.');
+    } catch {
+      this.toast.error('Error al subir el contrato firmado. Intenta de nuevo.');
+    } finally {
+      this._isUploadingContract.set(false);
     }
   }
 

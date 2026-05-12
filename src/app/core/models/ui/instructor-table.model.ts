@@ -48,3 +48,21 @@ export interface VehicleAssignmentHistory {
   endDate: string | null;
   assignedBy: string | null;
 }
+
+export interface InstructorHoraRow {
+  instructorId: number;
+  nombre: string;
+  initials: string;
+  practicalSessions: number;
+  totalEquivalent: number;
+}
+
+export interface InstructorHorarioSession {
+  id: number;
+  scheduledAt: string;
+  classNumber: number | null;
+  durationMin: number;
+  studentName: string;
+  studentInitials: string;
+  vehiclePlate: string | null;
+}

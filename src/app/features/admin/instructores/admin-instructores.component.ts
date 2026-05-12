@@ -23,6 +23,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { AdminInstructorCrearDrawerComponent } from './admin-instructor-crear-drawer.component';
 import { AdminInstructorVerDrawerComponent } from './admin-instructor-ver-drawer.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
+import { AdminInstructorHorasDrawerComponent } from './admin-instructor-horas-drawer.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 type FilterTab = 'all' | 'active' | 'expiring';
@@ -84,7 +85,6 @@ type FilterTab = 'all' | 'active' | 'expiring';
             Licencia por vencer ({{ facade.licenciasPorVencer() }})
           </button>
         </div>
-
         <div class="viewport-content bg-surface">
           <!-- VISTA Desktop: Tabla clásica -->
           <div class="desktop-view hide-on-squeeze overflow-x-auto">
@@ -166,7 +166,9 @@ type FilterTab = 'all' | 'active' | 'expiring';
 
                       <!-- RUT -->
                       <td>
-                        <span class="text-sm" style="color: var(--text-primary)">{{ inst.rut }}</span>
+                        <span class="text-sm" style="color: var(--text-primary)">{{
+                          inst.rut
+                        }}</span>
                       </td>
 
                       <!-- Licencia -->
@@ -258,7 +260,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
           <!-- VISTA Mobile: Tarjetas apiladas -->
           <div class="mobile-view show-on-squeeze p-4 space-y-4">
             @if (facade.isLoading()) {
-              @for (card of [1,2,3]; track card) {
+              @for (card of [1, 2, 3]; track card) {
                 <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
                   <div class="flex justify-between items-start">
                     <app-skeleton-block variant="text" width="140px" height="14px" />
@@ -272,34 +274,54 @@ type FilterTab = 'all' | 'active' | 'expiring';
               }
             } @else {
               @for (inst of paginatedInstructores(); track inst.id) {
-                <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all">
-                  <div class="p-4 border-b border-border-subtle flex items-start justify-between bg-subtle">
+                <div
+                  class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all"
+                >
+                  <div
+                    class="p-4 border-b border-border-subtle flex items-start justify-between bg-subtle"
+                  >
                     <div class="flex flex-col min-w-0">
-                      <span class="text-sm font-bold text-text-primary truncate">{{ inst.nombre }}</span>
+                      <span class="text-sm font-bold text-text-primary truncate">{{
+                        inst.nombre
+                      }}</span>
                       <span class="text-xs text-text-muted truncate">{{ inst.email }}</span>
                     </div>
-                    <span class="license-badge shrink-0" [class]="'license-badge license-badge--' + inst.licenseStatus" style="font-size: 10px; padding: 2px 8px;">
+                    <span
+                      class="license-badge shrink-0"
+                      [class]="'license-badge license-badge--' + inst.licenseStatus"
+                      style="font-size: 10px; padding: 2px 8px;"
+                    >
                       {{ inst.licenseStatusLabel }}
                     </span>
                   </div>
                   <div class="p-4 grid grid-cols-2 gap-4 text-xs">
                     <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">RUT</span>
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                        >RUT</span
+                      >
                       <span>{{ inst.rut }}</span>
                     </div>
                     <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">Tipo</span>
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                        >Tipo</span
+                      >
                       <span>{{ inst.tipoLabel }}</span>
                     </div>
                     <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">Vehículo</span>
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                        >Vehículo</span
+                      >
                       <span class="truncate">{{ inst.vehiclePlate || 'Sin asignar' }}</span>
                     </div>
                     <div class="flex flex-col">
-                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold">Estado</span>
-                      <span [class.text-state-success]="inst.estado === 'activo'"
-                            [class.text-text-muted]="inst.estado !== 'activo'"
-                            class="font-medium">
+                      <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                        >Estado</span
+                      >
+                      <span
+                        [class.text-state-success]="inst.estado === 'activo'"
+                        [class.text-text-muted]="inst.estado !== 'activo'"
+                        class="font-medium"
+                      >
                         {{ inst.estado === 'activo' ? 'Activo' : 'Inactivo' }}
                       </span>
                     </div>
@@ -320,13 +342,29 @@ type FilterTab = 'all' | 'active' | 'expiring';
 
         <!-- Paginación Global -->
         @if (!facade.isLoading() && filteredInstructores().length > 0) {
-          <div class="flex items-center justify-between px-6 py-4" style="border-top: 1px solid var(--border-subtle);">
+          <div
+            class="flex items-center justify-between px-6 py-4"
+            style="border-top: 1px solid var(--border-subtle);"
+          >
             <p class="text-xs text-text-muted">
-              Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de {{ filteredInstructores().length }}
+              Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
+              {{ filteredInstructores().length }}
             </p>
             <div class="flex items-center gap-2">
-              <button class="pagination-btn" [disabled]="currentPage() === 1" (click)="currentPage.set(currentPage() - 1)">Anterior</button>
-              <button class="pagination-btn" [disabled]="currentPage() >= totalPages()" (click)="currentPage.set(currentPage() + 1)">Siguiente</button>
+              <button
+                class="pagination-btn"
+                [disabled]="currentPage() === 1"
+                (click)="currentPage.set(currentPage() - 1)"
+              >
+                Anterior
+              </button>
+              <button
+                class="pagination-btn"
+                [disabled]="currentPage() >= totalPages()"
+                (click)="currentPage.set(currentPage() + 1)"
+              >
+                Siguiente
+              </button>
             </div>
           </div>
         }
@@ -484,11 +522,17 @@ type FilterTab = 'all' | 'active' | 'expiring';
       container-name: instructorContainer;
     }
 
-    .show-on-squeeze { display: none; }
+    .show-on-squeeze {
+      display: none;
+    }
 
     @container instructorContainer (max-width: 850px) {
-      .hide-on-squeeze { display: none !important; }
-      .show-on-squeeze { display: block !important; }
+      .hide-on-squeeze {
+        display: none !important;
+      }
+      .show-on-squeeze {
+        display: block !important;
+      }
     }
   `,
 })
@@ -530,7 +574,6 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
-
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'hours', label: 'Horas trabajadas', icon: 'clock', primary: false },
@@ -544,6 +587,8 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
         'Crear instructor Clase B',
         'user-plus',
       );
+    } else if (actionId === 'hours') {
+      this.layoutDrawer.open(AdminInstructorHorasDrawerComponent, 'Horas trabajadas', 'clock');
     }
   }
 

@@ -42,14 +42,14 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
   imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, BentoGridLayoutDirective],
   template: `
     <div
-      class="bento-grid"
+      class="bento-grid p-6 pb-12"
       appBentoGridLayout
       #bentoGrid
       [class.items-start]="!layoutDrawer.isOpen()"
       [class.force-compact]="layoutDrawer.isOpen()"
     >
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
+      <div class="bento-banner relative overflow-visible" #heroRef>
         <app-section-hero
           title="Cuadratura Diaria"
           icon="calculator"
@@ -58,6 +58,29 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           [actions]="heroActions()"
           (actionClick)="onHeroAction($event)"
         />
+        @if (exportMenuOpen()) {
+          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+          <div class="export-menu absolute top-14 right-4 z-20">
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('excel')"
+              data-llm-action="export-cuadratura-excel"
+            >
+              <app-icon name="table-2" [size]="16" />
+              Exportar como Excel
+            </button>
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('pdf')"
+              data-llm-action="export-cuadratura-pdf"
+            >
+              <app-icon name="file-text" [size]="16" />
+              Exportar como PDF
+            </button>
+          </div>
+        }
       </div>
 
       <!-- ─ Columna izquierda (2/3): Tablas de Registro de Sistema ─────────────────── -->
@@ -70,20 +93,22 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           >
             <div class="flex items-center gap-3">
               <div
-                class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                style="background: color-mix(in srgb, var(--state-success) 12%, transparent)"
+                class="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center shrink-0"
               >
-                <app-icon name="trending-up" [size]="18" color="var(--state-success)" />
+                <app-icon name="trending-up" [size]="20" color="var(--color-primary)" />
               </div>
               <div>
-                <h2 class="text-base font-bold text-text-primary">Registro de Ingresos</h2>
-                <p class="text-sm text-text-muted mt-0.5">Pagos y boletas recibidos hoy.</p>
+                <h2 class="font-bold text-text-primary">Registro de Ingresos</h2>
+                <p class="text-[13px] text-text-muted mt-0.5">
+                  Detalle de pagos y boletas recibidos en el día.
+                </p>
               </div>
             </div>
             <button
               class="btn-primary flex items-center gap-2 text-[13px] px-5 py-2.5 rounded-xl shrink-0 transition-transform active:scale-[0.98] shadow-sm"
               data-llm-action="agregar-ingreso-cuadratura"
               [disabled]="cajaYaCerrada()"
+              [style.opacity]="cajaYaCerrada() ? '0.5' : '1'"
               aria-label="Agregar nuevo ingreso"
               (click)="abrirIngreso.emit()"
             >
@@ -93,7 +118,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           </div>
 
           <!-- Tabla (Desktop) / Cards (Mobile) -->
-          <div class="flex-1 overflow-x-auto">
+          <div class="flex-1 overflow-x-auto" style="container-type: inline-size;">
             <!-- Vista Desktop (Table) -->
             <div class="hidden sm:block" [class.!hidden]="layoutDrawer.isOpen()">
               <!-- Header Columnas -->
@@ -201,7 +226,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-state-error/10 hover:text-state-error transition-all focus-visible:opacity-100 ml-auto"
                         [disabled]="cajaYaCerrada()"
                         [attr.aria-label]="'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)"
-                        (click)="onEliminarIngreso(fila)"
+                        (click)="onEliminarIngreso(fila, $event)"
                       >
                         <app-icon name="trash-2" [size]="15" />
                       </button>
@@ -238,7 +263,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       <button
                         class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-state-error transition-colors"
                         [disabled]="cajaYaCerrada()"
-                        (click)="onEliminarIngreso(fila)"
+                        (click)="onEliminarIngreso(fila, $event)"
                       >
                         <app-icon name="trash-2" [size]="14" />
                       </button>
@@ -278,14 +303,22 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div
             class="px-6 py-5 flex items-center justify-between border-t border-border-muted/50 bg-bg-surface mt-auto"
           >
-            <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              {{ pagosHoy().length }} ingreso{{ pagosHoy().length === 1 ? '' : 's' }}
+            <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted">
+              Mostrando {{ pagosHoy().length }} ingresos
             </span>
-            <div class="flex items-baseline gap-3">
-              <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+            <div
+              class="flex items-center gap-4 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10"
+            >
+              <span
+                class="text-[11px] font-black uppercase tracking-widest opacity-80"
+                style="color: var(--color-primary)"
+              >
                 Total Día
               </span>
-              <span class="text-2xl font-bold tabular-nums tracking-tight text-text-primary">
+              <span
+                class="text-[22px] font-black tabular-nums tracking-tight"
+                style="color: var(--color-primary)"
+              >
                 {{ clp(totalIngresosHoy()) }}
               </span>
             </div>
@@ -297,10 +330,9 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted/50">
             <div class="flex items-center gap-3">
               <div
-                class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                style="background: color-mix(in srgb, var(--text-muted) 12%, transparent)"
+                class="w-8 h-8 rounded-lg bg-state-warning/10 flex items-center justify-center shrink-0"
               >
-                <app-icon name="trending-down" [size]="18" color="var(--text-secondary)" />
+                <app-icon name="trending-down" [size]="16" color="var(--state-warning)" />
               </div>
               <h2 class="text-base font-bold text-text-primary">Egresos / Retiros</h2>
             </div>
@@ -365,18 +397,23 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div
             class="px-6 py-4 flex items-center justify-between border-t border-border-muted/50 bg-bg-surface mt-auto"
           >
-            <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Total Egresos
-            </span>
-            <span class="text-lg font-bold tabular-nums tracking-tight text-text-primary">
-              − {{ clp(totalEgresosHoy()) }}
+            <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
+              >Total Egresos</span
+            >
+            <span
+              class="text-[17px] font-black tabular-nums tracking-tight"
+              style="color: var(--state-warning)"
+            >
+              {{ clp(totalEgresosHoy()) }}
             </span>
           </div>
         </div>
       </div>
 
       <!-- ─ Columna derecha (1/3): Panel Interactivo (Sticky Checkout) ───────────────────────── -->
-      <div class="bento-tall sticky top-6 self-start flex flex-col">
+      <div
+        class="bento-banner bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col"
+      >
         <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
         <div class="card-accent card p-0 flex flex-col overflow-hidden">
           <!-- Titular principal -->
@@ -393,28 +430,32 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           </div>
 
           <!-- 1. Formulación Esperada (System Math) -->
-          <div class="px-6 py-5 border-b border-border-muted/50 flex flex-col gap-2.5 bg-bg-subtle">
-            <div class="flex items-center justify-between text-sm text-text-secondary">
+          <div class="px-6 py-5 bg-brand/5 border-b border-brand/10 flex flex-col gap-2.5">
+            <div
+              class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
+            >
               <span>Ingresos de Sistema</span>
-              <span class="tabular-nums font-semibold text-text-primary">
-                {{ clp(totalIngresosHoy()) }}
-              </span>
-            </div>
-            <div class="flex items-center justify-between text-sm text-text-secondary">
-              <span>Egresos / Retiros</span>
-              <span class="tabular-nums font-semibold text-text-primary">
-                − {{ clp(totalEgresosHoy()) }}
-              </span>
+              <span class="tabular-nums" style="color: var(--color-primary)">{{
+                clp(totalIngresosHoy())
+              }}</span>
             </div>
             <div
-              class="mt-1 pt-3 border-t border-border-muted/50 flex items-center justify-between"
+              class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
             >
-              <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Debe Haber en Caja
-              </span>
-              <span class="text-lg font-bold text-text-primary tabular-nums tracking-tight">
-                {{ clp(saldoTeorico()) }}
-              </span>
+              <span>Egresos / Retiros (-)</span>
+              <span class="tabular-nums" style="color: var(--state-warning)">{{
+                clp(totalEgresosHoy())
+              }}</span>
+            </div>
+            <div class="mt-1 pt-3 border-t border-brand/10 flex items-center justify-between">
+              <span
+                class="text-[11px] font-black uppercase tracking-widest"
+                style="color: var(--color-primary)"
+                >Debe Haber en Caja</span
+              >
+              <span class="text-[17px] font-black text-text-primary tabular-nums tracking-tight">{{
+                clp(saldoTeorico())
+              }}</span>
             </div>
           </div>
 
@@ -449,7 +490,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       inputmode="numeric"
                       pattern="[0-9]*"
                       autocomplete="off"
-                      class="w-[76px] h-9 text-sm font-semibold text-right px-3 py-1 rounded-lg bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                       [value]="cantidades()[billete.key] || ''"
                       placeholder="0"
                       [disabled]="cajaYaCerrada()"
@@ -485,7 +526,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       inputmode="numeric"
                       pattern="[0-9]*"
                       autocomplete="off"
-                      class="w-[76px] h-9 text-sm font-semibold text-right px-3 py-1 rounded-lg bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                       [value]="cantidades()[moneda.key] || ''"
                       placeholder="0"
                       [disabled]="cajaYaCerrada()"
@@ -501,26 +542,28 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <!-- 3. Dynamic Differential Status -->
           <div
             class="px-6 py-5 border-y border-border-muted/50 transition-colors flex flex-col gap-3"
-            [style.background]="'color-mix(in srgb, ' + colorDiferencia() + ' 6%, transparent)'"
+            [style.background]="'color-mix(in srgb, ' + colorDiferencia() + ' 8%, transparent)'"
             aria-live="polite"
           >
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Total Físico Arqueado
-              </span>
+              <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
+                >Total Físico Arqueado</span
+              >
               <span
-                class="text-base font-semibold tabular-nums"
+                class="text-[16px] font-black tabular-nums"
                 [style.color]="totalArqueo() > 0 ? 'var(--text-primary)' : 'var(--text-muted)'"
               >
                 {{ clp(totalArqueo()) }}
               </span>
             </div>
             <div class="flex items-center justify-between">
-              <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Diferencia
-              </span>
               <span
-                class="text-2xl font-bold tabular-nums tracking-tight"
+                class="text-[13px] font-black uppercase tracking-widest"
+                [style.color]="colorDiferencia()"
+                >Diferencia</span
+              >
+              <span
+                class="text-[22px] font-black tabular-nums tracking-tighter"
                 [style.color]="colorDiferencia()"
               >
                 {{ diferencia() > 0 ? '+' : '' }}{{ clp(diferencia()) }}
@@ -560,12 +603,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             </div>
 
             <button
-              class="w-full flex items-center justify-center gap-2.5 font-bold text-sm py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
+              class="w-full flex items-center justify-center gap-2.5 font-bold text-[14px] py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
               [class.btn-primary]="!cajaYaCerrada()"
               [style.background]="cajaYaCerrada() ? 'var(--bg-surface)' : ''"
               [style.border]="cajaYaCerrada() ? '1px solid var(--border-muted)' : ''"
               [style.color]="cajaYaCerrada() ? 'var(--text-muted)' : ''"
-              [disabled]="!puedeCerrar()"
+              [disabled]="!puedeCerrar() || isSaving()"
+              [style.opacity]="!puedeCerrar() || isSaving() ? '0.7' : '1'"
               data-llm-action="cerrar-caja-guardar"
               (click)="onGuardarCierre()"
             >
@@ -641,6 +685,34 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
       position: static !important;
       width: 100% !important;
     }
+
+    .export-menu {
+      min-width: 200px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-muted);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+      overflow: hidden;
+    }
+
+    .export-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background var(--duration-fast);
+    }
+
+    .export-menu-item:hover {
+      background: var(--bg-elevated);
+    }
   `,
 })
 export class CuadraturaContentComponent implements AfterViewInit {
@@ -654,6 +726,10 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
   readonly isSaving = input<boolean>(false);
+<<<<<<< HEAD
+=======
+  readonly isExporting = input<boolean>(false);
+>>>>>>> main
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -666,6 +742,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly abrirEgreso = output<void>();
   readonly eliminarIngreso = output<IngresoRow>();
   readonly eliminarEgreso = output<EgresoRow>();
+  readonly exportRequested = output<'excel' | 'pdf'>();
 
   // ── Estado interno del arqueo ─────────────────────────────────────────────
   protected readonly cantidades = signal<Record<string, number>>({
@@ -735,6 +812,8 @@ export class CuadraturaContentComponent implements AfterViewInit {
     }
   });
 
+  protected readonly exportMenuOpen = signal(false);
+
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {
       id: 'ver-historial',
@@ -744,9 +823,17 @@ export class CuadraturaContentComponent implements AfterViewInit {
       primary: false,
     },
     {
+<<<<<<< HEAD
       id: 'exportar-excel',
       label: 'Exportar a Excel',
       icon: 'download',
+=======
+      id: 'exportar',
+      label: this.isExporting() ? 'Exportando...' : 'Exportar',
+      icon: this.isExporting() ? 'loader-circle' : 'download',
+      loading: this.isExporting(),
+      disabled: this.isExporting(),
+>>>>>>> main
       primary: false,
     },
   ]);
@@ -770,12 +857,34 @@ export class CuadraturaContentComponent implements AfterViewInit {
     return (event.target as HTMLTextAreaElement).value;
   }
 
+<<<<<<< HEAD
   protected onHeroAction(_actionId: string): void {
     // exportar-excel: pendiente de implementar
   }
 
   protected onEliminarIngreso(fila: IngresoRow): void {
     this.eliminarIngreso.emit(fila);
+=======
+  protected onHeroAction(actionId: string): void {
+    if (actionId === 'exportar' && !this.isExporting()) {
+      this.exportMenuOpen.set(!this.exportMenuOpen());
+    }
+  }
+
+  protected requestExport(format: 'excel' | 'pdf'): void {
+    this.exportMenuOpen.set(false);
+    this.exportRequested.emit(format);
+  }
+
+  protected onEliminarIngreso(fila: IngresoRow, event: Event): void {
+    event.stopPropagation();
+    const confirmado = window.confirm(
+      '¿Estás seguro de que deseas eliminar este movimiento?\nEsta acción no se puede deshacer y los saldos se recalcularán.',
+    );
+    if (confirmado) {
+      this.eliminarIngreso.emit(fila);
+    }
+>>>>>>> main
   }
 
   protected onEliminarEgreso(egreso: EgresoRow): void {

@@ -1,6 +1,6 @@
 /**
  * Modelos UI para la Ficha del Alumno (/admin/alumnos/:id).
- * Derivados de: students + users + enrollments + class_b_*_attendance
+ * Derivados de: students + users + enrollments + class_b_*_attendance / professional_*
  */
 
 export interface AlumnoDetalleUI {
@@ -22,10 +22,32 @@ export interface AlumnoDetalleUI {
   telefono: string;
   fechaIngreso: string;
   estado: string;
+  /** 'class_b' | 'professional' — determina qué secciones de progreso mostrar */
+  licenseGroup: 'class_b' | 'professional';
   /** Suma de pagos confirmados (enrollments.total_paid) */
   totalPagado: number;
   /** Saldo aún no abonado (enrollments.pending_balance) */
   saldoPendiente: number;
+}
+
+/** Progreso de asistencia para alumnos profesionales (teoría o práctica). */
+export interface ProgresoAsistenciaProf {
+  /** Porcentaje de asistencia (0-100) o null si no hay sesiones registradas aún. */
+  pct: number | null;
+  asistidas: number;
+  totales: number;
+}
+
+/** Criterios de elegibilidad para certificado profesional (UI). */
+export interface ElegibilidadProfUI {
+  /** Asistencia teórica >= 75 % */
+  teoria: boolean;
+  /** Asistencia práctica >= 100 % (criterio flexible) */
+  practica: boolean;
+  /** Saldo pendiente <= 0 */
+  pago: boolean;
+  /** Nota promedio de módulos >= 75 */
+  nota: boolean;
 }
 
 export interface PagoUI {

@@ -5,6 +5,7 @@ import {
   input,
   linkedSignal,
   output,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -187,20 +188,72 @@ import {
         color: var(--text-secondary);
         white-space: nowrap;
       }
+
+      /* ── Export dropdown ────────────────────────────────────────────────── */
+      .export-menu {
+        min-width: 200px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-muted);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+        overflow: hidden;
+      }
+
+      .export-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--text-primary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+        transition: background var(--duration-fast);
+
+        &:hover {
+          background: var(--bg-elevated);
+        }
+      }
     `,
   ],
   template: `
     <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
-    <div class="bento-banner">
+    <div class="bento-banner relative overflow-visible">
       <app-section-hero
         title="Reportes Contables"
-        subtitle="RF-030 / RF-031 · Resumen financiero y Total Neto por rango de fechas"
+        subtitle="Resumen financiero y total neto por rango de fechas"
         icon="bar-chart-2"
-        [actions]="heroActions"
+        [actions]="heroActions()"
         [chips]="heroChips()"
         (actionClick)="onHeroAction($event)"
         class="block mb-5"
       />
+      @if (exportMenuOpen()) {
+        <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+        <div class="export-menu absolute top-14 right-4 z-20">
+          <button
+            type="button"
+            class="export-menu-item"
+            (click)="requestExport('excel')"
+            data-llm-action="export-reportes-contables-excel"
+          >
+            <app-icon name="table-2" [size]="16" />
+            Exportar como Excel
+          </button>
+          <button
+            type="button"
+            class="export-menu-item"
+            (click)="requestExport('pdf')"
+            data-llm-action="export-reportes-contables-pdf"
+          >
+            <app-icon name="file-text" [size]="16" />
+            Exportar como PDF
+          </button>
+        </div>
+      }
     </div>
 
     <!-- ── Contenido ─────────────────────────────────────────────────────── -->
@@ -304,7 +357,7 @@ import {
         />
         <app-kpi-card-variant
           [value]="kpis()?.totalNeto ?? 0"
-          label="Total Neto (RF-031)"
+          label="Total Neto"
           icon="coins"
           color="default"
           [accent]="true"
@@ -603,20 +656,28 @@ export class ReportesContablesContentComponent {
   readonly diasConMovimientos = input<number>(0);
   readonly escuela = input<string>('');
   readonly isLoading = input<boolean>(false);
+  readonly isExporting = input<boolean>(false);
   readonly filtros = input.required<FiltrosReporte>();
 
   // ── Outputs ────────────────────────────────────────────────────────────────
   readonly aplicarFiltros = output<FiltrosReporte>();
-  readonly exportarExcel = output<void>();
-  readonly exportarPDF = output<void>();
+  readonly exportRequested = output<'excel' | 'pdf'>();
   /** Emite la fecha (YYYY-MM-DD) cuando el usuario hace clic en "Ver detalle". */
   readonly verDetalle = output<string>();
 
   // ── Hero ──────────────────────────────────────────────────────────────────
-  protected readonly heroActions: SectionHeroAction[] = [
-    { id: 'excel', label: 'Excel', icon: 'file-spreadsheet', primary: false },
-    { id: 'pdf', label: 'PDF', icon: 'file-text', primary: false },
-  ];
+  protected readonly exportMenuOpen = signal(false);
+
+  protected readonly heroActions = computed<SectionHeroAction[]>(() => [
+    {
+      id: 'exportar',
+      label: this.isExporting() ? 'Exportando...' : 'Exportar',
+      icon: this.isExporting() ? 'loader-circle' : 'download',
+      loading: this.isExporting(),
+      disabled: this.isExporting(),
+      primary: false,
+    },
+  ]);
 
   protected readonly heroChips = computed<SectionHeroChip[]>(() => {
     const e = this.escuela();
@@ -672,8 +733,14 @@ export class ReportesContablesContentComponent {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   protected onHeroAction(id: string): void {
-    if (id === 'excel') this.exportarExcel.emit();
-    if (id === 'pdf') this.exportarPDF.emit();
+    if (id === 'exportar' && !this.isExporting()) {
+      this.exportMenuOpen.set(!this.exportMenuOpen());
+    }
+  }
+
+  protected requestExport(format: 'excel' | 'pdf'): void {
+    this.exportMenuOpen.set(false);
+    this.exportRequested.emit(format);
   }
 
   protected onRangoChange(rango: RangoReporte): void {

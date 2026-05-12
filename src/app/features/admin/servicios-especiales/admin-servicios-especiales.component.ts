@@ -19,11 +19,12 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
         [ventas]="facade.ventas()"
         [kpis]="facade.kpis()"
         [isLoading]="facade.isLoading()"
+        [isExporting]="facade.isExporting()"
         backRoute="/app/dashboard"
         (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
         (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
         (cobroRegistrado)="facade.registrarCobro($event)"
-        (exportarHistorial)="onExportar()"
+        (exportarHistorial)="onExportar($event)"
       />
     </div>
   `,
@@ -39,8 +40,7 @@ export class AdminServiciosEspecialesComponent {
     });
   }
 
-  protected onExportar(): void {
-    // TODO: implementar exportación CSV/Excel
-    console.log('[ServiciosEspeciales] Exportar historial');
+  protected onExportar(format: 'excel' | 'pdf'): void {
+    void this.facade.exportarHistorial(format);
   }
 }

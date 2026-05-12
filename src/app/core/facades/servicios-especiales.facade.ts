@@ -17,6 +17,7 @@ import type {
   VentaServicio,
 } from '@core/models/ui/servicios-especiales.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { downloadExcel } from '@core/utils/excel.utils';
 
 /** Mapea el nombre del servicio a ícono y color de UI. */
 function getServiceUiMeta(name: string): {
@@ -85,6 +86,7 @@ export class ServiciosEspecialesFacade {
   private readonly _ventas = signal<VentaServicio[]>([]);
   private readonly _selectedServicio = signal<ServicioEspecial | null>(null);
   private readonly _isLoading = signal(false);
+  private readonly _isExporting = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
@@ -94,6 +96,7 @@ export class ServiciosEspecialesFacade {
   public readonly ventas = this._ventas.asReadonly();
   public readonly selectedServicio = this._selectedServicio.asReadonly();
   public readonly isLoading = this._isLoading.asReadonly();
+  public readonly isExporting = this._isExporting.asReadonly();
   public readonly error = this._error.asReadonly();
 
   public readonly kpis = computed<ServiciosEspecialesKpis>(() => {
@@ -265,5 +268,43 @@ export class ServiciosEspecialesFacade {
 
     // Optimistic update
     this._ventas.update((prev) => prev.map((v) => (v.id === id ? { ...v, cobrado: true } : v)));
+  }
+
+  async exportarHistorial(format: 'excel' | 'pdf'): Promise<void> {
+    this._isExporting.set(true);
+    try {
+      const branchId = this.getActiveBranchId();
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'export-special-services',
+        {
+          body: { format, branch_id: branchId },
+        },
+      );
+
+      if (error) throw error;
+
+      const fecha = new Date().toISOString().slice(0, 10);
+
+      if (format === 'excel') {
+        const { headers, rows } = data as { headers: string[]; rows: (string | number)[][] };
+        downloadExcel('Ventas', headers, rows, `Historial_Ventas_${fecha}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Historial_Ventas_${fecha}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error('Error exportando historial:', err);
+      this._error.set('No se pudo exportar el historial.');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 }

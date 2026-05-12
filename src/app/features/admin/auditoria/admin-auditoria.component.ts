@@ -67,7 +67,7 @@ const ACTION_OPTIONS = [
               type="date"
               class="filter-input"
               [ngModel]="fechaDesde()"
-              (ngModelChange)="fechaDesde.set($event)"
+              (ngModelChange)="fechaDesde.set($event); applyFilters()"
               data-llm-description="Filtrar logs desde esta fecha"
             />
           </div>
@@ -81,7 +81,7 @@ const ACTION_OPTIONS = [
               type="date"
               class="filter-input"
               [ngModel]="fechaHasta()"
-              (ngModelChange)="fechaHasta.set($event)"
+              (ngModelChange)="fechaHasta.set($event); applyFilters()"
               data-llm-description="Filtrar logs hasta esta fecha"
             />
           </div>
@@ -146,23 +146,45 @@ const ACTION_OPTIONS = [
             Limpiar Filtros
           </button>
 
-          <div class="flex items-center gap-2">
+          <div class="relative">
             <button
-              class="export-btn"
-              (click)="exportExcel()"
-              data-llm-action="exportar-excel-auditoria"
+              type="button"
+              class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60"
+              [disabled]="facade.isExporting()"
+              (click)="exportMenuOpen.set(!exportMenuOpen())"
+              data-llm-action="open-export-menu-auditoria"
             >
-              <app-icon name="file-spreadsheet" [size]="14" />
-              Exportar Excel
+              @if (facade.isExporting()) {
+                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+              } @else {
+                <app-icon name="download" [size]="16" />
+              }
+              Exportar
+              <app-icon name="chevron-down" [size]="14" />
             </button>
-            <button
-              class="btn-primary export-btn--primary"
-              (click)="exportPdf()"
-              data-llm-action="exportar-pdf-auditoria"
-            >
-              <app-icon name="file-text" [size]="14" />
-              Exportar PDF
-            </button>
+            @if (exportMenuOpen()) {
+              <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+              <div class="export-menu">
+                <button
+                  type="button"
+                  class="export-menu-item"
+                  (click)="requestExport('excel')"
+                  data-llm-action="exportar-excel-auditoria"
+                >
+                  <app-icon name="table-2" [size]="15" />
+                  Exportar como Excel
+                </button>
+                <button
+                  type="button"
+                  class="export-menu-item"
+                  (click)="requestExport('pdf')"
+                  data-llm-action="exportar-pdf-auditoria"
+                >
+                  <app-icon name="file-text" [size]="15" />
+                  Exportar como PDF
+                </button>
+              </div>
+            }
           </div>
         </div>
       </div>
@@ -413,6 +435,36 @@ const ACTION_OPTIONS = [
       color: var(--state-warning);
     }
 
+    .export-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      z-index: 20;
+      min-width: 200px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+      overflow: hidden;
+    }
+    .export-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-primary);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      transition: background var(--duration-fast);
+    }
+    .export-menu-item:hover {
+      background: var(--bg-elevated);
+    }
+
     /* Paginación */
     .page-btn {
       min-width: 32px;
@@ -567,11 +619,10 @@ export class AdminAuditoriaComponent implements OnInit, AfterViewInit {
     return pages;
   });
 
-  protected exportExcel(): void {
-    // TODO: implementar exportación Excel con los filtros actuales
-  }
+  protected readonly exportMenuOpen = signal(false);
 
-  protected exportPdf(): void {
-    // TODO: implementar exportación PDF con los filtros actuales
+  protected requestExport(format: 'excel' | 'pdf'): void {
+    this.exportMenuOpen.set(false);
+    void this.facade.exportar(format);
   }
 }

@@ -26,6 +26,7 @@ import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.comp
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { Router } from '@angular/router';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -201,10 +202,10 @@ import { AuthFacade } from '@core/facades/auth.facade';
 
         <div class="flex flex-col gap-3">
           @for (alert of alerts(); track alert.id; let i = $index) {
-            <app-alert-card 
-              [severity]="alert.severity" 
+            <app-alert-card
+              [severity]="alert.severity"
               [title]="alert.title"
-              [appAnimateIn]="{ delay: 0.2 + (i * 0.05) }"
+              [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
             >
               {{ alert.description }}
             </app-alert-card>
@@ -222,6 +223,8 @@ export class DashboardComponent {
   private readonly auth = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly authFacade = inject(AuthFacade);
+  private readonly router = inject(Router);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Estado ────────────────────────────────────────────────────────────────
@@ -275,7 +278,7 @@ export class DashboardComponent {
     effect(() => {
       const isReady = !this.loading();
       const el = this.bentoGrid()?.nativeElement;
-      
+
       if (isReady && el) {
         Promise.resolve().then(() => {
           this.gsap.animateBentoGrid(el);
@@ -289,6 +292,10 @@ export class DashboardComponent {
       this.layoutDrawer.open(AdminMatriculaComponent, 'Nueva Matrícula', 'users');
     } else if (actionId === 'qa2') {
       this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
+    } else if (actionId === 'qa3') {
+      const role = this.authFacade.currentUser()?.role;
+      const route = role === 'secretaria' ? 'app/secretaria/pagos' : 'app/admin/pagos';
+      void this.router.navigate([route]);
     }
   }
 }
