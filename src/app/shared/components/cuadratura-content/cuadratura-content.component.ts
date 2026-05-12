@@ -726,10 +726,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
   readonly isSaving = input<boolean>(false);
-<<<<<<< HEAD
-=======
   readonly isExporting = input<boolean>(false);
->>>>>>> main
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -823,17 +820,11 @@ export class CuadraturaContentComponent implements AfterViewInit {
       primary: false,
     },
     {
-<<<<<<< HEAD
-      id: 'exportar-excel',
-      label: 'Exportar a Excel',
-      icon: 'download',
-=======
       id: 'exportar',
       label: this.isExporting() ? 'Exportando...' : 'Exportar',
       icon: this.isExporting() ? 'loader-circle' : 'download',
       loading: this.isExporting(),
       disabled: this.isExporting(),
->>>>>>> main
       primary: false,
     },
   ]);
@@ -857,14 +848,6 @@ export class CuadraturaContentComponent implements AfterViewInit {
     return (event.target as HTMLTextAreaElement).value;
   }
 
-<<<<<<< HEAD
-  protected onHeroAction(_actionId: string): void {
-    // exportar-excel: pendiente de implementar
-  }
-
-  protected onEliminarIngreso(fila: IngresoRow): void {
-    this.eliminarIngreso.emit(fila);
-=======
   protected onHeroAction(actionId: string): void {
     if (actionId === 'exportar' && !this.isExporting()) {
       this.exportMenuOpen.set(!this.exportMenuOpen());
@@ -884,7 +867,6 @@ export class CuadraturaContentComponent implements AfterViewInit {
     if (confirmado) {
       this.eliminarIngreso.emit(fila);
     }
->>>>>>> main
   }
 
   protected onEliminarEgreso(egreso: EgresoRow): void {
