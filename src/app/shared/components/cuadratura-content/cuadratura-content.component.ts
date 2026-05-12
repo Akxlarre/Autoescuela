@@ -52,6 +52,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
       <div class="bento-banner relative overflow-visible" #heroRef>
         <app-section-hero
           title="Cuadratura Diaria"
+          icon="calculator"
           [contextLine]="fechaHoy()"
           [chips]="heroChips()"
           [actions]="heroActions()"
@@ -333,13 +334,12 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               >
                 <app-icon name="trending-down" [size]="16" color="var(--state-warning)" />
               </div>
-              <h2 class="text-[15px] font-bold text-text-primary">Egresos / Retiros</h2>
+              <h2 class="text-base font-bold text-text-primary">Egresos / Retiros</h2>
             </div>
             <button
               class="btn-primary flex items-center gap-2 text-[13px] px-5 py-2.5 rounded-xl shrink-0 transition-transform active:scale-[0.98] shadow-sm"
               data-llm-action="agregar-egreso-cuadratura"
               [disabled]="cajaYaCerrada()"
-              [style.opacity]="cajaYaCerrada() ? '0.5' : '1'"
               aria-label="Agregar nuevo egreso"
               (click)="abrirEgreso.emit()"
             >
@@ -380,12 +380,12 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                     {{ egreso.descripcion }}
                   </span>
                   <span class="text-[13px] text-right font-bold text-text-primary tabular-nums">
-                    {{ egreso.monto.toLocaleString('es-CL') }}
+                    {{ clp(egreso.monto) }}
                   </span>
                   <button
                     class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-state-error/10 hover:text-state-error transition-all focus-visible:opacity-100"
                     [disabled]="cajaYaCerrada()"
-                    (click)="onEliminarEgreso(egreso, $event)"
+                    (click)="onEliminarEgreso(egreso)"
                   >
                     <app-icon name="x" [size]="14" />
                   </button>
@@ -415,14 +415,14 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         class="bento-banner bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col"
       >
         <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
-        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
+        <div class="card-accent card p-0 flex flex-col overflow-hidden">
           <!-- Titular principal -->
           <div class="px-6 py-5 border-b border-border-muted/50 bg-bg-surface">
             <div class="flex items-center gap-3 mb-1.5">
-              <div class="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                <app-icon name="wallet" [size]="16" color="var(--color-primary)" />
+              <div class="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <app-icon name="wallet" [size]="18" color="var(--color-primary)" />
               </div>
-              <h2 class="text-[16px] font-bold text-text-primary">Arqueo y Cierre Operativo</h2>
+              <h2 class="text-base font-bold text-text-primary">Arqueo y Cierre Operativo</h2>
             </div>
             <p class="text-[13px] text-text-muted pl-11">
               Conciliación entre lo esperado por el sistema y el efectivo declarado.
@@ -460,7 +460,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           </div>
 
           <!-- 2. Arqueo Form (Billetes y Monedas) -->
-          <div class="px-6 py-6 grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-8 bg-bg-surface">
+          <div class="px-6 py-6 grid grid-cols-1 gap-y-4 bg-bg-surface">
             <!-- Billetes -->
             <div class="flex flex-col gap-3">
               <div
@@ -486,8 +486,10 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                   <div class="flex items-center gap-2.5">
                     <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
                     <input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      autocomplete="off"
                       class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                       [value]="cantidades()[billete.key] || ''"
                       placeholder="0"
@@ -520,8 +522,10 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                   <div class="flex items-center gap-2.5">
                     <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
                     <input
-                      type="number"
-                      min="0"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      autocomplete="off"
                       class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                       [value]="cantidades()[moneda.key] || ''"
                       placeholder="0"
@@ -539,6 +543,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div
             class="px-6 py-5 border-y border-border-muted/50 transition-colors flex flex-col gap-3"
             [style.background]="'color-mix(in srgb, ' + colorDiferencia() + ' 8%, transparent)'"
+            aria-live="polite"
           >
             <div class="flex items-center justify-between">
               <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
@@ -598,13 +603,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             </div>
 
             <button
-              class="w-full flex items-center justify-center gap-2.5 font-bold text-[14px] py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              class="w-full flex items-center justify-center gap-2.5 font-bold text-[14px] py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
               [class.btn-primary]="!cajaYaCerrada()"
               [style.background]="cajaYaCerrada() ? 'var(--bg-surface)' : ''"
               [style.border]="cajaYaCerrada() ? '1px solid var(--border-muted)' : ''"
               [style.color]="cajaYaCerrada() ? 'var(--text-muted)' : ''"
-              [disabled]="cajaYaCerrada() || isSaving()"
-              [style.opacity]="cajaYaCerrada() || isSaving() ? '0.7' : '1'"
+              [disabled]="!puedeCerrar() || isSaving()"
+              [style.opacity]="!puedeCerrar() || isSaving() ? '0.7' : '1'"
               data-llm-action="cerrar-caja-guardar"
               (click)="onGuardarCierre()"
             >
@@ -614,6 +619,9 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               } @else if (cajaYaCerrada()) {
                 <app-icon name="lock" [size]="18" />
                 <span class="tracking-wide">Caja Cerrada Exitosamente</span>
+              } @else if (diferencia() !== 0 && notas().trim().length === 0) {
+                <app-icon name="alert-triangle" [size]="18" />
+                <span class="tracking-wide">Justifica la diferencia para cerrar</span>
               } @else {
                 <app-icon name="lock" [size]="18" />
                 <span class="tracking-wide">Validar Arqueo y Cerrar Caja</span>
@@ -718,7 +726,10 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
   readonly isSaving = input<boolean>(false);
+<<<<<<< HEAD
+=======
   readonly isExporting = input<boolean>(false);
+>>>>>>> main
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -770,6 +781,13 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   protected readonly diferencia = computed(() => this.totalArqueo() - this.saldoTeorico());
 
+  /** Si hay diferencia, exigir justificación para habilitar el cierre. */
+  protected readonly puedeCerrar = computed(() => {
+    if (this.cajaYaCerrada() || this.isSaving()) return false;
+    if (this.diferencia() === 0) return true;
+    return this.notas().trim().length > 0;
+  });
+
   protected readonly colorDiferencia = computed(() => {
     const d = this.diferencia();
     if (d === 0) return 'var(--state-success)';
@@ -805,11 +823,17 @@ export class CuadraturaContentComponent implements AfterViewInit {
       primary: false,
     },
     {
+<<<<<<< HEAD
+      id: 'exportar-excel',
+      label: 'Exportar a Excel',
+      icon: 'download',
+=======
       id: 'exportar',
       label: this.isExporting() ? 'Exportando...' : 'Exportar',
       icon: this.isExporting() ? 'loader-circle' : 'download',
       loading: this.isExporting(),
       disabled: this.isExporting(),
+>>>>>>> main
       primary: false,
     },
   ]);
@@ -818,8 +842,11 @@ export class CuadraturaContentComponent implements AfterViewInit {
   protected readonly clp = formatCLP;
 
   protected onCantidadChange(key: string, event: Event): void {
-    const val = parseInt((event.target as HTMLInputElement).value, 10);
-    this.cantidades.update((prev) => ({ ...prev, [key]: isNaN(val) || val < 0 ? 0 : val }));
+    const input = event.target as HTMLInputElement;
+    const sanitized = input.value.replace(/\D/g, '');
+    if (sanitized !== input.value) input.value = sanitized;
+    const val = sanitized === '' ? 0 : parseInt(sanitized, 10);
+    this.cantidades.update((prev) => ({ ...prev, [key]: isNaN(val) ? 0 : val }));
   }
 
   protected selectAll(event: Event): void {
@@ -830,6 +857,14 @@ export class CuadraturaContentComponent implements AfterViewInit {
     return (event.target as HTMLTextAreaElement).value;
   }
 
+<<<<<<< HEAD
+  protected onHeroAction(_actionId: string): void {
+    // exportar-excel: pendiente de implementar
+  }
+
+  protected onEliminarIngreso(fila: IngresoRow): void {
+    this.eliminarIngreso.emit(fila);
+=======
   protected onHeroAction(actionId: string): void {
     if (actionId === 'exportar' && !this.isExporting()) {
       this.exportMenuOpen.set(!this.exportMenuOpen());
@@ -849,16 +884,11 @@ export class CuadraturaContentComponent implements AfterViewInit {
     if (confirmado) {
       this.eliminarIngreso.emit(fila);
     }
+>>>>>>> main
   }
 
-  protected onEliminarEgreso(egreso: EgresoRow, event: Event): void {
-    event.stopPropagation();
-    const confirmado = window.confirm(
-      '¿Estás seguro de que deseas eliminar este egreso?\nEsta acción no se puede deshacer.',
-    );
-    if (confirmado) {
-      this.eliminarEgreso.emit(egreso);
-    }
+  protected onEliminarEgreso(egreso: EgresoRow): void {
+    this.eliminarEgreso.emit(egreso);
   }
 
   protected onGuardarCierre(): void {

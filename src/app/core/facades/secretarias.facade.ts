@@ -93,6 +93,12 @@ export class SecretariasFacade {
   readonly inactivas = computed<number>(
     () => this._secretarias().filter((s) => s.estado === 'inactiva').length,
   );
+  readonly sedesConPersonal = computed<number>(() => {
+    const sedes = this._secretarias()
+      .map((s) => s.sede)
+      .filter((s) => s && s !== '—');
+    return new Set(sedes).size;
+  });
 
   // ── Acciones ───────────────────────────────────────────────────────────────
 

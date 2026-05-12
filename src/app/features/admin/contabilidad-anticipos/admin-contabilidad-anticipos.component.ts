@@ -28,7 +28,12 @@ function clp(n: number): string {
 @Component({
   selector: 'app-admin-contabilidad-anticipos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, AlertCardComponent],
+  imports: [
+    SectionHeroComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    AlertCardComponent,
+  ],
   template: `
     <div class="page-wide flex flex-col gap-6 pb-8" #pageRef>
       <!-- ── Hero ─────────────────────────────────────────────────────────── -->

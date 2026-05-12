@@ -22,6 +22,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       [class.!rounded-sm]="variant() === 'text'"
       [style.width]="width()"
       [style.height]="variant() === 'text' ? '1em' : height()"
+      [style.background-color]="'var(--bg-subtle)'"
       aria-hidden="true"
     ></div>
   `,

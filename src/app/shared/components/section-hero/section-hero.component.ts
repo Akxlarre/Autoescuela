@@ -339,10 +339,11 @@ export class SectionHeroComponent implements AfterViewInit {
   readonly icon = input<string | null>(null);
   readonly chips = input<SectionHeroChip[]>([]);
   readonly actions = input.required<SectionHeroAction[]>();
-
   /** Ruta para el botón "Volver" con label. */
   readonly backRoute = input<string | null>(null);
   readonly backLabel = input<string>('Volver');
+  /** Si es false, no se anima al montar. Útil cuando el padre orquesta la entrada (ej: bento-grid). */
+  readonly animateOnInit = input<boolean>(true);
 
   readonly actionClick = output<string>();
   readonly backClicked = output<void>();
@@ -353,8 +354,9 @@ export class SectionHeroComponent implements AfterViewInit {
   private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
 
   ngAfterViewInit(): void {
-    // Obligatorio: todas las entradas de vista usan GsapAnimationsService.
-    this.gsap.animateHero(this.cardRef()?.nativeElement);
+    if (this.animateOnInit()) {
+      this.gsap.animateHero(this.cardRef()?.nativeElement);
+    }
   }
 
   /**

@@ -198,7 +198,7 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
               <span class="text-center">Estado</span>
             </div>
 
-            <div class="divide-y" style="border-color: var(--border-muted)">
+            <div class="rows-divider">
               @for (pago of facade.estadoCuentaHistorial(); track pago.id) {
                 <div
                   class="px-4 py-3 grid items-center gap-2 text-xs"
@@ -267,6 +267,9 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
     </div>
   `,
   styles: `
+    .rows-divider > * + * {
+      border-top: 1px solid var(--border-muted);
+    }
     .btn-primary {
       padding: 9px 20px;
       border-radius: var(--radius-md);
@@ -299,8 +302,6 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
   protected openPagoDrawer(): void {
     this.layoutDrawer.push(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
   }
-
-
 
   protected fechaCorta(fecha: string | null): string {
     if (!fecha) return '—';

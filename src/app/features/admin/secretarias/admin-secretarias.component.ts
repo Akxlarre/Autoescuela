@@ -33,7 +33,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     FormsModule,
     SelectModule,
     SectionHeroComponent,
@@ -43,7 +42,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     BentoGridLayoutDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoGridLayout #bentoGrid style="--bento-row-min: 125px;">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <div class="bento-banner" #heroRef>
         <app-section-hero
@@ -54,95 +53,33 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         />
       </div>
 
-      <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      <div class="bento-banner grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Total Secretarias"
-            [value]="facade.totalSecretarias()"
-            icon="users"
-            [loading]="facade.isLoading()"
-            data-llm-description="Total de secretarias registradas"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Activas"
-            [value]="facade.activas()"
-            icon="check-circle"
-            color="success"
-            [loading]="facade.isLoading()"
-            data-llm-description="Secretarias activas"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Inactivas"
-            [value]="facade.inactivas()"
-            icon="user-x"
-            [loading]="facade.isLoading()"
-            data-llm-description="Secretarias inactivas"
-          />
-        </div>
-      </div>
+      @if (facade.isLoading()) {
+        <!-- ── Skeleton State ────────────────────────────────────────────────── -->
+        <!-- 4 KPIs Skeletons -->
+        @for (_ of [1,2,3,4]; track $index) {
+          <div class="bento-square">
+            <div class="card p-6 h-full">
+              <app-skeleton-block variant="circle" width="40px" height="40px" class="mb-4" />
+              <app-skeleton-block variant="text" width="60%" height="12px" class="mb-2" />
+              <app-skeleton-block variant="text" width="40%" height="24px" />
+            </div>
+          </div>
+        }
 
-      <!-- ── Search + Filters ───────────────────────────────────────────────── -->
-      <div class="bento-banner flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
-        <div class="relative flex-1 min-w-[240px]">
-          <span
-            class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style="color: var(--text-muted)"
-          >
-            <app-icon name="search" [size]="15" />
-          </span>
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Buscar por nombre o email..."
-            [ngModel]="searchTerm()"
-            (ngModelChange)="searchTerm.set($event)"
-            data-llm-description="Buscar secretaria por nombre o email"
-          />
-        </div>
-
-        <div class="flex items-center gap-2 flex-wrap">
-          <p-select
-            [options]="sedeOptions()"
-            [(ngModel)]="filtroSedeModel"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Todas las sedes"
-            [style]="{ 'min-width': '160px' }"
-            aria-label="Filtrar por sede"
-            data-llm-description="Filtro de secretarias por sede"
-          />
-          <p-select
-            [options]="estadoOptions"
-            [(ngModel)]="filtroEstadoModel"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Todos los estados"
-            [style]="{ 'min-width': '160px' }"
-            aria-label="Filtrar por estado"
-            data-llm-description="Filtro de secretarias por estado"
-          />
-        </div>
-      </div>
-
-      <!-- ── Content (List + Sidebar) ───────────────────────────────────────── -->
-      <div class="bento-banner grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-        <!-- Lista de Secretarias -->
-        <div class="card p-6 flex flex-col">
-          <h2 class="text-base font-semibold mb-4" style="color: var(--text-primary)">
-            Lista de Secretarias
-          </h2>
-
-          @if (facade.isLoading()) {
+        <!-- Content Skeleton -->
+        <div class="bento-wide" data-col-span="9">
+          <div class="card p-6 h-full">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+              <app-skeleton-block variant="text" width="180px" height="20px" />
+              <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <app-skeleton-block variant="rect" width="100%" height="36px" class="md:w-[200px]" />
+                <app-skeleton-block variant="rect" width="100%" height="36px" class="sm:w-[120px]" />
+                <app-skeleton-block variant="rect" width="100%" height="36px" class="sm:w-[120px]" />
+              </div>
+            </div>
+            
             @for (_ of skeletonRows; track $index) {
-              <div
-                class="flex items-center gap-4 py-4"
-                style="border-bottom: 1px solid var(--border-subtle);"
-              >
+              <div class="flex items-center gap-4 py-4" style="border-bottom: 1px solid var(--border-subtle);">
                 <app-skeleton-block variant="circle" width="40px" height="40px" />
                 <div class="flex-1 flex flex-col gap-2">
                   <app-skeleton-block variant="text" width="180px" height="14px" />
@@ -151,263 +88,336 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 <app-skeleton-block variant="rect" width="60px" height="24px" />
               </div>
             }
-          } @else if (paginatedSecretarias().length === 0) {
-            <div class="py-14 text-center">
-              <div class="flex flex-col items-center gap-2">
-                <app-icon name="users" [size]="36" />
-                <p class="text-sm mt-1" style="color: var(--text-muted)">
-                  No hay secretarias que coincidan con los filtros.
-                </p>
+          </div>
+        </div>
+
+        <div class="bento-tall" data-col-span="3">
+          <div class="card p-6 h-full">
+            <app-skeleton-block variant="text" width="150px" height="18px" class="mb-4" />
+            <app-skeleton-block variant="rect" width="100%" height="80px" class="mb-4" />
+            @for (_ of [1,2,3,4]; track $index) {
+              <app-skeleton-block variant="text" width="100%" height="12px" class="mb-3" />
+            }
+          </div>
+        </div>
+
+      } @else {
+        <!-- ── Active View ──────────────────────────────────────────────────── -->
+        
+        <!-- 4 KPIs -->
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Total Secretarias"
+            [value]="facade.totalSecretarias()"
+            icon="users"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Sedes con Personal"
+            [value]="facade.sedesConPersonal()"
+            icon="map-pin"
+            color="default"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Cuentas Activas"
+            [value]="facade.activas()"
+            icon="check-circle"
+            color="success"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Inactivas"
+            [value]="facade.inactivas()"
+            icon="user-x"
+            color="default"
+            [loading]="facade.isLoading()"
+          />
+        </div>
+
+        <!-- Lista de Secretarias -->
+        <div class="bento-wide" data-col-span="9">
+          <div class="card p-6 flex flex-col h-full">
+            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
+              <h2 class="text-base font-bold whitespace-nowrap" style="color: var(--text-primary)">
+                Lista de Personal
+              </h2>
+
+              <!-- Search + Filters (Fully Responsive) -->
+              <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto">
+                <div class="relative flex-1 min-w-[200px]">
+                  <span
+                    class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style="color: var(--text-muted)"
+                  >
+                    <app-icon name="search" [size]="14" />
+                  </span>
+                  <input
+                    type="text"
+                    class="w-full h-9 pl-9 pr-3 rounded-md border border-border-subtle bg-base text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-colors"
+                    placeholder="Buscar por nombre o email..."
+                    [ngModel]="searchTerm()"
+                    (ngModelChange)="searchTerm.set($event)"
+                  />
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <p-select
+                    [options]="sedeOptions()"
+                    [(ngModel)]="filtroSedeModel"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Sede"
+                    appendTo="body"
+                    [style]="{ 'flex': '1', 'min-width': '120px', 'height': '36px' }"
+                    class="flex-1 sm:flex-none"
+                  />
+                  <p-select
+                    [options]="estadoOptions"
+                    [(ngModel)]="filtroEstadoModel"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Estado"
+                    appendTo="body"
+                    [style]="{ 'flex': '1', 'min-width': '120px', 'height': '36px' }"
+                    class="flex-1 sm:flex-none"
+                  />
+                </div>
               </div>
             </div>
-          } @else {
-            @for (sec of paginatedSecretarias(); track sec.id) {
-              <div
-                class="secretaria-row flex items-center gap-4 py-4"
-                style="border-bottom: 1px solid var(--border-subtle);"
-              >
-                <!-- Avatar -->
-                <div
-                  class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-sm font-bold"
-                  style="background: var(--color-primary-tint); color: var(--color-primary);"
-                >
-                  {{ sec.initials }}
-                </div>
 
-                <!-- Info principal -->
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-semibold" style="color: var(--text-primary)">
-                      {{ sec.nombre }}
-                    </span>
-
-                    <!-- Badge estado -->
-                    @if (sec.estado === 'activa') {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                        style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success);"
-                      >
-                        <app-icon name="check-circle" [size]="10" />
-                        Activa
-                      </span>
-                    } @else {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                        style="background: var(--bg-elevated); color: var(--text-muted);"
-                      >
-                        Inactiva
-                      </span>
-                    }
-
-                    <!-- Alias público -->
-                    @if (sec.aliasPublico) {
-                      <span
-                        class="inline-flex text-xs font-medium px-2 py-0.5 rounded-full"
-                        style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent); color: var(--ds-brand);"
-                      >
-                        alias público
-                      </span>
-                    }
+            <div class="flex-1">
+              @if (paginatedSecretarias().length === 0) {
+                <div class="py-14 text-center">
+                  <div class="flex flex-col items-center gap-2">
+                    <app-icon name="users" [size]="36" />
+                    <p class="text-sm mt-1" style="color: var(--text-muted)">
+                      No hay registros que coincidan con los filtros.
+                    </p>
                   </div>
-
-                  <div class="flex items-center gap-3 mt-1 flex-wrap">
-                    <a
-                      class="text-xs"
-                      style="color: var(--ds-brand); text-decoration: none;"
-                      [href]="'mailto:' + sec.email"
+                </div>
+              } @else {
+                <div class="flex flex-col">
+                  @for (sec of paginatedSecretarias(); track sec.id) {
+                    <div
+                      class="secretaria-row flex items-center gap-4 py-4"
+                      style="border-bottom: 1px solid var(--border-subtle);"
                     >
-                      {{ sec.email }}
-                    </a>
-                    <span class="flex items-center gap-1 text-xs" style="color: var(--text-muted)">
-                      <app-icon name="map-pin" [size]="11" />
-                      {{ sec.sede }}
-                    </span>
-                    @if (sec.ultimoAcceso) {
-                      <span class="text-xs" style="color: var(--text-muted)">
-                        Último acceso: {{ sec.ultimoAcceso | date: 'yyyy-MM-dd HH:mm' }}
-                      </span>
-                    }
-                  </div>
-                </div>
+                      <!-- Avatar -->
+                      <div
+                        class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-sm font-bold"
+                        style="background: var(--color-primary-tint); color: var(--color-primary);"
+                      >
+                        {{ sec.initials }}
+                      </div>
 
-                <!-- Acciones -->
-                <div class="flex items-center gap-2 shrink-0">
+                      <!-- Info principal -->
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-sm font-semibold truncate" style="color: var(--text-primary)">
+                            {{ sec.nombre }}
+                          </span>
+
+                          <!-- Badge estado -->
+                          @if (sec.estado === 'activa') {
+                            <span
+                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
+                              style="background: color-mix(in srgb, var(--state-success) 10%, transparent); color: var(--state-success);"
+                            >
+                              <app-icon name="check" [size]="8" />
+                              Activa
+                            </span>
+                          } @else {
+                            <span
+                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
+                              style="background: var(--bg-subtle); color: var(--text-muted);"
+                            >
+                              Inactiva
+                            </span>
+                          }
+                        </div>
+
+                        <div class="flex items-center gap-3 mt-1 flex-wrap">
+                          <span class="text-xs" style="color: var(--ds-brand)">
+                            {{ sec.email }}
+                          </span>
+                          <span class="flex items-center gap-1 text-xs" style="color: var(--text-muted)">
+                            <app-icon name="map-pin" [size]="11" />
+                            {{ sec.sede }}
+                          </span>
+                        </div>
+                      </div>
+
+                      <!-- Acciones -->
+                      <div class="flex items-center gap-2 shrink-0">
+                        <button
+                          class="action-btn"
+                          title="Ver detalle"
+                          (click)="openVerDrawer(sec)"
+                        >
+                          <app-icon name="eye" [size]="15" />
+                        </button>
+                        <button
+                          class="action-btn"
+                          title="Editar"
+                          (click)="openEditarDrawer(sec)"
+                        >
+                          <app-icon name="pencil" [size]="15" />
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Paginación -->
+            @if (filteredSecretarias().length > 0) {
+              <div
+                class="flex items-center justify-between pt-5 mt-auto"
+                style="border-top: 1px solid var(--border-subtle);"
+              >
+                <p class="text-xs font-medium" style="color: var(--text-muted)">
+                  {{ paginationStart() }}-{{ paginationEnd() }} de {{ filteredSecretarias().length }}
+                </p>
+                <div class="flex items-center gap-2">
                   <button
-                    class="action-btn"
-                    title="Ver detalle"
-                    (click)="openVerDrawer(sec)"
-                    data-llm-action="ver-secretaria"
+                    class="pagination-btn"
+                    [disabled]="currentPage() === 1"
+                    (click)="currentPage.set(currentPage() - 1)"
                   >
-                    <app-icon name="eye" [size]="16" />
+                    Anterior
                   </button>
                   <button
-                    class="action-btn"
-                    title="Editar secretaria"
-                    (click)="openEditarDrawer(sec)"
-                    data-llm-action="editar-secretaria"
+                    class="pagination-btn"
+                    [disabled]="currentPage() >= totalPages()"
+                    (click)="currentPage.set(currentPage() + 1)"
                   >
-                    <app-icon name="edit" [size]="16" />
+                    Siguiente
                   </button>
                 </div>
               </div>
             }
-          }
-
-          <!-- Paginación — siempre al pie del card -->
-          @if (!facade.isLoading() && filteredSecretarias().length > 0) {
-            <div
-              class="flex items-center justify-between pt-4 mt-auto"
-              style="border-top: 1px solid var(--border-subtle);"
-            >
-              <p class="text-xs" style="color: var(--text-muted)">
-                Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
-                {{ filteredSecretarias().length }} secretarias
-              </p>
-              <div class="flex items-center gap-2">
-                <button
-                  class="pagination-btn"
-                  [disabled]="currentPage() === 1"
-                  (click)="currentPage.set(currentPage() - 1)"
-                  data-llm-action="pagina-anterior"
-                >
-                  Anterior
-                </button>
-                <button
-                  class="pagination-btn"
-                  [disabled]="currentPage() >= totalPages()"
-                  (click)="currentPage.set(currentPage() + 1)"
-                  data-llm-action="pagina-siguiente"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
-          }
+          </div>
         </div>
 
-        <!-- Sidebar -->
-        <div class="flex flex-col gap-6">
-          <!-- Permisos de Secretaria -->
-          <div class="card p-5">
-            <h3 class="text-sm font-semibold mb-4" style="color: var(--text-primary)">
-              Permisos de Secretaria
+        <!-- Sidebar (Panel de Control) -->
+        <div class="bento-tall" data-col-span="3">
+          <div class="card p-6 h-full flex flex-col">
+            <h3 class="text-sm font-bold uppercase tracking-widest mb-6" style="color: var(--text-secondary)">
+              Panel de Control
             </h3>
 
-            <div
-              class="rounded-lg p-4 mb-4"
-              style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 20%, transparent);"
-            >
-              <div class="flex items-center gap-2 mb-1">
-                <app-icon name="shield-check" [size]="16" color="var(--ds-brand)" />
-                <span class="text-sm font-semibold" style="color: var(--ds-brand)">
-                  Rol: Secretaria
-                </span>
+            <div class="flex-1">
+              <div
+                class="rounded-xl p-5 mb-8"
+                style="background: var(--bg-subtle); border: 1px solid var(--border-subtle);"
+              >
+                <div class="flex items-center gap-3 mb-3">
+                  <div class="p-2.5 rounded-xl bg-brand/10" style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent)">
+                    <app-icon name="shield-check" [size]="20" color="var(--ds-brand)" />
+                  </div>
+                  <span class="text-sm font-bold" style="color: var(--ds-brand)">
+                    Rol Secretaria
+                  </span>
+                </div>
+                <p class="text-xs leading-relaxed" style="color: var(--text-secondary)">
+                  Acceso a matrículas, pagos, agenda y gestión de alumnos de su sede asignada.
+                </p>
               </div>
-              <p class="text-xs" style="color: var(--ds-brand)">
-                Gestión de matrículas, pagos, agenda y alumnos
-              </p>
+
+              <h4 class="text-[11px] font-bold uppercase tracking-widest mb-4" style="color: var(--text-muted)">
+                Permisos del Sistema
+              </h4>
+              <ul class="flex flex-col gap-4 mb-8">
+                @for (permiso of permisos; track permiso) {
+                  <li class="flex items-center gap-3 text-xs font-semibold" style="color: var(--text-secondary)">
+                    <div class="w-1.5 h-1.5 rounded-full" style="background: var(--state-success)"></div>
+                    {{ permiso }}
+                  </li>
+                }
+              </ul>
             </div>
 
-            <ul class="flex flex-col gap-2.5 mb-5">
-              @for (permiso of permisos; track permiso) {
-                <li class="flex items-center gap-2 text-xs" style="color: var(--text-secondary)">
-                  <app-icon name="check" [size]="13" color="var(--state-success)" />
-                  {{ permiso }}
-                </li>
-              }
-            </ul>
-
-            <div style="border-top: 1px solid var(--border-subtle);" class="pt-4">
-              <h4 class="text-sm font-semibold mb-2" style="color: var(--text-primary)">
-                Auditoría
+            <div style="border-top: 1px solid var(--border-subtle);" class="pt-6">
+              <h4 class="text-sm font-bold mb-2" style="color: var(--text-primary)">
+                Auditoría de Acciones
               </h4>
-              <p class="text-xs mb-3" style="color: var(--text-muted)">
-                Revisa el historial de acciones realizadas por las secretarias del sistema.
+              <p class="text-[11px] mb-5 leading-relaxed" style="color: var(--text-muted)">
+                Historial de movimientos realizados por el personal administrativo.
               </p>
               <button
-                class="quick-action-btn"
+                class="quick-action-btn-primary"
                 (click)="goToAuditoria()"
-                data-llm-action="ver-auditoria"
               >
                 <app-icon name="clipboard-list" [size]="16" />
-                Ver Auditoría
+                Explorar Auditoría
               </button>
             </div>
           </div>
         </div>
-      </div>
+      }
     </div>
   `,
   styles: `
-    .search-input {
+    .search-input-inline {
       width: 100%;
-      padding: 9px 12px 9px 36px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
+      padding: 8px 12px 8px 34px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
       background: var(--bg-base);
       color: var(--text-primary);
-      font-size: var(--text-sm);
-      font-family: inherit;
+      font-size: 13px;
       outline: none;
+      transition: all 0.2s ease;
     }
-    .search-input:focus {
+    .search-input-inline:focus {
       border-color: var(--ds-brand);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
-    }
-    .search-input::placeholder {
-      color: var(--text-muted);
-    }
-
-    .filter-select {
-      padding: 7px 10px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
       background: var(--bg-base);
-      color: var(--text-primary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      outline: none;
-      cursor: pointer;
-    }
-    .filter-select:focus {
-      border-color: var(--ds-brand);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--ds-brand) 8%, transparent);
     }
 
     .secretaria-row {
       transition: background var(--duration-fast);
     }
     .secretaria-row:hover {
-      background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
+      background: var(--bg-subtle);
     }
 
     .action-btn {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: transparent;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-base);
       color: var(--text-muted);
       cursor: pointer;
-      transition: all var(--duration-fast);
+      transition: all 0.2s ease;
     }
     .action-btn:hover {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
+      border-color: var(--ds-brand);
+      color: var(--ds-brand);
+      background: color-mix(in srgb, var(--ds-brand) 4%, transparent);
     }
 
     .pagination-btn {
-      padding: 6px 14px;
+      padding: 7px 16px;
       border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
+      border: 1px solid var(--border-subtle);
       background: var(--bg-base);
       color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
       cursor: pointer;
-      transition: all var(--duration-fast);
+      transition: all 0.2s ease;
     }
     .pagination-btn:hover:not(:disabled) {
       border-color: var(--ds-brand);
@@ -418,30 +428,30 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       cursor: not-allowed;
     }
 
-    .quick-action-btn {
+    .quick-action-btn-primary {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 10px;
       width: 100%;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      border: none;
+      background: var(--ds-brand);
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
-      text-align: left;
-      transition: all var(--duration-fast);
+      transition: all 0.2s ease;
     }
-    .quick-action-btn:hover {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
-      background: color-mix(in srgb, var(--ds-brand) 4%, transparent);
+    .quick-action-btn-primary:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--ds-brand) 20%, transparent);
     }
   `,
 })
-export class AdminSecretariasComponent implements AfterViewInit {
+export class AdminSecretariasComponent {
   // ── Internal ────────────────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -452,10 +462,29 @@ export class AdminSecretariasComponent implements AfterViewInit {
   private readonly router = inject(Router);
 
   constructor() {
-    // Recarga la lista cada vez que el admin cambia de sede (o vuelve a "Todas")
+    // Recarga la lista cada vez que el admin cambia de sede
     effect(() => {
       this.branchFacade.selectedBranchId(); // tracking
       this.facade.initialize();
+    });
+
+    // Animación reactiva atada al ciclo SWR
+    // Evita setTimeout y sincroniza GSAP exactamente con los cambios del DOM (@if)
+    effect(() => {
+      const loading = this.facade.isLoading();
+      const grid = this.bentoGrid();
+      const hero = this.heroRef();
+
+      // El effect corre después del Change Detection, por lo que el DOM
+      // ya tiene los elementos correspondientes (Skeletons o Contenido Real)
+      if (loading) {
+        if (hero) this.gsap.animateHero(hero.nativeElement);
+        if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+      } else {
+        // Al transicionar a contenido real, animamos los elementos nuevos
+        // sin tocar la opacidad para que se vea más rápido (skipOpacity: true)
+        if (grid) this.gsap.animateBentoGrid(grid.nativeElement, { skipOpacity: true });
+      }
     });
   }
 
@@ -564,13 +593,5 @@ export class AdminSecretariasComponent implements AfterViewInit {
 
   protected goToAuditoria(): void {
     void this.router.navigate(['/app/admin/auditoria']);
-  }
-
-  ngAfterViewInit(): void {
-    const hero = this.heroRef();
-    const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }
