@@ -34,8 +34,13 @@ process.stdin.on('end', () => {
     const normalizedPath = filePath.replace(/\\/g, '/');
 
     // ═══════════════════════════════════════════════════════════════════════
-    // 1. FILE PROTECTION — Archivos del sistema de guardrails
+    // 1. FILE PROTECTION - Archivos del sistema de guardrails (solo dentro del proyecto)
     // ═══════════════════════════════════════════════════════════════════════
+    // Calculamos el path relativo al cwd. Si el archivo vive fuera del proyecto
+    // (ej: ~/.claude/hooks/sdd/* globales), no aplica la proteccion.
+    const relPathForProtection = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+    const isInsideProject = !relPathForProtection.startsWith('..') && !path.isAbsolute(relPathForProtection);
+
     const protectedPatterns = [
       '.claude/hooks/',
       '.claude/settings.json',
@@ -43,14 +48,17 @@ process.stdin.on('end', () => {
       'scripts/architect.js',
     ];
 
-    for (const pattern of protectedPatterns) {
-      if (normalizedPath.includes(pattern)) {
-        process.stderr.write(
-          `\u{1F6E1}\u{FE0F} FILE PROTECTOR: ${path.basename(filePath)} es parte del sistema de guardrails.\n` +
-          `No se permite modificar archivos en: ${pattern}\n` +
-          `Si necesitas cambiar la configuracion de hooks, pide al humano que lo haga manualmente.`
-        );
-        process.exit(2);
+    if (isInsideProject) {
+      for (const pattern of protectedPatterns) {
+        if (relPathForProtection.startsWith(pattern)) {
+          process.stderr.write(
+            `\u{1F6E1}\u{FE0F} FILE PROTECTOR: ${path.basename(filePath)} es parte del sistema de guardrails del proyecto.\n` +
+            `No se permite modificar archivos en: ${pattern}\n` +
+            `Si necesitas cambiar la configuracion de hooks, pide al humano que lo haga manualmente.\n` +
+            `(Nota: archivos globales en ~/.claude/ NO estan protegidos por este guard.)`
+          );
+          process.exit(2);
+        }
       }
     }
 

@@ -6,7 +6,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "node \"C:/Users/Akxlarre/.claude/hooks/sdd/spec-gate.js\""
+          },
+          {
+            "type": "command",
             "command": "node .claude/hooks/pre-write-guard.js"
+          },
+          {
+            "type": "command",
+            "command": "node \"C:/Users/Akxlarre/.claude/hooks/sdd/plan-injector.js\""
           }
         ]
       },
@@ -57,6 +65,10 @@
           {
             "type": "prompt",
             "prompt": "You are a sync-check auditor. Review the conversation above. If .ts, .html, or .scss files inside src/app/ were CREATED (new files) or significantly modified during this session, check: Were the project indices (indices/COMPONENTS.md, indices/SERVICES.md, indices/DIRECTIVES.md, indices/DATABASE.md) also updated to reflect those new or changed items? If no source code was created/modified, or indices are already up to date, respond {\"ok\": true}. If new components/services/directives were created but indices were NOT updated, respond {\"ok\": false, \"reason\": \"Actualiza los indices del proyecto: agrega los nuevos componentes/servicios/directivas a indices/COMPONENTS.md, indices/SERVICES.md o indices/DIRECTIVES.md segun corresponda.\"}. IMPORTANT: If stop_hook_active is true in the input JSON, always respond {\"ok\": true} to prevent infinite loops."
+          },
+          {
+            "type": "prompt",
+            "prompt": "You are the SDD Acceptance Criteria Verifier.\n\nCONTEXT:\n- This project uses Spec-Driven Development.\n- The active spec ID is stored in `specs/.active` (one line, format `NNNN-slug`).\n- The spec contract is at `specs/<active>/spec.md` and includes an \"Acceptance Criteria\" section with items labeled `AC1`, `AC2`, `AC-E1`, etc.\n\nYOUR JOB:\nReview the conversation above to determine whether the active spec's Acceptance Criteria were addressed in this session.\n\nPROCEDURE:\n1. Read `specs/.active`. If empty or missing -> respond `{\"ok\": true}` (nothing to verify).\n2. Read `specs/<active>/spec.md`. Extract every AC (lines matching `**AC<id>**: Given ... When ... Then ...`).\n3. Look at the conversation: what files were created or edited, what tests were added, what behavior was implemented.\n4. For EACH AC, decide:\n   - Cumplido: there's clear evidence in the session (specific file, specific test case, or explicit verification statement)\n   - Parcial: partially addressed but missing pieces\n   - No abordado: nothing in the session targets this AC\n\nDECISION RULES:\n- If `stop_hook_active` is true in the input JSON -> respond `{\"ok\": true}` (anti-loop guard, mandatory).\n- If the user explicitly said \"estamos en draft\" / \"todavia no implemento\" / \"voy a continuar manana\" -> respond `{\"ok\": true}` (work in progress is fine).\n- If ALL ACs in the active spec are cumplidos -> respond `{\"ok\": true}`.\n- If ANY AC is no abordado AND files in code-of-production paths (`src/`, `app/`, `lib/`, `supabase/migrations/`) were modified in this session -> respond `{\"ok\": false, \"reason\": \"...\"}` with a concrete checklist of unmet ACs.\n- If only Parcial ACs exist -> respond `{\"ok\": false, \"reason\": \"...\"}` listing what's missing in concrete terms.\n- If no code was touched this session -> respond `{\"ok\": true}` (verification is for sessions that produced code).\n\nOUTPUT FORMAT (strict JSON, nothing else):\n- `{\"ok\": true}` when ready to close the turn\n- `{\"ok\": false, \"reason\": \"Spec <id>: AC2 sin evidencia (falta validar email unico antes del insert). AC-E1 parcial (falta caso de pre-inscripcion expirada). Corre /spec-verify para diagnostico completo o agrega los cambios faltantes.\"}` when blocking\n\nCONSTRAINTS:\n- Do NOT block based on style, naming, or architectural concerns (those have their own hooks).\n- Do NOT block if the user is clearly mid-feature (\"voy a seguir manana\", \"esto es un avance parcial\").\n- Be SPECIFIC in `reason`: name the AC and what's missing. Vague reasons waste the user's time.\n- Reason text MUST be in Spanish (the user works in Spanish).\n- Keep reason under 400 chars."
           }
         ]
       }
