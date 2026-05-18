@@ -25,7 +25,14 @@
       "Read(//tmp/**)",
       "Bash(echo \"EXIT:$?\")",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(cp /tmp/active-test.txt specs/.active)",
+      "Bash(cp /tmp/active-test.txt \"C:/Users/Akxlarre/Autoescuela/specs/.active\")",
+      "Bash(echo \"EXIT 7: $?\")",
+      "Bash(echo \"EXIT 6 \\(esperado 2\\): $?\")",
+      "Bash(xxd specs/.active)",
+      "Bash(git checkout *)"
     ]
   },
   "enabledMcpjsonServers": [
