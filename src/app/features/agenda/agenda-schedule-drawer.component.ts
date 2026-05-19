@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  OnInit,
+  signal,
+} from '@angular/core';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 
@@ -46,124 +55,139 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
         <ng-template #content>
           <div class="flex flex-col gap-6 h-full w-full">
-        <!-- Slot seleccionado (solo lectura) -->
-        @if (slot(); as s) {
-          <div class="slot-hero card p-0 overflow-hidden">
-            <!-- Franja de disponibilidad -->
-            <div class="slot-hero-badge">
-              <app-icon name="check-circle" [size]="12" />
-              <span>Cupo disponible</span>
-            </div>
-            <!-- Horario -->
-            <div class="slot-hero-body">
-              <span class="kpi-label">Horario seleccionado</span>
-              <div class="slot-hero-time">{{ s.startTime }} – {{ s.endTime }}</div>
-            </div>
-            <!-- Instructor + Vehículo -->
-            <div class="slot-hero-meta">
-              <div class="slot-meta-row" style="border-bottom: 1px solid var(--color-border)">
-                <div class="slot-meta-icon"><app-icon name="user" [size]="14" /></div>
-                <div class="slot-meta-body">
-                  <span class="slot-meta-label">Instructor</span>
-                  <span class="slot-meta-value">{{ s.instructorName }}</span>
+            <!-- Slot seleccionado (solo lectura) -->
+            @if (slot(); as s) {
+              <div class="slot-hero card p-0 overflow-hidden">
+                <!-- Franja de disponibilidad -->
+                <div class="slot-hero-badge">
+                  <app-icon name="check-circle" [size]="12" />
+                  <span>Cupo disponible</span>
+                </div>
+                <!-- Horario -->
+                <div class="slot-hero-body">
+                  <span class="kpi-label">Horario seleccionado</span>
+                  <div class="slot-hero-date">{{ slotDateLabel() }}</div>
+                  <div class="slot-hero-time">{{ s.startTime }} – {{ s.endTime }}</div>
+                </div>
+                <!-- Instructor + Vehículo -->
+                <div class="slot-hero-meta">
+                  <div class="slot-meta-row" style="border-bottom: 1px solid var(--color-border)">
+                    <div class="slot-meta-icon"><app-icon name="user" [size]="14" /></div>
+                    <div class="slot-meta-body">
+                      <span class="slot-meta-label">Instructor</span>
+                      <span class="slot-meta-value">{{ s.instructorName }}</span>
+                    </div>
+                  </div>
+                  <div class="slot-meta-row">
+                    <div class="slot-meta-icon"><app-icon name="car" [size]="14" /></div>
+                    <div class="slot-meta-body">
+                      <span class="slot-meta-label">Vehículo</span>
+                      <span class="slot-meta-value">{{ s.vehiclePlate }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="slot-meta-row">
-                <div class="slot-meta-icon"><app-icon name="car" [size]="14" /></div>
-                <div class="slot-meta-body">
-                  <span class="slot-meta-label">Vehículo</span>
-                  <span class="slot-meta-value">{{ s.vehiclePlate }}</span>
+            }
+
+            <!-- Selector de alumno -->
+            <div class="flex flex-col gap-2.5">
+              <label class="kpi-label" for="student-select"> Alumno a agendar </label>
+
+              @if (facade.studentsLoading()) {
+                <div class="flex flex-col gap-2">
+                  <app-skeleton-block variant="rect" width="100%" height="45px" />
+                  <div class="flex gap-2">
+                    <app-skeleton-block variant="rect" width="60%" height="20px" />
+                    <app-skeleton-block variant="rect" width="30%" height="20px" />
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        }
-
-        <!-- Selector de alumno -->
-        <div class="flex flex-col gap-2.5">
-          <label class="kpi-label" for="student-select"> Alumno a agendar </label>
-
-          @if (facade.studentsLoading()) {
-            <div class="flex flex-col gap-2">
-              <app-skeleton-block variant="rect" width="100%" height="45px" />
-              <div class="flex gap-2">
-                <app-skeleton-block variant="rect" width="60%" height="20px" />
-                <app-skeleton-block variant="rect" width="30%" height="20px" />
-              </div>
-            </div>
-          } @else if (facade.agendableStudents().length === 0) {
-            <div class="card p-4 flex items-start gap-3 bg-subtle border-none">
-              <app-icon name="info" [size]="18" class="text-text-muted mt-0.5" />
-              <p class="text-sm text-text-secondary m-0 leading-relaxed">
-                No hay alumnos con clases pendientes de agendar en esta sede.
-              </p>
-            </div>
-          } @else {
-            <p-select
-              inputId="student-select"
-              [options]="studentOptions()"
-              [(ngModel)]="selectedEnrollmentId"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Buscar alumno..."
-              [style]="{ width: '100%' }"
-              styleClass="premium-select"
-              [filter]="true"
-              filterPlaceholder="Escribe el nombre..."
-              [showClear]="true"
-              [attr.data-llm-description]="'Selector de alumno para agendar clase práctica'"
-            />
-          }
-        </div>
-
-        <!-- Detalle del alumno seleccionado -->
-        @if (selectedStudent()) {
-          <div class="card p-4 flex flex-col gap-3">
-            <div class="flex items-center gap-2">
-              <div class="w-1.5 h-1.5 rounded-full bg-brand"></div>
-              <span class="text-xs font-bold text-text-primary uppercase tracking-wider">
-                {{ selectedStudent()!.courseName }}
-              </span>
+              } @else if (facade.agendableStudents().length === 0) {
+                <div class="card p-4 flex items-start gap-3 bg-subtle border-none">
+                  <app-icon name="info" [size]="18" class="text-text-muted mt-0.5" />
+                  <p class="text-sm text-text-secondary m-0 leading-relaxed">
+                    No hay alumnos con clases pendientes de agendar en esta sede.
+                  </p>
+                </div>
+              } @else {
+                <p-select
+                  inputId="student-select"
+                  [options]="studentOptions()"
+                  [ngModel]="selectedEnrollmentId()"
+                  (ngModelChange)="selectedEnrollmentId.set($event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Buscar alumno..."
+                  [style]="{ width: '100%' }"
+                  styleClass="premium-select"
+                  [filter]="true"
+                  filterPlaceholder="Escribe el nombre..."
+                  [showClear]="true"
+                  [attr.data-llm-description]="'Selector de alumno para agendar clase práctica'"
+                />
+              }
             </div>
 
-            <div class="flex flex-col gap-2 pt-1">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-text-muted">Clases agendadas</span>
-                <span class="text-xs font-semibold text-text-primary">
-                  {{ selectedStudent()!.scheduledSessions }} de {{ selectedStudent()!.totalSessions }}
-                </span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-text-muted">Estado de disponibilidad</span>
-                <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-surface border"
+            <!-- Detalle del alumno seleccionado -->
+            @if (selectedStudent()) {
+              <div class="card p-4 flex flex-col gap-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-1.5 h-1.5 rounded-full bg-brand"></div>
+                  <span class="text-xs font-bold text-text-primary uppercase tracking-wider">
+                    {{ selectedStudent()!.courseName }}
+                  </span>
+                </div>
+
+                <div class="flex flex-col gap-2 pt-1">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-text-muted">Se asignará como</span>
+                    <span
+                      class="text-xs font-bold px-2 py-0.5 rounded-md"
+                      style="color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 10%, var(--bg-surface))"
+                    >
+                      Clase N° {{ selectedStudent()!.nextClassNumber }}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-text-muted">Clases agendadas</span>
+                    <span class="text-xs font-semibold text-text-primary">
+                      {{ selectedStudent()!.scheduledSessions }} de
+                      {{ selectedStudent()!.totalSessions }}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs text-text-muted">Clases restantes</span>
+                    <span
+                      class="text-xs font-bold px-2 py-0.5 rounded-md bg-surface border"
                       [style.color]="remainingColor()"
-                      [style.borderColor]="remainingColor().replace(')', ', 0.2)')">
-                  {{ selectedStudent()!.remainingSessions }} cupos libres
-                </span>
+                      [style.borderColor]="remainingColor().replace(')', ', 0.2)')"
+                    >
+                      {{ selectedStudent()!.remainingSessions }} restantes
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        }
+            }
 
-        <!-- Error -->
-        @if (facade.error()) {
-          <div class="flex items-start gap-2 p-3 rounded-lg bg-[var(--state-error-bg)]/50 border border-[var(--state-error)]" style="color: var(--state-error)">
-            <app-icon name="circle-alert" [size]="16" class="mt-0.5" />
-            <p class="text-xs font-medium m-0 leading-tight">{{ facade.error() }}</p>
-          </div>
-        }
+            <!-- Error -->
+            @if (facade.error()) {
+              <div
+                class="flex items-start gap-2 p-3 rounded-lg bg-(--state-error-bg)/50 border border-(--state-error)"
+                style="color: var(--state-error)"
+              >
+                <app-icon name="circle-alert" [size]="16" class="mt-0.5" />
+                <p class="text-xs font-medium m-0 leading-tight">{{ facade.error() }}</p>
+              </div>
+            }
           </div>
         </ng-template>
       </app-drawer-content-loader>
 
       <!-- Acciones (Sticky Footer) -->
-      <div class="flex items-center justify-between gap-4 pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"
-           style="border-color: var(--border-subtle);">
-        <button
-          class="cancel-btn-text"
-          (click)="cancel()"
-          data-llm-action="cancel-schedule"
-        >
+      <div
+        class="flex items-center justify-between gap-4 pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"
+        style="border-color: var(--border-subtle);"
+      >
+        <button class="cancel-btn-text" (click)="cancel()" data-llm-action="cancel-schedule">
           Cancelar reservación
         </button>
 
@@ -204,6 +228,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
       flex-direction: column;
       gap: 2px;
       padding: 0.5rem 1rem 0.75rem;
+    }
+
+    .slot-hero-date {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--text-secondary);
+      margin-bottom: 2px;
     }
 
     .slot-hero-time {
@@ -273,9 +304,23 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
     /* Custom styles for PrimeNG Select in drawer */
     :host ::ng-deep .premium-select {
-        border-radius: var(--radius-lg) !important;
-        background: var(--bg-subtle) !important;
-        border-color: var(--border-subtle) !important;
+      border-radius: var(--radius-lg) !important;
+      background: var(--bg-subtle) !important;
+      border-color: var(--border-subtle) !important;
+    }
+
+    /* Variante inline: dentro del slot-hero-meta, sin fondo propio */
+    :host ::ng-deep .premium-select--inline {
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      font-size: 0.875rem !important;
+      font-weight: var(--font-semibold) !important;
+      color: var(--text-primary) !important;
+
+      .p-select-label {
+        padding: 0 !important;
+      }
     }
   `,
 })
@@ -283,9 +328,18 @@ export class AgendaScheduleDrawerComponent implements OnInit {
   readonly facade = inject(AgendaFacade);
   private readonly drawer = inject(LayoutDrawerFacadeService);
 
-  selectedEnrollmentId: number | null = null;
+  readonly selectedEnrollmentId = signal<number | null>(null);
 
   readonly slot = this.facade.selectedSlot;
+
+  constructor() {
+    toObservable(this.slot)
+      .pipe(
+        filter((s) => s === null),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.drawer.back());
+  }
 
   readonly studentOptions = computed(() =>
     this.facade.agendableStudents().map((s) => ({
@@ -295,16 +349,26 @@ export class AgendaScheduleDrawerComponent implements OnInit {
   );
 
   readonly selectedStudent = computed<AgendableStudent | undefined>(() =>
-    this.facade.agendableStudents().find((s) => s.enrollmentId === this.selectedEnrollmentId),
+    this.facade.agendableStudents().find((s) => s.enrollmentId === this.selectedEnrollmentId()),
   );
 
   readonly canConfirm = computed(
     () =>
-      !!this.selectedEnrollmentId &&
+      !!this.selectedEnrollmentId() &&
       !!this.slot() &&
       !this.facade.isScheduling() &&
       (this.selectedStudent()?.remainingSessions ?? 0) > 0,
   );
+
+  readonly slotDateLabel = computed(() => {
+    const date = this.slot()?.date;
+    if (!date) return '';
+    const [year, month, day] = date.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    const weekday = d.toLocaleDateString('es-CL', { weekday: 'long' });
+    const monthName = d.toLocaleDateString('es-CL', { month: 'long' });
+    return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${d.getDate()} de ${monthName}`;
+  });
 
   readonly remainingColor = computed(() => {
     const remaining = this.selectedStudent()?.remainingSessions ?? 0;
@@ -317,13 +381,16 @@ export class AgendaScheduleDrawerComponent implements OnInit {
 
   async confirm(): Promise<void> {
     const s = this.slot();
-    if (!s || !this.selectedEnrollmentId) return;
+    const enrollmentId = this.selectedEnrollmentId();
+    if (!s || !enrollmentId) return;
 
+    const classNumber = this.selectedStudent()?.nextClassNumber ?? 1;
     const ok = await this.facade.scheduleClass(
-      this.selectedEnrollmentId,
+      enrollmentId,
       s.id,
       s.instructorId,
       s.vehicleId,
+      classNumber,
     );
 
     if (ok) {

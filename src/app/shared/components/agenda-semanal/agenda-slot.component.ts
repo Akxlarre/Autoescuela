@@ -39,9 +39,6 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
             <app-icon name="plus" [size]="12" />
             <span class="slot-time">{{ slot().startTime }}</span>
           </div>
-          @if (!compact()) {
-            <span class="slot-instructor">{{ slot().instructorName }}</span>
-          }
         }
         @case ('scheduled') {
           <span class="slot-time">{{ slot().startTime }} – {{ slot().endTime }}</span>
@@ -194,14 +191,6 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
     .slot-student {
       font-size: var(--text-xs);
       font-weight: var(--font-medium);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .slot-instructor {
-      font-size: var(--text-xs);
-      color: var(--text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

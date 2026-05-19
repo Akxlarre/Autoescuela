@@ -11,6 +11,7 @@ export interface StudentPaymentEnrollmentInfo {
   basePrice: number;
   pendingBalance: number;
   totalPaid: number;
+  licenseGroup: 'class_b' | 'professional';
 }
 
 export interface StudentPaymentInstructor {
@@ -32,6 +33,9 @@ export interface StudentPaymentStatus {
   enrollment: StudentPaymentEnrollmentInfo | null;
   instructor: StudentPaymentInstructor | null;
   existingSessionCount: number;
+  /** true  → alumno debe seleccionar 6 slots (flujo normal/escenario C)
+   *  false → 12 clases ya agendadas, solo pagar (escenario A) */
+  needsSlotSelection: boolean;
   studentName: string;
   payments: StudentPaymentHistoryItem[];
 }

@@ -3,8 +3,13 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { escapePdfWinAnsi as esc, textWidth as tw, loadImageForPdf, loadPngForPdf, assemblePdf } from '../_shared/pdf-utils.ts';
-
+import {
+  escapePdfWinAnsi as esc,
+  textWidth as tw,
+  loadImageForPdf,
+  loadPngForPdf,
+  assemblePdf,
+} from '../_shared/pdf-utils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -439,5 +444,5 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
 
   ops += `0 g\n`; // reset a negro
 
-  return assemblePdf(ops, W, H, d.logo ?? undefined, d.photo ?? undefined);
+  return assemblePdf([ops], W, H, d.logo ?? undefined, d.photo ?? undefined);
 }

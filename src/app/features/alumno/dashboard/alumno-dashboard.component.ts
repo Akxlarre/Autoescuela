@@ -180,17 +180,17 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           <div class="flex flex-col gap-6">
             <!-- Skeleton para el anillo de progreso y leyenda -->
             <div class="flex items-center gap-4 shrink-0">
-               <app-skeleton-block variant="circle" width="80px" height="80px" />
-               <div class="flex flex-col gap-2 flex-1">
-                  <app-skeleton-block variant="text" width="60%" height="12px" />
-                  <app-skeleton-block variant="text" width="40%" height="10px" />
-               </div>
+              <app-skeleton-block variant="circle" width="80px" height="80px" />
+              <div class="flex flex-col gap-2 flex-1">
+                <app-skeleton-block variant="text" width="60%" height="12px" />
+                <app-skeleton-block variant="text" width="40%" height="10px" />
+              </div>
             </div>
             <!-- Skeleton para la cuadrícula de clases -->
             <div class="grid grid-cols-4 sm:grid-cols-6 gap-2">
-               @for (i of [1,2,3,4,5,6,7,8,9,10,11,12]; track i) {
-                  <app-skeleton-block variant="rect" width="100%" height="32px" />
-               }
+              @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; track i) {
+                <app-skeleton-block variant="rect" width="100%" height="32px" />
+              }
             </div>
           </div>
         } @else {
@@ -312,7 +312,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
             >
               @if (grades()?.finalExamGrade !== null) {
                 <span class="text-xl font-bold" style="color: var(--ds-brand)">
-                   {{ grades()?.finalExamGrade }}
+                  {{ grades()?.finalExamGrade }}
                 </span>
               } @else {
                 <app-icon name="star" [size]="20" style="color: var(--text-muted)" />
@@ -385,7 +385,11 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           @if (certificate()?.state === 'locked' && certificate()?.blockingReason) {
             <p class="text-xs text-text-muted m-0">{{ certificate()?.blockingReason }}</p>
           } @else if (certificate()?.state === 'enabled') {
-            <app-alert-card severity="success" title="Tu certificado está listo para ser generado" appAnimateIn>
+            <app-alert-card
+              severity="success"
+              title="Tu certificado está listo para ser generado"
+              appAnimateIn
+            >
               Solicita a la secretaría que lo emita.
             </app-alert-card>
           } @else if (certificate()?.state === 'issued') {
@@ -675,25 +679,18 @@ export class AlumnoDashboardComponent {
     return chips;
   });
   readonly heroActions = computed((): SectionHeroAction[] => {
-    const actions: SectionHeroAction[] = [
-      {
-        id: 'agendar',
-        label: 'Agendar clase',
-        icon: 'calendar',
-        primary: true,
-        route: '/app/alumno/agendar',
-      },
-    ];
     if (this.certificate()?.state === 'issued' && this.certificate()?.pdfUrl) {
-      actions.push({
-        id: 'cert',
-        label: 'Descargar certificado',
-        icon: 'download',
-        primary: false,
-        route: undefined,
-      });
+      return [
+        {
+          id: 'cert',
+          label: 'Descargar certificado',
+          icon: 'download',
+          primary: true,
+          route: undefined,
+        },
+      ];
     }
-    return actions;
+    return [];
   });
 
   // ── Semáforo ───────────────────────────────────────────────────────────────
@@ -727,7 +724,7 @@ export class AlumnoDashboardComponent {
     effect(() => {
       const isReady = !this.loading();
       const el = this.bentoGrid()?.nativeElement;
-      
+
       if (isReady && el) {
         Promise.resolve().then(() => {
           this.gsap.animateBentoGrid(el);
@@ -745,8 +742,15 @@ export class AlumnoDashboardComponent {
   }
 
   async downloadCertificate(): Promise<void> {
+    // Abre la ventana sincrónicamente (gesto directo del usuario) para evitar
+    // que el browser bloquee el popup al llamarla después del await.
+    const win = window.open('', '_blank');
     const url = await this.facade.downloadCertificate();
-    if (url) window.open(url, '_blank');
+    if (url && win) {
+      win.location.href = url;
+    } else {
+      win?.close();
+    }
   }
 
   // ── Helpers de template ────────────────────────────────────────────────────

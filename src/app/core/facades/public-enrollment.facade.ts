@@ -2,6 +2,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
+import { normalizePhoto } from '@core/utils/image.utils';
 import type { Course } from '@core/models/dto/course.model';
 import type { BranchOption, BranchCoursePrice } from '@core/models/ui/branch.model';
 import type {
@@ -570,6 +571,8 @@ export class PublicEnrollmentFacade {
     this._error.set(null);
 
     try {
+      const normalizedFile = await normalizePhoto(file);
+
       // 1. Pedir URL firmada a la Edge Function
       const { data: urlData, error: urlError } = await this.supabase.client.functions.invoke(
         'public-enrollment',
@@ -584,7 +587,9 @@ export class PublicEnrollmentFacade {
       // 2. Subir directamente con el token firmado (sin políticas RLS anon)
       const { error } = await this.supabase.client.storage
         .from('documents')
-        .uploadToSignedUrl(urlData.path, urlData.token, file, { contentType: file.type });
+        .uploadToSignedUrl(urlData.path, urlData.token, normalizedFile, {
+          contentType: normalizedFile.type,
+        });
 
       if (error) {
         this._error.set('Error al subir la foto: ' + error.message);

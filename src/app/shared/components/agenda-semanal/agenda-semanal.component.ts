@@ -96,14 +96,14 @@ interface CellSummary {
           @for (kpi of kpiCards(); track kpi.id) {
             <div class="bento-square">
               <app-kpi-card-variant
-              [value]="kpi.value"
-              [label]="kpi.label"
-              [icon]="kpi.icon"
-              [color]="kpi.color"
-              [loading]="isLoading()"
-            />
-          </div>
-        }
+                [value]="kpi.value"
+                [label]="kpi.label"
+                [icon]="kpi.icon"
+                [color]="kpi.color"
+                [loading]="isLoading()"
+              />
+            </div>
+          }
         </div>
       }
 
@@ -179,7 +179,7 @@ interface CellSummary {
 
           <!-- Filtro de instructor -->
           <div class="flex items-center gap-2 min-w-0">
-            <app-icon name="users" [size]="14" />
+            <span class="instructor-label">Mostrando horario de:</span>
             <p-select
               [options]="instructorOptions()"
               [ngModel]="selectedInstructorId()"
@@ -464,6 +464,13 @@ interface CellSummary {
       &:hover {
         background: color-mix(in srgb, var(--ds-brand) 16%, var(--bg-surface));
       }
+    }
+
+    .instructor-label {
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      color: var(--text-secondary);
+      white-space: nowrap;
     }
 
     /* ── CSS Grid del calendario ─────────────────────────────── */
@@ -773,7 +780,6 @@ export class AgendaSemanalComponent implements AfterViewInit {
     if (!rows.length) return null;
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    // Encuentra la fila cuyo inicio ≤ ahora < inicio + 45min
     for (const row of rows) {
       const [h, m] = row.split(':').map(Number);
       const rowStart = h * 60 + m;
@@ -809,10 +815,10 @@ export class AgendaSemanalComponent implements AfterViewInit {
         accent: false,
       },
       {
-        id: 'instructores',
-        label: 'Instructores Disponibles',
-        value: kpis?.instructoresDisponibles ?? 0,
-        icon: 'users' as const,
+        id: 'alumnos',
+        label: 'Alumnos esta semana',
+        value: kpis?.alumnosDistintos ?? 0,
+        icon: 'user-check' as const,
         color: 'success' as const,
         accent: false,
       },
@@ -837,10 +843,9 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── Opciones del dropdown de instructor ──────────────────────────────────────
 
-  readonly instructorOptions = computed<InstructorOption[]>(() => [
-    { label: 'Todos los instructores', value: null },
-    ...this.instructors().map((i) => ({ label: i.name, value: i.id })),
-  ]);
+  readonly instructorOptions = computed<InstructorOption[]>(() =>
+    this.instructors().map((i) => ({ label: i.name, value: i.id })),
+  );
 
   // ── CSS Grid template ────────────────────────────────────────────────────────
 

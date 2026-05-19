@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { normalizePhoto } from '@core/utils/image.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -497,16 +498,17 @@ export class AdminPreInscritosFacade {
     // Foto carnet (obligatoria)
     if (payload.carnetPhotoFile) {
       try {
+        const photoFile = await normalizePhoto(payload.carnetPhotoFile);
         const filePath = `students/${enrollmentId}/id_photo`;
         const { error } = await this.supabase.client.storage
           .from('documents')
-          .upload(filePath, payload.carnetPhotoFile, { upsert: true });
+          .upload(filePath, photoFile, { upsert: true });
         if (!error) {
           await this.supabase.client.from('student_documents').upsert(
             {
               enrollment_id: enrollmentId,
               type: 'id_photo',
-              file_name: payload.carnetPhotoFile.name,
+              file_name: photoFile.name,
               storage_url: filePath,
               status: 'approved',
               uploaded_at: new Date().toISOString(),

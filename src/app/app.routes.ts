@@ -680,13 +680,6 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'agendar',
-            loadComponent: () =>
-              import('./features/alumno/agendar/alumno-agendar.component').then(
-                (m) => m.AlumnoAgendarComponent,
-              ),
-          },
-          {
             path: 'pagos',
             loadComponent: () =>
               import('./features/alumno/pagos/alumno-pagos.component').then(
