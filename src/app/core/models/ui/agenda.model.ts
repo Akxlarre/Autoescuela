@@ -5,7 +5,7 @@
 export interface AgendaWeekKpis {
   clasesAgendadas: number;
   clasesCompletadas: number;
-  instructoresDisponibles: number;
+  alumnosDistintos: number;
   vehiculosDisponibles: number;
 }
 
@@ -67,6 +67,8 @@ export interface AgendableStudent {
   totalSessions: number;
   scheduledSessions: number;
   remainingSessions: number;
+  /** Número de clase a asignar (scheduledSessions + 1). Solo para Clase B depósito. */
+  nextClassNumber: number;
 }
 
 // ─── Filtro de instructor ──────────────────────────────────────────────────

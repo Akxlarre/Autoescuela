@@ -94,6 +94,12 @@ export class StudentPaymentFacade {
     () => this._selectedSlotIds().length === this.requiredCount,
   );
 
+  /** false → alumno ya tiene 12 clases agendadas, solo debe pagar (escenario A). */
+  readonly needsSlotSelection = computed(() => this._status()?.needsSlotSelection ?? true);
+
+  /** true → alumno Clase B (flujo Webpay habilitado); false → Profesional (pago presencial). */
+  readonly isClassB = computed(() => this._status()?.enrollment?.licenseGroup === 'class_b');
+
   // ─── Métodos ───
 
   /** Carga el estado del enrollment con saldo pendiente. Llamar en ngOnInit del componente. */
@@ -134,6 +140,12 @@ export class StudentPaymentFacade {
     } catch {
       // Fail silencioso — datos stale siguen visibles
     }
+  }
+
+  /** Avanza directamente al step 3 sin pasar por selección de horarios.
+   *  Usado cuando el alumno ya tiene las 12 clases agendadas (escenario A). */
+  goDirectToConfirm(): void {
+    this._step.set(3);
   }
 
   /** Avanza al step 2 y carga la grilla de horarios del instructor asignado. */
@@ -291,7 +303,9 @@ export class StudentPaymentFacade {
     const enrollment = this._status()?.enrollment;
     const instructor = this._status()?.instructor;
 
-    if (!enrollment || !instructor) return;
+    if (!enrollment) return;
+    // instructor solo es requerido cuando hay slots que seleccionar (escenarios B y C)
+    if (this.needsSlotSelection() && !instructor) return;
 
     this._isSubmitting.set(true);
     this._error.set(null);
@@ -301,7 +315,7 @@ export class StudentPaymentFacade {
         body: {
           action: 'initiate-payment',
           enrollmentId: enrollment.id,
-          instructorId: instructor.id,
+          instructorId: instructor?.id ?? null,
           selectedSlotIds: this._selectedSlotIds(),
           sessionToken: this._sessionToken(),
         },

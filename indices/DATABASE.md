@@ -9,7 +9,7 @@
 | `roles` | M1 - Usuarios | `id`, `name` | Ninguna | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `users` | M1 - Usuarios | `id`, `rut`, `email` | `role_id`, `branch_id` | Admin: CRUD, Sec: R, Inst: R (self), Stu: R (self) | ✅ Definida |
 | `students` | M1 - Usuarios | `id`, `user_id`, `address` (sin `region`/`district`), `status` (TEXT: 'active'\|'pending'\|'inactive'\|'graduated'\|**'archived'** — sin CHECK constraint) | `user_id` | Admin: CRUD, Sec: CRUD, Inst: R, Stu: R (self) | ✅ Definida · `20260426000001`: documentado `'archived'` como valor de soft-delete. `AdminAlumnosFacade` excluye `.neq('status','archived')` de la query. |
-| `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks`, `is_convalidation` (BOOL, default false) | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `cc_class_b` + `cc_class_b_sence` agregados para branch 2 (`20260311100000`) · `is_convalidation` + cursos `conv_a4`/`conv_a3` agregados (`20260313100000`). Los cursos con `is_convalidation=true` NO generan enrollments ni cuentan contra cupo. |
+| `courses` | M1 - Usuarios | `id`, `code`, `schedule_days`, `schedule_blocks`, `is_convalidation` (BOOL, default false) | `branch_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida · `cc_class_b` + `cc_class_b_sence` agregados para branch 2 (`20260311100000`) · `is_convalidation` + cursos `conv_a4`/`conv_a3` agregados (`20260313100000`). Los cursos con `is_convalidation=true` NO generan enrollments ni cuentan contra cupo. · **`20260513000001`:** `schedule_blocks` cambiado de rangos continuos a **slots exactos** (cada elemento `{"from","to"}` es un slot de 45 min, no un rango). Nuevos horarios L-V: 08:30-09:15 · 09:20-10:05 · 10:10-10:55 · 11:00-11:45 · 11:50-12:35 · 12:40-13:25 · 15:00-15:45 · 15:50-16:35 · 16:40-17:25 · 17:30-18:15 · 18:20-19:05 · 19:10-19:55 · 20:00-20:45. Aplica a ambas sedes. |
 | `sence_codes` | M1 - Usuarios | `id`, `code` | `course_id` | Admin: CRUD, Sec: R, Inst: R, Stu: R | ✅ Definida |
 | `audit_log` | M1 - Usuarios | `id`, `user_id` | `user_id` | Admin: R · INSERT: autenticados (solo vía triggers) | ✅ Definida |
 | `login_attempts` | M1 - Usuarios | `id`, `email` | `user_id` | Admin: R | ✅ Definida |
@@ -88,7 +88,7 @@
 | `v_student_progress_b` | M4 - Acad. B | Progreso prácticas (0-12) + `pct_theory_attendance` (% sobre sesiones en las que el alumno fue **inscrito**, no todas las de la sede) por matrícula Clase B | Admin, Sec, Inst (propias), Stu (propia) |
 | `v_professional_attendance` | M5 - Prof. | Semáforo `green`/`yellow`/`red` de asistencia por matrícula profesional (RF-070) | Admin, Sec, Stu (propia) |
 | `v_dms_student_documents` | M6 - Matrí. | Documentos del alumno unificados (`student_documents` + `digital_contracts`) | Admin, Sec, Stu (propios) |
-| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Horarios derivados de `courses.schedule_days`/`schedule_blocks` (horario operativo de la autoescuela, compartido por todos los instructores). NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
+| `v_class_b_schedule_availability` | M4 - Acad. B | **Slots de 45 min (disponibles y ocupados)** por instructor+vehículo en las próximas 4 semanas. Columna `slot_status TEXT ('available'\|'occupied')` indica disponibilidad. Horarios derivados de `courses.schedule_days`/`schedule_blocks` (cada elemento del JSONB es un slot exacto, no un rango). NO filtra los slots ocupados, los expone con `slot_status='occupied'` para que la UI los muestre en gris. Usar para agenda de matrícula (RF-046). **`20260513000001`:** Vista recreada — ya no usa `generate_series` de 45 min; expande directamente los slots del JSONB a los días operativos de las próximas 4 semanas. | Admin, Sec (acceso completo) · Inst (solo sí mismo) · Stu: sin acceso (ver nota) |
 
 > **Nota `v_class_b_schedule_availability`:** El rol `student` no puede ver `instructors` ni `vehicles` según sus policies actuales, por lo que la vista devuelve vacío si la consulta un alumno. Si se requiere self-service de selección de horario, implementar un RPC `SECURITY DEFINER` específico.
 
@@ -126,10 +126,23 @@
 | `20260314100000_public_enrollment_anon_rls.sql` | Policies SELECT anónimas para `branches` (todas) y `courses` (activas, no convalidación) para la vista de matrícula pública. |
 | `20260315100000_enable_realtime_class_b_sessions.sql` | Habilita Supabase Realtime en `class_b_sessions` (`ALTER PUBLICATION supabase_realtime ADD TABLE`). Permite que secretarias/admin reciban actualizaciones en vivo de slots ocupados durante matrícula. |
 
+## GRANTs Data API (Supabase PostgREST)
+
+Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tablas del schema `public`. La migración `20260513000002_grant_data_api_access.sql` añade los GRANTs explícitos:
+
+| Rol | Tablas | Permisos |
+|-----|--------|----------|
+| `authenticated` | ALL TABLES IN SCHEMA public | SELECT, INSERT, UPDATE, DELETE |
+| `authenticated` | ALL SEQUENCES IN SCHEMA public | USAGE, SELECT |
+| `authenticated` | ALL FUNCTIONS IN SCHEMA public | EXECUTE |
+| `anon` | `branches`, `courses` | SELECT (solo tablas con policies FOR anon) |
+
+`ALTER DEFAULT PRIVILEGES` cubre tablas y secuencias creadas en migraciones futuras para `authenticated`. **RLS sigue siendo la capa de seguridad real** — estos GRANTs solo habilitan el acceso a nivel de objeto en PostgREST.
+
 ## Storage Buckets
 
 | Bucket | Migración creación | Migración fix | Visibilidad | MIME permitidos | Límite | Policies |
 |--------|-------------------|---------------|-------------|-----------------|--------|----------|
-| `documents` | `20260307160000_create_documents_storage_bucket.sql` | `20260413000001_secure_documents_bucket.sql` · `20260424000001_fix_anon_carnet_upload_rls.sql` | **`public: false`** (privado desde 2026-04-13) | `image/jpeg`, `image/png`, `image/webp`, `application/pdf` | 10 MB | SELECT: solo `authenticated` con rol `admin/secretary` (policy `documents_authenticated_read`) · INSERT/UPDATE authenticated: secretary o admin (policy `documents_auth_insert`/`documents_auth_update`) · INSERT/UPDATE anon: **solo** `public-uploads/carnet/{token}` donde `token ~ /^[0-9a-zA-Z-]+$/` (policies `documents_anon_carnet_insert`/`documents_anon_carnet_update`, re-creadas en `20260424000001` con regex más estricta) · DELETE: solo admin. **URLs en BD son rutas relativas** (path sin bucket); las Facades generan `createSignedUrl()` con TTL 1h bajo demanda. Carpetas internas: `class-books/`, `contracts/`, `student-docs/`, `certificates/{enrollment_id}/`, `public-uploads/carnet/` |
+| `documents` | `20260307160000_create_documents_storage_bucket.sql` | `20260413000001_secure_documents_bucket.sql` · `20260424000001_fix_anon_carnet_upload_rls.sql` · `20260517000001_student_own_certificate_storage_read.sql` | **`public: false`** (privado desde 2026-04-13) | `image/jpeg`, `image/png`, `image/webp`, `application/pdf` | 10 MB | SELECT: `admin/secretary` (policy `documents_authenticated_read`) · SELECT: alumnos autenticados **solo sobre los paths almacenados en su propia matrícula** (`certificate_b_pdf_url`, `certificate_professional_pdf_url`, `license_pdf_url`) — policy `documents_student_own_certificate_read` (`20260517000001`) · INSERT/UPDATE authenticated: secretary o admin · INSERT/UPDATE anon: **solo** `public-uploads/carnet/{token}` (regex estricta, `20260424000001`) · DELETE: solo admin. **URLs en BD son rutas relativas**; Facades generan `createSignedUrl()` TTL 1h. Carpetas: `class-books/`, `contracts/`, `student-docs/`, `certificates/{enrollment_id}/`, `public-uploads/carnet/` |
 
 > **Fix aplicado `20260310130000`:** Se reemplazó `auth_user_role()` por subquery `EXISTS(... JOIN roles ...)` en todas las policies de storage para evitar fallos en el contexto de evaluación del schema `storage`. Se agregó `WITH CHECK` a la policy UPDATE (necesario para que `upsert: true` funcione cuando el archivo ya existe). Se cambió `ON CONFLICT DO NOTHING` por `DO UPDATE SET` para forzar actualización de `allowed_mime_types` si el bucket ya existía antes de la migración original.

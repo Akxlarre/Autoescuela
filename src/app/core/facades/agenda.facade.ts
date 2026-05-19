@@ -13,7 +13,7 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 
-import { toISODate, to24hTime, buildDayLabel, capitalize } from '@core/utils/date.utils';
+import { toISODate, to24hTime, buildDayLabel } from '@core/utils/date.utils';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -101,6 +101,7 @@ export class AgendaFacade {
   private readonly _studentsLoading = signal<boolean>(false);
 
   private readonly _selectedSlot = signal<AgendaSlot | null>(null);
+  private readonly _availableSlotsAtTime = signal<AgendaSlot[]>([]);
   private readonly _isScheduling = signal<boolean>(false);
 
   /** Mapas de lookup para enriquecer slots con nombres (cargados en initialize) */
@@ -125,6 +126,7 @@ export class AgendaFacade {
   readonly agendableStudents = this._agendableStudents.asReadonly();
   readonly studentsLoading = this._studentsLoading.asReadonly();
   readonly selectedSlot = this._selectedSlot.asReadonly();
+  readonly availableSlotsAtTime = this._availableSlotsAtTime.asReadonly();
   readonly isScheduling = this._isScheduling.asReadonly();
 
   readonly kpis = computed(() => this._weekData()?.kpis ?? null);
@@ -257,10 +259,12 @@ export class AgendaFacade {
 
   setInstructorFilter(id: number | null): void {
     this._selectedInstructorId.set(id);
+    this._selectedSlot.set(null);
   }
 
-  setSelectedSlot(slot: AgendaSlot | null): void {
+  setSelectedSlot(slot: AgendaSlot | null, slotsAtTime: AgendaSlot[] = []): void {
     this._selectedSlot.set(slot);
+    this._availableSlotsAtTime.set(slotsAtTime);
   }
 
   async loadAgendableStudents(): Promise<void> {
@@ -273,6 +277,8 @@ export class AgendaFacade {
         .select(
           `
           id,
+          payment_mode,
+          license_group,
           courses!inner ( name, practical_hours ),
           students!inner (
             users!inner ( first_names, paternal_last_name )
@@ -280,7 +286,9 @@ export class AgendaFacade {
           class_b_sessions ( id, status )
         `,
         )
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('license_group', 'class_b')
+        .eq('payment_mode', 'partial');
 
       if (branchId !== null) query = query.eq('branch_id', branchId);
 
@@ -292,7 +300,7 @@ export class AgendaFacade {
 
       for (const enrollment of data as any[]) {
         const practicalHours = enrollment.courses?.practical_hours ?? 0;
-        if (!practicalHours) continue; // Solo clase B (tiene horas prácticas)
+        if (!practicalHours) continue;
 
         const totalSessions = Math.round((practicalHours * 60) / 45);
         const activeSessions: any[] = enrollment.class_b_sessions ?? [];
@@ -301,7 +309,9 @@ export class AgendaFacade {
         ).length;
         const remainingSessions = Math.max(0, totalSessions - scheduledSessions);
 
-        if (remainingSessions <= 0) continue;
+        // Solo mostrar alumnos con al menos su primera mitad asignada y clases finales pendientes
+        const halfSessions = Math.ceil(totalSessions / 2);
+        if (scheduledSessions < halfSessions || remainingSessions <= 0) continue;
 
         const user = enrollment.students?.users;
         const studentName = user ? `${user.first_names} ${user.paternal_last_name}` : 'Sin nombre';
@@ -313,6 +323,7 @@ export class AgendaFacade {
           totalSessions,
           scheduledSessions,
           remainingSessions,
+          nextClassNumber: scheduledSessions + 1,
         });
       }
 
@@ -329,6 +340,7 @@ export class AgendaFacade {
     slotId: string,
     instructorId: number,
     vehicleId: number,
+    classNumber: number,
   ): Promise<boolean> {
     this._isScheduling.set(true);
     try {
@@ -337,6 +349,7 @@ export class AgendaFacade {
         instructor_id: instructorId,
         vehicle_id: vehicleId,
         scheduled_at: slotId,
+        class_number: classNumber,
         status: 'scheduled',
         registered_by: this.auth.currentUser()?.dbId ?? null,
       });
@@ -489,6 +502,9 @@ export class AgendaFacade {
     );
 
     this._instructors.set(filters);
+    if (this._selectedInstructorId() === null && filters.length > 0) {
+      this._selectedInstructorId.set(filters[0].id);
+    }
   }
 
   // ── Construcción de la estructura semanal ─────────────────────────────────
@@ -595,14 +611,16 @@ export class AgendaFacade {
     const booked = allSlots.filter((s) => s.status === 'scheduled' || s.status === 'in_progress');
     const completed = allSlots.filter((s) => s.status === 'completed');
 
-    const instructoresDisponibles = new Set(availableSlots.map((s) => s.instructor_id)).size;
+    const alumnosDistintos = new Set(
+      [...booked, ...completed].filter((s) => s.enrollmentId != null).map((s) => s.enrollmentId),
+    ).size;
 
     const vehiculosDisponibles = new Set(availableSlots.map((s) => s.vehicle_id)).size;
 
     return {
       clasesAgendadas: booked.length,
       clasesCompletadas: completed.length,
-      instructoresDisponibles,
+      alumnosDistintos,
       vehiculosDisponibles,
     };
   }

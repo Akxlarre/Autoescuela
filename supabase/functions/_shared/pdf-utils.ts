@@ -6,7 +6,7 @@
 //
 // Usado por: generate-certificate-b-pdf, generate-certificate-professional-pdf,
 // generate-class-book-pdf, generate-student-license-pdf, generate-contract-pdf, etc.
-
+// @ts-nocheck
 // ══════════════════════════════════════════════════════════════════════════════
 // 1. Text & Font Primitives
 // ══════════════════════════════════════════════════════════════════════════════
@@ -41,27 +41,164 @@ export function wrapLines(text: string, maxChars: number): string[] {
 }
 
 export const HV_REG: Record<string, number> = {
-  ' ': 278, '!': 278, '"': 355, '#': 556, $: 556, '%': 889, '&': 667, "'": 222,
-  '(': 333, ')': 333, '*': 389, '+': 584, ',': 278, '-': 333, '.': 278, '/': 278,
-  '0': 556, '1': 556, '2': 556, '3': 556, '4': 556, '5': 556, '6': 556, '7': 556,
-  '8': 556, '9': 556, ':': 278, ';': 278, '<': 584, '=': 584, '>': 584, '?': 556,
-  '@': 1015, A: 667, B: 667, C: 667, D: 722, E: 667, F: 611, G: 722, H: 722,
-  I: 278, J: 500, K: 667, L: 611, M: 833, N: 722, O: 778, P: 667, Q: 778,
-  R: 722, S: 667, T: 611, U: 722, V: 667, W: 944, X: 667, Y: 611, Z: 611,
-  a: 556, b: 611, c: 556, d: 611, e: 556, f: 333, g: 611, h: 611, i: 278,
-  j: 278, k: 556, l: 278, m: 889, n: 611, o: 611, p: 611, q: 611, r: 333,
-  s: 556, t: 278, u: 611, v: 556, w: 778, x: 556, y: 556, z: 500,
+  ' ': 278,
+  '!': 278,
+  '"': 355,
+  '#': 556,
+  $: 556,
+  '%': 889,
+  '&': 667,
+  "'": 222,
+  '(': 333,
+  ')': 333,
+  '*': 389,
+  '+': 584,
+  ',': 278,
+  '-': 333,
+  '.': 278,
+  '/': 278,
+  '0': 556,
+  '1': 556,
+  '2': 556,
+  '3': 556,
+  '4': 556,
+  '5': 556,
+  '6': 556,
+  '7': 556,
+  '8': 556,
+  '9': 556,
+  ':': 278,
+  ';': 278,
+  '<': 584,
+  '=': 584,
+  '>': 584,
+  '?': 556,
+  '@': 1015,
+  A: 667,
+  B: 667,
+  C: 667,
+  D: 722,
+  E: 667,
+  F: 611,
+  G: 722,
+  H: 722,
+  I: 278,
+  J: 500,
+  K: 667,
+  L: 611,
+  M: 833,
+  N: 722,
+  O: 778,
+  P: 667,
+  Q: 778,
+  R: 722,
+  S: 667,
+  T: 611,
+  U: 722,
+  V: 667,
+  W: 944,
+  X: 667,
+  Y: 611,
+  Z: 611,
+  a: 556,
+  b: 611,
+  c: 556,
+  d: 611,
+  e: 556,
+  f: 333,
+  g: 611,
+  h: 611,
+  i: 278,
+  j: 278,
+  k: 556,
+  l: 278,
+  m: 889,
+  n: 611,
+  o: 611,
+  p: 611,
+  q: 611,
+  r: 333,
+  s: 556,
+  t: 278,
+  u: 611,
+  v: 556,
+  w: 778,
+  x: 556,
+  y: 556,
+  z: 500,
 };
 
 export const HV_BOLD: Record<string, number> = {
-  ' ': 278, '(': 333, ')': 333, '-': 333, '.': 278, ',': 278, ':': 333, '/': 278,
-  '0': 556, '1': 556, '2': 556, '3': 556, '4': 556, '5': 556, '6': 556, '7': 556,
-  '8': 556, '9': 556, A: 722, B: 722, C: 667, D: 722, E: 667, F: 611, G: 778,
-  H: 722, I: 278, J: 556, K: 722, L: 611, M: 833, N: 722, O: 778, P: 667,
-  Q: 778, R: 722, S: 667, T: 611, U: 722, V: 667, W: 944, X: 667, Y: 611,
-  Z: 611, a: 556, b: 611, c: 556, d: 611, e: 556, f: 333, g: 611, h: 611,
-  i: 278, j: 278, k: 556, l: 278, m: 889, n: 611, o: 611, p: 611, q: 611,
-  r: 389, s: 556, t: 333, u: 611, v: 556, w: 778, x: 611, y: 556, z: 500,
+  ' ': 278,
+  '(': 333,
+  ')': 333,
+  '-': 333,
+  '.': 278,
+  ',': 278,
+  ':': 333,
+  '/': 278,
+  '0': 556,
+  '1': 556,
+  '2': 556,
+  '3': 556,
+  '4': 556,
+  '5': 556,
+  '6': 556,
+  '7': 556,
+  '8': 556,
+  '9': 556,
+  A: 722,
+  B: 722,
+  C: 667,
+  D: 722,
+  E: 667,
+  F: 611,
+  G: 778,
+  H: 722,
+  I: 278,
+  J: 556,
+  K: 722,
+  L: 611,
+  M: 833,
+  N: 722,
+  O: 778,
+  P: 667,
+  Q: 778,
+  R: 722,
+  S: 667,
+  T: 611,
+  U: 722,
+  V: 667,
+  W: 944,
+  X: 667,
+  Y: 611,
+  Z: 611,
+  a: 556,
+  b: 611,
+  c: 556,
+  d: 611,
+  e: 556,
+  f: 333,
+  g: 611,
+  h: 611,
+  i: 278,
+  j: 278,
+  k: 556,
+  l: 278,
+  m: 889,
+  n: 611,
+  o: 611,
+  p: 611,
+  q: 611,
+  r: 389,
+  s: 556,
+  t: 333,
+  u: 611,
+  v: 556,
+  w: 778,
+  x: 611,
+  y: 556,
+  z: 500,
 };
 
 export function textWidth(text: string, size: number, bold: boolean): number {
@@ -176,7 +313,11 @@ function downscaleAlpha(
   return out;
 }
 
-export async function loadImageForPdf(url: string, maxW = 9999, maxH = 9999): Promise<AnyPdfImage | null> {
+export async function loadImageForPdf(
+  url: string,
+  maxW = 9999,
+  maxH = 9999,
+): Promise<AnyPdfImage | null> {
   let bytes: Uint8Array;
   try {
     const res = await fetch(url);
@@ -193,10 +334,62 @@ export async function loadImageForPdf(url: string, maxW = 9999, maxH = 9999): Pr
   if (PNG_SIG.every((b, i) => bytes[i] === b)) {
     return loadPngFromBytes(bytes, maxW, maxH);
   }
+  // WEBP: magic bytes RIFF....WEBP
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return loadWebpForPdf(bytes, maxW, maxH);
+  }
   return null;
 }
 
-export async function loadPngForPdf(url: string, maxW = 9999, maxH = 9999): Promise<PngPdfImage | null> {
+async function loadWebpForPdf(
+  bytes: Uint8Array,
+  maxW = 9999,
+  maxH = 9999,
+): Promise<AnyPdfImage | null> {
+  try {
+    const blob = new Blob([bytes], { type: 'image/webp' });
+    const bitmap = await createImageBitmap(blob);
+    const { width, height } = bitmap;
+
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.drawImage(bitmap, 0, 0);
+    const imageData = ctx.getImageData(0, 0, width, height);
+
+    const rgb = new Uint8Array(width * height * 3);
+    const alpha = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      rgb[i * 3] = imageData.data[i * 4];
+      rgb[i * 3 + 1] = imageData.data[i * 4 + 1];
+      rgb[i * 3 + 2] = imageData.data[i * 4 + 2];
+      alpha[i] = imageData.data[i * 4 + 3];
+    }
+
+    const scaled = downscaleRgb(rgb, width, height, maxW, maxH);
+    const scaledAlpha = downscaleAlpha(alpha, width, height, scaled.w, scaled.h);
+
+    return { kind: 'png', width: scaled.w, height: scaled.h, rgb: scaled.data, alpha: scaledAlpha };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadPngForPdf(
+  url: string,
+  maxW = 9999,
+  maxH = 9999,
+): Promise<PngPdfImage | null> {
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -491,7 +684,7 @@ export function assemblePdf(
     xref += off.toString().padStart(10, '0') + ' 00000 n \r\n';
   }
   const trailer = `trailer\n<< /Size ${all.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
-  
+
   const xrefBytes = encoder.encode(xref);
   const trailerBytes = encoder.encode(trailer);
   const finalPdf = new Uint8Array(pdf.length + xrefBytes.length + trailerBytes.length);

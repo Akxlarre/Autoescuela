@@ -167,7 +167,11 @@
                 </p>
                 <p class="text-xs text-text-secondary mt-1 flex items-center gap-1">
                   <app-icon name="info" [size]="12" class="text-text-muted shrink-0" />
-                  Solo puedes seleccionar una clase por día.
+                  @if (maxPerDay() > 1) {
+                    Puedes seleccionar hasta {{ maxPerDay() }} clases por día.
+                  } @else {
+                    Solo puedes seleccionar una clase por día.
+                  }
                 </p>
               </div>
               <span
@@ -238,6 +242,17 @@
                     >
                       <p class="text-xs font-bold uppercase">{{ day.dayOfWeek }}</p>
                       <p class="text-lg font-black font-display">{{ day.label }}</p>
+                      @if (maxPerDay() > 1) {
+                        <div class="flex items-center justify-center gap-1 mt-1">
+                          @for (dot of maxPerDayDots(); track dot) {
+                            <span
+                              class="w-1.5 h-1.5 rounded-full transition-colors"
+                              [class.bg-brand]="dot < (slotsPerDay().get(day.date) ?? 0)"
+                              [class.bg-border-default]="dot >= (slotsPerDay().get(day.date) ?? 0)"
+                            ></span>
+                          }
+                        </div>
+                      }
                     </button>
                   }
                 </div>
