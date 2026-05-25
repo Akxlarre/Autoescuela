@@ -23,6 +23,11 @@
 /* Contenedor del main: identifica el área que anima en cada cambio de ruta */
 .shell-content {
   view-transition-name: main-content;
+
+  /* Evita el outline/anillo de enfoque blanco cuando recibe foco programático (tabindex="-1") */
+  &:focus {
+    outline: none;
+  }
 }
 
 /* ── 1. ROOT — Sidebar y topbar estáticos ─────────────────── */

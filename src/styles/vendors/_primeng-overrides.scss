@@ -499,6 +499,32 @@ app-main-layout p-toast.p-toast-top-center,
   border-color: color-mix(in srgb, var(--state-error) 85%, black) !important;
 }
 
+/* ============================================
+   Toast Dark Mode Overrides
+   CSS variables + regla directa para garantizar
+   texto blanco sobre fondos translúcidos oscuros.
+   ============================================ */
+[data-mode='dark'] {
+  --p-toast-success-text-color: #ffffff;
+  --p-toast-info-text-color: #ffffff;
+  --p-toast-error-text-color: #ffffff;
+  --p-toast-warn-text-color: #ffffff;
+
+  .p-toast-message-success,
+  .p-toast-message-error,
+  .p-toast-message-warn,
+  .p-toast-message-info {
+    color: var(--color-primary-text) !important;
+
+    .p-toast-summary,
+    .p-toast-detail,
+    .p-toast-message-icon,
+    .p-toast-close-button {
+      color: var(--color-primary-text) !important;
+    }
+  }
+}
+
 /* ── Toolbar actions (topbar): neutro / hover / abierto ───────────────────────
    Reglas de estabilidad: los botones del topbar son iconos de navegación,
    NO CTAs. Deben ser completamente estacionarios (sin lift, sin glow, sin

@@ -46,9 +46,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             [class.is-unread]="!n.read"
             role="listitem"
             tabindex="0"
-            (click)="markRead.emit(n.id)"
-            (keydown.enter)="markRead.emit(n.id)"
-            (keydown.space)="$event.preventDefault(); markRead.emit(n.id)"
+            (click)="markRead.emit(n.id); notifClicked.emit(n)"
+            (keydown.enter)="markRead.emit(n.id); notifClicked.emit(n)"
+            (keydown.space)="$event.preventDefault(); markRead.emit(n.id); notifClicked.emit(n)"
             [attr.aria-label]="n.title + (!n.read ? ' — sin leer' : '')"
           >
             <span
@@ -88,6 +88,7 @@ export class NotificationsPanelComponent {
 
   readonly markRead = output<string>();
   readonly markAllRead = output<void>();
+  readonly notifClicked = output<Notification>();
 
   iconFor(type?: NotificationType): string {
     switch (type) {
