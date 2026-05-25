@@ -1,0 +1,54 @@
+---
+// src/pages/index.astro
+import LandingLayout from '../layouts/LandingLayout.astro';
+import Navbar from '../components/Navbar.astro';
+import Hero from '../components/Hero.astro';
+import PromoBanner from '../components/PromoBanner.astro';
+import Services from '../components/Services.astro';
+import Pricing from '../components/Pricing.astro';
+import WhyUs from '../components/WhyUs.astro';
+import FAQ from '../components/FAQ.astro';
+import Location from '../components/Location.astro';
+import Contact from '../components/Contact.astro';
+import Footer from '../components/Footer.astro';
+import FloatingCTA from '../components/FloatingCTA.astro';
+
+import { getSiteData } from '../lib/data/getSiteData';
+
+// Determine brand from environment variable (defaults to 'azul')
+const brandName = import.meta.env.BRAND || process.env.BRAND || 'azul';
+const siteData = await getSiteData(brandName);
+
+// URL base de la app Angular — en prod comparten dominio, se usan paths relativos.
+const isDev = import.meta.env.DEV;
+const checkoutBaseUrl = import.meta.env.PUBLIC_CHECKOUT_URL || (isDev ? 'http://localhost:4200' : '');
+const enrollmentUrl = `${checkoutBaseUrl}/inscripcion?branchId=${siteData.brand.branchId}`;
+---
+
+<LandingLayout siteData={siteData}>
+  <Navbar brand={siteData.brand} enrollmentUrl={enrollmentUrl} />
+  
+  <main>
+    <Hero data={siteData.hero} brand={siteData.brand} enrollmentUrl={enrollmentUrl} />
+    
+    <PromoBanner data={siteData.promo || { active: false, title: '', description: '', badge: '' }} brand={siteData.brand} whatsapp={siteData.contact.whatsapp} enrollmentUrl={enrollmentUrl} />
+
+    <Services data={siteData.courses} brand={siteData.brand} whatsapp={siteData.contact.whatsapp} enrollmentUrl={enrollmentUrl} />
+    <Pricing data={siteData.courses} brand={siteData.brand} pricingFooter={siteData.pricingFooter} enrollmentUrl={enrollmentUrl} />
+    <WhyUs data={siteData.whyUs} brand={siteData.brand} />
+    <FAQ data={siteData.faqs} brand={siteData.brand} />
+    <Location data={siteData.contact} hours={siteData.hours} brand={siteData.brand} />
+    <Contact data={siteData.contact} brand={siteData.brand} enrollmentUrl={enrollmentUrl} />
+  </main>
+
+  <Footer brand={siteData.brand} social={siteData.social} />
+  <FloatingCTA data={siteData.contact} brand={siteData.brand} />
+</LandingLayout>
+
+<style>
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

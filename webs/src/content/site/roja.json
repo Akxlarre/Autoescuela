@@ -1,0 +1,163 @@
+{
+  "faqs": [
+    {
+      "answer": "Para optar a una licencia profesional en Chile debes tener mínimo 20 años de edad, poseer una licencia Clase B vigente con al menos 2 años de antigüedad, y haber aprobado un curso en una Escuela de Conductores Profesionales reconocida por el Estado, como la nuestra.",
+      "question": "¿Cuáles son los requisitos para obtener la licencia profesional Clase A2 o A3?"
+    },
+    {
+      "answer": "La licencia Clase A4 permite conducir camiones simples destinados al transporte de carga sobre 3.500 kg de peso bruto. La Clase A5 autoriza la conducción de todo tipo de camiones articulados (camión con rampla, tractocamión, etc.) de carga nacional e internacional.",
+      "question": "¿Qué vehículos puedo conducir con la licencia Clase A4 y A5?"
+    },
+    {
+      "answer": "Sí, nuestros cursos de licencias profesionales cuentan con registro de asistencia y código SENCE activo para que las empresas de transportes y logística puedan capacitar a sus colaboradores aprovechando la franquicia tributaria.",
+      "question": "¿Cuentan con código SENCE para empresas?"
+    },
+    {
+      "answer": "El examen práctico es riguroso. Deberás conducir el tipo de vehículo correspondiente (bus o camión) ante el examinador municipal de la Dirección de Tránsito (Maipón 277). Evaluará maniobras de retroceso, estacionamiento en andén, frenado, conducción en ruta urbana, etc.",
+      "question": "¿Cómo es el examen práctico para licencias profesionales en la municipalidad?"
+    },
+    {
+      "answer": "Sí, recibimos muchos alumnos de Coihueco, Bulnes, San Carlos, Yungay y Quillón. Adaptamos los horarios prácticos en bloques continuos o de fin de semana para que optimicen sus traslados.",
+      "question": "¿Tienen facilidades para alumnos de comunas aledañas a Chillán?"
+    }
+  ],
+  "hero": {
+    "cta": {
+      "text": "Escríbenos por WhatsApp",
+      "whatsapp": "+56987654321"
+    },
+    "layoutType": "center",
+    "background": {
+      "type": "none",
+      "url": "",
+      "color": "var(--bg-surface)",
+      "overlayOpacity": 34
+    },
+    "media": {
+      "url": "",
+      "type": "none"
+    },
+    "features": [
+      {
+        "icon": "🚛",
+        "text": "Buses y Camiones Modernos"
+      },
+      {
+        "icon": "💼",
+        "text": "Alta Inserción Laboral"
+      },
+      {
+        "icon": "🏢",
+        "text": "Acreditación Ministerial Completa"
+      }
+    ],
+    "headline": "Tu Licencia de Conducir Clase B y Profesional en Chillán",
+    "subheadline": "La escuela líder en formación de conductores profesionales y particulares de la Región de Ñuble. Acreditados y equipados con camiones, buses y vehículos de última generación."
+  },
+  "brand": {
+    "logo": "/roja/logo.svg",
+    "name": "Conductores Chillán",
+    "theme": "azul",
+    "domain": "conductoreschillan.cl",
+    "slogan": "Formamos profesionales de la conducción en Ñuble",
+    "ogImage": "/roja/og-image.jpg",
+    "branchId": 2,
+    "shortName": "Conductores"
+  },
+  "hours": [
+    {
+      "days": "Lunes a Viernes",
+      "time": "08:30 - 18:30"
+    },
+    {
+      "days": "Sábado",
+      "time": "09:00 - 14:00"
+    }
+  ],
+  "promo": {
+    "badge": "🚛 Matrículas Abiertas",
+    "title": "Cursos Profesionales con Descuento",
+    "active": true,
+    "description": "Obtén un 10% de descuento en tu matrícula para cursos Clase A3 o A5 pagando al contado. ¡Asegura tu cupo e intégrate a la industria del transporte con alta demanda!"
+  },
+  "whyUs": [
+    {
+      "icon": "shield-check",
+      "title": "Seguridad Primero",
+      "description": "Pedaleras de doble comando homologadas para tu total seguridad."
+    },
+    {
+      "icon": "target",
+      "title": "Alta Aprobación",
+      "description": "Métodos prácticos diseñados para aprobar a la primera en la Dirección de Tránsito de Chillán."
+    },
+    {
+      "icon": "map-pin",
+      "title": "Cerca del Examen",
+      "description": "Nuestras clases de conducción cubren los recorridos y calles de examen habituales."
+    },
+    {
+      "icon": "calendar",
+      "title": "Horarios Flexibles",
+      "description": "Programamos tus horas prácticas de lunes a sábado en bloques que se acomodan a ti."
+    },
+    {
+      "icon": "car",
+      "title": "Flota Moderna",
+      "description": "Vehículos nuevos y confortables, garantizando un aprendizaje ameno y seguro."
+    },
+    {
+      "icon": "credit-card",
+      "title": "Facilidades de Pago",
+      "description": "Paga con tarjeta de crédito, débito o transferencia electrónica."
+    }
+  ],
+  "social": {
+    "facebook": "https://facebook.com/conductoreschillan",
+    "instagram": "https://instagram.com/conductoreschillan"
+  },
+  "contact": {
+    "geo": {
+      "lat": -36.608051,
+      "lng": -72.103248
+    },
+    "city": "Chillán",
+    "email": "contacto@conductoreschillan.cl",
+    "phone": "+56 42 288 8899",
+    "region": "Ñuble",
+    "address": "Maipón 999 (a cuadras del Terminal de Buses)",
+    "whatsapp": "+56987654321",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3202.83681423405!2d-72.1032483!3d-36.6080512!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzbCsDM2JzI5LjAiUyA3MsKwMDYnMTEuNyJX!5e0!3m2!1ses!2scl!4v1716300000000!5m2!1ses!2scl"
+  },
+  "courses": [],
+  "testimonials": [
+    {
+      "name": "Héctor Tapia G.",
+      "text": "Un curso excelente. Aprendí a conducir camiones articulados Clase A5 desde cero. La paciencia de los instructores en carretera es insuperable. Conseguí trabajo en una empresa forestal de Ñuble a las dos semanas de egresar.",
+      "course": "Clase A5 Profesional",
+      "rating": 5
+    },
+    {
+      "name": "Patricia Riquelme",
+      "text": "Hice el curso Clase A2 para conducir furgón escolar. Las clases en el simulador me dieron mucha tranquilidad para luego tomar el bus real. Un trato muy profesional y ordenado.",
+      "course": "Clase A2 Profesional",
+      "rating": 5
+    },
+    {
+      "name": "Sebastián Castro V.",
+      "text": "Saqué mi licencia Clase B con ellos y todo impecable. El ambiente de la escuela es muy serio y centrado en la seguridad. Los recomiendo totalmente.",
+      "course": "Clase B Particular",
+      "rating": 5
+    }
+  ],
+  "pricingFooter": {
+    "payment": {
+      "title": "Facilidades de Pago Directo",
+      "description": "Puedes reservar tu cupo con un pie inicial y pagar el saldo en cómodas cuotas mientras realizas el curso."
+    },
+    "guarantee": {
+      "title": "Garantía de Aprendizaje",
+      "description": "Todo el material teórico e instructores certificados están enfocados en tu éxito para que apruebes a la primera."
+    }
+  }
+}

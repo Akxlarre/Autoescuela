@@ -1,0 +1,194 @@
+{
+  "faqs": [
+    {
+      "answer": "Para inscribirte solo necesitas tu cédula de identidad chilena vigente (o pasaporte), tener al menos 17 años cumplidos (para licencia con autorización notarial de padres) o 18 años, y haber aprobado mínimo el 8° año de educación básica (certificado de estudios).",
+      "question": "¿Cuáles son los requisitos mínimos para inscribirme al curso Clase B?"
+    },
+    {
+      "answer": "El examen consta de 35 preguntas seleccionadas aleatoriamente de un banco de más de 800. Se aprueba con un mínimo de 33 de un máximo de 38 puntos totales (3 preguntas tienen puntaje doble sobre velocidad, alcohol/drogas y sistemas de retención). Tienes un tiempo máximo de 45 minutos.",
+      "question": "¿Cómo es el examen teórico de conducir en la Municipalidad de Chillán?"
+    },
+    {
+      "answer": "¡Sí! Nuestros cursos Clase B estándar e intensivos incluyen la facilidad de préstamo del mismo vehículo en el que practicaste para rendir tu examen práctico en la Municipalidad de Chillán (Maipón 277). Esto disminuye notablemente el estrés del alumno.",
+      "question": "¿La escuela me presta el auto para dar el examen práctico municipal?"
+    },
+    {
+      "answer": "Las horas de examen psicotécnico y práctico se solicitan de forma online directamente en el portal municipal de la Ilustre Municipalidad de Chillán (municipalidadchillan.cl). Generalmente el sistema abre las agendas el día 25 de cada mes a las 08:00 AM.",
+      "question": "¿Cómo se solicitan las horas de examen en Chillán?"
+    },
+    {
+      "answer": "Sí, programamos clases prácticas los días sábados en jornada mañana y tarde para aquellos alumnos que por razones de trabajo o estudios universitarios no pueden asistir de lunes a viernes.",
+      "question": "¿Ofrecen clases prácticas los fines de semana?"
+    }
+  ],
+  "hero": {
+    "cta": {
+      "text": "Consultar por WhatsApp",
+      "whatsapp": ""
+    },
+    "layoutType": "center",
+    "background": {
+      "type": "none",
+      "url": "",
+      "color": "var(--bg-surface)",
+      "overlayOpacity": 34
+    },
+    "media": {
+      "url": "",
+      "type": "none"
+    },
+    "features": [
+      {
+        "icon": "shield-check",
+        "text": "Flota Moderna de Vehículos"
+      },
+      {
+        "icon": "library-big",
+        "text": "Teórico Online Interactivo"
+      },
+      {
+        "icon": "🎓",
+        "text": "Instructores Certificados SEMT"
+      }
+    ],
+    "headline": "Aprende a conducir con confianza en Chillán?",
+    "layoutType": "split-left",
+    "trustBadge": {
+      "text": "",
+      "rating": 5,
+      "enabled": false
+    },
+    "subheadline": "Escuela de conductores autorizada por el Ministerio de Transportes. Cursos prácticos y teóricos online diseñados para que apruebes tu licencia de conducir Clase B a la primera."
+  },
+  "brand": {
+    "logo": "https://skvekggejikzxhzsjmkz.supabase.co/storage/v1/object/public/website-public/website-assets/branch-1/logo-1779486451213-opt_logo_logo_web_1_webp.webp",
+    "name": "Autoescuela Chillán",
+    "theme": "azul",
+    "domain": "autoescuelachillan.cl",
+    "slogan": "Tu licencia en Chillán, más cerca y fácil que nunca",
+    "ogImage": "/azul/og-image.jpg",
+    "branchId": 1,
+    "shortName": "Autoescuela"
+  },
+  "hours": [
+    {
+      "days": "Lunes a Jueves",
+      "time": "09:00 - 18:30"
+    },
+    {
+      "days": "Viernes",
+      "time": "09:00 - 17:30"
+    },
+    {
+      "days": "Sábado",
+      "time": "09:00 - 13:30"
+    }
+  ],
+  "promo": {
+    "badge": "🔥 Oferta del Mes",
+    "title": "¡Promo Especial de Temporada!",
+    "active": true,
+    "description": "Inscríbete hoy en el Curso Clase B Estándar con un pie de solo $50.000 y obtén acceso gratuito a los talleres psicotécnicos especiales. ¡Cupos de preventa limitados para este mes!"
+  },
+  "whyUs": [
+    {
+      "icon": "shield-check",
+      "title": "Seguridad Primero",
+      "description": "Pedaleras de doble comando homologadas para tu total seguridad."
+    },
+    {
+      "icon": "target",
+      "title": "Alta Aprobación",
+      "description": "Métodos prácticos diseñados para aprobar a la primera en la Dirección de Tránsito de Chillán."
+    },
+    {
+      "icon": "map-pin",
+      "title": "Cerca del Examen",
+      "description": "Nuestras clases de conducción cubren los recorridos y calles de examen habituales."
+    },
+    {
+      "icon": "calendar",
+      "title": "Horarios Flexibles",
+      "description": "Programamos tus horas prácticas de lunes a sábado en bloques que se acomodan a ti."
+    },
+    {
+      "icon": "car",
+      "title": "Flota Moderna",
+      "description": "Vehículos nuevos y confortables, garantizando un aprendizaje ameno y seguro."
+    },
+    {
+      "icon": "credit-card",
+      "title": "Facilidades de Pago",
+      "description": "Paga con tarjeta de crédito, débito o transferencia electrónica."
+    }
+  ],
+  "social": {
+    "facebook": "https://facebook.com/autoescuelachillan",
+    "instagram": "https://instagram.com/autoescuelachillan"
+  },
+  "contact": {
+    "geo": {
+      "lat": -36.606709,
+      "lng": -72.105436
+    },
+    "city": "Chillán",
+    "email": "contacto@autoescuelachillan.cl",
+    "phone": "+56 42 222 3344",
+    "region": "Ñuble",
+    "address": "Av. Libertad 123 (Plaza de Armas)",
+    "whatsapp": "+56912345678",
+    "mapEmbedUrl": "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3202.9734674751433!2d-72.1054366!3d-36.6067094!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x9668d7db5421f5fb%3A0xc3cf9c9b1abfa6a7!2sPlaza%20de%20Armas%20de%20Chill%C3%A1n!5e0!3m2!1ses!2scl!4v1716300000000!5m2!1ses!2scl"
+  },
+  "courses": [
+    {
+      "courseId": 1,
+      "name": "Clase B",
+      "licenseClass": "B",
+      "basePrice": 180000,
+      "isCourseActive": true,
+      "description": "Lorem ... ",
+      "priceNote": null,
+      "duration": "4 semanas",
+      "includes": [
+        "sdafda"
+      ],
+      "highlighted": true,
+      "badge": "El mejor ",
+      "displayOrder": 1,
+      "priceOverride": null,
+      "displayPrice": 180000,
+      "displayPriceLabel": "$180.000",
+      "isOverrideActive": false
+    }
+  ],
+  "testimonials": [
+    {
+      "name": "María José Orellana",
+      "text": "Excelente experiencia. Los instructores tienen mucha paciencia para enseñar, especialmente a quienes partimos con miedo. Aprobé mi examen práctico en la Municipalidad de Chillán en el primer intento.",
+      "course": "Clase B Estándar",
+      "rating": 5
+    },
+    {
+      "name": "Carlos Valenzuela S.",
+      "text": "El simulador de exámenes teóricos online me ayudó muchísimo a entender las preguntas con trampas del examen. El auto doble comando estaba impecable y muy cómodo de conducir.",
+      "course": "Clase B Estándar",
+      "rating": 5
+    },
+    {
+      "name": "Francisca Muñoz R.",
+      "text": "Tomé el curso intensivo y en dos semanas ya estaba lista. Me prestaron el mismo auto para dar el examen y eso me dio toda la seguridad. ¡Totalmente recomendados en Chillán!",
+      "course": "Clase B Intensivo",
+      "rating": 5
+    }
+  ],
+  "pricingFooter": {
+    "payment": {
+      "title": "Facilidades de Pago Directo",
+      "description": "Puedes reservar tu cupo con un pie inicial y pagar el saldo en cómodas cuotas mientras realizas el curso."
+    },
+    "guarantee": {
+      "title": "Garantía de Aprendizaje",
+      "description": "Todo el material teórico e instructores certificados están enfocados en tu éxito para que apruebes a la primera."
+    }
+  }
+}

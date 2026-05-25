@@ -1,0 +1,123 @@
+---
+// src/components/PromoBanner.astro
+import type { PromoConfig, BrandConfig } from '../lib/types';
+import Button from './ui/Button.astro';
+
+interface Props {
+  data: PromoConfig;
+  brand: BrandConfig;
+  whatsapp?: string;
+  enrollmentUrl: string;
+}
+
+const { data, brand, whatsapp, enrollmentUrl } = Astro.props;
+---
+
+<div id="promo-banner-container" class="promo-banner-container container animate-fade-in" style={data.active ? '' : 'display: none;'}>
+  <div class="promo-banner card-accent">
+    <div class="promo-content">
+      <div class="promo-header">
+        <span id="promo-badge" class="badge-promo" style={data.badge ? '' : 'display: none;'}>{data.badge || ''}</span>
+        <h3 id="promo-title" class="promo-title">{data.title}</h3>
+      </div>
+      <p id="promo-desc" class="promo-desc">{data.description}</p>
+    </div>
+    <div class="promo-action">
+      <Button id="promo-btn" href={enrollmentUrl} variant="primary" size="md">
+        Inscribirme con esta Promo
+      </Button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .promo-banner-container {
+    margin-top: -2.5rem;
+    position: relative;
+    z-index: 10;
+    padding-bottom: 2rem;
+  }
+
+  .promo-banner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    background: var(--gradient-card);
+    border-radius: var(--radius-xl);
+    padding: var(--space-6) var(--space-8);
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-xl);
+  }
+
+  @media (min-width: 768px) {
+    .promo-banner {
+      flex-direction: row;
+      gap: var(--space-8);
+      text-align: left;
+    }
+  }
+
+  .promo-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    text-align: center;
+  }
+
+  @media (min-width: 768px) {
+    .promo-content {
+      text-align: left;
+    }
+  }
+
+  .promo-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  @media (min-width: 768px) {
+    .promo-header {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  .badge-promo {
+    background: var(--color-primary);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .promo-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--color-primary-text);
+  }
+
+  .promo-desc {
+    font-size: 0.9375rem;
+    color: #475569; /* Slate 600 */
+    line-height: 1.5;
+  }
+
+  .promo-action {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  @media (min-width: 768px) {
+    .promo-action {
+      width: auto;
+    }
+  }
+</style>

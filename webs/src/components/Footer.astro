@@ -1,0 +1,238 @@
+---
+// src/components/Footer.astro
+import type { BrandConfig, SocialConfig } from '../lib/types';
+import Icon from './ui/Icon.astro';
+
+interface Props {
+  brand: BrandConfig;
+  social?: SocialConfig;
+}
+
+const { brand, social } = Astro.props;
+const currentYear = new Date().getFullYear();
+---
+
+<footer class="footer-container">
+  <div class="container footer-content-grid">
+    <!-- Brand Block -->
+    <div class="footer-brand-block">
+      <a href="#" class="footer-logo">
+        <span class="logo-icon flex items-center">
+          {brand.logo ? (
+            <img src={brand.logo} alt={`Logo ${brand.name}`} class="brand-logo-img" onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='inline-block';" />
+            <span style="display: none;"><Icon name="car" size={24} /></span>
+          ) : (
+            <Icon name="car" size={24} />
+          )}
+        </span>
+        <span class="brand-name">{brand.name}</span>
+      </a>
+      <p class="footer-slogan">{brand.slogan}</p>
+      
+      <div class="social-links">
+        {social?.facebook && (
+          <a href={social.facebook} target="_blank" rel="noopener noreferrer" class="social-item" aria-label="Facebook">
+            Facebook
+          </a>
+        )}
+        {social?.instagram && (
+          <a href={social.instagram} target="_blank" rel="noopener noreferrer" class="social-item" aria-label="Instagram">
+            Instagram
+          </a>
+        )}
+        {social?.tiktok && (
+          <a href={social.tiktok} target="_blank" rel="noopener noreferrer" class="social-item" aria-label="TikTok">
+            TikTok
+          </a>
+        )}
+      </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="footer-nav-block">
+      <h4 class="footer-heading">Secciones</h4>
+      <ul class="footer-links-list">
+        <li><a href="#cursos" class="footer-link">Cursos</a></li>
+        <li><a href="#precios" class="footer-link">Precios</a></li>
+        <li><a href="#ventajas" class="footer-link">Diferenciales</a></li>
+        <li><a href="#preguntas" class="footer-link">Preguntas</a></li>
+        <li><a href="#ubicacion" class="footer-link">Ubicación</a></li>
+      </ul>
+    </div>
+
+    <!-- Legal Warning -->
+    <div class="footer-legal-block">
+      <h4 class="footer-heading">Acreditación Legal</h4>
+      <p class="legal-text">
+        Escuela de conductores autorizada por resolución exenta de la Secretaría Regional Ministerial de Transportes y Telecomunicaciones (SEMT), Región de Ñuble. Formación alineada con la reglamentación vial vigente en la República de Chile.
+      </p>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <div class="container footer-bottom-container">
+      <p class="copyright-text">
+        &copy; {currentYear} {brand.name}. Todos los derechos reservados.
+      </p>
+      <p class="powered-text">
+        Powered by <strong class="koa-highlight">Koa Autoescuela</strong>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .footer-container {
+    background-color: #0f172a; /* Slate 900 */
+    color: #94a3b8; /* Slate 400 */
+    padding-top: var(--space-16);
+    border-top: 1px solid #1e293b;
+    margin-top: auto;
+  }
+
+  .footer-content-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  @media (min-width: 768px) {
+    .footer-content-grid {
+      grid-template-columns: 2fr 1fr 2fr;
+    }
+  }
+
+  .footer-brand-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .footer-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.25rem;
+  }
+
+  .logo-icon {
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .brand-logo-img {
+    height: 1.85rem;
+    width: auto;
+    max-width: 140px;
+    object-fit: contain;
+  }
+
+  .brand-name {
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .footer-slogan {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .social-links {
+    display: flex;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  .social-item {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    background-color: #1e293b;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm);
+    transition: color var(--transition-fast), background-color var(--transition-fast);
+  }
+
+  .social-item:hover {
+    color: #ffffff;
+    background-color: var(--color-primary);
+  }
+
+  .footer-nav-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .footer-heading {
+    font-family: var(--font-display);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #ffffff;
+  }
+
+  .footer-links-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2.5);
+  }
+
+  .footer-link {
+    font-size: 0.875rem;
+    transition: color var(--transition-fast);
+  }
+
+  .footer-link:hover {
+    color: #ffffff;
+  }
+
+  .footer-legal-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .legal-text {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    text-align: justify;
+  }
+
+  .footer-bottom {
+    background-color: #020617; /* Slate 950 */
+    padding: var(--space-6) 0;
+    border-top: 1px solid #1e293b;
+  }
+
+  .footer-bottom-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.8125rem;
+  }
+
+  @media (min-width: 640px) {
+    .footer-bottom-container {
+      flex-direction: row;
+      justify-content: space-between;
+    }
+  }
+
+  .powered-text {
+    color: #64748b;
+  }
+
+  .koa-highlight {
+    color: var(--color-primary);
+  }
+</style>

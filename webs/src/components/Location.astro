@@ -1,0 +1,215 @@
+---
+// src/components/Location.astro
+import type { ContactConfig, HourItem, BrandConfig } from '../lib/types';
+import SectionHeader from './ui/SectionHeader.astro';
+import Icon from './ui/Icon.astro';
+
+interface Props {
+  data: ContactConfig;
+  hours: HourItem[];
+  brand: BrandConfig;
+}
+
+const { data, hours, brand } = Astro.props;
+---
+
+<section id="ubicacion" class="location-section">
+  <div class="container">
+    <SectionHeader
+      title="Nuestra Ubicación y Horarios"
+      subtitle="Dónde Encontrarnos"
+      description="Te esperamos en nuestras dependencias céntricas de Chillán para resolver tus dudas e inscribirte de forma rápida."
+    />
+
+    <div class="location-grid">
+      <!-- Info Card -->
+      <div class="location-info-card card">
+        <div class="info-block">
+          <h3 class="block-title">
+            <Icon name="map-pin" size={20} class="location-icon" />
+            <span>Sede Central</span>
+          </h3>
+          <p class="address-text">{data.address}</p>
+          <span class="city-text">{data.city}, {data.region}</span>
+        </div>
+
+        <div class="info-block border-top">
+          <h3 class="block-title">
+            <Icon name="clock" size={20} class="location-icon" />
+            <span>Horarios de Atención</span>
+          </h3>
+          <ul class="hours-list">
+            {hours.map((h) => (
+              <li>
+                <span class="days-label">{h.days}:</span>
+                <span class="time-value"><strong>{h.time}</strong></span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div class="info-block border-top municipal-tip">
+          <h4 class="tip-title">
+            <Icon name="lightbulb" size={16} class="location-icon" />
+            <span>Dato Local Chillán</span>
+          </h4>
+          <p class="tip-text">
+            Nuestra oficina se encuentra ubicada estratégicamente con excelente conectividad, ideal para las salidas a tus clases prácticas y muy cerca de la <strong>Dirección de Tránsito Municipal (Maipón 277)</strong> donde rendirás tus exámenes oficiales.
+          </p>
+        </div>
+      </div>
+
+      <!-- Map Card -->
+      <div class="map-card card">
+        <iframe
+          src={data.mapEmbedUrl}
+          width="100%"
+          height="100%"
+          style="border:0;"
+          allowfullscreen=""
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          title={`Mapa de ubicación de ${brand.name}`}
+        ></iframe>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .location-section {
+    background-color: var(--bg-surface);
+  }
+
+  .location-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+  }
+
+  @media (min-width: 1024px) {
+    .location-grid {
+      grid-template-columns: 4fr 5fr;
+      align-items: stretch;
+    }
+  }
+
+  .location-info-card {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-5) var(--space-4);
+    height: 100%;
+    justify-content: center;
+  }
+
+  @media (min-width: 640px) {
+    .location-info-card {
+      padding: var(--space-8);
+    }
+  }
+
+  .info-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding-bottom: var(--space-6);
+  }
+
+  .info-block.border-top {
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--space-6);
+    padding-bottom: 0;
+  }
+
+  .info-block:not(:last-child) {
+    padding-bottom: var(--space-6);
+  }
+
+  .block-title {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.5rem !important; /* Fallback si var(--space-2) falla */
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .location-icon {
+    color: var(--brand-500);
+    flex-shrink: 0;
+    display: inline-flex !important;
+  }
+
+  .address-text {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: #334155;
+  }
+
+  .city-text {
+    font-size: 0.875rem;
+    color: #64748b;
+  }
+
+  .hours-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .hours-list li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9375rem;
+    color: #475569;
+  }
+
+  .municipal-tip {
+    background-color: var(--color-primary-muted);
+    border-radius: var(--radius-md);
+    padding: var(--space-4) !important;
+    border: 1px solid var(--brand-100);
+  }
+
+  .tip-title {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: 0.375rem !important; /* Fallback manual */
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-primary-text);
+    margin-bottom: var(--space-1);
+  }
+
+  .tip-text {
+    font-size: 0.8125rem;
+    color: #475569;
+    line-height: 1.5;
+  }
+
+  .map-card {
+    width: 100%;
+    max-width: 100%;
+    min-height: 350px;
+    height: 100%;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+
+  @media (max-width: 1023px) {
+    .map-card {
+      aspect-ratio: 16/9;
+    }
+  }
+
+  iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+</style>

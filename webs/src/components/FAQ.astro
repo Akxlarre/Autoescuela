@@ -1,0 +1,151 @@
+---
+// src/components/FAQ.astro
+import type { FAQItem, BrandConfig } from '../lib/types';
+import SectionHeader from './ui/SectionHeader.astro';
+
+interface Props {
+  data: FAQItem[];
+  brand: BrandConfig;
+}
+
+const { data, brand } = Astro.props;
+---
+
+<section id="preguntas" class="faq-section">
+  <div class="container">
+    <SectionHeader
+      title="Preguntas Frecuentes"
+      subtitle="Resolvemos tus Dudas"
+      description="¿Tienes consultas sobre el proceso, requisitos o exámenes en Chillán? Aquí te respondemos las dudas más habituales de nuestros alumnos."
+    />
+
+    <div class="faq-list">
+      {data.map((item, index) => (
+        <details class="faq-item card" name="faq-accordion">
+          <summary class="faq-question">
+            <span>{item.question}</span>
+            <span class="faq-arrow-icon">
+              <svg class="chevron-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>{item.answer}</p>
+          </div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .faq-section {
+    background-color: var(--bg-base);
+  }
+
+  .faq-list {
+    max-width: 820px;
+    margin: var(--space-12) auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .faq-item {
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-surface-elevated);
+    transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+  }
+
+  .faq-item:hover {
+    border-color: var(--brand-200);
+    box-shadow: var(--shadow-md);
+  }
+
+  .faq-item[open] {
+    border-color: var(--color-primary);
+    box-shadow: var(--shadow-md), 0 0 0 3px var(--color-primary-muted);
+  }
+
+  .faq-question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-8);
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 1.0625rem;
+    list-style: none;
+    user-select: none;
+    transition: color var(--transition-fast);
+  }
+
+  .faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .faq-question:hover {
+    color: var(--color-primary);
+  }
+
+  .faq-arrow-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    background-color: var(--bg-surface);
+    border-radius: var(--radius-full);
+    transition: transform var(--transition-normal), background-color var(--transition-normal);
+  }
+
+  .chevron-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: #64748b;
+    transition: color var(--transition-fast);
+  }
+
+  .faq-item[open] .faq-arrow-icon {
+    transform: rotate(180deg);
+    background-color: var(--color-primary-muted);
+  }
+
+  .faq-item[open] .chevron-icon {
+    color: var(--color-primary);
+  }
+
+  .faq-answer {
+    padding: 0 var(--space-8) var(--space-6);
+    font-size: 1rem;
+    color: #475569;
+    line-height: 1.7;
+    border-top: 1px solid transparent;
+  }
+
+  .faq-item[open] .faq-answer {
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--space-5);
+  }
+
+  @media (max-width: 640px) {
+    .faq-question {
+      padding: var(--space-5) var(--space-4);
+      font-size: 0.9375rem;
+    }
+    .faq-answer {
+      padding: 0 var(--space-4) var(--space-5);
+      font-size: 0.9375rem;
+    }
+    .faq-item[open] .faq-answer {
+      padding-top: var(--space-4);
+    }
+  }
+</style>

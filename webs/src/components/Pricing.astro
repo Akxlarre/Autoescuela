@@ -1,0 +1,441 @@
+---
+// src/components/Pricing.astro
+// Spec 0004: consume ResolvedCourse[] (ya viene del JOIN en getSiteData).
+import type { ResolvedCourse, BrandConfig, PricingFooterConfig } from '../lib/types';
+import SectionHeader from './ui/SectionHeader.astro';
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+
+interface Props {
+  data: ResolvedCourse[];
+  brand: BrandConfig;
+  pricingFooter?: PricingFooterConfig;
+  enrollmentUrl: string;
+}
+
+const { data, brand, pricingFooter, enrollmentUrl } = Astro.props;
+
+// Formatter usado solo para el basePrice tachado cuando hay priceOverride activo.
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+---
+
+<section id="precios" class="pricing-section">
+  <div class="container">
+    <SectionHeader
+      title="Planes y Precios Claros"
+      subtitle="Valores y Financiamiento"
+      description="Sin cobros sorpresa ni letras chicas. Todos nuestros valores son de curso completo e incluyen todo el material de estudio necesario."
+    />
+
+    <div class="pricing-container card">
+      <div class="pricing-table-header">
+        <h3 class="table-title">Resumen de Valores de Cursos</h3>
+        <p class="table-desc">Consulta las opciones de pago que tenemos para cada uno de nuestros cursos autorizados.</p>
+      </div>
+
+      <!-- Mobile Cards (visible on mobile only) -->
+      <div class="mobile-pricing-cards">
+        {data.map((course, index) => {
+          const checkoutUrl = `${enrollmentUrl}&courseId=${course.courseId}`;
+          return (
+            <div class:list={['mobile-price-card', { 'mobile-price-card--featured': course.highlighted }]} data-course-index={index}>
+              <div class="mpc-header">
+                <div class="mpc-meta">
+                  <span class="license-badge">Clase {course.licenseClass}</span>
+                  {course.badge && <span class="badge-mini">{course.badge}</span>}
+                  {course.displayPrice === 0 && <span class="badge-free">Curso gratuito</span>}
+                </div>
+                <strong class="mpc-name">{course.name}</strong>
+              </div>
+              <div class="mpc-body">
+                <div class="mpc-price-row">
+                  <div class="mpc-price-stack">
+                    {course.isOverrideActive && course.displayPrice !== 0 && (
+                      <span class="price-original-strike">{formatPrice(course.basePrice)}</span>
+                    )}
+                    <span class="mpc-price">{course.displayPriceLabel}</span>
+                  </div>
+                  <span class="mpc-duration">{course.duration}</span>
+                </div>
+                {course.priceNote && <span class="price-note-mobile">{course.priceNote}</span>}
+              </div>
+              <div class="mpc-footer">
+                <Button href={checkoutUrl} variant={course.highlighted ? 'primary' : 'secondary'} size="md" class="w-full">
+                  Inscribirme
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <!-- Desktop Table (visible on md+ only) -->
+      <div class="table-wrapper">
+        <table class="pricing-table">
+          <thead>
+            <tr>
+              <th scope="col">Curso</th>
+              <th scope="col">Clase</th>
+              <th scope="col">Duración</th>
+              <th scope="col" class="text-right">Valor Total</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((course, index) => {
+              const checkoutUrl = `${enrollmentUrl}&courseId=${course.courseId}`;
+
+              return (
+                <tr class:list={[{ 'row-highlighted': course.highlighted }]} data-course-index={index}>
+                  <td>
+                    <div class="course-cell-name">
+                      <strong>{course.name}</strong>
+                      {course.badge && <span class="badge-mini">{course.badge}</span>}
+                      {course.displayPrice === 0 && <span class="badge-free">Curso gratuito</span>}
+                    </div>
+                  </td>
+                  <td><span class="license-badge">Clase {course.licenseClass}</span></td>
+                  <td class="duration-cell">{course.duration}</td>
+                  <td class="text-right price-cell" data-course-license={course.licenseClass}>
+                    {course.isOverrideActive && course.displayPrice !== 0 && (
+                      <span class="price-original-strike">{formatPrice(course.basePrice)}</span>
+                    )}
+                    <strong class="price-value">{course.displayPriceLabel}</strong>
+                    {course.priceNote && <span class="note-cell">{course.priceNote}</span>}
+                  </td>
+                  <td class="action-cell">
+                    <Button href={checkoutUrl} variant={course.highlighted ? 'primary' : 'secondary'} size="sm">
+                      Inscribirme
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pricing-footer">
+        <div class="footer-info-item">
+          <span class="info-icon flex items-center justify-center">
+            <Icon name="credit-card" size={28} class="text-brand flex-shrink-0" />
+          </span>
+          <div class="info-text">
+            <h4>{pricingFooter?.payment?.title || "Facilidades de Pago Directo"}</h4>
+            <p>{pricingFooter?.payment?.description || "Puedes reservar tu cupo con un pie inicial y pagar el saldo en cómodas cuotas mientras realizas el curso."}</p>
+          </div>
+        </div>
+        <div class="footer-info-item">
+          <span class="info-icon flex items-center justify-center">
+            <Icon name="shield-check" size={28} class="text-brand flex-shrink-0" />
+          </span>
+          <div class="info-text">
+            <h4>{pricingFooter?.guarantee?.title || "Garantía de Aprendizaje"}</h4>
+            <p>{pricingFooter?.guarantee?.description || "Todo el material teórico e instructores certificados están enfocados en tu éxito para que apruebes a la primera."}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .pricing-section {
+    background-color: var(--bg-base);
+  }
+
+  .pricing-container {
+    max-width: 960px;
+    margin: var(--space-8) auto 0;
+    overflow: hidden;
+    box-shadow: var(--shadow-xl);
+  }
+
+  .pricing-table-header {
+    padding: var(--space-5) var(--space-5);
+    background-color: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  @media (min-width: 768px) {
+    .pricing-table-header {
+      padding: var(--space-6) var(--space-8);
+    }
+  }
+
+  .table-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .table-desc {
+    font-size: 0.9375rem;
+    color: #64748b;
+  }
+
+  /* Mobile cards: visible only on small screens */
+  .mobile-pricing-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-4);
+  }
+
+  @media (min-width: 640px) {
+    .mobile-pricing-cards {
+      display: none;
+    }
+  }
+
+  /* Desktop table: hidden on small screens */
+  .table-wrapper {
+    overflow-x: auto;
+    display: none;
+  }
+
+  @media (min-width: 640px) {
+    .table-wrapper {
+      display: block;
+    }
+  }
+
+  .pricing-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    min-width: 600px;
+  }
+
+  .pricing-table th, .pricing-table td {
+    padding: var(--space-4) var(--space-8);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9375rem;
+  }
+
+  .pricing-table th {
+    font-weight: 700;
+    color: #475569;
+    background-color: var(--bg-surface);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  .course-cell-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .badge-mini {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background-color: var(--color-accent);
+    color: #ffffff;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+  }
+
+  .badge-free {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .price-original-strike {
+    display: block;
+    font-size: 0.8125rem;
+    color: #94a3b8;
+    text-decoration: line-through;
+    font-weight: 500;
+    margin-bottom: 0.125rem;
+  }
+
+  .mpc-price-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.1;
+  }
+
+  .license-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    background-color: var(--color-primary-muted);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+  }
+
+  .text-right {
+    text-align: right;
+  }
+
+  .price-cell {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    color: #0f172a;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    border-bottom: none !important;
+  }
+
+  .note-cell {
+    font-size: 0.6875rem;
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-top: 0.125rem;
+  }
+
+  .action-cell {
+    width: 100px;
+  }
+
+  .row-highlighted {
+    background-color: var(--color-primary-muted);
+  }
+
+  .row-highlighted .price-value {
+    color: var(--color-primary);
+  }
+
+  .pricing-footer {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+    padding: var(--space-5) var(--space-4);
+    background-color: var(--bg-surface);
+    border-top: 1px solid var(--border-color);
+  }
+
+  @media (min-width: 640px) {
+    .pricing-footer {
+      padding: var(--space-6) var(--space-8);
+    }
+  }
+
+  @media (min-width: 768px) {
+    .pricing-footer {
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-8);
+    }
+  }
+
+  /* ---- Mobile Price Cards ---- */
+  .mobile-price-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+
+  .mobile-price-card--featured {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-primary-muted);
+  }
+
+  .mpc-header {
+    padding: var(--space-4) var(--space-4) var(--space-3);
+    background-color: var(--bg-surface-elevated);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .mpc-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .mpc-name {
+    font-size: 1.0625rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  .mpc-body {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .mpc-price-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .mpc-price {
+    font-family: var(--font-display);
+    font-size: 1.875rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  .mobile-price-card--featured .mpc-price {
+    color: var(--color-primary);
+  }
+
+  .mpc-duration {
+    font-size: 0.8125rem;
+    color: #64748b;
+    background-color: var(--bg-surface);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+  }
+
+  .price-note-mobile {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    margin-top: var(--space-1);
+  }
+
+  .mpc-footer {
+    padding: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  .footer-info-item {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .info-icon {
+    font-size: 1.75rem;
+    line-height: 1.2;
+  }
+
+  .info-text h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: var(--space-1);
+  }
+
+  .info-text p {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.4;
+  }
+</style>
