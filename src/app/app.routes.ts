@@ -340,6 +340,13 @@ export const routes: Routes = [
                 (m) => m.AdminAuditoriaComponent,
               ),
           },
+          {
+            path: 'configuracion-web',
+            loadComponent: () =>
+              import('./features/admin/configuracion-web/admin-configuracion-web.component').then(
+                (m) => m.AdminConfiguracionWebComponent,
+              ),
+          },
         ],
       },
 
@@ -560,6 +567,13 @@ export const routes: Routes = [
                 (m) => m.SecretariaLibroDeClasesComponent,
               ),
           },
+          {
+            path: 'configuracion-web',
+            loadComponent: () =>
+              import('./features/admin/configuracion-web/admin-configuracion-web.component').then(
+                (m) => m.AdminConfiguracionWebComponent,
+              ),
+          },
         ],
       },
 
@@ -653,6 +667,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/instructor/notificaciones/instructor-notificaciones.component').then(
                 (m) => m.InstructorNotificacionesComponent,
+              ),
+          },
+          {
+            path: 'tareas',
+            loadComponent: () =>
+              import('./features/instructor/tareas/instructor-tareas.component').then(
+                (m) => m.InstructorTareasComponent,
               ),
           },
         ],

@@ -56,7 +56,7 @@ const ADMIN_NAV: NavGroup[] = [
     group: 'Operación Diaria',
     items: [
       { label: 'Notificaciones', icon: 'bell', routerLink: '/app/admin/notificaciones' },
-      { label: 'Tareas', icon: 'check-square', routerLink: '/app/admin/tareas' },
+      { label: 'Comunicación', icon: 'message-circle', routerLink: '/app/admin/tareas' },
       { label: 'Nueva Matrícula', icon: 'file-plus', routerLink: '/app/admin/matricula' },
     ],
   },
@@ -108,6 +108,7 @@ const ADMIN_NAV: NavGroup[] = [
       },
       { label: 'Flota', icon: 'truck', routerLink: '/app/admin/flota' },
       { label: 'DMS', icon: 'folder-open', routerLink: '/app/admin/documentos' },
+      { label: 'Configuración Web', icon: 'globe', routerLink: '/app/admin/configuracion-web' },
     ],
   },
   {
@@ -162,7 +163,11 @@ const SECRETARIA_NAV: NavGroup[] = [
     items: [
       { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/secretaria/dashboard' },
       { label: 'Notificaciones', icon: 'bell', routerLink: '/app/secretaria/notificaciones' },
-      { label: 'Observaciones', icon: 'eye', routerLink: '/app/secretaria/observaciones' },
+      {
+        label: 'Comunicación',
+        icon: 'message-circle',
+        routerLink: '/app/secretaria/observaciones',
+      },
       { label: 'Nueva Matrícula', icon: 'file-plus', routerLink: '/app/secretaria/matricula' },
     ],
   },
@@ -208,6 +213,7 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'briefcase',
         routerLink: '/app/secretaria/servicios-especiales',
       },
+      { label: 'Configuración Web', icon: 'globe', routerLink: '/app/secretaria/configuracion-web' },
     ],
   },
   {
@@ -270,6 +276,7 @@ const INSTRUCTOR_NAV: NavGroup[] = [
         routerLink: '/app/instructor/ensayos-teoricos',
       },
       { label: 'Mis Horas', icon: 'dollar-sign', routerLink: '/app/instructor/liquidacion' },
+      { label: 'Comunicación', icon: 'message-circle', routerLink: '/app/instructor/tareas' },
     ],
   },
 ];

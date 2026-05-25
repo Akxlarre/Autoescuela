@@ -15,18 +15,22 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { TaskCardComponent } from '@shared/components/task-card/task-card.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
-import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
-import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { TaskType } from '@core/models/ui/task.model';
 
-type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
+type TaskTypeFilter = 'all' | TaskType;
+
+interface FilterTab {
+  id: TaskTypeFilter;
+  label: string;
+  count: () => number;
+}
 
 @Component({
-  selector: 'app-secretaria-observaciones',
+  selector: 'app-instructor-tareas',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
@@ -37,21 +41,20 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
   ],
   template: `
     <div #bentoGrid class="bento-grid" appBentoGridLayout>
-      <!-- Hero -->
+      <!-- Hero (sin CTA — instructor es receptor puro en v1) -->
       <app-section-hero
         class="bento-hero"
         title="Comunicación"
-        contextLine="Comunicación operativa con el equipo"
+        contextLine="Tareas y consultas asignadas por secretaría"
         icon="message-circle"
-        [actions]="heroActions"
-        (actionClick)="onHeroAction($event)"
+        [actions]="[]"
       />
 
-      <!-- KPI -->
+      <!-- KPIs -->
       <div class="bento-square">
         <app-kpi-card-variant
-          label="Mis pendientes"
-          [value]="pendingMineCount()"
+          label="Pendientes"
+          [value]="facade.pendingCount()"
           [loading]="facade.isLoading()"
           icon="clock"
           color="warning"
@@ -60,39 +63,31 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
       </div>
       <div class="bento-square">
         <app-kpi-card-variant
-          label="Recibidas"
-          [value]="facade.receivedTasks().length"
+          label="En progreso"
+          [value]="inProgressCount()"
           [loading]="facade.isLoading()"
-          icon="inbox"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="A instructores"
-          [value]="toInstructorTasks().length"
-          [loading]="facade.isLoading()"
-          icon="users"
+          icon="activity"
         />
       </div>
 
-      <!-- Lista con tabs -->
+      <!-- Lista de tareas -->
       <div class="bento-banner card p-0 overflow-hidden">
         <!-- Tabs -->
         <div
           class="flex border-b"
           style="border-color: var(--border-default)"
           role="tablist"
-          aria-label="Filtros de observaciones"
+          aria-label="Filtros de tareas"
         >
-          @for (tab of tabs; track tab.id) {
+          @for (tab of filterTabs; track tab.id) {
             <button
               role="tab"
               class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
-              [class.border-b-2]="activeTab() === tab.id"
-              [style.border-color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-              [style.color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'var(--text-muted)'"
-              [attr.aria-selected]="activeTab() === tab.id"
-              (click)="activeTab.set(tab.id)"
+              [class.border-b-2]="activeFilter() === tab.id"
+              [style.border-color]="activeFilter() === tab.id ? 'var(--ds-brand)' : 'transparent'"
+              [style.color]="activeFilter() === tab.id ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [attr.aria-selected]="activeFilter() === tab.id"
+              (click)="activeFilter.set(tab.id)"
             >
               {{ tab.label }}
               @if (tab.count() > 0) {
@@ -107,20 +102,20 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
           }
         </div>
 
-        <!-- Contenido -->
+        <!-- Contenido del tab activo -->
         <div class="p-4 flex flex-col gap-3">
           @if (facade.isLoading()) {
             @for (sk of skeletons; track sk) {
               <app-task-card [task]="dummyTask" [loading]="true" />
             }
-          } @else if (activeTasks().length === 0) {
+          } @else if (filteredTasks().length === 0) {
             <app-empty-state
-              message="Sin tareas en esta sección"
-              subtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
-              icon="message-circle"
+              [message]="emptyMessage()"
+              [subtitle]="emptySubtitle()"
+              icon="clipboard-list"
             />
           } @else {
-            @for (task of activeTasks(); track task.id) {
+            @for (task of filteredTasks(); track task.id) {
               <app-task-card [task]="task" (cardClicked)="openDetail($event)" />
             }
           }
@@ -129,72 +124,103 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
     </div>
   `,
 })
-export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
+export class InstructorTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
-  private readonly authFacade = inject(AuthFacade);
   private readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
-  protected readonly activeTab = signal<ObsTab>('mis-obs');
+  protected readonly skeletons = [1, 2, 3];
 
-  private readonly currentDbId = computed(() => this.authFacade.currentUser()?.dbId);
+  // ── filtro por tipo ──────────────────────────────────────────────────────────
+  protected readonly activeFilter = signal<TaskTypeFilter>('all');
 
-  protected readonly myObservations = computed(() =>
-    this.facade.sentTasks().filter((t) => t.type === 'observation'),
-  );
+  protected readonly filteredTasks = computed(() => {
+    const filter = this.activeFilter();
+    const tasks = this.facade.receivedTasks();
+    return filter === 'all' ? tasks : tasks.filter((t) => t.type === filter);
+  });
 
-  protected readonly toInstructorTasks = computed(() =>
-    this.facade.sentTasks().filter((t) => t.to_role === 'instructor' && t.status !== 'completed'),
-  );
-
-  protected readonly pendingMineCount = computed(
-    () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
-  );
-
-  protected readonly tabs = [
+  protected readonly filterTabs: FilterTab[] = [
     {
-      id: 'mis-obs' as ObsTab,
-      label: 'Mis observaciones',
-      count: computed(() => this.myObservations().filter((t) => t.status !== 'completed').length),
-    },
-    {
-      id: 'recibidas' as ObsTab,
-      label: 'Tareas recibidas',
+      id: 'all',
+      label: 'Todas',
       count: computed(
         () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
       ),
     },
     {
-      id: 'instructores' as ObsTab,
-      label: 'A instructores',
-      count: computed(() => this.toInstructorTasks().length),
+      id: 'task',
+      label: 'Tareas',
+      count: computed(
+        () =>
+          this.facade.receivedTasks().filter((t) => t.type === 'task' && t.status !== 'completed')
+            .length,
+      ),
+    },
+    {
+      id: 'question',
+      label: 'Consultas',
+      count: computed(
+        () =>
+          this.facade
+            .receivedTasks()
+            .filter((t) => t.type === 'question' && t.status !== 'completed').length,
+      ),
+    },
+    {
+      id: 'observation',
+      label: 'Observaciones',
+      count: computed(
+        () =>
+          this.facade
+            .receivedTasks()
+            .filter((t) => t.type === 'observation' && t.status !== 'completed').length,
+      ),
     },
   ];
 
-  protected readonly activeTasks = computed(() => {
-    switch (this.activeTab()) {
-      case 'mis-obs':
-        return this.myObservations();
-      case 'recibidas':
-        return this.facade.receivedTasks();
-      case 'instructores':
-        return this.toInstructorTasks();
+  // Computed usado por los tests (spec: filterChips como signal callable)
+  protected readonly filterChips = computed(() =>
+    this.filterTabs.map((tab) => ({
+      value: tab.id,
+      label: tab.label,
+      count: tab.count(),
+    })),
+  );
+
+  protected readonly inProgressCount = computed(
+    () => this.facade.receivedTasks().filter((t) => t.status === 'in_progress').length,
+  );
+
+  // ── empty state contextual ───────────────────────────────────────────────────
+  protected readonly emptyMessage = computed(() => {
+    switch (this.activeFilter()) {
+      case 'task':
+        return 'Sin tareas pendientes';
+      case 'question':
+        return 'Sin consultas pendientes';
+      case 'observation':
+        return 'Sin observaciones';
+      default:
+        return 'Sin tareas asignadas';
     }
   });
 
-  protected readonly heroActions: SectionHeroAction[] = [
-    {
-      id: 'nueva-comunicacion',
-      label: 'Nueva comunicación',
-      icon: 'message-circle',
-      primary: true,
-    },
-  ];
-
-  protected readonly skeletons = [1, 2, 3];
+  protected readonly emptySubtitle = computed(() => {
+    switch (this.activeFilter()) {
+      case 'task':
+        return 'Cuando secretaría te asigne una tarea, aparecerá aquí.';
+      case 'question':
+        return 'Cuando secretaría te haga una consulta, aparecerá aquí.';
+      case 'observation':
+        return 'Cuando secretaría registre una observación para ti, aparecerá aquí.';
+      default:
+        return 'Cuando secretaría te asigne tareas o consultas, aparecerán aquí.';
+    }
+  });
 
   protected readonly dummyTask = {
     id: '',
@@ -202,8 +228,8 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     from_user_id: 0,
     from_role: 'secretary' as const,
     to_user_id: 0,
-    to_role: 'admin' as const,
-    type: 'observation' as const,
+    to_role: 'instructor' as const,
+    type: 'task' as const,
     subject: '',
     body: null,
     status: 'pending' as const,
@@ -232,12 +258,6 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-  }
-
-  protected onHeroAction(id: string): void {
-    if (id === 'nueva-comunicacion') {
-      this.drawer.open(TaskCreateDrawerComponent, 'Nueva comunicación', 'message-circle');
-    }
   }
 
   protected openDetail(taskId: string): void {
