@@ -8,6 +8,7 @@ Interfaces que mapean 1:1 las tablas y vistas de Supabase. Son estructuras de da
 | Modelo | Archivo | Descripción |
 |---|---|---|
 | `User` | `user.model.ts` | Entidad base de Supabase Auth (AppUser), contiene el id, email y el rol del usuario (ADMIN, RECEPCION, etc.) |
+| `WebsiteConfig` | `website-config.model.ts` | Configuración de las landing pages web multi-sede (Azul y Roja). **Spec 0004:** `CourseConfig` refactorizado — ya NO incluye `name/price/licenseClass` (heredados de `courses` via `course_id` FK lógica). Campos nuevos: `course_id`, `priceOverride`, `displayOrder`. Validado por trigger SQL `trg_validate_website_config_courses_fk`. |
 
 ## 📁 Interfaz de Usuario (`core/models/ui/`)
 Estructuras de datos puramente visuales, consumidas por los componentes para su renderización.
@@ -15,6 +16,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | Modelo | Archivo | Descripción |
 |---|---|---|
 | `Notification` | `notification.model.ts` | Estructura para los banners/toasts del sistema (tipo, mensaje, icono) |
+| `ResolvedCourse` | `resolved-course.model.ts` | **Spec 0004:** Card de curso resuelta lista para UI. Combina `CourseConfig` (JSONB editorial) + datos heredados de `courses` (name, basePrice, licenseClass, active). Resolución JOIN en memoria via `WebsiteConfigFacade.resolvedCourses` computed. Campos derivados: `displayPrice` (override ?? base), `displayPriceLabel` ("$320.000" o "Gratis"), `isOverrideActive`, `isCourseActive`. Consumido por admin-configuracion-web y landing Astro. |
 | `KpiItem` | `dashboard.model.ts` | Estructura visual para las tarjetas de indicadores principales (kpi-card) |
 | `ActivityItem` | `dashboard.model.ts` | Elemento de la lista de actividad reciente del dashboard |
 | `QuickActionItem` | `dashboard.model.ts` | Definición de configuración para los botones de acceso rápido |
@@ -101,7 +103,6 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `MaintenanceRecord` | `dto` | `src/app/core/models/dto/maintenance-record.model.ts` |
 | `NotificationTemplate` | `dto` | `src/app/core/models/dto/notification-template.model.ts` |
 | `Notification` | `dto` | `src/app/core/models/dto/notification.model.ts` |
-| `PaymentAttemptStatus`, `PaymentAttempt` | `dto` | `src/app/core/models/dto/payment-attempt.model.ts` |
 | `PaymentDenomination` | `dto` | `src/app/core/models/dto/payment-denomination.model.ts` |
 | `Payment` | `dto` | `src/app/core/models/dto/payment.model.ts` |
 | `PricingSeason` | `dto` | `src/app/core/models/dto/pricing-season.model.ts` |
@@ -114,13 +115,13 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ProfessionalScheduleTemplate` | `dto` | `src/app/core/models/dto/professional-schedule-template.model.ts` |
 | `ProfessionalTheoryAttendance` | `dto` | `src/app/core/models/dto/professional-theory-attendance.model.ts` |
 | `ProfessionalTheorySession` | `dto` | `src/app/core/models/dto/professional-theory-session.model.ts` |
+| `ProfessionalWeeklySignature` | `dto` | `src/app/core/models/dto/professional-weekly-signature.model.ts` |
 | `PromotionCourseLecturer` | `dto` | `src/app/core/models/dto/promotion-course-lecturer.model.ts` |
 | `PromotionCourse` | `dto` | `src/app/core/models/dto/promotion-course.model.ts` |
 | `Role` | `dto` | `src/app/core/models/dto/role.model.ts` |
 | `RouteIncident` | `dto` | `src/app/core/models/dto/route-incident.model.ts` |
 | `SchoolDocument` | `dto` | `src/app/core/models/dto/school-document.model.ts` |
 | `SchoolSchedule` | `dto` | `src/app/core/models/dto/school-schedule.model.ts` |
-| `SecretaryObservation` | `dto` | `src/app/core/models/dto/secretary-observation.model.ts` |
 | `SenceCode` | `dto` | `src/app/core/models/dto/sence-code.model.ts` |
 | `ServiceCatalog` | `dto` | `src/app/core/models/dto/service-catalog.model.ts` |
 | `SessionMachinery` | `dto` | `src/app/core/models/dto/session-machinery.model.ts` |
@@ -131,17 +132,26 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `StandaloneCourse` | `dto` | `src/app/core/models/dto/standalone-course.model.ts` |
 | `StudentDocument` | `dto` | `src/app/core/models/dto/student-document.model.ts` |
 | `Student` | `dto` | `src/app/core/models/dto/student.model.ts` |
+| `TaskReply` | `dto` | `src/app/core/models/dto/task-reply.model.ts` |
+| `TaskType`, `TaskStatus`, `TaskFromRole`, `TaskToRole`, `Task` | `dto` | `src/app/core/models/dto/task.model.ts` |
 | `TemplateBlock` | `dto` | `src/app/core/models/dto/template-block.model.ts` |
 | `User` | `dto` | `src/app/core/models/dto/user.model.ts` |
 | `VehicleAssignment` | `dto` | `src/app/core/models/dto/vehicle-assignment.model.ts` |
 | `VehicleDocument` | `dto` | `src/app/core/models/dto/vehicle-document.model.ts` |
 | `Vehicle` | `dto` | `src/app/core/models/dto/vehicle.model.ts` |
+| `BrandConfig`, `HeroMediaConfig`, `HeroConfig`, `CourseConfig`, `WhyUsConfig`, `FAQConfig`, `ContactConfig`, `HourConfig`, `PromoConfig`, `TestimonialConfig`, `SocialConfig`, `SiteData`, `WebsiteConfig` | `dto` | `src/app/core/models/dto/website-config.model.ts` |
 | `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendableStudent`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
-| `AlumnoDetalleUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
+| `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
+| `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
+| `ClasePracticaStatus`, `ZoomLinkStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClaseTeoricoRow`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `TeoriaAsistenciaStatus`, `TeoriaAlumnoElegible`, `NuevaClaseTeoricaPayload`, `FinishClassPayload`, `TeoriaAlumnoAsistencia` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
 | `AuditAction`, `AuditLogRow` | `ui` | `src/app/core/models/ui/audit-log-row.model.ts` |
 | `BranchOption`, `BranchCoursePrice` | `ui` | `src/app/core/models/ui/branch.model.ts` |
+| `CertificacionAlumnoRow`, `CertificacionKpis`, `CertificacionLogRow` | `ui` | `src/app/core/models/ui/certificacion-clase-b.model.ts` |
+| `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |
 | `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
+| `TipoCursoSingular`, `EstadoCursoSingular`, `SingularPaymentMethod`, `SingularPaymentStatus`, `CursoSingularRow`, `CursosSingularesKpis`, `InscriptoCursoSingular`, `NuevoCursoSingularFormData`, `SingularStudentSearch`, `SingularPersonalDataForm`, `SingularPaymentForm` | `ui` | `src/app/core/models/ui/cursos-singulares.model.ts` |
 | `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertModel`, `QuickActionModel`, `SystemStatusModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |
 | `DmsTab`, `TemplateCategory`, `TemplateCategoryFilter`, `StudentWithDocsRow`, `DmsStudentDocRow`, `SchoolDocRow`, `TemplateCard`, `DmsKpis`, `UploadStudentDocPayload`, `UploadSchoolDocPayload`, `UploadTemplatePayload`, `DmsViewerDocument` | `ui` | `src/app/core/models/ui/dms.model.ts` |
 | `EgresadoTableRow` | `ui` | `src/app/core/models/ui/egresado-table.model.ts` |
@@ -152,18 +162,26 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PaymentMethod`, `PaymentMethodOption`, `PricingBreakdown`, `DiscountData`, `AvailableDiscount`, `SingularPaymentAlert`, `EnrollmentPaymentData` | `ui` | `src/app/core/models/ui/enrollment-payment.model.ts` |
 | `Gender`, `CourseCategory`, `CourseType`, `SingularCourseCode`, `CurrentLicenseType`, `ValidationBook`, `AgeAlertStatus`, `SingularCourseOption`, `CourseOption`, `SenceCodeOption`, `HistoricalPromotion`, `EnrollmentPersonalData`, `AgeValidation`, `LicenseValidation` | `ui` | `src/app/core/models/ui/enrollment-personal-data.model.ts` |
 | `EnrollmentWizardStep`, `StepStatus`, `StepConfig`, `CourseSummary`, `Requirement`, `SidebarSummary`, `EnrollmentWizardState`, `DraftSummary` | `ui` | `src/app/core/models/ui/enrollment-wizard.model.ts` |
+| `CeldaNota`, `FilaEvaluacion`, `GrillaEvaluacion` | `ui` | `src/app/core/models/ui/evaluaciones-profesional.model.ts` |
 | `HistorialCierre`, `HistorialFiltro` | `ui` | `src/app/core/models/ui/historial-cuadraturas.model.ts` |
 | `InstructorDashboardData`, `InstructorDashboardKpis`, `InstructorClassRow`, `InstructorStudentCard`, `InstructorStudentDetail`, `FichaTecnicaRow`, `EvaluationFormData`, `EvaluationChecklistItem`, `ScheduleBlock`, `WeekScheduleKpis`, `ScheduleDay`, `DaySchedule`, `WeekSchedule`, `MonthlyHoursRow`, `LiquidacionKpis`, `SessionDetailRow`, `ExamScoreRow`, `RegisterExamPayload`, `AttendanceClassRow`, `UpcomingDay` | `ui` | `src/app/core/models/ui/instructor-portal.model.ts` |
-| `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
+| `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory`, `InstructorHoraRow`, `InstructorHorarioSession` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
+| `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification` | `ui` | `src/app/core/models/ui/notification.model.ts` |
 | `RentabilidadCurso`, `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
+| `PreInscritoStatusSeverity`, `PreInscritoTableRow`, `EvaluarTestPayload`, `CompletarMatriculaPayload`, `PromocionOption`, `PromocionCourseOption` | `ui` | `src/app/core/models/ui/pre-inscrito-table.model.ts` |
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
 | `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |
+| `RangoReporte`, `RangoOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `DetalleDiario`, `ReporteContable` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
+| `ResolvedCourse` | `ui` | `src/app/core/models/ui/resolved-course.model.ts` |
 | `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
 | `SectionHeroChip`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
-| `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |
-| `LicenseGroup`, `CertificateState`, `AttendanceSemaphore`, `StudentHomeHero`, `StudentHomeProgress`, `StudentHomeAttendance`, `StudentHomeGrades`, `StudentHomeCertificate`, `StudentHomeSideWidgets`, `StudentHomeSnapshot` | `ui` | `src/app/core/models/ui/student-home.model.ts` |
+| `ServicioEspecial`, `VentaServicio`, `VentaFormData`, `NuevoServicioFormData`, `ServiciosEspecialesKpis` | `ui` | `src/app/core/models/ui/servicios-especiales.model.ts` |
+| `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay`, `AlumnoFirmaSemana` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |
+| `LicenseGroup`, `CertificateState`, `AttendanceSemaphore`, `StudentHomeHero`, `StudentHomePractice`, `StudentHomeProgress`, `StudentHomeSession`, `StudentHomeAttendance`, `StudentHomeModule`, `StudentHomeGrades`, `StudentHomeCertificate`, `StudentHomeNextClass`, `StudentHomeSideWidgets`, `StudentHomeSnapshot` | `ui` | `src/app/core/models/ui/student-home.model.ts` |
+| `StudentPaymentEnrollmentInfo`, `StudentPaymentInstructor`, `StudentPaymentHistoryItem`, `StudentPaymentStatus`, `StudentPaymentStep`, `StudentPaymentWizardState`, `StudentPaymentResult` | `ui` | `src/app/core/models/ui/student-payment.model.ts` |
+| `TaskRow`, `TaskWithReplies`, `TaskFilter`, `RoleMatrixKey`, `CreateTaskPayload`, `RecipientOption` | `ui` | `src/app/core/models/ui/task.model.ts` |
 | `UserRole`, `User` | `ui` | `src/app/core/models/ui/user.model.ts` |
 | `MaintenanceRow`, `MaintenanceKpis`, `ScheduledMaintenance`, `VehicleAgendaSlot` | `ui` | `src/app/core/models/ui/vehicle-detail.model.ts` |
 | `VehicleType`, `VehicleStatus`, `DocStatus`, `VehicleDocSummary`, `VehicleTableRow`, `FlotaKpis` | `ui` | `src/app/core/models/ui/vehicle-table.model.ts` |
