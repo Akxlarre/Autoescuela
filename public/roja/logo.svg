@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente para el isotipo profesional -->
+    <linearGradient id="redOrangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#DC2626" />
+      <stop offset="100%" stop-color="#F97316" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(10, 10)">
+    <!-- ISOTIPO: Camión/Bus Profesional Estilizado -->
+    <g transform="translate(0, 0)">
+      <!-- Líneas de velocidad / Viento aerodinámico -->
+      <path d="M5,62 L40,62" stroke="url(#redOrangeGrad)" stroke-width="4" stroke-linecap="round" opacity="0.4" />
+      <path d="M12,42 L32,42" stroke="url(#redOrangeGrad)" stroke-width="3" stroke-linecap="round" opacity="0.3" />
+      <path d="M8,80 L48,80" stroke="url(#redOrangeGrad)" stroke-width="4" stroke-linecap="round" opacity="0.5" />
+      
+      <!-- Cabina de Camión / Bus Moderno -->
+      <path d="M50,75 L50,35 C50,35 60,30 85,30 C110,30 115,35 115,35 L115,45 L155,45 C165,45 170,50 170,58 L170,75 C170,82 165,82 155,82 L65,82 C55,82 50,81 50,75 Z" 
+            fill="url(#redOrangeGrad)" />
+      
+      <!-- Ventana de cabina (Glass) -->
+      <path d="M56,38 L80,38 L80,55 L56,55 Z" fill="#FFFFFF" opacity="0.9" />
+      <path d="M86,38 L108,38 L108,55 L86,55 Z" fill="#FFFFFF" opacity="0.9" />
+      
+      <!-- Ventanas de pasajeros / Carga acanalada -->
+      <path d="M120,50 L132,50 L132,65 L120,65 Z" fill="#FFFFFF" opacity="0.9" />
+      <path d="M138,50 L150,50 L150,65 L138,65 Z" fill="#FFFFFF" opacity="0.9" />
+      <path d="M156,50 L164,50 L164,65 L156,65 Z" fill="#FFFFFF" opacity="0.9" />
+      
+      <!-- Ruedas dobles de servicio pesado -->
+      <circle cx="75" cy="82" r="16" fill="#0F172A" />
+      <circle cx="75" cy="82" r="10" fill="#F8FAFC" />
+      <circle cx="75" cy="82" r="5" fill="url(#redOrangeGrad)" />
+
+      <circle cx="140" cy="82" r="16" fill="#0F172A" />
+      <circle cx="140" cy="82" r="10" fill="#F8FAFC" />
+      <circle cx="140" cy="82" r="5" fill="url(#redOrangeGrad)" />
+
+      <circle cx="158" cy="82" r="16" fill="#0F172A" />
+      <circle cx="158" cy="82" r="10" fill="#F8FAFC" />
+      <circle cx="158" cy="82" r="5" fill="url(#redOrangeGrad)" />
+      
+      <!-- Faro delantero brillante -->
+      <path d="M166,70 L176,71 L168,75 Z" fill="#F59E0B" />
+    </g>
+
+    <!-- LOGOTIPO: Texto tipográfico premium -->
+    <g transform="translate(225, 0)">
+      <!-- Título Principal -->
+      <text x="0" y="52" font-family="'Outfit', 'Inter', 'system-ui', sans-serif" font-size="38" font-weight="900" fill="#0F172A" letter-spacing="-1">
+        CONDUCTORES
+      </text>
+      <!-- Subtítulo de Marca con gradiente -->
+      <text x="0" y="86" font-family="'Outfit', 'Inter', 'system-ui', sans-serif" font-size="28" font-weight="700" fill="url(#redOrangeGrad)" letter-spacing="4">
+        CHILLÁN
+      </text>
+    </g>
+  </g>
+</svg>
