@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { downloadExcel } from '@core/utils/excel.utils';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 import type { CashClosing } from '@core/models/dto/cash-closing.model';
 
@@ -48,45 +49,36 @@ function mapCierreToHistorial(
   };
 }
 
-/** Genera y descarga un archivo CSV con los cierres del historial. */
-export function exportarHistorialCSV(cierres: HistorialCierre[]): void {
-  const cabecera = [
-    'Fecha de Cierre',
+const ESTADO_LABEL: Record<HistorialCierre['estadoDiferencia'], string> = {
+  balanced: 'Cuadrado',
+  surplus: 'Sobrante',
+  shortage: 'Faltante',
+};
+
+function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][] {
+  const header = [
+    'Fecha',
+    'Cajero',
     'Fondo Inicial',
+    'Total Ingresos',
+    'Total Egresos',
     'Saldo Sistema',
-    'Saldo Físico',
+    'Saldo Fisico',
     'Diferencia',
     'Estado',
-    'Cajero',
   ];
-
-  const estadoLabel: Record<HistorialCierre['estadoDiferencia'], string> = {
-    balanced: 'Cuadrado',
-    surplus: 'Sobrante',
-    shortage: 'Faltante',
-  };
-
-  const filas = cierres.map((c) => [
+  const rows = cierres.map((c) => [
     c.fecha,
-    c.fondoInicial.toString(),
-    c.saldoSistema.toString(),
-    c.saldoFisico.toString(),
-    c.diferencia.toString(),
-    estadoLabel[c.estadoDiferencia],
     c.cajero,
+    c.fondoInicial,
+    c.totalIngresos,
+    c.totalEgresos,
+    c.saldoSistema,
+    c.saldoFisico,
+    c.diferencia,
+    ESTADO_LABEL[c.estadoDiferencia],
   ]);
-
-  const contenidoCsv = [cabecera, ...filas]
-    .map((fila) => fila.map((celda) => `"${celda.replace(/"/g, '""')}"`).join(','))
-    .join('\r\n');
-
-  const blob = new Blob(['\uFEFF' + contenidoCsv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `historial_cuadraturas_${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
+  return [header, ...rows];
 }
 
 // ─── Facade ───────────────────────────────────────────────────────────────────
@@ -102,6 +94,7 @@ export class HistorialCuadraturasFacade {
   private readonly _historialCierres = signal<HistorialCierre[]>([]);
   private readonly _cierreSeleccionado = signal<HistorialCierre | null>(null);
   private readonly _isLoadingHistorial = signal<boolean>(false);
+  private readonly _isExporting = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
   // ── SWR State ────────────────────────────────────────────────────────────
@@ -118,6 +111,7 @@ export class HistorialCuadraturasFacade {
   readonly historialCierres = this._historialCierres.asReadonly();
   readonly cierreSeleccionado = this._cierreSeleccionado.asReadonly();
   readonly isLoadingHistorial = this._isLoadingHistorial.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
   readonly error = this._error.asReadonly();
   readonly mesActual = this._mesActual.asReadonly();
   readonly anioActual = this._anioActual.asReadonly();
@@ -257,14 +251,93 @@ export class HistorialCuadraturasFacade {
     }
   }
 
-  /** Exporta los cierres actualmente cargados a un archivo CSV descargable. */
-  exportarCSV(): void {
+  // ── Exportación mensual ───────────────────────────────────────────────────
+
+  /** Exporta el resumen mensual de cierres. Excel: client-side. PDF: Edge Function generate-cash-history-report. */
+  async exportarMes(format: 'excel' | 'pdf'): Promise<void> {
     const cierres = this._historialCierres();
     if (cierres.length === 0) {
-      this.toast.warning('No hay datos para exportar.');
+      this.toast.warning('No hay datos para exportar en este mes.');
       return;
     }
-    exportarHistorialCSV(cierres);
-    this.toast.success('Archivo CSV generado correctamente.');
+
+    const mes = this._mesActual();
+    const anio = this._anioActual();
+    const mesStr = String(mes).padStart(2, '0');
+
+    if (format === 'excel') {
+      const filename = `Historial_Cuadraturas_${anio}-${mesStr}`;
+      const rows = buildMonthlyExcelRows(cierres);
+      downloadExcel('Historial', [], rows, filename);
+      this.toast.success('Excel mensual generado correctamente.');
+      return;
+    }
+
+    // PDF via Edge Function
+    this._isExporting.set(true);
+    try {
+      const branchId = this.getActiveBranchId();
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-cash-history-report',
+        { body: { month: mes, year: anio, branch_id: branchId } },
+      );
+      if (error) throw error;
+
+      const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+      const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Historial_Cuadraturas_${anio}-${mesStr}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      this.toast.success('PDF mensual generado correctamente.');
+    } catch {
+      this.toast.error('No se pudo generar el reporte PDF. Intenta de nuevo.');
+    } finally {
+      this._isExporting.set(false);
+    }
+  }
+
+  // ── Exportación de cierre individual ─────────────────────────────────────
+
+  /** Exporta el reporte detallado de un cierre específico usando la Edge Function generate-cash-closing-report. */
+  async exportarCierre(format: 'excel' | 'pdf'): Promise<void> {
+    const cierre = this._cierreSeleccionado();
+    if (!cierre) return;
+
+    this._isExporting.set(true);
+    try {
+      const branchId = this.getActiveBranchId();
+      const { data, error } = await this.supabase.client.functions.invoke(
+        'generate-cash-closing-report',
+        { body: { format, date: cierre.fecha, branch_id: branchId } },
+      );
+      if (error) throw error;
+
+      const fechaSlug = cierre.fecha.replace(/-/g, '');
+      if (format === 'excel') {
+        const { sheetName, rows, filename } = data as {
+          sheetName: string;
+          rows: (string | number)[][];
+          filename: string;
+        };
+        downloadExcel(sheetName, [], rows, filename ?? `Cuadratura_${fechaSlug}`);
+      } else {
+        const rawBuffer = data instanceof Blob ? await data.arrayBuffer() : data;
+        const blob = new Blob([rawBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Cuadratura_${fechaSlug}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      this.toast.success('Reporte generado correctamente.');
+    } catch {
+      this.toast.error('No se pudo generar el reporte. Intenta de nuevo.');
+    } finally {
+      this._isExporting.set(false);
+    }
   }
 }
