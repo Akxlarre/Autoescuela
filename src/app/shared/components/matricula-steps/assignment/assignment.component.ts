@@ -19,6 +19,11 @@ export class AssignmentComponent {
   stepNumber = input<number>(2);
   /** Oculta la sección de modalidad de pago (cuando ya fue elegida en un paso previo). */
   hidePaymentMode = input<boolean>(false);
+  /**
+   * Máximo de clases permitidas por día. Usar 2 para admin/secretaria, 1 (default) para alumnos.
+   * Con maxPerDay=2 el auto-avance ocurre solo cuando el día está lleno, no tras cada selección.
+   */
+  maxPerDay = input<number>(1);
   dataChange = output<EnrollmentAssignmentData>();
   next = output<void>();
   back = output<void>();
@@ -31,7 +36,24 @@ export class AssignmentComponent {
     this.dataChange.emit({ ...this.data(), [field]: value });
   }
 
-  /** Selecciona o deselecciona un slot de horario de forma inmutable. Max 1 por día. */
+  /** Cuenta cuántos slots seleccionados hay por fecha (YYYY-MM-DD). */
+  readonly slotsPerDay = computed<Map<string, number>>(() => {
+    const ids = this.data().slotSelection.selectedSlotIds;
+    const slots = this.data().scheduleGrid?.slots ?? [];
+    const map = new Map<string, number>();
+    for (const id of ids) {
+      const date = slots.find((s) => s.id === id)?.date;
+      if (date) map.set(date, (map.get(date) ?? 0) + 1);
+    }
+    return map;
+  });
+
+  /** Array de longitud maxPerDay para iterar dots en el template. */
+  readonly maxPerDayDots = computed<number[]>(() =>
+    Array.from({ length: this.maxPerDay() }, (_, i) => i),
+  );
+
+  /** Selecciona o deselecciona un slot de horario de forma inmutable. */
   selectSlot(slotId: string): void {
     const current = this.data();
     const oldIds = current.slotSelection.selectedSlotIds;
@@ -39,17 +61,15 @@ export class AssignmentComponent {
 
     let newIds: string[];
     if (index > -1) {
-      // Deseleccionar
       newIds = oldIds.filter((_, i) => i !== index);
     } else if (oldIds.length < current.slotSelection.requiredCount) {
-      // Verificar que no haya otro slot seleccionado en el mismo día
       const slotDate = current.scheduleGrid?.slots.find((s) => s.id === slotId)?.date;
       if (slotDate) {
-        const hasSameDay = oldIds.some((id) => {
+        const sameDayCount = oldIds.filter((id) => {
           const s = current.scheduleGrid?.slots.find((sl) => sl.id === id);
           return s?.date === slotDate;
-        });
-        if (hasSameDay) return;
+        }).length;
+        if (sameDayCount >= this.maxPerDay()) return;
       }
       newIds = [...oldIds, slotId];
     } else {
@@ -68,7 +88,18 @@ export class AssignmentComponent {
       },
     });
 
-    if (wasAdded) setTimeout(() => this.advanceToNextAvailableDay(), 450);
+    if (wasAdded) {
+      // Auto-avanzar solo cuando el día está lleno (cupo de maxPerDay alcanzado)
+      const slotDate = current.scheduleGrid?.slots.find((s) => s.id === slotId)?.date;
+      const dayNowFull = slotDate
+        ? newIds.filter((id) => {
+            const s = current.scheduleGrid?.slots.find((sl) => sl.id === id);
+            return s?.date === slotDate;
+          }).length >= this.maxPerDay()
+        : true;
+
+      if (dayNowFull) setTimeout(() => this.advanceToNextAvailableDay(), 450);
+    }
   }
 
   /** Mueve la selección al siguiente día con slots disponibles. Si no hay en la semana actual, avanza a la siguiente. */
@@ -149,14 +180,13 @@ export class AssignmentComponent {
     const sel = current.slotSelection;
     if (sel.selectedSlotIds.includes(slotId)) return true;
     if (sel.currentCount >= sel.requiredCount) return false;
-    // Max 1 class per day — disable if another slot on the same date is already selected
     const slotDate = current.scheduleGrid?.slots.find((s) => s.id === slotId)?.date;
     if (slotDate) {
-      const hasSameDay = sel.selectedSlotIds.some((id) => {
+      const sameDayCount = sel.selectedSlotIds.filter((id) => {
         const s = current.scheduleGrid?.slots.find((sl) => sl.id === id);
         return s?.date === slotDate;
-      });
-      if (hasSameDay) return false;
+      }).length;
+      if (sameDayCount >= this.maxPerDay()) return false;
     }
     return true;
   }

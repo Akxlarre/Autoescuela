@@ -208,11 +208,30 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 No hay alumnos con matrícula activa en esta sede.
               </p>
             } @else {
+              <!-- Buscador -->
+              <div class="relative">
+                <app-icon
+                  name="search"
+                  [size]="14"
+                  class="absolute top-1/2 -translate-y-1/2"
+                  style="left: 10px; color: var(--text-muted); pointer-events: none"
+                />
+                <input
+                  type="text"
+                  class="field-input"
+                  style="padding-left: 30px"
+                  placeholder="Buscar por nombre o email..."
+                  [ngModel]="studentSearch()"
+                  (ngModelChange)="studentSearch.set($event)"
+                  data-llm-description="Buscador de alumnos por nombre o email"
+                />
+              </div>
+
               <div
                 class="flex flex-col gap-1 max-h-64 overflow-y-auto rounded-lg border p-2"
                 [style.border-color]="'var(--border-subtle)'"
               >
-                @for (alumno of localAlumnos(); track alumno.enrollmentId) {
+                @for (alumno of filteredAlumnos(); track alumno.enrollmentId) {
                   <label
                     class="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:bg-surface-elevated"
                   >
@@ -231,6 +250,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                       </p>
                     </div>
                   </label>
+                } @empty {
+                  <p class="text-xs py-3 text-center" style="color: var(--text-muted)">
+                    Sin resultados para "{{ studentSearch() }}"
+                  </p>
                 }
               </div>
               <p class="text-xs" style="color: var(--text-muted)">
@@ -368,6 +391,15 @@ export class AgendarTeoriaDrawerComponent implements OnInit {
       this.endTime().length > 0 &&
       this.endTime() <= this.startTime(),
   );
+
+  protected readonly studentSearch = signal('');
+  protected readonly filteredAlumnos = computed(() => {
+    const q = this.studentSearch().trim().toLowerCase();
+    if (!q) return this.localAlumnos();
+    return this.localAlumnos().filter(
+      (a) => a.alumnoName.toLowerCase().includes(q) || a.email.toLowerCase().includes(q),
+    );
+  });
 
   protected readonly showEmailResult = signal(false);
 

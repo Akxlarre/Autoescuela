@@ -178,26 +178,140 @@ Deno.serve(async (req: Request) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Action: load-enrollment-status
-// Delega a la RPC get_student_payment_status que ejecuta todo en una sola
-// transacción PostgreSQL (5 round-trips → 1 llamada RPC).
+// Soporta tres escenarios de pago pendiente:
+//   A) payment_mode='total',   payment_status='pending'  → 12 sesiones ya agendadas,
+//      solo falta pagar.  needsSlotSelection=false.
+//   B) payment_mode='partial', payment_status='partial'  → pagó depósito, necesita
+//      seleccionar 6 horarios y pagar el resto.  needsSlotSelection=true.
+//   C) payment_mode='partial', payment_status='pending'  → nada pagado, necesita
+//      seleccionar 6 horarios y pagar el total.  needsSlotSelection=true.
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleLoadEnrollmentStatus(supabase: any, supabaseUid: string) {
-  const { data, error } = await supabase.rpc('get_student_payment_status', {
-    p_supabase_uid: supabaseUid,
+  // 1. Resolver usuario
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('id, first_names, paternal_last_name')
+    .eq('supabase_uid', supabaseUid)
+    .maybeSingle();
+  if (userError || !user) return errorResponse('Usuario no encontrado', 404);
+
+  // 2. Resolver alumno
+  const { data: student } = await supabase
+    .from('students')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!student) return errorResponse('Alumno no encontrado', 404);
+
+  // 3. Matrícula activa más reciente (con o sin saldo pendiente, para mostrar historial)
+  const { data: enrollment, error: enrollError } = await supabase
+    .from('enrollments')
+    .select(
+      `id, number, base_price, total_paid, pending_balance, payment_status, payment_mode, license_group,
+       courses!inner(name),
+       branches!inner(id, name)`,
+    )
+    .eq('student_id', student.id)
+    .in('status', ['active', 'completed'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (enrollError) {
+    console.error('enrollment query error:', enrollError);
+    return errorResponse('Error al cargar la matrícula', 500);
+  }
+
+  const studentName = `${user.first_names} ${user.paternal_last_name}`.trim();
+
+  // 4. Historial de pagos (siempre, independientemente del saldo)
+  const { data: rawPayments } = enrollment
+    ? await supabase
+        .from('payments')
+        .select('id, total_amount, type, status, payment_date')
+        .eq('enrollment_id', enrollment.id)
+        .order('payment_date', { ascending: false })
+    : { data: [] };
+
+  const payments = (rawPayments ?? []).map((p: any) => ({
+    id: p.id,
+    date: p.payment_date ?? null,
+    amount: Number(p.total_amount),
+    type: p.type,
+    status: p.status,
+  }));
+
+  const pendingBalance = Number(enrollment?.pending_balance ?? 0);
+  // pending_balance es el campo autoritativo (calculado por trg_update_balance).
+  // No confiar en payment_status — puede estar desincronizado (e.g. 'paid_full' con saldo real).
+  const hasPaymentPending = !!enrollment && pendingBalance > 0;
+
+  const enrollmentInfo = enrollment
+    ? {
+        id: enrollment.id,
+        number: enrollment.number,
+        courseName: enrollment.courses.name,
+        branchName: enrollment.branches.name,
+        branchId: enrollment.branches.id,
+        basePrice: Number(enrollment.base_price),
+        pendingBalance,
+        totalPaid: Number(enrollment.total_paid),
+        licenseGroup: enrollment.license_group as 'class_b' | 'professional',
+      }
+    : null;
+
+  if (!hasPaymentPending) {
+    return jsonResponse({
+      hasPaymentPending: false,
+      enrollment: enrollmentInfo,
+      instructor: null,
+      existingSessionCount: 0,
+      needsSlotSelection: false,
+      studentName,
+      payments,
+    });
+  }
+
+  // 5. Contar sesiones existentes (excluye canceladas)
+  const { count: sessionCount } = await supabase
+    .from('class_b_sessions')
+    .select('id', { count: 'exact', head: true })
+    .eq('enrollment_id', enrollment.id)
+    .neq('status', 'cancelled');
+
+  const existingSessionCount = Number(sessionCount ?? 0);
+  const needsSlotSelection = existingSessionCount < 12;
+
+  // 6. Instructor desde las sesiones existentes (service role bypasa RLS)
+  let instructor: { id: number; name: string } | null = null;
+  if (existingSessionCount > 0) {
+    const { data: firstSession } = await supabase
+      .from('class_b_sessions')
+      .select(`instructor_id, instructors!inner(users!inner(first_names, paternal_last_name))`)
+      .eq('enrollment_id', enrollment.id)
+      .order('class_number', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (firstSession?.instructors?.users) {
+      const u = firstSession.instructors.users;
+      instructor = {
+        id: firstSession.instructor_id,
+        name: `${u.first_names} ${u.paternal_last_name}`.trim(),
+      };
+    }
+  }
+
+  return jsonResponse({
+    hasPaymentPending: true,
+    enrollment: enrollmentInfo,
+    instructor,
+    existingSessionCount,
+    needsSlotSelection,
+    studentName,
+    payments,
   });
-
-  if (error) {
-    console.error('get_student_payment_status error:', error);
-    return errorResponse('Error al cargar el estado del pago', 500);
-  }
-
-  // La función retorna un objeto de error explícito si no encuentra usuario/alumno
-  if (data?.error) {
-    return errorResponse(data.error, data.status ?? 400);
-  }
-
-  return jsonResponse(data);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -338,12 +452,15 @@ async function handleReleaseSlots(supabase: any, body: any) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleInitiatePayment(supabase: any, body: any, supabaseUid: string) {
-  const { enrollmentId, instructorId, selectedSlotIds, sessionToken } = body;
+  const { enrollmentId, instructorId, sessionToken } = body;
+  // selectedSlotIds puede ser vacío cuando el alumno ya tiene 12 clases agendadas (escenario A)
+  const selectedSlotIds: string[] = Array.isArray(body.selectedSlotIds) ? body.selectedSlotIds : [];
 
-  if (!enrollmentId || !instructorId || !selectedSlotIds?.length || !sessionToken) {
-    return errorResponse(
-      'enrollmentId, instructorId, selectedSlotIds y sessionToken son requeridos',
-    );
+  if (!enrollmentId || !sessionToken) {
+    return errorResponse('enrollmentId y sessionToken son requeridos');
+  }
+  if (selectedSlotIds.length > 0 && !instructorId) {
+    return errorResponse('instructorId es requerido cuando se seleccionan slots');
   }
 
   try {

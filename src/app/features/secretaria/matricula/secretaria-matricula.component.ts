@@ -12,6 +12,7 @@ import {
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { calcAge } from '@core/utils/age.utils';
+import { normalizePhoto } from '@core/utils/image.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StepperModule } from 'primeng/stepper';
 import { ButtonModule } from 'primeng/button';
@@ -581,8 +582,9 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const { enrollmentId } = this.enrollment.draft();
     if (!enrollmentId) return;
     if (event.type === 'id_photo') {
-      const dataUrl = await this.fileToDataUrl(event.file);
-      await this.docs.uploadCarnetPhoto(dataUrl, event.file.name, enrollmentId);
+      const normalizedFile = await normalizePhoto(event.file);
+      const dataUrl = await this.fileToDataUrl(normalizedFile);
+      await this.docs.uploadCarnetPhoto(dataUrl, normalizedFile.name, enrollmentId);
     } else {
       await this.docs.uploadDocument(event.type as DocumentType, event.file, enrollmentId);
     }

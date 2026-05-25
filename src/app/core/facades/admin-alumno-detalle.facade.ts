@@ -423,6 +423,7 @@ export class AdminAlumnoDetalleFacade {
               numero: num,
               sessionId: null,
               fecha: null,
+              scheduledDate: null,
               hora: null,
               instructor: null,
               kmInicio: null,
@@ -445,6 +446,7 @@ export class AdminAlumnoDetalleFacade {
             numero: num,
             sessionId: ses.id ?? null,
             fecha: this.formatClassDate(ses.scheduled_at),
+            scheduledDate: this.slotDateFromStart(ses.scheduled_at) || null,
             hora: this.formatHour(ses.start_time, ses.end_time),
             instructor,
             kmInicio: ses.km_start,
@@ -827,7 +829,8 @@ export class AdminAlumnoDetalleFacade {
         for (const s of data) {
           this._slotVehicleMap.set(String(s.slot_start), s.vehicle_id);
         }
-        this._scheduleGrid.set(this.buildScheduleGrid(data));
+        const blockedDates = this.computeBlockedDates();
+        this._scheduleGrid.set(this.buildScheduleGrid(data, blockedDates));
       }
     } finally {
       this._isLoadingSchedule.set(false);
@@ -873,7 +876,23 @@ export class AdminAlumnoDetalleFacade {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(ts));
   }
 
-  private buildScheduleGrid(rawSlots: any[]): ScheduleGrid {
+  /** Returns dates where the student already has 3+ classes, excluding the one being rescheduled. */
+  private computeBlockedDates(): Set<string> {
+    const excludeSessionId = this._reprogramarTarget()?.sessionId ?? null;
+    const counts = new Map<string, number>();
+    for (const clase of this._clasesPracticas()) {
+      if (!clase.scheduledDate) continue;
+      if (clase.sessionId === excludeSessionId) continue;
+      counts.set(clase.scheduledDate, (counts.get(clase.scheduledDate) ?? 0) + 1);
+    }
+    const blocked = new Set<string>();
+    for (const [date, count] of counts) {
+      if (count >= 3) blocked.add(date);
+    }
+    return blocked;
+  }
+
+  private buildScheduleGrid(rawSlots: any[], blockedDates: Set<string> = new Set()): ScheduleGrid {
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
     const days: WeekDay[] = dates.map((d) => {
@@ -892,13 +911,19 @@ export class AdminAlumnoDetalleFacade {
       days,
     };
 
-    const slots: TimeSlot[] = rawSlots.map((s) => ({
-      id: String(s.slot_start),
-      date: this.slotDateFromStart(s.slot_start),
-      startTime: to24hTime(s.slot_start),
-      endTime: to24hTime(s.slot_end),
-      status: (s.slot_status === 'occupied' ? 'occupied' : 'available') as SlotStatus,
-    }));
+    const slots: TimeSlot[] = rawSlots.map((s) => {
+      const date = this.slotDateFromStart(s.slot_start);
+      const isBlocked = blockedDates.has(date);
+      return {
+        id: String(s.slot_start),
+        date,
+        startTime: to24hTime(s.slot_start),
+        endTime: to24hTime(s.slot_end),
+        status: (isBlocked || s.slot_status === 'occupied'
+          ? 'occupied'
+          : 'available') as SlotStatus,
+      };
+    });
 
     const timeRows = [...new Set(slots.map((s) => s.startTime))].sort();
     return { week, timeRows, slots };

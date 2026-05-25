@@ -83,6 +83,8 @@ export interface ClasePracticaUI {
   sessionId: number | null;
   /** Fecha formateada "DD-MM" (ej: "12-01") o null si la clase aún no ocurrió */
   fecha: string | null;
+  /** Fecha ISO "YYYY-MM-DD" para comparaciones lógicas — null si la clase no tiene sesión */
+  scheduledDate: string | null;
   /** Hora "HH:MM-HH:MM" (ej: "15:50-16:35") o null si pendiente */
   hora: string | null;
   /** Nombre completo del instructor o null si pendiente */

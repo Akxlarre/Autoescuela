@@ -293,7 +293,6 @@ const ALUMNO_NAV: NavGroup[] = [
     group: 'Mis Clases',
     items: [
       { label: 'Mis Clases', icon: 'calendar', routerLink: '/app/alumno/clases' },
-      { label: 'Agendar Clase', icon: 'clock', routerLink: '/app/alumno/agendar' },
       { label: 'Mi Horario', icon: 'calendar', routerLink: '/app/alumno/horario' },
       { label: 'Pruebas Online', icon: 'brain', routerLink: '/app/alumno/pruebas-online' },
     ],

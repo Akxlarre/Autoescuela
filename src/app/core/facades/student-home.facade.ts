@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthFacade } from './auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
 import {
   computeAverageGrade,
   computeCertificateBlockingReason,
@@ -23,6 +24,7 @@ import type {
 export class StudentHomeFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly toast = inject(ToastService);
 
   // ─── Estado reactivo privado ───────────────────────────────────────────────
 
@@ -68,11 +70,16 @@ export class StudentHomeFacade {
     const snap = this._snapshot();
     if (!snap?.certificate.pdfUrl) return null;
     try {
-      const { data } = await this.supabase.client.storage
+      const { data, error } = await this.supabase.client.storage
         .from('documents')
         .createSignedUrl(snap.certificate.pdfUrl, 3600);
-      return data?.signedUrl ?? null;
+      if (error || !data?.signedUrl) {
+        this.toast.error('No se pudo generar el enlace de descarga. Intenta de nuevo.');
+        return null;
+      }
+      return data.signedUrl;
     } catch {
+      this.toast.error('Error al descargar el certificado.');
       return null;
     }
   }
@@ -97,7 +104,7 @@ export class StudentHomeFacade {
       .select(
         `id, number, status, license_group, pending_balance, total_paid,
          certificate_enabled, certificate_b_pdf_url, certificate_professional_pdf_url,
-         created_at, student_id,
+         created_at, student_id, promotion_course_id,
          students!inner(id, users!inner(first_names, paternal_last_name)),
          courses!inner(code),
          branches!inner(name)`,
@@ -224,22 +231,21 @@ export class StudentHomeFacade {
     }
 
     const recentSessions: StudentHomeSession[] = [
-      ...recentSortedDesc.slice(0, 4).map((s: any) => {
-        const att = s.class_b_practice_attendance?.[0];
-        const status: 'present' | 'absent' | 'late' =
-          att?.status === 'present' || att?.status === 'late'
-            ? 'present'
-            : att?.status === 'absent'
-              ? 'absent'
-              : 'present';
-        return {
-          id: String(s.id),
-          date: s.scheduled_at,
-          kind: 'practice' as const,
-          status,
-          label: 'Práctica',
-        };
-      }),
+      ...recentSortedDesc
+        .filter((s: any) => s.class_b_practice_attendance?.[0] != null)
+        .slice(0, 4)
+        .map((s: any) => {
+          const att = s.class_b_practice_attendance[0];
+          const status: 'present' | 'absent' =
+            att.status === 'present' || att.status === 'late' ? 'present' : 'absent';
+          return {
+            id: String(s.id),
+            date: s.scheduled_at,
+            kind: 'practice' as const,
+            status,
+            label: 'Práctica',
+          };
+        }),
       ...(theoryRows ?? []).slice(0, 4).map((t: any) => ({
         id: `t-${t.class_b_theory_sessions.scheduled_at}`,
         date: t.class_b_theory_sessions.scheduled_at,
@@ -323,7 +329,7 @@ export class StudentHomeFacade {
     // Ahora que tenemos el snapshot, calculamos blockingReason
     const cert: StudentHomeCertificate = {
       state: certState,
-      folio: certResult.data ? String(certResult.data) : null,
+      folio: certResult.data?.folio ? String(certResult.data.folio) : null,
       issuedDate: null,
       pdfUrl: certState !== 'locked' ? (e.certificate_b_pdf_url ?? null) : null,
       blockingReason: null,
@@ -343,7 +349,18 @@ export class StudentHomeFacade {
     enrollmentId: number,
     firstName: string,
   ): Promise<StudentHomeSnapshot> {
-    const [modulesResult, semaphoreResult, nextSessionResult, certResult] = await Promise.all([
+    const promotionCourseId: number | null = e.promotion_course_id ?? null;
+
+    const [
+      modulesResult,
+      semaphoreResult,
+      nextSessionResult,
+      certResult,
+      totalPracticeResult,
+      attendedPracticeResult,
+      totalTheoryResult,
+      attendedTheoryResult,
+    ] = await Promise.all([
       this.supabase.client
         .from('professional_module_grades')
         .select('module_number, module, grade, passed, status')
@@ -354,19 +371,47 @@ export class StudentHomeFacade {
         .select('semaphore, consecutive_absences')
         .eq('enrollment_id', enrollmentId)
         .maybeSingle(),
-      this.supabase.client
-        .from('professional_practice_sessions')
-        .select('date')
-        .eq('promotion_course_id', e.promotion_course_id)
-        .gt('date', new Date().toISOString().split('T')[0])
-        .order('date', { ascending: true })
-        .limit(1)
-        .maybeSingle(),
+      promotionCourseId
+        ? this.supabase.client
+            .from('professional_practice_sessions')
+            .select('date')
+            .eq('promotion_course_id', promotionCourseId)
+            .gt('date', new Date().toISOString().split('T')[0])
+            .order('date', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
       this.supabase.client
         .from('certificates')
         .select('folio, created_at')
         .eq('enrollment_id', enrollmentId)
         .maybeSingle(),
+      // Total sesiones prácticas del curso de promoción
+      promotionCourseId
+        ? this.supabase.client
+            .from('professional_practice_sessions')
+            .select('id', { count: 'exact', head: true })
+            .eq('promotion_course_id', promotionCourseId)
+        : Promise.resolve({ count: 0 }),
+      // Sesiones prácticas asistidas por este enrollment
+      this.supabase.client
+        .from('professional_practice_attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('enrollment_id', enrollmentId)
+        .in('status', ['present', 'late']),
+      // Total sesiones teóricas del curso de promoción
+      promotionCourseId
+        ? this.supabase.client
+            .from('professional_theory_sessions')
+            .select('id', { count: 'exact', head: true })
+            .eq('promotion_course_id', promotionCourseId)
+        : Promise.resolve({ count: 0 }),
+      // Sesiones teóricas asistidas por este enrollment
+      this.supabase.client
+        .from('professional_theory_attendance')
+        .select('id', { count: 'exact', head: true })
+        .eq('enrollment_id', enrollmentId)
+        .in('status', ['present', 'late']),
     ]);
 
     const modules = (modulesResult.data ?? []).map((m: any) => ({
@@ -395,19 +440,26 @@ export class StudentHomeFacade {
       certificateIssued: Boolean(certResult.data),
     });
 
-    // For professional we don't have a progress view — approximate from modules
-    const completedModules = modules.filter((m) => m.passed === true).length;
-    const practicesTotal = 7;
-    const pctOverall = computeOverallProgress(completedModules, practicesTotal, 0);
+    const practicesTotal = Number((totalPracticeResult as any).count ?? 0);
+    const practicesCompleted = Number((attendedPracticeResult as any).count ?? 0);
+    const theoryTotal = Number((totalTheoryResult as any).count ?? 0);
+    const theoryAttended = Number((attendedTheoryResult as any).count ?? 0);
+    const pctTheoryAttendance =
+      theoryTotal > 0 ? Math.round((theoryAttended / theoryTotal) * 100) : 0;
+    const pctOverall = computeOverallProgress(
+      practicesCompleted,
+      practicesTotal || 1,
+      pctTheoryAttendance,
+    );
 
     const progress: StudentHomeProgress = {
-      practicesCompleted: completedModules,
-      practicesTotal,
-      pctTheoryAttendance: 0,
+      practicesCompleted,
+      practicesTotal: practicesTotal || 0,
+      pctTheoryAttendance,
       pctOverall,
-      practices: modules.map((m) => ({
-        number: m.number,
-        status: m.passed === true ? 'completed' : m.grade !== null ? 'scheduled' : 'pending',
+      practices: Array.from({ length: practicesTotal || 0 }, (_, i) => ({
+        number: i + 1,
+        status: (i < practicesCompleted ? 'completed' : 'pending') as 'completed' | 'pending',
         date: null,
       })),
     };

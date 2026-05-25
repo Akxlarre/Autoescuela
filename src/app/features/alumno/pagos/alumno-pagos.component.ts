@@ -35,14 +35,21 @@ function toCompact(amount: number): { value: number; suffix: string } {
   selector: 'app-alumno-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, KpiCardVariantComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
+  imports: [
+    SectionHeroComponent,
+    KpiCardVariantComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    BentoGridLayoutDirective,
+  ],
   template: `
     <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
       <div class="bento-banner">
         <app-section-hero
           title="Pagos y Clases"
-          subtitle="Paga tu saldo pendiente y agenda tus clases restantes"
+          [subtitle]="heroSubtitle()"
+          [contextLine]="heroContextLine()"
           icon="wallet"
           [actions]="heroActions()"
           (actionClick)="onHeroAction($event)"
@@ -61,46 +68,62 @@ function toCompact(amount: number): { value: number; suffix: string } {
       } @else {
         <!-- ── KPI Grid ── -->
         @if (facade.enrollment(); as enroll) {
-          <div class="bento-banner grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <app-kpi-card-variant
-              label="Total Curso"
-              [value]="toCompact(enroll.basePrice).value"
-              [loading]="facade.isLoading()"
-              icon="graduation-cap"
-              prefix="$"
-              [suffix]="toCompact(enroll.basePrice).suffix"
-              [subValue]="clp(enroll.basePrice)"
-            />
-            <app-kpi-card-variant
-              label="Ya Pagado"
-              [value]="toCompact(enroll.totalPaid).value"
-              [loading]="facade.isLoading()"
-              icon="circle-check"
-              color="success"
-              prefix="$"
-              [suffix]="toCompact(enroll.totalPaid).suffix"
-              [subValue]="clp(enroll.totalPaid)"
-            />
-            <app-kpi-card-variant
-              label="Saldo Pendiente"
-              [value]="toCompact(enroll.pendingBalance).value"
-              [loading]="facade.isLoading()"
-              icon="clock"
-              [color]="enroll.pendingBalance > 0 ? 'warning' : 'success'"
-              [accent]="enroll.pendingBalance > 0"
-              prefix="$"
-              [suffix]="toCompact(enroll.pendingBalance).suffix"
-              [subValue]="clp(enroll.pendingBalance)"
-            />
-          </div>
-
-          <!-- Info matrícula -->
-          <div class="bento-banner flex items-center gap-2 text-xs text-text-muted">
-            <app-icon name="info" [size]="12" />
-            <span>
-              Matrícula N°&nbsp;{{ enroll.number }} · {{ enroll.courseName }} ·
-              {{ enroll.branchName }}
-            </span>
+          <div class="bento-banner flex flex-col gap-4">
+            <!-- Aviso pago presencial para alumnos Profesional -->
+            @if (!facade.isClassB() && enroll.pendingBalance > 0) {
+              <div
+                class="flex items-start gap-3 p-4 rounded-lg"
+                style="background: var(--color-warning-muted)"
+              >
+                <app-icon
+                  name="info"
+                  [size]="18"
+                  style="color: var(--color-warning); flex-shrink: 0; margin-top: 1px"
+                />
+                <div>
+                  <p class="text-sm font-semibold" style="color: var(--color-warning)">
+                    Saldo pendiente: {{ clp(enroll.pendingBalance) }}
+                  </p>
+                  <p class="text-xs mt-0.5" style="color: var(--color-warning)">
+                    El pago de matrículas de Clase Profesional se realiza directamente en
+                    secretaría. Acércate a la sucursal <strong>{{ enroll.branchName }}</strong> para
+                    regularizar tu saldo.
+                  </p>
+                </div>
+              </div>
+            }
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <app-kpi-card-variant
+                label="Total Curso"
+                [value]="toCompact(enroll.basePrice).value"
+                [loading]="facade.isLoading()"
+                icon="graduation-cap"
+                prefix="$"
+                [suffix]="toCompact(enroll.basePrice).suffix"
+                [subValue]="clp(enroll.basePrice)"
+              />
+              <app-kpi-card-variant
+                label="Ya Pagado"
+                [value]="toCompact(enroll.totalPaid).value"
+                [loading]="facade.isLoading()"
+                icon="circle-check"
+                color="success"
+                prefix="$"
+                [suffix]="toCompact(enroll.totalPaid).suffix"
+                [subValue]="clp(enroll.totalPaid)"
+              />
+              <app-kpi-card-variant
+                label="Saldo Pendiente"
+                [value]="toCompact(enroll.pendingBalance).value"
+                [loading]="facade.isLoading()"
+                icon="clock"
+                [color]="enroll.pendingBalance > 0 ? 'warning' : 'success'"
+                [accent]="enroll.pendingBalance > 0"
+                prefix="$"
+                [suffix]="toCompact(enroll.pendingBalance).suffix"
+                [subValue]="clp(enroll.pendingBalance)"
+              />
+            </div>
           </div>
         } @else if (facade.isLoading()) {
           <!-- Skeleton KPIs mientras carga -->
@@ -196,17 +219,35 @@ export class AlumnoPagosComponent implements OnInit {
   protected readonly toCompact = toCompact;
   protected readonly clp = (amount: number) => formatCLP(amount);
 
+  protected readonly heroSubtitle = computed(() => {
+    if (!this.facade.isClassB()) {
+      return this.facade.enrollment()?.pendingBalance
+        ? 'Regulariza tu pago directamente en la secretaría'
+        : 'Resumen de pagos de tu matrícula profesional';
+    }
+    return this.facade.needsSlotSelection()
+      ? 'Paga tu saldo pendiente y agenda tus clases restantes'
+      : 'Paga tu saldo pendiente para completar tu matrícula';
+  });
+
+  protected readonly heroContextLine = computed(() => {
+    const enroll = this.facade.enrollment();
+    if (!enroll) return '';
+    return `Matrícula N° ${enroll.number} · ${enroll.courseName} · ${enroll.branchName}`;
+  });
+
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {
     const enroll = this.facade.enrollment();
-    if (enroll && enroll.pendingBalance > 0 && this.facade.status()?.hasPaymentPending) {
-      return [
-        {
-          id: 'pay',
-          label: `Pagar ${this.clp(enroll.pendingBalance)} y agendar clases`,
-          icon: 'credit-card',
-          primary: true,
-        },
-      ];
+    if (
+      enroll &&
+      enroll.pendingBalance > 0 &&
+      this.facade.status()?.hasPaymentPending &&
+      this.facade.isClassB()
+    ) {
+      const label = this.facade.needsSlotSelection()
+        ? `Pagar ${this.clp(enroll.pendingBalance)} y agendar clases`
+        : `Pagar ${this.clp(enroll.pendingBalance)}`;
+      return [{ id: 'pay', label, icon: 'credit-card', primary: true }];
     }
     return [];
   });

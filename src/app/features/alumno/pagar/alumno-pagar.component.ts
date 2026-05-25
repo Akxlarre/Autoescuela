@@ -46,13 +46,19 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
   selector: 'app-alumno-pagar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, AsyncBtnComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
+  imports: [
+    SectionHeroComponent,
+    IconComponent,
+    AsyncBtnComponent,
+    SkeletonBlockComponent,
+    BentoGridLayoutDirective,
+  ],
   template: `
     <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
       <div class="bento-banner">
         <app-section-hero
-          title="Agendar y Pagar"
+          [title]="facade.needsSlotSelection() ? 'Agendar y Pagar' : 'Pagar'"
           subtitle="Completa el pago de tu matrícula y agenda tus clases restantes"
           icon="calendar-check"
           [actions]="[]"
@@ -62,22 +68,24 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
       <!-- ── Stepper ── -->
       <div class="bento-banner card px-6 py-4">
         <div class="flex items-center">
-          @for (s of steps; track s.n; let last = $last) {
+          @for (s of steps(); track s.n; let last = $last) {
             <!-- Nodo del paso -->
             <div class="flex flex-col items-center gap-1.5 shrink-0">
               <div
                 class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all"
                 [style.background]="
-                  facade.step() > s.n
+                  facade.step() > s.facadeStep
                     ? 'var(--color-success)'
-                    : facade.step() === s.n
+                    : facade.step() === s.facadeStep
                       ? 'var(--ds-brand)'
                       : 'var(--bg-surface)'
                 "
-                [style.color]="facade.step() >= s.n ? 'white' : 'var(--text-muted)'"
-                [style.border]="facade.step() < s.n ? '2px solid var(--color-border)' : 'none'"
+                [style.color]="facade.step() >= s.facadeStep ? 'white' : 'var(--text-muted)'"
+                [style.border]="
+                  facade.step() < s.facadeStep ? '2px solid var(--color-border)' : 'none'
+                "
               >
-                @if (facade.step() > s.n) {
+                @if (facade.step() > s.facadeStep) {
                   <app-icon name="check" [size]="14" />
                 } @else {
                   {{ s.n }}
@@ -85,7 +93,9 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
               </div>
               <span
                 class="text-xs font-semibold tracking-wide uppercase"
-                [style.color]="facade.step() === s.n ? 'var(--ds-brand)' : 'var(--text-muted)'"
+                [style.color]="
+                  facade.step() === s.facadeStep ? 'var(--ds-brand)' : 'var(--text-muted)'
+                "
               >
                 {{ s.label }}
               </span>
@@ -95,7 +105,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
               <div
                 class="flex-1 h-0.5 mx-3 mb-5 transition-all"
                 [style.background]="
-                  facade.step() > s.n ? 'var(--color-success)' : 'var(--color-border)'
+                  facade.step() > s.facadeStep ? 'var(--color-success)' : 'var(--color-border)'
                 "
               ></div>
             }
@@ -202,54 +212,93 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
               </div>
             </div>
 
-            <!-- Columna derecha: instructor + CTA -->
+            <!-- Columna derecha: info + CTA -->
             <div class="flex flex-col gap-4">
-              @if (facade.instructor(); as instructor) {
+              @if (facade.needsSlotSelection()) {
+                <!-- Escenarios B/C: mostrar instructor asignado para las 6 clases restantes -->
+                @if (facade.instructor(); as instructor) {
+                  <div class="card p-5 flex flex-col gap-3">
+                    <div class="flex items-center gap-3">
+                      <div
+                        class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                        style="background: var(--bg-surface-elevated, var(--bg-surface))"
+                      >
+                        <app-icon name="user" [size]="18" style="color: var(--ds-brand)" />
+                      </div>
+                      <div>
+                        <p class="text-xs text-text-muted uppercase tracking-wide">Tu instructor</p>
+                        <p class="text-sm font-semibold text-text-primary">{{ instructor.name }}</p>
+                      </div>
+                    </div>
+                    <p class="text-xs text-text-muted">
+                      Agendarás las 6 clases restantes con este instructor. Para cambiar de
+                      instructor, comunícate con la secretaría.
+                    </p>
+                  </div>
+                } @else {
+                  <div
+                    class="flex items-start gap-3 p-4 rounded-lg"
+                    style="background: var(--color-warning-muted)"
+                  >
+                    <app-icon
+                      name="alert-circle"
+                      [size]="16"
+                      class="shrink-0 mt-0.5"
+                      style="color: var(--color-warning)"
+                    />
+                    <p class="text-sm text-text-muted">
+                      No se pudo determinar tu instructor asignado. Contacta a la secretaría para
+                      continuar.
+                    </p>
+                  </div>
+                }
+                <button
+                  class="btn-primary w-full flex items-center justify-center gap-2 cursor-pointer"
+                  [disabled]="!facade.instructor() || facade.isLoading()"
+                  (click)="facade.goToSchedule()"
+                  data-llm-action="go-to-schedule-selection"
+                >
+                  <app-icon name="calendar-days" [size]="16" />
+                  Elegir mis 6 horarios
+                </button>
+              } @else {
+                <!-- Escenario A: 12 clases ya agendadas, solo pagar -->
                 <div class="card p-5 flex flex-col gap-3">
                   <div class="flex items-center gap-3">
                     <div
                       class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                      style="background: var(--bg-surface-elevated, var(--bg-surface))"
+                      style="background: var(--color-success-muted)"
                     >
-                      <app-icon name="user" [size]="18" style="color: var(--ds-brand)" />
+                      <app-icon
+                        name="calendar-check"
+                        [size]="18"
+                        style="color: var(--color-success)"
+                      />
                     </div>
                     <div>
-                      <p class="text-xs text-text-muted uppercase tracking-wide">Tu instructor</p>
-                      <p class="text-sm font-semibold text-text-primary">{{ instructor.name }}</p>
+                      <p class="text-xs text-text-muted uppercase tracking-wide">
+                        Clases agendadas
+                      </p>
+                      <p class="text-sm font-semibold text-text-primary">
+                        Todas tus clases ya están reservadas
+                      </p>
                     </div>
                   </div>
                   <p class="text-xs text-text-muted">
-                    Agendarás las 6 clases restantes con este instructor. Para cambiar de
-                    instructor, comunícate con la secretaría.
+                    Tu horario quedó fijado durante el proceso de matrícula. Solo debes completar el
+                    pago.
                   </p>
                 </div>
-              } @else {
-                <div
-                  class="flex items-start gap-3 p-4 rounded-lg"
-                  style="background: var(--color-warning-muted)"
+                <button
+                  class="btn-primary w-full flex items-center justify-center gap-2 cursor-pointer"
+                  [disabled]="facade.isLoading()"
+                  (click)="facade.goDirectToConfirm()"
+                  data-llm-action="go-to-payment-direct"
                 >
-                  <app-icon
-                    name="alert-circle"
-                    [size]="16"
-                    class="shrink-0 mt-0.5"
-                    style="color: var(--color-warning)"
-                  />
-                  <p class="text-sm text-text-muted">
-                    No se pudo determinar tu instructor asignado. Contacta a la secretaría para
-                    continuar.
-                  </p>
-                </div>
+                  <app-icon name="credit-card" [size]="16" />
+                  {{ payLabel() }}
+                </button>
               }
-
-              <button
-                class="btn-primary w-full flex items-center justify-center gap-2 cursor-pointer"
-                [disabled]="!facade.instructor() || facade.isLoading()"
-                (click)="facade.goToSchedule()"
-                data-llm-action="go-to-schedule-selection"
-              >
-                <app-icon name="calendar-days" [size]="16" />
-                Elegir mis 6 horarios
-              </button>
             </div>
           </div>
         }
@@ -489,37 +538,64 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
       @if (facade.step() === 3) {
         <div class="bento-banner flex flex-col gap-4">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <!-- Horarios seleccionados -->
-            <div class="card p-5 flex flex-col gap-3">
-              <p class="text-xs text-text-muted uppercase tracking-wide font-semibold">
-                Horarios seleccionados ({{ facade.requiredCount }} clases)
-              </p>
-              @for (slot of selectedSlotsDisplay(); track slot.label) {
-                <div class="flex items-center gap-3 py-1">
-                  <app-icon
-                    name="calendar-check"
-                    [size]="14"
-                    style="color: var(--color-success)"
-                    class="shrink-0"
-                  />
-                  <span class="text-sm text-text-primary">{{ slot.label }}</span>
+            <!-- Horarios seleccionados / Clases ya agendadas -->
+            @if (facade.needsSlotSelection()) {
+              <div class="card p-5 flex flex-col gap-3">
+                <p class="text-xs text-text-muted uppercase tracking-wide font-semibold">
+                  Horarios seleccionados ({{ facade.requiredCount }} clases)
+                </p>
+                @for (slot of selectedSlotsDisplay(); track slot.label) {
+                  <div class="flex items-center gap-3 py-1">
+                    <app-icon
+                      name="calendar-check"
+                      [size]="14"
+                      style="color: var(--color-success)"
+                      class="shrink-0"
+                    />
+                    <span class="text-sm text-text-primary">{{ slot.label }}</span>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="card p-5 flex flex-col gap-4">
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center"
+                  style="background: var(--color-success-muted)"
+                >
+                  <app-icon name="calendar-check" [size]="20" style="color: var(--color-success)" />
                 </div>
-              }
-            </div>
+                <div>
+                  <p class="text-sm font-semibold text-text-primary">
+                    Tus 12 clases ya están agendadas
+                  </p>
+                  <p class="text-xs text-text-muted mt-1">
+                    Solo necesitas completar el pago para confirmar tu matrícula.
+                  </p>
+                </div>
+              </div>
+            }
 
             <!-- Resumen de pago + CTA -->
             <div class="flex flex-col gap-4">
               <div class="card-tinted rounded-xl p-5 flex flex-col gap-3">
                 @if (facade.enrollment(); as enroll) {
-                  <div class="flex items-center justify-between">
-                    <span class="text-sm text-text-muted">Instructor</span>
-                    <span class="text-sm font-medium text-text-primary">{{
-                      facade.instructor()?.name
-                    }}</span>
-                  </div>
+                  @if (facade.needsSlotSelection() && facade.instructor()?.name) {
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm text-text-muted">Instructor</span>
+                      <span class="text-sm font-medium text-text-primary">{{
+                        facade.instructor()!.name
+                      }}</span>
+                    </div>
+                  }
                   <div class="flex items-center justify-between">
                     <span class="text-sm text-text-muted">Clases a agendar</span>
-                    <span class="text-sm font-medium text-text-primary">6 clases prácticas</span>
+                    <span class="text-sm font-medium text-text-primary">
+                      @if (facade.needsSlotSelection()) {
+                        6 clases prácticas
+                      } @else {
+                        12 clases (ya agendadas)
+                      }
+                    </span>
                   </div>
                   <div class="border-t pt-3" style="border-color: var(--color-border)">
                     <div class="flex items-center justify-between">
@@ -551,7 +627,9 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                 <button
                   class="btn-secondary flex items-center gap-2 cursor-pointer"
                   [disabled]="facade.isSubmitting()"
-                  (click)="facade.backToSchedule()"
+                  (click)="
+                    facade.needsSlotSelection() ? facade.backToSchedule() : facade.backToSummary()
+                  "
                 >
                   <app-icon name="arrow-left" [size]="14" />
                   Volver
@@ -580,11 +658,20 @@ export class AlumnoPagarComponent implements OnInit {
   protected readonly selectedDayIndex = signal(0);
   protected readonly currentWeekIndex = signal(0);
 
-  protected readonly steps = [
-    { n: 1, label: 'Resumen' },
-    { n: 2, label: 'Horarios' },
-    { n: 3, label: 'Pago' },
-  ];
+  /** Cuando no se necesita seleccionar horarios, el step 2 se omite del stepper.
+   *  n = número visual; facadeStep = valor real de facade.step() para comparaciones. */
+  protected readonly steps = computed(() =>
+    this.facade.needsSlotSelection()
+      ? [
+          { n: 1, label: 'Resumen', facadeStep: 1 },
+          { n: 2, label: 'Horarios', facadeStep: 2 },
+          { n: 3, label: 'Pago', facadeStep: 3 },
+        ]
+      : [
+          { n: 1, label: 'Resumen', facadeStep: 1 },
+          { n: 2, label: 'Pago', facadeStep: 3 },
+        ],
+  );
 
   protected readonly weeks = computed<WeekDay[][]>(() => {
     const days = this.facade.scheduleGrid()?.week.days ?? [];

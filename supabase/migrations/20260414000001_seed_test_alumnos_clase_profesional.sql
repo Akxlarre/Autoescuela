@@ -471,53 +471,31 @@ BEGIN
 
   END LOOP;
 
-  -- ── 6. SESIONES TEÓRICAS — CURSO A4 (30 sesiones, una por día) ──────
-  FOR v_i IN 1..30 LOOP
-    INSERT INTO professional_theory_sessions (
-      promotion_course_id, date, status, notes, registered_by
-    )
-    SELECT
-      v_pc_a4_id,
-      v_session_dates[v_i],
-      'completed',
-      '[SEED] Teoría A4 — Sesión ' || v_i,
-      2
-    WHERE NOT EXISTS (
-      SELECT 1 FROM professional_theory_sessions
-      WHERE promotion_course_id = v_pc_a4_id
-        AND notes = '[SEED] Teoría A4 — Sesión ' || v_i
-    );
-  END LOOP;
+  -- ── 6. SESIONES TEÓRICAS — CURSO A4 (30 sesiones, creadas por trigger al INSERT promotion_courses)
+  -- El trigger trg_generate_professional_course_sessions ya las generó.
+  -- Solo actualizamos status/notes para marcarlas como completadas y poder colectar sus IDs.
+  UPDATE professional_theory_sessions
+  SET status = 'completed', registered_by = 2
+  WHERE promotion_course_id = v_pc_a4_id
+    AND date = ANY(v_session_dates);
 
   SELECT ARRAY_AGG(id ORDER BY date)
   INTO v_theory_ids_a4
   FROM professional_theory_sessions
   WHERE promotion_course_id = v_pc_a4_id
-    AND notes LIKE '[SEED] Teoría A4 — Sesión%';
+    AND date = ANY(v_session_dates);
 
-  -- ── 7. SESIONES TEÓRICAS — CURSO A2 (30 sesiones, una por día) ──────
-  FOR v_i IN 1..30 LOOP
-    INSERT INTO professional_theory_sessions (
-      promotion_course_id, date, status, notes, registered_by
-    )
-    SELECT
-      v_pc_a2_id,
-      v_session_dates[v_i],
-      'completed',
-      '[SEED] Teoría A2 — Sesión ' || v_i,
-      2
-    WHERE NOT EXISTS (
-      SELECT 1 FROM professional_theory_sessions
-      WHERE promotion_course_id = v_pc_a2_id
-        AND notes = '[SEED] Teoría A2 — Sesión ' || v_i
-    );
-  END LOOP;
+  -- ── 7. SESIONES TEÓRICAS — CURSO A2
+  UPDATE professional_theory_sessions
+  SET status = 'completed', registered_by = 2
+  WHERE promotion_course_id = v_pc_a2_id
+    AND date = ANY(v_session_dates);
 
   SELECT ARRAY_AGG(id ORDER BY date)
   INTO v_theory_ids_a2
   FROM professional_theory_sessions
   WHERE promotion_course_id = v_pc_a2_id
-    AND notes LIKE '[SEED] Teoría A2 — Sesión%';
+    AND date = ANY(v_session_dates);
 
   -- ── 8. ASISTENCIA TEÓRICA — A4 ────────────────────────────────────
   --
@@ -590,53 +568,29 @@ BEGIN
     END LOOP;
   END LOOP;
 
-  -- ── 10. SESIONES PRÁCTICAS — A4 (30 sesiones, una por día) ──────────
-  FOR v_i IN 1..30 LOOP
-    INSERT INTO professional_practice_sessions (
-      promotion_course_id, date, status, notes, registered_by
-    )
-    SELECT
-      v_pc_a4_id,
-      v_session_dates[v_i],
-      'completed',
-      '[SEED] Práctica A4 — Sesión ' || v_i,
-      2
-    WHERE NOT EXISTS (
-      SELECT 1 FROM professional_practice_sessions
-      WHERE promotion_course_id = v_pc_a4_id
-        AND notes = '[SEED] Práctica A4 — Sesión ' || v_i
-    );
-  END LOOP;
+  -- ── 10. SESIONES PRÁCTICAS — A4 (creadas por trigger)
+  UPDATE professional_practice_sessions
+  SET status = 'completed', registered_by = 2
+  WHERE promotion_course_id = v_pc_a4_id
+    AND date = ANY(v_session_dates);
 
   SELECT ARRAY_AGG(id ORDER BY date)
   INTO v_practice_ids_a4
   FROM professional_practice_sessions
   WHERE promotion_course_id = v_pc_a4_id
-    AND notes LIKE '[SEED] Práctica A4 — Sesión%';
+    AND date = ANY(v_session_dates);
 
-  -- ── 11. SESIONES PRÁCTICAS — A2 (30 sesiones, una por día) ──────────
-  FOR v_i IN 1..30 LOOP
-    INSERT INTO professional_practice_sessions (
-      promotion_course_id, date, status, notes, registered_by
-    )
-    SELECT
-      v_pc_a2_id,
-      v_session_dates[v_i],
-      'completed',
-      '[SEED] Práctica A2 — Sesión ' || v_i,
-      2
-    WHERE NOT EXISTS (
-      SELECT 1 FROM professional_practice_sessions
-      WHERE promotion_course_id = v_pc_a2_id
-        AND notes = '[SEED] Práctica A2 — Sesión ' || v_i
-    );
-  END LOOP;
+  -- ── 11. SESIONES PRÁCTICAS — A2 (creadas por trigger)
+  UPDATE professional_practice_sessions
+  SET status = 'completed', registered_by = 2
+  WHERE promotion_course_id = v_pc_a2_id
+    AND date = ANY(v_session_dates);
 
   SELECT ARRAY_AGG(id ORDER BY date)
   INTO v_practice_ids_a2
   FROM professional_practice_sessions
   WHERE promotion_course_id = v_pc_a2_id
-    AND notes LIKE '[SEED] Práctica A2 — Sesión%';
+    AND date = ANY(v_session_dates);
 
   -- ── 12. ASISTENCIA PRÁCTICA — A4 ──────────────────────────────────
   --
