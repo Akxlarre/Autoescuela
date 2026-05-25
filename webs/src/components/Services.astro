@@ -1,0 +1,298 @@
+---
+// src/components/Services.astro
+// Spec 0004: consume ResolvedCourse[] (ya viene del JOIN en getSiteData).
+import type { ResolvedCourse, BrandConfig } from '../lib/types';
+import SectionHeader from './ui/SectionHeader.astro';
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+
+interface Props {
+  data: ResolvedCourse[];
+  brand: BrandConfig;
+  whatsapp?: string;
+  enrollmentUrl: string;
+}
+
+const { data, brand, whatsapp, enrollmentUrl } = Astro.props;
+
+// Formatter usado solo para mostrar el basePrice tachado en override.
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('es-CL', {
+    style: 'currency',
+    currency: 'CLP',
+    maximumFractionDigits: 0,
+  }).format(price);
+};
+---
+
+<section id="cursos" class="services-section">
+  <div class="container">
+    <SectionHeader
+      title="Cursos de Conducción Acreditados"
+      subtitle="Nuestra Oferta Académica"
+      description={`Contamos con cursos teórico-prácticos autorizados, diseñados para adaptase a tu experiencia y ayudarte a obtener tu licencia de conducir en la Municipalidad de Chillán de manera exitosa.`}
+    />
+
+    <div class:list={['courses-grid', data.length > 2 ? 'bento-grid' : '', { 'courses-single': data.length === 1, 'courses-duo': data.length === 2 }]}>
+      {data.map((course, index) => {
+        const courseEnrollmentUrl = `${enrollmentUrl}&courseId=${course.courseId}`;
+
+        return (
+          <div class:list={['course-card card', { 'card-accent': course.highlighted }]} data-course-index={index}>
+            <div class="card-body">
+              <div class="card-header-wrapper">
+                {course.badge && <span class="badge badge-accent animate-pulse">{course.badge}</span>}
+                <span class="course-license-class text-uppercase">Clase {course.licenseClass}</span>
+              </div>
+              <h3 class="course-name">{course.name}</h3>
+              <p class="course-desc">{course.description}</p>
+              
+              <div class="course-pricing" data-course-license={course.licenseClass}>
+                {course.isOverrideActive && course.displayPrice !== 0 && (
+                  <span class="price-original-strike">{formatPrice(course.basePrice)}</span>
+                )}
+                <div class="price-wrapper">
+                  <span class="price-value">{course.displayPriceLabel}</span>
+                  {course.displayPrice !== 0 && <span class="price-period">/ Curso completo</span>}
+                  {course.displayPrice === 0 && <span class="badge-free">Curso gratuito</span>}
+                </div>
+                {course.priceNote && <span class="price-note">{course.priceNote}</span>}
+              </div>
+
+              <div class="course-meta">
+                <div class="meta-item">
+                  <Icon name="clock" size={15} class="text-brand flex-shrink-0" />
+                  <span class="meta-text">Duración: <strong>{course.duration}</strong></span>
+                </div>
+              </div>
+
+              <ul class="course-features-list">
+                {course.includes.map((feature) => (
+                  <li>
+                    <svg class="check-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div class="card-footer-action">
+              <Button
+                href={courseEnrollmentUrl}
+                variant={course.highlighted ? 'primary' : 'secondary'}
+                size="md"
+                class="w-full"
+              >
+                Inscribirme en este Curso
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+</section>
+
+<style>
+  .services-section {
+    background-color: var(--bg-surface);
+  }
+
+  .courses-grid {
+    margin-top: var(--space-8);
+  }
+
+  /* Ajustes para cuando hay pocos cursos (Centrado Premium) */
+  .courses-grid.courses-single {
+    display: flex;
+    justify-content: center;
+    padding: 0 var(--space-4);
+  }
+
+  .courses-grid.courses-single .course-card {
+    width: 100%;
+    max-width: 650px;
+  }
+
+  .courses-grid.courses-duo {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (min-width: 768px) {
+    .courses-grid.courses-duo {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .course-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: var(--space-5);
+  }
+
+  @media (min-width: 640px) {
+    .course-card {
+      padding: var(--space-6);
+    }
+  }
+
+  .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .card-header-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 1.5rem;
+  }
+
+  .course-license-class {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    background-color: var(--color-primary-muted);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.05em;
+  }
+
+  .course-name {
+    font-size: 1.375rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.3;
+  }
+
+  .course-desc {
+    font-size: 0.9375rem;
+    color: #475569;
+    line-height: 1.5;
+  }
+
+  .course-pricing {
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: var(--space-4) 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .price-wrapper {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .price-value {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  .price-period {
+    font-size: 0.8125rem;
+    color: #64748b;
+  }
+
+  .price-note {
+    font-size: 0.75rem;
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .price-original-strike {
+    font-size: 0.9375rem;
+    color: #94a3b8;
+    text-decoration: line-through;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+
+  .badge-free {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background-color: var(--color-primary);
+    color: #ffffff;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+  }
+
+  .course-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 0.875rem;
+    color: #475569;
+  }
+
+  .meta-icon {
+    font-size: 1.125rem;
+  }
+
+  .course-features-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2.5);
+    margin-bottom: var(--space-4);
+  }
+
+  .course-features-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    font-size: 0.875rem;
+    color: #334155; /* Slate 700 */
+    line-height: 1.4;
+  }
+
+  .check-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  .card-footer-action {
+    margin-top: var(--space-6);
+  }
+
+  .w-full {
+    width: 100%;
+  }
+
+  .text-uppercase {
+    text-transform: uppercase;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.96); }
+  }
+
+  .animate-pulse {
+    animation: pulse 2.5s infinite ease-in-out;
+  }
+</style>

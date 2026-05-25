@@ -11,6 +11,7 @@ import {
   ElementRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -619,6 +620,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
 export class PublicEnrollmentComponent {
   readonly facade = inject(PublicEnrollmentFacade);
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly route = inject(ActivatedRoute);
   readonly headerRef = viewChild<ElementRef<HTMLElement>>('headerRef');
 
   // ── Local form state (pre-save) ──
@@ -631,15 +633,46 @@ export class PublicEnrollmentComponent {
   constructor() {
     afterNextRender(() => {
       // Siempre cargar branches (necesario con o sin draft)
-      void this.facade.loadBranches();
+      void this.facade.loadBranches().then(() => {
+        const branchIdParam = this.route.snapshot.queryParamMap.get('branchId');
+        const courseIdParam = this.route.snapshot.queryParamMap.get('courseId');
 
-      // Solo resetear si no hay un borrador que ofrecer al usuario
-      if (!this.facade.hasDraftToRestore()) {
-        this.facade.reset();
-      }
+        if (branchIdParam) {
+          const branchId = parseInt(branchIdParam, 10);
+          const foundBranch = this.facade.branches().find((b) => b.id === branchId);
+          if (foundBranch) {
+            void this.facade.selectBranch(foundBranch).then(() => {
+              let flow: 'class_b' | 'professional' = 'class_b';
+              if (courseIdParam) {
+                const courseId = parseInt(courseIdParam, 10);
+                const course = this.facade.courseOptions().find((c) => c.id === courseId);
+                if (course) {
+                  flow = course.category === 'professional' ? 'professional' : 'class_b';
+                  this._step1Form.update((form) => ({
+                    ...form,
+                    courseType: course.type,
+                    courseCategory: course.category,
+                  }));
+                }
+              }
+              this.facade.selectFlowType(flow);
+              this.facade.confirmBranchSelection();
+            });
 
-      const el = this.headerRef()?.nativeElement;
-      if (el) this.gsap.animateHero(el);
+            const el = this.headerRef()?.nativeElement;
+            if (el) this.gsap.animateHero(el);
+            return;
+          }
+        }
+
+        // Solo resetear si no hay un borrador que ofrecer al usuario
+        if (!this.facade.hasDraftToRestore()) {
+          this.facade.reset();
+        }
+
+        const el = this.headerRef()?.nativeElement;
+        if (el) this.gsap.animateHero(el);
+      });
     });
 
     // Auto-load instructors when entering schedule step.

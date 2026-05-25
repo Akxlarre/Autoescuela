@@ -1,0 +1,50 @@
+/* src/styles/themes/azul.css */
+:root[data-theme="azul"] {
+  /* Color Brand (Sky) */
+  --brand-50: #f0f9ff;
+  --brand-100: #e0f2fe;
+  --brand-200: #bae6fd;
+  --brand-300: #7dd3fc;
+  --brand-400: #38bdf8;
+  --brand-500: #0ea5e9;
+  --brand-600: #0284c7;
+  --brand-700: #0369a1;
+  --brand-800: #075985;
+  --brand-900: #0c4a6e;
+  --brand-950: #082f49;
+
+  /* Color Accent (Indigo) */
+  --accent-50: #e0e7ff;
+  --accent-100: #c7d2fe;
+  --accent-200: #a5b4fc;
+  --accent-300: #818cf8;
+  --accent-400: #6366f1;
+  --accent-500: #4f46e5;
+  --accent-600: #4338ca;
+  --accent-700: #3730a3;
+  --accent-800: #312e81;
+  --accent-900: #1e1b4b;
+  --accent-950: #0f172a;
+
+  /* Semantic Mappings */
+  --color-primary: var(--brand-500);
+  --color-primary-hover: var(--brand-600);
+  --color-primary-muted: var(--brand-50);
+  --color-primary-text: var(--brand-950);
+  
+  --color-accent: var(--accent-400);
+  --color-accent-hover: var(--accent-500);
+
+  /* Backgrounds & Surfaces */
+  --bg-base: #ffffff;
+  --bg-surface: #f8fafc; /* Slate 50 */
+  --bg-surface-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --border-color: #e2e8f0; /* Slate 200 */
+  --border-focus: var(--brand-500);
+
+  /* Gradients */
+  --gradient-hero: linear-gradient(135deg, var(--brand-500) 0%, var(--accent-400) 100%);
+  --gradient-card: linear-gradient(135deg, var(--brand-50) 0%, #ffffff 100%);
+  --gradient-badge: linear-gradient(135deg, var(--brand-100) 0%, var(--brand-50) 100%);
+}

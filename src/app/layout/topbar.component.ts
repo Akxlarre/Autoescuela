@@ -13,6 +13,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import type { Notification } from '@core/models/ui/notification.model';
 import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
 import { ThemeService } from '@core/services/ui/theme.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
@@ -76,7 +77,7 @@ import { Button } from 'primeng/button';
 
       <!-- Selector de sede (solo admin) / breadcrumb -->
       <div
-        class="flex-1 min-w-0 flex items-center overflow-visible"
+        class="shrink-0 flex items-center overflow-visible sm:flex-1 sm:min-w-0"
         aria-label="Contexto de sede activa"
       >
         @if (auth.currentUser()?.role === 'admin') {
@@ -175,6 +176,7 @@ import { Button } from 'primeng/button';
               [unreadCount]="notifications.unreadCount()"
               (markRead)="notifications.markAsRead($event)"
               (markAllRead)="notifications.markAllAsRead()"
+              (notifClicked)="onNotifClicked($event)"
             />
           }
         </div>
@@ -254,6 +256,21 @@ export class TopbarComponent {
 
     this.panelOpen.set(opening);
     if (opening) this.userPanelOpen.set(false); // Close user panel if notifications open
+  }
+
+  onNotifClicked(n: Notification): void {
+    this.panelOpen.set(false);
+    if (n.referenceType !== 'task') return;
+
+    const role = this.auth.currentUser()?.role as string | undefined;
+    const route =
+      role === 'admin'
+        ? '/app/admin/tareas'
+        : role === 'secretary' || role === 'secretaria'
+          ? '/app/secretaria/observaciones'
+          : '/app/instructor/tareas';
+
+    void this.router.navigateByUrl(route);
   }
 
   onUserAction(action: 'profile' | 'settings'): void {

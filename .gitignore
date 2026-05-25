@@ -28,6 +28,10 @@ bazel-out/
 .claude/temp/
 .gemini/
 
+# SDD — artefactos privados de dev (no se comparten en el repo)
+# Si querés compartir una spec, copiala a docs/specs/ y commitéala ahí.
+specs/
+
 environments/
 docs/2020libros-curso-profesional.pdf
 docs/2020libros-curso-profesional.xlsx

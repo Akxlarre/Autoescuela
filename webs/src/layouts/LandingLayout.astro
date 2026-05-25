@@ -1,0 +1,1010 @@
+---
+// src/layouts/LandingLayout.astro
+import '../styles/global.css';
+import '../styles/themes/azul.css';
+import '../styles/themes/roja.css';
+import SchemaOrg from '../components/SchemaOrg.astro';
+import type { SiteData } from '../lib/types';
+
+interface Props {
+  siteData: SiteData;
+}
+
+const { siteData } = Astro.props;
+const { brand, hero } = siteData;
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+---
+
+<!DOCTYPE html>
+<html lang="es" data-theme={brand.theme}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Preconectar y Cargar Google Fonts en paralelo (Elimina Chained Critical Path y FOUT) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    
+    <!-- Meta Tags Principales (SEO) -->
+    <title>{brand.name} — {hero.headline}</title>
+    <meta name="description" content={hero.subheadline} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href={`https://${brand.domain}/`} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={`https://${brand.domain}/`} />
+    <meta property="og:title" content={`${brand.name} — ${hero.headline}`} />
+    <meta property="og:description" content={hero.subheadline} />
+    <meta property="og:image" content={`${brand.ogImage}`} />
+    <meta property="og:locale" content="es_CL" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={`https://${brand.domain}/`} />
+    <meta property="twitter:title" content={`${brand.name} — ${hero.headline}`} />
+    <meta property="twitter:description" content={hero.subheadline} />
+    <meta property="twitter:image" content={`${brand.ogImage}`} />
+
+    <!-- Favicons -->
+    <link rel="icon" href={brand.favicon || brand.logo || '/favicon.ico'} />
+    <link rel="shortcut icon" href={brand.favicon || '/favicon.ico'} />
+
+    <!-- Schema.org JSON-LD -->
+    <SchemaOrg data={siteData} />
+
+    <!-- Bloqueo FOUC de Tema -->
+    <script is:inline define:vars={{ branchId: brand.branchId }}>
+      try {
+        const savedTheme = localStorage.getItem('theme-branch-' + branchId);
+        if (savedTheme) {
+          document.documentElement.setAttribute('data-theme', savedTheme);
+        }
+      } catch (e) {}
+    </script>
+    <script is:inline>
+      document.documentElement.classList.add('js-enabled');
+      // Asegurar que las View Transitions de Astro preserven la clase en el body
+      document.addEventListener('astro:after-swap', function() {
+        console.log('[Page Reveal] astro:after-swap fired. Forcing page-ready.');
+        document.body.classList.add('page-ready');
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Script de Revelado Suave Cinemático (Fórmula Anti-FOUT premium) -->
+    <script is:inline>
+      (function() {
+        console.log('[Page Reveal] Initializing soft reveal...');
+        var revealed = false;
+        function revealPage(reason) {
+          if (!revealed && document.body) {
+            revealed = true;
+            console.log('[Page Reveal] Revealing page. Reason:', reason);
+            document.body.classList.add('page-ready');
+          }
+        }
+
+        // 1. Escuchar DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() { revealPage('DOMContentLoaded'); });
+
+        // 2. Escuchar cuando las fuentes de Google Fonts estén totalmente listas y renderizadas
+        if ('fonts' in document) {
+          document.fonts.ready.then(function() {
+            revealPage('Fonts Ready');
+          });
+        }
+
+        // 3. Fallback inmediato de carga
+        if (document.readyState === 'interactive' || document.readyState === 'complete') {
+          revealPage('ReadyState Direct');
+        }
+
+        // 4. Límite estricto de seguridad de 180ms para conexiones lentas (evita pantalla en blanco)
+        setTimeout(function() {
+          revealPage('Security Timeout Fallback');
+        }, 180);
+      })();
+    </script>
+    <slot />
+
+    <!-- Script de Sincronización e Hidratación Dinámica Completa (Fase 3 - Resiliente) -->
+    <script is:inline define:vars={{ branchId: brand.branchId, brandName: brand.name, supabaseUrl, supabaseKey }}>
+      (function() {
+        console.log('[Astro Hydration] 🚀 Iniciando hidratación para:', brandName, '| Sede ID:', branchId);
+        
+        // Carga diferida de Lucide desde CDN para iconos dinámicos resilientes
+        if (typeof window.lucide === 'undefined') {
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/lucide@latest';
+          script.async = true;
+          script.onload = function() {
+            if (window.lucide) {
+              window.lucide.createIcons();
+            }
+          };
+          document.head.appendChild(script);
+        }
+
+        const configUrl = supabaseUrl + '/rest/v1/website_config?branch_id=eq.' + branchId + '&select=config';
+        const coursesUrl = supabaseUrl + '/rest/v1/courses?branch_id=eq.' + branchId + '&active=eq.true&select=id,name,license_class,base_price,active';
+        const anonKey = supabaseKey;
+
+        // Helper seguro para actualizar texto de botones con íconos SVG internos
+        function updateButtonText(buttonEl, newText) {
+          if (!buttonEl) return;
+          const textNodes = Array.from(buttonEl.childNodes).filter(n => n.nodeType === 3);
+          const targetNode = textNodes.find(n => n.textContent.trim().length > 0) || textNodes[textNodes.length - 1];
+          if (targetNode) {
+            targetNode.textContent = ' ' + newText.trim() + ' ';
+          } else {
+            buttonEl.textContent = newText;
+          }
+        }
+
+        const formatter = new Intl.NumberFormat('es-CL', {
+          style: 'currency',
+          currency: 'CLP',
+          maximumFractionDigits: 0,
+        });
+
+        Promise.all([
+          fetch(configUrl, { 
+            cache: 'no-store',
+            headers: { 'apikey': anonKey, 'Authorization': 'Bearer ' + anonKey } 
+          }).then(r => {
+            if (!r.ok) throw new Error('website_config error: ' + r.statusText);
+            return r.json();
+          }),
+          fetch(coursesUrl, { 
+            cache: 'no-store',
+            headers: { 'apikey': anonKey, 'Authorization': 'Bearer ' + anonKey } 
+          }).then(r => {
+            if (!r.ok) throw new Error('courses error: ' + r.statusText);
+            return r.json();
+          })
+        ])
+        .then(([configRows, catalog]) => {
+          if (!configRows || configRows.length === 0) {
+            console.warn('[Astro Hydration] ⚠️ Sin config en BD para sede:', branchId);
+            return;
+          }
+          const config = configRows[0].config;
+          if (!config) {
+            console.warn('[Astro Hydration] ⚠️ config vacío en BD.');
+            return;
+          }
+          console.log('[Astro Hydration] ✅ Config y Catálogo cargados.');
+
+          // Resolve courses like SSR does
+          const rawCourses = config.courses || [];
+          const catalogById = new Map();
+          for (const c of catalog) catalogById.set(c.id, c);
+
+          const resolvedCourses = [];
+          for (const card of rawCourses) {
+            const course = catalogById.get(card.course_id);
+            if (!course) continue;
+
+            const priceOverride = card.priceOverride ?? null;
+            const isOverrideActive = priceOverride !== null;
+            const basePrice = course.base_price != null ? course.base_price : 0;
+            const displayPrice = isOverrideActive ? priceOverride : basePrice;
+            const displayPriceLabel = displayPrice === 0 ? 'Gratis' : formatter.format(displayPrice);
+
+            resolvedCourses.push({
+              courseId: course.id,
+              name: course.name ?? '',
+              licenseClass: course.license_class ?? '',
+              basePrice,
+              isCourseActive: course.active,
+              description: card.description,
+              priceNote: card.priceNote ?? null,
+              duration: card.duration,
+              includes: card.includes,
+              highlighted: card.highlighted,
+              badge: card.badge ?? null,
+              displayOrder: card.displayOrder,
+              priceOverride,
+              displayPrice,
+              displayPriceLabel,
+              isOverrideActive,
+              price: displayPrice,
+            });
+          }
+
+          resolvedCourses.sort((a, b) => {
+            if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+            return a.courseId - b.courseId;
+          });
+
+          // Inject resolved courses into config
+          config.courses = resolvedCourses;
+
+          // ─────────────────────────────────────────
+          // BLOQUE 1: IDENTIDAD / MARCA
+          // ─────────────────────────────────────────
+          try {
+            if (config.brand) {
+              const currentBrandName = config.brand.name || brandName;
+              console.log('[Hydration §1 Marca] Nombre:', currentBrandName);
+
+              if (config.brand.theme) {
+                document.documentElement.setAttribute('data-theme', config.brand.theme);
+                try { localStorage.setItem('theme-branch-' + branchId, config.brand.theme); } catch(e) {}
+              }
+
+              if (config.hero && config.hero.headline) {
+                document.title = currentBrandName + ' — ' + config.hero.headline;
+              }
+              if (config.hero && config.hero.subheadline) {
+                const metaDesc = document.querySelector('meta[name="description"]');
+                if (metaDesc) metaDesc.setAttribute('content', config.hero.subheadline);
+              }
+
+              const navBrandEl = document.querySelector('.navbar-brand .brand-name');
+              if (navBrandEl && navBrandEl.textContent !== currentBrandName) {
+                navBrandEl.textContent = currentBrandName;
+              }
+
+              const footerBrandEl = document.querySelector('.footer-logo .brand-name');
+              if (footerBrandEl && footerBrandEl.textContent !== currentBrandName) {
+                footerBrandEl.textContent = currentBrandName;
+              }
+
+              const footerSloganEl = document.querySelector('.footer-slogan');
+              if (footerSloganEl && config.brand.slogan && footerSloganEl.textContent !== config.brand.slogan) {
+                footerSloganEl.textContent = config.brand.slogan;
+              }
+
+              const copyrightEl = document.querySelector('.copyright-text');
+              if (copyrightEl) {
+                const targetCopyright = '&copy; ' + new Date().getFullYear() + ' ' + currentBrandName + '. Todos los derechos reservados.';
+                if (copyrightEl.innerHTML !== targetCopyright) {
+                  copyrightEl.innerHTML = targetCopyright;
+                }
+              }
+
+              if (config.brand.logo) {
+                const logoContainers = document.querySelectorAll('.logo-icon');
+                logoContainers.forEach(function(container) {
+                  if (container) {
+                    let imgEl = container.querySelector('.brand-logo-img');
+                    if (imgEl) {
+                      if (imgEl.getAttribute('src') !== config.brand.logo) {
+                        imgEl.style.transition = 'opacity 0.25s ease-in-out';
+                        imgEl.style.opacity = '0';
+                        const tempImg = new Image();
+                        tempImg.onload = function() {
+                          imgEl.setAttribute('src', config.brand.logo);
+                          imgEl.style.opacity = '1';
+                        };
+                        tempImg.src = config.brand.logo;
+                      }
+                      imgEl.style.display = 'inline-block';
+                      var fallbackIcon = container.querySelector('span');
+                      if (fallbackIcon) fallbackIcon.style.display = 'none';
+                    } else {
+                      container.innerHTML = `
+                        <img src="${config.brand.logo}" alt="Logo" class="brand-logo-img" style="height: 1.85rem; width: auto; max-width: 140px; object-fit: contain; transition: opacity 0.25s ease-in-out; opacity: 1;" onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='inline-block';" />
+                        <span style="display: none;"><svg class="lucide lucide-car" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg></span>
+                      `;
+                    }
+                  }
+                });
+              }
+            }
+          } catch(e) { console.error('[Hydration §1 Marca] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 2: HERO (Layout, Media, Badges, Features)
+          // ─────────────────────────────────────────
+          try {
+            if (config.hero) {
+              console.log('[Hydration §2 Hero] 🟢 Iniciando hidratación de Hero...');
+
+              const heroSection = document.querySelector('.hero-section');
+              const heroContainer = document.querySelector('.hero-container');
+              const heroContent = document.querySelector('.hero-content');
+              
+              const layoutType = config.hero.layoutType || 'center';
+              const hasMedia = !!(config.hero.media && config.hero.media.type !== 'none' && config.hero.media.url);
+              const overlayOpacity = config.hero.media?.overlayOpacity ?? 40;
+
+              // Helper function to update the interior DOM of the Hero
+              function updateHeroDOM() {
+                // 1. Update layout classes
+                if (heroContainer) {
+                  const targetContainerClass = 'container hero-container layout-' + layoutType + ' animate-fade-in';
+                  if (heroContainer.className !== targetContainerClass) {
+                    heroContainer.className = targetContainerClass;
+                  }
+                }
+
+                if (heroSection) {
+                  const hasBgImage = (layoutType === 'center' && hasMedia);
+                  if (hasBgImage && !heroSection.classList.contains('has-bg-image')) {
+                    heroSection.classList.add('has-bg-image');
+                  } else if (!hasBgImage && heroSection.classList.contains('has-bg-image')) {
+                    heroSection.classList.remove('has-bg-image');
+                  }
+                }
+
+                // 2. Update background image / accent
+                let bgImageEl = document.querySelector('.hero-bg-image');
+                let bgAccentEl = document.querySelector('.hero-bg-accent');
+                
+                if (layoutType === 'center' && hasMedia) {
+                  if (bgAccentEl) bgAccentEl.remove();
+                  if (!bgImageEl && heroSection) {
+                    bgImageEl = document.createElement('div');
+                    bgImageEl.className = 'hero-bg-image';
+                    bgImageEl.style.opacity = '0';
+                    bgImageEl.style.transition = 'opacity 0.3s ease-in-out';
+                    heroSection.insertBefore(bgImageEl, heroSection.firstChild);
+                  }
+                  if (bgImageEl) {
+                    const targetStyle = 'background-image: url(\'' + config.hero.media.url + '\'); --overlay-opacity: ' + (overlayOpacity / 100) + ';';
+                    if (bgImageEl.getAttribute('style') !== targetStyle) {
+                      const tempBg = new Image();
+                      tempBg.onload = function() {
+                        bgImageEl.setAttribute('style', targetStyle);
+                        bgImageEl.style.opacity = '1';
+                      };
+                      tempBg.src = config.hero.media.url;
+                    } else {
+                      bgImageEl.style.opacity = '1';
+                    }
+                  }
+                } else {
+                  if (bgImageEl) bgImageEl.remove();
+                  if (!bgAccentEl && heroSection) {
+                    bgAccentEl = document.createElement('div');
+                    bgAccentEl.className = 'hero-bg-accent';
+                    heroSection.insertBefore(bgAccentEl, heroSection.firstChild);
+                  }
+                }
+
+                // 3. Update Title & Subtitle with Smart DOM Diffing
+                const heroTitleEl = document.querySelector('.hero-title');
+                if (heroTitleEl && config.hero.headline && heroTitleEl.textContent !== config.hero.headline) {
+                  heroTitleEl.textContent = config.hero.headline;
+                }
+
+                const heroLeadEl = document.querySelector('.hero-lead');
+                if (heroLeadEl && config.hero.subheadline && heroLeadEl.textContent !== config.hero.subheadline) {
+                  heroLeadEl.textContent = config.hero.subheadline;
+                }
+
+                // 4. Update Trust Badge
+                let trustBadgeEl = document.querySelector('.trust-badge');
+                const trustBadgeEnabled = !!(config.hero.trustBadge?.enabled && config.hero.trustBadge?.text);
+                
+                if (trustBadgeEnabled) {
+                  if (!trustBadgeEl && heroContent && heroLeadEl) {
+                    trustBadgeEl = document.createElement('div');
+                    trustBadgeEl.className = 'trust-badge';
+                    trustBadgeEl.innerHTML = `
+                      <div class="stars">
+                        <span class="star-icon">★</span>
+                        <span class="star-icon">★</span>
+                        <span class="star-icon">★</span>
+                        <span class="star-icon">★</span>
+                        <span class="star-icon">★</span>
+                      </div>
+                      <span class="trust-text">${config.hero.trustBadge.text}</span>
+                    `;
+                    heroContent.insertBefore(trustBadgeEl, heroLeadEl.nextSibling);
+                  } else if (trustBadgeEl) {
+                    trustBadgeEl.style.display = '';
+                    const trustTextEl = trustBadgeEl.querySelector('.trust-text');
+                    if (trustTextEl && trustTextEl.textContent !== config.hero.trustBadge.text) {
+                      trustTextEl.textContent = config.hero.trustBadge.text;
+                    }
+                  }
+                } else {
+                  if (trustBadgeEl) {
+                    trustBadgeEl.style.display = 'none';
+                  }
+                }
+
+                // 5. Update CTA Button
+                // Buscar específicamente el botón de WhatsApp (para no sobrescribir el botón principal de 'Inscribirme Online')
+                const heroActionsLinks = document.querySelectorAll('.hero-actions a');
+                let heroCtaEl = null;
+                heroActionsLinks.forEach(link => {
+                  if (link.getAttribute('href')?.includes('whatsapp')) {
+                    heroCtaEl = link;
+                  }
+                });
+                
+                if (heroCtaEl && config.hero.cta) {
+                  if (config.hero.cta.text) {
+                    updateButtonText(heroCtaEl, config.hero.cta.text);
+                  }
+                  const wpNum = config.hero.cta.whatsapp || (config.contact ? config.contact.whatsapp : '+56912345678');
+                  const enc = encodeURIComponent('¡Hola! Vengo de su sitio web y me gustaría solicitar información sobre los cursos de conducción de ' + (config.brand?.name || brandName) + ' en Chillán.');
+                  const targetHref = 'https://api.whatsapp.com/send?phone=' + wpNum + '&text=' + enc;
+                  if (heroCtaEl.getAttribute('href') !== targetHref) {
+                    heroCtaEl.setAttribute('href', targetHref);
+                  }
+                }
+
+                // 6. Update Media (Split layout) - Hydration DOM Diffing Resiliente
+                let mediaWrapperEl = document.querySelector('.hero-media-wrapper');
+                if (layoutType !== 'center' && hasMedia) {
+                  if (!mediaWrapperEl && heroContainer) {
+                    mediaWrapperEl = document.createElement('div');
+                    mediaWrapperEl.className = 'hero-media-wrapper';
+                    mediaWrapperEl.setAttribute('data-media-type', config.hero.media.type);
+                    
+                    const ambientEl = document.createElement('div');
+                    ambientEl.className = 'media-ambient-blur';
+                    ambientEl.style.backgroundImage = 'url("' + config.hero.media.url + '")';
+                    mediaWrapperEl.appendChild(ambientEl);
+
+                    const skelEl = document.createElement('div');
+                    skelEl.className = 'media-skeleton';
+                    skelEl.innerHTML = '<div class="skeleton-shimmer"></div>';
+                    mediaWrapperEl.appendChild(skelEl);
+
+                    const featuresGrid = document.querySelector('.hero-features');
+                    if (featuresGrid) {
+                      heroContainer.insertBefore(mediaWrapperEl, featuresGrid);
+                    } else {
+                      heroContainer.appendChild(mediaWrapperEl);
+                    }
+                  }
+
+                  if (mediaWrapperEl) {
+                    mediaWrapperEl.style.display = '';
+                    
+                    // Actualizar data-media-type
+                    if (mediaWrapperEl.getAttribute('data-media-type') !== config.hero.media.type) {
+                      mediaWrapperEl.setAttribute('data-media-type', config.hero.media.type);
+                    }
+
+                    // Actualizar background image de ambient blur
+                    const ambientBlurEl = mediaWrapperEl.querySelector('.media-ambient-blur');
+                    const targetBgUrl = 'url("' + config.hero.media.url + '")';
+                    if (ambientBlurEl && ambientBlurEl.style.backgroundImage !== targetBgUrl) {
+                      ambientBlurEl.style.backgroundImage = targetBgUrl;
+                    }
+
+                    // Actualizar imagen o video en primer plano sin sobreescribir HTML estático
+                    if (config.hero.media.type === 'image') {
+                      const videoEl = mediaWrapperEl.querySelector('video');
+                      if (videoEl) videoEl.remove();
+
+                      let imgEl = mediaWrapperEl.querySelector('img.hero-media-img');
+                      if (!imgEl) {
+                        imgEl = document.createElement('img');
+                        imgEl.className = 'hero-media-img js-fade-image';
+                        imgEl.alt = config.hero.headline;
+                        imgEl.loading = 'eager';
+                        
+                        imgEl.addEventListener('load', function() {
+                          imgEl.classList.add('is-loaded');
+                          mediaWrapperEl.classList.add('media-loaded');
+                          if (imgEl.naturalHeight > imgEl.naturalWidth) {
+                            mediaWrapperEl.classList.add('is-portrait-media');
+                          } else {
+                            mediaWrapperEl.classList.remove('is-portrait-media');
+                          }
+                        });
+                        mediaWrapperEl.appendChild(imgEl);
+                      }
+
+                      if (imgEl.getAttribute('src') !== config.hero.media.url) {
+                        console.log('[Hydration §2 Hero] New image URL detected. Updating src and resetting loaded classes.');
+                        imgEl.classList.remove('is-loaded');
+                        mediaWrapperEl.classList.remove('media-loaded');
+                        mediaWrapperEl.classList.remove('is-portrait-media');
+                        imgEl.setAttribute('src', config.hero.media.url);
+                      }
+                    } else {
+                      const imgEl = mediaWrapperEl.querySelector('img');
+                      if (imgEl) imgEl.remove();
+
+                      let videoEl = mediaWrapperEl.querySelector('video.hero-media-video');
+                      if (!videoEl) {
+                        videoEl = document.createElement('video');
+                        videoEl.className = 'hero-media-video js-fade-video';
+                        videoEl.autoplay = true;
+                        videoEl.loop = true;
+                        videoEl.muted = true;
+                        videoEl.playsInline = true;
+                        
+                        videoEl.addEventListener('loadeddata', function() {
+                          videoEl.classList.add('is-loaded');
+                          mediaWrapperEl.classList.add('media-loaded');
+                          if (videoEl.videoHeight > videoEl.videoWidth) {
+                            mediaWrapperEl.classList.add('is-portrait-media');
+                          } else {
+                            mediaWrapperEl.classList.remove('is-portrait-media');
+                          }
+                        });
+                        mediaWrapperEl.appendChild(videoEl);
+                      }
+
+                      if (videoEl.getAttribute('src') !== config.hero.media.url) {
+                        console.log('[Hydration §2 Hero] New video URL detected. Updating src and resetting loaded classes.');
+                        videoEl.classList.remove('is-loaded');
+                        mediaWrapperEl.classList.remove('media-loaded');
+                        mediaWrapperEl.classList.remove('is-portrait-media');
+                        videoEl.setAttribute('src', config.hero.media.url);
+                      }
+                    }
+                  }
+                } else {
+                  if (mediaWrapperEl) {
+                    mediaWrapperEl.style.display = 'none';
+                  }
+                }
+
+                // 7. Update Bento Features
+                const featureItems = document.querySelectorAll('.hero-features .feature-item');
+                if (featureItems.length > 0 && config.hero.features) {
+                  featureItems.forEach((el, idx) => {
+                    const feature = config.hero.features[idx];
+                    if (!feature) {
+                      el.style.display = 'none';
+                      return;
+                    }
+                    el.style.display = '';
+                    const textEl = el.querySelector('.feature-text');
+                    if (textEl && textEl.textContent !== feature.text) {
+                      textEl.textContent = feature.text;
+                    }
+                  });
+                }
+              }
+
+              // Smooth Layout Shift Transition:
+              // If the layout type or media background has actually changed, apply a 200ms fade-out transition,
+              // run all the updates in the background, and fade it back in!
+              const currentLayoutClass = 'container hero-container layout-' + layoutType + ' animate-fade-in';
+              const layoutChanged = heroContainer && heroContainer.className !== currentLayoutClass;
+              const bgImageEl = document.querySelector('.hero-bg-image');
+              const bgChanged = bgImageEl && config.hero.media?.url && bgImageEl.style.backgroundImage !== 'url("' + config.hero.media.url + '")';
+
+              if ((layoutChanged || bgChanged) && heroContainer) {
+                heroContainer.style.transition = 'opacity 0.2s ease-in-out';
+                heroContainer.style.opacity = '0';
+                setTimeout(() => {
+                  updateHeroDOM();
+                  heroContainer.style.opacity = '1';
+                }, 200);
+              } else {
+                updateHeroDOM();
+              }
+
+              console.log('[Hydration §2 Hero] 🏁 Fin de hidratación de Hero con éxito.');
+            }
+          } catch(e) { console.error('[Hydration §2 Hero] ❌ Error crítico durante hidratación:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 3A: CARDS DE CURSOS (Services)
+          // ─────────────────────────────────────────
+          try {
+            const courseCards = document.querySelectorAll('.course-card[data-course-index]');
+            console.log('[Hydration §3A Cursos] tarjetas encontradas:', courseCards.length);
+
+            courseCards.forEach(el => {
+              const index = parseInt(el.getAttribute('data-course-index'), 10);
+              if (isNaN(index)) return;
+              const course = config.courses && config.courses[index];
+              if (!course) { el.style.display = 'none'; return; }
+              el.style.display = '';
+
+              const nameEl = el.querySelector('.course-name');
+              if (nameEl) nameEl.textContent = course.name;
+              const descEl = el.querySelector('.course-desc');
+              if (descEl) descEl.textContent = course.description;
+              const licenseEl = el.querySelector('.course-license-class');
+              if (licenseEl) licenseEl.textContent = 'Clase ' + course.licenseClass;
+              
+              const priceValEl = el.querySelector('.price-value');
+              if (priceValEl) priceValEl.textContent = course.displayPriceLabel;
+              
+              const originalPriceEl = el.querySelector('.price-original');
+              if (originalPriceEl) {
+                if (course.isOverrideActive && course.displayPrice !== 0) {
+                  originalPriceEl.textContent = formatter.format(course.basePrice);
+                  originalPriceEl.style.display = '';
+                } else {
+                  originalPriceEl.style.display = 'none';
+                }
+              }
+
+              const priceNoteEl = el.querySelector('.price-note');
+              if (priceNoteEl) {
+                if (course.priceNote) { priceNoteEl.textContent = course.priceNote; priceNoteEl.style.display = ''; }
+                else { priceNoteEl.style.display = 'none'; }
+              }
+              const durationEl = el.querySelector('.meta-text strong');
+              if (durationEl) durationEl.textContent = course.duration;
+
+              const featuresList = el.querySelector('.course-features-list');
+              if (featuresList && course.includes) {
+                featuresList.innerHTML = '';
+                course.includes.forEach(inc => {
+                  const li = document.createElement('li');
+                  li.innerHTML = '<svg class="check-icon" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>' + inc + '</span>';
+                  featuresList.appendChild(li);
+                });
+              }
+
+              const badgeEl = el.querySelector('.badge-accent');
+              if (badgeEl) {
+                if (course.badge) { badgeEl.textContent = course.badge; badgeEl.style.display = ''; }
+                else { badgeEl.style.display = 'none'; }
+              }
+
+              const btnEl = el.querySelector('.card-footer-action a');
+              if (btnEl && config.contact && config.contact.whatsapp) {
+                const enc = encodeURIComponent('¡Hola! Vengo de su sitio web y me interesa inscribirme en: "' + course.name + '" en ' + (config.brand?.name || brandName) + '.');
+                btnEl.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + config.contact.whatsapp + '&text=' + enc);
+              }
+            });
+          } catch(e) { console.error('[Hydration §3A Cursos] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 3B: TABLA DE PRECIOS Y MOBILE CARDS (Pricing)
+          // ─────────────────────────────────────────
+          try {
+            // Desktop Table Rows
+            const pricingRows = document.querySelectorAll('tbody tr[data-course-index]');
+            console.log('[Hydration §3B Precios Desktop] filas encontradas:', pricingRows.length);
+
+            pricingRows.forEach(el => {
+              const index = parseInt(el.getAttribute('data-course-index'), 10);
+              if (isNaN(index)) return;
+              const course = config.courses && config.courses[index];
+              if (!course) { el.style.display = 'none'; return; }
+              el.style.display = '';
+
+              const nameEl = el.querySelector('.course-cell-name strong');
+              if (nameEl) nameEl.textContent = course.name;
+
+              const badgeMini = el.querySelector('.badge-mini');
+              if (badgeMini) {
+                if (course.badge) { badgeMini.textContent = course.badge; badgeMini.style.display = ''; }
+                else { badgeMini.style.display = 'none'; }
+              }
+
+              const licenseBadge = el.querySelector('.license-badge');
+              if (licenseBadge) licenseBadge.textContent = 'Clase ' + course.licenseClass;
+              const durationCell = el.querySelector('.duration-cell');
+              if (durationCell) durationCell.textContent = course.duration;
+              
+              const priceValEl = el.querySelector('.price-value');
+              if (priceValEl) priceValEl.textContent = course.displayPriceLabel;
+              
+              const originalPriceEl = el.querySelector('.price-original-strike');
+              if (originalPriceEl) {
+                if (course.isOverrideActive && course.displayPrice !== 0) {
+                  originalPriceEl.textContent = formatter.format(course.basePrice);
+                  originalPriceEl.style.display = '';
+                } else {
+                  originalPriceEl.style.display = 'none';
+                }
+              }
+
+              const noteCell = el.querySelector('.note-cell');
+              if (noteCell) {
+                if (course.priceNote) { noteCell.textContent = course.priceNote; noteCell.style.display = ''; }
+                else { noteCell.style.display = 'none'; }
+              }
+              const btnEl = el.querySelector('.action-cell a');
+              if (btnEl && config.contact && config.contact.whatsapp) {
+                const enc = encodeURIComponent('¡Hola! Me interesa facilidades de pago para: "' + course.name + '" en ' + (config.brand?.name || brandName) + '.');
+                btnEl.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + config.contact.whatsapp + '&text=' + enc);
+              }
+            });
+
+            // Mobile Cards Table Hydration
+            const mobilePricingCards = document.querySelectorAll('.mobile-price-card[data-course-index]');
+            console.log('[Hydration §3B Precios Mobile] tarjetas encontradas:', mobilePricingCards.length);
+
+            mobilePricingCards.forEach(el => {
+              const index = parseInt(el.getAttribute('data-course-index'), 10);
+              if (isNaN(index)) return;
+              const course = config.courses && config.courses[index];
+              if (!course) { el.style.display = 'none'; return; }
+              el.style.display = '';
+
+              const nameEl = el.querySelector('.mpc-name');
+              if (nameEl) nameEl.textContent = course.name;
+
+              const badgeMini = el.querySelector('.badge-mini');
+              if (badgeMini) {
+                if (course.badge) { badgeMini.textContent = course.badge; badgeMini.style.display = ''; }
+                else { badgeMini.style.display = 'none'; }
+              }
+
+              const licenseBadge = el.querySelector('.license-badge');
+              if (licenseBadge) licenseBadge.textContent = 'Clase ' + course.licenseClass;
+              
+              const durationEl = el.querySelector('.mpc-duration');
+              if (durationEl) durationEl.textContent = course.duration;
+
+              const priceValEl = el.querySelector('.mpc-price');
+              if (priceValEl) priceValEl.textContent = course.displayPriceLabel;
+
+              const originalPriceEl = el.querySelector('.price-original-strike');
+              if (originalPriceEl) {
+                if (course.isOverrideActive && course.displayPrice !== 0) {
+                  originalPriceEl.textContent = formatter.format(course.basePrice);
+                  originalPriceEl.style.display = '';
+                } else {
+                  originalPriceEl.style.display = 'none';
+                }
+              }
+
+              const noteEl = el.querySelector('.price-note-mobile');
+              if (noteEl) {
+                if (course.priceNote) { noteEl.textContent = course.priceNote; noteEl.style.display = ''; }
+                else { noteEl.style.display = 'none'; }
+              }
+
+              const btnEl = el.querySelector('.mpc-footer a');
+              if (btnEl && config.contact && config.contact.whatsapp) {
+                const enc = encodeURIComponent('¡Hola! Me interesa inscribirme en: "' + course.name + '" en ' + (config.brand?.name || brandName) + '.');
+                btnEl.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + config.contact.whatsapp + '&text=' + enc);
+              }
+            });
+          } catch(e) { console.error('[Hydration §3B Precios] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 4: WHY US (Ventajas)
+          // ─────────────────────────────────────────
+          try {
+            if (config.whyUs) {
+              const whyCards = document.querySelectorAll('.why-card');
+              console.log('[Hydration §4 WhyUs] .why-card encontrados:', whyCards.length);
+              whyCards.forEach((el, idx) => {
+                const item = config.whyUs[idx];
+                if (!item) { el.style.display = 'none'; return; }
+                el.style.display = '';
+                const iconWrapper = el.querySelector('.icon-wrapper');
+                if (iconWrapper && item.icon) {
+                  const isEmoji = /\p{Emoji}/u.test(item.icon) || (item.icon.length <= 4 && !/^[a-zA-Z0-9_-]+$/.test(item.icon));
+                  if (isEmoji) {
+                    iconWrapper.innerHTML = '<span class="why-icon text-3xl flex items-center justify-center" style="font-size: 28px; line-height: 1;">' + item.icon + '</span>';
+                  } else {
+                    const currentSvg = iconWrapper.querySelector('svg');
+                    const targetClass = 'lucide-' + item.icon;
+                    if (!currentSvg || !currentSvg.classList.contains(targetClass)) {
+                      iconWrapper.innerHTML = '<i data-lucide="' + item.icon + '" class="why-icon text-primary" style="width: 28px; height: 28px; display: inline-block;"></i>';
+                      if (window.lucide) {
+                        window.lucide.createIcons();
+                      }
+                    }
+                  }
+                }
+                const titleEl = el.querySelector('.why-title');
+                if (titleEl) titleEl.textContent = item.title;
+                const descEl = el.querySelector('.why-desc');
+                if (descEl) descEl.textContent = item.description;
+              });
+            }
+          } catch(e) { console.error('[Hydration §4 WhyUs] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 5: FAQs
+          // ─────────────────────────────────────────
+          try {
+            if (config.faqs) {
+              const faqItems = document.querySelectorAll('.faq-item');
+              faqItems.forEach((el, idx) => {
+                const faq = config.faqs[idx];
+                if (!faq) { el.style.display = 'none'; return; }
+                el.style.display = '';
+                const questionEl = el.querySelector('.faq-question span:first-child');
+                if (questionEl) questionEl.textContent = faq.question;
+                const answerEl = el.querySelector('.faq-answer p');
+                if (answerEl) answerEl.textContent = faq.answer;
+              });
+            }
+          } catch(e) { console.error('[Hydration §5 FAQs] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 6: CONTACTO
+          // ─────────────────────────────────────────
+          try {
+            const contact = config.contact;
+            if (contact) {
+              const whatsappLink = document.querySelector('.whatsapp-hover');
+              if (whatsappLink && contact.whatsapp) {
+                const enc = encodeURIComponent('¡Hola! Vengo de su sitio web y me gustaría inscribirme en ' + (config.brand?.name || brandName) + '.');
+                whatsappLink.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + contact.whatsapp + '&text=' + enc);
+                const valueEl = whatsappLink.querySelector('.method-value');
+                if (valueEl) valueEl.textContent = contact.whatsapp;
+              }
+
+              const phoneLink = document.querySelector('.phone-hover');
+              if (phoneLink && contact.phone) {
+                phoneLink.setAttribute('href', 'tel:' + contact.phone.replace(/\s+/g, ''));
+                const valueEl = phoneLink.querySelector('.method-value');
+                if (valueEl) valueEl.textContent = contact.phone;
+              }
+
+              const emailLink = document.querySelector('.email-hover');
+              if (emailLink && contact.email) {
+                emailLink.setAttribute('href', 'mailto:' + contact.email);
+                const valueEl = emailLink.querySelector('.method-value');
+                if (valueEl) valueEl.textContent = contact.email;
+              }
+
+              const expressBtn = document.querySelector('.action-card-btn a');
+              if (expressBtn && contact.whatsapp) {
+                const enc = encodeURIComponent('¡Hola! Me gustaría inscribirme y coordinar mi primer curso en ' + (config.brand?.name || brandName) + '.');
+                expressBtn.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + contact.whatsapp + '&text=' + enc);
+              }
+
+              const addressEl = document.querySelector('.address-text');
+              if (addressEl && contact.address) addressEl.textContent = contact.address;
+
+              const cityEl = document.querySelector('.city-text');
+              if (cityEl && contact.city && contact.region) cityEl.textContent = contact.city + ', ' + contact.region;
+
+              const mapIframe = document.querySelector('.map-card iframe');
+              if (mapIframe && contact.mapEmbedUrl) mapIframe.setAttribute('src', contact.mapEmbedUrl);
+            }
+          } catch(e) { console.error('[Hydration §6 Contacto] ❌ Error:', e); }
+
+          // BLOQUE 7: HORARIOS
+          // ─────────────────────────────────────────
+          try {
+            if (config.hours) {
+              const hoursContainer = document.querySelector('.hours-list');
+              if (hoursContainer) {
+                hoursContainer.innerHTML = '';
+                config.hours.forEach(h => {
+                  const daysText = h.days || '';
+                  const timeText = h.time || h.hours || '';
+                  if (daysText && timeText) {
+                    const li = document.createElement('li');
+                    
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'days-label';
+                    labelSpan.textContent = daysText + ':';
+                    
+                    const valueSpan = document.createElement('span');
+                    valueSpan.className = 'time-value';
+                    const strong = document.createElement('strong');
+                    strong.textContent = timeText;
+                    valueSpan.appendChild(strong);
+                    
+                    li.appendChild(labelSpan);
+                    li.appendChild(valueSpan);
+                    hoursContainer.appendChild(li);
+                  }
+                });
+              }
+            }
+          } catch(e) { console.error('[Hydration §7 Horarios] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 8: PROMO BANNER
+          // ─────────────────────────────────────────
+          try {
+            const promoContainer = document.getElementById('promo-banner-container');
+            if (promoContainer) {
+              const promo = config.promo;
+              if (promo && promo.active) {
+                const badgeEl = document.getElementById('promo-badge');
+                if (badgeEl) {
+                  if (promo.badge) { badgeEl.textContent = promo.badge; badgeEl.style.display = ''; }
+                  else { badgeEl.style.display = 'none'; }
+                }
+
+                const titleEl = document.getElementById('promo-title');
+                if (titleEl) titleEl.textContent = promo.title;
+
+                const descEl = document.getElementById('promo-desc');
+                if (descEl) descEl.textContent = promo.description;
+
+                const btnEl = document.getElementById('promo-btn');
+                if (btnEl) {
+                  const wpContact = config.contact && config.contact.whatsapp;
+                  const wpNum = wpContact || (branchId === 1 ? '+56912345678' : '+56987654321');
+                  const enc = encodeURIComponent('¡Hola! Me interesa la promoción: "' + promo.title + '" en ' + (config.brand?.name || brandName) + '.');
+                  btnEl.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + wpNum + '&text=' + enc);
+                }
+
+                promoContainer.style.display = '';
+              } else {
+                promoContainer.style.display = 'none';
+              }
+            }
+          } catch(e) { console.error('[Hydration §8 Promo] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 9: REDES SOCIALES
+          // ─────────────────────────────────────────
+          try {
+            const socialContainer = document.querySelector('.social-links');
+            if (socialContainer && config.social) {
+              socialContainer.innerHTML = '';
+              if (config.social.facebook) {
+                const a = document.createElement('a');
+                a.href = config.social.facebook; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.className = 'social-item'; a.setAttribute('aria-label', 'Facebook'); a.textContent = 'Facebook';
+                socialContainer.appendChild(a);
+              }
+              if (config.social.instagram) {
+                const a = document.createElement('a');
+                a.href = config.social.instagram; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.className = 'social-item'; a.setAttribute('aria-label', 'Instagram'); a.textContent = 'Instagram';
+                socialContainer.appendChild(a);
+              }
+              if (config.social.tiktok) {
+                const a = document.createElement('a');
+                a.href = config.social.tiktok; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                a.className = 'social-item'; a.setAttribute('aria-label', 'TikTok'); a.textContent = 'TikTok';
+                socialContainer.appendChild(a);
+              }
+            }
+          } catch(e) { console.error('[Hydration §9 Social] ❌ Error:', e); }
+
+          // ─────────────────────────────────────────
+          // BLOQUE 10: BOTONES FLOTANTES CTA
+          // ─────────────────────────────────────────
+          try {
+            const contact = config.contact;
+            const whatsappBubble = document.querySelector('.whatsapp-bubble');
+            if (whatsappBubble && contact && contact.whatsapp) {
+              const enc = encodeURIComponent('¡Hola! Me interesa consultar y matricularme en ' + (config.brand?.name || brandName) + ' en Chillán.');
+              whatsappBubble.setAttribute('href', 'https://api.whatsapp.com/send?phone=' + contact.whatsapp + '&text=' + enc);
+            }
+            const callBubble = document.querySelector('.call-bubble');
+            if (callBubble && contact && contact.phone) {
+              callBubble.setAttribute('href', 'tel:' + contact.phone.replace(/\s+/g, ''));
+            }
+          } catch(e) { console.error('[Hydration §10 CTA] ❌ Error:', e); }
+
+          console.log('[Astro Hydration] ✅ Hidratación completa finalizada.');
+        })
+        .catch(err => {
+          console.error('[Astro Hydration] ❌ Error crítico al hidratar (fetch/parse):', err);
+        });
+      })();
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  /* Apply smooth scroll only when not matching reduced motion */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /**
+   * FIX: Los SVG .check-icon son inyectados dinámicamente por el script de hidratación
+   * con innerHTML. Al no pasar por el compilador de Astro, no reciben el atributo
+   * data-astro-cid-xxx, por lo que los estilos scoped de Services.astro no se aplican.
+   * Esta regla global garantiza que los íconos se vean correctamente en todos los casos.
+   */
+  .check-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+</style>

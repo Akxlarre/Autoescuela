@@ -4,7 +4,8 @@ export type NotificationReferenceType =
   | 'class_b'
   | 'professional_session'
   | 'document_expiry'
-  | 'payment';
+  | 'payment'
+  | 'task';
 
 export interface Notification {
   id: string;

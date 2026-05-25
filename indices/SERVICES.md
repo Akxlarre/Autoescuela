@@ -21,6 +21,7 @@ Servicios estructurales compartidos que proveen funcionalidades base, autenticac
 | `LayoutDrawerService` | Orquesta el drawer arquitectónico del AppShell. Estado via signal. **Navegación en pila:** `open()` (raíz, limpia historial), `push()` (sub-vista sin cerrar panel), `back()` (restaura anterior o cierra), `close()` (cierra + limpia historial). `canGoBack` computed. `clear()` limpia componente post-animación GSAP. | `core/services/ui/layout-drawer.service.ts` | — | ✅ Estable |
 | `LayoutDrawerFacadeService` | Interfaz pública para componentes UI hacia `LayoutDrawerService`. Expone: `isOpen`, `component`, `title`, `icon`, `actions`, `canGoBack`. Métodos: `open()`, `push()`, `back()`, `close()`, `setActions()`. | `core/services/ui/layout-drawer.facade.service.ts` | LayoutDrawerService | ✅ Estable |
 | `DmsViewerService` | Estado y control del visor global de documentos (PDF/Imágenes). Detecta automáticamente el tipo por URL. | `core/services/ui/dms-viewer.service.ts` | — | ✅ Estable |
+| `TaskCreateContextService` | Puente de estado entre la página que abre el drawer de creación de tareas y `TaskCreateDrawerComponent`. `prime(type)` setea el tipo inicial antes de abrir; `reset()` lo restaura a `'task'` tras la lectura. | `core/services/ui/task-create-context.service.ts` | — | ✅ Estable |
 
 ## 1b. Pure Utilities (Functional Core)
 Funciones puras sin estado ni inyección de Angular. Testeables sin framework.
@@ -107,16 +108,18 @@ Funciones server-side que requieren `SERVICE_ROLE_KEY` o lógica que no puede ej
 | Clase | Dependencias | Archivo |
 |-------|-------------|---------|
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
+| `RoleService` | — | `src/app/core/services/auth/role.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
 | `DmsViewerService` | — | `src/app/core/services/ui/dms-viewer.service.ts` |
-| `GsapAnimationsService` | `PLATFORM_ID` | `src/app/core/services/ui/gsap-animations.service.ts` |
+| `GsapAnimationsService` | `PLATFORM_ID`, `NgZone` | `src/app/core/services/ui/gsap-animations.service.ts` |
 | `LayoutDrawerFacadeService` | `LayoutDrawerService` | `src/app/core/services/ui/layout-drawer.facade.service.ts` |
 | `LayoutDrawerService` | — | `src/app/core/services/ui/layout-drawer.service.ts` |
 | `LayoutService` | — | `src/app/core/services/ui/layout.service.ts` |
 | `ModalOverlayService` | — | `src/app/core/services/ui/modal-overlay.service.ts` |
 | `SearchPanelFacadeService` | `SearchPanelFacadeService` | `src/app/core/services/ui/search-panel.service.ts` |
+| `TaskCreateContextService` | — | `src/app/core/services/ui/task-create-context.service.ts` |
 | `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
 | `ToastService` | `MessageService` | `src/app/core/services/ui/toast.service.ts` |
 

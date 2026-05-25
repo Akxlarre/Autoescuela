@@ -172,19 +172,20 @@
   /* Estados semánticos
      state-* = resultado de acciones del sistema
      ("guardado con éxito", "error de formulario", "información") */
-  --state-success: #16a34a;
+  /* WCAG AA compliant (≥4.5:1) sobre fondos pastel — variantes -700 de Tailwind */
+  --state-success: #15803d;
   --state-success-bg: #f0fdf4;
   --state-success-border: #bbf7d0;
 
-  --state-warning: #d97706;
+  --state-warning: #b45309;
   --state-warning-bg: #fffbeb;
   --state-warning-border: #fde68a;
 
-  --state-error: #dc2626;
+  --state-error: #b91c1c;
   --state-error-bg: #fef2f2;
   --state-error-border: #fecaca;
 
-  --state-info: #0284c7;
+  --state-info: #0369a1;
   --state-info-bg: #f0f9ff;
   --state-info-border: #bae6fd;
 
@@ -209,9 +210,11 @@
   /* Gradientes */
   --gradient-primary: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
   --gradient-hero: linear-gradient(135deg, #0ea5e9 0%, #6366f1 50%, #8b5cf6 100%);
-  --gradient-subtle: linear-gradient(135deg,
-      rgba(14, 165, 233, 0.06) 0%,
-      rgba(14, 165, 233, 0.02) 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    rgba(14, 165, 233, 0.06) 0%,
+    rgba(14, 165, 233, 0.02) 100%
+  );
 
   /* Aliases semánticos — separación: acción ≠ texto */
   --action-primary: var(--ds-brand);
@@ -409,9 +412,11 @@
 
   --gradient-primary: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
   --gradient-hero: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #a78bfa 100%);
-  --gradient-subtle: linear-gradient(135deg,
-      rgba(56, 189, 248, 0.12) 0%,
-      rgba(56, 189, 248, 0.04) 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.12) 0%,
+    rgba(56, 189, 248, 0.04) 100%
+  );
 
   --action-primary: var(--ds-brand);
   --action-primary-hover: var(--color-primary-hover);
@@ -593,7 +598,7 @@ body {
   --text-muted: rgba(255, 255, 255, 0.55);
 
   // Sincronización con tokens de Tailwind v4
-  // Esto asegura que las utilidades como .text-text-secondary recojan 
+  // Esto asegura que las utilidades como .text-text-secondary recojan
   // los overrides locales del gradiente en lugar de los valores de :root.
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
@@ -721,7 +726,6 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .indicator-live::after,
   .badge-pulse {
     animation: none;

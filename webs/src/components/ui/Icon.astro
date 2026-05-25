@@ -1,0 +1,36 @@
+---
+import * as lucide from 'lucide';
+
+interface Props {
+  name: string;
+  size?: number | string;
+  class?: string;
+}
+
+const { name, size = 24, class: className = '' } = Astro.props;
+
+// Convert kebab-case to PascalCase (e.g., shield-check -> ShieldCheck)
+const toPascalCase = (str: string) => str.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+
+const pascalName = toPascalCase(name);
+const iconData = (lucide as any)[pascalName] || (lucide as any).CircleHelp;
+
+// iconData is an array of [tag, attrs]
+const innerHTML = iconData ? iconData.map(([tag, attrs]: [string, any]) => {
+  const attrStr = Object.entries(attrs).map(([k, v]) => `${k}="${v}"`).join(' ');
+  return `<${tag} ${attrStr}></${tag}>`;
+}).join('') : '';
+---
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class={`lucide lucide-${name} ${className}`}
+  set:html={innerHTML}
+/>

@@ -1,0 +1,812 @@
+---
+// src/components/Hero.astro
+import type { HeroConfig, BrandConfig } from '../lib/types';
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+
+interface Props {
+  data: HeroConfig;
+  brand: BrandConfig;
+  enrollmentUrl: string;
+}
+
+const { data, brand, enrollmentUrl } = Astro.props;
+
+// Layout fallbacks
+const layoutType = data.layoutType || 'center';
+const background = data.background || { type: 'none' };
+const hasBgMedia = (background.type === 'image' || background.type === 'video') && background.url;
+const hasBgColor = background.type === 'color' && background.color;
+const overlayOpacity = background.overlayOpacity ?? 40;
+
+const hasMedia = data.media && data.media.type !== 'none' && data.media.url;
+
+// WhatsApp CTA — opcional, solo se renderiza si está configurado
+const whatsappUrl = data.cta.whatsapp
+  ? `https://api.whatsapp.com/send?phone=${data.cta.whatsapp}&text=${encodeURIComponent(
+      `¡Hola! Vengo de su sitio web y me gustaría solicitar información sobre los cursos de conducción de ${brand.name} en Chillán.`
+    )}`
+  : null;
+
+const containerClass = `hero-container layout-${layoutType}`;
+---
+
+<section class={`hero-section surface-hero ${hasBgMedia ? 'has-bg-image' : ''}`} style={hasBgColor ? `background-color: ${background.color};` : ''}>
+  {hasBgMedia && background.type === 'image' && (
+    <div 
+      class="hero-bg-image js-hero-bg" 
+      data-bg-url={background.url}
+      style={`background-image: url('${background.url}'); --overlay-opacity: ${overlayOpacity / 100};`}
+    ></div>
+  )}
+  
+  {hasBgMedia && background.type === 'video' && (
+    <div class="hero-bg-video-wrapper js-hero-bg" style={`--overlay-opacity: ${overlayOpacity / 100};`}>
+      <video src={background.url} autoplay loop muted playsinline class="hero-bg-video"></video>
+      <div class="hero-bg-video-overlay"></div>
+    </div>
+  )}
+  
+  {!hasBgMedia && !hasBgColor && (
+    <div class="hero-bg-accent"></div>
+  )}
+
+  <div class={`container ${containerClass} animate-fade-in`}>
+    <div class="hero-content">
+      <div class="hero-badge-wrapper">
+        <span class="badge badge-accent text-uppercase inline-flex items-center gap-1.5">
+          <Icon name="map-pin" size={12} />
+          Chillán, Región de Ñuble
+        </span>
+      </div>
+      
+      <h1 class="hero-title">{data.headline}</h1>
+      <p class="hero-lead">{data.subheadline}</p>
+      
+      {data.trustBadge?.enabled && (
+        <div class="trust-badge">
+          <div class="stars">
+            {[1, 2, 3, 4, 5].map(() => (
+              <Icon name="star-filled" class="star-icon" size={18} />
+            ))}
+          </div>
+          <span class="trust-text">{data.trustBadge.text}</span>
+        </div>
+      )}
+      
+      <div class="hero-actions">
+        <Button href={enrollmentUrl} variant="primary" size="lg">
+          Inscribirme Online
+        </Button>
+        {whatsappUrl && (
+          <Button href={whatsappUrl} variant="glass" size="lg" whatsapp external>
+            {data.cta.text}
+          </Button>
+        )}
+      </div>
+    </div>
+
+    {layoutType !== 'center' && hasMedia && (
+      <div class="hero-media-wrapper" data-media-type={data.media!.type}>
+        <!-- Fondo de Desenfoque Ambient -->
+        <div class="media-ambient-blur" style={`background-image: url('${data.media!.url}');`}></div>
+        
+        <!-- Esqueleto de Carga Sutil (Solid color memory transition) -->
+        <div class="media-skeleton">
+          <div class="skeleton-shimmer"></div>
+        </div>
+
+        {data.media!.type === 'image' ? (
+          <img 
+            src={data.media!.url} 
+            alt={data.headline} 
+            class="hero-media-img js-fade-image" 
+            onload="console.log('[Hero HTML Inline OnLoad] Image onload fired. Src:', this.src); this.classList.add('is-loaded'); const wrapper = this.closest('.hero-media-wrapper'); if (wrapper) { wrapper.classList.add('media-loaded'); if (this.naturalHeight > this.naturalWidth) wrapper.classList.add('is-portrait-media'); }"
+            loading="eager"
+          />
+        ) : (
+          <video 
+            src={data.media!.url} 
+            autoplay 
+            loop 
+            muted 
+            playsinline 
+            class="hero-media-video js-fade-video"
+            onloadeddata="console.log('[Hero HTML Inline OnLoadedData] Video onloadeddata fired. Src:', this.src); this.classList.add('is-loaded'); const wrapper = this.closest('.hero-media-wrapper'); if (wrapper) { wrapper.classList.add('media-loaded'); if (this.videoHeight > this.videoWidth) wrapper.classList.add('is-portrait-media'); }"
+          ></video>
+        )}
+      </div>
+    )}
+
+    <div class="hero-features bento-features">
+      {data.features.map((feature) => (
+        <div class="feature-item">
+          {feature.icon && <Icon name={feature.icon} class="feature-icon" size={28} />}
+          <span class="feature-text">{feature.text}</span>
+        </div>
+      ))}
+    </div>
+
+    <!-- Swipe indicator dots for mobile only -->
+    <div class="features-scroll-indicator js-features-indicator">
+      <span class="indicator-dot active" data-index="0"></span>
+      <span class="indicator-dot" data-index="1"></span>
+      <span class="indicator-dot" data-index="2"></span>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-section {
+    position: relative;
+    overflow: hidden;
+    padding-top: 4.5rem; /* Más compacto por defecto en móvil */
+    padding-bottom: 2rem;
+    min-height: auto; /* Permite asomar la promo del mes arriba del pliegue */
+    display: flex;
+    align-items: center;
+  }
+
+  @media (max-width: 479px) {
+    .hero-section {
+      min-height: 85svh; /* Elástico en móvil */
+    }
+  }
+
+  .hero-section:not(.has-bg-image) {
+    background-size: cover;
+    background-position: center;
+  }
+
+  @media (min-width: 480px) {
+    .hero-section {
+      padding-top: 6rem;
+      padding-bottom: 3rem;
+    }
+  }
+
+  @media (min-width: 640px) {
+    .hero-section {
+      padding-top: 6.5rem;
+      padding-bottom: 3.5rem;
+      min-height: 85vh;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hero-section {
+      padding-top: 7rem;
+      padding-bottom: 4rem;
+    }
+  }
+
+  /* Backgrounds */
+  .hero-bg-accent {
+    position: absolute;
+    top: -20%;
+    right: -10%;
+    width: 60vw;
+    height: 60vw;
+    max-width: 500px;
+    max-height: 500px;
+    background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255, 255, 255, 0) 70%);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .hero-bg-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 1.5s ease-in-out;
+  }
+  
+  .hero-bg-image.is-loaded {
+    opacity: 1;
+  }
+  
+  .hero-bg-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-color: var(--bg-default);
+    opacity: var(--overlay-opacity, 0.4);
+    transition: opacity 0.5s ease;
+  }
+
+  .hero-bg-video-wrapper {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+  }
+  .hero-bg-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .hero-bg-video-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: var(--bg-default);
+    opacity: var(--overlay-opacity, 0.4);
+    transition: opacity 0.5s ease;
+  }
+
+  /* Grid Layout (Bento logic for alignment) */
+  .hero-container {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    gap: var(--space-4); /* Más compacto en móvil por defecto */
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "content"
+      "media"
+      "features";
+    width: 100%;
+  }
+
+  @media (min-width: 480px) {
+    .hero-container {
+      gap: var(--space-6);
+    }
+  }
+
+  .hero-content {
+    grid-area: content;
+    max-width: 48rem;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4); /* Más compacto en móvil por defecto */
+  }
+
+  @media (min-width: 480px) {
+    .hero-content {
+      gap: var(--space-6);
+    }
+  }
+
+  .hero-media-wrapper {
+    grid-area: media;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10; /* Proporción áurea moderna para balancear la altura del texto */
+    border-radius: var(--radius-2xl);
+    overflow: hidden;
+    background-color: rgba(15, 23, 42, 0.4); /* Solid memory background fallback */
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 
+      0 25px 50px -12px rgba(0, 0, 0, 0.35),
+      inset 0 1px 1px rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Fondo desenfocado dinámico */
+  .media-ambient-blur {
+    position: absolute;
+    inset: -30px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(40px) brightness(0.65) saturate(1.2);
+    opacity: 0;
+    transition: opacity 1s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .hero-media-wrapper.media-loaded .media-ambient-blur {
+    opacity: 0.85;
+  }
+
+  /* Esqueleto de Carga */
+  .media-skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.8s ease;
+    z-index: 2;
+    overflow: hidden;
+  }
+
+  .skeleton-shimmer {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.05),
+      transparent
+    );
+    animation: shimmer 2s infinite linear;
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  .hero-media-wrapper.media-loaded .media-skeleton {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Imagen/Video real en primer plano - Por defecto cubre la tarjeta (Landscape) */
+  .hero-media-img, .hero-media-video {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Paisaje cubre por completo la tarjeta, limpio y nítido */
+    border-radius: var(--radius-2xl); /* Comparte el mismo radio de borde */
+    opacity: 0;
+    transform: scale(1.01); /* Pop sutilísimo */
+    transition: 
+      opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hero-media-img.is-loaded, .hero-media-video.is-loaded {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Si la imagen es VERTICAL (Mockups, Teléfonos) */
+  .hero-media-wrapper.is-portrait-media {
+    background-color: rgba(15, 23, 42, 0.55); /* Fondo más oscuro para destacar el teléfono */
+  }
+
+  .hero-media-wrapper.is-portrait-media .hero-media-img,
+  .hero-media-wrapper.is-portrait-media .hero-media-video {
+    max-width: 90%;
+    max-height: 90%;
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Centrado y sin recortarse */
+    border-radius: var(--radius-xl); /* Radio de borde interno más pronunciado */
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* El fondo de desenfoque ambient SOLO se ilumina si la imagen es vertical */
+  .media-ambient-blur {
+    position: absolute;
+    inset: -30px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(100px) brightness(0.6) saturate(1.3); /* Ultra blur de 100px para disolver formas completas */
+    opacity: 0;
+    transition: opacity 0.8s ease;
+    pointer-events: none;
+    z-index: 1;
+    display: none; /* Por defecto oculto en landscape */
+  }
+
+  .hero-media-wrapper.is-portrait-media .media-ambient-blur {
+    display: block; /* Solo visible en vertical */
+  }
+
+  .hero-media-wrapper.media-loaded.is-portrait-media .media-ambient-blur {
+    opacity: 0.75; /* Glow de colores ambientales */
+  }
+
+  /* Efecto de escalado suave al interactuar con el contenedor */
+  .hero-media-wrapper:hover .hero-media-img,
+  .hero-media-wrapper:hover .hero-media-video {
+    transform: scale(1.02);
+  }
+
+  .bento-features {
+    grid-area: features;
+  }
+
+  /* Global Layout Centering Styles (Centrado en móvil/tablet/desktop) */
+  .layout-center {
+    text-align: center;
+  }
+  .layout-center .hero-content {
+    margin: 0 auto;
+    align-items: center;
+  }
+  .layout-center .hero-actions {
+    justify-content: center;
+  }
+  .layout-center .hero-badge-wrapper {
+    justify-content: center;
+  }
+  .layout-center .trust-badge {
+    margin: 0 auto;
+  }
+
+  /* Desktop Grid Overrides */
+  @media (min-width: 992px) {
+    .layout-center {
+      grid-template-areas:
+        "content"
+        "features";
+    }
+    
+    .layout-split-right {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "content media"
+        "features features";
+      align-items: center;
+      gap: var(--space-8);
+    }
+
+    .layout-split-left {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "media content"
+        "features features";
+      align-items: center;
+      gap: var(--space-8);
+    }
+  }
+
+  /* Typography & Content Inner Styles */
+  .hero-badge-wrapper {
+    display: flex;
+  }
+
+  .hero-title {
+    font-size: 2.0rem; /* Ajuste para evitar desbordes toscos en móviles angostos */
+    line-height: 1.1;
+    color: #ffffff;
+    letter-spacing: -0.03em;
+  }
+
+  @media (min-width: 360px) {
+    .hero-title {
+      font-size: 2.25rem;
+    }
+  }
+
+  @media (min-width: 480px) {
+    .hero-title {
+      font-size: 2.75rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hero-title {
+      font-size: 3.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hero-title {
+      font-size: 4rem;
+    }
+  }
+
+  .hero-lead {
+    font-size: 1.0625rem; /* Compactación sutil en móvil */
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.5;
+    max-width: 40rem;
+  }
+
+  @media (min-width: 480px) {
+    .hero-lead {
+      font-size: 1.125rem;
+      line-height: 1.6;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hero-lead {
+      font-size: 1.375rem;
+    }
+  }
+
+  /* Trust Badge */
+  .trust-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: rgba(255,255,255,0.05);
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(8px);
+    width: fit-content;
+  }
+  
+  .layout-center .trust-badge {
+    margin: 0 auto;
+  }
+
+  .stars {
+    display: flex;
+    gap: 2px;
+    color: #fbbf24; /* Warning/Yellow for stars */
+  }
+
+  .trust-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-top: var(--space-2);
+  }
+
+  @media (min-width: 640px) {
+    .hero-actions {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  /* Features Grid (Bento children) - Slider horizontal en móvil, Grid en Desktop */
+  .hero-features {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    gap: var(--space-3);
+    margin-top: var(--space-5);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: var(--space-4);
+    padding-bottom: var(--space-3);
+    scroll-padding-left: var(--space-4); /* snap offset alineado con container */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+
+  .hero-features::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  @media (min-width: 480px) {
+    .hero-features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-4);
+      margin-top: var(--space-6);
+      padding-top: var(--space-5);
+      padding-bottom: 0;
+      overflow-x: visible;
+      scroll-snap-type: none;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .hero-features {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-6);
+      margin-top: var(--space-8);
+      padding-top: var(--space-6);
+    }
+  }
+
+  .feature-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: rgba(255, 255, 255, 0.06);
+    padding: var(--space-3) var(--space-4); /* Más compacto verticalmente en móvil */
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: transform 0.2s ease, background 0.2s ease;
+    flex-shrink: 0;
+    width: 76vw; /* Efecto Peeking Generoso: se asoman entre 50px y 90px de la segunda tarjeta */
+    max-width: 280px;
+    scroll-snap-align: start; /* Alineado a la izquierda */
+  }
+  
+  .feature-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+  }
+
+  @media (min-width: 480px) {
+    .feature-item {
+      padding: var(--space-4); /* Retorna al padding estándar */
+      flex-shrink: 1;
+      width: auto;
+      max-width: none;
+      scroll-snap-align: none;
+    }
+  }
+
+  /* Swipe Indicator Dots */
+  .features-scroll-indicator {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    margin-bottom: var(--space-1);
+  }
+
+  @media (min-width: 480px) {
+    .features-scroll-indicator {
+      display: none; /* Oculto en tablet/desktop */
+    }
+  }
+
+  .indicator-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.25);
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .indicator-dot.active {
+    width: 16px; /* Transición animada a píldora estilo iOS */
+    background: var(--ds-brand-300, #93c5fd);
+  }
+
+  .feature-icon {
+    font-size: 1.5rem;
+    width: 24px !important;
+    height: 24px !important;
+    line-height: 1;
+    color: var(--ds-brand-300, #93c5fd);
+    flex-shrink: 0; /* Previene deformaciones en flex */
+  }
+
+  @media (min-width: 480px) {
+    .feature-icon {
+      font-size: 1.75rem;
+      width: 28px !important;
+      height: 28px !important;
+    }
+  }
+
+  .feature-text {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #ffffff;
+    line-height: 1.3;
+  }
+
+  .text-uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+</style>
+
+<script>
+  function initHeroBg() {
+    console.log('[Hero Script] initHeroBg executing...');
+    const bgElements = document.querySelectorAll('.js-hero-bg');
+    bgElements.forEach(el => {
+      const url = el.getAttribute('data-bg-url');
+      if (url && !el.classList.contains('is-loaded')) {
+        console.log('[Hero Script] Preloading background image:', url);
+        const img = new Image();
+        img.onload = () => {
+          console.log('[Hero Script] Background image preloaded. Fading in background.');
+          el.classList.add('is-loaded');
+        };
+        img.src = url;
+        if (img.complete) {
+          console.log('[Hero Script] Background image already complete (cached).');
+          el.classList.add('is-loaded');
+        }
+      }
+    });
+  }
+
+  function initHeroMedia() {
+    console.log('[Hero Script] initHeroMedia executing...');
+    
+    // Fade-in para imágenes
+    const images = document.querySelectorAll('.js-fade-image');
+    console.log(`[Hero Script] Found ${images.length} js-fade-image element(s)`);
+    
+    images.forEach((img, i) => {
+      const imgEl = img as HTMLImageElement;
+      console.log(`[Hero Script] Image [${i}] src:`, imgEl.src);
+      console.log(`[Hero Script] Image [${i}] complete state:`, imgEl.complete);
+      
+      const handleLoad = () => {
+        if (!imgEl.classList.contains('is-loaded')) {
+          imgEl.classList.add('is-loaded');
+          const wrapper = imgEl.closest('.hero-media-wrapper');
+          if (wrapper) {
+            wrapper.classList.add('media-loaded');
+            
+            // Detección dinámica de orientación para Bento layout inteligente
+            if (imgEl.naturalHeight > imgEl.naturalWidth) {
+              console.log(`[Hero Script] Image [${i}] is portrait. Activating ambient blur.`);
+              wrapper.classList.add('is-portrait-media');
+            } else {
+              console.log(`[Hero Script] Image [${i}] is landscape. Covering container.`);
+              wrapper.classList.remove('is-portrait-media');
+            }
+          }
+        }
+      };
+      
+      if (imgEl.complete) {
+        handleLoad();
+      } else {
+        console.log(`[Hero Script] Image [${i}] complete = false, attaching load listener...`);
+        imgEl.addEventListener('load', handleLoad);
+      }
+    });
+
+    // Fade-in para videos
+    const videos = document.querySelectorAll('.js-fade-video');
+    console.log(`[Hero Script] Found ${videos.length} js-fade-video element(s)`);
+    
+    videos.forEach((vid, i) => {
+      const vidEl = vid as HTMLVideoElement;
+      console.log(`[Hero Script] Video [${i}] readyState:`, vidEl.readyState);
+      
+      const handleVideoLoad = () => {
+        if (!vidEl.classList.contains('is-loaded')) {
+          vidEl.classList.add('is-loaded');
+          const wrapper = vidEl.closest('.hero-media-wrapper');
+          if (wrapper) {
+            wrapper.classList.add('media-loaded');
+            if (vidEl.videoHeight > vidEl.videoWidth) {
+              wrapper.classList.add('is-portrait-media');
+            } else {
+              wrapper.classList.remove('is-portrait-media');
+            }
+          }
+        }
+      };
+      
+      if (vidEl.readyState >= 3) {
+        handleVideoLoad();
+      } else {
+        console.log(`[Hero Script] Video [${i}] readyState < 3, attaching loadeddata listener...`);
+        vidEl.addEventListener('loadeddata', handleVideoLoad);
+      }
+    });
+  }
+
+  function initHeroFeaturesScroll() {
+    console.log('[Hero Script] initHeroFeaturesScroll executing...');
+    const container = document.querySelector('.hero-features');
+    const dots = document.querySelectorAll('.js-features-indicator .indicator-dot');
+    if (!container || dots.length === 0) return;
+
+    // Resilient passive scroll listener for real-time iOS indicator syncing
+    container.addEventListener('scroll', () => {
+      const scrollLeft = container.scrollLeft;
+      const cardWidth = container.querySelector('.feature-item')?.clientWidth || 280;
+      const gap = 12; // var(--space-3)
+      const index = Math.round(scrollLeft / (cardWidth + gap));
+      
+      dots.forEach((dot, i) => {
+        if (i === index) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+    }, { passive: true });
+  }
+
+  // Inicializar en carga y transiciones de Astro
+  initHeroBg();
+  initHeroMedia();
+  initHeroFeaturesScroll();
+  document.addEventListener('astro:page-load', () => {
+    console.log('[Astro Event] astro:page-load fired. Re-initializing Hero media...');
+    initHeroBg();
+    initHeroMedia();
+    initHeroFeaturesScroll();
+  });
+</script>

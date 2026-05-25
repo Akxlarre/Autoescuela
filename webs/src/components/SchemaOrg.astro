@@ -1,0 +1,122 @@
+---
+// src/components/SchemaOrg.astro
+import type { SiteData } from '../lib/types';
+
+interface Props {
+  data: SiteData;
+}
+
+const { data } = Astro.props;
+
+// Compile structured schema graph
+const schemaGraph = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "LocalBusiness",
+      "@id": `https://www.${data.brand.domain}/#organization`,
+      "name": data.brand.name,
+      "alternateName": `Escuela de Conductores ${data.brand.shortName}`,
+      "description": data.hero.subheadline,
+      "url": `https://www.${data.brand.domain}`,
+      "telephone": data.contact.phone,
+      "email": data.contact.email,
+      "image": `https://www.${data.brand.domain}${data.brand.ogImage}`,
+      "logo": `https://www.${data.brand.domain}${data.brand.logo}`,
+      "priceRange": "$90.000 - $850.000 CLP",
+      "currenciesAccepted": "CLP",
+      "paymentAccepted": "Efectivo, Transferencia, Tarjeta de crédito, Tarjeta de débito",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": data.contact.address,
+        "addressLocality": data.contact.city,
+        "addressRegion": data.contact.region,
+        "postalCode": "3780000",
+        "addressCountry": "CL"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": data.contact.geo.lat.toString(),
+        "longitude": data.contact.geo.lng.toString()
+      },
+      "areaServed": [
+        {
+          "@type": "City",
+          "name": "Chillán",
+          "sameAs": "https://es.wikipedia.org/wiki/Chill%C3%A1n"
+        },
+        {
+          "@type": "City",
+          "name": "Chillán Viejo"
+        },
+        {
+          "@type": "AdministrativeArea",
+          "name": "Región de Ñuble"
+        }
+      ],
+      "openingHoursSpecification": data.hours.map(h => {
+        let dayOfWeek: string[] = [];
+        if (h.days.includes("Lunes a Jueves")) {
+          dayOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday"];
+        } else if (h.days.includes("Lunes a Viernes")) {
+          dayOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+        } else if (h.days.includes("Viernes")) {
+          dayOfWeek = ["Friday"];
+        } else if (h.days.includes("Sábado")) {
+          dayOfWeek = ["Saturday"];
+        } else {
+          dayOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+        }
+
+        const parts = h.time.split(" - ");
+        return {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": dayOfWeek,
+          "opens": parts[0] || "09:00",
+          "closes": parts[1] || "18:00"
+        };
+      }),
+      "sameAs": [
+        data.social?.facebook,
+        data.social?.instagram
+      ].filter(Boolean),
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Cursos de Conducción",
+        "itemListElement": data.courses.map((course) => ({
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Course",
+            "name": course.name,
+            "description": course.description,
+            "provider": { "@id": `https://www.${data.brand.domain}/#organization` },
+            "hasCourseInstance": {
+              "@type": "CourseInstance",
+              "courseMode": "Blended"
+            }
+          },
+          "price": course.displayPrice.toString(),
+          "priceCurrency": "CLP",
+          "availability": "https://schema.org/InStock"
+        }))
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `https://www.${data.brand.domain}/#faq`,
+      "mainEntity": data.faqs.map(faq => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    }
+  ]
+};
+
+const jsonLd = JSON.stringify(schemaGraph);
+---
+
+<script type="application/ld+json" set:html={jsonLd}></script>

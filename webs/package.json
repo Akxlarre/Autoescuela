@@ -1,0 +1,21 @@
+{
+  "name": "webs",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "dev:roja": "node -e \"process.env.BRAND='roja'; require('child_process').execSync('npx astro dev', {stdio:'inherit'})\"",
+    "build": "astro build",
+    "build:all": "node scripts/build-sites.mjs",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.2",
+    "astro": "^6.3.7",
+    "lucide": "^1.16.0"
+  }
+}

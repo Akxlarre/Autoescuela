@@ -1,0 +1,85 @@
+---
+// src/components/ui/SectionHeader.astro
+interface Props {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  centered?: boolean;
+  light?: boolean;
+  class?: string;
+}
+
+const {
+  title,
+  subtitle,
+  description,
+  centered = true,
+  light = false,
+  class: className = '',
+} = Astro.props;
+---
+
+<div class:list={['section-header', { 'text-center': centered, 'text-light': light }, className]}>
+  {subtitle && (
+    <span class="badge badge-primary text-uppercase animate-pulse">
+      {subtitle}
+    </span>
+  )}
+  <h2>{title}</h2>
+  {description && <p class="description">{description}</p>}
+</div>
+
+<style>
+  .section-header {
+    margin-bottom: var(--space-12);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .text-center {
+    align-items: center;
+    text-align: center;
+  }
+
+  .text-light h2 {
+    color: #ffffff;
+  }
+
+  .text-light .description {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  h2 {
+    font-size: 2.25rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  @media (min-width: 768px) {
+    h2 {
+      font-size: 2.75rem;
+    }
+  }
+
+  .description {
+    font-size: 1.125rem;
+    color: #475569; /* Slate 600 */
+    max-width: 42rem;
+    line-height: 1.6;
+  }
+
+  .text-uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.92; transform: scale(0.98); }
+  }
+
+  .animate-pulse {
+    animation: pulse 3s infinite ease-in-out;
+  }
+</style>

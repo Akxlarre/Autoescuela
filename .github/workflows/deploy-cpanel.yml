@@ -1,0 +1,170 @@
+name: 🚀 Build & Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main
+  repository_dispatch:
+    types: [supabase-publish]
+  workflow_dispatch: # Permite disparar el despliegue manualmente desde GitHub
+
+jobs:
+  build-and-deploy:
+    name: 🏗️ Build & FTP Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚚 Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-size: '>=22.12.0'
+          cache: 'npm'
+
+      - name: 📦 Install Root Dependencies
+        run: npm ci
+
+      - name: 📦 Install Web Dependencies
+        run: |
+          cd webs
+          npm ci
+
+      - name: 🔄 Sync Configurations from Supabase
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          # Creamos y ejecutamos el script de sincronización con la API Key del secreto
+          node -e "
+            const fs = require('fs');
+            const path = require('path');
+            
+            const url1 = 'https://skvekggejikzxhzsjmkz.supabase.co/rest/v1/website_config?branch_id=eq.1&select=config';
+            const url2 = 'https://skvekggejikzxhzsjmkz.supabase.co/rest/v1/website_config?branch_id=eq.2&select=config';
+            const anonKey = process.env.SUPABASE_ANON_KEY;
+
+            function cleanNulls(obj) {
+              if (Array.isArray(obj)) {
+                return obj.map(cleanNulls);
+              } else if (obj !== null && typeof obj === 'object') {
+                const cleaned = {};
+                for (const key in obj) {
+                  if (obj[key] !== null) {
+                    cleaned[key] = cleanNulls(obj[key]);
+                  } else {
+                    if (['priceOverride', 'priceNote', 'badge'].includes(key)) {
+                      cleaned[key] = null;
+                    }
+                  }
+                }
+                return cleaned;
+              }
+              return obj;
+            }
+
+            const CLP_FORMATTER = new Intl.NumberFormat('es-CL', {
+              style: 'currency',
+              currency: 'CLP',
+              maximumFractionDigits: 0,
+            });
+
+            function resolveCourses(rawCourses, catalog) {
+              const catalogById = new Map();
+              for (const c of catalog) catalogById.set(c.id, c);
+
+              const resolved = [];
+              for (const card of (rawCourses || [])) {
+                const course = catalogById.get(card.course_id);
+                if (!course) continue;
+
+                const priceOverride = card.priceOverride ?? null;
+                const isOverrideActive = priceOverride !== null;
+                const basePrice = course.base_price != null ? course.base_price : 0;
+                const displayPrice = isOverrideActive ? priceOverride : basePrice;
+                const displayPriceLabel = displayPrice === 0 ? 'Gratis' : CLP_FORMATTER.format(displayPrice);
+
+                resolved.push({
+                  courseId: course.id,
+                  name: course.name ?? '',
+                  licenseClass: course.license_class ?? '',
+                  basePrice,
+                  isCourseActive: course.active,
+                  description: card.description,
+                  priceNote: card.priceNote ?? null,
+                  duration: card.duration,
+                  includes: card.includes,
+                  highlighted: !!card.highlighted,
+                  badge: card.badge ?? null,
+                  displayOrder: card.displayOrder,
+                  priceOverride,
+                  displayPrice,
+                  displayPriceLabel,
+                  isOverrideActive,
+                });
+              }
+
+              resolved.sort((a, b) => {
+                if (a.displayOrder !== b.displayOrder) return a.displayOrder - b.displayOrder;
+                return a.courseId - b.courseId;
+              });
+
+              return resolved;
+            }
+
+            async function run() {
+              const [res1, resCat1, res2, resCat2] = await Promise.all([
+                fetch(url1, { headers: { 'apikey': anonKey, 'Authorization': 'Bearer ' + anonKey } }).then(r => r.json()),
+                fetch('https://skvekggejikzxhzsjmkz.supabase.co/rest/v1/courses?branch_id=eq.1&active=eq.true&select=id,name,license_class,base_price,active', {
+                  headers: { 'apikey': anonKey, 'Authorization': 'Bearer ' + anonKey }
+                }).then(r => r.json()),
+                fetch(url2, { headers: { 'apikey': anonKey, 'Authorization': 'Bearer ' + anonKey } }).then(r => r.json()),
+                fetch('https://skvekggejikzxhzsjmkz.supabase.co/rest/v1/courses?branch_id=eq.2&active=eq.true&select=id,name,license_class,base_price,active', {
+                  headers: { 'apikey': anonKey, 'Authorization': 'Bearer ' + anonKey }
+                }).then(r => r.json())
+              ]);
+
+              if (res1.length) {
+                let c1 = cleanNulls(res1[0].config);
+                if (!c1.brand.name) c1.brand.name = 'Autoescuela Chillán';
+                c1.courses = resolveCourses(c1.courses, resCat1);
+                fs.writeFileSync('webs/src/content/site/azul.json', JSON.stringify(c1, null, 2));
+              }
+
+              if (res2.length) {
+                let c2 = cleanNulls(res2[0].config);
+                if (!c2.brand.name) c2.brand.name = 'Conductores Chillán';
+                c2.courses = resolveCourses(c2.courses, resCat2);
+                fs.writeFileSync('webs/src/content/site/roja.json', JSON.stringify(c2, null, 2));
+              }
+              console.log('Configs successfully synced in CI!');
+            }
+            run();
+          "
+
+      - name: 🏗️ Build Sites
+        run: |
+          cd webs
+          npm run build:all
+
+      # DESPLIEGUE SEDE 1 (AZUL): autoescuelachillan.cl
+      - name: 🔵 Deploy Sede Azul to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER_AZUL }}
+          username: ${{ secrets.FTP_USERNAME_AZUL }}
+          password: ${{ secrets.FTP_PASSWORD_AZUL }}
+          local-dir: ./webs/dist/azul/
+          server-dir: ${{ secrets.FTP_TARGET_DIR_AZUL || '/' }}
+          dangerous-clean-slate: false
+
+      # DESPLIEGUE SEDE 2 (ROJA): conductoreschillan.cl
+      - name: 🔴 Deploy Sede Roja to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER_ROJA }}
+          username: ${{ secrets.FTP_USERNAME_ROJA }}
+          password: ${{ secrets.FTP_PASSWORD_ROJA }}
+          local-dir: ./webs/dist/roja/
+          server-dir: ${{ secrets.FTP_TARGET_DIR_ROJA || '/' }}
+          dangerous-clean-slate: false

@@ -1,0 +1,50 @@
+/* src/styles/themes/roja.css */
+:root[data-theme="roja"] {
+  /* Color Brand (Red: #fd2018) */
+  --brand-50: #fff1f0;
+  --brand-100: #ffe2e0;
+  --brand-200: #ffc8c4;
+  --brand-300: #ffa29c;
+  --brand-400: #ff736b;
+  --brand-500: #fd2018;
+  --brand-600: #e0120b;
+  --brand-700: #bc0b05;
+  --brand-800: #9c0c07;
+  --brand-900: #81110e;
+  --brand-950: #470402;
+
+  /* Color Accent (Orange) */
+  --accent-50: #fff7ed;
+  --accent-100: #ffedd5;
+  --accent-200: #fed7aa;
+  --accent-300: #fdba74;
+  --accent-400: #f97316;
+  --accent-500: #ea580c;
+  --accent-600: #ca8a04;
+  --accent-700: #a16207;
+  --accent-800: #854d0e;
+  --accent-900: #713f12;
+  --accent-950: #1c1917;
+
+  /* Semantic Mappings */
+  --color-primary: var(--brand-500);
+  --color-primary-hover: var(--brand-600);
+  --color-primary-muted: var(--brand-50);
+  --color-primary-text: var(--brand-950);
+  
+  --color-accent: var(--accent-400);
+  --color-accent-hover: var(--accent-500);
+
+  /* Backgrounds & Surfaces */
+  --bg-base: #ffffff;
+  --bg-surface: #fafaf9; /* Stone 50 */
+  --bg-surface-elevated: #ffffff;
+  --bg-glass: rgba(255, 255, 255, 0.7);
+  --border-color: #e7e5e4; /* Stone 200 */
+  --border-focus: var(--brand-500);
+
+  /* Gradients */
+  --gradient-hero: linear-gradient(160deg, var(--brand-700) 0%, var(--brand-500) 55%, var(--brand-500) 100%);
+  --gradient-card: linear-gradient(135deg, var(--brand-50) 0%, #ffffff 100%);
+  --gradient-badge: linear-gradient(135deg, var(--brand-100) 0%, var(--brand-50) 100%);
+}
