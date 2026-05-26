@@ -9,6 +9,9 @@ Este proyecto tiene guardrails automáticos que se ejecutan sin intervención hu
 - **Context Guard** — Verifica que exista contexto de negocio. Si `indices/DOMAIN_DICTIONARY.md` o `DATABASE.md` están vacíos/incompletos, te bloqueará para que pidas el brief al humano antes de programar a ciegas.
 - **Discovery Gate** — NO puedes escribir código en `src/app/` sin antes leer al menos un archivo de `indices/`. Serás bloqueado automáticamente.
 - **Architect Guard** — Cada Edit/Write es validado en tiempo real. Se bloquean: `*ngIf`, `@Input()`, colores hardcodeados, imports de Supabase en UI, `@angular/animations`, `@keyframes`.
+- **Spec Gate** — NO puedes escribir código de producción sin un track activo en `specs/.active` con `plan.md` aprobado. Paths exentos: `specs/`, `indices/`, `docs/`, tests, configs.
+- **Plan Injector** — Al editar código de producción, inyecta automáticamente el `plan.md` del track activo como contexto.
+- **AC Verifier** — Al terminar el turno, verifica que los Acceptance Criteria del track activo hayan sido cumplidos. Bloquea si quedan ACs abiertos.
 - **File Protector** — No puedes modificar los archivos del sistema de hooks (`.claude/hooks/`, `settings.json`, `architect.js`).
 - **Bash Guard** — No puedes crear archivos `.ts/.html/.scss` via Bash. Usa Edit/Write.
 - **Compact Recovery** — Si el contexto se compacta, los índices se re-inyectan automáticamente.
@@ -23,15 +26,54 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 - Build: `ng build`
 - Lint: `ng lint`
 - Lint arquitectónico: `npm run lint:arch`
+- Tests: `npm run test:ci` (sin watch, para auto-validación)
+- Tests cobertura: `npm run test:coverage`
 - Supabase local: `npx supabase start`
+
+## Sistema SDD (Spec-Driven Development)
+
+**Todo código de producción requiere un track activo.** El Spec Gate te bloqueará si intentas editar `src/` sin uno.
+
+### Los 3 tracks
+
+| Track | Cuándo | ID format | Contrato |
+|-------|--------|-----------|---------|
+| **Spec** | Feature nueva | `NNNN-slug` | `specs/<id>/spec.md` con ACs |
+| **Fix** | Bug con ACs afectados | `fix-NNN-slug` | `specs/<id>/fix.md` |
+| **Hotfix** | Fix urgente simple | `hotfix-NNN-slug` | Auto-cerrado por hook |
+
+### Slash commands globales
+
+- `/spec-new` → crea `specs/<id>/spec.md`
+- `/spec-activate <id>` → activa el track (escribe en `specs/.active`)
+- `/spec-plan` → genera `specs/<id>/plan.md` desde la spec
+- `/spec-tasks` → desglosa el plan en tareas atómicas
+- `/spec-verify` → muestra ACs abiertos vs cumplidos
+- `/fix-new <desc>` → crea track fix con `fix.md`
+- `/fix-close` → cierra el track tras verificar test de regresión
+
+### Flujo Feature nueva
+
+```
+/spec-new → editar spec.md (ACs) → /spec-activate <id> → /spec-plan
+→ aprobar plan.md → implementar → npm run test:ci → AC Verifier pasa → done
+```
+
+### Flujo Bug Fix
+
+```
+/fix-new "desc" → /spec-activate fix-NNN → corregir → npm run test:ci → /fix-close
+```
+
+**Paths exentos del gate:** `specs/`, `indices/`, `docs/`, `.claude/`, `scripts/`, tests, configs.
 
 ## Flujo obligatorio y Estado Cero (6 pasos)
 
 0. **CONTEXT SEEDING (Día 0)** — Si es un proyecto/módulo nuevo, DEBES establecer el Lenguaje Ubicuo (`indices/DOMAIN_DICTIONARY.md`) y el modelo de datos (`indices/DATABASE.md`) ANTES de codificar. Si te falta contexto, pídeselo al humano (el Context Guard te obligará a hacerlo si lo olvidas).
 1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. **El Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR** — Define qué vas a tocar sin violar las reglas de arquitectura.
-3. **EJECUTAR** — Escribe el código. Reutiliza siempre lo existente primero. Los hooks validarán cada escritura en tiempo real.
-4. **VALIDAR** — Corre `npm run lint:arch` para una auditoría completa del proyecto.
+3. **EJECUTAR** — Escribe el código. Reutiliza siempre lo existente primero. Los hooks validarán cada escritura en tiempo real. **Si hay lógica nueva, escribe el `.spec.ts` primero (TDD).**
+4. **VALIDAR** — Corre `npm run lint:arch` para auditoría arquitectónica y `npm run test:ci` para tests.
 5. **SINCRONIZAR** — Actualiza `indices/*.md` con los componentes/servicios creados. El Stop hook te lo recordará si lo olvidas.
 
 ## Reglas del proyecto
