@@ -1,9 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { DmsListContentComponent } from '@shared/components/dms-list-content/dms-list-content.component';
@@ -17,9 +12,7 @@ import type { TemplateCard } from '@core/models/ui/dms.model';
   selector: 'app-secretaria-documentos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    DmsListContentComponent,
-  ],
+  imports: [DmsListContentComponent],
   template: `
     <app-dms-list-content
       basePath="/app/secretaria/documentos"
