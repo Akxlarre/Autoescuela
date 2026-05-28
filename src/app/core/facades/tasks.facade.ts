@@ -147,12 +147,15 @@ export class TasksFacade {
     const currentUser = this.auth.currentUser();
     if (!currentUser?.dbId) return;
 
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
+
     let query = this.supabase.client
       .from('tasks')
       .select(
         `*, from_user:users!from_user_id(first_names, paternal_last_name, active), to_user:users!to_user_id(first_names, paternal_last_name, active), reply_count:task_replies(count)`,
       )
-      .is('deleted_at', null);
+      .is('deleted_at', null)
+      .or(`status.neq.completed,created_at.gte.${ninetyDaysAgo}`);
 
     if (branchId !== null) {
       query = query.eq('branch_id', branchId);
@@ -181,6 +184,7 @@ export class TasksFacade {
         currentUser.dbId!,
         recipientInactive,
         now,
+        currentUser.role,
       );
     });
 
@@ -308,11 +312,11 @@ export class TasksFacade {
 
   async softDelete(taskId: string): Promise<boolean> {
     try {
-      const { error } = await this.supabase.client
-        .from('tasks')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', taskId);
+      const { data, error } = await this.supabase.client.rpc('soft_delete_task', {
+        p_task_id: taskId,
+      });
       if (error) throw error;
+      if (!data) return false;
       await this.refreshSilently();
       return true;
     } catch {

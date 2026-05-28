@@ -12,6 +12,7 @@ export interface TaskRow extends TaskDto {
   recipientInactive: boolean;
   canEdit: boolean; // emisor + status='pending'
   canChangeStatus: boolean; // destinatario (o emisor según tipo)
+  canDelete: boolean; // admin siempre | emisor solo si status='pending'
 }
 
 export interface TaskWithReplies extends TaskRow {
