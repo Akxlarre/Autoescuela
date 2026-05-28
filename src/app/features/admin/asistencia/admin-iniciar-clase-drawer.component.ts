@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,7 +19,7 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
   selector: 'app-admin-iniciar-clase-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, AlertCardComponent],
+  imports: [TooltipModule, ReactiveFormsModule, IconComponent, AlertCardComponent],
   template: `
     @if (facade.selectedPractica(); as cls) {
       <!-- Ticket resumen -->
@@ -40,7 +41,13 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
             }}</span>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-primary truncate">{{ cls.alumnoName ?? 'Sin alumno' }}</p>
+            <p
+              class="font-semibold text-primary truncate"
+              [pTooltip]="cls.alumnoName ?? 'Sin alumno'"
+              tooltipPosition="top"
+            >
+              {{ cls.alumnoName ?? 'Sin alumno' }}
+            </p>
             <p class="text-xs text-muted mt-0.5">
               {{ cls.horaInicio }} · {{ cls.instructorName }}
               @if (selectedVehicle(); as v) {

@@ -10,7 +10,12 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-admin-editar-perfil-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
@@ -28,114 +33,114 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         <ng-template #content>
           <form [formGroup]="form" class="flex flex-col gap-5 w-full" (ngSubmit)="onSubmit()">
             <!-- Nombres -->
-          <div class="flex flex-col gap-1.5">
-            <label for="edit-first-names" class="field-label">
-              NOMBRES <span style="color: var(--state-error)">*</span>
-            </label>
-            <input
-              id="edit-first-names"
-              type="text"
-              formControlName="first_names"
-              class="field-input"
-              placeholder="Ej: Juan Carlos"
-              aria-required="true"
-              data-llm-description="Nombres del alumno"
-              [class.field-input--error]="isInvalid('first_names')"
-            />
-            @if (isInvalid('first_names')) {
-              <span class="field-error">Los nombres son obligatorios.</span>
-            }
-          </div>
-
-          <!-- Apellido Paterno -->
-          <div class="flex flex-col gap-1.5">
-            <label for="edit-paternal" class="field-label">
-              APELLIDO PATERNO <span style="color: var(--state-error)">*</span>
-            </label>
-            <input
-              id="edit-paternal"
-              type="text"
-              formControlName="paternal_last_name"
-              class="field-input"
-              placeholder="Ej: González"
-              aria-required="true"
-              data-llm-description="Apellido paterno del alumno"
-              [class.field-input--error]="isInvalid('paternal_last_name')"
-            />
-            @if (isInvalid('paternal_last_name')) {
-              <span class="field-error">El apellido paterno es obligatorio.</span>
-            }
-          </div>
-
-          <!-- Apellido Materno -->
-          <div class="flex flex-col gap-1.5">
-            <label for="edit-maternal" class="field-label">APELLIDO MATERNO</label>
-            <input
-              id="edit-maternal"
-              type="text"
-              formControlName="maternal_last_name"
-              class="field-input"
-              placeholder="Ej: Pérez"
-              data-llm-description="Apellido materno del alumno"
-            />
-          </div>
-
-          <!-- Email -->
-          <div class="flex flex-col gap-1.5">
-            <label for="edit-email" class="field-label">
-              EMAIL <span style="color: var(--state-error)">*</span>
-            </label>
-            <input
-              id="edit-email"
-              type="email"
-              formControlName="email"
-              class="field-input"
-              placeholder="correo@ejemplo.cl"
-              aria-required="true"
-              data-llm-description="Correo electrónico del alumno"
-              [class.field-input--error]="isInvalid('email')"
-            />
-            @if (isInvalid('email')) {
-              <span class="field-error">Ingresa un email válido.</span>
-            }
-          </div>
-
-          <!-- Teléfono -->
-          <div class="flex flex-col gap-1.5">
-            <label for="edit-phone" class="field-label">TELÉFONO</label>
-            <input
-              id="edit-phone"
-              type="tel"
-              formControlName="phone"
-              class="field-input"
-              placeholder="+56 9 1234 5678"
-              data-llm-description="Número de teléfono del alumno"
-            />
-          </div>
-
-          <!-- Feedback de error -->
-          @if (saveError()) {
-            <p class="text-sm" style="color: var(--state-error)">
-              {{ saveError() }}
-            </p>
-          }
-
-          <!-- Feedback de éxito -->
-          @if (saveSuccess()) {
-            <div
-              class="flex items-center gap-2 p-3 rounded-lg text-sm font-medium"
-              style="background: var(--state-success-bg); color: var(--state-success); border: 1px solid var(--state-success-border)"
-            >
-              <app-icon name="check-circle" [size]="16" />
-              Datos actualizados correctamente.
+            <div class="flex flex-col gap-1.5">
+              <label for="edit-first-names" class="field-label">
+                NOMBRES <span class="text-error">*</span>
+              </label>
+              <input
+                id="edit-first-names"
+                type="text"
+                formControlName="first_names"
+                class="field-input"
+                placeholder="Ej: Juan Carlos"
+                aria-required="true"
+                data-llm-description="Nombres del alumno"
+                [class.field-input--error]="isInvalid('first_names')"
+              />
+              @if (isInvalid('first_names')) {
+                <span class="field-error">Los nombres son obligatorios.</span>
+              }
             </div>
-          }
+
+            <!-- Apellido Paterno -->
+            <div class="flex flex-col gap-1.5">
+              <label for="edit-paternal" class="field-label">
+                APELLIDO PATERNO <span class="text-error">*</span>
+              </label>
+              <input
+                id="edit-paternal"
+                type="text"
+                formControlName="paternal_last_name"
+                class="field-input"
+                placeholder="Ej: González"
+                aria-required="true"
+                data-llm-description="Apellido paterno del alumno"
+                [class.field-input--error]="isInvalid('paternal_last_name')"
+              />
+              @if (isInvalid('paternal_last_name')) {
+                <span class="field-error">El apellido paterno es obligatorio.</span>
+              }
+            </div>
+
+            <!-- Apellido Materno -->
+            <div class="flex flex-col gap-1.5">
+              <label for="edit-maternal" class="field-label">APELLIDO MATERNO</label>
+              <input
+                id="edit-maternal"
+                type="text"
+                formControlName="maternal_last_name"
+                class="field-input"
+                placeholder="Ej: Pérez"
+                data-llm-description="Apellido materno del alumno"
+              />
+            </div>
+
+            <!-- Email -->
+            <div class="flex flex-col gap-1.5">
+              <label for="edit-email" class="field-label">
+                EMAIL <span class="text-error">*</span>
+              </label>
+              <input
+                id="edit-email"
+                type="email"
+                formControlName="email"
+                class="field-input"
+                placeholder="correo@ejemplo.cl"
+                aria-required="true"
+                data-llm-description="Correo electrónico del alumno"
+                [class.field-input--error]="isInvalid('email')"
+              />
+              @if (isInvalid('email')) {
+                <span class="field-error">Ingresa un email válido.</span>
+              }
+            </div>
+
+            <!-- Teléfono -->
+            <div class="flex flex-col gap-1.5">
+              <label for="edit-phone" class="field-label">TELÉFONO</label>
+              <input
+                id="edit-phone"
+                type="tel"
+                formControlName="phone"
+                class="field-input"
+                placeholder="+56 9 1234 5678"
+                data-llm-description="Número de teléfono del alumno"
+              />
+            </div>
+
+            <!-- Feedback de error -->
+            @if (saveError()) {
+              <p class="text-sm text-error" >
+                {{ saveError() }}
+              </p>
+            }
+
+            <!-- Feedback de éxito -->
+            @if (saveSuccess()) {
+              <div
+                class="flex items-center gap-2 p-3 rounded-lg text-sm font-medium bg-success-subtle text-success"
+                style="border: 1px solid var(--state-success-border)"
+              >
+                <app-icon name="check-circle" [size]="16" />
+                Datos actualizados correctamente.
+              </div>
+            }
           </form>
         </ng-template>
       </app-drawer-content-loader>
 
       <!-- ── Footer ── -->
-      <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
+      <div class="p-4 border-t border-border-subtle flex items-center justify-end gap-2">
         <button
           type="button"
           class="btn-secondary"

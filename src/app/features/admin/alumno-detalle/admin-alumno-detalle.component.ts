@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,6 +37,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TooltipModule,
     RouterLink,
     IconComponent,
     SkeletonBlockComponent,
@@ -115,7 +117,12 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <app-icon name="user" [size]="24" />
               </div>
               <div class="flex flex-col min-w-0">
-                <span class="font-bold text-text-primary truncate">{{ alumno.nombre }}</span>
+                <span
+                  class="font-bold text-text-primary truncate"
+                  [pTooltip]="alumno.nombre"
+                  tooltipPosition="top"
+                  >{{ alumno.nombre }}</span
+                >
                 <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
                 <span class="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5"
                   >ESTADO: {{ alumno.estado }}</span
@@ -158,7 +165,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   </span>
                 </div>
                 <div class="flex flex-col items-end">
-                  <span class="kpi-value text-brand" style="font-size: var(--text-3xl)"
+                  <span class="kpi-value text-brand text-3xl"
                     >{{ facade.porcentajePracticas() }}%</span
                   >
                   <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
@@ -208,7 +215,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   </span>
                 </div>
                 <div class="flex flex-col items-end">
-                  <span class="kpi-value text-state-success" style="font-size: var(--text-3xl)"
+                  <span class="kpi-value text-state-success text-3xl"
                     >{{ facade.porcentajeTeoricas() }}%</span
                   >
                   <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
@@ -264,8 +271,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 </div>
                 <div class="flex flex-col items-end">
                   <span
-                    class="kpi-value"
-                    style="font-size: var(--text-3xl)"
+                    class="kpi-value text-3xl"
                     [class.text-state-success]="facade.elegibilidadProf().teoria"
                     [class.text-state-error]="
                       !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
@@ -341,8 +347,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 </div>
                 <div class="flex flex-col items-end">
                   <span
-                    class="kpi-value"
-                    style="font-size: var(--text-3xl)"
+                    class="kpi-value text-3xl"
                     [class.text-state-success]="facade.elegibilidadProf().practica"
                     [class.text-state-warning]="
                       !facade.elegibilidadProf().practica &&
@@ -418,8 +423,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 </div>
                 <div class="flex flex-col items-end">
                   <span
-                    class="kpi-value"
-                    style="font-size: var(--text-3xl)"
+                    class="kpi-value text-3xl"
                     [class.text-state-success]="facade.elegibilidadProf().nota"
                     [class.text-state-error]="
                       !facade.elegibilidadProf().nota && facade.notaPromedioProf() !== null
@@ -489,10 +493,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         }
 
         <!-- Bento Item 4: Inasistencias (Banner, común) -->
-        <div
-          class="bento-card bento-banner"
-          style="background: var(--state-warning-bg); border-color: var(--state-warning-border)"
-        >
+        <div class="bento-card bento-banner bg-warning-subtle border-warning">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div

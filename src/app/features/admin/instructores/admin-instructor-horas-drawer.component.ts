@@ -38,11 +38,11 @@ const MONTH_NAMES = [
         </button>
 
         <div class="flex flex-col items-center gap-0.5">
-          <span class="text-base font-semibold" style="color: var(--text-primary)">
+          <span class="text-base font-semibold text-text-primary">
             {{ periodoLabel() }}
           </span>
           @if (facade.isHorasCurrentMonth()) {
-            <span class="text-xs font-medium" style="color: var(--ds-brand)">Mes actual</span>
+            <span class="text-xs font-medium text-brand" >Mes actual</span>
           }
         </div>
 
@@ -91,9 +91,7 @@ const MONTH_NAMES = [
                 <td colspan="3">
                   <div class="py-10 flex flex-col items-center gap-2">
                     <app-icon name="calendar-x" [size]="32" color="var(--text-muted)" />
-                    <p class="text-sm" style="color: var(--text-muted)">
-                      Sin clases registradas para este período.
-                    </p>
+                    <p class="text-sm text-text-muted">Sin clases registradas para este período.</p>
                   </div>
                 </td>
               </tr>
@@ -103,13 +101,13 @@ const MONTH_NAMES = [
                   <td>
                     <div class="flex items-center gap-3">
                       <div class="avatar">{{ row.initials }}</div>
-                      <span class="text-sm font-medium" style="color: var(--text-primary)">
+                      <span class="text-sm font-medium text-text-primary">
                         {{ row.nombre }}
                       </span>
                     </div>
                   </td>
                   <td class="text-right">
-                    <span class="text-sm" style="color: var(--text-secondary)">
+                    <span class="text-sm text-text-secondary">
                       {{ row.practicalSessions }}
                       {{ row.practicalSessions === 1 ? 'clase' : 'clases' }}
                     </span>
@@ -125,19 +123,19 @@ const MONTH_NAMES = [
             <tfoot>
               <tr>
                 <td>
-                  <span class="text-xs font-semibold uppercase" style="color: var(--text-muted)">
+                  <span class="text-xs font-semibold uppercase text-text-muted">
                     Total — {{ facade.horasMensuales().length }}
                     {{ facade.horasMensuales().length === 1 ? 'instructor' : 'instructores' }}
                   </span>
                 </td>
                 <td class="text-right">
-                  <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                  <span class="text-sm font-semibold text-text-primary">
                     {{ totales().clases }}
                     {{ totales().clases === 1 ? 'clase' : 'clases' }}
                   </span>
                 </td>
                 <td class="text-right">
-                  <span class="text-sm font-bold" style="color: var(--ds-brand)">
+                  <span class="text-sm font-bold text-brand" >
                     {{ totales().horas | number: '1.1-1' }} h
                   </span>
                 </td>

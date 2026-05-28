@@ -124,20 +124,17 @@ const POR_PAGINA = 5;
         <div class="flex flex-col gap-6">
           <!-- ── Alumnos con saldo pendiente ────────────────────────────────────── -->
           <div class="card p-0 overflow-hidden">
-            <div
-              class="flex items-center justify-between px-6 py-4 border-b"
-              style="border-color: var(--border-muted)"
-            >
+            <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
               <div>
-                <h2 class="text-base font-semibold" style="color: var(--text-primary)">
+                <h2 class="text-base font-semibold text-text-primary">
                   Alumnos con saldo pendiente
                 </h2>
-                <p class="text-xs mt-0.5" style="color: var(--color-primary)">
+                <p class="text-xs mt-0.5 text-text-muted">
                   Alumnos con saldo por pagar. Registrar abonos para actualizar el saldo y habilitar
                   clase 7 cuando corresponda.
                 </p>
               </div>
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 {{ rangoDeudoresMostrando() }}
               </span>
             </div>
@@ -178,18 +175,13 @@ const POR_PAGINA = 5;
             } @else if (facade.alumnosConDeuda().length === 0) {
               <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
                 <app-icon name="check-circle" [size]="32" color="var(--state-success)" />
-                <p class="text-sm font-medium" style="color: var(--text-primary)">
-                  ¡Sin saldos pendientes!
-                </p>
-                <p class="text-xs" style="color: var(--text-muted)">
-                  Todos los alumnos están al día con sus pagos.
-                </p>
+                <p class="text-sm font-medium text-text-primary">¡Sin saldos pendientes!</p>
+                <p class="text-xs text-text-muted">Todos los alumnos están al día con sus pagos.</p>
               </div>
             } @else {
               <div>
                 <div
-                  class="hidden lg:grid px-6 py-2 grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase border-b"
-                  style="color: var(--text-muted); background: var(--bg-surface); border-color: var(--border-muted)"
+                  class="hidden lg:grid px-6 py-2 grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
                 >
                   <span>Alumno</span>
                   <span>RUT</span>
@@ -201,59 +193,56 @@ const POR_PAGINA = 5;
                 <div class="rows-divider">
                   @for (alumno of deudoresVisibles(); track alumno.enrollmentId) {
                     <div
-                      class="p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
+                      class="deudores-row p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center transition-colors"
                     >
                       <!-- Identidad Mobile (Alumno + RUT) / Alumno Desktop -->
                       <div class="flex flex-col min-w-0">
-                        <span
-                          class="text-sm font-semibold truncate"
-                          style="color: var(--text-primary)"
-                        >
+                        <span class="text-sm font-semibold truncate text-text-primary">
                           {{ alumno.alumno }}
                         </span>
                         <!-- RUT Mobile only -->
-                        <span class="text-xs lg:hidden mt-0.5" style="color: var(--color-primary)">
+                        <span class="text-xs lg:hidden mt-0.5 text-text-secondary">
                           RUT: {{ alumno.rut }}
                         </span>
                       </div>
 
                       <!-- RUT Desktop only -->
-                      <span class="hidden lg:block text-sm" style="color: var(--color-primary)">
+                      <span class="hidden lg:block text-sm text-text-secondary">
                         {{ alumno.rut }}
                       </span>
 
                       <!-- Finanzas -->
                       <div
-                        class="grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
-                        style="background: color-mix(in srgb, var(--bg-surface) 60%, transparent)"
+                        class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
                       >
                         <div class="flex flex-col lg:block text-center lg:text-right">
                           <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                            style="color: var(--text-muted)"
+                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Total</span
                           >
-                          <span class="text-sm" style="color: var(--text-primary)">{{
+                          <span class="text-sm text-text-primary">{{
                             clp(alumno.totalAPagar)
                           }}</span>
                         </div>
                         <div class="flex flex-col lg:block text-center lg:text-right">
                           <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                            style="color: var(--text-muted)"
+                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Pagado</span
                           >
-                          <span class="text-sm font-medium" style="color: var(--state-success)">{{
-                            clp(alumno.pagado)
-                          }}</span>
+                          <span
+                            class="text-sm font-medium"
+                            [style.color]="
+                              alumno.pagado > 0 ? 'var(--state-success)' : 'var(--text-muted)'
+                            "
+                            >{{ clp(alumno.pagado) }}</span
+                          >
                         </div>
                         <div class="flex flex-col lg:block text-center lg:text-right">
                           <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                            style="color: var(--text-muted)"
+                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Saldo</span
                           >
-                          <span class="text-sm font-bold" style="color: var(--state-warning)">{{
+                          <span class="text-sm font-bold text-warning">{{
                             clp(alumno.saldo)
                           }}</span>
                         </div>
@@ -262,14 +251,15 @@ const POR_PAGINA = 5;
                       <!-- Acciones -->
                       <div class="flex items-center gap-2 mt-4 lg:mt-0 lg:justify-end">
                         <button
-                          class="text-xs font-medium flex-1 lg:flex-none justify-center py-2 lg:py-0 border lg:border-none rounded-lg lg:rounded-none"
-                          style="color: var(--text-secondary); border-color: var(--border-muted)"
+                          class="btn-ghost text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
+                          data-llm-action="view-student-payment-detail"
                           (click)="openDetalle(alumno.enrollmentId)"
                         >
                           Ver detalle
                         </button>
                         <button
-                          class="btn-primary text-xs flex-1 lg:flex-none justify-center px-3 py-2 lg:py-1.5"
+                          class="btn-primary text-xs flex-1 lg:flex-none justify-center px-3 py-1.5"
+                          data-llm-action="register-student-payment"
                           (click)="openDrawer(alumno.enrollmentId)"
                         >
                           Registrar pago
@@ -280,29 +270,22 @@ const POR_PAGINA = 5;
                 </div>
                 @if (totalPaginasDeudores() > 1) {
                   <div
-                    class="px-6 py-3 flex items-center justify-between border-t"
-                    style="border-color: var(--border-muted)"
+                    class="px-6 py-3 flex items-center justify-between border-t border-border-muted"
                   >
-                    <span class="text-xs" style="color: var(--text-muted)">
+                    <span class="text-xs text-text-muted">
                       {{ rangoDeudoresMostrando() }} alumnos
                     </span>
                     <div class="flex gap-2">
                       <button
-                        class="text-sm px-4 py-1.5 rounded-lg border font-medium"
-                        style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
+                        class="btn-secondary text-sm"
                         [disabled]="paginaDeudoresActual() <= 1"
-                        [style.opacity]="paginaDeudoresActual() <= 1 ? '0.4' : '1'"
                         (click)="paginaDeudoresAnterior()"
                       >
                         Anterior
                       </button>
                       <button
-                        class="text-sm px-4 py-1.5 rounded-lg border font-medium"
-                        style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
+                        class="btn-secondary text-sm"
                         [disabled]="paginaDeudoresActual() >= totalPaginasDeudores()"
-                        [style.opacity]="
-                          paginaDeudoresActual() >= totalPaginasDeudores() ? '0.4' : '1'
-                        "
                         (click)="paginaDeudoresSiguiente()"
                       >
                         Siguiente
@@ -322,12 +305,9 @@ const POR_PAGINA = 5;
             <!-- ─ Pagos Recientes (lg:col-span-8) ─────────────────────────────────────────── -->
             <div class="lg:col-span-8 card p-0 overflow-hidden">
               <div
-                class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b"
-                style="border-color: var(--border-muted); background: var(--bg-surface)"
+                class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
               >
-                <h2 class="text-base font-semibold" style="color: var(--text-primary)">
-                  Pagos Recientes
-                </h2>
+                <h2 class="text-base font-semibold text-text-primary">Pagos Recientes</h2>
 
                 <!-- ── Barra de búsqueda + filtros (Integrada como Toolbar) ── -->
                 <div class="flex flex-col xl:flex-row gap-3 w-full">
@@ -341,8 +321,7 @@ const POR_PAGINA = 5;
                     <input
                       type="search"
                       placeholder="Buscar por alumno o N° boleta..."
-                      class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand"
-                      style="border: 1px solid var(--border-muted); color: var(--text-primary);"
+                      class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
                       (input)="onSearch($event)"
                     />
                   </div>
@@ -390,8 +369,7 @@ const POR_PAGINA = 5;
                         <app-skeleton-block variant="text" width="70%" height="12px" />
                       </div>
                       <div
-                        class="grid grid-cols-2 lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none"
-                        style="border-color: var(--border-muted)"
+                        class="grid grid-cols-2 lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
                       >
                         <app-skeleton-block variant="text" width="70%" height="12px" />
                         <app-skeleton-block variant="text" width="80%" height="12px" />
@@ -414,14 +392,13 @@ const POR_PAGINA = 5;
               } @else if (pagosVisibles().length === 0) {
                 <div class="px-6 py-10 flex flex-col items-center gap-2 text-center">
                   <app-icon name="search" [size]="28" color="var(--text-muted)" />
-                  <p class="text-sm" style="color: var(--text-muted)">
+                  <p class="text-sm text-text-muted">
                     No se encontraron pagos con los filtros seleccionados.
                   </p>
                 </div>
               } @else {
                 <div
-                  class="hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b"
-                  style="color: var(--text-muted); background: var(--bg-surface); border-color: var(--border-muted)"
+                  class="hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
                 >
                   <span>Fecha</span>
                   <span>Alumno</span>
@@ -438,7 +415,7 @@ const POR_PAGINA = 5;
                       class="p-4 lg:px-6 lg:py-3.5 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
                     >
                       <div class="flex items-center justify-between lg:contents">
-                        <span class="text-xs font-medium" style="color: var(--color-primary)">
+                        <span class="text-xs font-medium text-brand">
                           {{ fechaCorta(pago.fecha) }}
                         </span>
                         <span
@@ -453,47 +430,33 @@ const POR_PAGINA = 5;
                         </span>
                       </div>
                       <div class="flex flex-col lg:contents min-w-0">
-                        <span
-                          class="text-sm font-semibold truncate"
-                          style="color: var(--text-primary)"
-                        >
+                        <span class="text-sm font-semibold truncate text-text-primary">
                           {{ pago.alumno }}
                         </span>
                         <span
-                          class="text-xs truncate lg:text-secondary mt-0.5 lg:mt-0"
-                          style="color: var(--text-muted)"
+                          class="text-xs truncate lg:text-secondary mt-0.5 lg:mt-0 text-text-muted"
                         >
                           {{ pago.concepto ?? '—' }}
                         </span>
                       </div>
                       <div
-                        class="flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none"
-                        style="border-color: var(--border-muted)"
+                        class="flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
                       >
                         <div class="flex justify-between items-center lg:contents">
-                          <span
-                            class="text-xs uppercase font-bold lg:hidden"
-                            style="color: var(--text-muted)"
+                          <span class="text-xs uppercase font-bold lg:hidden text-text-muted"
                             >Monto</span
                           >
-                          <span
-                            class="text-sm font-bold lg:text-right"
-                            style="color: var(--text-primary)"
-                          >
+                          <span class="text-sm font-bold lg:text-right text-text-primary">
                             {{ clp(pago.monto) }}
                           </span>
                         </div>
                         <div class="flex items-center justify-between lg:contents mt-2 lg:mt-0">
-                          <span
-                            class="flex items-center gap-1.5 text-xs"
-                            style="color: var(--text-secondary)"
-                          >
+                          <span class="flex items-center gap-1.5 text-xs text-text-secondary">
                             <app-icon [name]="pago.metodoIcono" [size]="13" />
                             {{ pago.metodo }}
                           </span>
                           <span
-                            class="text-[10px] lg:text-xs font-mono px-1.5 py-0.5 rounded"
-                            style="color: var(--text-muted); background: var(--bg-surface); border: 1px solid var(--border-muted);"
+                            class="text-[10px] lg:text-xs font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
                           >
                             {{ pago.nroDocumento ?? '—' }}
                           </span>
@@ -516,27 +479,22 @@ const POR_PAGINA = 5;
                 </div>
 
                 <div
-                  class="px-6 py-3 flex items-center justify-between border-t"
-                  style="border-color: var(--border-muted)"
+                  class="px-6 py-3 flex items-center justify-between border-t border-border-muted"
                 >
-                  <span class="text-xs" style="color: var(--color-primary)">
+                  <span class="text-xs text-brand">
                     {{ rangoMostrando() }}
                   </span>
                   <div class="flex gap-2">
                     <button
-                      class="text-sm px-4 py-1.5 rounded-lg border font-medium"
-                      style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
+                      class="btn-outline"
                       [disabled]="paginaActual() <= 1"
-                      [style.opacity]="paginaActual() <= 1 ? '0.4' : '1'"
                       (click)="paginaAnterior()"
                     >
                       Anterior
                     </button>
                     <button
-                      class="text-sm px-4 py-1.5 rounded-lg border font-medium"
-                      style="border-color: var(--border-muted); color: var(--text-primary); background: var(--bg-surface); cursor: pointer;"
+                      class="btn-outline"
                       [disabled]="paginaActual() >= totalPaginas()"
-                      [style.opacity]="paginaActual() >= totalPaginas() ? '0.4' : '1'"
                       (click)="paginaSiguiente()"
                     >
                       Siguiente
@@ -548,7 +506,7 @@ const POR_PAGINA = 5;
 
             <div class="lg:col-span-4 flex flex-col gap-4">
               <div class="card p-5 flex flex-col gap-4">
-                <h3 class="text-sm font-semibold" style="color: var(--text-primary)">
+                <h3 class="text-sm font-semibold text-text-primary">
                   Métodos de Pago ({{ mesActual() }})
                 </h3>
 
@@ -570,14 +528,11 @@ const POR_PAGINA = 5;
                           <app-icon [name]="metodo.icono" [size]="12" />
                           {{ metodo.metodo }}
                         </span>
-                        <span class="text-xs font-semibold" style="color: var(--text-primary)"
+                        <span class="text-xs font-semibold text-text-primary"
                           >{{ metodo.porcentaje }}%</span
                         >
                       </div>
-                      <div
-                        class="h-1.5 rounded-full overflow-hidden"
-                        style="background: var(--border-muted)"
-                      >
+                      <div class="h-1.5 rounded-full overflow-hidden bg-border-muted">
                         <div
                           class="h-full rounded-full"
                           [style.width.%]="metodo.porcentaje"
@@ -588,9 +543,7 @@ const POR_PAGINA = 5;
                   } @empty {
                     <div class="flex flex-col items-center gap-1.5 py-4 text-center">
                       <app-icon name="pie-chart" [size]="22" color="var(--text-muted)" />
-                      <p class="text-xs" style="color: var(--text-muted)">
-                        Sin pagos registrados este mes.
-                      </p>
+                      <p class="text-xs text-text-muted">Sin pagos registrados este mes.</p>
                     </div>
                   }
                 }
@@ -603,12 +556,9 @@ const POR_PAGINA = 5;
           </div>
 
           @if (facade.error()) {
-            <div
-              class="card p-4 flex items-center gap-3"
-              style="border-color: var(--state-error); background: color-mix(in srgb, var(--state-error) 8%, transparent)"
-            >
+            <div class="card p-4 flex items-center gap-3 border-error bg-error/8">
               <app-icon name="alert-circle" [size]="18" color="var(--state-error)" />
-              <p class="text-sm" style="color: var(--state-error)">{{ facade.error() }}</p>
+              <p class="text-sm text-error">{{ facade.error() }}</p>
             </div>
           }
         </div>
@@ -629,30 +579,23 @@ const POR_PAGINA = 5;
       <div class="flex flex-col gap-4">
         <!-- Sede: tomada del selector del topbar, sin opción de cambio aquí -->
         <div
-          class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg"
-          style="
-            background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-            border: 1px solid color-mix(in srgb, var(--color-primary) 18%, transparent);
-          "
+          class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-brand/8 border border-brand/18"
         >
           <app-icon name="building-2" [size]="15" color="var(--color-primary)" />
-          <span class="text-xs" style="color: var(--text-muted)">Sede</span>
-          <span class="text-sm font-semibold" style="color: var(--color-primary)">{{
+          <span class="text-xs text-text-muted">Sede</span>
+          <span class="text-sm font-semibold text-brand">{{
             branchFacade.selectedBranchLabel()
           }}</span>
         </div>
 
         <!-- Rango de fechas (inline — evita overlay que cierra al hacer scroll) -->
         <div class="flex flex-col gap-2">
-          <p
-            class="text-xs font-semibold uppercase tracking-wider"
-            style="color: var(--text-muted)"
-          >
+          <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">
             Período del reporte
           </p>
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-medium" style="color: var(--text-secondary)">Desde</label>
+              <label class="text-sm font-medium text-text-secondary">Desde</label>
               <p-datepicker
                 [(ngModel)]="reportStartDate"
                 [inline]="true"
@@ -662,7 +605,7 @@ const POR_PAGINA = 5;
               />
             </div>
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-medium" style="color: var(--text-secondary)">Hasta</label>
+              <label class="text-sm font-medium text-text-secondary">Hasta</label>
               <p-datepicker
                 [(ngModel)]="reportEndDate"
                 [inline]="true"
@@ -675,16 +618,15 @@ const POR_PAGINA = 5;
           </div>
           <!-- Resumen textual de fechas seleccionadas -->
           <div
-            class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg text-sm"
-            style="background: color-mix(in srgb, var(--color-primary) 6%, transparent)"
+            class="flex items-center justify-center gap-3 px-3 py-2 rounded-lg text-sm bg-brand/6"
           >
-            <span style="color: var(--text-muted)">Desde</span>
-            <span class="font-semibold" style="color: var(--text-primary)">{{
+            <span class="text-text-muted">Desde</span>
+            <span class="font-semibold text-text-primary">{{
               reportStartDate | date: 'dd/MM/yyyy'
             }}</span>
             <app-icon name="arrow-right" [size]="13" color="var(--text-muted)" />
-            <span style="color: var(--text-muted)">Hasta</span>
-            <span class="font-semibold" style="color: var(--text-primary)">{{
+            <span class="text-text-muted">Hasta</span>
+            <span class="font-semibold text-text-primary">{{
               reportEndDate | date: 'dd/MM/yyyy'
             }}</span>
           </div>
@@ -692,11 +634,7 @@ const POR_PAGINA = 5;
 
         <!-- Descripción del contenido -->
         <div
-          class="flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-xs"
-          style="
-            background: color-mix(in srgb, var(--text-muted) 6%, transparent);
-            color: var(--text-muted);
-          "
+          class="flex items-start gap-2.5 px-3 py-2.5 rounded-lg text-xs text-text-muted bg-text-muted/6"
         >
           <app-icon name="file-text" [size]="13" />
           <span
@@ -737,6 +675,17 @@ const POR_PAGINA = 5;
     `
       .rows-divider > * + * {
         border-top: 1px solid var(--border-muted);
+      }
+      .deudores-row:hover {
+        background: color-mix(in srgb, var(--bg-surface) 60%, transparent);
+      }
+      .finance-mobile-bg {
+        background: color-mix(in srgb, var(--bg-surface) 60%, transparent);
+      }
+      @media (min-width: 1024px) {
+        .finance-mobile-bg {
+          background: transparent;
+        }
       }
       .force-compact .hidden.lg\\:grid {
         display: none !important;
@@ -972,11 +921,11 @@ export class AdminPagosComponent implements AfterViewInit {
   protected estadoBg(estado: string | null): string {
     switch (estado) {
       case 'completado':
-        return 'color-mix(in srgb, var(--state-success) 15%, transparent)';
+        return 'var(--state-success-bg)';
       case 'pendiente':
-        return 'color-mix(in srgb, var(--state-warning) 15%, transparent)';
+        return 'var(--state-warning-bg)';
       default:
-        return 'color-mix(in srgb, var(--text-muted) 10%, transparent)';
+        return 'var(--bg-elevated)';
     }
   }
 

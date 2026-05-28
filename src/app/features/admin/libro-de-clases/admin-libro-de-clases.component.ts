@@ -113,7 +113,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
       <!-- ═══ Error ═══ -->
       @if (facade.error(); as err) {
-        <div class="bento-banner card p-4 text-center" style="color: var(--state-error)">
+        <div class="bento-banner card p-4 text-center text-error" >
           <p>{{ err }}</p>
         </div>
       }
@@ -187,7 +187,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
               </div>
 
               <!-- Campos editables del Libro -->
-              <div class="mt-4 border-t pt-4" style="border-color: var(--border-default)">
+              <div class="mt-4 border-t pt-4 border-border-default">
                 <h3 class="mb-3 text-sm font-semibold text-secondary">
                   <app-icon name="edit-3" [size]="14" class="mr-1 inline-block align-text-bottom" />
                   Datos del Libro de Clases

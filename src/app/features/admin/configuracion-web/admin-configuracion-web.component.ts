@@ -96,7 +96,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
                 <span
                   class="font-display font-bold align-baseline truncate leading-none"
-                  style="color: var(--text-primary); font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));"
+                  class="text-text-primary"
+                  [style.font-size]="'clamp(var(--text-2xl), 8vw, var(--text-4xl))'"
                   [title]="promoActive() ? 'Activa' : 'Inactiva'"
                 >
                   {{ promoActive() ? 'Activa' : 'Inactiva' }}
@@ -138,15 +139,12 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             <app-skeleton-block variant="rect" width="70%" height="44px" />
           } @else {
             <div class="flex items-start justify-between gap-3 mb-1">
-              <span
-                class="text-[10px] uppercase font-bold tracking-wider"
-                style="color: var(--color-primary)"
+              <span class="text-[10px] uppercase font-bold tracking-wider text-brand"
                 >Dominio Web</span
               >
               <div
-                class="flex items-center justify-center rounded-md w-7 h-7"
-                style="background: var(--color-primary-muted, rgba(14, 165, 233, 0.1))"
-                style="color: var(--color-primary)"
+                class="flex items-center justify-center rounded-md w-7 h-7 text-brand"
+                class="bg-brand-muted"
               >
                 <app-icon name="globe" [size]="14" />
               </div>
@@ -155,7 +153,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
                 <span
                   class="font-display font-bold align-baseline truncate leading-none"
-                  style="color: var(--text-primary); font-size: clamp(var(--text-lg), 4vw, var(--text-xl));"
+                  class="text-text-primary"
+                  [style.font-size]="'clamp(var(--text-lg), 4vw, var(--text-xl))'"
                   [title]="brandDomain()"
                 >
                   {{ brandDomain() }}
@@ -172,17 +171,11 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         style="min-height: 500px; display: flex; flex-direction: column;"
       >
         <!-- Header with branch selection for Admin and Tabs Switcher -->
-        <div
-          class="flex flex-col border-b"
-          style="border-color: var(--border-default); background: var(--bg-surface);"
-        >
+        <div class="flex flex-col border-b border-border-default bg-surface">
           <!-- Sede activa (solo secretaria — admin usa el selector global del topbar) -->
           @if (!isAdmin()) {
-            <div
-              class="flex items-center gap-2 px-4 py-2.5 border-b"
-              style="border-color: var(--border-default)"
-            >
-              <app-icon name="building-2" [size]="14" style="color: var(--text-muted)" />
+            <div class="flex items-center gap-2 px-4 py-2.5 border-b border-border-default">
+              <app-icon name="building-2" [size]="14" class="text-text-muted" />
               <span class="text-xs text-text-muted">Sede:</span>
               <span class="text-xs font-semibold text-text-primary">{{ branchLabel() }}</span>
             </div>
@@ -219,13 +212,12 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         <form
           [formGroup]="form"
           (ngSubmit)="onSubmit()"
-          class="flex-1 p-5 md:p-6 overflow-y-auto"
-          style="background: var(--bg-surface);"
+          class="flex-1 p-5 md:p-6 overflow-y-auto bg-surface"
         >
           @if (noBranchSelected()) {
             <!-- Empty state: admin sin sede seleccionada en topbar -->
             <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
-              <app-icon name="building-2" [size]="40" style="color: var(--text-muted)" />
+              <app-icon name="building-2" [size]="40" class="text-text-muted" />
               <p class="text-sm font-semibold text-text-secondary">
                 Seleccioná una sede en el menú superior
               </p>
@@ -259,8 +251,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <div class="flex flex-col gap-6 animate-fade-in">
                 <div formGroupName="brand" class="flex flex-col gap-6">
                   <h3
-                    class="text-base font-bold text-text-primary border-b pb-2 mb-2"
-                    style="border-color: var(--border-subtle)"
+                    class="text-base font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle"
                   >
                     Identidad y Metadatos SEO
                   </h3>
@@ -309,8 +300,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                       <label class="field-label">Tema Visual</label>
                       <select
                         formControlName="theme"
-                        class="field-input field-select"
-                        style="opacity: 0.8; cursor: not-allowed;"
+                        class="field-input field-select cursor-not-allowed"
+                        style="opacity: 0.8"
                       >
                         <option value="azul">Azul (Sky/Indigo)</option>
                         <option value="roja">Roja (Red/Orange)</option>
@@ -323,16 +314,14 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                   <!-- Recursos Gráficos del Sitio (Logo y SEO) -->
                   <h3
-                    class="text-base font-bold text-text-primary border-b pb-2 mt-4 mb-2"
-                    style="border-color: var(--border-subtle)"
+                    class="text-base font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
                   >
                     Recursos Gráficos del Sitio (Logo y SEO)
                   </h3>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Tarjeta Logo -->
                     <div
-                      class="p-4 rounded-xl border flex flex-col gap-4"
-                      style="border-color: var(--border-default); background: var(--bg-elevated)"
+                      class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated"
                     >
                       <div class="flex flex-col gap-1">
                         <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
@@ -355,8 +344,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                     <!-- Tarjeta Imagen OG (SEO) -->
                     <div
-                      class="p-4 rounded-xl border flex flex-col gap-4"
-                      style="border-color: var(--border-default); background: var(--bg-elevated)"
+                      class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated"
                     >
                       <div class="flex flex-col gap-1">
                         <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
@@ -379,15 +367,15 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                     <!-- Tarjeta Favicon -->
                     <div
-                      class="p-4 rounded-xl border flex flex-col gap-4"
-                      style="border-color: var(--border-default); background: var(--bg-elevated)"
+                      class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated"
                     >
                       <div class="flex flex-col gap-1">
                         <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                           >Favicon (Pestaña del Navegador)</span
                         >
                         <span class="text-[11px] text-text-muted"
-                          >Icono pequeño para la pestaña del navegador. Soporta .ico, .png, .svg.</span
+                          >Icono pequeño para la pestaña del navegador. Soporta .ico, .png,
+                          .svg.</span
                         >
                       </div>
 
@@ -405,8 +393,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                 <div formGroupName="social" class="flex flex-col gap-6">
                   <h3
-                    class="text-base font-bold text-text-primary border-b pb-2 mt-4 mb-2"
-                    style="border-color: var(--border-subtle)"
+                    class="text-base font-bold text-text-primary border-b pb-2 mt-4 mb-2 border-border-subtle"
                   >
                     Redes Sociales
                   </h3>
@@ -440,7 +427,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                     </div>
                   </div>
                 </div>
-
               </div>
             }
 
@@ -449,8 +435,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <div formGroupName="hero" class="hero-studio-container animate-fade-in">
                 <!-- Cabecera de la Pestaña -->
                 <div
-                  class="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-3"
-                  style="border-color: var(--border-subtle)"
+                  class="flex items-center justify-between border-b pb-3 mb-4 flex-wrap gap-3 border-border-subtle"
                 >
                   <div class="flex flex-col">
                     <h3 class="text-base font-bold text-text-primary m-0">
@@ -545,7 +530,9 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             type="button"
                             class="media-pill"
                             [class.active]="form.get('hero.background.type')?.value === 'none'"
-                            (click)="form.get('hero.background.type')?.setValue('none'); form.markAsDirty()"
+                            (click)="
+                              form.get('hero.background.type')?.setValue('none'); form.markAsDirty()
+                            "
                           >
                             <app-icon name="palette" [size]="13" />
                             <span>Tema (Degradado)</span>
@@ -554,7 +541,10 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             type="button"
                             class="media-pill"
                             [class.active]="form.get('hero.background.type')?.value === 'color'"
-                            (click)="form.get('hero.background.type')?.setValue('color'); form.markAsDirty()"
+                            (click)="
+                              form.get('hero.background.type')?.setValue('color');
+                              form.markAsDirty()
+                            "
                           >
                             <app-icon name="pipette" [size]="13" />
                             <span>Color Personalizado</span>
@@ -563,7 +553,10 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             type="button"
                             class="media-pill"
                             [class.active]="form.get('hero.background.type')?.value === 'image'"
-                            (click)="form.get('hero.background.type')?.setValue('image'); form.markAsDirty()"
+                            (click)="
+                              form.get('hero.background.type')?.setValue('image');
+                              form.markAsDirty()
+                            "
                           >
                             <app-icon name="image" [size]="13" />
                             <span>Imagen</span>
@@ -572,7 +565,10 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             type="button"
                             class="media-pill"
                             [class.active]="form.get('hero.background.type')?.value === 'video'"
-                            (click)="form.get('hero.background.type')?.setValue('video'); form.markAsDirty()"
+                            (click)="
+                              form.get('hero.background.type')?.setValue('video');
+                              form.markAsDirty()
+                            "
                           >
                             <app-icon name="video" [size]="13" />
                             <span>Video (MP4)</span>
@@ -584,8 +580,15 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                         <div class="flex flex-col gap-1.5 mt-4">
                           <label class="field-label">Color Sólido *</label>
                           <div class="flex items-center gap-3">
-                            <div class="relative w-12 h-10 p-1 rounded border cursor-pointer flex items-center justify-center overflow-hidden" style="border-color: var(--border-default); background: var(--bg-elevated)">
-                              <div class="w-full h-full rounded-sm shadow-inner" [style.background-color]="form.get('hero.background.color')?.value || '#000000'"></div>
+                            <div
+                              class="relative w-12 h-10 p-1 rounded border cursor-pointer flex items-center justify-center overflow-hidden border-border-default bg-elevated"
+                            >
+                              <div
+                                class="w-full h-full rounded-sm shadow-inner"
+                                [style.background-color]="
+                                  form.get('hero.background.color')?.value || '#000000'
+                                "
+                              ></div>
                               <input
                                 type="color"
                                 formControlName="color"
@@ -604,8 +607,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                       } @else if (form.get('hero.background.type')?.value === 'none') {
                         <!-- Sin Fondo Warning -->
                         <div
-                          class="p-3.5 rounded-lg border border-dashed text-center mt-3 flex flex-col items-center gap-1.5"
-                          style="border-color: var(--color-primary-muted, rgba(14,165,233,0.3)); background: var(--bg-subtle);"
+                          class="p-3.5 rounded-lg border border-dashed text-center mt-3 flex flex-col items-center gap-1.5 bg-subtle border-brand-muted"
                         >
                           <app-icon name="palette" [size]="20" class="text-brand" />
                           <span class="text-xs font-semibold text-text-primary"
@@ -622,16 +624,35 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                         </div>
                       }
 
-                      @if (form.get('hero.background.type')?.value === 'image' || form.get('hero.background.type')?.value === 'video') {
+                      @if (
+                        form.get('hero.background.type')?.value === 'image' ||
+                        form.get('hero.background.type')?.value === 'video'
+                      ) {
                         <div class="flex flex-col gap-1.5 mt-4">
                           <label class="field-label">Recurso de Fondo *</label>
                           <app-media-upload-control
                             formControlName="url"
                             label="URL del Recurso"
-                            [buttonLabel]="form.get('hero.background.type')?.value === 'image' ? 'Subir Imagen' : 'Subir Video'"
-                            [buttonIcon]="form.get('hero.background.type')?.value === 'image' ? 'image' : 'video'"
-                            [accept]="form.get('hero.background.type')?.value === 'image' ? 'image/*' : 'video/mp4'"
-                            [previewType]="form.get('hero.background.type')?.value === 'video' ? 'video' : 'image'"
+                            [buttonLabel]="
+                              form.get('hero.background.type')?.value === 'image'
+                                ? 'Subir Imagen'
+                                : 'Subir Video'
+                            "
+                            [buttonIcon]="
+                              form.get('hero.background.type')?.value === 'image'
+                                ? 'image'
+                                : 'video'
+                            "
+                            [accept]="
+                              form.get('hero.background.type')?.value === 'image'
+                                ? 'image/*'
+                                : 'video/mp4'
+                            "
+                            [previewType]="
+                              form.get('hero.background.type')?.value === 'video'
+                                ? 'video'
+                                : 'image'
+                            "
                             [isUploading]="isUploadingBackground()"
                             (fileSelected)="onBackgroundMediaSelected($event)"
                           />
@@ -640,10 +661,16 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                         <!-- Opacidad Visual Range Slider -->
                         <div class="flex flex-col gap-2 mt-4">
                           <div class="flex justify-between items-center">
-                            <label class="field-label !mb-0">Opacidad de Capa Oscura: <strong>{{ form.get('hero.background.overlayOpacity')?.value }}%</strong></label>
-                            
+                            <label class="field-label !mb-0"
+                              >Opacidad de Capa Oscura:
+                              <strong
+                                >{{ form.get('hero.background.overlayOpacity')?.value }}%</strong
+                              ></label
+                            >
+
                             <!-- Opacity Badge dinámico según legibilidad -->
-                            @let opacityVal = form.get('hero.background.overlayOpacity')?.value ?? 40;
+                            @let opacityVal =
+                              form.get('hero.background.overlayOpacity')?.value ?? 40;
                             <span
                               class="opacity-legibility-badge"
                               [class.poor]="opacityVal < 20 || opacityVal > 80"
@@ -664,7 +691,13 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                               }
                             </span>
                           </div>
-                          <input type="range" formControlName="overlayOpacity" min="0" max="100" class="studio-range-slider" />
+                          <input
+                            type="range"
+                            formControlName="overlayOpacity"
+                            min="0"
+                            max="100"
+                            class="studio-range-slider"
+                          />
                         </div>
                       }
                     </div>
@@ -681,7 +714,9 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                               type="button"
                               class="media-pill"
                               [class.active]="form.get('hero.media.type')?.value === 'none'"
-                              (click)="form.get('hero.media.type')?.setValue('none'); form.markAsDirty()"
+                              (click)="
+                                form.get('hero.media.type')?.setValue('none'); form.markAsDirty()
+                              "
                             >
                               <app-icon name="x-circle" [size]="13" />
                               <span>Ninguno</span>
@@ -690,7 +725,9 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                               type="button"
                               class="media-pill"
                               [class.active]="form.get('hero.media.type')?.value === 'image'"
-                              (click)="form.get('hero.media.type')?.setValue('image'); form.markAsDirty()"
+                              (click)="
+                                form.get('hero.media.type')?.setValue('image'); form.markAsDirty()
+                              "
                             >
                               <app-icon name="image" [size]="13" />
                               <span>Imagen Lateral</span>
@@ -699,7 +736,9 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                               type="button"
                               class="media-pill"
                               [class.active]="form.get('hero.media.type')?.value === 'video'"
-                              (click)="form.get('hero.media.type')?.setValue('video'); form.markAsDirty()"
+                              (click)="
+                                form.get('hero.media.type')?.setValue('video'); form.markAsDirty()
+                              "
                             >
                               <app-icon name="video" [size]="13" />
                               <span>Video Lateral</span>
@@ -708,30 +747,52 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                         </div>
 
                         @if (form.get('hero.media.type')?.value === 'none') {
-                          <div class="mt-4 p-4 rounded-xl border border-dashed flex flex-col items-center justify-center text-center gap-2" style="border-color: var(--border-default); background: rgba(0,0,0,0.02)">
-                            <app-icon name="layout" [size]="20" class="text-text-muted opacity-50" />
-                            <span class="text-sm font-medium text-text-primary">Sin elemento lateral</span>
+                          <div
+                            class="mt-4 p-4 rounded-xl border border-dashed flex flex-col items-center justify-center text-center gap-2 border-border-default"
+                            class="bg-black/[0.02]"
+                          >
+                            <app-icon
+                              name="layout"
+                              [size]="20"
+                              class="text-text-muted opacity-50"
+                            />
+                            <span class="text-sm font-medium text-text-primary"
+                              >Sin elemento lateral</span
+                            >
                             <span class="text-xs text-text-muted max-w-[280px]">
-                              El layout dividido mostrará una tarjeta limpia y desenfocada sin contenido, dándole más protagonismo al texto.
+                              El layout dividido mostrará una tarjeta limpia y desenfocada sin
+                              contenido, dándole más protagonismo al texto.
                             </span>
                           </div>
                         } @else {
                           <div class="flex flex-col gap-1.5 mt-4">
                             <label class="field-label">Recurso Lateral *</label>
-                            
+
                             <!-- Micro-copy Contextual -->
-                            <div class="mb-2 p-3 rounded-lg flex gap-3 items-start" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle)">
+                            <div
+                              class="mb-2 p-3 rounded-lg flex gap-3 items-start bg-elevated border border-border-subtle"
+                            >
                               @if (form.get('hero.media.type')?.value === 'image') {
                                 <app-icon name="sparkles" [size]="16" class="text-brand mt-0.5" />
                                 <div class="flex flex-col">
-                                  <span class="text-[11px] font-semibold text-text-primary">Efecto Auto-Glow</span>
-                                  <span class="text-[11px] text-text-muted leading-tight mt-0.5">Las imágenes con formato vertical (Portrait) generarán un desenfoque de luz ambiental automático a su alrededor.</span>
+                                  <span class="text-[11px] font-semibold text-text-primary"
+                                    >Efecto Auto-Glow</span
+                                  >
+                                  <span class="text-[11px] text-text-muted leading-tight mt-0.5"
+                                    >Las imágenes con formato vertical (Portrait) generarán un
+                                    desenfoque de luz ambiental automático a su alrededor.</span
+                                  >
                                 </div>
                               } @else {
                                 <app-icon name="film" [size]="16" class="text-brand mt-0.5" />
                                 <div class="flex flex-col">
-                                  <span class="text-[11px] font-semibold text-text-primary">Optimización Recomendada</span>
-                                  <span class="text-[11px] text-text-muted leading-tight mt-0.5">Sube videos en bucle menores a 5MB, idealmente sin sonido para no interrumpir al usuario. Formato MP4.</span>
+                                  <span class="text-[11px] font-semibold text-text-primary"
+                                    >Optimización Recomendada</span
+                                  >
+                                  <span class="text-[11px] text-text-muted leading-tight mt-0.5"
+                                    >Sube videos en bucle menores a 5MB, idealmente sin sonido para
+                                    no interrumpir al usuario. Formato MP4.</span
+                                  >
                                 </div>
                               }
                             </div>
@@ -739,10 +800,22 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             <app-media-upload-control
                               formControlName="url"
                               label="URL del Recurso"
-                              [buttonLabel]="form.get('hero.media.type')?.value === 'image' ? 'Subir Imagen' : 'Subir Video'"
-                              [buttonIcon]="form.get('hero.media.type')?.value === 'image' ? 'image' : 'video'"
-                              [accept]="form.get('hero.media.type')?.value === 'image' ? 'image/*' : 'video/mp4'"
-                              [previewType]="form.get('hero.media.type')?.value === 'video' ? 'video' : 'image'"
+                              [buttonLabel]="
+                                form.get('hero.media.type')?.value === 'image'
+                                  ? 'Subir Imagen'
+                                  : 'Subir Video'
+                              "
+                              [buttonIcon]="
+                                form.get('hero.media.type')?.value === 'image' ? 'image' : 'video'
+                              "
+                              [accept]="
+                                form.get('hero.media.type')?.value === 'image'
+                                  ? 'image/*'
+                                  : 'video/mp4'
+                              "
+                              [previewType]="
+                                form.get('hero.media.type')?.value === 'video' ? 'video' : 'image'
+                              "
                               [isUploading]="isUploadingHero()"
                               (fileSelected)="onHeroMediaSelected($event)"
                             />
@@ -848,8 +921,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                         @for (featGroup of heroFeatures.controls; track $index) {
                           <div
                             [formGroupName]="$index"
-                            class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-xl border border-solid"
-                            style="border-color: var(--border-subtle); background: var(--bg-subtle);"
+                            class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-xl border border-solid border-border-subtle bg-subtle"
                           >
                             <div class="md:col-span-3 flex flex-col gap-1 icon-dropdown-container">
                               <label
@@ -887,7 +959,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                                     [class.mt-1]="$index === 0"
                                     [class.bottom-full]="$index > 0"
                                     [class.mb-1]="$index > 0"
-                                    style="border-color: var(--border-subtle)"
+                                    class="border-border-subtle"
                                     (click)="$event.stopPropagation()"
                                   >
                                     <!-- Buscador de icono -->
@@ -996,8 +1068,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             @if (activeTab() === 'cursos') {
               <div class="flex flex-col gap-6 animate-fade-in">
                 <div
-                  class="flex items-center justify-between border-b pb-2 mb-2"
-                  style="border-color: var(--border-subtle)"
+                  class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle"
                 >
                   <h3 class="text-base font-bold text-text-primary">
                     Gestión de Cursos y Licencias
@@ -1023,8 +1094,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                   </div>
                 } @else if (coursesFacade.availableCourses().length === 0) {
                   <div
-                    class="p-8 text-center border rounded-xl border-dashed flex flex-col items-center gap-3"
-                    style="border-color: var(--state-warning); background: color-mix(in srgb, var(--state-warning) 5%, transparent)"
+                    class="p-8 text-center border rounded-xl border-dashed flex flex-col items-center gap-3 border-warning bg-warning/5"
+                    
                   >
                     <app-icon name="alert-triangle" [size]="28" />
                     <p class="text-text-primary text-sm font-semibold">
@@ -1039,8 +1110,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                   <div formArrayName="courses" class="flex flex-col gap-6">
                     @if (coursesArray.length === 0) {
                       <div
-                        class="p-8 text-center border rounded-xl border-dashed"
-                        style="border-color: var(--border-subtle); background: var(--bg-elevated)"
+                        class="p-8 text-center border rounded-xl border-dashed border-border-subtle bg-elevated"
                       >
                         <p class="text-text-muted text-sm">
                           No hay cards de cursos. Hacé clic en "Agregar Curso" para crear una.
@@ -1063,12 +1133,11 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                               ? 'var(--state-warning)'
                               : 'var(--border-default)'
                         "
-                        style="background: var(--bg-elevated)"
+                        class="bg-elevated"
                       >
                         <!-- Card header -->
                         <div
-                          class="flex items-center justify-between border-b pb-2 mb-1"
-                          style="border-color: var(--border-subtle)"
+                          class="flex items-center justify-between border-b pb-2 mb-1 border-border-subtle"
                         >
                           <span class="text-sm font-bold text-text-primary">
                             Card #{{ $index + 1 }}:
@@ -1080,16 +1149,16 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                           <div class="flex items-center gap-2">
                             @if (isOrphan) {
                               <span
-                                class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                                style="background: color-mix(in srgb, var(--state-danger) 12%, transparent); color: var(--state-danger)"
+                                class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-error bg-error/12"
+                                
                               >
                                 <app-icon name="x-circle" [size]="11" />
                                 Curso no existe
                               </span>
                             } @else if (isInactive) {
                               <span
-                                class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                                style="background: color-mix(in srgb, var(--state-warning) 12%, transparent); color: var(--state-warning)"
+                                class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-warning bg-warning/12"
+                                
                               >
                                 <app-icon name="alert-triangle" [size]="11" />
                                 Curso inactivo — no visible en web
@@ -1097,8 +1166,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             }
                             <button
                               type="button"
-                              class="btn-ghost py-1 px-2 text-xs flex items-center gap-1 rounded cursor-pointer"
-                              style="color: var(--state-danger)"
+                              class="btn-ghost py-1 px-2 text-xs flex items-center gap-1 rounded cursor-pointer text-error"
                               (click)="removeCourse($index)"
                             >
                               <app-icon name="trash-2" [size]="13" />
@@ -1128,8 +1196,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                           <div class="md:col-span-3 flex flex-col gap-1.5">
                             <label class="field-label">Precio Base (heredado)</label>
                             <div
-                              class="field-input flex items-center text-text-muted text-xs"
-                              style="background: var(--bg-base); cursor: default"
+                              class="field-input flex items-center text-text-muted text-xs bg-base cursor-default"
                             >
                               {{ catalogItem ? formatCLP(catalogItem.base_price) : '—' }}
                             </div>
@@ -1148,8 +1215,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                         <!-- Fila 2: Override de precio -->
                         <div
-                          class="flex flex-col gap-2 p-3 rounded-lg border border-dashed"
-                          style="border-color: var(--border-subtle)"
+                          class="flex flex-col gap-2 p-3 rounded-lg border border-dashed border-border-subtle"
                         >
                           <label class="flex items-center gap-2 cursor-pointer">
                             <input
@@ -1167,8 +1233,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             >
                             @if (courseGroup.get('priceOverride')?.value != null) {
                               <span
-                                class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                                style="background: color-mix(in srgb, var(--color-primary) 12%, transparent); color: var(--color-primary)"
+                                class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-brand bg-brand/12"
+                                
                               >
                                 <app-icon name="tag" [size]="10" />
                                 Override activo
@@ -1289,15 +1355,19 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                 <div formGroupName="pricingFooter" class="flex flex-col gap-6">
                   <h3
-                    class="text-base font-bold text-text-primary border-b pb-2 mt-6 mb-2"
-                    style="border-color: var(--border-subtle)"
+                    class="text-base font-bold text-text-primary border-b pb-2 mt-6 mb-2 border-border-subtle"
                   >
                     Términos de Pago y Garantía (Precios)
                   </h3>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Pago Directo Group -->
-                    <div formGroupName="payment" class="flex flex-col gap-4 p-4 rounded-xl border" style="border-color: var(--border-default); background: var(--bg-elevated)">
-                      <span class="text-xs font-bold uppercase tracking-wider text-text-primary">Facilidades de Pago</span>
+                    <div
+                      formGroupName="payment"
+                      class="flex flex-col gap-4 p-4 rounded-xl border border-border-default bg-elevated"
+                    >
+                      <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
+                        >Facilidades de Pago</span
+                      >
                       <div class="flex flex-col gap-1.5">
                         <label class="field-label">Título *</label>
                         <input
@@ -1306,10 +1376,17 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                           class="field-input"
                           placeholder="Facilidades de Pago Directo"
                         />
-                        @if (form.get('pricingFooter.payment.title')?.touched && form.get('pricingFooter.payment.title')?.invalid) {
-                          <span class="text-xs mt-1" style="color: var(--state-error)">
-                            @if (form.get('pricingFooter.payment.title')?.errors?.['required']) { El título es requerido. }
-                            @if (form.get('pricingFooter.payment.title')?.errors?.['maxlength']) { Máximo 100 caracteres. }
+                        @if (
+                          form.get('pricingFooter.payment.title')?.touched &&
+                          form.get('pricingFooter.payment.title')?.invalid
+                        ) {
+                          <span class="text-xs mt-1 text-error">
+                            @if (form.get('pricingFooter.payment.title')?.errors?.['required']) {
+                              El título es requerido.
+                            }
+                            @if (form.get('pricingFooter.payment.title')?.errors?.['maxlength']) {
+                              Máximo 100 caracteres.
+                            }
                           </span>
                         }
                       </div>
@@ -1320,17 +1397,33 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                           class="field-input min-h-[60px] resize-y"
                           placeholder="Puedes reservar tu cupo con un pie inicial..."
                         ></textarea>
-                        @if (form.get('pricingFooter.payment.description')?.touched && form.get('pricingFooter.payment.description')?.invalid) {
-                          <span class="text-xs mt-1" style="color: var(--state-error)">
-                            @if (form.get('pricingFooter.payment.description')?.errors?.['required']) { La descripción es requerida. }
-                            @if (form.get('pricingFooter.payment.description')?.errors?.['maxlength']) { Máximo 300 caracteres. }
+                        @if (
+                          form.get('pricingFooter.payment.description')?.touched &&
+                          form.get('pricingFooter.payment.description')?.invalid
+                        ) {
+                          <span class="text-xs mt-1 text-error">
+                            @if (
+                              form.get('pricingFooter.payment.description')?.errors?.['required']
+                            ) {
+                              La descripción es requerida.
+                            }
+                            @if (
+                              form.get('pricingFooter.payment.description')?.errors?.['maxlength']
+                            ) {
+                              Máximo 300 caracteres.
+                            }
                           </span>
                         }
                       </div>
                     </div>
                     <!-- Garantía Group -->
-                    <div formGroupName="guarantee" class="flex flex-col gap-4 p-4 rounded-xl border" style="border-color: var(--border-default); background: var(--bg-elevated)">
-                      <span class="text-xs font-bold uppercase tracking-wider text-text-primary">Garantía de Aprendizaje</span>
+                    <div
+                      formGroupName="guarantee"
+                      class="flex flex-col gap-4 p-4 rounded-xl border border-border-default bg-elevated"
+                    >
+                      <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
+                        >Garantía de Aprendizaje</span
+                      >
                       <div class="flex flex-col gap-1.5">
                         <label class="field-label">Título *</label>
                         <input
@@ -1339,10 +1432,17 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                           class="field-input"
                           placeholder="Garantía de Aprendizaje"
                         />
-                        @if (form.get('pricingFooter.guarantee.title')?.touched && form.get('pricingFooter.guarantee.title')?.invalid) {
-                          <span class="text-xs mt-1" style="color: var(--state-error)">
-                            @if (form.get('pricingFooter.guarantee.title')?.errors?.['required']) { El título es requerido. }
-                            @if (form.get('pricingFooter.guarantee.title')?.errors?.['maxlength']) { Máximo 100 caracteres. }
+                        @if (
+                          form.get('pricingFooter.guarantee.title')?.touched &&
+                          form.get('pricingFooter.guarantee.title')?.invalid
+                        ) {
+                          <span class="text-xs mt-1 text-error">
+                            @if (form.get('pricingFooter.guarantee.title')?.errors?.['required']) {
+                              El título es requerido.
+                            }
+                            @if (form.get('pricingFooter.guarantee.title')?.errors?.['maxlength']) {
+                              Máximo 100 caracteres.
+                            }
                           </span>
                         }
                       </div>
@@ -1353,10 +1453,21 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                           class="field-input min-h-[60px] resize-y"
                           placeholder="Todo el material teórico e instructores certificados..."
                         ></textarea>
-                        @if (form.get('pricingFooter.guarantee.description')?.touched && form.get('pricingFooter.guarantee.description')?.invalid) {
-                          <span class="text-xs mt-1" style="color: var(--state-error)">
-                            @if (form.get('pricingFooter.guarantee.description')?.errors?.['required']) { La descripción es requerida. }
-                            @if (form.get('pricingFooter.guarantee.description')?.errors?.['maxlength']) { Máximo 300 caracteres. }
+                        @if (
+                          form.get('pricingFooter.guarantee.description')?.touched &&
+                          form.get('pricingFooter.guarantee.description')?.invalid
+                        ) {
+                          <span class="text-xs mt-1 text-error">
+                            @if (
+                              form.get('pricingFooter.guarantee.description')?.errors?.['required']
+                            ) {
+                              La descripción es requerida.
+                            }
+                            @if (
+                              form.get('pricingFooter.guarantee.description')?.errors?.['maxlength']
+                            ) {
+                              Máximo 300 caracteres.
+                            }
                           </span>
                         }
                       </div>
@@ -1370,15 +1481,13 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             @if (activeTab() === 'promo') {
               <div formGroupName="promo" class="flex flex-col gap-6 animate-fade-in">
                 <div
-                  class="flex items-center justify-between border-b pb-2 mb-2"
-                  style="border-color: var(--border-subtle)"
+                  class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle"
                 >
                   <h3 class="text-base font-bold text-text-primary">
                     Campaña y Banner Promocional Global
                   </h3>
                   <label
-                    class="flex items-center gap-2 cursor-pointer bg-base py-1.5 px-3 rounded-lg border"
-                    style="border-color: var(--border-subtle)"
+                    class="flex items-center gap-2 cursor-pointer bg-base py-1.5 px-3 rounded-lg border border-border-subtle"
                   >
                     <input
                       type="checkbox"
@@ -1393,8 +1502,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
                 @if (form.get('promo.active')?.value) {
                   <div
-                    class="grid grid-cols-1 md:grid-cols-3 gap-5 p-4 rounded-xl border border-solid"
-                    style="border-color: var(--state-success); background: color-mix(in srgb, var(--state-success) 4%, transparent);"
+                    class="grid grid-cols-1 md:grid-cols-3 gap-5 p-4 rounded-xl border border-solid border-success bg-success/4"
+                    
                   >
                     <div class="md:col-span-2 flex flex-col gap-1.5">
                       <label class="field-label">Título de la Oferta / Promoción *</label>
@@ -1426,8 +1535,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                   </div>
                 } @else {
                   <div
-                    class="p-8 text-center border rounded-xl border-dashed animate-fade-in"
-                    style="border-color: var(--border-subtle); background: var(--bg-elevated)"
+                    class="p-8 text-center border rounded-xl border-dashed animate-fade-in border-border-subtle bg-elevated"
                   >
                     <app-icon name="ban" [size]="32" class="text-text-muted mx-auto mb-2" />
                     <h4 class="text-sm font-bold text-text-secondary">
@@ -1446,8 +1554,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             @if (activeTab() === 'contacto') {
               <div class="flex flex-col gap-6 animate-fade-in">
                 <h3
-                  class="text-base font-bold text-text-primary border-b pb-2 mb-2"
-                  style="border-color: var(--border-subtle)"
+                  class="text-base font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle"
                 >
                   Datos de Sucursal y Geolocalización SEO
                 </h3>
@@ -1556,8 +1663,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                 </div>
 
                 <div
-                  class="flex items-center justify-between border-b pb-2 mt-4 mb-2"
-                  style="border-color: var(--border-subtle)"
+                  class="flex items-center justify-between border-b pb-2 mt-4 mb-2 border-border-subtle"
                 >
                   <h3 class="text-base font-bold text-text-primary">Horarios de Atención</h3>
                   <button
@@ -1573,8 +1679,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                 <div formArrayName="hours" class="flex flex-col gap-4">
                   @if (hoursArray.length === 0) {
                     <div
-                      class="p-8 text-center border rounded-xl border-dashed"
-                      style="border-color: var(--border-subtle); background: var(--bg-elevated)"
+                      class="p-8 text-center border rounded-xl border-dashed border-border-subtle bg-elevated"
                     >
                       <p class="text-text-muted text-sm">
                         No hay horarios configurados. Haz clic en "Agregar Horario" para crear uno.
@@ -1585,20 +1690,17 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                   @for (hourGroup of hoursArray.controls; track $index) {
                     <div
                       [formGroupName]="$index"
-                      class="p-4 rounded-xl border flex flex-col gap-3"
-                      style="border-color: var(--border-default); background: var(--bg-elevated)"
+                      class="p-4 rounded-xl border flex flex-col gap-3 border-border-default bg-elevated"
                     >
                       <div
-                        class="flex items-center justify-between border-b pb-1 mb-1"
-                        style="border-color: var(--border-subtle)"
+                        class="flex items-center justify-between border-b pb-1 mb-1 border-border-subtle"
                       >
                         <span class="text-xs font-bold text-text-secondary"
                           >Bloque #{{ $index + 1 }}</span
                         >
                         <button
                           type="button"
-                          class="btn-ghost py-1 px-2 text-xs flex items-center gap-1 rounded cursor-pointer"
-                          style="color: var(--state-error)"
+                          class="btn-ghost py-1 px-2 text-xs flex items-center gap-1 rounded cursor-pointer text-error"
                           (click)="removeHour($index)"
                         >
                           <app-icon name="trash-2" [size]="13" />
@@ -1616,7 +1718,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             placeholder="Ej: Lunes a Viernes"
                           />
                           @if (hourGroup.get('days')?.touched && hourGroup.get('days')?.invalid) {
-                            <span class="text-xs mt-1" style="color: var(--state-error)"
+                            <span class="text-xs mt-1 text-error"
                               >Los días de atención son requeridos.</span
                             >
                           }
@@ -1630,7 +1732,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             placeholder="Ej: 09:00 - 18:30"
                           />
                           @if (hourGroup.get('time')?.touched && hourGroup.get('time')?.invalid) {
-                            <span class="text-xs mt-1" style="color: var(--state-error)"
+                            <span class="text-xs mt-1 text-error"
                               >El rango de horas es requerido.</span
                             >
                           }
@@ -1646,8 +1748,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             @if (activeTab() === 'faqs') {
               <div class="flex flex-col gap-6 animate-fade-in">
                 <div
-                  class="flex items-center justify-between border-b pb-2 mb-2"
-                  style="border-color: var(--border-subtle)"
+                  class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle"
                 >
                   <h3 class="text-base font-bold text-text-primary">
                     Preguntas Frecuentes (SEO FAQPage)
@@ -1665,8 +1766,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                 <div formArrayName="faqs" class="flex flex-col gap-4">
                   @if (faqsArray.length === 0) {
                     <div
-                      class="p-8 text-center border rounded-xl border-dashed"
-                      style="border-color: var(--border-subtle); background: var(--bg-elevated)"
+                      class="p-8 text-center border rounded-xl border-dashed border-border-subtle bg-elevated"
                     >
                       <p class="text-text-muted text-sm">
                         No hay preguntas configuradas. Haz clic en "Agregar Pregunta" para crear
@@ -1678,20 +1778,17 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                   @for (faqGroup of faqsArray.controls; track $index) {
                     <div
                       [formGroupName]="$index"
-                      class="p-4 rounded-xl border flex flex-col gap-3"
-                      style="border-color: var(--border-default); background: var(--bg-elevated)"
+                      class="p-4 rounded-xl border flex flex-col gap-3 border-border-default bg-elevated"
                     >
                       <div
-                        class="flex items-center justify-between border-b pb-1 mb-1"
-                        style="border-color: var(--border-subtle)"
+                        class="flex items-center justify-between border-b pb-1 mb-1 border-border-subtle"
                       >
                         <span class="text-xs font-bold text-text-secondary"
                           >Pregunta #{{ $index + 1 }}</span
                         >
                         <button
                           type="button"
-                          class="btn-ghost py-1 px-2 text-xs flex items-center gap-1 rounded cursor-pointer"
-                          style="color: var(--state-error)"
+                          class="btn-ghost py-1 px-2 text-xs flex items-center gap-1 rounded cursor-pointer text-error"
                           (click)="removeFaq($index)"
                         >
                           <app-icon name="trash-2" [size]="13" />
@@ -1723,13 +1820,10 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             }
 
             <!-- Persistent Form Save Area inside the Card body if invalid (highly accessible) -->
-            <div
-              class="flex items-center justify-between mt-8 pt-5 border-t"
-              style="border-color: var(--border-subtle);"
-            >
+            <div class="flex items-center justify-between mt-8 pt-5 border-t border-border-subtle">
               <span class="text-xs">
                 @if (form.invalid) {
-                  <span class="font-medium" style="color: var(--state-error)"
+                  <span class="font-medium text-error"
                     >⚠️ Existen errores de validación en el formulario.</span
                   >
                 } @else {
@@ -2730,7 +2824,11 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
     this.isUploadingFavicon.set(true);
     try {
       const optimizedFile = await optimizeImage(file, 'favicon');
-      const url = await this.facade.uploadAsset(this.effectiveBranchId()!, optimizedFile, 'favicon');
+      const url = await this.facade.uploadAsset(
+        this.effectiveBranchId()!,
+        optimizedFile,
+        'favicon',
+      );
       this.form.get('brand.favicon')?.setValue(url);
       this.form.markAsDirty();
       this.toast.success(
@@ -3142,7 +3240,10 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
           type: (raw.hero.background?.type as 'color' | 'image' | 'video' | 'none') || 'none',
           url: raw.hero.background?.url || '',
           color: raw.hero.background?.color || 'var(--bg-surface)',
-          overlayOpacity: raw.hero.background?.overlayOpacity != null ? Number(raw.hero.background.overlayOpacity) : 40,
+          overlayOpacity:
+            raw.hero.background?.overlayOpacity != null
+              ? Number(raw.hero.background.overlayOpacity)
+              : 40,
         },
         media: {
           type: (raw.hero.media?.type as 'image' | 'video' | 'none') || 'none',

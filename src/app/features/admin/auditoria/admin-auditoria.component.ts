@@ -1,7 +1,6 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   computed,
   effect,
   inject,
@@ -12,7 +11,6 @@ import {
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
 import { SelectModule } from 'primeng/select';
 import { AuditoriaFacade } from '@core/facades/auditoria.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -57,12 +55,10 @@ const ACTION_OPTIONS = [
 
       <!-- ── Filtros ──────────────────────────────────────────────────────── -->
       <div class="bento-banner card p-5">
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <!-- Fecha desde -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium" style="color: var(--text-secondary)">
-              Fecha desde
-            </label>
+            <label class="text-xs font-medium text-secondary">Fecha desde</label>
             <input
               type="date"
               class="filter-input"
@@ -74,9 +70,7 @@ const ACTION_OPTIONS = [
 
           <!-- Fecha hasta -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium" style="color: var(--text-secondary)">
-              Fecha hasta
-            </label>
+            <label class="text-xs font-medium text-secondary">Fecha hasta</label>
             <input
               type="date"
               class="filter-input"
@@ -88,9 +82,7 @@ const ACTION_OPTIONS = [
 
           <!-- Secretaria -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium" style="color: var(--text-secondary)">
-              Secretaria
-            </label>
+            <label class="text-xs font-medium text-secondary">Secretaria</label>
             <p-select
               [options]="secretariaOptions()"
               [(ngModel)]="secretariaModel"
@@ -105,7 +97,7 @@ const ACTION_OPTIONS = [
 
           <!-- Acción -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium" style="color: var(--text-secondary)">Acción</label>
+            <label class="text-xs font-medium text-secondary">Acción</label>
             <p-select
               [options]="actionOptions"
               [(ngModel)]="accionModel"
@@ -120,7 +112,7 @@ const ACTION_OPTIONS = [
 
           <!-- Módulo -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium" style="color: var(--text-secondary)">Módulo</label>
+            <label class="text-xs font-medium text-secondary">Módulo</label>
             <p-select
               [options]="moduloOptions"
               [(ngModel)]="moduloModel"
@@ -137,8 +129,7 @@ const ACTION_OPTIONS = [
         <!-- Acciones de filtro -->
         <div class="flex items-center justify-between flex-wrap gap-3">
           <button
-            class="flex items-center gap-2 text-sm"
-            style="color: var(--text-secondary); background: none; border: none; cursor: pointer; padding: 0;"
+            class="filter-clear-btn flex items-center gap-2 text-sm text-secondary"
             (click)="clearFilters()"
             data-llm-action="limpiar-filtros-auditoria"
           >
@@ -190,109 +181,92 @@ const ACTION_OPTIONS = [
       </div>
 
       <!-- ── Tabla ─────────────────────────────────────────────────────────── -->
-      <div class="bento-banner card p-0 overflow-hidden">
-        <!-- Header tabla -->
-        <div
-          class="grid audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide"
-          style="
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border-subtle);
-            background: var(--bg-subtle, rgba(0,0,0,0.02));
-          "
-        >
-          <span>Fecha/Hora</span>
-          <span>Usuario</span>
-          <span>Acción</span>
-          <span>Módulo</span>
-          <span>Detalles</span>
-          <span>IP</span>
-        </div>
-
-        <!-- Filas -->
-        @if (facade.isLoading()) {
-          @for (_ of skeletonRows; track $index) {
-            <div
-              class="grid audit-grid px-6 py-4 items-center"
-              style="border-bottom: 1px solid var(--border-subtle);"
-            >
-              <app-skeleton-block variant="text" width="120px" height="13px" />
-              <div class="flex flex-col gap-1.5">
-                <app-skeleton-block variant="text" width="140px" height="13px" />
-                <app-skeleton-block variant="text" width="180px" height="11px" />
-              </div>
-              <app-skeleton-block variant="rect" width="80px" height="24px" />
-              <app-skeleton-block variant="text" width="90px" height="13px" />
-              <app-skeleton-block variant="text" width="200px" height="13px" />
-              <app-skeleton-block variant="text" width="100px" height="13px" />
-            </div>
-          }
-        } @else if (facade.logs().length === 0) {
-          <div class="py-16 flex flex-col items-center gap-3">
-            <app-icon name="shield-off" [size]="36" />
-            <p class="text-sm" style="color: var(--text-muted)">
-              No hay registros de auditoría para los filtros seleccionados.
-            </p>
+      <div class="bento-banner card card-accent p-0 overflow-hidden">
+        <!-- Scroll wrapper: habilita scroll horizontal en pantallas chicas -->
+        <div class="overflow-x-auto">
+          <!-- Header tabla -->
+          <div
+            class="audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted audit-header"
+          >
+            <span>Fecha/Hora</span>
+            <span>Usuario</span>
+            <span>Acción</span>
+            <span>Módulo</span>
+            <span>Detalles</span>
+            <span>IP</span>
           </div>
-        } @else {
-          @for (log of facade.logs(); track log.id) {
-            <div
-              class="audit-row grid audit-grid px-6 py-4 items-start"
-              style="border-bottom: 1px solid var(--border-subtle);"
-            >
-              <!-- Fecha/Hora -->
-              <span class="text-sm tabular-nums" style="color: var(--text-secondary)">
-                {{ log.fechaHora | date: 'yyyy-MM-dd HH:mm:ss' }}
-              </span>
 
-              <!-- Usuario -->
-              <div class="flex flex-col gap-0.5">
-                <span class="text-sm font-semibold" style="color: var(--text-primary)">
-                  {{ log.usuarioNombre }}
-                </span>
-                <a
-                  [href]="'mailto:' + log.usuarioEmail"
-                  class="text-xs"
-                  style="color: var(--ds-brand); text-decoration: none;"
-                >
-                  {{ log.usuarioEmail }}
-                </a>
+          <!-- Filas -->
+          @if (facade.isLoading()) {
+            @for (_ of skeletonRows; track $index) {
+              <div class="audit-grid px-6 py-4 items-center audit-row-border">
+                <app-skeleton-block variant="text" width="120px" height="13px" />
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="140px" height="13px" />
+                  <app-skeleton-block variant="text" width="180px" height="11px" />
+                </div>
+                <app-skeleton-block variant="rect" width="80px" height="24px" />
+                <app-skeleton-block variant="text" width="90px" height="13px" />
+                <app-skeleton-block variant="text" width="200px" height="13px" />
+                <app-skeleton-block variant="text" width="100px" height="13px" />
               </div>
-
-              <!-- Acción badge -->
-              <div>
-                <span [class]="'action-badge action-badge--' + badgeClass(log)">
-                  @if (log.accion === 'Crear') {
-                    <app-icon name="plus" [size]="10" />
-                  } @else if (log.accion === 'Actualizar') {
-                    <app-icon name="pencil" [size]="10" />
-                  } @else {
-                    <app-icon name="triangle-alert" [size]="10" />
-                  }
-                  {{ log.accion }}
-                </span>
-              </div>
-
-              <!-- Módulo -->
-              <span class="text-sm" style="color: var(--text-secondary)">{{ log.modulo }}</span>
-
-              <!-- Detalles -->
-              <span class="text-sm" style="color: var(--ds-brand)">{{ log.detalle }}</span>
-
-              <!-- IP -->
-              <span class="text-sm tabular-nums" style="color: var(--text-muted)">
-                {{ log.ip }}
-              </span>
+            }
+          } @else if (facade.logs().length === 0) {
+            <div class="py-16 flex flex-col items-center gap-3">
+              <app-icon name="shield-off" [size]="36" />
+              <p class="text-sm text-muted">
+                No hay registros de auditoría para los filtros seleccionados.
+              </p>
             </div>
+          } @else {
+            @for (log of facade.logs(); track log.id) {
+              <div class="audit-row audit-grid px-6 py-4 items-start audit-row-border">
+                <!-- Fecha/Hora -->
+                <span class="text-sm tabular-nums text-secondary">
+                  {{ log.fechaHora | date: 'yyyy-MM-dd HH:mm:ss' }}
+                </span>
+
+                <!-- Usuario -->
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-sm font-semibold text-primary">{{ log.usuarioNombre }}</span>
+                  <a [href]="'mailto:' + log.usuarioEmail" class="text-xs brand-link">
+                    {{ log.usuarioEmail }}
+                  </a>
+                </div>
+
+                <!-- Acción badge -->
+                <div>
+                  <span [class]="'action-badge action-badge--' + badgeClass(log)">
+                    @if (log.accion === 'Crear') {
+                      <app-icon name="plus" [size]="10" />
+                    } @else if (log.accion === 'Actualizar') {
+                      <app-icon name="pencil" [size]="10" />
+                    } @else {
+                      <app-icon name="triangle-alert" [size]="10" />
+                    }
+                    {{ log.accion }}
+                  </span>
+                </div>
+
+                <!-- Módulo -->
+                <span class="text-sm text-secondary">{{ log.modulo }}</span>
+
+                <!-- Detalles -->
+                <span class="text-sm text-brand" >{{ log.detalle }}</span>
+
+                <!-- IP -->
+                <span class="text-sm tabular-nums text-muted">{{ log.ip }}</span>
+              </div>
+            }
           }
-        }
+        </div>
 
         <!-- Paginación -->
         @if (!facade.isLoading() && facade.totalCount() > 0) {
           <div
-            class="flex items-center justify-between px-6 py-4"
-            style="border-top: 1px solid var(--border-subtle);"
+            class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 pagination-border"
           >
-            <p class="text-xs" style="color: var(--ds-brand)">
+            <p class="text-xs text-brand" >
               Mostrando {{ facade.paginationStart() }}-{{ facade.paginationEnd() }} de
               {{ facade.totalCount() }} registros
             </p>
@@ -306,19 +280,27 @@ const ACTION_OPTIONS = [
                 ← Anterior
               </button>
 
-              @for (p of visiblePages(); track p) {
-                @if (p === -1) {
-                  <span class="text-xs px-1" style="color: var(--text-muted)">…</span>
-                } @else {
-                  <button
-                    class="page-btn"
-                    [class.page-btn--active]="p === facade.currentPage()"
-                    (click)="goToPage(p)"
-                  >
-                    {{ p }}
-                  </button>
+              <!-- Números de página: ocultos en mobile para no saturar -->
+              <div class="hidden sm:flex items-center gap-1">
+                @for (p of visiblePages(); track p) {
+                  @if (p === -1) {
+                    <span class="text-xs px-1 text-muted">…</span>
+                  } @else {
+                    <button
+                      class="page-btn"
+                      [class.page-btn--active]="p === facade.currentPage()"
+                      (click)="goToPage(p)"
+                    >
+                      {{ p }}
+                    </button>
+                  }
                 }
-              }
+              </div>
+
+              <!-- Indicador compacto solo en mobile -->
+              <span class="text-xs text-muted sm:hidden px-2">
+                {{ facade.currentPage() }} / {{ facade.totalPages() }}
+              </span>
 
               <button
                 class="page-btn"
@@ -335,19 +317,14 @@ const ACTION_OPTIONS = [
 
       <!-- ── Banner informativo ─────────────────────────────────────────────── -->
       <div
-        class="bento-banner flex items-start gap-3 p-4 rounded-lg text-sm"
-        style="
-          background: color-mix(in srgb, var(--state-warning) 8%, transparent);
-          border: 1px solid color-mix(in srgb, var(--state-warning) 25%, transparent);
-          color: var(--text-secondary);
-        "
+        class="bento-banner flex items-start gap-3 p-4 rounded-lg text-sm text-secondary warning-banner"
       >
         <app-icon name="info" [size]="16" color="var(--state-warning)" class="mt-0.5 shrink-0" />
         <p>
           <strong>Política de correos:</strong> El log registra el
           <strong>correo personal</strong> de cada secretaria (no el alias institucional) para
           garantizar trazabilidad inequívoca. El alias público (ej.
-          <span style="color: var(--ds-brand); font-weight: 600;">
+          <span class="font-semibold text-brand" >
             secretaria&#64;autoescuela-chillan.cl
           </span>
           ) puede ser compartido; el correo personal identifica a la persona real.
@@ -373,36 +350,33 @@ const ACTION_OPTIONS = [
       box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
     }
 
-    .export-btn {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-surface);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
+    .filter-clear-btn {
+      background: none;
+      border: none;
       cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .export-btn:hover {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
-    }
-    .export-btn--primary {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 14px;
-      font-size: var(--text-sm);
-      font-family: inherit;
+      padding: 0;
     }
 
+    .brand-link {
+      color: var(--ds-brand);
+      text-decoration: none;
+    }
+
+    /* Tabla — el min-width garantiza scroll horizontal antes de colapsar */
     .audit-grid {
+      display: grid;
       grid-template-columns: 148px 220px 110px 130px 1fr 120px;
       gap: 16px;
+      min-width: 780px;
+    }
+
+    .audit-header {
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
+    }
+
+    .audit-row-border {
+      border-bottom: 1px solid var(--border-subtle);
     }
 
     .audit-row {
@@ -410,6 +384,15 @@ const ACTION_OPTIONS = [
     }
     .audit-row:hover {
       background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
+    }
+
+    .pagination-border {
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .warning-banner {
+      background: color-mix(in srgb, var(--state-warning) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--state-warning) 25%, transparent);
     }
 
     /* Action badges */
@@ -489,24 +472,23 @@ const ACTION_OPTIONS = [
     }
     .page-btn--active {
       background: var(--ds-brand);
-      color: #fff;
+      color: var(--color-primary-text);
       border-color: var(--ds-brand);
       cursor: default;
     }
     .page-btn--active:hover {
       background: var(--ds-brand);
-      color: #fff;
+      color: var(--color-primary-text);
     }
   `,
 })
-export class AdminAuditoriaComponent implements OnInit, AfterViewInit {
+export class AdminAuditoriaComponent implements AfterViewInit {
   protected readonly facade = inject(AuditoriaFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly router = inject(Router);
 
   constructor() {
     effect(() => {
@@ -561,10 +543,6 @@ export class AdminAuditoriaComponent implements OnInit, AfterViewInit {
   protected set moduloModel(v: string | null) {
     this.filtroModulo.set(v);
     this.applyFilters();
-  }
-
-  ngOnInit(): void {
-    /* lifecycle hook kept — effect() handles initialization */
   }
 
   ngAfterViewInit(): void {

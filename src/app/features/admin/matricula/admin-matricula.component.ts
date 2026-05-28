@@ -12,4 +12,4 @@ import { SecretariaMatriculaComponent } from '../../../features/secretaria/matri
   imports: [SecretariaMatriculaComponent],
   template: `<app-secretaria-matricula />`,
 })
-export class AdminMatriculaComponent { }
+export class AdminMatriculaComponent {}

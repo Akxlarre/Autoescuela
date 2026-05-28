@@ -46,22 +46,22 @@ function getEstadoStyle(estado: string): { bg: string; color: string } {
   switch (estado) {
     case 'active':
       return {
-        bg: 'color-mix(in srgb, var(--state-success) 12%, transparent)',
+        bg: 'var(--state-success-bg)',
         color: 'var(--state-success)',
       };
     case 'upcoming':
       return {
-        bg: 'color-mix(in srgb, var(--state-warning) 12%, transparent)',
+        bg: 'var(--state-warning-bg)',
         color: 'var(--state-warning)',
       };
     case 'cancelled':
       return {
-        bg: 'color-mix(in srgb, var(--state-error) 12%, transparent)',
+        bg: 'var(--state-error-bg)',
         color: 'var(--state-error)',
       };
     default: // completed
       return {
-        bg: 'color-mix(in srgb, var(--text-muted) 12%, transparent)',
+        bg: 'var(--bg-elevated)',
         color: 'var(--text-muted)',
       };
   }
@@ -153,9 +153,7 @@ const BILLING_LABEL: Record<string, string> = {
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div class="flex items-center gap-2">
               <app-icon name="list" [size]="18" color="var(--ds-brand)" />
-              <h2 class="text-base font-bold" style="color: var(--text-primary)">
-                Listado de Cursos
-              </h2>
+              <h2 class="text-base font-bold text-text-primary">Listado de Cursos</h2>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -184,43 +182,28 @@ const BILLING_LABEL: Record<string, string> = {
           <div class="lg:hidden flex flex-col gap-3">
             @if (facade.isLoading()) {
               @for (i of skeletonRows; track i) {
-                <div
-                  class="rounded-xl p-4 flex flex-col gap-3 border"
-                  style="border-color: var(--border-muted)"
-                >
-                  <div
-                    class="h-4 rounded w-3/4"
-                    style="background: color-mix(in srgb, var(--text-muted) 14%, transparent)"
-                  ></div>
-                  <div
-                    class="h-3 rounded w-1/2"
-                    style="background: color-mix(in srgb, var(--text-muted) 10%, transparent)"
-                  ></div>
-                  <div
-                    class="h-8 rounded w-full"
-                    style="background: color-mix(in srgb, var(--text-muted) 8%, transparent)"
-                  ></div>
+                <div class="rounded-xl p-4 flex flex-col gap-3 border border-border-muted">
+                  <div class="h-4 rounded w-3/4 bg-text-muted/14"></div>
+                  <div class="h-3 rounded w-1/2 bg-text-muted/10"></div>
+                  <div class="h-8 rounded w-full bg-text-muted/8"></div>
                 </div>
               }
             } @else if (cursosFiltrados().length === 0) {
               <div class="py-12 text-center">
-                <p class="text-sm" style="color: var(--text-muted)">
+                <p class="text-sm text-text-muted">
                   No hay cursos que coincidan con los filtros seleccionados.
                 </p>
               </div>
             } @else {
               @for (curso of cursosFiltrados(); track curso.id) {
-                <div
-                  class="rounded-xl border overflow-hidden"
-                  style="border-color: var(--border-muted); background: var(--bg-surface)"
-                >
+                <div class="rounded-xl border overflow-hidden border-border-muted bg-surface">
                   <!-- Cabecera de card: nombre + badges -->
                   <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <p class="text-sm font-semibold truncate" style="color: var(--text-primary)">
+                      <p class="text-sm font-semibold truncate text-text-primary">
                         {{ curso.nombre }}
                       </p>
-                      <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                      <p class="text-xs mt-0.5 text-text-muted">
                         Inicio: {{ formatChileanDate(curso.inicio) }}
                       </p>
                     </div>
@@ -245,40 +228,28 @@ const BILLING_LABEL: Record<string, string> = {
                   </div>
 
                   <!-- Grid de datos clave (3 cols) -->
-                  <div
-                    class="grid grid-cols-3 divide-x px-0 border-t border-b"
-                    style="border-color: var(--border-muted)"
-                  >
+                  <div class="grid grid-cols-3 divide-x px-0 border-t border-b border-border-muted">
                     <div class="py-3 px-4 flex flex-col gap-0.5">
-                      <p
-                        class="text-xs font-semibold uppercase tracking-wide"
-                        style="color: var(--text-muted)"
-                      >
+                      <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                         Precio
                       </p>
-                      <p class="text-sm font-bold" style="color: var(--text-primary)">
+                      <p class="text-sm font-bold text-text-primary">
                         {{ formatCLP(curso.precio) }}
                       </p>
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-center">
-                      <p
-                        class="text-xs font-semibold uppercase tracking-wide"
-                        style="color: var(--text-muted)"
-                      >
+                      <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                         Inscritos
                       </p>
-                      <p class="text-sm font-bold" style="color: var(--text-primary)">
+                      <p class="text-sm font-bold text-text-primary">
                         {{ curso.inscritos
-                        }}<span class="text-xs font-normal" style="color: var(--text-muted)"
+                        }}<span class="text-xs font-normal text-text-muted"
                           >/{{ curso.cupos }}</span
                         >
                       </p>
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-right">
-                      <p
-                        class="text-xs font-semibold uppercase tracking-wide"
-                        style="color: var(--text-muted)"
-                      >
+                      <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                         Ingreso Est.
                       </p>
                       <p
@@ -294,8 +265,8 @@ const BILLING_LABEL: Record<string, string> = {
 
                   <!-- Fila secundaria: Duración + Facturación -->
                   <div class="px-4 py-2 flex items-center gap-4">
-                    <p class="text-xs" style="color: var(--text-muted)">
-                      <span class="font-semibold" style="color: var(--text-secondary)"
+                    <p class="text-xs text-text-muted">
+                      <span class="font-semibold text-text-secondary"
                         >{{ curso.duracionHoras }} hrs</span
                       >
                       · {{ billingLabel(curso.billingType) }}
@@ -305,8 +276,7 @@ const BILLING_LABEL: Record<string, string> = {
                   <!-- Footer: Acciones full-width -->
                   <div class="px-4 pb-4 flex gap-2">
                     <button
-                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold border transition-colors cursor-pointer"
-                      style="border-color: var(--border-muted); color: var(--text-secondary)"
+                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold border transition-colors cursor-pointer border-border-muted text-text-secondary"
                       data-llm-action="view-curso-singular"
                       (click)="onVerDetalle(curso)"
                     >
@@ -314,8 +284,7 @@ const BILLING_LABEL: Record<string, string> = {
                       Ver detalle
                     </button>
                     <button
-                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold transition-colors cursor-pointer"
-                      style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success)"
+                      class="flex-1 flex items-center justify-center gap-2 h-9 rounded-full text-xs font-semibold transition-colors cursor-pointer text-success bg-success/12"
                       data-llm-action="registrar-cobro-singular"
                       (click)="onRegistrarCobro(curso)"
                     >
@@ -328,16 +297,15 @@ const BILLING_LABEL: Record<string, string> = {
 
               <!-- Totales móvil -->
               <div
-                class="rounded-xl px-4 py-3 flex items-center justify-between border-t-2"
-                style="background: var(--bg-surface); border-color: var(--border-muted)"
+                class="rounded-xl px-4 py-3 flex items-center justify-between border-t-2 bg-surface border-border-muted"
               >
-                <span class="text-sm font-bold" style="color: var(--text-primary)">TOTAL</span>
+                <span class="text-sm font-bold text-text-primary">TOTAL</span>
                 <div class="flex items-center gap-4">
-                  <span class="text-xs" style="color: var(--text-muted)">
-                    <strong style="color: var(--text-primary)">{{ totales().inscritos }}</strong>
+                  <span class="text-xs text-text-muted">
+                    <strong class="text-text-primary">{{ totales().inscritos }}</strong>
                     inscritos
                   </span>
-                  <span class="text-sm font-bold" style="color: var(--state-success)">
+                  <span class="text-sm font-bold text-success">
                     {{ formatCLP(totales().ingresos) }}
                   </span>
                 </div>
@@ -349,14 +317,14 @@ const BILLING_LABEL: Record<string, string> = {
           <div class="hidden lg:block overflow-x-auto">
             <table class="w-full" role="table" aria-label="Cursos singulares">
               <thead>
-                <tr class="border-b" style="border-color: var(--border-muted)">
+                <tr class="border-b border-border-muted">
                   @for (col of columnas; track col) {
                     <th
                       class="py-3 px-4 text-xs font-semibold uppercase tracking-wide"
                       [class.text-left]="col.align === 'left'"
                       [class.text-right]="col.align === 'right'"
                       [class.text-center]="col.align === 'center'"
-                      style="color: var(--text-muted)"
+                      class="text-text-muted"
                     >
                       {{ col.label }}
                     </th>
@@ -364,16 +332,13 @@ const BILLING_LABEL: Record<string, string> = {
                 </tr>
               </thead>
 
-              <tbody class="divide-y" style="border-color: var(--border-muted)">
+              <tbody class="divide-y border-border-muted">
                 @if (facade.isLoading()) {
                   @for (i of skeletonRows; track i) {
                     <tr>
                       @for (col of columnas; track col) {
                         <td class="py-3 px-4">
-                          <div
-                            class="h-4 rounded w-full"
-                            style="background: color-mix(in srgb, var(--text-muted) 14%, transparent)"
-                          ></div>
+                          <div class="h-4 rounded w-full bg-text-muted/14"></div>
                         </td>
                       }
                     </tr>
@@ -381,7 +346,7 @@ const BILLING_LABEL: Record<string, string> = {
                 } @else if (cursosFiltrados().length === 0) {
                   <tr>
                     <td [attr.colspan]="columnas.length" class="py-12 text-center">
-                      <p class="text-sm" style="color: var(--text-muted)">
+                      <p class="text-sm text-text-muted">
                         No hay cursos que coincidan con los filtros seleccionados.
                       </p>
                     </td>
@@ -399,10 +364,10 @@ const BILLING_LABEL: Record<string, string> = {
                       (mouseleave)="$any($event.currentTarget)?.setAttribute('style', '')"
                     >
                       <td class="py-3 px-4">
-                        <p class="text-sm font-medium" style="color: var(--text-primary)">
+                        <p class="text-sm font-medium text-text-primary">
                           {{ curso.nombre }}
                         </p>
-                        <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                        <p class="text-xs mt-0.5 text-text-muted">
                           Inicio: {{ formatChileanDate(curso.inicio) }}
                         </p>
                       </td>
@@ -415,22 +380,20 @@ const BILLING_LABEL: Record<string, string> = {
                         >
                       </td>
                       <td class="py-3 px-4 text-right">
-                        <span class="text-sm font-semibold" style="color: var(--text-primary)">{{
+                        <span class="text-sm font-semibold text-text-primary">{{
                           formatCLP(curso.precio)
                         }}</span>
                       </td>
                       <td class="py-3 px-4 text-center">
-                        <span class="text-sm" style="color: var(--text-secondary)"
+                        <span class="text-sm text-text-secondary"
                           >{{ curso.duracionHoras }} hrs</span
                         >
                       </td>
                       <td class="py-3 px-4 text-center">
-                        <span class="text-sm font-medium" style="color: var(--text-primary)">{{
+                        <span class="text-sm font-medium text-text-primary">{{
                           curso.inscritos
                         }}</span>
-                        <span class="text-xs" style="color: var(--text-muted)"
-                          >/{{ curso.cupos }}</span
-                        >
+                        <span class="text-xs text-text-muted">/{{ curso.cupos }}</span>
                       </td>
                       <td class="py-3 px-4 text-center">
                         <span
@@ -465,8 +428,7 @@ const BILLING_LABEL: Record<string, string> = {
                       <td class="py-3 px-4 text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
-                            class="p-1.5 rounded transition-colors cursor-pointer"
-                            style="color: var(--text-muted)"
+                            class="p-1.5 rounded transition-colors cursor-pointer text-text-muted"
                             title="Ver detalle"
                             data-llm-action="view-curso-singular"
                             (mouseenter)="
@@ -483,8 +445,7 @@ const BILLING_LABEL: Record<string, string> = {
                             <app-icon name="eye" [size]="16" />
                           </button>
                           <button
-                            class="p-1.5 rounded transition-colors cursor-pointer"
-                            style="color: var(--text-muted)"
+                            class="p-1.5 rounded transition-colors cursor-pointer text-text-muted"
                             title="Registrar cobro"
                             data-llm-action="registrar-cobro-singular"
                             (mouseenter)="
@@ -509,25 +470,14 @@ const BILLING_LABEL: Record<string, string> = {
 
               @if (!facade.isLoading() && cursosFiltrados().length > 0) {
                 <tfoot>
-                  <tr
-                    class="border-t-2"
-                    style="border-color: var(--border-muted); background: var(--bg-surface)"
-                  >
-                    <td class="py-3 px-4 text-sm font-bold" style="color: var(--text-primary)">
-                      TOTAL
-                    </td>
+                  <tr class="border-t-2 border-border-muted bg-surface">
+                    <td class="py-3 px-4 text-sm font-bold text-text-primary">TOTAL</td>
                     <td colspan="3"></td>
-                    <td
-                      class="py-3 px-4 text-center text-sm font-bold"
-                      style="color: var(--text-primary)"
-                    >
+                    <td class="py-3 px-4 text-center text-sm font-bold text-text-primary">
                       {{ totales().inscritos }}
                     </td>
                     <td colspan="2"></td>
-                    <td
-                      class="py-3 px-4 text-right text-sm font-bold"
-                      style="color: var(--state-success)"
-                    >
+                    <td class="py-3 px-4 text-right text-sm font-bold text-success">
                       {{ formatCLP(totales().ingresos) }}
                     </td>
                     <td></td>
@@ -539,17 +489,12 @@ const BILLING_LABEL: Record<string, string> = {
 
           <!-- Nota informativa -->
           <div
-            class="mt-4 px-4 py-3 rounded-lg text-xs"
-            style="
-              background: color-mix(in srgb, var(--color-primary) 6%, transparent);
-              color: var(--text-secondary);
-              border: 1px solid color-mix(in srgb, var(--color-primary) 20%, transparent);
-            "
+            class="mt-4 px-4 py-3 rounded-lg text-xs text-text-secondary bg-brand/6 border border-brand/20"
           >
-            <strong style="color: var(--color-primary)">SENCE:</strong>
+            <strong class="text-brand">SENCE:</strong>
             Los cursos SENCE se facturan directamente al organismo. El cobro al alumno es $0 si está
             100% financiado.&nbsp;&nbsp;
-            <strong style="color: var(--text-primary)">Particular:</strong>
+            <strong class="text-text-primary">Particular:</strong>
             Se emite boleta por el monto total al inscrito.
           </div>
         </section>

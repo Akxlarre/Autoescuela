@@ -47,10 +47,7 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
           <!-- Historial skeleton -->
           <div class="card p-0 overflow-hidden">
             @for (i of [1, 2, 3, 4]; track i) {
-              <div
-                class="px-4 py-3 flex gap-3 items-center border-b"
-                style="border-color: var(--border-muted)"
-              >
+              <div class="px-4 py-3 flex gap-3 items-center border-b border-border-muted">
                 <app-skeleton-block variant="text" width="20%" height="12px" />
                 <app-skeleton-block variant="text" width="30%" height="12px" />
                 <app-skeleton-block variant="text" width="20%" height="12px" />
@@ -65,10 +62,8 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
       @if (!facade.isLoadingDetalle() && !facade.estadoCuentaResumen()) {
         <div class="flex flex-col items-center gap-3 py-12 text-center">
           <app-icon name="file-x" [size]="36" color="var(--text-muted)" />
-          <p class="text-sm font-medium" style="color: var(--text-primary)">
-            No se encontró la matrícula
-          </p>
-          <p class="text-xs" style="color: var(--text-muted)">
+          <p class="text-sm font-medium text-text-primary">No se encontró la matrícula</p>
+          <p class="text-xs text-text-muted">
             Es posible que haya sido eliminada o que no tengas permisos para verla.
           </p>
         </div>
@@ -80,10 +75,10 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
         <div class="card p-4 flex flex-col gap-3">
           <div class="flex items-start justify-between gap-3">
             <div class="flex flex-col gap-0.5">
-              <h2 class="text-base font-bold" style="color: var(--text-primary)">
+              <h2 class="text-base font-bold text-text-primary">
                 {{ resumen.alumno }}
               </h2>
-              <span class="text-xs font-mono" style="color: var(--text-muted)">
+              <span class="text-xs font-mono text-text-muted">
                 {{ resumen.rut }}
               </span>
             </div>
@@ -96,32 +91,27 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
             </span>
           </div>
 
-          <div
-            class="border-t pt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs"
-            style="border-color: var(--border-muted)"
-          >
+          <div class="border-t pt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs border-border-muted">
             <div class="flex items-center gap-1.5">
               <app-icon name="book-open" [size]="13" color="var(--text-muted)" />
-              <span style="color: var(--text-secondary)">{{ resumen.curso }}</span>
+              <span class="text-text-secondary">{{ resumen.curso }}</span>
             </div>
             @if (resumen.email) {
               <div class="flex items-center gap-1.5">
                 <app-icon name="mail" [size]="13" color="var(--text-muted)" />
-                <span style="color: var(--text-secondary)">{{ resumen.email }}</span>
+                <span class="text-text-secondary">{{ resumen.email }}</span>
               </div>
             }
             @if (resumen.telefono) {
               <div class="flex items-center gap-1.5">
                 <app-icon name="phone" [size]="13" color="var(--text-muted)" />
-                <span style="color: var(--text-secondary)">{{ resumen.telefono }}</span>
+                <span class="text-text-secondary">{{ resumen.telefono }}</span>
               </div>
             }
             @if (resumen.descuento > 0) {
               <div class="flex items-center gap-1.5">
                 <app-icon name="tag" [size]="13" color="var(--state-success)" />
-                <span style="color: var(--state-success)">
-                  Descuento: {{ clp(resumen.descuento) }}
-                </span>
+                <span class="text-success"> Descuento: {{ clp(resumen.descuento) }} </span>
               </div>
             }
           </div>
@@ -169,26 +159,20 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
         <!-- 4. Historial de pagos -->
         <div class="card p-0 overflow-hidden">
-          <div class="px-4 py-3 border-b" style="border-color: var(--border-muted)">
-            <h3 class="text-sm font-semibold" style="color: var(--text-primary)">
-              Historial de Pagos
-            </h3>
+          <div class="px-4 py-3 border-b border-border-muted">
+            <h3 class="text-sm font-semibold text-text-primary">Historial de Pagos</h3>
           </div>
 
           @if (facade.estadoCuentaHistorial().length === 0) {
             <div class="px-4 py-8 flex flex-col items-center gap-2 text-center">
               <app-icon name="inbox" [size]="28" color="var(--text-muted)" />
-              <p class="text-xs" style="color: var(--text-muted)">Sin pagos registrados aún.</p>
+              <p class="text-xs text-text-muted">Sin pagos registrados aún.</p>
             </div>
           } @else {
             <!-- Header columnas -->
             <div
-              class="px-4 py-2 grid text-xs font-semibold tracking-wide uppercase"
-              style="
-                grid-template-columns: 80px 1fr 90px 80px 90px 70px;
-                color: var(--text-muted);
-                background: var(--bg-surface);
-              "
+              class="px-4 py-2 grid text-xs font-semibold tracking-wide uppercase text-text-muted bg-surface"
+              style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
             >
               <span>Fecha</span>
               <span>Concepto</span>
@@ -205,35 +189,30 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
                   style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
                 >
                   <!-- Fecha -->
-                  <span class="font-medium" style="color: var(--color-primary)">
+                  <span class="font-medium text-brand">
                     {{ fechaCorta(pago.fecha) }}
                   </span>
 
                   <!-- Concepto -->
-                  <span class="font-semibold truncate" style="color: var(--text-primary)">
+                  <span class="font-semibold truncate text-text-primary">
                     {{ pago.concepto ?? '—' }}
                   </span>
 
                   <!-- Método -->
-                  <span class="flex items-center gap-1" style="color: var(--text-secondary)">
+                  <span class="flex items-center gap-1 text-text-secondary">
                     <app-icon [name]="pago.metodoIcono" [size]="11" />
                     {{ pago.metodo }}
                   </span>
 
                   <!-- N° Documento -->
                   <span
-                    class="font-mono px-1 py-0.5 rounded truncate"
-                    style="
-                      color: var(--text-muted);
-                      background: var(--bg-surface);
-                      border: 1px solid var(--border-muted);
-                    "
+                    class="font-mono px-1 py-0.5 rounded truncate text-text-muted bg-surface border border-border-muted"
                   >
                     {{ pago.nroDocumento ?? '—' }}
                   </span>
 
                   <!-- Monto -->
-                  <span class="font-bold text-right" style="color: var(--text-primary)">
+                  <span class="font-bold text-right text-text-primary">
                     {{ clp(pago.monto) }}
                   </span>
 
@@ -251,13 +230,12 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 
             <!-- Total del historial -->
             <div
-              class="px-4 py-3 flex items-center justify-between border-t"
-              style="border-color: var(--border-muted); background: var(--bg-surface)"
+              class="px-4 py-3 flex items-center justify-between border-t border-border-muted bg-surface"
             >
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 {{ facade.estadoCuentaHistorial().length }} pago(s) registrado(s)
               </span>
-              <span class="text-sm font-bold" style="color: var(--text-primary)">
+              <span class="text-sm font-bold text-text-primary">
                 Total: {{ clp(totalHistorial()) }}
               </span>
             </div>
@@ -333,11 +311,11 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
   protected paymentStatusBg(status: string | null): string {
     switch (status) {
       case 'paid':
-        return 'color-mix(in srgb, var(--state-success) 15%, transparent)';
+        return 'var(--state-success-bg)';
       case 'partial':
-        return 'color-mix(in srgb, var(--state-warning) 15%, transparent)';
+        return 'var(--state-warning-bg)';
       default:
-        return 'color-mix(in srgb, var(--text-muted) 10%, transparent)';
+        return 'var(--bg-elevated)';
     }
   }
 
@@ -355,11 +333,11 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
   protected estadoBg(estado: string | null): string {
     switch (estado) {
       case 'completado':
-        return 'color-mix(in srgb, var(--state-success) 15%, transparent)';
+        return 'var(--state-success-bg)';
       case 'pendiente':
-        return 'color-mix(in srgb, var(--state-warning) 15%, transparent)';
+        return 'var(--state-warning-bg)';
       default:
-        return 'color-mix(in srgb, var(--text-muted) 10%, transparent)';
+        return 'var(--bg-elevated)';
     }
   }
 

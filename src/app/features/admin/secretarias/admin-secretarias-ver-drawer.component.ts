@@ -12,122 +12,161 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-admin-secretarias-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe, IconComponent, StatBoxComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    DatePipe,
+    IconComponent,
+    StatBoxComponent,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
       <app-drawer-content-loader class="flex-col h-full flex p-5 pb-0">
         <ng-template #skeletons>
-        <div class="flex flex-col gap-6 w-full">
-          <div class="flex justify-center"><app-skeleton-block variant="circle" width="64px" height="64px" /></div>
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
+          <div class="flex flex-col gap-6 w-full">
+            <div class="flex justify-center">
+              <app-skeleton-block variant="circle" width="64px" height="64px" />
+            </div>
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+          </div>
         </ng-template>
         <ng-template #content>
-        <div class="flex flex-col h-full w-full">
-          <!-- Avatar + nombre -->
-          <div
-        class="flex flex-col items-center gap-3 pb-6 mb-6"
-        style="border-bottom: 1px solid var(--border-subtle);"
-      >
-        <div
-          class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold"
-          style="background: var(--color-primary-tint); color: var(--color-primary);"
-        >
-          {{ sec.initials }}
-        </div>
-        <div class="text-center">
-          <p class="text-base font-semibold" style="color: var(--text-primary)">{{ sec.nombre }}</p>
-          <a
-            [href]="'mailto:' + sec.email"
-            class="text-sm"
-            style="color: var(--ds-brand); text-decoration: none;"
-          >
-            {{ sec.email }}
-          </a>
-        </div>
+          <div class="flex flex-col h-full w-full">
+            <!-- Avatar + nombre -->
+            <div
+              class="flex flex-col items-center gap-3 pb-6 mb-6"
+              style="border-bottom: 1px solid var(--border-subtle);"
+            >
+              <div
+                class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
+                
+              >
+                {{ sec.initials }}
+              </div>
+              <div class="text-center">
+                <p class="text-base font-semibold text-text-primary">{{ sec.nombre }}</p>
+                <a
+                  [href]="'mailto:' + sec.email"
+                  class="text-sm text-brand no-underline"
+                  
+                >
+                  {{ sec.email }}
+                </a>
+              </div>
 
-        <!-- Badge estado -->
-        @if (sec.estado === 'activa') {
-          <span
-            class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full"
-            style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success);"
-          >
-            <app-icon name="check-circle" [size]="12" />
-            Activa
-          </span>
-        } @else {
-          <span
-            class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
-            style="background: var(--bg-elevated); color: var(--text-muted);"
-          >
-            <app-icon name="circle" [size]="12" />
-            Inactiva
-          </span>
-        }
-      </div>
-
-      <!-- Datos de contacto y acceso -->
-      <div class="flex flex-col gap-4 mb-6">
-        <h3 class="text-xs font-semibold uppercase tracking-wide" style="color: var(--text-muted)">
-          Información
-        </h3>
-
-        <div class="grid grid-cols-2 gap-3 pb-3">
-          <app-stat-box label="RUT" [value]="sec.rut" variant="surface" [compact]="true" icon="id-card" />
-          <app-stat-box label="Sede" [value]="sec.sede" variant="surface" [compact]="true" icon="map-pin" />
-          @if (sec.phone) {
-            <app-stat-box label="Teléfono" [value]="sec.phone" variant="surface" [compact]="true" icon="phone" />
-          }
-           @if (sec.aliasPublico) {
-            <app-stat-box label="Alias" [value]="sec.aliasPublico" variant="surface" [compact]="true" icon="at-sign" />
-          }
-        </div>
-
-        <div
-          class="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-bg-elevated/50"
-        >
-          <app-icon name="clock" [size]="15" color="var(--text-muted)" />
-          <div class="flex flex-col">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-muted">Último acceso</p>
-             <p class="text-sm font-medium text-primary">
-              @if (sec.ultimoAcceso) {
-                {{ sec.ultimoAcceso | date: 'dd/MM/yyyy HH:mm' }}
+              <!-- Badge estado -->
+              @if (sec.estado === 'activa') {
+                <span
+                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
+                  
+                >
+                  <app-icon name="check-circle" [size]="12" />
+                  Activa
+                </span>
               } @else {
-                Sin registros
+                <span
+                  class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
+                  
+                >
+                  <app-icon name="circle" [size]="12" />
+                  Inactiva
+                </span>
               }
-            </p>
+            </div>
+
+            <!-- Datos de contacto y acceso -->
+            <div class="flex flex-col gap-4 mb-6">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                Información
+              </h3>
+
+              <div class="grid grid-cols-2 gap-3 pb-3">
+                <app-stat-box
+                  label="RUT"
+                  [value]="sec.rut"
+                  variant="surface"
+                  [compact]="true"
+                  icon="id-card"
+                />
+                <app-stat-box
+                  label="Sede"
+                  [value]="sec.sede"
+                  variant="surface"
+                  [compact]="true"
+                  icon="map-pin"
+                />
+                @if (sec.phone) {
+                  <app-stat-box
+                    label="Teléfono"
+                    [value]="sec.phone"
+                    variant="surface"
+                    [compact]="true"
+                    icon="phone"
+                  />
+                }
+                @if (sec.aliasPublico) {
+                  <app-stat-box
+                    label="Alias"
+                    [value]="sec.aliasPublico"
+                    variant="surface"
+                    [compact]="true"
+                    icon="at-sign"
+                  />
+                }
+              </div>
+
+              <div
+                class="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-bg-elevated/50"
+              >
+                <app-icon name="clock" [size]="15" color="var(--text-muted)" />
+                <div class="flex flex-col">
+                  <p class="text-[10px] font-bold uppercase tracking-wider text-muted">
+                    Último acceso
+                  </p>
+                  <p class="text-sm font-medium text-primary">
+                    @if (sec.ultimoAcceso) {
+                      {{ sec.ultimoAcceso | date: 'dd/MM/yyyy HH:mm' }}
+                    } @else {
+                      Sin registros
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rol y permisos -->
+            <div
+              class="rounded-lg p-4 mb-6 bg-brand/6 border border-brand/20"
+              
+            >
+              <div class="flex items-center gap-2 mb-2">
+                <app-icon name="shield-check" [size]="15" color="var(--ds-brand)" />
+                <span class="text-sm font-semibold text-brand" 
+                  >Rol: Secretaria</span
+                >
+              </div>
+              <p class="text-xs leading-relaxed text-brand" >
+                Gestión de matrículas, pagos, agenda y alumnos.
+              </p>
+            </div>
+
+            <!-- Acciones -->
+            <div
+              class="flex items-center gap-3 pt-4"
+              style="border-top: 1px solid var(--border-subtle);"
+            >
+              <button
+                class="edit-btn"
+                (click)="editar()"
+                data-llm-action="editar-secretaria-desde-ver"
+              >
+                <app-icon name="edit" [size]="15" />
+                Editar secretaria
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Rol y permisos -->
-      <div
-        class="rounded-lg p-4 mb-6"
-        style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 20%, transparent);"
-      >
-        <div class="flex items-center gap-2 mb-2">
-          <app-icon name="shield-check" [size]="15" color="var(--ds-brand)" />
-          <span class="text-sm font-semibold" style="color: var(--ds-brand)">Rol: Secretaria</span>
-        </div>
-        <p class="text-xs leading-relaxed" style="color: var(--ds-brand)">
-          Gestión de matrículas, pagos, agenda y alumnos.
-        </p>
-      </div>
-
-      <!-- Acciones -->
-      <div class="flex items-center gap-3 pt-4" style="border-top: 1px solid var(--border-subtle);">
-        <button
-          class="edit-btn"
-          (click)="editar()"
-          data-llm-action="editar-secretaria-desde-ver"
-        >
-          <app-icon name="edit" [size]="15" />
-          Editar secretaria
-        </button>
-      </div>
-        </div>
         </ng-template>
       </app-drawer-content-loader>
     }

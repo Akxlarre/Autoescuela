@@ -11,7 +11,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-admin-inasistencia-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    SelectModule,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
@@ -28,122 +34,124 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         <ng-template #content>
           <form [formGroup]="form" class="flex flex-col gap-6 w-full" (ngSubmit)="onSubmit()">
             <!-- Info Alumno -->
-          <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
-            <div
-              class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted"
-            >
-              <app-icon name="user" [size]="20" />
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
+              <div
+                class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted"
+              >
+                <app-icon name="user" [size]="20" />
+              </div>
+              <div class="flex flex-col">
+                <span class="text-sm font-semibold text-primary">{{
+                  facade.alumno()?.nombre
+                }}</span>
+                <span class="text-xs text-muted">Matrícula {{ facade.alumno()?.matricula }}</span>
+              </div>
             </div>
-            <div class="flex flex-col">
-              <span class="text-sm font-semibold text-primary">{{ facade.alumno()?.nombre }}</span>
-              <span class="text-xs text-muted">Matrícula {{ facade.alumno()?.matricula }}</span>
-            </div>
-          </div>
 
-          <!-- Fecha de inasistencia -->
-          <div class="flex flex-col gap-1.5">
-            <label for="inas-date" class="field-label">
-              FECHA DE INASISTENCIA <span style="color: var(--state-error)">*</span>
-            </label>
-            <input
-              id="inas-date"
-              type="date"
-              formControlName="document_date"
-              class="field-input"
-              aria-required="true"
-              data-llm-description="Fecha en que ocurrió la inasistencia del alumno"
-              [class.field-input--error]="isInvalid('document_date')"
-            />
-            @if (isInvalid('document_date')) {
-              <span class="field-error">Este campo es obligatorio.</span>
-            }
-          </div>
-
-          <!-- Tipo de justificación -->
-          <div class="flex flex-col gap-1.5">
-            <label for="inas-type" class="field-label">
-              TIPO DE JUSTIFICACIÓN <span style="color: var(--state-error)">*</span>
-            </label>
-            <p-select
-              formControlName="document_type"
-              [options]="tipoJustificacionOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Selecciona un tipo..."
-              styleClass="w-full"
-              aria-required="true"
-              data-llm-description="Categoría del documento que justifica la inasistencia"
-              [class.field-input--error]="isInvalid('document_type')"
-            />
-            @if (isInvalid('document_type')) {
-              <span class="field-error">Selecciona un tipo de justificación.</span>
-            }
-          </div>
-
-          <!-- Descripción / Motivo -->
-          <div class="flex flex-col gap-1.5">
-            <label for="inas-desc" class="field-label">MOTIVO / DESCRIPCIÓN</label>
-            <textarea
-              id="inas-desc"
-              formControlName="description"
-              rows="3"
-              class="field-input"
-              placeholder="Describe brevemente el motivo de la inasistencia..."
-              data-llm-description="Descripción detallada del motivo de la inasistencia del alumno"
-            ></textarea>
-          </div>
-
-          <!-- Archivo adjunto (simulado) -->
-          <div class="flex flex-col gap-1.5">
-            <span class="field-label">DOCUMENTO DE RESPALDO</span>
-            <label
-              class="file-upload-zone"
-              [class.file-upload-zone--selected]="selectedFileName()"
-              tabindex="0"
-              role="button"
-              aria-label="Seleccionar archivo de respaldo"
-              (keydown.enter)="fileInput.click()"
-              (keydown.space)="fileInput.click(); $event.preventDefault()"
-            >
+            <!-- Fecha de inasistencia -->
+            <div class="flex flex-col gap-1.5">
+              <label for="inas-date" class="field-label">
+                FECHA DE INASISTENCIA <span class="text-error">*</span>
+              </label>
               <input
-                #fileInput
-                type="file"
-                class="sr-only"
-                accept=".pdf,.jpg,.jpeg,.png"
-                (change)="onFileChange($event)"
-                data-llm-description="Archivo PDF o imagen que respalda la justificación"
+                id="inas-date"
+                type="date"
+                formControlName="document_date"
+                class="field-input"
+                aria-required="true"
+                data-llm-description="Fecha en que ocurrió la inasistencia del alumno"
+                [class.field-input--error]="isInvalid('document_date')"
               />
-              @if (selectedFileName()) {
-                <div class="flex items-center gap-2" style="color: var(--state-success)">
-                  <app-icon name="check-circle" [size]="16" />
-                  <span class="text-sm font-medium">{{ selectedFileName() }}</span>
-                </div>
-              } @else {
-                <div class="flex flex-col items-center gap-1.5" style="color: var(--text-muted)">
-                  <app-icon name="upload-cloud" [size]="22" />
-                  <span class="text-sm">
-                    Arrastra o
-                    <span style="color: var(--ds-brand); font-weight: 500"
-                      >haz clic para seleccionar</span
-                    >
-                  </span>
-                  <span class="text-xs">PDF, JPG o PNG — máx. 5 MB</span>
-                </div>
+              @if (isInvalid('document_date')) {
+                <span class="field-error">Este campo es obligatorio.</span>
               }
-            </label>
-          </div>
+            </div>
 
-          @if (saveError()) {
-            <p class="text-sm" style="color: var(--state-error)">
-              {{ saveError() }}
-            </p>
-          }
-        </form>
+            <!-- Tipo de justificación -->
+            <div class="flex flex-col gap-1.5">
+              <label for="inas-type" class="field-label">
+                TIPO DE JUSTIFICACIÓN <span class="text-error">*</span>
+              </label>
+              <p-select
+                formControlName="document_type"
+                [options]="tipoJustificacionOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona un tipo..."
+                styleClass="w-full"
+                aria-required="true"
+                data-llm-description="Categoría del documento que justifica la inasistencia"
+                [class.field-input--error]="isInvalid('document_type')"
+              />
+              @if (isInvalid('document_type')) {
+                <span class="field-error">Selecciona un tipo de justificación.</span>
+              }
+            </div>
+
+            <!-- Descripción / Motivo -->
+            <div class="flex flex-col gap-1.5">
+              <label for="inas-desc" class="field-label">MOTIVO / DESCRIPCIÓN</label>
+              <textarea
+                id="inas-desc"
+                formControlName="description"
+                rows="3"
+                class="field-input"
+                placeholder="Describe brevemente el motivo de la inasistencia..."
+                data-llm-description="Descripción detallada del motivo de la inasistencia del alumno"
+              ></textarea>
+            </div>
+
+            <!-- Archivo adjunto (simulado) -->
+            <div class="flex flex-col gap-1.5">
+              <span class="field-label">DOCUMENTO DE RESPALDO</span>
+              <label
+                class="file-upload-zone"
+                [class.file-upload-zone--selected]="selectedFileName()"
+                tabindex="0"
+                role="button"
+                aria-label="Seleccionar archivo de respaldo"
+                (keydown.enter)="fileInput.click()"
+                (keydown.space)="fileInput.click(); $event.preventDefault()"
+              >
+                <input
+                  #fileInput
+                  type="file"
+                  class="sr-only"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  (change)="onFileChange($event)"
+                  data-llm-description="Archivo PDF o imagen que respalda la justificación"
+                />
+                @if (selectedFileName()) {
+                  <div class="flex items-center gap-2 text-success" >
+                    <app-icon name="check-circle" [size]="16" />
+                    <span class="text-sm font-medium">{{ selectedFileName() }}</span>
+                  </div>
+                } @else {
+                  <div class="flex flex-col items-center gap-1.5 text-text-muted">
+                    <app-icon name="upload-cloud" [size]="22" />
+                    <span class="text-sm">
+                      Arrastra o
+                      <span class="text-brand" style="font-weight: 500"
+                        >haz clic para seleccionar</span
+                      >
+                    </span>
+                    <span class="text-xs">PDF, JPG o PNG — máx. 5 MB</span>
+                  </div>
+                }
+              </label>
+            </div>
+
+            @if (saveError()) {
+              <p class="text-sm text-error" >
+                {{ saveError() }}
+              </p>
+            }
+          </form>
         </ng-template>
       </app-drawer-content-loader>
 
       <!-- ── Footer ── -->
-      <div class="p-4 border-t bg-subtle flex items-center justify-end gap-2">
+      <div class="p-4 border-t border-border-subtle flex items-center justify-end gap-2">
         <button
           type="button"
           class="btn-secondary"
@@ -168,7 +176,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </button>
       </div>
     </div>
-    `,
+  `,
   styles: `
     .field-label {
       font-size: var(--text-xs);

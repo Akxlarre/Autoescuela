@@ -18,34 +18,32 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, SkeletonBlockComponent],
   template: `
-    <div class="flex flex-col h-full" style="background: var(--bg-surface)">
+    <div class="flex flex-col h-full bg-surface">
       <!-- ── Body ── -->
       <div class="flex-1 overflow-y-auto p-5 space-y-6">
         <!-- Clase target banner -->
         <div
-          class="flex items-center gap-3 p-3 rounded-xl border"
-          style="background: var(--bg-elevated); border-color: var(--border-default)"
+          class="flex items-center gap-3 p-3 rounded-xl border bg-elevated border-border-default"
+          
         >
           <div
-            class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-            style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent); color: var(--ds-brand)"
+            class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-brand bg-brand/10"
+            
           >
             <app-icon name="calendar-clock" [size]="18" />
           </div>
           <div class="flex flex-col">
-            <span class="text-sm font-bold" style="color: var(--text-primary)">
+            <span class="text-sm font-bold text-text-primary">
               Clase #{{ facade.reprogramarTarget()?.claseNumero }} —
               {{ facade.alumno()?.nombre }}
             </span>
-            <span class="text-xs" style="color: var(--text-muted)">
-              Selecciona instructor y nuevo horario
-            </span>
+            <span class="text-xs text-text-muted"> Selecciona instructor y nuevo horario </span>
           </div>
         </div>
 
         <!-- ── 1. Instructor ── -->
         <div class="space-y-3">
-          <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--ds-brand)"
+          <span class="text-xs font-bold uppercase tracking-widest text-brand" 
             >1. Instructor</span
           >
 
@@ -57,13 +55,11 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
             </div>
           } @else if (facade.instructores().length === 0) {
             <div
-              class="p-6 rounded-xl border flex flex-col items-center gap-2 text-center"
-              style="background: var(--bg-base); border-color: var(--border-default)"
+              class="p-6 rounded-xl border flex flex-col items-center gap-2 text-center bg-base border-border-default"
+              
             >
-              <app-icon name="user-x" [size]="24" style="color: var(--text-muted)" />
-              <p class="text-sm" style="color: var(--text-muted)">
-                No hay instructores disponibles.
-              </p>
+              <app-icon name="user-x" [size]="24" class="text-text-muted" />
+              <p class="text-sm text-text-muted">No hay instructores disponibles.</p>
             </div>
           } @else {
             <div class="flex flex-col gap-2">
@@ -110,22 +106,22 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
         <!-- ── 2. Horario — visible solo al seleccionar instructor ── -->
         @if (selectedInstructorId()) {
           <div class="space-y-3">
-            <span class="text-xs font-bold uppercase tracking-widest" style="color: var(--ds-brand)"
+            <span class="text-xs font-bold uppercase tracking-widest text-brand" 
               >2. Selecciona el nuevo horario</span
             >
 
             @if (facade.isLoadingSchedule()) {
               <div
-                class="h-40 rounded-2xl flex items-center justify-center gap-2"
-                style="background: var(--bg-base); border: 1px solid var(--border-default)"
+                class="h-40 rounded-2xl flex items-center justify-center gap-2 bg-base border border-border-default"
+                
               >
                 <app-icon name="loader" [size]="16" class="animate-spin text-text-muted" />
                 <span class="text-sm text-text-muted">Cargando disponibilidad...</span>
               </div>
             } @else if (!facade.scheduleGrid() || daysFromGrid().length === 0) {
               <div
-                class="p-8 rounded-2xl flex flex-col items-center gap-2 text-center"
-                style="background: var(--bg-base); border: 1px solid var(--border-default)"
+                class="p-8 rounded-2xl flex flex-col items-center gap-2 text-center bg-base border border-border-default"
+                
               >
                 <app-icon name="calendar-x" [size]="28" class="text-text-muted" />
                 <p class="text-sm font-bold text-text-primary">Sin disponibilidad</p>
@@ -135,13 +131,13 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
               </div>
             } @else {
               <div
-                class="rounded-2xl overflow-hidden"
-                style="background: var(--bg-base); border: 1px solid var(--border-default)"
+                class="rounded-2xl overflow-hidden bg-base border border-border-default"
+                
               >
                 <!-- Navegación semanas -->
                 <div
-                  class="flex items-center justify-between px-4 py-2.5 border-b"
-                  style="background: var(--bg-elevated); border-color: var(--border-subtle)"
+                  class="flex items-center justify-between px-4 py-2.5 border-b bg-elevated border-border-subtle"
+                  
                 >
                   <button
                     type="button"
@@ -165,8 +161,8 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
 
                 <!-- Tabs días -->
                 <div
-                  class="flex overflow-x-auto border-b"
-                  style="background: var(--bg-elevated); border-color: var(--border-subtle)"
+                  class="flex overflow-x-auto border-b bg-elevated border-border-subtle"
+                  
                 >
                   @for (day of currentWeekDays(); track day.date; let i = $index) {
                     <button
@@ -190,8 +186,8 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
                   @for (slot of slotsForDay(); track slot.id) {
                     @if (slot.status === 'occupied') {
                       <div
-                        class="p-2.5 border rounded-lg flex items-center justify-center gap-1 cursor-not-allowed opacity-50"
-                        style="background: var(--bg-subtle); border-color: var(--border-default)"
+                        class="p-2.5 border rounded-lg flex items-center justify-center gap-1 cursor-not-allowed opacity-50 bg-subtle border-border-default"
+                        
                       >
                         <app-icon name="x" [size]="10" class="text-text-muted" />
                         <span class="text-xs text-text-muted"
@@ -225,23 +221,20 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
                 <div class="px-4 pb-3 flex items-center gap-4 text-xs text-text-muted flex-wrap">
                   <span class="flex items-center gap-1.5">
                     <span
-                      class="w-3 h-3 rounded inline-block"
-                      style="background: var(--ds-brand)"
+                      class="w-3 h-3 rounded inline-block bg-brand"
+                      
                     ></span>
                     Seleccionado
                   </span>
                   <span class="flex items-center gap-1.5">
                     <span
-                      class="w-3 h-3 rounded border inline-block"
-                      style="background: var(--bg-surface); border-color: var(--border-default)"
+                      class="w-3 h-3 rounded border inline-block bg-surface border-border-default"
+                      
                     ></span>
                     Disponible
                   </span>
                   <span class="flex items-center gap-1.5">
-                    <span
-                      class="w-3 h-3 rounded opacity-50 inline-block"
-                      style="background: var(--bg-subtle)"
-                    ></span>
+                    <span class="w-3 h-3 rounded opacity-50 inline-block bg-subtle"></span>
                     Ocupado
                   </span>
                 </div>
@@ -252,14 +245,14 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
 
         <!-- Error -->
         @if (saveError()) {
-          <p class="text-sm" style="color: var(--state-error)">{{ saveError() }}</p>
+          <p class="text-sm text-error" >{{ saveError() }}</p>
         }
       </div>
 
       <!-- ── Footer ── -->
       <div
-        class="p-4 border-t flex gap-3"
-        style="background: var(--bg-subtle); border-color: var(--border-subtle)"
+        class="p-4 border-t flex gap-3 bg-subtle border-border-subtle"
+        
       >
         <button
           type="button"

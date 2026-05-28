@@ -43,16 +43,16 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             style="border-bottom: 1px solid var(--border-subtle)"
           >
             <div
-              class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold"
-              style="background: var(--color-primary-tint); color: var(--color-primary)"
+              class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
+              
             >
               {{ inst.initials }}
             </div>
             <div class="text-center">
-              <p class="text-base font-semibold" style="color: var(--text-primary)">
+              <p class="text-base font-semibold text-text-primary">
                 {{ inst.nombre }}
               </p>
-              <p class="text-sm" style="color: var(--ds-brand)">
+              <p class="text-sm text-brand" >
                 Instructor {{ inst.tipoLabel | lowercase }}
               </p>
             </div>
@@ -60,19 +60,16 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             <!-- Badge estado -->
             @if (inst.estado === 'activo') {
               <span
-                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full"
-                style="
-              background: color-mix(in srgb, var(--state-success) 12%, transparent);
-              color: var(--state-success);
-            "
+                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
+                
               >
                 <app-icon name="check-circle" [size]="12" />
                 Activo
               </span>
             } @else {
               <span
-                class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full"
-                style="background: var(--bg-elevated); color: var(--text-muted)"
+                class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
+                
               >
                 <app-icon name="circle" [size]="12" />
                 Inactivo
@@ -119,9 +116,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               <div>
                 <p class="detail-label">Email</p>
                 <a
-                  class="detail-value"
+                  class="detail-value text-brand no-underline"
                   [href]="'mailto:' + inst.email"
-                  style="color: var(--ds-brand); text-decoration: none"
+                  
                 >
                   {{ inst.email }}
                 </a>
@@ -210,7 +207,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 <div>
                   <p class="detail-label">Vehículo</p>
                   <p class="detail-value font-semibold">{{ inst.vehiclePlate }}</p>
-                  <p class="text-xs" style="color: var(--text-muted)">{{ inst.vehicleModel }}</p>
+                  <p class="text-xs text-text-muted">{{ inst.vehicleModel }}</p>
                 </div>
               </div>
               @if (inst.vehicleAssignmentDate) {
@@ -223,7 +220,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 </div>
               }
             } @else {
-              <p class="text-sm italic" style="color: var(--text-muted)">Sin vehículo asignado</p>
+              <p class="text-sm italic text-text-muted">Sin vehículo asignado</p>
             }
           </div>
 
@@ -234,24 +231,19 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             @if (facade.assignmentHistory().length === 0) {
               <div class="flex flex-col items-center gap-2 py-6">
                 <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
-                <p class="text-xs" style="color: var(--text-muted)">
-                  Sin historial de asignaciones de vehículos
-                </p>
+                <p class="text-xs text-text-muted">Sin historial de asignaciones de vehículos</p>
               </div>
             } @else {
               @for (h of facade.assignmentHistory(); track h.id) {
-                <div
-                  class="flex items-center justify-between py-2.5 px-3 rounded-lg"
-                  style="background: var(--bg-elevated)"
-                >
+                <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
                   <div>
-                    <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                    <p class="text-sm font-semibold text-text-primary">
                       {{ h.vehiclePlate }}
                     </p>
-                    <p class="text-xs" style="color: var(--text-muted)">{{ h.vehicleModel }}</p>
+                    <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>
                   </div>
                   <div class="text-right">
-                    <p class="text-xs" style="color: var(--text-secondary)">
+                    <p class="text-xs text-text-secondary">
                       {{ h.startDate }}
                       @if (h.endDate) {
                         → {{ h.endDate }}
@@ -285,8 +277,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               Ver horario
             </button>
             <button
-              class="quick-action-btn"
-              style="border-color: var(--ds-brand); color: var(--ds-brand)"
+              class="quick-action-btn border-brand text-brand"
+              
               data-llm-action="ver-clases-activas-instructor"
             >
               <app-icon name="clipboard-list" [size]="16" />

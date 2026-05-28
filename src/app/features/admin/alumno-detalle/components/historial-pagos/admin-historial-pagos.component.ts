@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Button } from 'primeng/button';
@@ -10,16 +11,22 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
   selector: 'app-admin-historial-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, Button, RouterLink, IconComponent, StatBoxComponent],
+  imports: [TooltipModule, CommonModule, Button, RouterLink, IconComponent, StatBoxComponent],
   template: `
     <div class="bento-card !p-0 flex flex-col h-full w-full overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/30">
+      <div
+        class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/30"
+      >
         <div class="flex flex-col">
           <h2 class="text-base font-bold text-text-primary m-0">Estado Financiero</h2>
-          <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5">Control de Pagos</span>
+          <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"
+            >Control de Pagos</span
+          >
         </div>
-        <div class="w-8 h-8 rounded-full bg-state-success/10 flex items-center justify-center text-state-success">
+        <div
+          class="w-8 h-8 rounded-full bg-state-success/10 flex items-center justify-center text-state-success"
+        >
           <app-icon name="dollar-sign" [size]="18" />
         </div>
       </div>
@@ -53,24 +60,37 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
           }
 
           @for (pago of pagos(); track pago.id) {
-            <div class="flex flex-col gap-1.5 p-3 rounded-xl bg-bg-elevated/50 border border-border-subtle shadow-sm transition-all hover:bg-bg-elevated">
+            <div
+              class="flex flex-col gap-1.5 p-3 rounded-xl bg-bg-elevated/50 border border-border-subtle shadow-sm transition-all hover:bg-bg-elevated"
+            >
               <div class="flex items-start justify-between gap-2">
-                <span class="text-xs font-bold text-text-primary line-clamp-1 truncate pr-2">{{ pago.concepto }}</span>
-                <span class="text-xs font-bold text-text-primary shrink-0">\${{ pago.monto.toLocaleString('es-CL') }}</span>
+                <span
+                  class="text-xs font-bold text-text-primary line-clamp-1 truncate pr-2"
+                  [pTooltip]="pago.concepto"
+                  tooltipPosition="top"
+                  >{{ pago.concepto }}</span
+                >
+                <span class="text-xs font-bold text-text-primary shrink-0"
+                  >\${{ pago.monto.toLocaleString('es-CL') }}</span
+                >
               </div>
-              
+
               <div class="flex items-center justify-between mt-1">
                 <div class="flex items-center gap-2">
-                   <span class="text-[10px] text-text-muted font-medium">{{ pago.fecha }}</span>
-                   @if (pago.metodo) {
-                     <span class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-bg-subtle text-text-muted border border-border-subtle">
-                        {{ pago.metodo }}
-                     </span>
-                   }
+                  <span class="text-[10px] text-text-muted font-medium">{{ pago.fecha }}</span>
+                  @if (pago.metodo) {
+                    <span
+                      class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-bg-subtle text-text-muted border border-border-subtle"
+                    >
+                      {{ pago.metodo }}
+                    </span>
+                  }
                 </div>
-                <span class="inas-badge !px-2 !py-0.5 !text-[9px]" 
-                      [class.inas-badge--approved]="pago.estado === 'Pagado'"
-                      [class.inas-badge--pending]="pago.estado === 'Pendiente'">
+                <span
+                  class="inas-badge !px-2 !py-0.5 !text-[9px]"
+                  [class.inas-badge--approved]="pago.estado === 'Pagado'"
+                  [class.inas-badge--pending]="pago.estado === 'Pendiente'"
+                >
                   {{ pago.estado }}
                 </span>
               </div>
@@ -124,7 +144,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
       background: var(--border-default);
       border-radius: 10px;
     }
-  `
+  `,
 })
 export class AdminHistorialPagosComponent {
   pagos = input.required<PagoUI[]>();

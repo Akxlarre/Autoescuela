@@ -44,122 +44,130 @@ type UploadMode = 'student' | 'school';
         </div>
       </ng-template>
       <ng-template #content>
-      <div class="flex-1 flex flex-col gap-5">
+        <div class="flex-1 flex flex-col gap-5">
+          <!-- ── Selector alumno (modo student) ── -->
+          @if (facade.currentUploadMode() === 'student') {
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-primary">Alumno *</label>
+              <p-select
+                [ngModel]="selectedStudentId()"
+                (ngModelChange)="selectedStudentId.set($event)"
+                [options]="studentOptions()"
+                optionLabel="name"
+                optionValue="studentId"
+                placeholder="Seleccionar alumno..."
+                [filter]="true"
+                filterPlaceholder="Buscar alumno..."
+                styleClass="w-full"
+                appendTo="body"
+              ></p-select>
+            </div>
+          }
 
-        <!-- ── Selector alumno (modo student) ── -->
-        @if (facade.currentUploadMode() === 'student') {
+          <!-- ── Selector tipo ── -->
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium" style="color: var(--text-primary);">Alumno *</label>
+            <label class="text-sm font-medium text-text-primary">Tipo de documento *</label>
             <p-select
-              [ngModel]="selectedStudentId()"
-              (ngModelChange)="selectedStudentId.set($event)"
-              [options]="studentOptions()"
-              optionLabel="name"
-              optionValue="studentId"
-              placeholder="Seleccionar alumno..."
-              [filter]="true"
-              filterPlaceholder="Buscar alumno..."
+              [ngModel]="selectedType()"
+              (ngModelChange)="selectedType.set($event)"
+              [options]="
+                facade.currentUploadMode() === 'student' ? studentDocTypes : schoolDocTypes
+              "
+              placeholder="Seleccionar tipo..."
               styleClass="w-full"
               appendTo="body"
             ></p-select>
           </div>
-        }
 
-        <!-- ── Selector tipo ── -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" style="color: var(--text-primary);">Tipo de documento *</label>
-          <p-select
-            [ngModel]="selectedType()"
-            (ngModelChange)="selectedType.set($event)"
-            [options]="facade.currentUploadMode() === 'student' ? studentDocTypes : schoolDocTypes"
-            placeholder="Seleccionar tipo..."
-            styleClass="w-full"
-            appendTo="body"
-          ></p-select>
-        </div>
-
-        <!-- ── Descripción (modo school) ── -->
-        @if (facade.currentUploadMode() === 'school') {
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium" style="color: var(--text-primary);">Descripción</label>
-            <textarea
-              [ngModel]="description()"
-              (ngModelChange)="description.set($event)"
-              rows="2"
-              placeholder="Descripción opcional..."
-              class="w-full rounded-lg px-3 py-2 text-sm resize-none border"
-              style="background: var(--bg-subtle); border-color: var(--border-subtle); color: var(--text-primary); outline: none;"
-            ></textarea>
-          </div>
-        }
-
-        <!-- ── Drag & Drop ── -->
-        <div
-          class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
-          [style]="isDragOver() ? 'border-color: var(--color-primary); background: var(--color-primary-tint);' : 'border-color: var(--border-subtle); background: var(--bg-subtle);'"
-          (dragover)="onDragOver($event)"
-          (dragleave)="isDragOver.set(false)"
-          (drop)="onDrop($event)"
-          (click)="fileInput.click()"
-        >
-          <div
-            class="w-12 h-12 rounded-xl flex items-center justify-center"
-            style="background: var(--bg-surface);"
-          >
-            <app-icon name="upload" [size]="22"></app-icon>
-          </div>
-
-          @if (selectedFile()) {
-            <div>
-              <p class="font-semibold text-sm m-0" style="color: var(--text-primary);">{{ selectedFile()!.name }}</p>
-              <p class="text-xs m-0 mt-1" style="color: var(--text-secondary);">{{ formatFileSize(selectedFile()!.size) }}</p>
-            </div>
-          } @else {
-            <div>
-              <p class="font-medium text-sm m-0" style="color: var(--text-primary);">Arrastra tu archivo aquí</p>
-              <p class="text-xs m-0 mt-1" style="color: var(--text-secondary);">PDF, JPG, PNG — máx. 5 MB</p>
+          <!-- ── Descripción (modo school) ── -->
+          @if (facade.currentUploadMode() === 'school') {
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-primary">Descripción</label>
+              <textarea
+                [ngModel]="description()"
+                (ngModelChange)="description.set($event)"
+                rows="2"
+                placeholder="Descripción opcional..."
+                class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
+                
+              ></textarea>
             </div>
           }
+
+          <!-- ── Drag & Drop ── -->
+          <div
+            class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
+            [style]="
+              isDragOver()
+                ? 'border-color: var(--color-primary); background: var(--color-primary-tint);'
+                : 'border-color: var(--border-subtle); background: var(--bg-subtle);'
+            "
+            (dragover)="onDragOver($event)"
+            (dragleave)="isDragOver.set(false)"
+            (drop)="onDrop($event)"
+            (click)="fileInput.click()"
+          >
+            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
+              <app-icon name="upload" [size]="22"></app-icon>
+            </div>
+
+            @if (selectedFile()) {
+              <div>
+                <p class="font-semibold text-sm m-0 text-text-primary">
+                  {{ selectedFile()!.name }}
+                </p>
+                <p class="text-xs m-0 mt-1 text-text-secondary">
+                  {{ formatFileSize(selectedFile()!.size) }}
+                </p>
+              </div>
+            } @else {
+              <div>
+                <p class="font-medium text-sm m-0 text-text-primary">Arrastra tu archivo aquí</p>
+                <p class="text-xs m-0 mt-1 text-text-secondary">PDF, JPG, PNG — máx. 5 MB</p>
+              </div>
+            }
+          </div>
+          <input
+            #fileInput
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            class="hidden"
+            (change)="onFileChange($event)"
+          />
+
+          <!-- ── Error de validación ── -->
+          @if (validationError()) {
+            <app-alert-card title="Error de archivo" severity="error">
+              {{ validationError() }}
+            </app-alert-card>
+          }
+
+          <!-- ── Banner éxito ── -->
+          @if (savedOk()) {
+            <app-alert-card title="Documento subido" severity="success">
+              El documento se subió correctamente.
+            </app-alert-card>
+          }
         </div>
-        <input
-          #fileInput
-          type="file"
-          accept=".pdf,.jpg,.jpeg,.png,.webp"
-          class="hidden"
-          (change)="onFileChange($event)"
-        />
 
-        <!-- ── Error de validación ── -->
-        @if (validationError()) {
-          <app-alert-card title="Error de archivo" severity="error">
-            {{ validationError() }}
-          </app-alert-card>
-        }
-
-        <!-- ── Banner éxito ── -->
-        @if (savedOk()) {
-          <app-alert-card title="Documento subido" severity="success">
-            El documento se subió correctamente.
-          </app-alert-card>
-        }
-      </div>
-
-      <!-- Footer integrado en el contenido -->
-      <div class="flex items-center justify-end gap-3 pt-4 border-t" style="border-color: var(--border-subtle);">
-        <button
-          type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer"
-          style="border-color: var(--border-subtle); background: transparent; color: var(--text-primary);"
-          (click)="onClose()"
-        >Cancelar</button>
-        <app-async-btn
-          label="Subir documento"
-          icon="upload"
-          [loading]="isSubmitting()"
-          [disabled]="!canSubmit()"
-          (click)="onSubmit()"
-        ></app-async-btn>
-      </div>
+        <!-- Footer integrado en el contenido -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-border-subtle">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer border-border-subtle bg-transparent text-text-primary"
+            
+            (click)="onClose()"
+          >
+            Cancelar
+          </button>
+          <app-async-btn
+            label="Subir documento"
+            icon="upload"
+            [loading]="isSubmitting()"
+            [disabled]="!canSubmit()"
+            (click)="onSubmit()"
+          ></app-async-btn>
+        </div>
       </ng-template>
     </app-drawer-content-loader>
   `,
@@ -188,20 +196,20 @@ export class DmsUploadDrawerComponent {
 
   // ── Config selectores ─────────────────────────────────────────────────────
   readonly studentDocTypes = [
-    { label: 'Contrato',               value: 'contrato' },
-    { label: 'Foto Licencia',          value: 'foto_licencia' },
-    { label: 'Hoja de Vida',           value: 'hoja_vida' },
-    { label: 'Cédula',                 value: 'cedula' },
-    { label: 'Cert. Antecedentes',     value: 'certificado_antecedentes' },
-    { label: 'Autorización Notarial',  value: 'autorizacion_notarial' },
-    { label: 'Foto Carnet',            value: 'foto_carnet' },
+    { label: 'Contrato', value: 'contrato' },
+    { label: 'Foto Licencia', value: 'foto_licencia' },
+    { label: 'Hoja de Vida', value: 'hoja_vida' },
+    { label: 'Cédula', value: 'cedula' },
+    { label: 'Cert. Antecedentes', value: 'certificado_antecedentes' },
+    { label: 'Autorización Notarial', value: 'autorizacion_notarial' },
+    { label: 'Foto Carnet', value: 'foto_carnet' },
   ];
 
   readonly schoolDocTypes = [
-    { label: 'Factura Folios',   value: 'factura_folios' },
-    { label: 'Resolución MTT',   value: 'resolucion_mtt' },
-    { label: 'Decreto',          value: 'decreto' },
-    { label: 'Otro',             value: 'otro' },
+    { label: 'Factura Folios', value: 'factura_folios' },
+    { label: 'Resolución MTT', value: 'resolucion_mtt' },
+    { label: 'Decreto', value: 'decreto' },
+    { label: 'Otro', value: 'otro' },
   ];
 
   constructor() {

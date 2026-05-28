@@ -99,14 +99,12 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
       <div class="bento-banner flex flex-col gap-6">
         <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden">
           <div
-            class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b"
-            style="border-color: var(--border-muted); background: var(--bg-surface)"
+            class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
+            
           >
             <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold" style="color: var(--text-primary)">
-                Historial de Promociones
-              </h2>
-              <span class="text-xs" style="color: var(--text-muted)">
+              <h2 class="text-base font-semibold text-text-primary">Historial de Promociones</h2>
+              <span class="text-xs text-text-muted">
                 {{ filteredPromociones().length }} promociones encontradas
               </span>
             </div>
@@ -121,8 +119,8 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                 <input
                   type="search"
                   placeholder="Buscar por nombre o código..."
-                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand"
-                  style="border: 1px solid var(--border-muted); color: var(--text-primary);"
+                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
+                  
                   [ngModel]="searchTerm()"
                   (ngModelChange)="searchTerm.set($event)"
                   (input)="currentPage.set(1)"
@@ -164,15 +162,13 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
             } @else if (paginatedPromociones().length === 0) {
               <div class="flex-1 flex flex-col items-center justify-center py-14 text-center">
                 <app-icon name="calendar-x" [size]="40" color="var(--text-muted)" class="mb-3" />
-                <p class="text-sm font-medium" style="color: var(--text-primary)">
-                  No se encontraron promociones
-                </p>
-                <p class="text-xs mt-1 mb-4" style="color: var(--text-muted)">
+                <p class="text-sm font-medium text-text-primary">No se encontraron promociones</p>
+                <p class="text-xs mt-1 mb-4 text-text-muted">
                   Intenta cambiar los términos de búsqueda o filtros.
                 </p>
                 <button
-                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  style="color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 8%, transparent);"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-brand bg-brand/8"
+                  
                   (click)="limpiarFiltros()"
                   data-llm-action="limpiar-filtros-promociones"
                 >
@@ -190,12 +186,12 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                     <!-- Info principal -->
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 mb-1 flex-wrap">
-                        <span class="text-sm font-bold" style="color: var(--text-primary)">
+                        <span class="text-sm font-bold text-text-primary">
                           {{ promo.name }}
                         </span>
                         <span
-                          class="text-[10px] font-mono px-1.5 py-0.5 rounded"
-                          style="background: var(--bg-elevated); color: var(--text-muted);"
+                          class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+                          
                         >
                           {{ promo.code }}
                         </span>
@@ -208,18 +204,12 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                       </div>
 
                       <div class="flex items-center gap-4 flex-wrap">
-                        <span
-                          class="flex items-center gap-1.5 text-xs"
-                          style="color: var(--text-muted)"
-                        >
+                        <span class="flex items-center gap-1.5 text-xs text-text-muted">
                           <app-icon name="calendar" [size]="12" />
                           {{ promo.startDate | date: 'dd/MM/yyyy' }} →
                           {{ promo.endDate | date: 'dd/MM/yyyy' }}
                         </span>
-                        <span
-                          class="flex items-center gap-1.5 text-xs"
-                          style="color: var(--text-secondary)"
-                        >
+                        <span class="flex items-center gap-1.5 text-xs text-text-secondary">
                           <app-icon name="users" [size]="12" />
                           {{ promo.totalEnrolled }} / {{ promo.maxStudents }} alumnos
                         </span>
@@ -269,7 +259,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                 class="flex items-center justify-between mt-6 pt-6"
                 style="border-top: 1px solid var(--border-subtle);"
               >
-                <p class="text-xs" style="color: var(--text-muted)">
+                <p class="text-xs text-text-muted">
                   Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
                   {{ filteredPromociones().length }} promociones
                 </p>

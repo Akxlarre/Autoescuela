@@ -48,7 +48,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
           <!-- ── Header ──────────────────────────────────────────────── -->
           <div>
             <div class="flex items-center gap-3 mb-2">
-              <h2 class="text-lg font-semibold" style="color: var(--text-primary)">
+              <h2 class="text-lg font-semibold text-text-primary">
                 {{ p.name }}
               </h2>
               <span
@@ -61,12 +61,11 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
             </div>
             <div class="flex items-center gap-3 flex-wrap">
               <span
-                class="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded"
-                style="background: var(--bg-elevated); color: var(--text-muted);"
+                class="inline-flex items-center gap-1 text-xs font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
               >
                 {{ p.code }}
               </span>
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 {{ formatDate(p.startDate) }} → {{ formatDate(p.endDate) }}
               </span>
             </div>
@@ -74,48 +73,27 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
           <!-- ── Status banner ───────────────────────────────────────── -->
           @if (p.status === 'in_progress') {
-            <div
-              class="rounded-lg p-4"
-              style="
-              background: color-mix(in srgb, var(--ds-brand) 6%, transparent);
-              border: 1px solid color-mix(in srgb, var(--ds-brand) 20%, transparent);
-            "
-            >
+            <div class="rounded-lg p-4 bg-brand/6 border border-brand/20">
               <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium" style="color: var(--text-primary)">
+                <span class="text-sm font-medium text-text-primary">
                   Día de clase {{ p.currentDay }} de 30
                 </span>
-                <span class="text-sm font-semibold" style="color: var(--ds-brand)">
-                  {{ progressPercent() }}%
-                </span>
+                <span class="text-sm font-semibold text-brand"> {{ progressPercent() }}% </span>
               </div>
-              <div
-                class="w-full rounded-full overflow-hidden"
-                style="height: 8px; background: var(--bg-elevated);"
-              >
-                <div
-                  class="h-full rounded-full"
-                  style="background: var(--ds-brand);"
-                  [style.width.%]="progressPercent()"
-                ></div>
+              <div class="w-full rounded-full overflow-hidden bg-elevated" style="height: 8px">
+                <div class="h-full rounded-full bg-brand" [style.width.%]="progressPercent()"></div>
               </div>
             </div>
           }
 
           @if (p.status === 'finished') {
             <div
-              class="rounded-lg p-4 flex items-center gap-3"
-              style="
-              background: color-mix(in srgb, var(--state-success) 6%, transparent);
-              border: 1px solid color-mix(in srgb, var(--state-success) 20%, transparent);
-            "
+              class="rounded-lg p-4 flex items-center gap-3 bg-success/6 border border-success/20"
             >
               <app-icon name="check-circle" [size]="20" color="var(--state-success)" />
               <div>
-                <p class="text-sm font-medium" style="color: var(--text-primary)">
-                  Promoción completada
-                </p>
-                <p class="text-xs" style="color: var(--text-muted)">
+                <p class="text-sm font-medium text-text-primary">Promoción completada</p>
+                <p class="text-xs text-text-muted">
                   Esta promoción finalizó el {{ formatDate(p.endDate) }}. Se completaron los 30 días
                   de clase (lun-sáb) con {{ p.totalEnrolled }} alumnos inscritos.
                 </p>
@@ -125,10 +103,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
           <!-- ── Info general ────────────────────────────────────────── -->
           <div>
-            <h3
-              class="text-xs font-bold uppercase tracking-widest mb-3"
-              style="color: var(--text-muted)"
-            >
+            <h3 class="text-xs font-bold uppercase tracking-widest mb-3 text-text-muted">
               Información general
             </h3>
             <div class="grid grid-cols-2 gap-3">
@@ -178,10 +153,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
           <!-- ── Alumnos por categoría ───────────────────────────────── -->
           <div>
-            <h3
-              class="text-xs font-bold uppercase tracking-widest mb-3"
-              style="color: var(--text-muted)"
-            >
+            <h3 class="text-xs font-bold uppercase tracking-widest mb-3 text-text-muted">
               Alumnos por categoría
             </h3>
             <div class="grid grid-cols-2 gap-3">
@@ -199,15 +171,12 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
           <!-- ── Cursos de la promoción ──────────────────────────────── -->
           <div>
-            <h3 class="text-sm font-semibold mb-3" style="color: var(--text-primary)">
-              Cursos de la promoción
-            </h3>
+            <h3 class="text-sm font-semibold mb-3 text-text-primary">Cursos de la promoción</h3>
             <div class="flex flex-col gap-3">
               @for (curso of p.cursos; track curso.id) {
                 <div
-                  class="rounded-lg p-4"
+                  class="rounded-lg p-4 border border-border-subtle"
                   [style.borderLeft]="'3px solid ' + courseColor(curso.courseCode)"
-                  style="border: 1px solid var(--border-subtle);"
                 >
                   <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
@@ -217,7 +186,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                       >
                         {{ curso.courseCode }}
                       </span>
-                      <span class="text-sm" style="color: var(--text-muted)">
+                      <span class="text-sm text-text-muted">
                         {{ curso.courseName }}
                       </span>
                     </div>
@@ -225,29 +194,22 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
                   <!-- Relatores -->
                   <div class="mb-3">
-                    <p class="text-[10px] font-semibold mb-1.5" style="color: var(--ds-brand)">
-                      Relatores
-                    </p>
+                    <p class="text-[10px] font-semibold mb-1.5 text-brand">Relatores</p>
                     @if (curso.relatores.length > 0) {
                       @for (rel of curso.relatores; track rel.id) {
                         <div class="flex items-center gap-2 mb-1.5">
                           <div
-                            class="flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0"
-                            style="
-                            background: var(--color-primary-tint);
-                            color: var(--color-primary);
-                          "
+                            class="flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0 bg-brand-tint text-brand"
                           >
                             {{ rel.initials }}
                           </div>
                           <div>
-                            <span class="text-sm" style="color: var(--text-primary)">
+                            <span class="text-sm text-text-primary">
                               {{ rel.nombre }}
                             </span>
                             @if (rel.role) {
                               <span
-                                class="text-[10px] ml-1 px-1.5 py-0.5 rounded"
-                                style="background: var(--bg-elevated); color: var(--text-muted);"
+                                class="text-[10px] ml-1 px-1.5 py-0.5 rounded bg-elevated text-text-muted"
                               >
                                 {{ roleLabel(rel.role) }}
                               </span>
@@ -256,9 +218,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                         </div>
                       }
                     } @else {
-                      <p class="text-xs italic" style="color: var(--text-muted)">
-                        Sin relator asignado
-                      </p>
+                      <p class="text-xs italic text-text-muted">Sin relator asignado</p>
                     }
                   </div>
 
@@ -271,12 +231,10 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                     >
                       <div class="flex items-center gap-1.5">
                         <app-icon name="users" [size]="12" color="var(--ds-brand)" />
-                        <span class="text-[11px] font-semibold" style="color: var(--ds-brand)">
-                          Alumnos
-                        </span>
+                        <span class="text-[11px] font-semibold text-brand"> Alumnos </span>
                       </div>
                       <div class="flex items-center gap-2">
-                        <span class="text-xs" style="color: var(--text-secondary)">
+                        <span class="text-xs text-text-secondary">
                           {{ curso.enrolledStudents }} / {{ curso.maxStudents }}
                         </span>
                         <app-icon
@@ -288,8 +246,8 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                     </button>
 
                     <div
-                      class="w-full rounded-full overflow-hidden mb-2"
-                      style="height: 6px; background: var(--bg-elevated);"
+                      class="w-full rounded-full overflow-hidden mb-2 bg-elevated"
+                      style="height: 6px"
                     >
                       <div
                         class="h-full rounded-full"
@@ -317,10 +275,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                           }
                         } @else {
                           @if (getStudents(curso.id).length === 0) {
-                            <p
-                              class="text-xs italic py-2 text-center"
-                              style="color: var(--text-muted)"
-                            >
+                            <p class="text-xs italic py-2 text-center text-text-muted">
                               Sin alumnos inscritos en este curso
                             </p>
                           } @else {
@@ -330,22 +285,15 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                 style="border-bottom: 1px solid var(--border-subtle);"
                               >
                                 <div
-                                  class="flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold shrink-0"
-                                  style="
-                                  background: var(--bg-elevated);
-                                  color: var(--text-secondary);
-                                "
+                                  class="flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold shrink-0 bg-elevated text-text-secondary"
                                 >
                                   {{ alumno.initials }}
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                  <p
-                                    class="text-xs font-medium truncate"
-                                    style="color: var(--text-primary)"
-                                  >
+                                  <p class="text-xs font-medium truncate text-text-primary">
                                     {{ alumno.nombre }}
                                   </p>
-                                  <p class="text-[10px] font-mono" style="color: var(--text-muted)">
+                                  <p class="text-[10px] font-mono text-text-muted">
                                     {{ alumno.rut }}
                                   </p>
                                 </div>
@@ -373,11 +321,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
             class="flex items-center gap-3 pt-4"
             style="border-top: 1px solid var(--border-subtle);"
           >
-            <button
-              class="btn-outline flex items-center gap-2"
-              (click)="editar()"
-              data-llm-action="editar-promocion"
-            >
+            <button class="btn-secondary" (click)="editar()" data-llm-action="editar-promocion">
               <app-icon name="edit" [size]="14" />
               Editar promoción
             </button>
@@ -387,22 +331,6 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
     }
   `,
   styles: `
-    .btn-outline {
-      padding: 7px 16px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .btn-outline:hover {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
-    }
-
     .students-toggle {
       display: flex;
       align-items: center;
@@ -463,13 +391,20 @@ export class AdminPromocionVerDrawerComponent {
     return STATUS_CONFIG[status] ?? STATUS_CONFIG['planned'];
   }
 
+  private readonly stateBgTokens: Record<string, string> = {
+    success: 'var(--state-success-bg)',
+    warning: 'var(--state-warning-bg)',
+    error: 'var(--state-error-bg)',
+    info: 'var(--state-info-bg)',
+  };
+
   protected statusPillStyle(status: string): { bg: string; color: string } {
     const cfg = this.statusCfg(status);
     if (cfg.variant === 'surface') {
       return { bg: 'var(--bg-elevated)', color: 'var(--text-muted)' };
     }
     return {
-      bg: `color-mix(in srgb, var(--state-${cfg.variant}) 12%, transparent)`,
+      bg: this.stateBgTokens[cfg.variant] ?? 'var(--bg-elevated)',
       color: `var(--state-${cfg.variant})`,
     };
   }
@@ -505,10 +440,10 @@ export class AdminPromocionVerDrawerComponent {
 
   protected enrollStatusBg(status: string): string {
     const map: Record<string, string> = {
-      active: 'color-mix(in srgb, var(--state-success) 12%, transparent)',
+      active: 'var(--state-success-bg)',
       completed: 'var(--bg-elevated)',
-      inactive: 'color-mix(in srgb, var(--state-error) 12%, transparent)',
-      pending_payment: 'color-mix(in srgb, var(--state-warning) 12%, transparent)',
+      inactive: 'var(--state-error-bg)',
+      pending_payment: 'var(--state-warning-bg)',
     };
     return map[status] ?? 'var(--bg-elevated)';
   }

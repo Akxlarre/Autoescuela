@@ -97,8 +97,8 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
         <div class="card p-0 flex flex-col overflow-hidden">
           <!-- TOOLBAR: Filtros + Navegación -->
           <div
-            class="p-4 lg:px-6 lg:py-4 flex flex-col xl:flex-row gap-4 border-b xl:items-center justify-between bg-surface"
-            style="border-color: var(--border-muted);"
+            class="p-4 lg:px-6 lg:py-4 flex flex-col xl:flex-row gap-4 border-b xl:items-center justify-between bg-surface border-border-muted"
+            
           >
             <!-- Selectores -->
             <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
@@ -324,8 +324,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                     seleccionado{{ selectedForSign().length > 1 ? 's' : '' }}
                   </span>
                   <button
-                    class="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors cursor-pointer"
-                    style="background: var(--ds-brand); color: #fff;"
+                    class="btn-primary"
                     [disabled]="facade.isSaving()"
                     (click)="onRegistrarFirmas()"
                     data-llm-action="register-weekly-signatures"

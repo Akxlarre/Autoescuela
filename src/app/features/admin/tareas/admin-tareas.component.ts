@@ -89,8 +89,7 @@ type TaskTab = 'sent' | 'received' | 'observations';
       <div class="bento-banner card p-0 overflow-hidden">
         <!-- Tabs -->
         <div
-          class="flex border-b"
-          style="border-color: var(--border-default)"
+          class="flex border-b border-border-default"
           role="tablist"
           aria-label="Filtros de tareas"
         >
@@ -107,8 +106,8 @@ type TaskTab = 'sent' | 'received' | 'observations';
               {{ tab.label }}
               @if (tab.count() > 0) {
                 <span
-                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5"
-                  style="background: var(--bg-subtle); color: var(--text-muted)"
+                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
+                  
                 >
                   {{ tab.count() }}
                 </span>
@@ -221,6 +220,7 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     recipientInactive: false,
     canEdit: false,
     canChangeStatus: false,
+    canDelete: false,
   };
 
   constructor() {
@@ -249,6 +249,6 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     this.facade.selectTask(taskId);
     const task = this.facade.selectedTask();
     const title = task?.subject ?? 'Detalle';
-    this.drawer.push(TaskDetailModalComponent, title, 'clipboard-list');
+    this.drawer.open(TaskDetailModalComponent, title, 'clipboard-list');
   }
 }

@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,6 +26,7 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TooltipModule,
     RouterLink,
     SlicePipe,
     IconComponent,
@@ -40,116 +42,123 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
         <app-skeleton-block variant="rect" width="100%" height="300px" />
       </div>
     } @else {
-
-    <div class="p-6 flex flex-col gap-6">
-
-      <!-- Breadcrumb -->
-      <nav class="flex items-center gap-2 text-sm" style="color: var(--text-secondary);">
-        <a
-          [routerLink]="isAdmin() ? '/app/admin/documentos' : '/app/secretaria/documentos'"
-          class="no-underline hover:underline transition-colors"
-          style="color: var(--text-secondary);"
-        >Repositorio DMS</a>
-        <app-icon name="chevron-right" [size]="14" />
-        <span style="color: var(--text-secondary);">Documentos del alumno</span>
-        <app-icon name="chevron-right" [size]="14" />
-        <span class="font-medium" style="color: var(--text-primary);">
-          {{ facade.studentDetail()?.name ?? 'Alumno' }}
-        </span>
-      </nav>
-
-      <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold m-0" style="color: var(--text-primary);">
+      <div class="p-6 flex flex-col gap-6">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-text-secondary">
+          <a
+            [routerLink]="isAdmin() ? '/app/admin/documentos' : '/app/secretaria/documentos'"
+            class="no-underline hover:underline transition-colors text-text-secondary"
+            >Repositorio DMS</a
+          >
+          <app-icon name="chevron-right" [size]="14" />
+          <span class="text-text-secondary">Documentos del alumno</span>
+          <app-icon name="chevron-right" [size]="14" />
+          <span class="font-medium text-text-primary">
             {{ facade.studentDetail()?.name ?? 'Alumno' }}
-          </h1>
-          <p class="text-sm m-0 mt-1" style="color: var(--text-secondary);">
-            {{ facade.studentDetail()?.rut ?? '' }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-all duration-150 border-0"
-          style="background: var(--color-primary); color: var(--color-primary-text);"
-          (click)="openUploadDrawer()"
-        >
-          <app-icon name="upload" [size]="15" />
-          Subir documento
-        </button>
-      </div>
+          </span>
+        </nav>
 
-      <!-- Lista de documentos -->
-      <div class="bento-card p-0 overflow-hidden">
-        <div class="px-5 py-4 border-b" style="border-color: var(--border-subtle);">
-          <h2 class="text-base font-semibold m-0" style="color: var(--text-primary);">
-            Documentos
-            @if (facade.studentDocs().length > 0) {
-              <span
-                class="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold"
-                style="background: var(--color-primary-tint); color: var(--color-primary);"
-              >{{ facade.studentDocs().length }}</span>
-            }
-          </h2>
-        </div>
-
-        @if (facade.studentDocs().length === 0) {
-          <div class="p-8">
-            <app-empty-state
-              message="Sin documentos"
-              subtitle="Este alumno aún no tiene documentos en el repositorio."
-              icon="file-text"
-              actionLabel="Subir primer documento"
-              actionIcon="upload"
-              (action)="openUploadDrawer()"
-            />
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold m-0 text-text-primary">
+              {{ facade.studentDetail()?.name ?? 'Alumno' }}
+            </h1>
+            <p class="text-sm m-0 mt-1 text-text-secondary">
+              {{ facade.studentDetail()?.rut ?? '' }}
+            </p>
           </div>
-        } @else {
-          <ul class="divide-y m-0 p-0 list-none" style="border-color: var(--border-subtle);">
-            @for (doc of facade.studentDocs(); track doc.id) {
-              <li class="flex items-center justify-between px-5 py-4 gap-3 transition-colors"
-                  style="border-color: var(--border-subtle);"
-              >
-                <div class="flex items-center gap-3 min-w-0">
-                  <div
-                    class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style="background: var(--bg-subtle);"
-                  >
-                    <app-icon name="file-text" [size]="18" />
-                  </div>
-                  <div class="min-w-0">
-                    <p class="font-medium text-sm truncate m-0" style="color: var(--text-primary);">{{ doc.fileName }}</p>
-                    <p class="text-xs m-0 mt-0.5" style="color: var(--text-secondary);">
-                      {{ doc.typeLabel }} · Subido el {{ doc.documentAt | slice:0:10 }}
-                    </p>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  @if (doc.fileUrl) {
-                    <button
-                      type="button"
-                      class="text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer border"
-                      style="color: var(--text-primary); border-color: var(--border-subtle); background: transparent;"
-                      (click)="onViewDocument(doc.fileUrl!, doc.fileName)"
-                    >Ver</button>
-                  }
-                  @if (isAdmin()) {
-                    <button
-                      type="button"
-                      class="text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer border-0 bg-transparent"
-                      style="color: var(--state-error);"
-                      (click)="onDeleteDoc(doc.id, doc.source)"
-                    >Eliminar</button>
-                  }
-                </div>
-              </li>
-            }
-          </ul>
-        }
-      </div>
-    </div>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-all duration-150 border-0 bg-brand"
+            style="color: var(--color-primary-text)"
+            (click)="openUploadDrawer()"
+          >
+            <app-icon name="upload" [size]="15" />
+            Subir documento
+          </button>
+        </div>
 
-    } <!-- end @else !loading -->
+        <!-- Lista de documentos -->
+        <div class="bento-card p-0 overflow-hidden">
+          <div class="px-5 py-4 border-b border-border-subtle">
+            <h2 class="text-base font-semibold m-0 text-text-primary">
+              Documentos
+              @if (facade.studentDocs().length > 0) {
+                <span
+                  class="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold bg-brand-tint text-brand"
+                  
+                  >{{ facade.studentDocs().length }}</span
+                >
+              }
+            </h2>
+          </div>
+
+          @if (facade.studentDocs().length === 0) {
+            <div class="p-8">
+              <app-empty-state
+                message="Sin documentos"
+                subtitle="Este alumno aún no tiene documentos en el repositorio."
+                icon="file-text"
+                actionLabel="Subir primer documento"
+                actionIcon="upload"
+                (action)="openUploadDrawer()"
+              />
+            </div>
+          } @else {
+            <ul class="divide-y m-0 p-0 list-none border-border-subtle">
+              @for (doc of facade.studentDocs(); track doc.id) {
+                <li
+                  class="flex items-center justify-between px-5 py-4 gap-3 transition-colors border-border-subtle"
+                >
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div
+                      class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-subtle"
+                    >
+                      <app-icon name="file-text" [size]="18" />
+                    </div>
+                    <div class="min-w-0">
+                      <p
+                        class="font-medium text-sm truncate m-0 text-text-primary"
+                        [pTooltip]="doc.fileName"
+                        tooltipPosition="top"
+                      >
+                        {{ doc.fileName }}
+                      </p>
+                      <p class="text-xs m-0 mt-0.5 text-text-secondary">
+                        {{ doc.typeLabel }} · Subido el {{ doc.documentAt | slice: 0 : 10 }}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 shrink-0">
+                    @if (doc.fileUrl) {
+                      <button
+                        type="button"
+                        class="text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer border text-text-primary border-border-subtle bg-transparent"
+                        (click)="onViewDocument(doc.fileUrl!, doc.fileName)"
+                      >
+                        Ver
+                      </button>
+                    }
+                    @if (isAdmin()) {
+                      <button
+                        type="button"
+                        class="text-xs font-medium px-3 py-1.5 rounded-md cursor-pointer border-0 bg-transparent text-error"
+                        
+                        (click)="onDeleteDoc(doc.id, doc.source)"
+                      >
+                        Eliminar
+                      </button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+      </div>
+    }
+    <!-- end @else !loading -->
   `,
 })
 export class AdminAlumnoDocsDetalleComponent implements OnInit {
@@ -188,7 +197,10 @@ export class AdminAlumnoDocsDetalleComponent implements OnInit {
     });
     if (!confirmed) return;
     try {
-      await this.facade.deleteStudentDocument(docId, source as 'student_document' | 'digital_contract');
+      await this.facade.deleteStudentDocument(
+        docId,
+        source as 'student_document' | 'digital_contract',
+      );
       // Recargar lista
       if (this.studentId()) {
         void this.facade.loadStudentDocuments(this.studentId()!);
