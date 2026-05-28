@@ -187,14 +187,13 @@ const PAGE_SIZE = 10;
               <app-icon
                 name="search"
                 [size]="15"
-                class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                style="color: var(--text-muted)"
+                class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
               />
               <input
                 type="text"
                 placeholder="Buscar por nombre o RUT..."
-                class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors"
-                style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+                class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
+                
                 data-llm-description="Search professional certificate students by name or RUT"
                 [value]="searchQuery()"
                 (input)="setSearchQuery($any($event.target).value)"
@@ -272,10 +271,10 @@ const PAGE_SIZE = 10;
                 <app-icon
                   name="file-check"
                   [size]="20"
-                  style="color: var(--ds-brand); flex-shrink: 0; margin-top: 2px"
+                  class="text-brand shrink-0" style="margin-top: 2px"
                 />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                  <p class="text-sm font-semibold text-text-primary">
                     Generar Pendientes —
                     {{ pendientesElegibles().length }} de {{ pendientesCount() }} alumno{{
                       pendientesCount() !== 1 ? 's' : ''
@@ -285,7 +284,7 @@ const PAGE_SIZE = 10;
                     }}
                   </p>
                   @if (pendientesNoElegibles().length > 0) {
-                    <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                    <p class="text-xs mt-0.5 text-text-muted">
                       {{ pendientesNoElegibles().length }} alumno{{
                         pendientesNoElegibles().length !== 1 ? 's no cumplen' : ' no cumple'
                       }}
@@ -297,27 +296,21 @@ const PAGE_SIZE = 10;
 
               <!-- Elegibles -->
               @if (pendientesElegibles().length > 0) {
-                <div
-                  class="rounded-lg border divide-y overflow-hidden"
-                  style="border-color: var(--border-subtle)"
-                >
+                <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
                   @for (alumno of pendientesElegibles(); track alumno.enrollmentId) {
                     <div class="flex items-center gap-3 px-4 py-2.5">
                       <app-icon
                         name="file-check"
                         [size]="14"
-                        style="color: var(--state-success); flex-shrink: 0"
+                        class="text-success shrink-0"
                       />
-                      <span
-                        class="text-sm font-medium flex-1 truncate"
-                        style="color: var(--text-primary)"
-                      >
+                      <span class="text-sm font-medium flex-1 truncate text-text-primary">
                         {{ alumno.nombre }}
                       </span>
                       @if (
                         alumno.pctAsistenciaPractica !== null && alumno.pctAsistenciaPractica < 100
                       ) {
-                        <span class="text-xs" style="color: var(--state-warning)">
+                        <span class="text-xs text-warning" >
                           <app-icon name="alert-triangle" [size]="11" />
                           {{ alumno.pctAsistenciaPractica }}% práctica
                         </span>
@@ -330,27 +323,21 @@ const PAGE_SIZE = 10;
               <!-- No elegibles -->
               @if (pendientesNoElegibles().length > 0) {
                 <div>
-                  <p
-                    class="text-xs font-semibold uppercase tracking-wider mb-2"
-                    style="color: var(--text-muted)"
-                  >
+                  <p class="text-xs font-semibold uppercase tracking-wider mb-2 text-text-muted">
                     No elegibles — no se generará certificado
                   </p>
-                  <div
-                    class="rounded-lg border divide-y overflow-hidden"
-                    style="border-color: var(--border-subtle)"
-                  >
+                  <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
                     @for (alumno of pendientesNoElegibles(); track alumno.enrollmentId) {
                       <div class="flex items-center gap-3 px-4 py-2.5">
                         <app-icon
                           name="x-circle"
                           [size]="14"
-                          style="color: var(--state-warning); flex-shrink: 0"
+                          class="text-warning shrink-0"
                         />
-                        <span class="text-sm flex-1 truncate" style="color: var(--text-muted)">
+                        <span class="text-sm flex-1 truncate text-text-muted">
                           {{ alumno.nombre }}
                         </span>
-                        <span class="text-xs" style="color: var(--text-muted)">
+                        <span class="text-xs text-text-muted">
                           @if (!alumno.elegibilidad.teoria) {
                             Teoría &lt;75% ·
                           }
@@ -369,14 +356,14 @@ const PAGE_SIZE = 10;
 
               <div class="flex items-center gap-2 justify-end">
                 <button
-                  class="btn-outline cursor-pointer px-4 py-2 text-sm"
+                  class="btn-ghost"
                   data-llm-action="cancel-generate-pending-professional-certificates"
                   (click)="cancelarPendientes()"
                 >
                   Cancelar
                 </button>
                 <button
-                  class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                  class="btn-primary"
                   data-llm-action="confirm-generate-pending-professional-certificates"
                   [disabled]="pendientesElegibles().length === 0"
                   (click)="confirmarPendientes()"
@@ -400,17 +387,17 @@ const PAGE_SIZE = 10;
                 <app-icon
                   name="send"
                   [size]="20"
-                  style="color: var(--ds-brand); flex-shrink: 0; margin-top: 2px"
+                  class="text-brand shrink-0" style="margin-top: 2px"
                 />
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                  <p class="text-sm font-semibold text-text-primary">
                     Envío masivo — {{ alumnosParaEnvioMasivo().length }} alumno{{
                       alumnosParaEnvioMasivo().length !== 1 ? 's' : ''
                     }}
                     recibirá{{ alumnosParaEnvioMasivo().length !== 1 ? 'n' : '' }} su certificado
                     por correo
                   </p>
-                  <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                  <p class="text-xs mt-0.5 text-text-muted">
                     Solo se incluyen alumnos con certificado generado que aún no han recibido el
                     correo.
                   </p>
@@ -418,24 +405,14 @@ const PAGE_SIZE = 10;
               </div>
 
               <!-- Lista de destinatarios -->
-              <div
-                class="rounded-lg border divide-y overflow-hidden"
-                style="border-color: var(--border-subtle)"
-              >
+              <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
                 @for (alumno of alumnosParaEnvioMasivo(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-3 px-4 py-2.5">
-                    <app-icon
-                      name="user"
-                      [size]="14"
-                      style="color: var(--text-muted); flex-shrink: 0"
-                    />
-                    <span
-                      class="text-sm font-medium flex-1 truncate"
-                      style="color: var(--text-primary)"
-                    >
+                    <app-icon name="user" [size]="14" class="text-text-muted shrink-0" />
+                    <span class="text-sm font-medium flex-1 truncate text-text-primary">
                       {{ alumno.nombre }}
                     </span>
-                    <span class="text-xs truncate" style="color: var(--ds-brand)">
+                    <span class="text-xs truncate text-brand" >
                       {{ alumno.email }}
                     </span>
                   </div>
@@ -445,14 +422,14 @@ const PAGE_SIZE = 10;
               <!-- Acciones -->
               <div class="flex items-center gap-2 justify-end">
                 <button
-                  class="btn-outline cursor-pointer px-4 py-2 text-sm"
+                  class="btn-ghost"
                   data-llm-action="cancel-bulk-email-professional"
                   (click)="cancelarMasivo()"
                 >
                   Cancelar
                 </button>
                 <button
-                  class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                  class="btn-primary"
                   data-llm-action="confirm-bulk-email-professional"
                   (click)="confirmarMasivo()"
                 >
@@ -554,7 +531,7 @@ const PAGE_SIZE = 10;
                       <td class="px-4 py-3 font-medium text-primary">
                         {{ alumno.nombre }}
                       </td>
-                      <td class="px-4 py-3" style="color: var(--color-primary)">
+                      <td class="px-4 py-3 text-brand" >
                         {{ alumno.rut }}
                       </td>
                       <td class="px-4 py-3 text-xs text-muted max-w-40 truncate">
@@ -615,16 +592,16 @@ const PAGE_SIZE = 10;
                       <td class="px-4 py-3 text-center">
                         @if (alumno.pagoCorrecto) {
                           <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                            style="background: var(--bg-success-muted, rgba(34,197,94,0.1)); color: var(--state-success)"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-success"
+                            class="bg-success-subtle"
                           >
                             <app-icon name="check" [size]="11" />
                             Al día
                           </span>
                         } @else {
                           <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                            style="background: var(--bg-warning-muted, rgba(234,179,8,0.1)); color: var(--state-warning)"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-warning"
+                            class="bg-warning-subtle"
                           >
                             <app-icon name="alert-triangle" [size]="11" />
                             Pendiente
@@ -635,16 +612,16 @@ const PAGE_SIZE = 10;
                       <td class="px-4 py-3 text-center">
                         @if (alumno.certificadoStatus === 'generado') {
                           <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                            style="background: var(--bg-success-muted, rgba(34,197,94,0.1)); color: var(--state-success)"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-success"
+                            class="bg-success-subtle"
                           >
                             <app-icon name="check" [size]="12" />
                             Generado
                           </span>
                         } @else {
                           <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                            style="background: var(--bg-warning-muted, rgba(234,179,8,0.1)); color: var(--state-warning)"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-warning"
+                            class="bg-warning-subtle"
                           >
                             Pendiente
                           </span>
@@ -718,28 +695,24 @@ const PAGE_SIZE = 10;
                       <tr class="border-b border-(--border-default)">
                         <td colspan="9" class="px-4 py-3">
                           <div
-                            class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
-                            style="background: color-mix(in srgb, var(--ds-brand) 8%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent)"
+                            class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
+                            
                           >
                             <app-icon
                               name="send"
                               [size]="18"
-                              style="color: var(--ds-brand); flex-shrink: 0"
+                              class="text-brand shrink-0"
                             />
-                            <p class="text-sm flex-1" style="color: var(--text-secondary)">
+                            <p class="text-sm flex-1 text-text-secondary">
                               Se enviará el certificado de
-                              <strong style="color: var(--text-primary)">{{
-                                alumno.nombre
-                              }}</strong>
+                              <strong class="text-text-primary">{{ alumno.nombre }}</strong>
                               @if (alumno.email) {
                                 al correo
-                                <strong style="color: var(--ds-brand)">{{ alumno.email }}</strong
+                                <strong class="text-brand">{{ alumno.email }}</strong
                                 >.
                               }
                               @if (alumno.emailEnviado) {
-                                <span style="color: var(--text-muted)">
-                                  (ya fue enviado anteriormente)</span
-                                >
+                                <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
                               }
                             </p>
                             <div class="flex items-center gap-2 shrink-0">
@@ -752,7 +725,7 @@ const PAGE_SIZE = 10;
                                 Confirmar envío
                               </button>
                               <button
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 cursor-pointer btn-outline"
+                                class="btn-ghost text-xs"
                                 data-llm-action="cancel-send-professional-certificate-email"
                                 (click)="cancelarEmail()"
                               >
@@ -770,15 +743,15 @@ const PAGE_SIZE = 10;
                         <td colspan="9" class="px-4 pb-4 pt-0">
                           <div
                             class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
-                            style="background: var(--bg-warning-muted, rgba(234,179,8,0.08)); border: 1px solid var(--state-warning)"
+                            class="bg-warning-subtle border border-warning"
                           >
                             <app-icon
                               name="alert-triangle"
                               [size]="18"
-                              style="color: var(--state-warning); flex-shrink: 0"
+                              class="text-warning shrink-0"
                             />
-                            <p class="text-sm flex-1" style="color: var(--text-secondary)">
-                              <span class="font-semibold" style="color: var(--state-warning)">
+                            <p class="text-sm flex-1 text-text-secondary">
+                              <span class="font-semibold text-warning" >
                                 Asistencia práctica incompleta:
                               </span>
                               {{ alumno.nombre }} registra
@@ -808,7 +781,7 @@ const PAGE_SIZE = 10;
                                 }
                               </button>
                               <button
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 cursor-pointer btn-outline"
+                                class="btn-ghost text-xs"
                                 data-llm-action="cancel-generate-professional-certificate"
                                 (click)="cancelarGenerar()"
                               >

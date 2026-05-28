@@ -64,13 +64,9 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         </div>
 
         <!-- Navegación de semana -->
-        <div
-          class="flex items-center p-1 rounded-xl"
-          style="background: var(--bg-elevated); border: 1px solid var(--border-subtle)"
-        >
+        <div class="flex items-center p-1 rounded-xl bg-elevated border border-border-subtle">
           <button
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-            style="color: var(--text-secondary)"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary"
             (click)="prevWeek.emit()"
             title="Semana anterior"
             data-llm-action="prev-week"
@@ -78,16 +74,14 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
             <app-icon name="chevron-left" [size]="18" />
           </button>
           <button
-            class="px-4 h-8 text-sm font-bold rounded-lg transition-colors mx-1"
-            style="color: var(--text-primary)"
+            class="px-4 h-8 text-sm font-bold rounded-lg transition-colors mx-1 text-text-primary"
             (click)="today.emit()"
             data-llm-action="go-today"
           >
             Hoy
           </button>
           <button
-            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors"
-            style="color: var(--text-secondary)"
+            class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors text-text-secondary"
             (click)="nextWeek.emit()"
             title="Siguiente semana"
             data-llm-action="next-week"
@@ -98,15 +92,15 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
       </div>
 
       <!-- Cuerpo con scroll horizontal -->
-      <div class="overflow-x-auto flex-1" style="background: var(--bg-surface)">
+      <div class="overflow-x-auto flex-1 bg-surface">
         <div
           class="min-w-[900px] schedule-container"
           [style.--days]="schedule()?.days?.length || 5"
         >
           <!-- Header días — sticky -->
           <div
-            class="schedule-grid sticky top-0 z-40 pt-5 pb-6"
-            style="background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle)"
+            class="schedule-grid sticky top-0 z-40 pt-5 pb-6 bg-surface"
+            style="border-bottom: 1px solid var(--border-subtle)"
           >
             <!-- Esquina vacía (alineada con la columna de horas) -->
             <div></div>
@@ -143,13 +137,10 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                     >
                       {{ day.dayNumber }}
                     </span>
-                    
+
                     <!-- Indicador "hoy" sutil -->
                     @if (day.isToday && day.date !== selectedDate()) {
-                      <div
-                        class="absolute -bottom-1 w-1 h-1 rounded-full"
-                        style="background: var(--color-primary)"
-                      ></div>
+                      <div class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand"></div>
                     }
                   </button>
                 </div>
@@ -185,7 +176,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                   <div
                     class="absolute top-0 bottom-0 pointer-events-none z-0 rounded-lg"
                     [style.grid-column]="i + 1"
-                    style="background: rgba(14, 165, 233, 0.04)"
+                    class="bg-brand-tint"
                   ></div>
                 }
               }
@@ -205,8 +196,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
               @if (isLoading()) {
                 @for (ghost of skeletonBlocks; track ghost.col) {
                   <div
-                    class="rounded-2xl m-1 p-3 flex flex-col gap-2 pointer-events-none"
-                    style="background: var(--bg-elevated); border: 1px solid var(--border-subtle)"
+                    class="rounded-2xl m-1 p-3 flex flex-col gap-2 pointer-events-none bg-elevated border border-border-subtle"
                     [style.grid-column]="ghost.col"
                     [style.grid-row-start]="ghost.rowStart"
                     [style.grid-row-end]="ghost.rowEnd"
@@ -255,11 +245,14 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                           </span>
                           @if (block.status === 'in_progress') {
                             <span
-                              class="flex h-1.5 w-1.5 rounded-full indicator-live"
-                              style="background: var(--color-primary-text)"
+                              class="flex h-1.5 w-1.5 rounded-full indicator-live bg-text-primary"
                             ></span>
                           } @else if (getStatusVisual(block.status).icon; as iconName) {
-                             <app-icon [name]="iconName" [size]="10" [style.color]="'var(--text-muted)'" />
+                            <app-icon
+                              [name]="iconName"
+                              [size]="10"
+                              [style.color]="'var(--text-muted)'"
+                            />
                           }
                         </div>
                         <div
@@ -301,7 +294,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                         <!-- Layout ultra-compacto para bloques ≤ 30min -->
                         <span
                           class="text-[9px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded-md"
-                          style="background: rgba(255,255,255,0.2)"
+                          class="bg-white/20"
                           [style.color]="
                             block.status === 'in_progress'
                               ? 'var(--color-primary-text)'
@@ -332,8 +325,8 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
 
       <!-- Leyenda -->
       <div
-        class="px-6 py-4 flex flex-wrap gap-6 items-center"
-        style="border-top: 1px solid var(--border-subtle); background: var(--bg-surface)"
+        class="px-6 py-4 flex flex-wrap gap-6 items-center bg-surface"
+        style="border-top: 1px solid var(--border-subtle)"
       >
         <span
           class="text-[10px] font-bold uppercase tracking-widest mr-1"
@@ -382,11 +375,13 @@ export class WeeklyScheduleGridComponent {
     { col: 5, rowStart: 29, rowEnd: 33 },
   ];
 
-  readonly legendItems = (['scheduled', 'in_progress', 'completed', 'cancelled'] as const).map(s => ({
-    label: getStatusLabel(s),
-    dotStyle: `background: ${getDotStyle(s)['background']}; border: ${getDotStyle(s)['border']};`,
-    emphasis: s === 'in_progress',
-  }));
+  readonly legendItems = (['scheduled', 'in_progress', 'completed', 'cancelled'] as const).map(
+    (s) => ({
+      label: getStatusLabel(s),
+      dotStyle: `background: ${getDotStyle(s)['background']}; border: ${getDotStyle(s)['border']};`,
+      emphasis: s === 'in_progress',
+    }),
+  );
 
   getRowStart(block: ScheduleBlock): number {
     const hourOffset = block.hour - 8;
@@ -413,13 +408,13 @@ export class WeeklyScheduleGridComponent {
   getBlockStyle(block: ScheduleBlock): string {
     const visual = getStatusVisual(block.status);
     let style = `border-left: 3px solid ${visual.borderColor}; opacity: ${visual.opacity};`;
-    
+
     if (block.status === 'in_progress') {
       style += ` background: var(--color-primary); box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent); z-index: 20;`;
     } else {
       style += ` background: var(--bg-surface); border: 1px solid var(--border-subtle); border-left-width: 3px;`;
     }
-    
+
     return style;
   }
 
@@ -429,7 +424,7 @@ export class WeeklyScheduleGridComponent {
     const pad = isShort ? 'p-2 px-3' : 'p-3';
     const cursor = visual.interactive ? 'cursor-pointer' : 'cursor-default';
     const base = `rounded-2xl transition-all duration-200 relative m-1 flex flex-col overflow-hidden ${pad} ${cursor}`;
-    
+
     return block.status === 'in_progress' ? `${base} scale-[1.02] shadow-lg` : base;
   }
 

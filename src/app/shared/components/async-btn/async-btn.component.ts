@@ -98,17 +98,22 @@ export class AsyncBtnComponent {
 
   protected readonly btnBg = computed(() => {
     switch (this.activeState()) {
-      case 'success': return 'var(--state-success, #22c55e)';
-      case 'error':   return 'var(--state-error, #ef4444)';
-      default:        return 'var(--btn-primary-bg)';
+      case 'success':
+        return 'var(--state-success, #22c55e)';
+      case 'error':
+        return 'var(--state-error, #ef4444)';
+      default:
+        return 'var(--btn-primary-bg)';
     }
   });
 
   protected readonly btnColor = computed(() => {
     switch (this.activeState()) {
       case 'success':
-      case 'error':   return '#fff';
-      default:        return 'var(--btn-primary-text)';
+      case 'error':
+        return '#fff';
+      default:
+        return 'var(--btn-primary-text)';
     }
   });
 
@@ -124,7 +129,7 @@ export class AsyncBtnComponent {
     effect(() => {
       const isLoading = this.loading();
       const isSuccess = this.success();
-      const isError   = this.error();
+      const isError = this.error();
 
       if (isLoading) {
         this.activeState.set('loading');

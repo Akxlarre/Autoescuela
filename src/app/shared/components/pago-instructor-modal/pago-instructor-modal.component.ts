@@ -36,7 +36,7 @@ function formatCLP(value: number): string {
       <div class="flex-1">
         @if (row()) {
           <!-- ── Subtítulo Contextual ── -->
-          <div class="mb-5 pb-5 border-b" style="border-color: var(--border-muted)">
+          <div class="mb-5 pb-5 border-b border-border-muted" >
             <div class="flex items-center gap-3">
               <div
                 class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
@@ -154,14 +154,8 @@ function formatCLP(value: number): string {
                   <input
                     id="transfer-code"
                     type="text"
-                    class="w-full px-4 py-3 text-sm rounded-xl font-mono"
-                    style="
-                      background: var(--bg-surface-elevated);
-                      border: 1px solid var(--border-muted);
-                      color: var(--text-primary);
-                      outline: none;
-                      transition: border-color 0.2s;
-                    "
+                    class="w-full px-4 py-3 text-sm rounded-xl font-mono bg-elevated border border-border-muted text-text-primary outline-none"
+                    style="transition: border-color 0.2s"
                     onfocus="this.style.borderColor='var(--ds-brand)'"
                     onblur="this.style.borderColor='var(--border-muted)'"
                     placeholder="Ej: 123456789"
@@ -171,7 +165,10 @@ function formatCLP(value: number): string {
                     aria-label="Código o número de transferencia"
                   />
                   @if (showTransferError()) {
-                    <p class="text-xs font-medium mt-2 flex items-center gap-1.5" style="color: var(--state-error)">
+                    <p
+                      class="text-xs font-medium mt-2 flex items-center gap-1.5 text-error"
+                      
+                    >
                       <app-icon name="alert-circle" [size]="14" />
                       Ingresa el código de la transferencia para continuar.
                     </p>
@@ -183,13 +180,13 @@ function formatCLP(value: number): string {
         }
       </div>
 
-      <div class="flex items-center justify-end gap-3 w-full pt-6 mt-6 border-t sticky bottom-0 bg-surface pb-4" style="border-color: var(--border-muted)">
+      <div
+        class="flex items-center justify-end gap-3 w-full pt-6 mt-6 border-t sticky bottom-0 bg-surface pb-4 border-border-muted"
+        
+      >
         <button
-          class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer transition-colors hover:opacity-80"
-          style="
-            background: transparent;
-            color: var(--text-secondary);
-          "
+          class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer transition-colors hover:opacity-80 bg-transparent text-text-secondary"
+          
           (click)="cerrar()"
           data-llm-action="cancelar-pago-instructor"
           aria-label="Cancelar"
@@ -242,12 +239,12 @@ export class PagoInstructorModalComponent {
       this.showTransferError.set(true);
       return;
     }
-    
+
     const row = this.row();
     if (!row) return;
 
     this.showTransferError.set(false);
-    
+
     const payload = {
       paymentMethod: this.paymentMethod(),
       transferCode: this.paymentMethod() === 'transfer' ? this.transferCode().trim() : null,
@@ -259,4 +256,3 @@ export class PagoInstructorModalComponent {
     }
   }
 }
-

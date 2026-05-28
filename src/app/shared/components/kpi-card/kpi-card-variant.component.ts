@@ -42,7 +42,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       } @else {
         <!-- Modo Contenido Real -->
         <div class="flex items-start justify-between gap-3 mb-1">
-          <span class="text-[10px] uppercase font-bold tracking-wider" [style.color]="labelColor()">{{ label() }}</span>
+          <span
+            class="text-[10px] uppercase font-bold tracking-wider"
+            [style.color]="labelColor()"
+            >{{ label() }}</span
+          >
           @if (icon(); as iconName) {
             <div
               class="flex items-center justify-center rounded-md w-7 h-7"
@@ -58,25 +62,19 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         <div class="flex flex-col gap-2">
           <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
             @if (prefix()) {
-              <span
-                class="text-2xl md:text-3xl font-bold align-baseline"
-                style="color: var(--text-primary)"
-              >
+              <span class="text-2xl md:text-3xl font-bold align-baseline text-text-primary">
                 {{ prefix() }}
               </span>
             }
             <span
               #valueEl
-              class="font-display font-bold align-baseline truncate leading-none"
-              style="color: var(--text-primary); font-size: clamp(var(--text-2xl), 8vw, var(--text-4xl));"
+              class="font-display font-bold align-baseline truncate leading-none text-text-primary"
+              [style.font-size]="'clamp(var(--text-2xl), 8vw, var(--text-4xl))'"
               title="{{ value() }}"
               >{{ value() }}</span
             >
             @if (suffix()) {
-              <span
-                class="text-2xl md:text-3xl font-bold align-baseline"
-                style="color: var(--text-primary)"
-              >
+              <span class="text-2xl md:text-3xl font-bold align-baseline text-text-primary">
                 {{ suffix() }}
               </span>
             }
@@ -84,19 +82,24 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
           <!-- Barra de progreso opcional -->
           @if (progressPercent() !== undefined) {
-             <div class="w-full flex flex-col gap-1.5 mt-1">
-                <div class="w-full bg-surface-elevated rounded-full overflow-hidden" style="height: 6px;">
-                   <div 
-                      class="h-full rounded-full transition-all duration-700 ease-out"
-                      [style.width.%]="progressPercent()"
-                      [style.background]="iconColorStyle()"
-                   ></div>
-                </div>
-                <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-tight" style="color: var(--text-muted)">
-                   <span>Progreso</span>
-                   <span>{{ progressPercent() }}%</span>
-                </div>
-             </div>
+            <div class="w-full flex flex-col gap-1.5 mt-1">
+              <div
+                class="w-full bg-surface-elevated rounded-full overflow-hidden"
+                style="height: 6px;"
+              >
+                <div
+                  class="h-full rounded-full transition-all duration-700 ease-out"
+                  [style.width.%]="progressPercent()"
+                  [style.background]="iconColorStyle()"
+                ></div>
+              </div>
+              <div
+                class="flex justify-between items-center text-[10px] font-bold uppercase tracking-tight text-text-muted"
+              >
+                <span>Progreso</span>
+                <span>{{ progressPercent() }}%</span>
+              </div>
+            </div>
           }
         </div>
 
@@ -111,9 +114,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             </span>
           }
           @if (subValue() || trendLabel()) {
-            <span class="text-xs" style="color: var(--text-muted)">{{
-              subValue() || trendLabel()
-            }}</span>
+            <span class="text-xs text-text-muted">{{ subValue() || trendLabel() }}</span>
           }
         </div>
       }

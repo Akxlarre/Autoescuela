@@ -1,9 +1,4 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  input,
-  output,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
 
@@ -54,11 +49,10 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
     @if (icon()) {
       <!-- Contenedor ilustrativo del ícono -->
       <div
-        class="flex items-center justify-center w-16 h-16 rounded-2xl flex-shrink-0"
-        style="background: var(--bg-subtle)"
+        class="flex items-center justify-center w-16 h-16 rounded-2xl flex-shrink-0 bg-subtle"
         aria-hidden="true"
       >
-        <app-icon [name]="icon()!" [size]="32" style="color: var(--text-muted)" />
+        <app-icon [name]="icon()!" [size]="32" class="text-text-muted" />
       </div>
     }
 
@@ -66,7 +60,7 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
     <div class="flex flex-col gap-1.5 max-w-[280px]">
       <p class="m-0 text-sm font-semibold text-text-primary">{{ message() }}</p>
       @if (subtitle()) {
-        <p class="m-0 text-sm" style="color: var(--text-muted)">{{ subtitle() }}</p>
+        <p class="m-0 text-sm text-text-muted">{{ subtitle() }}</p>
       }
     </div>
 
@@ -74,8 +68,8 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
     @if (actionLabel()) {
       <button
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border cursor-pointer"
-        style="border-color: var(--border-subtle); background: var(--bg-elevated); color: var(--text-secondary)"
+        class="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border cursor-pointer border-border-subtle bg-elevated text-text-secondary"
+        
         [appPressFeedback]="'press'"
         (click)="action.emit()"
         [attr.aria-label]="actionLabel()"

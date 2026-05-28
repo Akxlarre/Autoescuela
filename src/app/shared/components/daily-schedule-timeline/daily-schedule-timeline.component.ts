@@ -32,15 +32,19 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             [style.border-color]="getDayPillBorderColor(day)"
             (click)="daySelect.emit(day.date)"
           >
-            <span class="text-[10px] font-bold uppercase tracking-widest mb-1"
-              [style.color]="getDayPillTextColor(day, 'label')">
+            <span
+              class="text-[10px] font-bold uppercase tracking-widest mb-1"
+              [style.color]="getDayPillTextColor(day, 'label')"
+            >
               {{ day.name.slice(0, 3) }}
             </span>
-            <span class="text-2xl font-black leading-none"
-              [style.color]="getDayPillTextColor(day, 'number')">
+            <span
+              class="text-2xl font-black leading-none"
+              [style.color]="getDayPillTextColor(day, 'number')"
+            >
               {{ day.dayNumber }}
             </span>
-            
+
             <!-- Indicador sutil de "hoy" en pildora no seleccionada -->
             @if (day.isToday && day.date !== selectedDateString()) {
               <div class="absolute -bottom-1 w-1 h-1 rounded-full bg-brand"></div>
@@ -54,20 +58,23 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
         <h2 class="text-2xl font-bold tracking-tight" [style.color]="'var(--text-primary)'">
           {{ daySchedule()?.dateLabel }}
         </h2>
-        <div class="flex h-1.5 w-1.5 rounded-full bg-brand" style="box-shadow: 0 0 8px var(--color-primary)"></div>
+        <div
+          class="flex h-1.5 w-1.5 rounded-full bg-brand"
+          style="box-shadow: 0 0 8px var(--color-primary)"
+        ></div>
       </div>
 
       <!-- ── Loading skeleton ───────────────────────────────────────────────── -->
       @if (isLoading()) {
         <div class="space-y-4">
           <div class="rounded-3xl p-6 bg-elevated border border-dashed opacity-50 animate-pulse">
-             <app-skeleton-block variant="rect" width="100%" height="120px" />
+            <app-skeleton-block variant="rect" width="100%" height="120px" />
           </div>
           @for (i of [1, 2, 3]; track i) {
-             <div class="flex gap-4">
-                <app-skeleton-block variant="text" width="40px" height="20px" />
-                <app-skeleton-block variant="rect" width="100%" height="80px" />
-             </div>
+            <div class="flex gap-4">
+              <app-skeleton-block variant="text" width="40px" height="20px" />
+              <app-skeleton-block variant="rect" width="100%" height="80px" />
+            </div>
           }
         </div>
       } @else {
@@ -81,13 +88,13 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             (click)="blockClick.emit(nextBlock)"
           >
             <!-- Decoración sutil -->
-            <div class="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10" style="background: white"></div>
+            <div class="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 bg-white"></div>
 
             <div class="relative z-10 flex flex-col h-full">
               <div class="flex justify-between items-center mb-4">
                 <div
                   class="rounded-full px-3 py-1 font-bold text-[11px] tracking-wider"
-                  style="background: rgba(255,255,255,0.2); color: var(--color-primary-text)"
+                  class="bg-white/20 text-brand-text"
                 >
                   PRÓXIMA CLASE • {{ nextBlock.startTime }}
                 </div>
@@ -108,8 +115,10 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                 {{ nextBlock.vehiclePlate || 'S/A' }}
               </p>
 
-              <div class="flex items-center gap-2 text-[11px] font-bold mt-auto"
-                [style.color]="'var(--color-primary-text)'">
+              <div
+                class="flex items-center gap-2 text-[11px] font-bold mt-auto"
+                [style.color]="'var(--color-primary-text)'"
+              >
                 <app-icon name="arrow-right" [size]="14" />
                 <span class="uppercase tracking-widest">Iniciar sesión ahora</span>
               </div>
@@ -118,14 +127,20 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
         } @else {
           <!-- Empty day state -->
           <div
-            class="rounded-3xl p-8 mb-8 bg-elevated flex flex-col items-center justify-center min-h-[180px] border border-dashed"
-            style="border-color: var(--border-subtle)"
+            class="rounded-3xl p-8 mb-8 bg-elevated flex flex-col items-center justify-center min-h-[180px] border border-dashed border-border-subtle"
           >
-            <div class="w-16 h-16 rounded-full bg-surface-base flex items-center justify-center mb-4" style="border: 1px solid var(--border-subtle)">
-               <app-icon name="calendar-check" [size]="32" [color]="'var(--text-muted)'" />
+            <div
+              class="w-16 h-16 rounded-full bg-surface-base flex items-center justify-center mb-4 border border-border-subtle"
+            >
+              <app-icon name="calendar-check" [size]="32" [color]="'var(--text-muted)'" />
             </div>
-            <h4 class="text-xl font-bold mb-2" [style.color]="'var(--text-primary)'">Agenda Libre</h4>
-            <p class="text-xs font-medium text-center max-w-[200px]" [style.color]="'var(--text-muted)'">
+            <h4 class="text-xl font-bold mb-2" [style.color]="'var(--text-primary)'">
+              Agenda Libre
+            </h4>
+            <p
+              class="text-xs font-medium text-center max-w-[200px]"
+              [style.color]="'var(--text-muted)'"
+            >
               No tienes actividades programadas para el día seleccionado.
             </p>
           </div>
@@ -139,7 +154,9 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               <div class="w-[45px] shrink-0 pt-4 flex justify-end">
                 <span
                   class="font-black text-[10px] tracking-tighter"
-                  [style.color]="block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--text-muted)'"
+                  [style.color]="
+                    block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--text-muted)'
+                  "
                 >
                   {{ block.startTime }}
                 </span>
@@ -150,7 +167,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                 @if (!last) {
                   <div
                     class="w-[1px] absolute top-6 bottom-[-16px]"
-                    style="background: var(--border-subtle); opacity: 0.3"
+                    class="bg-border-subtle opacity-30"
                   ></div>
                 }
                 <div
@@ -172,12 +189,20 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                   <div class="flex items-center justify-between mb-2">
                     <span
                       class="text-[9px] font-black tracking-widest uppercase opacity-60"
-                      [style.color]="block.status === 'in_progress' ? 'var(--color-primary-text)' : 'var(--text-muted)'"
+                      [style.color]="
+                        block.status === 'in_progress'
+                          ? 'var(--color-primary-text)'
+                          : 'var(--text-muted)'
+                      "
                     >
                       BLOQUE {{ block.durationMin }} MIN
                     </span>
                     @if (getStatusVisual(block.status).icon; as iconName) {
-                      <app-icon [name]="iconName" [size]="14" [style.color]="getStatusVisual(block.status).textColor" />
+                      <app-icon
+                        [name]="iconName"
+                        [size]="14"
+                        [style.color]="getStatusVisual(block.status).textColor"
+                      />
                     }
                   </div>
 
@@ -188,8 +213,10 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                     {{ block.studentName }}
                   </h5>
 
-                  <div class="flex items-center gap-2 text-[10px] font-bold opacity-70"
-                    [style.color]="getStatusVisual(block.status).textColor">
+                  <div
+                    class="flex items-center gap-2 text-[10px] font-bold opacity-70"
+                    [style.color]="getStatusVisual(block.status).textColor"
+                  >
                     <span>#{{ block.classNumber }}</span>
                     <span>•</span>
                     <span>{{ block.vehiclePlate || 'Sin vehículo' }}</span>
@@ -202,19 +229,23 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
       }
     </div>
   `,
-  styles: [`
-    .scrollbar-hide::-webkit-scrollbar {
-      display: none;
-    }
-    .scrollbar-hide {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-  `]
+  styles: [
+    `
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    `,
+  ],
 })
 export class DailyScheduleTimelineComponent {
   readonly daySchedule = input<DaySchedule | null>(null);
-  readonly weekDays = input<{ name: string; date: string; dayNumber: number; isToday: boolean }[] | undefined>();
+  readonly weekDays = input<
+    { name: string; date: string; dayNumber: number; isToday: boolean }[] | undefined
+  >();
   readonly selectedDateString = input<string | undefined>();
   readonly isLoading = input<boolean>(false);
 
@@ -256,7 +287,7 @@ export class DailyScheduleTimelineComponent {
     return {
       background: style['background'],
       border: style['border'],
-      'box-shadow': style['box-shadow']
+      'box-shadow': style['box-shadow'],
     };
   }
 
@@ -264,13 +295,14 @@ export class DailyScheduleTimelineComponent {
     const visual = getStatusVisual(block.status);
     let style: Record<string, string> = {
       'border-left': `4px solid ${visual.borderColor}`,
-      'background': block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--bg-surface)',
-      'opacity': String(visual.opacity),
-      'border-color': block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--border-subtle)'
+      background: block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--bg-surface)',
+      opacity: String(visual.opacity),
+      'border-color':
+        block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--border-subtle)',
     };
-    
+
     if (block.status === 'in_progress') {
-       style['box-shadow'] = '0 8px 24px color-mix(in srgb, var(--color-primary) 20%, transparent)';
+      style['box-shadow'] = '0 8px 24px color-mix(in srgb, var(--color-primary) 20%, transparent)';
     }
 
     return style;

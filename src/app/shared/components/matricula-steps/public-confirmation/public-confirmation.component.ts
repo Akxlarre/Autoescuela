@@ -11,8 +11,8 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
     <div class="text-center space-y-6 py-4">
       <!-- Success icon -->
       <div
-        class="mx-auto w-16 h-16 rounded-full flex items-center justify-center"
-        style="background: color-mix(in srgb, var(--ds-brand) 15%, transparent)"
+        class="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-brand/15"
+        
       >
         <app-icon name="check-circle" [size]="36" color="var(--ds-brand)" />
       </div>
@@ -40,24 +40,24 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
           <ol class="space-y-2.5 text-sm text-secondary">
             <li class="flex items-start gap-2">
               <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0"
-                style="color: var(--ds-brand)"
+                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
+                
                 >1</span
               >
               Revisa tu correo para confirmar la matrícula.
             </li>
             <li class="flex items-start gap-2">
               <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0"
-                style="color: var(--ds-brand)"
+                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
+                
                 >2</span
               >
               Asiste a tu primera clase teórica según el horario indicado.
             </li>
             <li class="flex items-start gap-2">
               <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0"
-                style="color: var(--ds-brand)"
+                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
+                
                 >3</span
               >
               Tus clases prácticas comienzan según la agenda seleccionada.
@@ -81,24 +81,24 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
           <ol class="space-y-2.5 text-sm text-secondary">
             <li class="flex items-start gap-2">
               <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0"
-                style="color: var(--ds-brand)"
+                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
+                
                 >1</span
               >
               Te contactaremos por teléfono o WhatsApp para agendar tu visita.
             </li>
             <li class="flex items-start gap-2">
               <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0"
-                style="color: var(--ds-brand)"
+                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
+                
                 >2</span
               >
               Deberás presentar tu documentación original en la sede.
             </li>
             <li class="flex items-start gap-2">
               <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0"
-                style="color: var(--ds-brand)"
+                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
+                
                 >3</span
               >
               Se completará tu matrícula y se asignará tu promoción de curso.

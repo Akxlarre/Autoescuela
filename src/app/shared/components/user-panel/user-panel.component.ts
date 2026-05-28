@@ -1,12 +1,13 @@
+import { TooltipModule } from 'primeng/tooltip';
 import { Component, ChangeDetectionStrategy, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 export interface User {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-    initials: string;
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  initials: string;
 }
 
 /**
@@ -17,11 +18,11 @@ export interface User {
  * (Smart parent), que usa ConfirmModalService.
  */
 @Component({
-    selector: 'app-user-panel',
-    standalone: true,
-    changeDetection: ChangeDetectionStrategy.OnPush,
-    imports: [IconComponent],
-    template: `
+  selector: 'app-user-panel',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [TooltipModule, IconComponent],
+  template: `
     <div class="user-panel card" role="menu" aria-label="Menú de usuario">
       <!-- Info Header -->
       <div class="user-panel__header">
@@ -29,8 +30,12 @@ export interface User {
           {{ user()?.initials }}
         </div>
         <div class="user-panel__info min-w-0">
-          <p class="user-panel__name truncate">{{ user()?.name }}</p>
-          <p class="user-panel__email truncate">{{ user()?.email }}</p>
+          <p class="user-panel__name truncate" [pTooltip]="user()?.name" tooltipPosition="top">
+            {{ user()?.name }}
+          </p>
+          <p class="user-panel__email truncate" [pTooltip]="user()?.email" tooltipPosition="top">
+            {{ user()?.email }}
+          </p>
         </div>
       </div>
 
@@ -39,21 +44,13 @@ export interface User {
       <!-- Action List -->
       <ul class="user-panel__list" role="presentation">
         <li role="none">
-          <button
-            class="user-panel__item"
-            role="menuitem"
-            (click)="action.emit('profile')"
-          >
+          <button class="user-panel__item" role="menuitem" (click)="action.emit('profile')">
             <app-icon name="user" class="text-text-muted" [size]="16" />
             <span>Mi perfil</span>
           </button>
         </li>
         <li role="none">
-          <button
-            class="user-panel__item"
-            role="menuitem"
-            (click)="action.emit('settings')"
-          >
+          <button class="user-panel__item" role="menuitem" (click)="action.emit('settings')">
             <app-icon name="settings" class="text-text-muted" [size]="16" />
             <span>Ajustes</span>
           </button>
@@ -77,11 +74,11 @@ export interface User {
       </ul>
     </div>
   `,
-    styleUrl: './user-panel.component.scss',
+  styleUrl: './user-panel.component.scss',
 })
 export class UserPanelComponent {
-    readonly user = input.required<User | null>();
+  readonly user = input.required<User | null>();
 
-    readonly action = output<'profile' | 'settings'>();
-    readonly logout = output<void>();
+  readonly action = output<'profile' | 'settings'>();
+  readonly logout = output<void>();
 }

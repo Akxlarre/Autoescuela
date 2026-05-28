@@ -36,8 +36,8 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
         </div>
         <div class="h-1.5 w-full rounded-full bg-surface-elevated overflow-hidden">
           <div
-            class="h-full rounded-full transition-all duration-300"
-            style="background: var(--ds-brand)"
+            class="h-full rounded-full transition-all duration-300 bg-brand"
+            
             [style.width.%]="progressPct()"
           ></div>
         </div>

@@ -260,8 +260,8 @@ import {
     <div class="px-4 sm:px-6 pb-6 flex flex-col gap-5">
       <!-- ── Barra de filtros ─────────────────────────────────────────────── -->
       <div
-        class="flex flex-col sm:flex-row sm:items-end gap-4 px-4 py-3 shadow-sm flex-wrap"
-        style="background:var(--bg-surface);border:1px solid var(--border-color);border-radius:var(--radius-lg,10px)"
+        class="flex flex-col sm:flex-row sm:items-end gap-4 px-4 py-3 shadow-sm flex-wrap bg-surface"
+        style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
       >
         <!-- Rango -->
         <div>
@@ -319,13 +319,13 @@ import {
           <div class="flex items-center gap-2 ml-auto">
             <app-icon name="calendar" [size]="13" color="var(--text-muted)" />
             <span
-              style="font-size:var(--text-xs);color:var(--text-muted);font-weight:var(--font-medium)"
+              class="text-xs text-text-muted font-medium"
             >
               {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
             </span>
             <span
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-              style="background:var(--state-success-bg);color:var(--state-success);border:1px solid var(--state-success-border)"
+              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-subtle text-success"
+              style="border:1px solid var(--state-success-border)"
             >
               {{ pct(kpis()!.margenGanancia) }} margen
             </span>
@@ -375,7 +375,7 @@ import {
             <div class="flex items-center gap-2">
               <span class="cat-section-dot dot--success"></span>
               <h2
-                style="font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary)"
+                class="text-base font-semibold text-text-primary"
               >
                 Ingresos por Categoría
               </h2>
@@ -386,12 +386,12 @@ import {
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between gap-2">
                     <span
-                      style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary)"
+                      class="text-sm font-medium text-text-primary"
                     >
                       {{ cat.nombre }}
                     </span>
                     <span
-                      style="font-size: var(--text-sm); font-weight: var(--font-semibold); color: var(--state-success); white-space: nowrap"
+                      class="text-sm font-semibold text-success whitespace-nowrap"
                     >
                       {{ clp(cat.monto) }}
                     </span>
@@ -404,10 +404,10 @@ import {
                     ></div>
                   </div>
                   <div class="flex justify-between">
-                    <span style="font-size: var(--text-xs); color: var(--text-muted)">
+                    <span class="text-xs text-text-muted">
                       {{ cat.operaciones }} operaciones
                     </span>
-                    <span style="font-size: var(--text-xs); color: var(--text-muted)">
+                    <span class="text-xs text-text-muted">
                       {{ pct(cat.porcentaje) }}
                     </span>
                   </div>
@@ -420,12 +420,12 @@ import {
                   style="border-top: 1px solid var(--border-subtle)"
                 >
                   <span
-                    style="font-size: var(--text-sm); font-weight: var(--font-semibold); color: var(--text-primary)"
+                    class="text-sm font-semibold text-text-primary"
                   >
                     Total Ingresos
                   </span>
                   <span
-                    style="font-size: var(--text-sm); font-weight: var(--font-bold); color: var(--state-success)"
+                    class="text-sm font-bold text-success"
                   >
                     {{ clp(totalIngresos()) }}
                   </span>
@@ -439,7 +439,7 @@ import {
             <div class="flex items-center gap-2">
               <span class="cat-section-dot dot--error"></span>
               <h2
-                style="font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary)"
+                class="text-base font-semibold text-text-primary"
               >
                 Gastos por Categoría
               </h2>
@@ -450,28 +450,28 @@ import {
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between gap-2">
                     <span
-                      style="font-size: var(--text-sm); font-weight: var(--font-medium); color: var(--text-primary)"
+                      class="text-sm font-medium text-text-primary"
                     >
                       {{ cat.nombre }}
                     </span>
                     <span
-                      style="font-size: var(--text-sm); font-weight: var(--font-semibold); color: var(--state-error); white-space: nowrap"
+                      class="text-sm font-semibold text-error whitespace-nowrap"
                     >
                       {{ clp(cat.monto) }}
                     </span>
                   </div>
                   <div class="cat-bar-track">
                     <div
-                      class="cat-bar-fill"
+                      class="cat-bar-fill bg-error"
                       [style.width.%]="cat.porcentaje"
-                      style="background: var(--state-error)"
+                      
                     ></div>
                   </div>
                   <div class="flex justify-between">
-                    <span style="font-size: var(--text-xs); color: var(--text-muted)">
+                    <span class="text-xs text-text-muted">
                       {{ cat.registros }} registros
                     </span>
-                    <span style="font-size: var(--text-xs); color: var(--text-muted)">
+                    <span class="text-xs text-text-muted">
                       {{ pct(cat.porcentaje) }}
                     </span>
                   </div>
@@ -484,12 +484,12 @@ import {
                   style="border-top: 1px solid var(--border-subtle)"
                 >
                   <span
-                    style="font-size: var(--text-sm); font-weight: var(--font-semibold); color: var(--text-primary)"
+                    class="text-sm font-semibold text-text-primary"
                   >
                     Total Gastos
                   </span>
                   <span
-                    style="font-size: var(--text-sm); font-weight: var(--font-bold); color: var(--state-error)"
+                    class="text-sm font-bold text-error"
                   >
                     {{ clp(totalGastos()) }}
                   </span>
@@ -504,7 +504,7 @@ import {
       @if (!isLoading() && evolucionMensual().length) {
         <div class="card p-5">
           <h2
-            style="font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary); margin-bottom: var(--space-4)"
+            class="text-base font-semibold text-text-primary" style="margin-bottom: var(--space-4)"
           >
             Evolución Mensual
           </h2>
@@ -522,18 +522,18 @@ import {
               <tbody>
                 @for (row of evolucionMensual(); track row.mes) {
                   <tr>
-                    <td class="report-td" style="font-weight: var(--font-medium)">
+                    <td class="report-td font-medium" >
                       {{ row.mes }}
                     </td>
-                    <td class="report-td align-right" style="color: var(--state-success)">
+                    <td class="report-td align-right text-success" >
                       {{ clp(row.ingresos) }}
                     </td>
-                    <td class="report-td align-right" style="color: var(--state-error)">
+                    <td class="report-td align-right text-error" >
                       {{ clp(row.gastos) }}
                     </td>
                     <td
-                      class="report-td align-right"
-                      style="color: var(--color-primary); font-weight: var(--font-semibold)"
+                      class="report-td align-right text-brand font-semibold"
+                      
                     >
                       {{ clp(row.neto) }}
                     </td>
@@ -553,12 +553,12 @@ import {
         <div class="card p-5">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
             <h2
-              style="font-size: var(--text-base); font-weight: var(--font-semibold); color: var(--text-primary)"
+              class="text-base font-semibold text-text-primary"
             >
               Detalle Diario
             </h2>
             <span
-              style="font-size: var(--text-sm); color: var(--color-primary); font-weight: var(--font-medium)"
+              class="text-sm text-brand font-medium"
             >
               {{ diasConMovimientos() }} días con movimientos
             </span>
@@ -579,21 +579,21 @@ import {
               <tbody>
                 @for (row of detalleDiario(); track row.fecha) {
                   <tr>
-                    <td class="report-td" style="font-size: var(--text-sm)">
+                    <td class="report-td text-sm" >
                       {{ row.fecha }}
                     </td>
-                    <td class="report-td align-right" style="color: var(--state-error)">
+                    <td class="report-td align-right text-error" >
                       {{ row.operaciones }}
                     </td>
-                    <td class="report-td align-right" style="color: var(--state-success)">
+                    <td class="report-td align-right text-success" >
                       +{{ clp(row.ingresos) }}
                     </td>
-                    <td class="report-td align-right" style="color: var(--state-error)">
+                    <td class="report-td align-right text-error" >
                       -{{ clp(row.gastos) }}
                     </td>
                     <td
-                      class="report-td align-right"
-                      style="color: var(--color-primary); font-weight: var(--font-semibold)"
+                      class="report-td align-right text-brand font-semibold"
+                      
                     >
                       {{ clp(row.neto) }}
                     </td>
@@ -611,28 +611,28 @@ import {
               </tbody>
               <tfoot class="report-tfoot">
                 <tr>
-                  <td class="report-td" style="font-weight: var(--font-bold)">TOTAL</td>
+                  <td class="report-td font-bold" >TOTAL</td>
                   <td
-                    class="report-td align-right"
-                    style="color: var(--state-error); font-weight: var(--font-bold)"
+                    class="report-td align-right text-error font-bold"
+                    
                   >
                     {{ totalesDiario().operaciones }}
                   </td>
                   <td
-                    class="report-td align-right"
-                    style="color: var(--state-success); font-weight: var(--font-bold)"
+                    class="report-td align-right text-success font-bold"
+                    
                   >
                     +{{ clp(totalesDiario().ingresos) }}
                   </td>
                   <td
-                    class="report-td align-right"
-                    style="color: var(--state-error); font-weight: var(--font-bold)"
+                    class="report-td align-right text-error font-bold"
+                    
                   >
                     -{{ clp(totalesDiario().gastos) }}
                   </td>
                   <td
-                    class="report-td align-right"
-                    style="color: var(--color-primary); font-weight: var(--font-bold)"
+                    class="report-td align-right text-brand font-bold"
+                    
                   >
                     {{ clp(totalesDiario().neto) }}
                   </td>

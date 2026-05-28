@@ -46,10 +46,7 @@ const TYPE_ICON: Record<string, string> = {
         <div class="flex items-start justify-between gap-2">
           <div class="flex items-center gap-1.5 min-w-0">
             <app-icon [name]="typeIcon()" [size]="14" [ariaHidden]="true" class="shrink-0" />
-            <p
-              class="text-sm font-semibold text-primary truncate"
-              style="color: var(--text-primary)"
-            >
+            <p class="text-sm font-semibold text-primary truncate text-text-primary">
               {{ task().subject }}
             </p>
           </div>
@@ -58,7 +55,7 @@ const TYPE_ICON: Record<string, string> = {
 
         <!-- Body preview -->
         @if (bodyPreview()) {
-          <p class="text-xs" style="color: var(--text-secondary); line-height: 1.5">
+          <p class="text-xs text-text-secondary leading-normal">
             {{ bodyPreview() }}
           </p>
         }
@@ -76,8 +73,7 @@ const TYPE_ICON: Record<string, string> = {
           }
           @if (task().recipientInactive) {
             <span
-              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              style="color: var(--text-muted); background-color: var(--bg-subtle)"
+              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text-muted bg-subtle"
             >
               <app-icon name="user-x" [size]="11" [ariaHidden]="true" />
               Destinatario inactivo
@@ -87,25 +83,22 @@ const TYPE_ICON: Record<string, string> = {
 
         <!-- Footer: emisor → destinatario + age + replies -->
         <div class="flex items-center justify-between gap-2 mt-1">
-          <span class="text-xs truncate" style="color: var(--text-muted)">
+          <span class="text-xs truncate text-text-muted">
             {{ task().senderName }} → {{ task().recipientName }}
           </span>
           <div class="flex items-center gap-2 shrink-0">
             @if (task().replyCount > 0) {
-              <span
-                class="inline-flex items-center gap-1 text-xs"
-                style="color: var(--text-secondary)"
-              >
+              <span class="inline-flex items-center gap-1 text-xs text-text-secondary">
                 <app-icon name="message-circle" [size]="11" [ariaHidden]="true" />
                 {{ task().replyCount }}
               </span>
             }
             @if (task().due_date) {
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 {{ dueDateLabel() }}
               </span>
             }
-            <span class="text-xs" style="color: var(--text-muted)">
+            <span class="text-xs text-text-muted">
               {{ age() }}
             </span>
           </div>

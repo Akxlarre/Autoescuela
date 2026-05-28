@@ -174,6 +174,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     // HOST = único grid item. bento-hero va aquí, nunca en el div interno.
     class: 'block min-h-0 bento-hero',
     style: 'view-transition-name: section-hero',
+    '[attr.title]': 'null',
   },
   imports: [IconComponent, RouterLink],
   template: `

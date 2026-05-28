@@ -165,23 +165,18 @@ interface AlumnoKpiItem {
         #tableCard
       >
         <!-- Toolbar de la tabla -->
-        <div
-          class="flex flex-wrap items-center gap-3 p-4"
-          style="border-bottom: 1px solid var(--border-default)"
-        >
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <!-- Buscador -->
           <div class="relative flex-1 min-w-52 max-w-xs">
             <app-icon
               name="search"
               [size]="15"
-              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              style="color: var(--text-muted)"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
             />
             <input
               type="text"
               placeholder="Buscar por nombre, RUT o Nº Expediente..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors"
-              style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search students by name, RUT or file number"
               [(ngModel)]="searchTerm"
             />
@@ -467,8 +462,7 @@ interface AlumnoKpiItem {
                           <!-- Vista Papelera: solo Restaurar -->
                           <button
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                            style="color: var(--state-success)"
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-success"
                             pTooltip="Restaurar alumno"
                             (click)="restaurarRequested.emit(alumno.id)"
                             data-llm-action="restore-student-row"
@@ -500,8 +494,7 @@ interface AlumnoKpiItem {
                           </button>
                           <button
                             pButton
-                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-                            style="color: var(--state-error)"
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-error"
                             pTooltip="Archivar alumno"
                             (click)="archivarRequested.emit(alumno.id)"
                             data-llm-action="archive-student-row"
@@ -548,10 +541,18 @@ interface AlumnoKpiItem {
                           {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
                         </div>
                         <div class="flex flex-col min-w-0">
-                          <span class="font-bold text-sm text-text-primary truncate"
+                          <span
+                            class="font-bold text-sm text-text-primary truncate"
+                            [pTooltip]="alumno.apellido + ' ' + alumno.nombre"
+                            tooltipPosition="top"
                             >{{ alumno.apellido }} {{ alumno.nombre }}</span
                           >
-                          <span class="text-xs text-text-muted truncate">{{ alumno.email }}</span>
+                          <span
+                            class="text-xs text-text-muted truncate"
+                            [pTooltip]="alumno.email"
+                            tooltipPosition="top"
+                            >{{ alumno.email }}</span
+                          >
                         </div>
                       </div>
                       <p-tag
@@ -602,8 +603,7 @@ interface AlumnoKpiItem {
                         <!-- Vista Papelera: solo Restaurar -->
                         <button
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                          style="color: var(--state-success)"
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-success"
                           pTooltip="Restaurar alumno"
                           (click)="restaurarRequested.emit(alumno.id)"
                           data-llm-action="restore-student-card"
@@ -635,8 +635,7 @@ interface AlumnoKpiItem {
                         </button>
                         <button
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
-                          style="color: var(--state-error)"
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-error"
                           pTooltip="Archivar alumno"
                           (click)="archivarRequested.emit(alumno.id)"
                           data-llm-action="archive-student-card"

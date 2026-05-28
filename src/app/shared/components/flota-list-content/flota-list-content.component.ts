@@ -387,7 +387,12 @@ import type {
                     <div class="grid grid-cols-2 gap-2 text-xs">
                       <div class="flex flex-col">
                         <span class="text-text-muted mb-0.5">Instructor</span>
-                        <span class="truncate">{{ v.instructorName || '—' }}</span>
+                        <span
+                          class="truncate"
+                          [pTooltip]="v.instructorName || '—'"
+                          tooltipPosition="top"
+                          >{{ v.instructorName || '—' }}</span
+                        >
                       </div>
                       <div class="flex flex-col">
                         <span class="text-text-muted mb-0.5">Kilometraje</span>

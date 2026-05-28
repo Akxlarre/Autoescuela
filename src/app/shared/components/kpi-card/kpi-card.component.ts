@@ -75,13 +75,19 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       <!-- Valor principal — animado por GSAP al montar -->
       <p class="kpi-value flex items-baseline gap-0.5 min-w-0 w-full overflow-hidden">
         @if (prefix()) {
-          <span class="font-semibold align-baseline" style="color: var(--text-secondary); font-size: clamp(var(--text-lg), 5vw, var(--text-2xl));">
+          <span
+            class="font-semibold align-baseline text-text-secondary"
+            [style.font-size]="'clamp(var(--text-lg), 5vw, var(--text-2xl))'"
+          >
             {{ prefix() }}
           </span>
         }
         <span #valueEl class="truncate align-baseline" title="{{ value() }}">{{ value() }}</span>
         @if (suffix()) {
-          <span class="font-semibold align-baseline" style="color: var(--text-secondary); font-size: clamp(var(--text-lg), 5vw, var(--text-2xl));">
+          <span
+            class="font-semibold align-baseline text-text-secondary"
+            [style.font-size]="'clamp(var(--text-lg), 5vw, var(--text-2xl))'"
+          >
             {{ suffix() }}
           </span>
         }
@@ -99,7 +105,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             <span class="text-xs font-semibold">{{ trendDisplay() }}</span>
           </span>
           @if (trendLabel()) {
-            <span class="text-xs" style="color: var(--text-muted)">{{ trendLabel() }}</span>
+            <span class="text-xs text-text-muted">{{ trendLabel() }}</span>
           }
         </div>
       }
