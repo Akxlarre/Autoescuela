@@ -108,8 +108,8 @@ interface SimulatorLink {
               >
                 <div class="flex items-start justify-between gap-2">
                   <div
-                    class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
-                    style="background: var(--bg-surface-elevated)"
+                    class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-elevated"
+                    
                   >
                     <app-icon [name]="sim.icon" [size]="18" />
                   </div>
@@ -128,8 +128,8 @@ interface SimulatorLink {
                 </div>
 
                 <div
-                  class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-divider"
-                  style="color: var(--ds-brand)"
+                  class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-divider text-brand"
+                  
                 >
                   <span>Ir al simulador</span>
                   <app-icon name="external-link" [size]="12" />

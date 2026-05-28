@@ -52,16 +52,16 @@ import type {
             style="border-left: 3px solid var(--ds-brand)"
           >
             <div
-              class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0"
-              style="background: var(--bg-tinted)"
+              class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-brand-tint"
+              
             >
-              <app-icon name="calendar-check" [size]="22" style="color: var(--ds-brand)" />
+              <app-icon name="calendar-check" [size]="22" class="text-brand" />
             </div>
 
             <div class="flex flex-col gap-1 flex-1 min-w-0">
               <span
-                class="text-[10px] uppercase font-bold tracking-wider"
-                style="color: var(--ds-brand)"
+                class="text-[10px] uppercase font-bold tracking-wider text-brand"
+                
                 >Próxima clase</span
               >
               <p class="font-semibold text-text-primary m-0 leading-tight">
@@ -80,8 +80,8 @@ import type {
             </div>
 
             <span
-              class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full"
-              style="background: var(--bg-tinted); color: var(--ds-brand)"
+              class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full bg-brand-tint text-brand"
+              
             >
               {{ daysUntil(nextSession()!.date) }}
             </span>
@@ -95,8 +95,8 @@ import type {
         <div class="flex items-center gap-2">
           <button
             type="button"
-            class="flex items-center justify-center w-8 h-8 rounded-lg border-0 cursor-pointer transition-colors"
-            style="background: var(--bg-subtle); color: var(--text-secondary)"
+            class="flex items-center justify-center w-8 h-8 rounded-lg border-0 cursor-pointer transition-colors bg-subtle text-text-secondary"
+            
             (click)="facade.goToPrevWeek()"
             aria-label="Semana anterior"
             data-llm-action="horario-semana-anterior"
@@ -110,8 +110,8 @@ import type {
 
           <button
             type="button"
-            class="flex items-center justify-center w-8 h-8 rounded-lg border-0 cursor-pointer transition-colors"
-            style="background: var(--bg-subtle); color: var(--text-secondary)"
+            class="flex items-center justify-center w-8 h-8 rounded-lg border-0 cursor-pointer transition-colors bg-subtle text-text-secondary"
+            
             (click)="facade.goToNextWeek()"
             aria-label="Semana siguiente"
             data-llm-action="horario-semana-siguiente"
@@ -122,8 +122,8 @@ import type {
           @if (!facade.isCurrentWeek()) {
             <button
               type="button"
-              class="text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-colors"
-              style="background: var(--bg-tinted); color: var(--ds-brand)"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-colors bg-brand-tint text-brand"
+              
               (click)="facade.goToToday()"
               data-llm-action="horario-hoy"
             >
@@ -209,8 +209,8 @@ import type {
 
                       @if (session.isNext) {
                         <span
-                          class="text-[8px] font-bold px-1 py-0.5 rounded-full self-center"
-                          style="background: var(--ds-brand); color: #fff"
+                          class="text-[8px] font-bold px-1 py-0.5 rounded-full self-center bg-brand"
+                          style="color: #fff"
                         >
                           PRÓXIMA
                         </span>
@@ -226,8 +226,8 @@ import type {
                   <!-- Día vacío (sin sesiones) -->
                   @if (day.sessions.length === 0) {
                     <div
-                      class="rounded-lg py-3 flex items-center justify-center"
-                      style="border: 1px dashed var(--border-subtle)"
+                      class="rounded-lg py-3 flex items-center justify-center border border-dashed border-border-subtle"
+                      
                     >
                       <span class="text-[10px] text-text-muted">—</span>
                     </div>
@@ -256,7 +256,7 @@ import type {
       @if (!loading() && facade.licenseGroup() === null) {
         <div class="bento-banner" appScrollReveal>
           <div class="card flex flex-col items-center gap-3 py-10 text-center">
-            <app-icon name="calendar-x" [size]="36" style="color: var(--text-muted)" />
+            <app-icon name="calendar-x" [size]="36" class="text-text-muted" />
             <p class="text-sm text-text-muted m-0">
               Sin matrícula activa. Consulta a la secretaría.
             </p>
