@@ -51,7 +51,7 @@ interface BranchCardMeta {
                   <app-icon [name]="card.icon" [size]="22" />
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-base font-bold" style="color: var(--text-primary)">
+                  <p class="text-base font-bold text-text-primary">
                     {{ card.branch.name }}
                   </p>
                   <p class="text-xs text-muted">{{ card.address }}</p>
@@ -69,13 +69,13 @@ interface BranchCardMeta {
               <div class="flex flex-wrap gap-1.5">
                 @for (course of card.courses; track course.name) {
                   <span
-                    class="text-xs px-2.5 py-1 rounded-full font-medium border border-border inline-flex items-center gap-1"
-                    style="background: var(--bg-surface-elevated); color: var(--text-primary)"
+                    class="text-xs px-2.5 py-1 rounded-full font-medium border border-border inline-flex items-center gap-1 bg-elevated text-text-primary"
+                    
                   >
                     {{ course.name }}
                     @if (course.price > 0) {
                       <span class="text-muted">·</span>
-                      <span style="color: var(--ds-brand)">{{
+                      <span class="text-brand">{{
                         course.price | currency: 'CLP' : 'symbol-narrow' : '1.0-0'
                       }}</span>
                     }
@@ -110,7 +110,7 @@ interface BranchCardMeta {
               >
                 <div class="flex items-center gap-3 mb-2">
                   <app-icon [name]="flow.icon" [size]="20" />
-                  <p class="text-base font-bold" style="color: var(--text-primary)">
+                  <p class="text-base font-bold text-text-primary">
                     {{ flow.label }}
                   </p>
                 </div>

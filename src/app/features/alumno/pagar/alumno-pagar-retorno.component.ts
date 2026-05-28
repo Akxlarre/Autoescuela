@@ -37,10 +37,10 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       @if (!isConfirming() && wasAbandoned()) {
         <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
           <div
-            class="w-16 h-16 rounded-full flex items-center justify-center"
-            style="background: var(--color-warning-muted)"
+            class="w-16 h-16 rounded-full flex items-center justify-center bg-warning-subtle"
+            
           >
-            <app-icon name="clock" [size]="32" style="color: var(--color-warning)" />
+            <app-icon name="clock" [size]="32" class="text-warning" />
           </div>
           <div>
             <h1 class="text-xl font-semibold text-text-primary">Pago cancelado</h1>
@@ -50,7 +50,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
             </p>
           </div>
           <button
-            class="btn-secondary w-full flex items-center justify-center gap-2"
+            class="btn-secondary w-full"
             (click)="goToWizard()"
             data-llm-action="retry-payment"
           >
@@ -67,10 +67,10 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       @if (!isConfirming() && result()?.rejected) {
         <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
           <div
-            class="w-16 h-16 rounded-full flex items-center justify-center"
-            style="background: var(--color-error-muted)"
+            class="w-16 h-16 rounded-full flex items-center justify-center bg-error-subtle"
+            
           >
-            <app-icon name="x-circle" [size]="32" style="color: var(--color-error)" />
+            <app-icon name="x-circle" [size]="32" class="text-error" />
           </div>
           <div>
             <h1 class="text-xl font-semibold text-text-primary">Pago rechazado</h1>
@@ -81,11 +81,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
               }}
             </p>
           </div>
-          <button
-            class="btn-primary w-full flex items-center justify-center gap-2"
-            (click)="goToWizard()"
-            data-llm-action="retry-payment"
-          >
+          <button class="btn-primary w-full" (click)="goToWizard()" data-llm-action="retry-payment">
             <app-icon name="refresh-cw" [size]="14" />
             Intentar nuevamente
           </button>
@@ -99,10 +95,10 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       @if (!isConfirming() && !wasAbandoned() && !result()?.rejected && result()?.error) {
         <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
           <div
-            class="w-16 h-16 rounded-full flex items-center justify-center"
-            style="background: var(--color-error-muted)"
+            class="w-16 h-16 rounded-full flex items-center justify-center bg-error-subtle"
+            
           >
-            <app-icon name="alert-circle" [size]="32" style="color: var(--color-error)" />
+            <app-icon name="alert-circle" [size]="32" class="text-error" />
           </div>
           <div>
             <h1 class="text-xl font-semibold text-text-primary">Error al confirmar</h1>
@@ -122,17 +118,17 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
       @if (!isConfirming() && result()?.success && !result()?.error) {
         <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
           <div
-            class="w-16 h-16 rounded-full flex items-center justify-center"
-            style="background: var(--color-success-muted)"
+            class="w-16 h-16 rounded-full flex items-center justify-center bg-success-subtle"
+            
           >
-            <app-icon name="check-circle" [size]="32" style="color: var(--color-success)" />
+            <app-icon name="check-circle" [size]="32" class="text-success" />
           </div>
           <div>
             <h1 class="text-xl font-semibold text-text-primary">¡Pago exitoso!</h1>
             @if (result(); as r) {
               <p class="text-sm text-text-muted mt-1">
                 Se registró tu pago de
-                <strong style="color: var(--ds-brand)">{{ formatClp(r.amountPaid ?? 0) }}</strong>
+                <strong class="text-brand">{{ formatClp(r.amountPaid ?? 0) }}</strong>
                 para
                 <strong>{{ r.courseName }}</strong>
                 (Matrícula N°&nbsp;{{ r.enrollmentNumber }}).
@@ -145,18 +141,14 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
                 </p>
               }
               @if ((r.pendingBalance ?? 0) === 0) {
-                <p class="text-xs mt-2" style="color: var(--color-success)">
+                <p class="text-xs mt-2 text-success" >
                   Tu matrícula está completamente pagada.
                 </p>
               }
             }
           </div>
 
-          <button
-            class="btn-primary w-full flex items-center justify-center gap-2"
-            (click)="goToClases()"
-            data-llm-action="go-to-clases"
-          >
+          <button class="btn-primary w-full" (click)="goToClases()" data-llm-action="go-to-clases">
             <app-icon name="calendar" [size]="14" />
             Ver mis clases agendadas
           </button>

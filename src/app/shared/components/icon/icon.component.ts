@@ -30,33 +30,177 @@ const EMOJI_MAP: Record<string, string> = {
   '⭐': 'star',
   '👥': 'users',
   '👤': 'user',
-  '❓': 'circle-help'
+  '❓': 'circle-help',
 };
 
 // Set de iconos provistos estáticamente en app.config.ts para saber si cargarlos localmente
 const PROVIDED_ICONS = new Set([
-  'arrow-left', 'arrow-right', 'arrow-right-left', 'arrow-up-down',
-  'chevron-down', 'chevron-left', 'chevron-right', 'chevron-up', 'chevrons-down', 'chevrons-up',
-  'external-link', 'home', 'layout-dashboard', 'layout', 'layers', 'menu', 'globe',
-  'check', 'check-check', 'check-circle', 'check-square', 'circle-check', 'circle-play',
-  'download', 'edit', 'edit-3', 'eraser', 'eye', 'filter', 'pencil', 'play', 'plus', 'plus-circle',
-  'printer', 'refresh-cw', 'rotate-ccw', 'rotate-cw', 'save', 'search', 'search-x', 'send',
-  'trash-2', 'upload', 'upload-cloud', 'x', 'x-circle', 'zoom-in',
-  'alert-circle', 'alert-triangle', 'ban', 'circle-alert', 'circle-help', 'circle-x',
-  'flag', 'help-circle', 'info', 'minus-circle', 'shield', 'shield-alert', 'shield-check', 'shield-off', 'triangle-alert',
-  'user', 'user-check', 'user-minus', 'user-pen', 'user-plus', 'user-x', 'users',
-  'clipboard-check', 'clipboard-list', 'file', 'file-badge', 'file-check', 'file-check-2',
-  'file-clock', 'file-pen', 'file-plus', 'file-question', 'file-signature', 'file-spreadsheet',
-  'file-text', 'table-2', 'file-x', 'filter-x', 'folder', 'folder-open', 'folder-search',
-  'list', 'list-checks', 'scroll',
-  'calendar', 'calendar-check', 'calendar-clock', 'calendar-days', 'calendar-plus', 'calendar-x',
-  'clock', 'history',
-  'banknote', 'calculator', 'credit-card', 'dollar-sign', 'landmark', 'piggy-bank', 'receipt', 'tag', 'wallet',
-  'at-sign', 'bell', 'bell-off', 'inbox', 'mail', 'mail-check', 'message-circle', 'message-square-off', 'mic', 'phone',
-  'camera', 'clock-alert', 'image', 'keyboard', 'monitor', 'monitor-off', 'moon', 'play-circle', 'qr-code', 'square', 'sun', 'video',
-  'activity', 'archive', 'award', 'bar-chart-2', 'book-open', 'brain', 'briefcase', 'building-2', 'bus', 'car', 'circle', 'mouse-pointer-click',
-  'flask-conical', 'gauge', 'graduation-cap', 'hash', 'coins', 'id-card', 'life-buoy', 'loader', 'loader-2', 'loader-circle', 'lock', 'log-out',
-  'map-pin', 'pen-line', 'pen-tool', 'settings', 'settings-2', 'star', 'stethoscope', 'trending-down', 'trending-up', 'truck', 'unlock', 'wrench'
+  'arrow-left',
+  'arrow-right',
+  'arrow-right-left',
+  'arrow-up-down',
+  'chevron-down',
+  'chevron-left',
+  'chevron-right',
+  'chevron-up',
+  'chevrons-down',
+  'chevrons-up',
+  'external-link',
+  'home',
+  'layout-dashboard',
+  'layout',
+  'layers',
+  'menu',
+  'globe',
+  'check',
+  'check-check',
+  'check-circle',
+  'check-square',
+  'circle-check',
+  'circle-play',
+  'download',
+  'edit',
+  'edit-3',
+  'eraser',
+  'eye',
+  'filter',
+  'pencil',
+  'play',
+  'plus',
+  'plus-circle',
+  'printer',
+  'refresh-cw',
+  'rotate-ccw',
+  'rotate-cw',
+  'save',
+  'search',
+  'search-x',
+  'send',
+  'trash-2',
+  'upload',
+  'upload-cloud',
+  'x',
+  'x-circle',
+  'zoom-in',
+  'alert-circle',
+  'alert-triangle',
+  'ban',
+  'circle-alert',
+  'circle-help',
+  'circle-x',
+  'flag',
+  'help-circle',
+  'info',
+  'minus-circle',
+  'shield',
+  'shield-alert',
+  'shield-check',
+  'shield-off',
+  'triangle-alert',
+  'user',
+  'user-check',
+  'user-minus',
+  'user-pen',
+  'user-plus',
+  'user-x',
+  'users',
+  'clipboard-check',
+  'clipboard-list',
+  'file',
+  'file-badge',
+  'file-check',
+  'file-check-2',
+  'file-clock',
+  'file-pen',
+  'file-plus',
+  'file-question',
+  'file-signature',
+  'file-spreadsheet',
+  'file-text',
+  'table-2',
+  'file-x',
+  'filter-x',
+  'folder',
+  'folder-open',
+  'folder-search',
+  'list',
+  'list-checks',
+  'scroll',
+  'calendar',
+  'calendar-check',
+  'calendar-clock',
+  'calendar-days',
+  'calendar-plus',
+  'calendar-x',
+  'clock',
+  'history',
+  'banknote',
+  'calculator',
+  'credit-card',
+  'dollar-sign',
+  'landmark',
+  'piggy-bank',
+  'receipt',
+  'tag',
+  'wallet',
+  'at-sign',
+  'bell',
+  'bell-off',
+  'inbox',
+  'mail',
+  'mail-check',
+  'message-circle',
+  'message-square-off',
+  'mic',
+  'phone',
+  'camera',
+  'clock-alert',
+  'image',
+  'keyboard',
+  'monitor',
+  'monitor-off',
+  'moon',
+  'play-circle',
+  'qr-code',
+  'square',
+  'sun',
+  'video',
+  'activity',
+  'archive',
+  'award',
+  'bar-chart-2',
+  'book-open',
+  'brain',
+  'briefcase',
+  'building-2',
+  'bus',
+  'car',
+  'circle',
+  'mouse-pointer-click',
+  'flask-conical',
+  'gauge',
+  'graduation-cap',
+  'hash',
+  'coins',
+  'id-card',
+  'life-buoy',
+  'loader',
+  'loader-2',
+  'loader-circle',
+  'lock',
+  'log-out',
+  'map-pin',
+  'pen-line',
+  'pen-tool',
+  'settings',
+  'settings-2',
+  'star',
+  'stethoscope',
+  'trending-down',
+  'trending-up',
+  'truck',
+  'unlock',
+  'wrench',
 ]);
 
 // Caché en memoria para evitar descargar múltiples veces el mismo icono SVG desde la CDN
@@ -90,30 +234,32 @@ const SVG_CACHE = new Map<string, string>();
       ></span>
     }
   `,
-  styles: [`
-    :host {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      line-height: 0;
-    }
-    .dynamic-svg-container {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 0;
-    }
-    .dynamic-svg-container ::ng-deep svg {
-      width: 100%;
-      height: 100%;
-      stroke: currentColor;
-      stroke-width: 2px;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      fill: none;
-    }
-  `]
+  styles: [
+    `
+      :host {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        line-height: 0;
+      }
+      .dynamic-svg-container {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 0;
+      }
+      .dynamic-svg-container ::ng-deep svg {
+        width: 100%;
+        height: 100%;
+        stroke: currentColor;
+        stroke-width: 2px;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+      }
+    `,
+  ],
 })
 export class IconComponent {
   private readonly sanitizer = inject(DomSanitizer);
@@ -140,7 +286,7 @@ export class IconComponent {
   protected readonly resolvedName = computed(() => {
     const raw = this.name();
     if (!raw) return 'circle-help';
-    
+
     const trimmed = raw.trim();
     // 1. Traducir emojis conocidos
     if (EMOJI_MAP[trimmed]) {
@@ -185,15 +331,19 @@ export class IconComponent {
     }
 
     try {
-      const response = await fetch(`https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/${iconName}.svg`);
+      const response = await fetch(
+        `https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/${iconName}.svg`,
+      );
       if (response.ok) {
         const svgContent = await response.text();
-        
+
         // Almacenar en caché y asignar a la señal reactiva
         SVG_CACHE.set(iconName, svgContent);
         this.dynamicSvg.set(svgContent);
       } else {
-        console.warn(`[IconComponent] Icon "${iconName}" not found on CDN. Falling back to circle-help.`);
+        console.warn(
+          `[IconComponent] Icon "${iconName}" not found on CDN. Falling back to circle-help.`,
+        );
         this.useFallback();
       }
     } catch (err) {

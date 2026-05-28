@@ -186,7 +186,7 @@ const PAGE_SIZE = 9;
                 <!-- Skeleton fiel a la student-card: mismos gaps, padding y estructura -->
                 <div class="student-card" aria-hidden="true">
                   <!-- Accent bar -->
-                  <div class="student-card__accent" style="background: var(--bg-subtle)"></div>
+                  <div class="student-card__accent bg-subtle"></div>
 
                   <div class="p-5 flex flex-col gap-4 h-full">
                     <!-- Header: avatar + nombre/rut + badge -->
@@ -215,7 +215,7 @@ const PAGE_SIZE = 9;
                     </div>
 
                     <!-- Footer -->
-                    <div class="pt-4 mt-auto border-t" style="border-color: var(--border-subtle)">
+                    <div class="pt-4 mt-auto border-t border-border-subtle">
                       <div class="flex items-center justify-between">
                         <app-skeleton-block variant="text" width="50%" />
                         <app-skeleton-block variant="rect" width="48px" height="22px" />
@@ -259,7 +259,7 @@ const PAGE_SIZE = 9;
                       [style.color]="'var(--text-secondary)'"
                     >
                       <app-icon name="book-open" [size]="14" />
-                      <span class="truncate">{{ s.courseName }}</span>
+                      <span class="truncate" [attr.title]="s.courseName">{{ s.courseName }}</span>
                     </div>
 
                     <!-- Progreso -->
@@ -281,8 +281,7 @@ const PAGE_SIZE = 9;
 
                     <!-- Footer -->
                     <div
-                      class="pt-4 mt-auto flex items-center justify-between border-t"
-                      style="border-color: var(--border-subtle)"
+                      class="pt-4 mt-auto flex items-center justify-between border-t border-border-subtle"
                     >
                       <div
                         class="flex items-center gap-2 text-xs"

@@ -36,179 +36,181 @@ const SPEC_COLORS: Record<string, string> = {
         </div>
       </ng-template>
       <ng-template #content>
-    <h3 class="section-title">Información Personal</h3>
-    <div class="flex flex-col gap-4 mb-6">
-      <!-- Nombres -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="e-nombres">Nombres *</label>
-        <input
-          id="e-nombres"
-          type="text"
-          class="field-input"
-          [class.field-input--error]="nombresTouched() && !nombresValido()"
-          [ngModel]="nombres()"
-          (ngModelChange)="nombres.set($event)"
-          (blur)="nombresTouched.set(true)"
-          data-llm-description="Nombres del relator"
-          aria-required="true"
-        />
-        @if (nombresTouched() && !nombresValido()) {
-          <span class="field-error">Ingresa el nombre (mínimo 2 caracteres)</span>
-        }
-      </div>
+        <h3 class="section-title">Información Personal</h3>
+        <div class="flex flex-col gap-4 mb-6">
+          <!-- Nombres -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label" for="e-nombres">Nombres *</label>
+            <input
+              id="e-nombres"
+              type="text"
+              class="field-input"
+              [class.field-input--error]="nombresTouched() && !nombresValido()"
+              [ngModel]="nombres()"
+              (ngModelChange)="nombres.set($event)"
+              (blur)="nombresTouched.set(true)"
+              data-llm-description="Nombres del relator"
+              aria-required="true"
+            />
+            @if (nombresTouched() && !nombresValido()) {
+              <span class="field-error">Ingresa el nombre (mínimo 2 caracteres)</span>
+            }
+          </div>
 
-      <!-- Apellido Paterno -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="e-paterno">Apellido Paterno *</label>
-        <input
-          id="e-paterno"
-          type="text"
-          class="field-input"
-          [class.field-input--error]="paternoTouched() && !paternoValido()"
-          [ngModel]="paterno()"
-          (ngModelChange)="paterno.set($event)"
-          (blur)="paternoTouched.set(true)"
-          data-llm-description="Apellido paterno del relator"
-          aria-required="true"
-        />
-        @if (paternoTouched() && !paternoValido()) {
-          <span class="field-error">Ingresa el apellido paterno (mínimo 2 caracteres)</span>
-        }
-      </div>
+          <!-- Apellido Paterno -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label" for="e-paterno">Apellido Paterno *</label>
+            <input
+              id="e-paterno"
+              type="text"
+              class="field-input"
+              [class.field-input--error]="paternoTouched() && !paternoValido()"
+              [ngModel]="paterno()"
+              (ngModelChange)="paterno.set($event)"
+              (blur)="paternoTouched.set(true)"
+              data-llm-description="Apellido paterno del relator"
+              aria-required="true"
+            />
+            @if (paternoTouched() && !paternoValido()) {
+              <span class="field-error">Ingresa el apellido paterno (mínimo 2 caracteres)</span>
+            }
+          </div>
 
-      <!-- Apellido Materno -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="e-materno">Apellido Materno</label>
-        <input
-          id="e-materno"
-          type="text"
-          class="field-input"
-          [ngModel]="materno()"
-          (ngModelChange)="materno.set($event)"
-          data-llm-description="Apellido materno del relator (opcional)"
-        />
-      </div>
+          <!-- Apellido Materno -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label" for="e-materno">Apellido Materno</label>
+            <input
+              id="e-materno"
+              type="text"
+              class="field-input"
+              [ngModel]="materno()"
+              (ngModelChange)="materno.set($event)"
+              data-llm-description="Apellido materno del relator (opcional)"
+            />
+          </div>
 
-      <!-- Email -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="e-email">Correo electrónico</label>
-        <input
-          id="e-email"
-          type="email"
-          class="field-input"
-          [class.field-input--error]="emailTouched() && email().length > 0 && !emailValido()"
-          [ngModel]="email()"
-          (ngModelChange)="email.set($event)"
-          (blur)="emailTouched.set(true)"
-          data-llm-description="Correo electrónico del relator (opcional)"
-        />
-        @if (emailTouched() && email().length > 0 && !emailValido()) {
-          <span class="field-error">Ingresa un correo electrónico válido.</span>
-        }
-      </div>
+          <!-- Email -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label" for="e-email">Correo electrónico</label>
+            <input
+              id="e-email"
+              type="email"
+              class="field-input"
+              [class.field-input--error]="emailTouched() && email().length > 0 && !emailValido()"
+              [ngModel]="email()"
+              (ngModelChange)="email.set($event)"
+              (blur)="emailTouched.set(true)"
+              data-llm-description="Correo electrónico del relator (opcional)"
+            />
+            @if (emailTouched() && email().length > 0 && !emailValido()) {
+              <span class="field-error">Ingresa un correo electrónico válido.</span>
+            }
+          </div>
 
-      <!-- Teléfono -->
-      <div class="flex flex-col gap-1.5">
-        <label class="field-label" for="e-telefono">Teléfono *</label>
-        <input
-          id="e-telefono"
-          type="tel"
-          class="field-input"
-          [class.field-input--error]="telefonoTouched() && !telefonoValido()"
-          [ngModel]="telefono()"
-          (ngModelChange)="telefono.set($event)"
-          (blur)="telefonoTouched.set(true)"
-          data-llm-description="Teléfono de contacto del relator"
-          aria-required="true"
-        />
-        @if (telefonoTouched() && !telefonoValido()) {
-          <span class="field-error">Ingresa un teléfono válido (mínimo 8 dígitos).</span>
-        }
-      </div>
-    </div>
-
-    <!-- ── Especialidades ──────────────────────────────────────────────────── -->
-    <h3 class="section-title">Especialidades *</h3>
-    <p class="text-xs mb-3" style="color: var(--text-muted)">
-      Selecciona las clases que el relator puede dictar
-    </p>
-    <div class="grid grid-cols-2 gap-2 mb-2">
-      @for (spec of specializationOptions; track spec.value) {
-        <button
-          type="button"
-          class="spec-chip"
-          [class.spec-chip--active]="isSelected(spec.value)"
-          (click)="toggleSpec(spec.value)"
-          [attr.aria-pressed]="isSelected(spec.value)"
-          data-llm-action="toggle-especialidad-editar"
-        >
-          <span class="spec-badge" [style.background]="spec.color">{{ spec.value }}</span>
-          <span class="text-xs">{{ spec.label }}</span>
-        </button>
-      }
-    </div>
-    @if (specsTouched() && !specsValidas()) {
-      <span class="field-error mb-4 block">Selecciona al menos una especialidad.</span>
-    }
-
-    <!-- ── Zona de peligro ─────────────────────────────────────────────────── -->
-    <div
-      class="rounded-lg p-4 mt-6 mb-2"
-      style="border: 1px solid color-mix(in srgb, var(--state-error) 30%, transparent); background: color-mix(in srgb, var(--state-error) 4%, transparent);"
-    >
-      <h4 class="text-sm font-semibold mb-3" style="color: var(--state-error)">
-        Estado del relator
-      </h4>
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <p class="text-sm" style="color: var(--text-primary)">
-            {{ active() ? 'Relator activo' : 'Relator inactivo' }}
-          </p>
-          <p class="text-xs mt-0.5" style="color: var(--text-muted)">
-            {{ active() ? 'Puede ser asignado a promociones' : 'No aparece en asignaciones' }}
-          </p>
+          <!-- Teléfono -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label" for="e-telefono">Teléfono *</label>
+            <input
+              id="e-telefono"
+              type="tel"
+              class="field-input"
+              [class.field-input--error]="telefonoTouched() && !telefonoValido()"
+              [ngModel]="telefono()"
+              (ngModelChange)="telefono.set($event)"
+              (blur)="telefonoTouched.set(true)"
+              data-llm-description="Teléfono de contacto del relator"
+              aria-required="true"
+            />
+            @if (telefonoTouched() && !telefonoValido()) {
+              <span class="field-error">Ingresa un teléfono válido (mínimo 8 dígitos).</span>
+            }
+          </div>
         </div>
-        <button
-          type="button"
-          class="toggle-btn"
-          [class.toggle-btn--active]="active()"
-          (click)="active.set(!active())"
-          [attr.aria-label]="active() ? 'Desactivar relator' : 'Activar relator'"
-          data-llm-action="toggle-estado-relator"
-        >
-          <span class="toggle-knob"></span>
-        </button>
-      </div>
-    </div>
 
-    <!-- ── Acciones ────────────────────────────────────────────────────────── -->
-    <div
-      class="flex items-center gap-3 pt-4 mt-4"
-      style="border-top: 1px solid var(--border-subtle)"
-    >
-      <button
-        class="btn-secondary flex-1"
-        (click)="layoutDrawer.close()"
-        data-llm-action="cancelar-editar-relator"
-      >
-        Cancelar
-      </button>
-      <button
-        class="btn-primary flex-[2]"
-        [disabled]="facade.isSubmitting()"
-        (click)="submit()"
-        data-llm-action="confirmar-editar-relator"
-        aria-label="Guardar cambios del relator"
-      >
-        @if (facade.isSubmitting()) {
-          <app-icon name="loader-2" [size]="15" class="animate-spin" />
-          Guardando...
-        } @else {
-          <app-icon name="save" [size]="15" />
-          Guardar cambios
+        <!-- ── Especialidades ──────────────────────────────────────────────────── -->
+        <h3 class="section-title">Especialidades *</h3>
+        <p class="text-xs mb-3 text-text-muted">
+          Selecciona las clases que el relator puede dictar
+        </p>
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          @for (spec of specializationOptions; track spec.value) {
+            <button
+              type="button"
+              class="spec-chip"
+              [class.spec-chip--active]="isSelected(spec.value)"
+              (click)="toggleSpec(spec.value)"
+              [attr.aria-pressed]="isSelected(spec.value)"
+              data-llm-action="toggle-especialidad-editar"
+            >
+              <span class="spec-badge" [style.background]="spec.color">{{ spec.value }}</span>
+              <span class="text-xs">{{ spec.label }}</span>
+            </button>
+          }
+        </div>
+        @if (specsTouched() && !specsValidas()) {
+          <span class="field-error mb-4 block">Selecciona al menos una especialidad.</span>
         }
-      </button>
-    </div>
+
+        <!-- ── Zona de peligro ─────────────────────────────────────────────────── -->
+        <div
+          class="rounded-lg p-4 mt-6 mb-2 border border-error/30 bg-error/4"
+          
+        >
+          <h4 class="text-sm font-semibold mb-3 text-error" >
+            Estado del relator
+          </h4>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-sm text-text-primary">
+                {{ active() ? 'Relator activo' : 'Relator inactivo' }}
+              </p>
+              <p class="text-xs mt-0.5 text-text-muted">
+                {{ active() ? 'Puede ser asignado a promociones' : 'No aparece en asignaciones' }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="toggle-btn"
+              [class.toggle-btn--active]="active()"
+              (click)="active.set(!active())"
+              [attr.aria-label]="active() ? 'Desactivar relator' : 'Activar relator'"
+              data-llm-action="toggle-estado-relator"
+            >
+              <span class="toggle-knob"></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── Acciones ────────────────────────────────────────────────────────── -->
+        <div
+          class="flex items-center gap-3 pt-4 mt-4"
+          style="border-top: 1px solid var(--border-subtle)"
+        >
+          <button
+            class="btn-secondary flex-1"
+            (click)="layoutDrawer.close()"
+            data-llm-action="cancelar-editar-relator"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn-primary flex-[2]"
+            [disabled]="facade.isSubmitting()"
+            (click)="submit()"
+            data-llm-action="confirmar-editar-relator"
+            aria-label="Guardar cambios del relator"
+          >
+            @if (facade.isSubmitting()) {
+              <app-icon name="loader-2" [size]="15" class="animate-spin" />
+              Guardando...
+            } @else {
+              <app-icon name="save" [size]="15" />
+              Guardar cambios
+            }
+          </button>
+        </div>
+      </ng-template></app-drawer-content-loader
+    >
   `,
   styles: `
     .section-title {

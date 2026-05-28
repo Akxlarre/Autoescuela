@@ -90,8 +90,7 @@ type TabId = 'practice' | 'theory';
         <!-- Tabs -->
         @if (!loading()) {
           <div
-            class="flex gap-1 self-start p-1 rounded-lg"
-            style="background: var(--bg-subtle)"
+            class="flex gap-1 self-start p-1 rounded-lg bg-subtle"
             role="tablist"
             aria-label="Ver clases"
           >
@@ -155,7 +154,7 @@ type TabId = 'practice' | 'theory';
           @if (licenseGroup() === 'class_b') {
             @if (practiceSessions().length === 0) {
               <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="car" [size]="32" style="color: var(--text-muted)" />
+                <app-icon name="car" [size]="32" class="text-text-muted" />
                 <p class="text-sm text-text-muted m-0">
                   Aún no tienes clases prácticas registradas
                 </p>
@@ -209,7 +208,7 @@ type TabId = 'practice' | 'theory';
             <!-- Profesional: Prácticas -->
             @if (profPracticeSessions().length === 0) {
               <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="car" [size]="32" style="color: var(--text-muted)" />
+                <app-icon name="car" [size]="32" class="text-text-muted" />
                 <p class="text-sm text-text-muted m-0">Sin prácticas registradas aún</p>
               </div>
             } @else {
@@ -247,7 +246,7 @@ type TabId = 'practice' | 'theory';
           @if (licenseGroup() === 'class_b') {
             @if (theorySessions().length === 0) {
               <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="clipboard-list" [size]="32" style="color: var(--text-muted)" />
+                <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
                 <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
               </div>
             } @else {
@@ -285,7 +284,7 @@ type TabId = 'practice' | 'theory';
             <!-- Profesional: Teoría -->
             @if (profTheorySessions().length === 0) {
               <div class="flex flex-col items-center gap-2 py-10 text-center">
-                <app-icon name="clipboard-list" [size]="32" style="color: var(--text-muted)" />
+                <app-icon name="clipboard-list" [size]="32" class="text-text-muted" />
                 <p class="text-sm text-text-muted m-0">Sin sesiones de teoría registradas</p>
               </div>
             } @else {

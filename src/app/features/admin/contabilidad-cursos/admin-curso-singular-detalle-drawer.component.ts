@@ -57,234 +57,223 @@ const PAYMENT_LABEL: Record<string, string> = {
         </div>
       </ng-template>
       <ng-template #content>
-      @if (facade.selectedCurso(); as curso) {
-        <!-- ── Ficha del curso ──────────────────────────────────────────────── -->
-        <div class="card card-tinted p-4 flex flex-col gap-4">
-          <!-- Nombre + tipo badge -->
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-base font-bold" style="color: var(--text-primary)">
-                {{ curso.nombre }}
-              </p>
-              <div class="flex items-center gap-1.5 mt-1">
-                <app-icon name="calendar" [size]="12" color="var(--text-muted)" />
-                <p class="text-xs font-medium" style="color: var(--text-muted)">
-                  Inicio: {{ formatChileanDate(curso.inicio) }}
+        @if (facade.selectedCurso(); as curso) {
+          <!-- ── Ficha del curso ──────────────────────────────────────────────── -->
+          <div class="card card-tinted p-4 flex flex-col gap-4">
+            <!-- Nombre + tipo badge -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <p class="text-base font-bold text-text-primary">
+                  {{ curso.nombre }}
                 </p>
+                <div class="flex items-center gap-1.5 mt-1">
+                  <app-icon name="calendar" [size]="12" color="var(--text-muted)" />
+                  <p class="text-xs font-medium text-text-muted">
+                    Inicio: {{ formatChileanDate(curso.inicio) }}
+                  </p>
+                </div>
               </div>
-            </div>
-            <span
-              class="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
-              [style.background]="
-                curso.tipo === 'sence'
-                  ? 'color-mix(in srgb, var(--color-primary) 14%, transparent)'
-                  : 'color-mix(in srgb, var(--color-purple) 14%, transparent)'
-              "
-              [style.color]="
-                curso.tipo === 'sence' ? 'var(--color-primary)' : 'var(--color-purple)'
-              "
-            >
-              {{ curso.tipo === 'sence' ? 'SENCE' : 'Particular' }}
-            </span>
-          </div>
-
-          <!-- Datos en grid -->
-          <div class="grid grid-cols-2 gap-3">
-            @for (item of fichaItems(curso); track item.label) {
-              <app-stat-box
-                [label]="item.label"
-                [value]="item.value"
-                variant="surface"
-                [compact]="true"
-              />
-            }
-          </div>
-        </div>
-
-        <!-- ── KPIs mini ────────────────────────────────────────────────────── -->
-        <div class="grid grid-cols-3 gap-3">
-          <app-stat-box
-            label="Inscritos"
-            [value]="curso.inscritos"
-            [suffix]="'/ ' + curso.cupos"
-            [compact]="true"
-          />
-
-          <app-stat-box
-            label="Ingresos"
-            [value]="formatCLP(curso.ingresoEstimado)"
-            [variant]="curso.ingresoEstimado > 0 ? 'success' : 'default'"
-            [compact]="true"
-            [useMono]="true"
-          />
-
-          <app-stat-box
-            label="Libres"
-            [value]="curso.cupos - curso.inscritos"
-            [variant]="curso.cupos - curso.inscritos > 0 ? 'success' : 'error'"
-            [compact]="true"
-          />
-        </div>
-
-        <!-- ── Acciones de estado ──────────────────────────────────────────── -->
-        @if (curso.estado === 'active' || curso.estado === 'upcoming') {
-          <div class="card p-4 flex flex-col gap-3">
-            <p
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
-              Cambiar estado
-            </p>
-
-            @if (confirmingAction() === null) {
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer border"
-                  style="border-color: var(--state-success); color: var(--state-success)"
-                  [disabled]="facade.isSaving()"
-                  (click)="confirmingAction.set('completed')"
-                  data-llm-action="marcar-curso-singular-finalizado"
-                >
-                  <app-icon name="check-circle" [size]="13" color="var(--state-success)" />
-                  Marcar como finalizado
-                </button>
-                <button
-                  type="button"
-                  class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer border"
-                  style="border-color: var(--state-error); color: var(--state-error)"
-                  [disabled]="facade.isSaving()"
-                  (click)="confirmingAction.set('cancelled')"
-                  data-llm-action="cancelar-curso-singular"
-                >
-                  <app-icon name="x-circle" [size]="13" color="var(--state-error)" />
-                  Cancelar curso
-                </button>
-              </div>
-            } @else {
-              <div
-                class="rounded-lg p-3 flex items-center justify-between gap-3"
+              <span
+                class="shrink-0 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
                 [style.background]="
-                  confirmingAction() === 'completed'
-                    ? 'color-mix(in srgb, var(--state-success) 10%, transparent)'
-                    : 'color-mix(in srgb, var(--state-error) 10%, transparent)'
+                  curso.tipo === 'sence'
+                    ? 'color-mix(in srgb, var(--color-primary) 14%, transparent)'
+                    : 'color-mix(in srgb, var(--color-purple) 14%, transparent)'
+                "
+                [style.color]="
+                  curso.tipo === 'sence' ? 'var(--color-primary)' : 'var(--color-purple)'
                 "
               >
-                <p class="text-xs font-medium" style="color: var(--text-primary)">
-                  @if (confirmingAction() === 'completed') {
-                    ¿Marcar el curso como finalizado?
-                  } @else {
-                    ¿Cancelar el curso? Esta acción no se puede revertir.
-                  }
-                </p>
-                <div class="flex gap-2 shrink-0">
+                {{ curso.tipo === 'sence' ? 'SENCE' : 'Particular' }}
+              </span>
+            </div>
+
+            <!-- Datos en grid -->
+            <div class="grid grid-cols-2 gap-3">
+              @for (item of fichaItems(curso); track item.label) {
+                <app-stat-box
+                  [label]="item.label"
+                  [value]="item.value"
+                  variant="surface"
+                  [compact]="true"
+                />
+              }
+            </div>
+          </div>
+
+          <!-- ── KPIs mini ────────────────────────────────────────────────────── -->
+          <div class="grid grid-cols-3 gap-3">
+            <app-stat-box
+              label="Inscritos"
+              [value]="curso.inscritos"
+              [suffix]="'/ ' + curso.cupos"
+              [compact]="true"
+            />
+
+            <app-stat-box
+              label="Ingresos"
+              [value]="formatCLP(curso.ingresoEstimado)"
+              [variant]="curso.ingresoEstimado > 0 ? 'success' : 'default'"
+              [compact]="true"
+              [useMono]="true"
+            />
+
+            <app-stat-box
+              label="Libres"
+              [value]="curso.cupos - curso.inscritos"
+              [variant]="curso.cupos - curso.inscritos > 0 ? 'success' : 'error'"
+              [compact]="true"
+            />
+          </div>
+
+          <!-- ── Acciones de estado ──────────────────────────────────────────── -->
+          @if (curso.estado === 'active' || curso.estado === 'upcoming') {
+            <div class="card p-4 flex flex-col gap-3">
+              <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                Cambiar estado
+              </p>
+
+              @if (confirmingAction() === null) {
+                <div class="flex gap-2">
                   <button
                     type="button"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border"
-                    style="border-color: var(--border-muted); color: var(--text-muted)"
+                    class="btn-success-soft text-xs flex-1"
                     [disabled]="facade.isSaving()"
-                    (click)="confirmingAction.set(null)"
+                    (click)="confirmingAction.set('completed')"
+                    data-llm-action="marcar-curso-singular-finalizado"
                   >
-                    No
+                    <app-icon name="check-circle" [size]="13" />
+                    Marcar como finalizado
                   </button>
                   <button
                     type="button"
-                    class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer text-white"
-                    [style.background]="
-                      confirmingAction() === 'completed'
-                        ? 'var(--state-success)'
-                        : 'var(--state-error)'
-                    "
+                    class="btn-danger-ghost text-xs flex-1"
                     [disabled]="facade.isSaving()"
-                    (click)="onConfirmarCambioEstado(curso.id)"
-                    data-llm-action="confirmar-cambio-estado-curso-singular"
+                    (click)="confirmingAction.set('cancelled')"
+                    data-llm-action="cancelar-curso-singular"
                   >
-                    @if (facade.isSaving()) {
-                      Guardando…
-                    } @else if (confirmingAction() === 'completed') {
-                      Sí, finalizar
-                    } @else {
-                      Sí, cancelar
-                    }
+                    <app-icon name="x-circle" [size]="13" />
+                    Cancelar curso
                   </button>
                 </div>
+              } @else {
+                <div
+                  class="rounded-lg p-3 flex items-center justify-between gap-3"
+                  [style.background]="
+                    confirmingAction() === 'completed'
+                      ? 'var(--state-success-bg)'
+                      : 'var(--state-error-bg)'
+                  "
+                >
+                  <p class="text-xs font-medium text-text-primary">
+                    @if (confirmingAction() === 'completed') {
+                      ¿Marcar el curso como finalizado?
+                    } @else {
+                      ¿Cancelar el curso? Esta acción no se puede revertir.
+                    }
+                  </p>
+                  <div class="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      class="btn-ghost text-xs"
+                      [disabled]="facade.isSaving()"
+                      (click)="confirmingAction.set(null)"
+                    >
+                      No
+                    </button>
+                    <button
+                      type="button"
+                      [class]="
+                        confirmingAction() === 'completed'
+                          ? 'btn-success-soft text-xs'
+                          : 'btn-danger-solid text-xs'
+                      "
+                      [disabled]="facade.isSaving()"
+                      (click)="onConfirmarCambioEstado(curso.id)"
+                      data-llm-action="confirmar-cambio-estado-curso-singular"
+                    >
+                      @if (facade.isSaving()) {
+                        Guardando…
+                      } @else if (confirmingAction() === 'completed') {
+                        Sí, finalizar
+                      } @else {
+                        Sí, cancelar
+                      }
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- ── Inscriptos ───────────────────────────────────────────────────── -->
+          <div class="card p-0 overflow-hidden">
+            <div
+              class="px-4 py-3 border-b flex items-center justify-between gap-2 border-border-muted"
+            >
+              <div class="flex items-center gap-2">
+                <app-icon name="users" [size]="16" color="var(--text-muted)" />
+                <p class="text-sm font-semibold text-text-primary">Inscritos</p>
               </div>
+              @if (curso.estado !== 'cancelled' && curso.inscritos < curso.cupos) {
+                <button
+                  type="button"
+                  class="btn-primary text-xs"
+                  (click)="onInscribir()"
+                  data-llm-action="abrir-inscripcion-curso-singular"
+                >
+                  <app-icon name="user-plus" [size]="13" />
+                  Inscribir alumno
+                </button>
+              }
+            </div>
+
+            @if (facade.isLoadingInscriptos()) {
+              @for (i of [1, 2, 3]; track i) {
+                <div
+                  class="px-4 py-3 flex items-center justify-between border-b border-border-muted"
+                >
+                  <app-skeleton-block variant="text" width="55%" height="14px" />
+                  <app-skeleton-block variant="text" width="20%" height="20px" />
+                </div>
+              }
+            } @else if (facade.inscriptos().length === 0) {
+              <div class="px-4 py-8 text-center">
+                <p class="text-sm text-text-muted">Sin inscriptos registrados.</p>
+              </div>
+            } @else {
+              @for (alumno of facade.inscriptos(); track alumno.enrollmentId) {
+                <div
+                  class="px-4 py-3 flex items-center justify-between border-b last:border-b-0 border-border-muted"
+                >
+                  <div>
+                    <p class="text-sm font-medium text-text-primary">
+                      {{ alumno.nombreAlumno }}
+                    </p>
+                    <p class="text-xs text-text-muted">{{ alumno.rutAlumno }}</p>
+                  </div>
+                  <div class="flex flex-col items-end gap-1">
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                      [style.background]="getPaymentBg(alumno.paymentStatus)"
+                      [style.color]="getPaymentColor(alumno.paymentStatus)"
+                    >
+                      {{ paymentLabel(alumno.paymentStatus) }}
+                    </span>
+                    <p class="text-xs text-text-muted">
+                      {{ formatCLP(alumno.montoPagado) }}
+                    </p>
+                  </div>
+                </div>
+              }
             }
+          </div>
+        } @else {
+          <div class="flex flex-col items-center justify-center py-16 gap-3">
+            <app-icon name="graduation-cap" [size]="32" color="var(--text-muted)" />
+            <p class="text-sm text-text-muted">Sin curso seleccionado.</p>
           </div>
         }
-
-        <!-- ── Inscriptos ───────────────────────────────────────────────────── -->
-        <div class="card p-0 overflow-hidden">
-          <div
-            class="px-4 py-3 border-b flex items-center justify-between gap-2"
-            style="border-color: var(--border-muted)"
-          >
-            <div class="flex items-center gap-2">
-              <app-icon name="users" [size]="16" color="var(--text-muted)" />
-              <p class="text-sm font-semibold" style="color: var(--text-primary)">Inscritos</p>
-            </div>
-            @if (curso.estado !== 'cancelled' && curso.inscritos < curso.cupos) {
-              <button
-                type="button"
-                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-                style="background: var(--ds-brand); color: white"
-                (click)="onInscribir()"
-                data-llm-action="abrir-inscripcion-curso-singular"
-              >
-                <app-icon name="user-plus" [size]="13" color="white" />
-                Inscribir alumno
-              </button>
-            }
-          </div>
-
-          @if (facade.isLoadingInscriptos()) {
-            @for (i of [1, 2, 3]; track i) {
-              <div
-                class="px-4 py-3 flex items-center justify-between border-b"
-                style="border-color: var(--border-muted)"
-              >
-                <app-skeleton-block variant="text" width="55%" height="14px" />
-                <app-skeleton-block variant="text" width="20%" height="20px" />
-              </div>
-            }
-          } @else if (facade.inscriptos().length === 0) {
-            <div class="px-4 py-8 text-center">
-              <p class="text-sm" style="color: var(--text-muted)">Sin inscriptos registrados.</p>
-            </div>
-          } @else {
-            @for (alumno of facade.inscriptos(); track alumno.enrollmentId) {
-              <div
-                class="px-4 py-3 flex items-center justify-between border-b last:border-b-0"
-                style="border-color: var(--border-muted)"
-              >
-                <div>
-                  <p class="text-sm font-medium" style="color: var(--text-primary)">
-                    {{ alumno.nombreAlumno }}
-                  </p>
-                  <p class="text-xs" style="color: var(--text-muted)">{{ alumno.rutAlumno }}</p>
-                </div>
-                <div class="flex flex-col items-end gap-1">
-                  <span
-                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                    [style.background]="getPaymentBg(alumno.paymentStatus)"
-                    [style.color]="getPaymentColor(alumno.paymentStatus)"
-                  >
-                    {{ paymentLabel(alumno.paymentStatus) }}
-                  </span>
-                  <p class="text-xs" style="color: var(--text-muted)">
-                    {{ formatCLP(alumno.montoPagado) }}
-                  </p>
-                </div>
-              </div>
-            }
-          }
-        </div>
-      } @else {
-        <div class="flex flex-col items-center justify-center py-16 gap-3">
-          <app-icon name="graduation-cap" [size]="32" color="var(--text-muted)" />
-          <p class="text-sm" style="color: var(--text-muted)">Sin curso seleccionado.</p>
-        </div>
-      }
       </ng-template>
     </app-drawer-content-loader>
   `,
@@ -328,9 +317,9 @@ export class AdminCursoSingularDetalleDrawerComponent {
   }
 
   protected getPaymentBg(status: string): string {
-    if (status === 'paid') return 'color-mix(in srgb, var(--state-success) 12%, transparent)';
-    if (status === 'partial') return 'color-mix(in srgb, var(--state-warning) 12%, transparent)';
-    return 'color-mix(in srgb, var(--text-muted) 12%, transparent)';
+    if (status === 'paid') return 'var(--state-success-bg)';
+    if (status === 'partial') return 'var(--state-warning-bg)';
+    return 'var(--bg-elevated)';
   }
 
   protected getPaymentColor(status: string): string {

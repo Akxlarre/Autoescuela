@@ -80,8 +80,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                   </p>
                   @if (notif.actionLabel) {
                     <button
-                      class="text-sm font-medium hover:underline"
-                      style="color: var(--color-primary)"
+                      class="text-sm font-medium hover:underline text-brand"
+                      
                     >
                       {{ notif.actionLabel }}
                     </button>
@@ -90,8 +90,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
                 @if (notif.unread) {
                   <div
-                    class="w-2.5 h-2.5 rounded-full shrink-0 mt-2"
-                    style="background: var(--color-primary)"
+                    class="w-2.5 h-2.5 rounded-full shrink-0 mt-2 bg-brand"
+                    
                   ></div>
                 }
               </div>

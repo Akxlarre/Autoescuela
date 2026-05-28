@@ -11,18 +11,18 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
           <p class="text-sm text-text-muted mt-0.5">Mockup: /alumno/notificaciones</p>
         </div>
         <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface"
-          style="color: var(--state-warning); outline: 1px solid var(--state-warning)"
+          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning"
+          
         >
           PLANO
         </span>
       </div>
       <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center"
-        style="border-style: dashed"
+        class="card p-8 flex flex-col items-center justify-center gap-2 text-center border-dashed"
+        
       >
         <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs" style="color: var(--text-muted)">
+        <code class="text-xs text-text-muted">
           mock/web/src/pages/alumno/notificaciones.astro
         </code>
       </div>

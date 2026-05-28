@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -43,111 +37,120 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
       <ng-template #content>
-      <div class="flex-1 flex flex-col gap-5">
-
-        <!-- Nombre -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" style="color: var(--text-primary);">Nombre *</label>
-          <input
-            type="text"
-            [ngModel]="name()"
-            (ngModelChange)="name.set($event)"
-            placeholder="Ej: Contrato Clase B"
-            class="w-full rounded-lg px-3 py-2 text-sm border"
-            style="background: var(--bg-subtle); border-color: var(--border-subtle); color: var(--text-primary); outline: none;"
-          />
-        </div>
-
-        <!-- Descripción -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" style="color: var(--text-secondary);">Descripción</label>
-          <textarea
-            [ngModel]="description()"
-            (ngModelChange)="description.set($event)"
-            rows="2"
-            placeholder="Descripción breve de la plantilla..."
-            class="w-full rounded-lg px-3 py-2 text-sm resize-none border"
-            style="background: var(--bg-subtle); border-color: var(--border-subtle); color: var(--text-primary); outline: none;"
-          ></textarea>
-        </div>
-
-        <!-- Categoría -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" style="color: var(--text-primary);">Categoría *</label>
-          <p-select
-            [ngModel]="category()"
-            (ngModelChange)="category.set($event)"
-            [options]="categoryOptions"
-            placeholder="Seleccionar categoría..."
-            styleClass="w-full"
-          />
-        </div>
-
-        <!-- Archivo -->
-        <div class="flex flex-col gap-1.5">
-          <label class="text-sm font-medium" style="color: var(--text-primary);">Archivo *</label>
-          <div
-            class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
-            [style]="isDragOver() ? 'border-color: var(--color-primary); background: var(--color-primary-tint);' : 'border-color: var(--border-subtle); background: var(--bg-subtle);'"
-            (dragover)="onDragOver($event)"
-            (dragleave)="isDragOver.set(false)"
-            (drop)="onDrop($event)"
-            (click)="fileInput.click()"
-          >
-            <div
-              class="w-12 h-12 rounded-xl flex items-center justify-center"
-              style="background: var(--bg-surface);"
-            >
-              <app-icon name="file-text" [size]="22" />
-            </div>
-
-            @if (selectedFile()) {
-              <div>
-                <p class="font-semibold text-sm m-0" style="color: var(--text-primary);">{{ selectedFile()!.name }}</p>
-                <p class="text-xs m-0 mt-1" style="color: var(--text-secondary);">
-                  {{ detectedFormat().toUpperCase() }} · {{ formatFileSize(selectedFile()!.size) }}
-                </p>
-              </div>
-            } @else {
-              <div>
-                <p class="font-medium text-sm m-0" style="color: var(--text-primary);">Arrastra tu plantilla aquí</p>
-                <p class="text-xs m-0 mt-1" style="color: var(--text-secondary);">PDF, DOCX, XLSX — máx. 10 MB</p>
-              </div>
-            }
+        <div class="flex-1 flex flex-col gap-5">
+          <!-- Nombre -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-primary">Nombre *</label>
+            <input
+              type="text"
+              [ngModel]="name()"
+              (ngModelChange)="name.set($event)"
+              placeholder="Ej: Contrato Clase B"
+              class="w-full rounded-lg px-3 py-2 text-sm border bg-subtle border-border-subtle text-text-primary outline-none"
+              
+            />
           </div>
-          <input
-            #fileInput
-            type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx"
-            class="hidden"
-            (change)="onFileChange($event)"
-          />
+
+          <!-- Descripción -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-secondary">Descripción</label>
+            <textarea
+              [ngModel]="description()"
+              (ngModelChange)="description.set($event)"
+              rows="2"
+              placeholder="Descripción breve de la plantilla..."
+              class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
+              
+            ></textarea>
+          </div>
+
+          <!-- Categoría -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-primary">Categoría *</label>
+            <p-select
+              [ngModel]="category()"
+              (ngModelChange)="category.set($event)"
+              [options]="categoryOptions"
+              placeholder="Seleccionar categoría..."
+              styleClass="w-full"
+            />
+          </div>
+
+          <!-- Archivo -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-sm font-medium text-text-primary">Archivo *</label>
+            <div
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
+              [style]="
+                isDragOver()
+                  ? 'border-color: var(--color-primary); background: var(--color-primary-tint);'
+                  : 'border-color: var(--border-subtle); background: var(--bg-subtle);'
+              "
+              (dragover)="onDragOver($event)"
+              (dragleave)="isDragOver.set(false)"
+              (drop)="onDrop($event)"
+              (click)="fileInput.click()"
+            >
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
+                <app-icon name="file-text" [size]="22" />
+              </div>
+
+              @if (selectedFile()) {
+                <div>
+                  <p class="font-semibold text-sm m-0 text-text-primary">
+                    {{ selectedFile()!.name }}
+                  </p>
+                  <p class="text-xs m-0 mt-1 text-text-secondary">
+                    {{ detectedFormat().toUpperCase() }} ·
+                    {{ formatFileSize(selectedFile()!.size) }}
+                  </p>
+                </div>
+              } @else {
+                <div>
+                  <p class="font-medium text-sm m-0 text-text-primary">
+                    Arrastra tu plantilla aquí
+                  </p>
+                  <p class="text-xs m-0 mt-1 text-text-secondary">PDF, DOCX, XLSX — máx. 10 MB</p>
+                </div>
+              }
+            </div>
+            <input
+              #fileInput
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              class="hidden"
+              (change)="onFileChange($event)"
+            />
+          </div>
+
+          <!-- Éxito -->
+          @if (savedOk()) {
+            <app-alert-card title="Plantilla creada" severity="success">
+              La plantilla se subió correctamente.
+            </app-alert-card>
+          }
         </div>
 
-        <!-- Éxito -->
-        @if (savedOk()) {
-          <app-alert-card title="Plantilla creada" severity="success">
-            La plantilla se subió correctamente.
-          </app-alert-card>
-        }
-      </div>
-
-      <!-- Footer -->
-      <div class="flex items-center justify-end gap-3 pt-4 border-t shrink-0" style="border-color: var(--border-subtle);">
-        <button
-          type="button"
-          class="px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer"
-          style="border-color: var(--border-subtle); background: transparent; color: var(--text-primary);"
-          (click)="onClose()"
-        >Cancelar</button>
-        <app-async-btn
-          label="Guardar plantilla"
-          icon="folder"
-          [loading]="isSubmitting()"
-          [disabled]="!canSubmit()"
-          (click)="onSubmit()"
-        ></app-async-btn>
-      </div>
+        <!-- Footer -->
+        <div
+          class="flex items-center justify-end gap-3 pt-4 border-t shrink-0 border-border-subtle"
+        >
+          <button
+            type="button"
+            class="px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer border-border-subtle bg-transparent text-text-primary"
+            
+            (click)="onClose()"
+          >
+            Cancelar
+          </button>
+          <app-async-btn
+            label="Guardar plantilla"
+            icon="folder"
+            [loading]="isSubmitting()"
+            [disabled]="!canSubmit()"
+            (click)="onSubmit()"
+          ></app-async-btn>
+        </div>
       </ng-template>
     </app-drawer-content-loader>
   `,
@@ -181,10 +184,10 @@ export class DmsTemplateDrawerComponent {
 
   // ── Config ────────────────────────────────────────────────────────────────
   readonly categoryOptions = [
-    { label: 'Clase B',           value: 'clase_b' },
+    { label: 'Clase B', value: 'clase_b' },
     { label: 'Clase Profesional', value: 'clase_profesional' },
-    { label: 'Administrativo',    value: 'administrativo' },
-    { label: 'General',           value: 'general' },
+    { label: 'Administrativo', value: 'administrativo' },
+    { label: 'General', value: 'general' },
   ];
 
   constructor() {

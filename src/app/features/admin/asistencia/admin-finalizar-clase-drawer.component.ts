@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -18,6 +19,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TooltipModule,
     DecimalPipe,
     ReactiveFormsModule,
     IconComponent,
@@ -46,7 +48,13 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
             }}</span>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-primary truncate">{{ cls.alumnoName ?? 'Sin alumno' }}</p>
+            <p
+              class="font-semibold text-primary truncate"
+              [pTooltip]="cls.alumnoName ?? 'Sin alumno'"
+              tooltipPosition="top"
+            >
+              {{ cls.alumnoName ?? 'Sin alumno' }}
+            </p>
             <p class="text-xs text-muted mt-0.5">
               {{ cls.horaInicio }} · {{ cls.instructorName }}
               @if (cls.vehiclePlate) {

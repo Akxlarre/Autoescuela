@@ -128,9 +128,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
                 "
                 [style.background]="
-                  alerta.nivel === 'danger'
-                    ? 'color-mix(in srgb, var(--state-error) 6%, transparent)'
-                    : 'color-mix(in srgb, var(--state-warning) 6%, transparent)'
+                  alerta.nivel === 'danger' ? 'var(--state-error-bg)' : 'var(--state-warning-bg)'
                 "
               >
                 <!-- Info del alumno -->
@@ -236,8 +234,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 />
                 @if (isFutureDate()) {
                   <span
-                    class="text-sm font-semibold px-2 py-2 rounded-full"
-                    style="background: color-mix(in srgb, var(--state-warning) 12%, transparent); color: var(--state-warning)"
+                    class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
                   >
                     Solo lectura
                   </span>
@@ -431,7 +428,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
                               [style.color]="'var(--state-success)'"
                               [style.border-color]="'var(--state-success)'"
-                              [style.background]="'color-mix(in srgb, var(--state-success) 8%, transparent)'"
+                              [style.background]="'var(--state-success-bg)'"
                               [disabled]="isSaving()"
                               title="Finalizar clase"
                               data-llm-action="finalizar-clase-practica"
@@ -511,8 +508,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 />
                 @if (isFutureDate()) {
                   <span
-                    class="text-sm font-semibold px-2 py-2 rounded-full"
-                    style="background: color-mix(in srgb, var(--state-warning) 12%, transparent); color: var(--state-warning)"
+                    class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
                   >
                     Solo lectura
                   </span>
@@ -605,7 +601,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       @if (justifyModalOpen()) {
         <div
           class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style="background: rgba(0,0,0,0.4)"
+          class="bg-black/40"
           (click)="closeJustifyModal()"
         >
           <div
@@ -801,11 +797,11 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected zoomBadgeBg(status: ClaseTeoricoRow['zoomLinkStatus']): string {
     switch (status) {
       case 'sent':
-        return 'color-mix(in srgb, var(--state-success) 12%, transparent)';
+        return 'var(--state-success-bg)';
       case 'pending':
-        return 'color-mix(in srgb, var(--state-warning) 12%, transparent)';
+        return 'var(--state-warning-bg)';
       case 'not_configured':
-        return 'color-mix(in srgb, var(--state-error) 12%, transparent)';
+        return 'var(--state-error-bg)';
     }
   }
 
@@ -851,13 +847,13 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected statusBadgeBg(status: ClasePracticaStatus): string {
     switch (status) {
       case 'presente':
-        return 'color-mix(in srgb, var(--state-success) 12%, transparent)';
+        return 'var(--state-success-bg)';
       case 'ausente':
-        return 'color-mix(in srgb, var(--state-error) 12%, transparent)';
+        return 'var(--state-error-bg)';
       case 'en_curso':
         return 'color-mix(in srgb, var(--color-primary) 12%, transparent)';
       case 'pendiente':
-        return 'color-mix(in srgb, var(--text-muted) 12%, transparent)';
+        return 'var(--bg-elevated)';
     }
   }
 

@@ -24,6 +24,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { NotificationsPanelComponent } from '@shared/components/notifications-panel/notifications-panel.component';
 import { UserPanelComponent } from '@shared/components/user-panel/user-panel.component';
 import { BranchSelectorComponent } from '@shared/components/branch-selector/branch-selector.component';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AjustesDrawerComponent } from '@shared/components/ajustes-drawer/ajustes-drawer.component';
 import { Button } from 'primeng/button';
 
 /**
@@ -225,43 +227,44 @@ export class TopbarComponent {
   protected readonly notifications = inject(NotificationsFacade);
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly theme = inject(ThemeService);
-
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+ 
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly router = inject(Router);
-
+ 
   protected readonly panelOpen = signal(false);
   protected readonly userPanelOpen = signal(false);
-
+ 
   private readonly bellWrapperRef = viewChild<ElementRef<HTMLElement>>('bellWrapper');
-
+ 
   openSearch(wrapper: HTMLElement): void {
     this.search.toggle(wrapper);
   }
-
+ 
   cycleTheme(event: MouseEvent): void {
     const btnEl = (event.target as HTMLElement).closest?.('button') as HTMLElement | null;
     if (btnEl) this.gsap.animateThemeToggleIcon(btnEl);
     this.theme.cycleColorMode(event);
   }
-
+ 
   togglePanel(): void {
     const opening = !this.panelOpen();
-
+ 
     // Animación Aladino solo al abrir — una campana suena al recibir, no al colgar
     if (opening) {
       const btnEl = this.bellWrapperRef()?.nativeElement?.querySelector<HTMLElement>('button');
       if (btnEl) this.gsap.animateBell(btnEl);
     }
-
+ 
     this.panelOpen.set(opening);
     if (opening) this.userPanelOpen.set(false); // Close user panel if notifications open
   }
-
+ 
   onNotifClicked(n: Notification): void {
     this.panelOpen.set(false);
     if (n.referenceType !== 'task') return;
-
+ 
     const role = this.auth.currentUser()?.role as string | undefined;
     const route =
       role === 'admin'
@@ -269,14 +272,17 @@ export class TopbarComponent {
         : role === 'secretary' || role === 'secretaria'
           ? '/app/secretaria/observaciones'
           : '/app/instructor/tareas';
-
+ 
     void this.router.navigateByUrl(route);
   }
-
+ 
   onUserAction(action: 'profile' | 'settings'): void {
     this.userPanelOpen.set(false);
-    // TODO: Navigation to profile or settings
-    console.log('[Topbar] User action:', action);
+    this.layoutDrawer.open(
+      AjustesDrawerComponent,
+      'Ajustes del Sistema',
+      'settings'
+    );
   }
 
   async onLogout(): Promise<void> {

@@ -66,20 +66,20 @@ const PAYMENT_METHODS: {
       <!-- ── Encabezado del curso ──────────────────────────────────────────── -->
       @if (facade.selectedCurso(); as curso) {
         <div
-          class="flex items-center gap-3 p-3 rounded-xl border"
-          style="background: color-mix(in srgb, var(--ds-brand) 8%, transparent); border-color: color-mix(in srgb, var(--ds-brand) 20%, transparent)"
+          class="flex items-center gap-3 p-3 rounded-xl border bg-brand/8 border-brand/20"
+          
         >
           <div
-            class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style="background: color-mix(in srgb, var(--ds-brand) 15%, transparent)"
+            class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-brand/15"
+            
           >
             <app-icon name="star" [size]="16" color="var(--ds-brand)" />
           </div>
           <div class="min-w-0">
-            <p class="text-sm font-semibold truncate" style="color: var(--text-primary)">
+            <p class="text-sm font-semibold truncate text-text-primary">
               {{ curso.nombre }}
             </p>
-            <p class="text-xs" style="color: var(--text-muted)">
+            <p class="text-xs text-text-muted">
               {{ curso.cupos - curso.inscritos }} cupo{{
                 curso.cupos - curso.inscritos !== 1 ? 's' : ''
               }}
@@ -108,7 +108,7 @@ const PAYMENT_METHODS: {
             {{ step === 1 ? 'Datos del alumno' : 'Pago' }}
           </div>
           @if (step < 2) {
-            <div class="flex-1 h-px" style="background: var(--border-muted)"></div>
+            <div class="flex-1 h-px bg-border-muted"></div>
           }
         }
       </div>
@@ -120,10 +120,7 @@ const PAYMENT_METHODS: {
         <div class="flex flex-col gap-5">
           <!-- Búsqueda por RUT -->
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-bold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
+            <label class="text-xs font-bold uppercase tracking-wide text-text-muted">
               RUT del alumno *
             </label>
             <div class="flex gap-2">
@@ -133,11 +130,10 @@ const PAYMENT_METHODS: {
                 (ngModelChange)="onRutChange($event)"
                 placeholder="12.345.678-9"
                 maxlength="12"
-                class="flex-1 h-10 px-3 text-sm rounded-lg border transition-colors"
+                class="flex-1 h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary"
                 [class.border-state-error]="rutInput().length > 0 && !rutValido()"
                 [class.border-state-success]="rutValido()"
                 [class.border-border-subtle]="!rutInput().length"
-                style="background: var(--bg-base); color: var(--text-primary)"
                 data-llm-description="RUT del alumno a inscribir en el curso singular"
               />
               <button
@@ -168,32 +164,28 @@ const PAYMENT_METHODS: {
                 RUT válido
               </p>
             } @else {
-              <p class="text-xs italic mt-1" style="color: var(--text-muted)">
-                Formato: 12.345.678-9
-              </p>
+              <p class="text-xs italic mt-1 text-text-muted">Formato: 12.345.678-9</p>
             }
           </div>
 
           <!-- Estado de búsqueda -->
           @if (facade.studentSearch(); as found) {
             <div
-              class="flex items-center gap-3 p-3 rounded-xl border"
-              style="background: color-mix(in srgb, var(--state-success) 8%, transparent); border-color: color-mix(in srgb, var(--state-success) 25%, transparent)"
+              class="flex items-center gap-3 p-3 rounded-xl border bg-success/8 border-success/25"
+              
             >
               <app-icon name="check-circle" [size]="18" color="var(--state-success)" />
               <div>
-                <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                <p class="text-sm font-semibold text-text-primary">
                   {{ found.nombreCompleto }}
                 </p>
-                <p class="text-xs" style="color: var(--text-muted)">
-                  Alumno encontrado — datos pre-cargados
-                </p>
+                <p class="text-xs text-text-muted">Alumno encontrado — datos pre-cargados</p>
               </div>
             </div>
           } @else if (facade.studentNotFound()) {
             <div
-              class="flex items-start gap-3 p-3 rounded-xl border"
-              style="background: color-mix(in srgb, var(--state-info) 8%, transparent); border-color: color-mix(in srgb, var(--state-info) 25%, transparent)"
+              class="flex items-start gap-3 p-3 rounded-xl border bg-info/8 border-info/25"
+              
             >
               <app-icon
                 name="alert-circle"
@@ -201,7 +193,7 @@ const PAYMENT_METHODS: {
                 color="var(--state-info)"
                 class="mt-0.5 shrink-0"
               />
-              <p class="text-xs leading-relaxed" style="color: var(--text-secondary)">
+              <p class="text-xs leading-relaxed text-text-secondary">
                 RUT no encontrado. Completa los datos para registrar al alumno en el sistema.
               </p>
             </div>
@@ -212,81 +204,66 @@ const PAYMENT_METHODS: {
             <div class="flex flex-col gap-4">
               <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label
-                    class="text-xs font-bold uppercase tracking-wide"
-                    style="color: var(--text-muted)"
+                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Nombres *</label
                   >
                   <input
                     type="text"
                     [(ngModel)]="form().firstNames"
                     (ngModelChange)="patchForm('firstNames', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                    style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                     placeholder="Juan Carlos"
                     data-llm-description="Nombres del alumno"
                   />
                 </div>
                 <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label
-                    class="text-xs font-bold uppercase tracking-wide"
-                    style="color: var(--text-muted)"
+                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Ap. Paterno *</label
                   >
                   <input
                     type="text"
                     [(ngModel)]="form().paternalLastName"
                     (ngModelChange)="patchForm('paternalLastName', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                    style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                     placeholder="González"
                     data-llm-description="Apellido paterno del alumno"
                   />
                 </div>
                 <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label
-                    class="text-xs font-bold uppercase tracking-wide"
-                    style="color: var(--text-muted)"
+                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Ap. Materno</label
                   >
                   <input
                     type="text"
                     [(ngModel)]="form().maternalLastName"
                     (ngModelChange)="patchForm('maternalLastName', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                    style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                     placeholder="Pérez"
                   />
                 </div>
                 <div class="flex flex-col gap-1 col-span-2 sm:col-span-1">
-                  <label
-                    class="text-xs font-bold uppercase tracking-wide"
-                    style="color: var(--text-muted)"
+                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Teléfono</label
                   >
                   <input
                     type="tel"
                     [(ngModel)]="form().phone"
                     (ngModelChange)="patchForm('phone', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                    style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                     placeholder="+56 9 1234 5678"
                   />
                 </div>
               </div>
 
               <div class="flex flex-col gap-1">
-                <label
-                  class="text-xs font-bold uppercase tracking-wide"
-                  style="color: var(--text-muted)"
+                <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                   >Email *</label
                 >
                 <input
                   type="email"
                   [(ngModel)]="form().email"
                   (ngModelChange)="patchForm('email', $event)"
-                  class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                  style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                  class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                   placeholder="alumno@ejemplo.com"
                   data-llm-description="Email del alumno"
                 />
@@ -294,30 +271,24 @@ const PAYMENT_METHODS: {
 
               <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1">
-                  <label
-                    class="text-xs font-bold uppercase tracking-wide"
-                    style="color: var(--text-muted)"
+                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Fecha de nacimiento</label
                   >
                   <input
                     type="date"
                     [(ngModel)]="form().birthDate"
                     (ngModelChange)="patchForm('birthDate', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                    style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                   />
                 </div>
                 <div class="flex flex-col gap-1">
-                  <label
-                    class="text-xs font-bold uppercase tracking-wide"
-                    style="color: var(--text-muted)"
+                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Género</label
                   >
                   <select
                     [(ngModel)]="form().gender"
                     (ngModelChange)="patchForm('gender', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                    style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                   >
                     <option value="M">Masculino</option>
                     <option value="F">Femenino</option>
@@ -326,25 +297,22 @@ const PAYMENT_METHODS: {
               </div>
 
               <div class="flex flex-col gap-1">
-                <label
-                  class="text-xs font-bold uppercase tracking-wide"
-                  style="color: var(--text-muted)"
+                <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                   >Dirección</label
                 >
                 <input
                   type="text"
                   [(ngModel)]="form().address"
                   (ngModelChange)="patchForm('address', $event)"
-                  class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                  style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                  class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                   placeholder="Calle 123, Chillán"
                 />
               </div>
 
               @if (facade.error()) {
                 <p
-                  class="text-xs px-3 py-2 rounded-lg"
-                  style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
+                  class="text-xs px-3 py-2 rounded-lg text-error bg-error/10"
+                  
                 >
                   {{ facade.error() }}
                 </p>
@@ -369,28 +337,20 @@ const PAYMENT_METHODS: {
       @if (facade.wizardStep() === 2) {
         <div class="flex flex-col gap-5">
           <!-- Resumen del alumno -->
-          <div
-            class="p-3 rounded-xl border"
-            style="background: var(--bg-surface); border-color: var(--border-muted)"
-          >
-            <p
-              class="text-xs font-bold uppercase tracking-wide mb-1"
-              style="color: var(--text-muted)"
-            >
-              Alumno
-            </p>
-            <p class="text-sm font-semibold" style="color: var(--text-primary)">
+          <div class="p-3 rounded-xl border bg-surface border-border-muted">
+            <p class="text-xs font-bold uppercase tracking-wide mb-1 text-text-muted">Alumno</p>
+            <p class="text-sm font-semibold text-text-primary">
               {{ nombreAlumnoResumen() }}
             </p>
-            <p class="text-xs" style="color: var(--text-muted)">{{ form().rut }}</p>
+            <p class="text-xs text-text-muted">{{ form().rut }}</p>
           </div>
 
           <!-- Resumen financiero -->
           <div
             class="rounded-2xl p-5 relative overflow-hidden"
-            style="background: #0a0a0a; color: white"
+            class="bg-[#0a0a0a] text-white"
           >
-            <div class="absolute right-0 top-0 p-6 opacity-10" style="pointer-events: none">
+            <div class="absolute right-0 top-0 p-6 opacity-10 pointer-events-none">
               <app-icon name="banknote" [size]="56" color="white" />
             </div>
             <div class="flex flex-col gap-2.5 relative z-10">
@@ -401,7 +361,7 @@ const PAYMENT_METHODS: {
                 <span class="text-sm font-medium text-white">{{ formatCLP(basePrice()) }}</span>
               </div>
               @if (discountApplied()) {
-                <div class="flex justify-between items-center" style="color: var(--state-success)">
+                <div class="flex justify-between items-center text-success">
                   <span class="text-xs">{{ discountReason() || 'Descuento aplicado' }}</span>
                   <span class="text-xs font-bold">- {{ formatCLP(discountAmount()) }}</span>
                 </div>
@@ -411,10 +371,7 @@ const PAYMENT_METHODS: {
                 style="border-top: 1px solid rgba(255,255,255,0.1)"
               >
                 <div>
-                  <p
-                    class="text-xs font-bold uppercase tracking-tighter"
-                    style="color: var(--ds-brand)"
-                  >
+                  <p class="text-xs font-bold uppercase tracking-tighter text-brand">
                     Total a pagar
                   </p>
                   <p class="text-3xl font-black tracking-tight text-white">
@@ -435,22 +392,20 @@ const PAYMENT_METHODS: {
             <!-- Sin descuento cuando el pago queda pendiente -->
           } @else if (discountApplied()) {
             <div
-              class="flex items-center justify-between p-3 rounded-xl border"
-              style="background: color-mix(in srgb, var(--state-success) 8%, transparent); border-color: color-mix(in srgb, var(--state-success) 25%, transparent)"
+              class="flex items-center justify-between p-3 rounded-xl border bg-success/8 border-success/25"
+              
             >
               <div class="flex items-center gap-2">
                 <app-icon name="tag" [size]="15" color="var(--state-success)" />
                 <div>
-                  <p class="text-xs font-bold" style="color: var(--state-success)">
-                    Descuento aplicado
-                  </p>
-                  <p class="text-xs" style="color: var(--text-muted)">{{ discountReason() }}</p>
+                  <p class="text-xs font-bold text-success">Descuento aplicado</p>
+                  <p class="text-xs text-text-muted">{{ discountReason() }}</p>
                 </div>
               </div>
               <button
                 type="button"
-                class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors"
-                style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
+                class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors text-error bg-error/10"
+                
                 (click)="clearDiscount()"
                 data-llm-action="quitar-descuento-singular"
               >
@@ -459,9 +414,7 @@ const PAYMENT_METHODS: {
             </div>
           } @else {
             <div class="flex flex-col gap-2">
-              <label
-                class="text-xs font-bold uppercase tracking-wide"
-                style="color: var(--text-muted)"
+              <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                 >Descuento (opcional)</label
               >
               <div class="grid grid-cols-2 gap-2">
@@ -470,23 +423,20 @@ const PAYMENT_METHODS: {
                   [(ngModel)]="discountAmountInput"
                   min="0"
                   placeholder="Monto $"
-                  class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                  style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                  class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                   data-llm-description="Monto del descuento en pesos chilenos"
                 />
                 <input
                   type="text"
                   [(ngModel)]="discountReasonInput"
                   placeholder="Motivo"
-                  class="h-10 px-3 text-sm rounded-lg border transition-colors"
-                  style="background: var(--bg-base); color: var(--text-primary); border-color: var(--border-subtle)"
+                  class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
                   data-llm-description="Motivo del descuento aplicado"
                 />
               </div>
               <button
                 type="button"
-                class="w-full h-9 text-xs font-bold rounded-lg border flex items-center justify-center gap-2 transition-all cursor-pointer"
-                style="background: var(--bg-surface); border-color: var(--border-muted); color: var(--text-secondary)"
+                class="w-full h-9 text-xs font-bold rounded-lg border flex items-center justify-center gap-2 transition-all cursor-pointer bg-surface border-border-muted text-text-secondary"
                 [disabled]="!discountAmountInput() || !discountReasonInput()"
                 [style.opacity]="!discountAmountInput() || !discountReasonInput() ? '0.4' : '1'"
                 (click)="applyDiscount()"
@@ -500,9 +450,7 @@ const PAYMENT_METHODS: {
 
           <!-- Método de pago (2x2) -->
           <div class="flex flex-col gap-2">
-            <label
-              class="text-xs font-bold uppercase tracking-wide"
-              style="color: var(--text-muted)"
+            <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
               >Método de pago *</label
             >
             <div class="grid grid-cols-2 gap-2">
@@ -546,7 +494,7 @@ const PAYMENT_METHODS: {
                     >
                       {{ method.label }}
                     </p>
-                    <p class="text-xs truncate" style="color: var(--text-muted)">
+                    <p class="text-xs truncate text-text-muted">
                       {{ method.description }}
                     </p>
                   </div>
@@ -557,8 +505,8 @@ const PAYMENT_METHODS: {
 
           @if (facade.error()) {
             <p
-              class="text-xs px-3 py-2 rounded-lg"
-              style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
+              class="text-xs px-3 py-2 rounded-lg text-error bg-error/10"
+              
             >
               {{ facade.error() }}
             </p>
@@ -576,8 +524,7 @@ const PAYMENT_METHODS: {
             />
             <button
               type="button"
-              class="flex items-center justify-center gap-2 w-full py-2 text-sm cursor-pointer transition-colors rounded-lg"
-              style="color: var(--text-muted)"
+              class="flex items-center justify-center gap-2 w-full py-2 text-sm cursor-pointer transition-colors rounded-lg text-text-muted"
               (click)="onVolver()"
             >
               <app-icon name="arrow-left" [size]="14" color="var(--text-muted)" />

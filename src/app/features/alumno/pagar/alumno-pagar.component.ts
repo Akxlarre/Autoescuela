@@ -116,23 +116,17 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
       <!-- ── Error global ── -->
       @if (facade.error()) {
         <div
-          class="bento-banner flex items-start gap-3 p-4 rounded-lg"
-          style="background: var(--color-error-muted)"
+          class="bento-banner flex items-start gap-3 p-4 rounded-lg bg-error-subtle"
           role="alert"
         >
-          <app-icon
-            name="alert-circle"
-            [size]="16"
-            class="shrink-0 mt-0.5"
-            style="color: var(--color-error)"
-          />
-          <p class="text-sm flex-1" style="color: var(--color-error)">{{ facade.error() }}</p>
+          <app-icon name="alert-circle" [size]="16" class="shrink-0 mt-0.5 text-error" />
+          <p class="text-sm flex-1 text-error">{{ facade.error() }}</p>
           <button
             class="shrink-0 cursor-pointer"
             (click)="facade.resetError()"
             aria-label="Cerrar error"
           >
-            <app-icon name="x" [size]="14" style="color: var(--color-error)" />
+            <app-icon name="x" [size]="14" class="text-error" />
           </button>
         </div>
       }
@@ -150,11 +144,8 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
           </div>
         } @else if (facade.status()?.hasPaymentPending === false) {
           <div class="bento-banner card p-8 flex flex-col items-center gap-4 text-center">
-            <div
-              class="w-14 h-14 rounded-full flex items-center justify-center"
-              style="background: var(--color-success-muted)"
-            >
-              <app-icon name="check-circle" [size]="28" style="color: var(--color-success)" />
+            <div class="w-14 h-14 rounded-full flex items-center justify-center bg-success-subtle">
+              <app-icon name="check-circle" [size]="28" class="text-success" />
             </div>
             <div>
               <h2 class="text-lg font-semibold text-text-primary">Tu matrícula está al día</h2>
@@ -220,10 +211,9 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                   <div class="card p-5 flex flex-col gap-3">
                     <div class="flex items-center gap-3">
                       <div
-                        class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                        style="background: var(--bg-surface-elevated, var(--bg-surface))"
+                        class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-elevated"
                       >
-                        <app-icon name="user" [size]="18" style="color: var(--ds-brand)" />
+                        <app-icon name="user" [size]="18" class="text-brand" />
                       </div>
                       <div>
                         <p class="text-xs text-text-muted uppercase tracking-wide">Tu instructor</p>
@@ -236,15 +226,11 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                     </p>
                   </div>
                 } @else {
-                  <div
-                    class="flex items-start gap-3 p-4 rounded-lg"
-                    style="background: var(--color-warning-muted)"
-                  >
+                  <div class="flex items-start gap-3 p-4 rounded-lg bg-warning-subtle">
                     <app-icon
                       name="alert-circle"
                       [size]="16"
-                      class="shrink-0 mt-0.5"
-                      style="color: var(--color-warning)"
+                      class="shrink-0 mt-0.5 text-warning"
                     />
                     <p class="text-sm text-text-muted">
                       No se pudo determinar tu instructor asignado. Contacta a la secretaría para
@@ -266,14 +252,9 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                 <div class="card p-5 flex flex-col gap-3">
                   <div class="flex items-center gap-3">
                     <div
-                      class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                      style="background: var(--color-success-muted)"
+                      class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-success-subtle"
                     >
-                      <app-icon
-                        name="calendar-check"
-                        [size]="18"
-                        style="color: var(--color-success)"
-                      />
+                      <app-icon name="calendar-check" [size]="18" class="text-success" />
                     </div>
                     <div>
                       <p class="text-xs text-text-muted uppercase tracking-wide">
@@ -411,8 +392,8 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                 @for (slot of slotsForDay(); track slot.id) {
                   @if (slot.status === 'occupied') {
                     <div
-                      class="flex items-center justify-between px-4 py-3 rounded-lg cursor-not-allowed"
-                      style="background: var(--bg-surface); border: 1.5px solid var(--color-border); opacity: 0.45"
+                      class="flex items-center justify-between px-4 py-3 rounded-lg cursor-not-allowed bg-surface"
+                      style="border: 1.5px solid var(--color-border); opacity: 0.45"
                       aria-disabled="true"
                     >
                       <span class="text-sm text-text-muted"
@@ -453,11 +434,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                         {{ slot.startTime }} – {{ slot.endTime }}
                       </span>
                       @if (selected) {
-                        <app-icon
-                          name="check-circle"
-                          [size]="16"
-                          style="color: var(--color-success)"
-                        />
+                        <app-icon name="check-circle" [size]="16" class="text-success" />
                       }
                     </button>
                   }
@@ -470,8 +447,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
           @if (facade.selectedCount() > 0) {
             <div class="card overflow-hidden">
               <div
-                class="flex items-center justify-between px-4 py-2.5 border-b"
-                style="background: var(--bg-surface-elevated); border-color: var(--color-border)"
+                class="flex items-center justify-between px-4 py-2.5 border-b bg-elevated border-border-default"
               >
                 <span class="text-xs font-bold uppercase tracking-widest text-text-muted">
                   Clases seleccionadas
@@ -492,19 +468,9 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 p-3">
                 @for (slot of selectedSlotsDisplay(); track slot.label) {
-                  <div
-                    class="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-                    style="background: var(--color-success-muted)"
-                  >
-                    <app-icon
-                      name="calendar-check"
-                      [size]="12"
-                      style="color: var(--color-success)"
-                      class="shrink-0"
-                    />
-                    <span class="text-xs font-medium" style="color: var(--color-success)">{{
-                      slot.label
-                    }}</span>
+                  <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-success-subtle">
+                    <app-icon name="calendar-check" [size]="12" class="shrink-0 text-success" />
+                    <span class="text-xs font-medium text-success">{{ slot.label }}</span>
                   </div>
                 }
               </div>
@@ -546,12 +512,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                 </p>
                 @for (slot of selectedSlotsDisplay(); track slot.label) {
                   <div class="flex items-center gap-3 py-1">
-                    <app-icon
-                      name="calendar-check"
-                      [size]="14"
-                      style="color: var(--color-success)"
-                      class="shrink-0"
-                    />
+                    <app-icon name="calendar-check" [size]="14" class="shrink-0 text-success" />
                     <span class="text-sm text-text-primary">{{ slot.label }}</span>
                   </div>
                 }
@@ -559,10 +520,9 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
             } @else {
               <div class="card p-5 flex flex-col gap-4">
                 <div
-                  class="w-10 h-10 rounded-full flex items-center justify-center"
-                  style="background: var(--color-success-muted)"
+                  class="w-10 h-10 rounded-full flex items-center justify-center bg-success-subtle"
                 >
-                  <app-icon name="calendar-check" [size]="20" style="color: var(--color-success)" />
+                  <app-icon name="calendar-check" [size]="20" class="text-success" />
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-text-primary">
@@ -597,12 +557,11 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                       }
                     </span>
                   </div>
-                  <div class="border-t pt-3" style="border-color: var(--color-border)">
+                  <div class="border-t pt-3 border-border-default">
                     <div class="flex items-center justify-between">
                       <span class="text-sm font-semibold text-text-primary">Total a pagar</span>
                       <span
-                        class="text-lg font-bold"
-                        style="color: var(--ds-brand)"
+                        class="text-lg font-bold text-brand"
                         data-llm-description="total amount to pay via Webpay"
                       >
                         {{ clp(enroll.pendingBalance) }}
@@ -612,10 +571,7 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
                 }
               </div>
 
-              <div
-                class="flex items-start gap-3 p-3 rounded-lg text-xs text-text-muted"
-                style="background: var(--bg-surface)"
-              >
+              <div class="flex items-start gap-3 p-3 rounded-lg text-xs text-text-muted bg-surface">
                 <app-icon name="credit-card" [size]="14" class="shrink-0 mt-0.5" />
                 <span
                   >Serás redirigido al portal seguro de Transbank (Webpay Plus) para completar el

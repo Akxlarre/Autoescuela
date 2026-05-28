@@ -115,14 +115,13 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             <app-icon
               name="search"
               [size]="15"
-              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-              style="color: var(--text-muted)"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
             />
             <input
               type="text"
               placeholder="Buscar por nombre o RUT..."
-              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors"
-              style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
+              
               data-llm-description="Search students by name or RUT"
               [value]="searchQuery()"
               (input)="setSearchQuery($any($event.target).value)"
@@ -200,47 +199,41 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               <app-icon
                 name="file-check"
                 [size]="20"
-                style="color: var(--ds-brand); flex-shrink: 0; margin-top: 2px"
+                class="text-brand shrink-0" style="margin-top: 2px"
               />
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                <p class="text-sm font-semibold text-text-primary">
                   Generar Pendientes — {{ alumnosPendientes().length }} certificado{{
                     alumnosPendientes().length !== 1 ? 's' : ''
                   }}
                 </p>
-                <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                <p class="text-xs mt-0.5 text-text-muted">
                   Los alumnos con asistencia teórica incompleta recibirán su certificado igualmente.
                 </p>
               </div>
             </div>
 
-            <div
-              class="rounded-lg border divide-y overflow-hidden"
-              style="border-color: var(--border-subtle)"
-            >
+            <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
               @for (alumno of alumnosPendientes(); track alumno.enrollmentId) {
                 <div class="flex items-center gap-3 px-4 py-2.5">
                   @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
                     <app-icon
                       name="alert-triangle"
                       [size]="14"
-                      style="color: var(--state-warning); flex-shrink: 0"
+                      class="text-warning shrink-0"
                     />
                   } @else {
                     <app-icon
                       name="file-check"
                       [size]="14"
-                      style="color: var(--state-success); flex-shrink: 0"
+                      class="text-success shrink-0"
                     />
                   }
-                  <span
-                    class="text-sm font-medium flex-1 truncate"
-                    style="color: var(--text-primary)"
-                  >
+                  <span class="text-sm font-medium flex-1 truncate text-text-primary">
                     {{ alumno.nombre }}
                   </span>
                   @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
-                    <span class="text-xs" style="color: var(--state-warning)">
+                    <span class="text-xs text-warning" >
                       {{ alumno.pctAsistenciaTeoria }}% teoría
                     </span>
                   }
@@ -250,14 +243,14 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
 
             <div class="flex items-center gap-2 justify-end">
               <button
-                class="btn-outline cursor-pointer px-4 py-2 text-sm"
+                class="btn-ghost"
                 data-llm-action="cancel-generate-pending-certificates"
                 (click)="cancelarPendientes()"
               >
                 Cancelar
               </button>
               <button
-                class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                class="btn-primary"
                 data-llm-action="confirm-generate-pending-certificates"
                 (click)="confirmarPendientes()"
               >
@@ -280,17 +273,17 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               <app-icon
                 name="send"
                 [size]="20"
-                style="color: var(--ds-brand); flex-shrink: 0; margin-top: 2px"
+                class="text-brand shrink-0" style="margin-top: 2px"
               />
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold" style="color: var(--text-primary)">
+                <p class="text-sm font-semibold text-text-primary">
                   Envío masivo — {{ alumnosParaEnvioMasivo().length }} alumno{{
                     alumnosParaEnvioMasivo().length !== 1 ? 's' : ''
                   }}
                   recibirá{{ alumnosParaEnvioMasivo().length !== 1 ? 'n' : '' }} su certificado por
                   correo
                 </p>
-                <p class="text-xs mt-0.5" style="color: var(--text-muted)">
+                <p class="text-xs mt-0.5 text-text-muted">
                   Solo se incluyen alumnos con certificado generado que aún no han recibido el
                   correo.
                 </p>
@@ -298,24 +291,14 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             </div>
 
             <!-- Lista de destinatarios -->
-            <div
-              class="rounded-lg border divide-y overflow-hidden"
-              style="border-color: var(--border-subtle)"
-            >
+            <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
               @for (alumno of alumnosParaEnvioMasivo(); track alumno.enrollmentId) {
                 <div class="flex items-center gap-3 px-4 py-2.5">
-                  <app-icon
-                    name="user"
-                    [size]="14"
-                    style="color: var(--text-muted); flex-shrink: 0"
-                  />
-                  <span
-                    class="text-sm font-medium flex-1 truncate"
-                    style="color: var(--text-primary)"
-                  >
+                  <app-icon name="user" [size]="14" class="text-text-muted shrink-0" />
+                  <span class="text-sm font-medium flex-1 truncate text-text-primary">
                     {{ alumno.nombre }}
                   </span>
-                  <span class="text-xs truncate" style="color: var(--ds-brand)">
+                  <span class="text-xs truncate text-brand" >
                     {{ alumno.email }}
                   </span>
                 </div>
@@ -325,14 +308,14 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             <!-- Acciones -->
             <div class="flex items-center gap-2 justify-end">
               <button
-                class="btn-outline cursor-pointer px-4 py-2 text-sm"
+                class="btn-ghost"
                 data-llm-action="cancel-bulk-email"
                 (click)="cancelarMasivo()"
               >
                 Cancelar
               </button>
               <button
-                class="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                class="btn-primary"
                 data-llm-action="confirm-bulk-email"
                 (click)="confirmarMasivo()"
               >
@@ -430,20 +413,20 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     <td class="px-4 py-3 font-medium text-primary">
                       {{ alumno.nombre }}
                     </td>
-                    <td class="px-4 py-3" style="color: var(--color-primary)">
+                    <td class="px-4 py-3 text-brand" >
                       {{ alumno.rut }}
                     </td>
                     <td class="px-4 py-3">
                       <span
-                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                        style="background: var(--bg-brand-muted); color: var(--color-primary)"
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-muted text-brand"
+                        
                       >
                         {{ alumno.curso }}
                       </span>
                     </td>
                     <!-- Prácticas: siempre 12/12 si aparece en esta lista -->
                     <td class="px-4 py-3 text-center">
-                      <span class="font-semibold" style="color: var(--state-success)">
+                      <span class="font-semibold text-success" >
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
@@ -467,22 +450,22 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     <td class="px-4 py-3 text-muted">
                       {{ alumno.fechaTermino ?? '—' }}
                     </td>
-                    <td class="px-4 py-3" style="color: var(--color-primary)">
+                    <td class="px-4 py-3 text-brand" >
                       {{ alumno.certificadoFolio ?? '—' }}
                     </td>
                     <td class="px-4 py-3 text-center">
                       @if (alumno.certificadoStatus === 'generado') {
                         <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                          style="background: var(--bg-success-muted, rgba(34,197,94,0.1)); color: var(--state-success)"
+                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-success"
+                          class="bg-success-subtle"
                         >
                           <app-icon name="check" [size]="12" />
                           Generado
                         </span>
                       } @else {
                         <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-                          style="background: var(--bg-warning-muted, rgba(234,179,8,0.1)); color: var(--state-warning)"
+                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-warning"
+                          class="bg-warning-subtle"
                         >
                           Pendiente
                         </span>
@@ -552,26 +535,24 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     <tr class="border-b border-(--border-default)">
                       <td colspan="9" class="px-4 py-3">
                         <div
-                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
-                          style="background: color-mix(in srgb, var(--ds-brand) 8%, transparent); border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent)"
+                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
+                          
                         >
                           <app-icon
                             name="send"
                             [size]="18"
-                            style="color: var(--ds-brand); flex-shrink: 0"
+                            class="text-brand shrink-0"
                           />
-                          <p class="text-sm flex-1" style="color: var(--text-secondary)">
+                          <p class="text-sm flex-1 text-text-secondary">
                             Se enviará el certificado de
-                            <strong style="color: var(--text-primary)">{{ alumno.nombre }}</strong>
+                            <strong class="text-text-primary">{{ alumno.nombre }}</strong>
                             @if (alumno.email) {
                               al correo
-                              <strong style="color: var(--ds-brand)">{{ alumno.email }}</strong
+                              <strong class="text-brand">{{ alumno.email }}</strong
                               >.
                             }
                             @if (alumno.emailEnviado) {
-                              <span style="color: var(--text-muted)">
-                                (ya fue enviado anteriormente)</span
-                              >
+                              <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
                             }
                           </p>
                           <div class="flex items-center gap-2 shrink-0">
@@ -584,7 +565,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                               Confirmar envío
                             </button>
                             <button
-                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-outline"
+                              class="btn-ghost text-xs"
                               data-llm-action="cancel-send-certificate-email"
                               (click)="cancelarEmail()"
                             >
@@ -602,15 +583,15 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                       <td colspan="9" class="px-4 pb-4 pt-0">
                         <div
                           class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
-                          style="background: var(--bg-warning-muted, rgba(234,179,8,0.08)); border: 1px solid var(--state-warning)"
+                          class="bg-warning-subtle border border-warning"
                         >
                           <app-icon
                             name="alert-triangle"
                             [size]="18"
-                            style="color: var(--state-warning); flex-shrink: 0"
+                            class="text-warning shrink-0"
                           />
-                          <p class="text-sm flex-1" style="color: var(--text-secondary)">
-                            <span class="font-semibold" style="color: var(--state-warning)">
+                          <p class="text-sm flex-1 text-text-secondary">
+                            <span class="font-semibold text-warning" >
                               Asistencia teórica incompleta:
                             </span>
                             {{ alumno.nombre }} registra
@@ -640,7 +621,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                               }
                             </button>
                             <button
-                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 cursor-pointer btn-outline"
+                              class="btn-ghost text-xs"
                               data-llm-action="cancel-generate-certificate"
                               (click)="cancelarGenerar()"
                             >
@@ -658,11 +639,8 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
 
           <!-- Paginación tabla principal -->
           @if (totalPagesAlumnos() > 1) {
-            <div
-              class="flex items-center justify-between px-4 py-3 border-t"
-              style="border-color: var(--border-default)"
-            >
-              <span class="text-xs" style="color: var(--text-muted)">
+            <div class="flex items-center justify-between px-4 py-3 border-t border-border-default">
+              <span class="text-xs text-text-muted">
                 {{ currentPageAlumnos() * PAGE_SIZE + 1 }}–{{
                   pageEnd(currentPageAlumnos(), filteredAlumnos().length)
                 }}
@@ -670,19 +648,17 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               </span>
               <div class="flex items-center gap-1">
                 <button
-                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  style="color: var(--text-secondary)"
+                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPageAlumnos() === 0"
                   (click)="prevPageAlumnos()"
                 >
                   <app-icon name="chevron-left" [size]="16" />
                 </button>
-                <span class="text-xs px-3" style="color: var(--text-secondary)">
+                <span class="text-xs px-3 text-text-secondary">
                   Pág. {{ currentPageAlumnos() + 1 }} / {{ totalPagesAlumnos() }}
                 </span>
                 <button
-                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  style="color: var(--text-secondary)"
+                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPageAlumnos() >= totalPagesAlumnos() - 1"
                   (click)="nextPageAlumnos()"
                 >
@@ -769,10 +745,9 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             <!-- Paginación log -->
             @if (totalPagesLog() > 1) {
               <div
-                class="flex items-center justify-between px-4 py-3 border-t"
-                style="border-color: var(--border-default)"
+                class="flex items-center justify-between px-4 py-3 border-t border-border-default"
               >
-                <span class="text-xs" style="color: var(--text-muted)">
+                <span class="text-xs text-text-muted">
                   {{ currentPageLog() * PAGE_SIZE + 1 }}–{{
                     pageEnd(currentPageLog(), log().length)
                   }}
@@ -780,19 +755,17 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                 </span>
                 <div class="flex items-center gap-1">
                   <button
-                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    style="color: var(--text-secondary)"
+                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                     [disabled]="currentPageLog() === 0"
                     (click)="prevPageLog()"
                   >
                     <app-icon name="chevron-left" [size]="16" />
                   </button>
-                  <span class="text-xs px-3" style="color: var(--text-secondary)">
+                  <span class="text-xs px-3 text-text-secondary">
                     Pág. {{ currentPageLog() + 1 }} / {{ totalPagesLog() }}
                   </span>
                   <button
-                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    style="color: var(--text-secondary)"
+                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                     [disabled]="currentPageLog() >= totalPagesLog() - 1"
                     (click)="nextPageLog()"
                   >

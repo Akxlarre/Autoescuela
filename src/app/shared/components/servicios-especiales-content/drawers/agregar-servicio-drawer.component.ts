@@ -16,7 +16,10 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
     <div class="flex flex-col gap-5 py-2">
       <form [formGroup]="servicioForm" (ngSubmit)="submitServicio()" class="flex flex-col gap-5">
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="ns-nombre">
+          <label
+            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+            for="ns-nombre"
+          >
             Nombre del servicio <span class="text-state-error">*</span>
           </label>
           <input
@@ -29,7 +32,10 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="ns-descripcion">
+          <label
+            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+            for="ns-descripcion"
+          >
             Descripción <span class="text-state-error">*</span>
           </label>
           <textarea
@@ -42,7 +48,10 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         </div>
 
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="ns-precio">
+          <label
+            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
+            for="ns-precio"
+          >
             Precio Base ($) <span class="text-state-error">*</span>
           </label>
           <div class="relative">
@@ -102,7 +111,7 @@ export class AgregarServicioDrawerComponent {
 
     this.isSaving.set(true);
     const val = this.servicioForm.value;
-    
+
     const success = await this.facade.agregarServicio({
       nombre: val.nombre!,
       descripcion: val.descripcion!,

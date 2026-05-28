@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -49,6 +50,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TooltipModule,
     CommonModule,
     RouterModule,
     TableModule,
@@ -66,7 +68,6 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mantenimientos del Vehículo">
-
       <!-- Hero con breadcrumb + acciones -->
       <app-section-hero
         [title]="heroTitle()"
@@ -96,7 +97,6 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
 
       <!-- Tabla Historial (Bento Banner) -->
       <div class="bento-banner card p-0 overflow-hidden shadow-sm" appAnimateIn>
-
         <!-- Header de sección -->
         <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
           <h2 class="text-base font-bold text-text-primary">Historial Cronológico</h2>
@@ -120,7 +120,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
         <!-- Tabla -->
         @if (facade.isLoading()) {
           <div class="p-6 space-y-2">
-            @for (i of [1,2,3,4,5]; track i) {
+            @for (i of [1, 2, 3, 4, 5]; track i) {
               <div class="flex items-center gap-4 py-2">
                 <app-skeleton-block variant="text" width="80px" height="12px" />
                 <app-skeleton-block variant="text" width="20%" height="12px" />
@@ -142,13 +142,31 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
           >
             <ng-template pTemplate="header">
               <tr class="text-left">
-                <th class="pl-6 py-4 text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Fecha</th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Tipo</th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Kilometraje</th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Costo</th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Taller</th>
-                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Estado</th>
-                <th class="pr-6 text-right text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">Acc.</th>
+                <th
+                  class="pl-6 py-4 text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle"
+                >
+                  Fecha
+                </th>
+                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
+                  Tipo
+                </th>
+                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
+                  Kilometraje
+                </th>
+                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
+                  Costo
+                </th>
+                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
+                  Taller
+                </th>
+                <th class="text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle">
+                  Estado
+                </th>
+                <th
+                  class="pr-6 text-right text-xs uppercase tracking-wider text-text-muted font-medium bg-subtle"
+                >
+                  Acc.
+                </th>
               </tr>
             </ng-template>
 
@@ -158,14 +176,20 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                 <td>
                   <span class="font-bold text-sm text-text-primary">{{ m.type }}</span>
                   @if (m.description) {
-                    <p class="text-[11px] text-text-muted truncate max-w-[200px]">{{ m.description }}</p>
+                    <p
+                      class="text-[11px] text-text-muted truncate max-w-[200px]"
+                      [pTooltip]="m.description"
+                      tooltipPosition="top"
+                    >
+                      {{ m.description }}
+                    </p>
                   }
                 </td>
                 <td class="font-mono text-xs text-text-secondary">
                   {{ m.km !== null ? (m.km | number) + ' km' : '—' }}
                 </td>
                 <td class="font-bold text-sm text-text-primary">
-                  {{ m.cost !== null ? ('$' + (m.cost | number)) : '—' }}
+                  {{ m.cost !== null ? '$' + (m.cost | number) : '—' }}
                 </td>
                 <td class="text-xs text-text-muted italic">{{ m.workshop ?? '—' }}</td>
                 <td>
@@ -208,9 +232,14 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
       @if (!facade.isLoading() && facade.scheduledMaintenances().length > 0) {
         @for (s of facade.scheduledMaintenances(); track s.type) {
           <div class="bento-square">
-            <div class="card h-full flex flex-col gap-2 border-l-4" [class]="scheduledBorderColor(s.status)">
+            <div
+              class="card h-full flex flex-col gap-2 border-l-4"
+              [class]="scheduledBorderColor(s.status)"
+            >
               <div class="flex items-center justify-between">
-                <span class="text-[10px] font-black uppercase tracking-wider text-text-muted">{{ s.type }}</span>
+                <span class="text-[10px] font-black uppercase tracking-wider text-text-muted">{{
+                  s.type
+                }}</span>
                 <p-tag
                   [value]="scheduledStatusLabel(s.status)"
                   [severity]="scheduledSeverity(s.status)"
@@ -267,7 +296,9 @@ export class VehicleMaintenancesComponent implements OnInit {
 
   readonly heroSubtitle = computed(() => {
     const v = this.facade.vehicle();
-    return v ? `${v.vehicleLabel} · ${v.year} · ${v.currentKm?.toLocaleString() ?? '—'} km actuales` : 'Historial de mantenimiento del vehículo';
+    return v
+      ? `${v.vehicleLabel} · ${v.year} · ${v.currentKm?.toLocaleString() ?? '—'} km actuales`
+      : 'Historial de mantenimiento del vehículo';
   });
 
   readonly heroChips = computed((): SectionHeroChip[] => {
@@ -287,10 +318,38 @@ export class VehicleMaintenancesComponent implements OnInit {
   readonly maintenanceKpis = computed(() => {
     const k = this.facade.maintenanceKpis();
     return [
-      { id: 'total', label: 'Total Mantenciones', value: k.totalCount, icon: 'clipboard-list', color: 'default' as const, accent: true },
-      { id: 'gasto', label: 'Inversión Total', value: k.totalSpent, icon: 'banknote', color: 'warning' as const, prefix: '$' },
-      { id: 'promedio', label: 'Costo p/Mes', value: k.avgMonthly, icon: 'trending-up', color: 'default' as const, prefix: '$' },
-      { id: 'km', label: 'KM Recorridos', value: k.kmTraveled, icon: 'gauge', color: 'success' as const, suffix: ' km' },
+      {
+        id: 'total',
+        label: 'Total Mantenciones',
+        value: k.totalCount,
+        icon: 'clipboard-list',
+        color: 'default' as const,
+        accent: true,
+      },
+      {
+        id: 'gasto',
+        label: 'Inversión Total',
+        value: k.totalSpent,
+        icon: 'banknote',
+        color: 'warning' as const,
+        prefix: '$',
+      },
+      {
+        id: 'promedio',
+        label: 'Costo p/Mes',
+        value: k.avgMonthly,
+        icon: 'trending-up',
+        color: 'default' as const,
+        prefix: '$',
+      },
+      {
+        id: 'km',
+        label: 'KM Recorridos',
+        value: k.kmTraveled,
+        icon: 'gauge',
+        color: 'success' as const,
+        suffix: ' km',
+      },
     ];
   });
 

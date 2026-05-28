@@ -49,12 +49,13 @@ const ROUTE_HOURS = Array.from({ length: 11 }, (_, i) => {
 
     <!-- Hoja A4 -->
     <div class="route-sheet-page">
-
       <!-- Header -->
       <div class="sheet-header">
         <div class="sheet-logo">Autoescuela Chillán</div>
         <div class="sheet-header-right">
-          <div><strong>Sede:</strong> {{ vehicle()?.branchId === 2 ? 'Sucursal' : 'Chillán Centro' }}</div>
+          <div>
+            <strong>Sede:</strong> {{ vehicle()?.branchId === 2 ? 'Sucursal' : 'Chillán Centro' }}
+          </div>
           <div><strong>Fecha:</strong> ____/____/______</div>
         </div>
       </div>
@@ -67,7 +68,11 @@ const ROUTE_HOURS = Array.from({ length: 11 }, (_, i) => {
         <div class="sheet-info-item">
           <span class="sheet-label">Vehículo / Patente:</span>
           <span class="sheet-value">
-            {{ vehicle() ? vehicle()!.licensePlate + ' (' + vehicle()!.vehicleLabel + ')' : '________________' }}
+            {{
+              vehicle()
+                ? vehicle()!.licensePlate + ' (' + vehicle()!.vehicleLabel + ')'
+                : '________________'
+            }}
           </span>
         </div>
         <div class="sheet-info-item">
@@ -112,131 +117,193 @@ const ROUTE_HOURS = Array.from({ length: 11 }, (_, i) => {
       <div class="sheet-footer">
         <div class="sheet-footer-title">OBSERVACIONES / FALLAS MECÁNICAS DETECTADAS:</div>
       </div>
-
     </div>
   `,
-  styles: [`
-    /* ============================================================
+  styles: [
+    `
+      /* ============================================================
        ESTILOS NORMALES (preview en el navegador)
     ============================================================ */
-    :host {
-      display: block;
-      min-height: 100vh;
-      background: var(--surface);
-      padding: 2rem;
-    }
-
-    .route-sheet-page {
-      max-width: 794px; /* A4 width en 96dpi */
-      margin: 0 auto;
-      background: white;
-      padding: 2cm;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-      font-family: Arial, sans-serif;
-      font-size: 12px;
-      line-height: 1.4;
-      color: #000;
-    }
-
-    /* Header */
-    .sheet-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 1.5rem;
-      border-bottom: 2px solid #000;
-      padding-bottom: 1rem;
-    }
-    .sheet-logo { font-size: 1.4rem; font-weight: bold; }
-    .sheet-header-right { text-align: right; font-size: 11px; line-height: 1.8; }
-
-    /* Título */
-    .sheet-title {
-      text-align: center;
-      font-size: 1.1rem;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 1.25rem;
-    }
-
-    /* Info */
-    .sheet-info {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-    .sheet-info-item { display: flex; gap: 0.5rem; align-items: baseline; }
-    .sheet-label { font-weight: bold; white-space: nowrap; }
-    .sheet-value { border-bottom: 1px dotted #000; flex: 1; min-height: 1.2em; }
-    .sheet-value-empty { border-bottom: 1px dotted #000; flex: 1; min-height: 1.2em; }
-
-    /* Tabla */
-    .sheet-table { width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; }
-    .sheet-table th, .sheet-table td {
-      border: 1px solid #000;
-      padding: 0.35rem 0.5rem;
-      text-align: left;
-      vertical-align: middle;
-    }
-    .sheet-table th { background: #f0f0f0; font-weight: bold; text-align: center; font-size: 11px; }
-    .sheet-row { height: 40px; }
-
-    /* Columnas fijas */
-    .col-hora { width: 60px; }
-    .col-alumno { width: 22%; }
-    .col-actividad { }
-    .col-km { width: 70px; }
-    .col-firma { width: 14%; }
-
-    /* Footer */
-    .sheet-footer {
-      border: 1px solid #000;
-      padding: 0.75rem;
-      min-height: 90px;
-    }
-    .sheet-footer-title { font-weight: bold; margin-bottom: 0.5rem; border-bottom: 1px solid #000; display: inline-block; padding-bottom: 0.25rem; }
-
-    /* ============================================================
-       MEDIA PRINT
-    ============================================================ */
-    @media print {
-      @page { margin: 1cm; size: A4; }
-
-      /* Ocultar todo el shell de Angular (sidebar, topbar) excepto este componente */
-      body > * { display: none !important; }
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-      app-root,
-      app-admin-shell,
-      app-layout-shell,
-      .p-drawer,
-      .no-print { display: none !important; }
-
-      /* Mostrar solo la hoja */
-      app-route-sheet,
-      app-route-sheet .route-sheet-page {
-        display: block !important;
-        visibility: visible !important;
-        position: fixed !important;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        margin: 0; padding: 0;
-        box-shadow: none;
+      :host {
+        display: block;
+        min-height: 100vh;
+        background: var(--surface);
+        padding: 2rem;
       }
 
       .route-sheet-page {
-        max-width: 100%;
-        padding: 0;
-        box-shadow: none;
+        max-width: 794px; /* A4 width en 96dpi */
+        margin: 0 auto;
+        background: white;
+        padding: 2cm;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #000;
       }
 
-      .no-print { display: none !important; }
-    }
-  `],
+      /* Header */
+      .sheet-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #000;
+        padding-bottom: 1rem;
+      }
+      .sheet-logo {
+        font-size: 1.4rem;
+        font-weight: bold;
+      }
+      .sheet-header-right {
+        text-align: right;
+        font-size: 11px;
+        line-height: 1.8;
+      }
+
+      /* Título */
+      .sheet-title {
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1.25rem;
+      }
+
+      /* Info */
+      .sheet-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .sheet-info-item {
+        display: flex;
+        gap: 0.5rem;
+        align-items: baseline;
+      }
+      .sheet-label {
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      .sheet-value {
+        border-bottom: 1px dotted #000;
+        flex: 1;
+        min-height: 1.2em;
+      }
+      .sheet-value-empty {
+        border-bottom: 1px dotted #000;
+        flex: 1;
+        min-height: 1.2em;
+      }
+
+      /* Tabla */
+      .sheet-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 1.5rem;
+      }
+      .sheet-table th,
+      .sheet-table td {
+        border: 1px solid #000;
+        padding: 0.35rem 0.5rem;
+        text-align: left;
+        vertical-align: middle;
+      }
+      .sheet-table th {
+        background: #f0f0f0;
+        font-weight: bold;
+        text-align: center;
+        font-size: 11px;
+      }
+      .sheet-row {
+        height: 40px;
+      }
+
+      /* Columnas fijas */
+      .col-hora {
+        width: 60px;
+      }
+      .col-alumno {
+        width: 22%;
+      }
+      .col-actividad {
+      }
+      .col-km {
+        width: 70px;
+      }
+      .col-firma {
+        width: 14%;
+      }
+
+      /* Footer */
+      .sheet-footer {
+        border: 1px solid #000;
+        padding: 0.75rem;
+        min-height: 90px;
+      }
+      .sheet-footer-title {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        border-bottom: 1px solid #000;
+        display: inline-block;
+        padding-bottom: 0.25rem;
+      }
+
+      /* ============================================================
+       MEDIA PRINT
+    ============================================================ */
+      @media print {
+        @page {
+          margin: 1cm;
+          size: A4;
+        }
+
+        /* Ocultar todo el shell de Angular (sidebar, topbar) excepto este componente */
+        body > * {
+          display: none !important;
+        }
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        app-root,
+        app-admin-shell,
+        app-layout-shell,
+        .p-drawer,
+        .no-print {
+          display: none !important;
+        }
+
+        /* Mostrar solo la hoja */
+        app-route-sheet,
+        app-route-sheet .route-sheet-page {
+          display: block !important;
+          visibility: visible !important;
+          position: fixed !important;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          margin: 0;
+          padding: 0;
+          box-shadow: none;
+        }
+
+        .route-sheet-page {
+          max-width: 100%;
+          padding: 0;
+          box-shadow: none;
+        }
+
+        .no-print {
+          display: none !important;
+        }
+      }
+    `,
+  ],
 })
 export class RouteSheetComponent implements OnInit, AfterViewInit {
   private readonly facade = inject(FlotaFacade);

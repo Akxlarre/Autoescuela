@@ -169,8 +169,8 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
                 <td class="text-sm font-mono text-secondary">{{ row.rut }}</td>
                 <td>
                   <span
-                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white"
-                    style="background: var(--ds-brand)"
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white bg-brand"
+                    
                   >
                     {{ row.licencia }}
                   </span>

@@ -33,8 +33,7 @@ function humanizeWebpayError(message: string | null): string {
     <div class="min-h-screen bg-base flex items-center justify-center p-6">
       <!-- Orb decorativo -->
       <div
-        class="fixed top-0 left-1/2 -translate-x-1/2 w-150 h-100 rounded-full opacity-10 blur-3xl pointer-events-none"
-        style="background: var(--ds-brand)"
+        class="fixed top-0 left-1/2 -translate-x-1/2 w-150 h-100 rounded-full opacity-10 blur-3xl pointer-events-none bg-brand"
         aria-hidden="true"
       ></div>
 
@@ -43,8 +42,8 @@ function humanizeWebpayError(message: string | null): string {
           @case ('loading') {
             <div class="flex flex-col items-center gap-4 py-4">
               <div
-                class="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin"
-                style="border-color: var(--ds-brand); border-top-color: transparent"
+                class="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin border-brand"
+                style="border-top-color: transparent"
                 role="status"
                 aria-label="Verificando pago..."
               ></div>
@@ -56,10 +55,9 @@ function humanizeWebpayError(message: string | null): string {
             <div class="flex flex-col items-center gap-5">
               <!-- Ícono de éxito -->
               <div
-                class="w-16 h-16 rounded-full flex items-center justify-center"
-                style="background: var(--color-success-muted)"
+                class="w-16 h-16 rounded-full flex items-center justify-center bg-success-subtle"
               >
-                <app-icon name="check-circle" [size]="32" style="color: var(--color-success)" />
+                <app-icon name="check-circle" [size]="32" class="text-success" />
               </div>
 
               <!-- Título -->
@@ -123,7 +121,7 @@ function humanizeWebpayError(message: string | null): string {
                     </div>
                   </div>
                 }
-                <div class="border-t" style="border-color: var(--color-border)"></div>
+                <div class="border-t border-border-default"></div>
                 @if (amountPaid() !== null) {
                   <div class="flex items-center gap-3">
                     <app-icon name="credit-card" [size]="16" class="text-muted shrink-0" />
@@ -144,7 +142,7 @@ function humanizeWebpayError(message: string | null): string {
                       <span class="text-muted text-xs uppercase tracking-wide"
                         >Saldo pendiente</span
                       >
-                      <span class="text-sm font-medium" style="color: var(--color-warning)">
+                      <span class="text-sm font-medium text-warning">
                         {{ formatClp(pendingBalance()!) }}
                       </span>
                     </div>
@@ -227,10 +225,9 @@ function humanizeWebpayError(message: string | null): string {
           @case ('error') {
             <div class="flex flex-col items-center gap-4">
               <div
-                class="w-16 h-16 rounded-full flex items-center justify-center"
-                style="background: var(--color-warning-muted)"
+                class="w-16 h-16 rounded-full flex items-center justify-center bg-warning-subtle"
               >
-                <app-icon name="alert-triangle" [size]="32" style="color: var(--color-warning)" />
+                <app-icon name="alert-triangle" [size]="32" class="text-warning" />
               </div>
               <div class="flex flex-col gap-1">
                 <h1 class="text-xl font-semibold text-primary">Error al verificar el pago</h1>

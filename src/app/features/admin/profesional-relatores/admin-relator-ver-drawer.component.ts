@@ -50,32 +50,32 @@ const SPEC_LABELS: Record<string, string> = {
           <!-- ── Avatar + nombre ─────────────────────────────────────────────── -->
           <div class="flex items-center gap-4 mb-6">
             <div
-              class="flex items-center justify-center w-14 h-14 rounded-full shrink-0 text-base font-bold"
-              style="background: var(--color-primary-tint); color: var(--color-primary);"
+              class="flex items-center justify-center w-14 h-14 rounded-full shrink-0 text-base font-bold bg-brand-tint text-brand"
+              
             >
               {{ rel.initials }}
             </div>
             <div>
-              <h2 class="text-base font-semibold" style="color: var(--text-primary)">
+              <h2 class="text-base font-semibold text-text-primary">
                 {{ rel.nombre }}
               </h2>
-              <p class="text-xs mt-0.5" style="color: var(--text-muted)">{{ rel.rut }}</p>
+              <p class="text-xs mt-0.5 text-text-muted">{{ rel.rut }}</p>
               <div class="flex items-center gap-2 mt-1.5 flex-wrap">
                 @for (spec of rel.specializations; track spec) {
                   <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
                 }
                 @if (rel.estado === 'activo') {
                   <span
-                    class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style="background: color-mix(in srgb, var(--state-success) 12%, transparent); color: var(--state-success);"
+                    class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full text-success bg-success/12"
+                    
                   >
                     <app-icon name="check-circle" [size]="10" />
                     Activo
                   </span>
                 } @else {
                   <span
-                    class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                    style="background: var(--bg-elevated); color: var(--text-muted);"
+                    class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-elevated text-text-muted"
+                    
                   >
                     Inactivo
                   </span>
@@ -116,29 +116,25 @@ const SPEC_LABELS: Record<string, string> = {
           <div class="flex flex-col gap-2 mb-6">
             @for (spec of rel.specializations; track spec) {
               <div
-                class="flex items-center gap-3 p-3 rounded-lg"
-                style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+                class="flex items-center gap-3 p-3 rounded-lg bg-elevated border border-border-subtle"
+                
               >
                 <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
-                <span class="text-sm" style="color: var(--text-primary)">{{
-                  specLabel(spec)
-                }}</span>
+                <span class="text-sm text-text-primary">{{ specLabel(spec) }}</span>
               </div>
             } @empty {
-              <p class="text-sm" style="color: var(--text-muted)">
-                Sin especialidades registradas.
-              </p>
+              <p class="text-sm text-text-muted">Sin especialidades registradas.</p>
             }
           </div>
 
           <!-- ── Info registro ───────────────────────────────────────────────── -->
           @if (rel.registrationDate) {
             <div
-              class="flex items-center gap-2 p-3 rounded-lg mb-6"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+              class="flex items-center gap-2 p-3 rounded-lg mb-6 bg-elevated border border-border-subtle"
+              
             >
               <app-icon name="calendar" [size]="14" color="var(--text-muted)" />
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 Fecha de registro: {{ rel.registrationDate }}
               </span>
             </div>
@@ -149,8 +145,8 @@ const SPEC_LABELS: Record<string, string> = {
             Cursos asignados
             @if (!facade.isLoadingCursos() && facade.cursosAsignados().length > 0) {
               <span
-                class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
-                style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent); color: var(--ds-brand);"
+                class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full text-brand bg-brand/10"
+                
               >
                 {{ facade.cursosAsignados().length }}
               </span>
@@ -161,8 +157,8 @@ const SPEC_LABELS: Record<string, string> = {
             <div class="flex flex-col gap-3 mb-6">
               @for (_ of [1, 2]; track $index) {
                 <div
-                  class="flex items-center gap-3 p-3 rounded-lg"
-                  style="border: 1px solid var(--border-subtle);"
+                  class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle"
+                  
                 >
                   <app-skeleton-block variant="rect" width="28px" height="22px" />
                   <div class="flex-1 flex flex-col gap-1.5">
@@ -175,13 +171,11 @@ const SPEC_LABELS: Record<string, string> = {
             </div>
           } @else if (facade.cursosAsignados().length === 0) {
             <div
-              class="flex items-center gap-2 p-4 rounded-lg mb-6"
-              style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+              class="flex items-center gap-2 p-4 rounded-lg mb-6 bg-elevated border border-border-subtle"
+              
             >
               <app-icon name="calendar-x" [size]="15" color="var(--text-muted)" />
-              <span class="text-sm" style="color: var(--text-muted)">
-                Sin cursos asignados actualmente.
-              </span>
+              <span class="text-sm text-text-muted"> Sin cursos asignados actualmente. </span>
             </div>
           } @else {
             <!-- Cabecera tabla -->
@@ -192,8 +186,8 @@ const SPEC_LABELS: Record<string, string> = {
               <span>ESTADO</span>
             </div>
             <div
-              class="flex flex-col mb-6"
-              style="border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden;"
+              class="flex flex-col mb-6 border border-border-subtle overflow-hidden"
+              style="border-radius: var(--radius-md)"
             >
               @for (curso of facade.cursosAsignados(); track curso.id; let last = $last) {
                 <div
@@ -202,12 +196,10 @@ const SPEC_LABELS: Record<string, string> = {
                 >
                   <!-- Promoción -->
                   <div class="flex flex-col min-w-0">
-                    <span class="text-xs font-semibold truncate" style="color: var(--text-primary)">
+                    <span class="text-xs font-semibold truncate text-text-primary">
                       {{ curso.promotionName }}
                     </span>
-                    <span class="text-xs" style="color: var(--text-muted)">
-                      Código: {{ curso.promotionCode }}
-                    </span>
+                    <span class="text-xs text-text-muted"> Código: {{ curso.promotionCode }} </span>
                   </div>
 
                   <!-- Curso badge -->
@@ -216,14 +208,14 @@ const SPEC_LABELS: Record<string, string> = {
                       {{ curso.courseCode }}
                     </span>
                     @if (curso.role) {
-                      <span class="text-xs" style="color: var(--text-muted); white-space: nowrap;">
+                      <span class="text-xs text-text-muted whitespace-nowrap">
                         {{ roleLabel(curso.role) }}
                       </span>
                     }
                   </div>
 
                   <!-- Alumnos -->
-                  <span class="text-xs" style="color: var(--text-secondary)">
+                  <span class="text-xs text-text-secondary">
                     {{ curso.enrolledStudents }} / {{ curso.maxStudents }}
                   </span>
 
@@ -241,7 +233,11 @@ const SPEC_LABELS: Record<string, string> = {
 
           <!-- ── Acciones ───────────────────────────────────────────────────── -->
           <div style="border-top: 1px solid var(--border-subtle);" class="pt-4">
-            <button class="edit-btn" (click)="editar()" data-llm-action="editar-relator">
+            <button
+              class="btn-secondary w-full"
+              (click)="editar()"
+              data-llm-action="editar-relator"
+            >
               <app-icon name="edit" [size]="15" />
               Editar relator
             </button>
@@ -269,27 +265,6 @@ const SPEC_LABELS: Record<string, string> = {
       font-size: 11px;
       font-weight: 700;
       color: white;
-    }
-    .edit-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      cursor: pointer;
-      text-align: left;
-      transition: all var(--duration-fast);
-    }
-    .edit-btn:hover {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
-      background: color-mix(in srgb, var(--ds-brand) 4%, transparent);
     }
 
     .courses-header {

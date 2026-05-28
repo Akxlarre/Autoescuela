@@ -25,7 +25,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-registrar-egreso-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    SelectModule,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
@@ -37,133 +43,129 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
       <ng-template #content>
-      <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
-      <div class="flex-1 overflow-y-auto p-5">
-        <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
-          <!-- Tipo de egreso -->
-          <div class="flex flex-col gap-1.5">
-            <label for="egr-tipo" class="field-label">
-              TIPO DE EGRESO <span style="color: var(--state-error)">*</span>
-            </label>
-            <p-select
-              formControlName="tipo"
-              [options]="tipoOptions"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="Seleccionar tipo..."
-              styleClass="w-full"
-              data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
-              [class.field-input--error]="isInvalid('tipo')"
-            />
-            @if (isInvalid('tipo')) {
-              <span class="field-error">Seleccione un tipo de egreso.</span>
-            }
-          </div>
-
-          <!-- Monto -->
-          <div class="flex flex-col gap-1.5">
-            <label for="egr-monto" class="field-label">
-              MONTO (CLP) <span style="color: var(--state-error)">*</span>
-            </label>
-            <div class="input-prefix-wrapper">
-              <span class="input-prefix">$</span>
-              <input
-                id="egr-monto"
-                type="number"
-                min="1"
-                formControlName="monto"
-                class="field-input field-input--prefixed"
-                placeholder="0"
-                data-llm-description="Monto del egreso en pesos chilenos"
-                [class.field-input--error]="isInvalid('monto')"
+        <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
+        <div class="flex-1 overflow-y-auto p-5">
+          <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
+            <!-- Tipo de egreso -->
+            <div class="flex flex-col gap-1.5">
+              <label for="egr-tipo" class="field-label">
+                TIPO DE EGRESO <span class="text-error">*</span>
+              </label>
+              <p-select
+                formControlName="tipo"
+                [options]="tipoOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Seleccionar tipo..."
+                styleClass="w-full"
+                data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
+                [class.field-input--error]="isInvalid('tipo')"
               />
+              @if (isInvalid('tipo')) {
+                <span class="field-error">Seleccione un tipo de egreso.</span>
+              }
             </div>
-            @if (form.get('monto')?.hasError('required') && form.get('monto')?.touched) {
-              <span class="field-error">Ingrese el monto.</span>
-            } @else if (form.get('monto')?.hasError('min') && form.get('monto')?.touched) {
-              <span class="field-error">El monto debe ser mayor a 0.</span>
+
+            <!-- Monto -->
+            <div class="flex flex-col gap-1.5">
+              <label for="egr-monto" class="field-label">
+                MONTO (CLP) <span class="text-error">*</span>
+              </label>
+              <div class="input-prefix-wrapper">
+                <span class="input-prefix">$</span>
+                <input
+                  id="egr-monto"
+                  type="number"
+                  min="1"
+                  formControlName="monto"
+                  class="field-input field-input--prefixed"
+                  placeholder="0"
+                  data-llm-description="Monto del egreso en pesos chilenos"
+                  [class.field-input--error]="isInvalid('monto')"
+                />
+              </div>
+              @if (form.get('monto')?.hasError('required') && form.get('monto')?.touched) {
+                <span class="field-error">Ingrese el monto.</span>
+              } @else if (form.get('monto')?.hasError('min') && form.get('monto')?.touched) {
+                <span class="field-error">El monto debe ser mayor a 0.</span>
+              }
+            </div>
+
+            <!-- Descripción / Motivo -->
+            <div class="flex flex-col gap-1.5">
+              <label for="egr-descripcion" class="field-label">
+                {{ tipoLabel() }} <span class="text-error">*</span>
+              </label>
+              <input
+                id="egr-descripcion"
+                type="text"
+                formControlName="descripcion"
+                class="field-input"
+                [placeholder]="tipoPlaceholder()"
+                data-llm-description="Descripción o motivo del egreso"
+                [class.field-input--error]="isInvalid('descripcion')"
+              />
+              @if (isInvalid('descripcion')) {
+                <span class="field-error">Ingrese una descripción o motivo.</span>
+              }
+            </div>
+
+            <!-- Fecha (display-only) -->
+            <div class="flex flex-col gap-1.5">
+              <label class="field-label">FECHA</label>
+              <div
+                class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-muted"
+                
+              >
+                <app-icon name="calendar" [size]="14" />
+                {{ fechaHoy() }}
+                <span class="text-xs ml-auto">(Hoy — no modificable)</span>
+              </div>
+            </div>
+
+            <!-- Error global -->
+            @if (saveError()) {
+              <div
+                class="flex items-start gap-2 p-3 rounded-lg bg-error/8"
+                
+              >
+                <app-icon name="circle-alert" [size]="15" color="var(--state-error)" />
+                <p class="text-sm text-error" >{{ saveError() }}</p>
+              </div>
             }
-          </div>
+          </form>
+        </div>
 
-          <!-- Descripción / Motivo -->
-          <div class="flex flex-col gap-1.5">
-            <label for="egr-descripcion" class="field-label">
-              {{ tipoLabel() }} <span style="color: var(--state-error)">*</span>
-            </label>
-            <input
-              id="egr-descripcion"
-              type="text"
-              formControlName="descripcion"
-              class="field-input"
-              [placeholder]="tipoPlaceholder()"
-              data-llm-description="Descripción o motivo del egreso"
-              [class.field-input--error]="isInvalid('descripcion')"
-            />
-            @if (isInvalid('descripcion')) {
-              <span class="field-error">Ingrese una descripción o motivo.</span>
+        <!-- ── Footer fijo ─────────────────────────────────────────────── -->
+        <div
+          class="p-5 border-t bg-surface flex items-center justify-end gap-3 sticky bottom-0 z-20 border-border-muted"
+          
+        >
+          <button
+            type="button"
+            class="btn-secondary"
+            [disabled]="isSaving()"
+            data-llm-action="cancelar-egreso-cuadratura"
+            (click)="onCancel()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-primary"
+            [disabled]="form.invalid || isSaving()"
+            data-llm-action="guardar-egreso-cuadratura"
+            (click)="onSubmit()"
+          >
+            @if (isSaving()) {
+              <app-icon name="loader-2" [size]="14" class="animate-spin" />
+              Guardando...
+            } @else {
+              <app-icon name="check" [size]="14" />
+              Guardar Egreso
             }
-          </div>
-
-          <!-- Fecha (display-only) -->
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">FECHA</label>
-            <div
-              class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-muted);
-              "
-            >
-              <app-icon name="calendar" [size]="14" />
-              {{ fechaHoy() }}
-              <span class="text-xs ml-auto">(Hoy — no modificable)</span>
-            </div>
-          </div>
-
-          <!-- Error global -->
-          @if (saveError()) {
-            <div
-              class="flex items-start gap-2 p-3 rounded-lg"
-              style="background: color-mix(in srgb, var(--state-error) 8%, transparent)"
-            >
-              <app-icon name="circle-alert" [size]="15" color="var(--state-error)" />
-              <p class="text-sm" style="color: var(--state-error)">{{ saveError() }}</p>
-            </div>
-          }
-        </form>
-      </div>
-
-      <!-- ── Footer fijo ─────────────────────────────────────────────── -->
-      <div
-        class="p-5 border-t bg-surface flex items-center justify-end gap-3 sticky bottom-0 z-20"
-        style="border-color: var(--border-muted)"
-      >
-        <button
-          type="button"
-          class="btn-secondary"
-          [disabled]="isSaving()"
-          data-llm-action="cancelar-egreso-cuadratura"
-          (click)="onCancel()"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          class="btn-primary"
-          [disabled]="form.invalid || isSaving()"
-          data-llm-action="guardar-egreso-cuadratura"
-          (click)="onSubmit()"
-        >
-          @if (isSaving()) {
-            <app-icon name="loader-2" [size]="14" class="animate-spin" />
-            Guardando...
-          } @else {
-            <app-icon name="check" [size]="14" />
-            Guardar Egreso
-          }
-        </button>
-      </div>
+          </button>
+        </div>
       </ng-template>
     </app-drawer-content-loader>
   `,

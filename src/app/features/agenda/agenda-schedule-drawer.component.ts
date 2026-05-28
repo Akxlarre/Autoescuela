@@ -141,8 +141,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   <div class="flex items-center justify-between">
                     <span class="text-xs text-text-muted">Se asignará como</span>
                     <span
-                      class="text-xs font-bold px-2 py-0.5 rounded-md"
-                      style="color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 10%, var(--bg-surface))"
+                      class="text-xs font-bold px-2 py-0.5 rounded-md text-brand"
+                      class="bg-brand/10"
                     >
                       Clase N° {{ selectedStudent()!.nextClassNumber }}
                     </span>
@@ -171,8 +171,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             <!-- Error -->
             @if (facade.error()) {
               <div
-                class="flex items-start gap-2 p-3 rounded-lg bg-(--state-error-bg)/50 border border-(--state-error)"
-                style="color: var(--state-error)"
+                class="flex items-start gap-2 p-3 rounded-lg bg-(--state-error-bg)/50 border border-(--state-error) text-error"
+                
               >
                 <app-icon name="circle-alert" [size]="16" class="mt-0.5" />
                 <p class="text-xs font-medium m-0 leading-tight">{{ facade.error() }}</p>
@@ -184,10 +184,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
       <!-- Acciones (Sticky Footer) -->
       <div
-        class="flex items-center justify-between gap-4 pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"
-        style="border-color: var(--border-subtle);"
+        class="flex items-center justify-between gap-4 pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10 border-border-subtle"
       >
-        <button class="cancel-btn-text" (click)="cancel()" data-llm-action="cancel-schedule">
+        <button class="btn-ghost" (click)="cancel()" data-llm-action="cancel-schedule">
           Cancelar reservación
         </button>
 
@@ -283,23 +282,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
       font-size: 0.875rem;
       font-weight: var(--font-semibold);
       color: var(--text-primary);
-    }
-
-    .cancel-btn-text {
-      padding: 0.625rem 0.5rem;
-      border-radius: var(--radius-lg);
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      cursor: pointer;
-      transition: all var(--duration-standard) var(--ease-standard);
-
-      &:hover {
-        background: var(--bg-subtle);
-        color: var(--text-secondary);
-      }
     }
 
     /* Custom styles for PrimeNG Select in drawer */

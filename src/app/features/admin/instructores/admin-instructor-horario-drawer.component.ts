@@ -74,10 +74,10 @@ interface DayGroup {
         >
           <div class="avatar-sm">{{ inst.initials }}</div>
           <div>
-            <p class="text-sm font-semibold" style="color: var(--text-primary)">
+            <p class="text-sm font-semibold text-text-primary">
               {{ inst.nombre }}
             </p>
-            <p class="text-xs" style="color: var(--text-muted)">
+            <p class="text-xs text-text-muted">
               Próximas {{ totalSessions() }}
               {{ totalSessions() === 1 ? 'clase' : 'clases' }} agendadas
             </p>
@@ -112,10 +112,8 @@ interface DayGroup {
             <app-icon name="calendar-check" [size]="28" color="var(--text-muted)" />
           </div>
           <div class="text-center">
-            <p class="text-sm font-medium" style="color: var(--text-secondary)">
-              Sin clases agendadas
-            </p>
-            <p class="text-xs mt-1" style="color: var(--text-muted)">
+            <p class="text-sm font-medium text-text-secondary">Sin clases agendadas</p>
+            <p class="text-xs mt-1 text-text-muted">
               No hay clases pendientes para este instructor.
             </p>
           </div>
@@ -134,7 +132,7 @@ interface DayGroup {
               >
                 {{ group.label }}
               </span>
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 {{ group.sessions.length }}
                 {{ group.sessions.length === 1 ? 'clase' : 'clases' }}
               </span>
@@ -153,11 +151,11 @@ interface DayGroup {
                 <div class="flex items-center gap-3 flex-1 min-w-0">
                   <div class="student-avatar">{{ session.studentInitials }}</div>
                   <div class="flex flex-col min-w-0">
-                    <span class="text-sm font-medium truncate" style="color: var(--text-primary)">
+                    <span class="text-sm font-medium truncate text-text-primary">
                       {{ session.studentName }}
                     </span>
                     @if (session.vehiclePlate) {
-                      <span class="text-xs truncate" style="color: var(--text-muted)">
+                      <span class="text-xs truncate text-text-muted">
                         <app-icon name="car" [size]="11" />
                         {{ session.vehiclePlate }}
                       </span>

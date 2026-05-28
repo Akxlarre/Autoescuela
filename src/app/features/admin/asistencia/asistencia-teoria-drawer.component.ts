@@ -89,7 +89,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
       </ng-template>
       <ng-template #content>
         <!-- ── Info de la sesión ──────────────────────────────────────────────── -->
-        <div class="flex flex-col gap-4 p-5 border-b" style="border-color: var(--border-subtle)">
+        <div class="flex flex-col gap-4 p-5 border-b border-border-subtle">
           @if (clase()) {
             <!-- Tema editable -->
             <div class="flex flex-col gap-1.5">
@@ -127,7 +127,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                   data-llm-description="Hora de fin de la clase teórica"
                 />
                 @if (endTimeError()) {
-                  <p class="text-xs font-medium" style="color: var(--state-error)">
+                  <p class="text-xs font-medium text-error">
                     Debe ser posterior a la hora de inicio.
                   </p>
                 }
@@ -136,14 +136,13 @@ type LocalStatus = TeoriaAsistenciaStatus;
 
             <!-- Botón guardar info + instructor -->
             <div class="flex items-center justify-between gap-2">
-              <p class="text-xs" style="color: var(--text-muted)">
+              <p class="text-xs text-text-muted">
                 <app-icon name="user" [size]="12" style="display:inline;vertical-align:middle" />
                 {{ clase()!.instructorName }}
               </p>
               @if (infoChanged()) {
                 <button
-                  class="px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5"
-                  style="background: var(--ds-brand); color: #fff; border: none; cursor: pointer"
+                  class="btn-primary text-xs"
                   [disabled]="!canSaveInfo() || facade.isSaving()"
                   data-llm-action="save-teoria-info"
                   (click)="onSaveInfo()"
@@ -171,8 +170,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                   data-llm-description="URL del enlace Zoom para la clase teórica"
                 />
                 <button
-                  class="px-3 rounded-lg text-xs font-semibold shrink-0 flex items-center gap-1.5"
-                  style="background: var(--ds-brand); color: #fff; border: none; cursor: pointer"
+                  class="btn-primary text-xs shrink-0"
                   [disabled]="!zoomLink().trim() || facade.isSaving()"
                   data-llm-action="save-zoom-link"
                   (click)="onSaveZoom()"
@@ -191,8 +189,8 @@ type LocalStatus = TeoriaAsistenciaStatus;
                     class="flex items-center gap-2 px-3 py-2.5 rounded-xl mt-1"
                     [style.background]="
                       result.errors.length === 0
-                        ? 'color-mix(in srgb, var(--state-success) 12%, transparent)'
-                        : 'color-mix(in srgb, var(--state-warning) 12%, transparent)'
+                        ? 'var(--state-success-bg)'
+                        : 'var(--state-warning-bg)'
                     "
                   >
                     <app-icon
@@ -232,31 +230,30 @@ type LocalStatus = TeoriaAsistenciaStatus;
         <div class="flex-1 overflow-y-auto p-5">
           @if (isFutureDate()) {
             <div
-              class="flex items-center gap-2 px-4 py-3 rounded-xl mb-3"
-              style="background: color-mix(in srgb, var(--state-warning) 10%, transparent); border: 1px solid color-mix(in srgb, var(--state-warning) 25%, transparent)"
+              class="flex items-center gap-2 px-4 py-3 rounded-xl mb-3 bg-warning/10 border border-warning/25"
             >
-              <app-icon name="clock" [size]="15" style="color: var(--state-warning); shrink-0" />
-              <span class="text-xs font-medium" style="color: var(--state-warning)">
+              <app-icon name="clock" [size]="15" class="text-warning" />
+              <span class="text-xs font-medium text-warning">
                 Clase futura — la asistencia se podrá registrar el día de la clase.
               </span>
             </div>
           }
 
           <div class="flex items-center justify-between mb-3">
-            <p class="text-sm font-semibold" style="color: var(--text-primary)">
+            <p class="text-sm font-semibold text-text-primary">
               Asistencia
               @if (!facade.isLoadingTeoriaAlumnos()) {
-                <span class="font-normal text-xs" style="color: var(--text-muted)">
+                <span class="font-normal text-xs text-text-muted">
                   ({{ presentCount() }}/{{ localAlumnos().length }} presentes)
                 </span>
               }
             </p>
             @if (!facade.isLoadingTeoriaAlumnos() && localAlumnos().length > 0 && !isFutureDate()) {
               <button
-                class="text-xs font-medium"
-                style="color: var(--color-primary); background: none; border: none; cursor: pointer"
+                class="btn-ghost text-xs"
                 [disabled]="facade.isSaving()"
                 (click)="markAllPresente()"
+                data-llm-action="marcar-todos-presentes"
               >
                 Todos presentes
               </button>
@@ -270,7 +267,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
               }
             </div>
           } @else if (localAlumnos().length === 0) {
-            <p class="text-sm text-center py-8" style="color: var(--text-muted)">
+            <p class="text-sm text-center py-8 text-text-muted">
               No hay alumnos inscritos en esta sesión.
             </p>
           } @else {
@@ -284,10 +281,10 @@ type LocalStatus = TeoriaAsistenciaStatus;
                   <!-- Nombre + badge de estado -->
                   <div class="flex items-center justify-between gap-2 min-w-0">
                     <div class="min-w-0">
-                      <p class="text-sm font-medium truncate" style="color: var(--text-primary)">
+                      <p class="text-sm font-medium truncate text-text-primary">
                         {{ alumno.alumnoName }}
                       </p>
-                      <p class="text-xs truncate" style="color: var(--text-muted)">
+                      <p class="text-xs truncate text-text-muted">
                         {{ alumno.email }}
                       </p>
                     </div>
@@ -309,8 +306,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                       <!-- Sin marcar: mostrar los 3 botones -->
                       <div class="flex gap-1.5">
                         <button
-                          class="status-btn"
-                          style="background: transparent; color: var(--state-success); border-color: var(--state-success)"
+                          class="status-btn bg-transparent text-success border-success"
                           [disabled]="facade.isSaving()"
                           data-llm-action="mark-presente-teoria"
                           (click)="setStatus(alumno.studentId, 'presente')"
@@ -318,8 +314,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                           Presente
                         </button>
                         <button
-                          class="status-btn"
-                          style="background: transparent; color: var(--state-error); border-color: var(--state-error)"
+                          class="status-btn bg-transparent text-error border-error"
                           [disabled]="facade.isSaving()"
                           data-llm-action="mark-ausente-teoria"
                           (click)="setStatus(alumno.studentId, 'ausente')"
@@ -327,8 +322,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                           Ausente
                         </button>
                         <button
-                          class="status-btn"
-                          style="background: transparent; color: var(--state-warning); border-color: var(--state-warning)"
+                          class="status-btn bg-transparent text-warning border-warning"
                           [disabled]="facade.isSaving()"
                           data-llm-action="mark-justificado-teoria"
                           (click)="setStatus(alumno.studentId, 'justificado')"
@@ -341,8 +335,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                       <div class="flex gap-1.5">
                         @if (alumno.status !== 'presente') {
                           <button
-                            class="status-btn"
-                            style="background: transparent; color: var(--state-success); border-color: var(--state-success)"
+                            class="status-btn bg-transparent text-success border-success"
                             [disabled]="facade.isSaving()"
                             data-llm-action="mark-presente-teoria"
                             (click)="setStatus(alumno.studentId, 'presente')"
@@ -352,8 +345,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                         }
                         @if (alumno.status !== 'ausente') {
                           <button
-                            class="status-btn"
-                            style="background: transparent; color: var(--state-error); border-color: var(--state-error)"
+                            class="status-btn bg-transparent text-error border-error"
                             [disabled]="facade.isSaving()"
                             data-llm-action="mark-ausente-teoria"
                             (click)="setStatus(alumno.studentId, 'ausente')"
@@ -363,8 +355,7 @@ type LocalStatus = TeoriaAsistenciaStatus;
                         }
                         @if (alumno.status !== 'justificado') {
                           <button
-                            class="status-btn"
-                            style="background: transparent; color: var(--state-warning); border-color: var(--state-warning)"
+                            class="status-btn bg-transparent text-warning border-warning"
                             [disabled]="facade.isSaving()"
                             data-llm-action="mark-justificado-teoria"
                             (click)="setStatus(alumno.studentId, 'justificado')"
@@ -394,12 +385,9 @@ type LocalStatus = TeoriaAsistenciaStatus;
 
           <!-- Banner éxito -->
           @if (savedOk()) {
-            <div
-              class="flex items-center gap-2 px-4 py-3 rounded-xl mt-4"
-              style="background: color-mix(in srgb, var(--state-success) 12%, transparent)"
-            >
-              <app-icon name="check-circle" [size]="16" style="color: var(--state-success)" />
-              <span class="text-sm font-medium" style="color: var(--state-success)">
+            <div class="flex items-center gap-2 px-4 py-3 rounded-xl mt-4 bg-success/12">
+              <app-icon name="check-circle" [size]="16" class="text-success" />
+              <span class="text-sm font-medium text-success">
                 Asistencia guardada correctamente.
               </span>
             </div>
@@ -408,21 +396,14 @@ type LocalStatus = TeoriaAsistenciaStatus;
 
         <!-- ── Footer ─────────────────────────────────────────────────────────── -->
         <div
-          class="p-4 border-t flex items-center justify-end gap-2"
-          style="border-color: var(--border-subtle); background: var(--bg-subtle)"
+          class="p-4 border-t flex items-center justify-end gap-2 border-border-subtle bg-subtle"
         >
-          <button
-            class="px-4 py-2 rounded-lg text-sm font-medium"
-            style="background: transparent; color: var(--text-muted); border: none; cursor: pointer"
-            (click)="onClose()"
-            data-llm-action="cerrar-teoria-drawer"
-          >
+          <button class="btn-ghost" (click)="onClose()" data-llm-action="cerrar-teoria-drawer">
             Cerrar
           </button>
           @if (!isFutureDate()) {
             <button
-              class="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2"
-              style="background: var(--ds-brand); color: #fff; border: none; cursor: pointer"
+              class="btn-primary"
               [disabled]="facade.isSaving() || facade.isLoadingTeoriaAlumnos()"
               data-llm-action="guardar-asistencia-teoria"
               (click)="onSaveAsistencia()"
@@ -611,11 +592,11 @@ export class AsistenciaTeoriaDrawerComponent implements OnInit {
   protected statusBg(status: LocalStatus): string {
     switch (status) {
       case 'presente':
-        return 'color-mix(in srgb, var(--state-success) 6%, transparent)';
+        return 'var(--state-success-bg)';
       case 'ausente':
-        return 'color-mix(in srgb, var(--state-error) 6%, transparent)';
+        return 'var(--state-error-bg)';
       case 'justificado':
-        return 'color-mix(in srgb, var(--state-warning) 6%, transparent)';
+        return 'var(--state-warning-bg)';
       default:
         return 'transparent';
     }
@@ -637,13 +618,13 @@ export class AsistenciaTeoriaDrawerComponent implements OnInit {
   protected statusBadgeBg(status: LocalStatus): string {
     switch (status) {
       case 'presente':
-        return 'color-mix(in srgb, var(--state-success) 15%, transparent)';
+        return 'var(--state-success-bg)';
       case 'ausente':
-        return 'color-mix(in srgb, var(--state-error) 15%, transparent)';
+        return 'var(--state-error-bg)';
       case 'justificado':
-        return 'color-mix(in srgb, var(--state-warning) 15%, transparent)';
+        return 'var(--state-warning-bg)';
       default:
-        return 'color-mix(in srgb, var(--text-muted) 15%, transparent)';
+        return 'var(--bg-elevated)';
     }
   }
 

@@ -23,12 +23,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
 @Component({
   selector: 'app-secretaria-instructores',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    SectionHeroComponent,
-    IconComponent,
-    SkeletonBlockComponent,
-    BentoGridLayoutDirective,
-  ],
+  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
   template: `
     <div class="bento-grid" appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
@@ -43,7 +38,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
 
       <!-- ── Filter Tabs ──────────────────────────────────────────────────── -->
       <div class="bento-banner flex items-center gap-2">
-        <span class="text-sm font-medium" style="color: var(--text-secondary)">Filtros:</span>
+        <span class="text-sm font-medium text-text-secondary">Filtros:</span>
         <button
           class="filter-pill"
           [class.filter-pill--active]="activeFilter() === 'all'"
@@ -129,7 +124,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                     <div class="py-14 text-center">
                       <div class="flex flex-col items-center gap-2">
                         <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
-                        <p class="text-sm mt-1" style="color: var(--text-muted)">
+                        <p class="text-sm mt-1 text-text-muted">
                           No hay instructores que coincidan con los filtros.
                         </p>
                       </div>
@@ -141,12 +136,11 @@ type FilterTab = 'all' | 'active' | 'expiring';
                   <tr class="instructor-row">
                     <td>
                       <div class="flex flex-col">
-                        <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                        <span class="text-sm font-semibold text-text-primary">
                           {{ inst.nombre }}
                         </span>
                         <a
-                          class="text-xs"
-                          style="color: var(--text-muted); text-decoration: none"
+                          class="text-xs text-text-muted no-underline"
                           [href]="'mailto:' + inst.email"
                         >
                           {{ inst.email }}
@@ -154,7 +148,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       </div>
                     </td>
                     <td>
-                      <span class="text-sm" style="color: var(--text-primary)">{{ inst.rut }}</span>
+                      <span class="text-sm text-text-primary">{{ inst.rut }}</span>
                     </td>
                     <td>
                       <div class="flex flex-col gap-1">
@@ -165,7 +159,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                           {{ inst.licenseStatusLabel }}
                         </span>
                         @if (inst.licenseExpiry) {
-                          <span class="text-xs" style="color: var(--text-muted)">
+                          <span class="text-xs text-text-muted">
                             Vence: {{ inst.licenseExpiry }}
                           </span>
                         }
@@ -174,21 +168,19 @@ type FilterTab = 'all' | 'active' | 'expiring';
                     <td>
                       @if (inst.vehiclePlate) {
                         <div class="flex flex-col">
-                          <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                          <span class="text-sm font-semibold text-text-primary">
                             {{ inst.vehiclePlate }}
                           </span>
-                          <span class="text-xs" style="color: var(--text-muted)">
+                          <span class="text-xs text-text-muted">
                             {{ inst.vehicleModel }}
                           </span>
                         </div>
                       } @else {
-                        <span class="text-sm italic" style="color: var(--text-muted)">
-                          Sin asignar
-                        </span>
+                        <span class="text-sm italic text-text-muted"> Sin asignar </span>
                       }
                     </td>
                     <td>
-                      <span class="text-sm" style="color: var(--text-primary)">
+                      <span class="text-sm text-text-primary">
                         {{ inst.tipoLabel }}
                       </span>
                     </td>
@@ -235,7 +227,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
             class="flex items-center justify-between px-6 py-4"
             style="border-top: 1px solid var(--border-subtle)"
           >
-            <p class="text-xs" style="color: var(--text-muted)">
+            <p class="text-xs text-text-muted">
               Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
               {{ filteredInstructores().length }} instructores
             </p>
@@ -460,7 +452,11 @@ export class SecretariaInstructoresComponent implements OnInit {
   }
 
   protected openCrearDrawer(): void {
-    this.layoutDrawer.open(AdminInstructorCrearDrawerComponent, 'Crear instructor Clase B', 'user-plus');
+    this.layoutDrawer.open(
+      AdminInstructorCrearDrawerComponent,
+      'Crear instructor Clase B',
+      'user-plus',
+    );
   }
 
   protected openVerDrawer(inst: InstructorTableRow): void {

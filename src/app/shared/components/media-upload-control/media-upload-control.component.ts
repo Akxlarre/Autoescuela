@@ -28,11 +28,25 @@ import { ButtonModule } from 'primeng/button';
     <div class="flex flex-col gap-2">
       <!-- Image/Video Preview -->
       @if (value() && value() !== '') {
-        <div class="mb-1 rounded-lg overflow-hidden border" style="border-color: var(--border-subtle); max-height: 120px; background: var(--bg-subtle);">
+        <div
+          class="mb-1 rounded-lg overflow-hidden border border-border-subtle bg-subtle"
+          style="max-height: 120px"
+        >
           @if (previewType() === 'video') {
-            <video [src]="value()" class="w-full h-full object-cover opacity-80" autoplay muted loop playsinline></video>
+            <video
+              [src]="value()"
+              class="w-full h-full object-cover opacity-80"
+              autoplay
+              muted
+              loop
+              playsinline
+            ></video>
           } @else {
-            <img [src]="value()" class="w-full h-full object-cover opacity-80" alt="Media Preview" />
+            <img
+              [src]="value()"
+              class="w-full h-full object-cover opacity-80"
+              alt="Media Preview"
+            />
           }
         </div>
       }
@@ -72,7 +86,9 @@ import { ButtonModule } from 'primeng/button';
       <!-- URL Manual Input -->
       <div class="flex gap-2 items-end mt-1">
         <div class="flex-1 flex flex-col gap-1">
-          <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">{{ label() }}</label>
+          <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">{{
+            label()
+          }}</label>
           <div class="relative">
             <input
               type="text"
@@ -83,17 +99,19 @@ import { ButtonModule } from 'primeng/button';
               (input)="onTextInput($event)"
               (blur)="onBlur()"
             />
-            <span class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted" title="URL manual">
+            <span
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted"
+              title="URL manual"
+            >
               <app-icon name="link" [size]="14" />
             </span>
           </div>
         </div>
       </div>
-      
+
       @if (isUploading()) {
         <div
-          class="absolute inset-0 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20"
-          style="background: var(--bg-surface);"
+          class="absolute inset-0 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20 bg-surface"
         >
           <app-icon name="loader-2" [size]="20" class="animate-spin text-brand" />
           <span class="text-[10px] font-bold text-brand uppercase tracking-wider">Subiendo...</span>
@@ -101,12 +119,14 @@ import { ButtonModule } from 'primeng/button';
       }
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-      position: relative;
-    }
-  `],
+  styles: [
+    `
+      :host {
+        display: block;
+        position: relative;
+      }
+    `,
+  ],
 })
 export class MediaUploadControlComponent implements ControlValueAccessor {
   label = input<string>('Ruta o URL del Recurso');

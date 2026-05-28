@@ -39,12 +39,14 @@ export interface LoginFormData {
       <!-- Logo / Brand -->
       <div class="mb-8 text-center">
         <div
-          class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl"
-          style="background: var(--gradient-primary); box-shadow: 0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)"
+          class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary"
+          style="box-shadow:  0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)"
         >
           <app-icon name="car" [size]="32" color="white" />
         </div>
-        <p class="m-0 mb-2 font-display text-xs font-bold uppercase tracking-[0.18em] text-text-muted">
+        <p
+          class="m-0 mb-2 font-display text-xs font-bold uppercase tracking-[0.18em] text-text-muted"
+        >
           Autoescuela
         </p>
         <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
@@ -75,7 +77,7 @@ export interface LoginFormData {
         overflow:hidden en el wrapper garantiza que el contenido no sea
         visible cuando height = 0, sin causar layout shift.
       -->
-      <div #errorMsgRef style="overflow: hidden">
+      <div #errorMsgRef class="overflow-hidden">
         <div
           class="flex items-center gap-2 rounded-md border border-(--state-error-border) bg-(--state-error-bg) px-4 py-3 text-sm text-error"
           role="alert"
@@ -86,7 +88,7 @@ export interface LoginFormData {
         </div>
       </div>
 
-      <div #successMsgRef style="overflow: hidden">
+      <div #successMsgRef class="overflow-hidden">
         <div
           class="flex items-center gap-2 rounded-md border border-(--state-success-border) bg-(--state-success-bg) px-4 py-3 text-sm text-success"
           role="status"
@@ -124,7 +126,7 @@ export interface LoginFormData {
           Password — siempre en DOM. GSAP: height 0↔auto según modo.
           Inner div con pb-4 para espaciar al botón submit cuando está visible.
         -->
-        <div #passwordWrapRef style="overflow: hidden">
+        <div #passwordWrapRef class="overflow-hidden">
           <div class="flex flex-col gap-2 pb-4">
             <label for="lc-password" class="text-sm font-medium text-text-secondary">
               Contraseña
@@ -243,7 +245,13 @@ export class LoginCardComponent {
         el,
         isReset
           ? { height: 0, opacity: 0, duration: 0.3, ease: 'power2.inOut' }
-          : { height: 'auto', opacity: 1, duration: 0.35, ease: 'power2.out', clearProps: 'height' },
+          : {
+              height: 'auto',
+              opacity: 1,
+              duration: 0.35,
+              ease: 'power2.out',
+              clearProps: 'height',
+            },
       );
     });
 

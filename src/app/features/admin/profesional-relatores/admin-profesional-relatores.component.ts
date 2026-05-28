@@ -98,14 +98,11 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
       <div class="bento-banner flex flex-col gap-6">
         <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden">
           <div
-            class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b"
-            style="border-color: var(--border-muted); background: var(--bg-surface)"
+            class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
           >
             <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold" style="color: var(--text-primary)">
-                Lista de Relatores
-              </h2>
-              <span class="text-xs" style="color: var(--text-muted)">
+              <h2 class="text-base font-semibold text-text-primary">Lista de Relatores</h2>
+              <span class="text-xs text-text-muted">
                 {{ filteredRelatores().length }} relatores encontrados
               </span>
             </div>
@@ -120,8 +117,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                 <input
                   type="search"
                   placeholder="Buscar por nombre, rut o especialidad..."
-                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand"
-                  style="border: 1px solid var(--border-muted); color: var(--text-primary);"
+                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
                   [ngModel]="searchTerm()"
                   (ngModelChange)="searchTerm.set($event)"
                   (input)="currentPage.set(1)"
@@ -173,15 +169,13 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
             } @else if (paginatedRelatores().length === 0) {
               <div class="flex-1 flex flex-col items-center justify-center py-14 text-center">
                 <app-icon name="users" [size]="40" color="var(--text-muted)" class="mb-3" />
-                <p class="text-sm font-medium" style="color: var(--text-primary)">
-                  No se encontraron relatores
-                </p>
-                <p class="text-xs mt-1 mb-4" style="color: var(--text-muted)">
+                <p class="text-sm font-medium text-text-primary">No se encontraron relatores</p>
+                <p class="text-xs mt-1 mb-4 text-text-muted">
                   Intenta cambiar los términos de búsqueda o filtros.
                 </p>
                 <button
-                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                  style="color: var(--ds-brand); background: color-mix(in srgb, var(--ds-brand) 8%, transparent);"
+                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-brand bg-brand/8"
+                  
                   (click)="limpiarFiltros()"
                   data-llm-action="limpiar-filtros-relatores"
                 >
@@ -198,15 +192,10 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                     <!-- Status Badge -->
                     <div class="absolute top-4 right-4">
                       @if (rel.estado === 'activo') {
-                        <span
-                          class="flex w-2 h-2 rounded-full"
-                          style="background: var(--state-success)"
-                          title="Activo"
-                        ></span>
+                        <span class="flex w-2 h-2 rounded-full bg-success" title="Activo"></span>
                       } @else {
                         <span
-                          class="flex w-2 h-2 rounded-full"
-                          style="background: var(--text-muted)"
+                          class="flex w-2 h-2 rounded-full bg-text-muted"
                           title="Inactivo"
                         ></span>
                       }
@@ -215,20 +204,16 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                     <div class="flex items-start gap-3 mb-4">
                       <!-- Avatar -->
                       <div
-                        class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-xs font-bold"
-                        style="background: var(--color-primary-tint); color: var(--color-primary);"
+                        class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-xs font-bold bg-brand-tint text-brand"
                       >
                         {{ rel.initials }}
                       </div>
 
                       <div class="flex-1 min-w-0">
-                        <h3
-                          class="text-sm font-semibold truncate"
-                          style="color: var(--text-primary)"
-                        >
+                        <h3 class="text-sm font-semibold truncate text-text-primary">
                           {{ rel.nombre }}
                         </h3>
-                        <p class="text-xs" style="color: var(--text-muted)">{{ rel.rut }}</p>
+                        <p class="text-xs text-text-muted">{{ rel.rut }}</p>
                       </div>
                     </div>
 
@@ -248,12 +233,10 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                     >
                       <div class="flex items-center gap-3">
                         <div class="flex flex-col">
-                          <span
-                            class="text-[10px] uppercase font-bold"
-                            style="color: var(--text-muted)"
+                          <span class="text-[10px] uppercase font-bold text-text-muted"
                             >WhatsApp</span
                           >
-                          <span class="text-xs font-medium" style="color: var(--text-primary)">{{
+                          <span class="text-xs font-medium text-text-primary">{{
                             rel.phone || '—'
                           }}</span>
                         </div>
@@ -289,7 +272,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                 class="flex items-center justify-between mt-6 pt-6"
                 style="border-top: 1px solid var(--border-subtle);"
               >
-                <p class="text-xs" style="color: var(--text-muted)">
+                <p class="text-xs text-text-muted">
                   Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
                   {{ filteredRelatores().length }} relatores
                 </p>

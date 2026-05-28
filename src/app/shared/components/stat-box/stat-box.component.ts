@@ -10,7 +10,7 @@ export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'bran
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, IconComponent],
   template: `
-    <div 
+    <div
       class="stat-box transition-all duration-300"
       [class.stat-box--compact]="compact()"
       [ngClass]="'stat-box--' + variant()"
@@ -22,7 +22,7 @@ export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'bran
             <app-icon [name]="icon()!" [size]="compact() ? 12 : 14" class="stat-box__icon" />
           }
         </div>
-        
+
         <div class="flex items-baseline gap-1.5 overflow-hidden">
           <span class="stat-box__value truncate" [class.stat-box__value--mono]="useMono()">
             {{ value() }}
@@ -94,27 +94,43 @@ export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'bran
     .stat-box--brand {
       background: color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface));
       border-color: color-mix(in srgb, var(--ds-brand) 30%, var(--border-default));
-      .stat-box__label, .stat-box__value, .stat-box__icon { color: var(--ds-brand); }
+      .stat-box__label,
+      .stat-box__value,
+      .stat-box__icon {
+        color: var(--ds-brand);
+      }
     }
 
     .stat-box--success {
       background: var(--state-success-bg);
       border-color: var(--state-success-border);
-      .stat-box__label, .stat-box__value, .stat-box__icon { color: var(--state-success); }
+      .stat-box__label,
+      .stat-box__value,
+      .stat-box__icon {
+        color: var(--state-success);
+      }
     }
 
     .stat-box--warning {
       background: var(--state-warning-bg);
       border-color: var(--state-warning-border);
-      .stat-box__label, .stat-box__value, .stat-box__icon { color: var(--state-warning); }
+      .stat-box__label,
+      .stat-box__value,
+      .stat-box__icon {
+        color: var(--state-warning);
+      }
     }
 
     .stat-box--error {
       background: var(--state-error-bg);
       border-color: var(--state-error-border);
-      .stat-box__label, .stat-box__value, .stat-box__icon { color: var(--state-error); }
+      .stat-box__label,
+      .stat-box__value,
+      .stat-box__icon {
+        color: var(--state-error);
+      }
     }
-  `
+  `,
 })
 export class StatBoxComponent {
   label = input.required<string>();

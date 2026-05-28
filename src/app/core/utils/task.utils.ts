@@ -23,6 +23,11 @@ export function canEditTask(task: Task, currentUserId: number): boolean {
   return task.from_user_id === currentUserId && task.status === 'pending';
 }
 
+export function canDeleteTask(task: Task, currentUserId: number, currentRole: string): boolean {
+  if (currentRole === 'admin') return true;
+  return task.from_user_id === currentUserId && task.status === 'pending';
+}
+
 export function canChangeStatus(task: Task, currentUserId: number): boolean {
   if (task.status === 'completed') return false;
   if (task.to_user_id === currentUserId) return true;
@@ -51,6 +56,7 @@ export function mapTaskDtoToRow(
   currentUserId: number,
   recipientInactive: boolean,
   now: Date,
+  currentRole: string,
 ): TaskRow {
   const ageInDays = Math.floor((now.getTime() - new Date(dto.created_at).getTime()) / 86_400_000);
 
@@ -64,5 +70,6 @@ export function mapTaskDtoToRow(
     recipientInactive,
     canEdit: canEditTask(dto, currentUserId),
     canChangeStatus: canChangeStatus(dto, currentUserId),
+    canDelete: canDeleteTask(dto, currentUserId, currentRole),
   };
 }

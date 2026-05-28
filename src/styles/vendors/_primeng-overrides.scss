@@ -167,7 +167,7 @@
   box-shadow: var(--shadow-md) !important;
   margin-bottom: var(--space-3) !important;
   border-width: 1px;
-  overflow: visible !important;
+  overflow: hidden !important;
   transition:
     transform var(--duration-fast) ease,
     box-shadow var(--duration-fast) ease;
@@ -1191,3 +1191,49 @@ i.pi {
     color: var(--text-secondary) !important;
   }
 }
+
+/* ============================================
+   Tooltip — Design System Premium 2026
+   ============================================ */
+.p-tooltip {
+  display: inline-block;
+  pointer-events: none;
+  z-index: 10000;
+  transition: opacity var(--duration-fast) var(--ease-standard) !important;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15)) !important;
+}
+
+.p-tooltip-text {
+  background: rgba(9, 9, 11, 0.95) !important; /* Rich Dark Charcoal */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  color: #ffffff !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--text-xs) !important;
+  font-weight: var(--font-medium) !important;
+  padding: 6px 10px !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  line-height: var(--leading-tight) !important;
+  letter-spacing: 0.01em !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Arrow styling to match the background color for all positions */
+.p-tooltip-arrow {
+  border-width: 5px !important;
+}
+
+.p-tooltip-top .p-tooltip-arrow {
+  border-top-color: rgba(9, 9, 11, 0.95) !important;
+}
+.p-tooltip-bottom .p-tooltip-arrow {
+  border-bottom-color: rgba(9, 9, 11, 0.95) !important;
+}
+.p-tooltip-left .p-tooltip-arrow {
+  border-left-color: rgba(9, 9, 11, 0.95) !important;
+}
+.p-tooltip-right .p-tooltip-arrow {
+  border-right-color: rgba(9, 9, 11, 0.95) !important;
+}
+

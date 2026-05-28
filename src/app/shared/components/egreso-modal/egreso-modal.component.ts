@@ -22,46 +22,32 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
       <!-- Backdrop -->
       <div
         class="fixed inset-0 z-40"
-        style="background: rgba(0,0,0,0.4); backdrop-filter: blur(2px)"
+        class="bg-black/40" style="backdrop-filter: blur(2px)"
         aria-hidden="true"
         (click)="onCerrar()"
       ></div>
 
       <!-- Panel modal -->
       <div
-        class="fixed z-50 flex flex-col"
-        style="
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: min(480px, calc(100vw - 32px));
-          background: var(--bg-surface);
-          border: 1px solid var(--border-muted);
-          border-radius: var(--radius-lg, 12px);
-          box-shadow: 0 24px 48px rgba(0,0,0,0.18);
-        "
+        class="fixed z-50 flex flex-col bg-surface border border-border-muted"
+        style="top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(480px, calc(100vw - 32px)); border-radius: var(--radius-lg, 12px); box-shadow: 0 24px 48px rgba(0,0,0,0.18)"
         role="dialog"
         aria-modal="true"
         aria-labelledby="egreso-modal-title"
       >
         <!-- Header -->
         <div
-          class="flex items-center justify-between px-6 py-4 border-b"
-          style="border-color: var(--border-muted)"
+          class="flex items-center justify-between px-6 py-4 border-b border-border-muted"
+          
         >
           <div class="flex items-center gap-2.5">
             <app-icon name="minus-circle" [size]="18" color="var(--state-warning)" />
-            <h2
-              id="egreso-modal-title"
-              class="text-base font-semibold"
-              style="color: var(--text-primary)"
-            >
+            <h2 id="egreso-modal-title" class="text-base font-semibold text-text-primary">
               Registrar Egreso
             </h2>
           </div>
           <button
-            class="flex items-center justify-center w-8 h-8 rounded-lg opacity-60 hover:opacity-100 transition-opacity"
-            style="color: var(--text-muted)"
+            class="flex items-center justify-center w-8 h-8 rounded-lg opacity-60 hover:opacity-100 transition-opacity text-text-muted"
             aria-label="Cerrar modal de egreso"
             (click)="onCerrar()"
           >
@@ -75,10 +61,9 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
           <div class="flex flex-col gap-1.5">
             <label
               for="egreso-tipo"
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
+              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             >
-              Tipo de Egreso <span style="color: var(--state-error)">*</span>
+              Tipo de Egreso <span class="text-error">*</span>
             </label>
             <p-select
               formControlName="tipo"
@@ -90,7 +75,7 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
             />
             @if (form.get('tipo')?.invalid && form.get('tipo')?.touched) {
-              <p class="text-xs" style="color: var(--state-error)">Seleccione un tipo de egreso.</p>
+              <p class="text-xs text-error" >Seleccione un tipo de egreso.</p>
             }
           </div>
 
@@ -98,15 +83,13 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
           <div class="flex flex-col gap-1.5">
             <label
               for="egreso-monto"
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
+              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             >
-              Monto (CLP) <span style="color: var(--state-error)">*</span>
+              Monto (CLP) <span class="text-error">*</span>
             </label>
             <div class="relative">
               <span
-                class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold pointer-events-none"
-                style="color: var(--text-muted)"
+                class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold pointer-events-none text-text-muted"
               >
                 $
               </span>
@@ -115,13 +98,8 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
                 type="number"
                 min="1"
                 formControlName="monto"
-                class="w-full text-sm pl-7 pr-3 py-2.5 rounded-lg"
-                style="
-                  background: var(--bg-surface);
-                  border: 1px solid var(--border-muted);
-                  color: var(--text-primary);
-                  outline: none;
-                "
+                class="w-full text-sm pl-7 pr-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-primary outline-none"
+                
                 placeholder="0"
                 data-llm-description="Monto del egreso en pesos chilenos"
                 [style.borderColor]="
@@ -132,9 +110,9 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               />
             </div>
             @if (form.get('monto')?.hasError('required') && form.get('monto')?.touched) {
-              <p class="text-xs" style="color: var(--state-error)">Ingrese el monto.</p>
+              <p class="text-xs text-error" >Ingrese el monto.</p>
             } @else if (form.get('monto')?.hasError('min') && form.get('monto')?.touched) {
-              <p class="text-xs" style="color: var(--state-error)">El monto debe ser mayor a 0.</p>
+              <p class="text-xs text-error" >El monto debe ser mayor a 0.</p>
             }
           </div>
 
@@ -142,22 +120,16 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
           <div class="flex flex-col gap-1.5">
             <label
               for="egreso-descripcion"
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
+              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             >
-              {{ tipoLabel() }} <span style="color: var(--state-error)">*</span>
+              {{ tipoLabel() }} <span class="text-error">*</span>
             </label>
             <input
               id="egreso-descripcion"
               type="text"
               formControlName="descripcion"
-              class="w-full text-sm px-3 py-2.5 rounded-lg"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-primary);
-                outline: none;
-              "
+              class="w-full text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-primary outline-none"
+              
               [placeholder]="tipoPlaceholder()"
               data-llm-description="Descripción o motivo del egreso"
               [style.borderColor]="
@@ -167,7 +139,7 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               "
             />
             @if (form.get('descripcion')?.invalid && form.get('descripcion')?.touched) {
-              <p class="text-xs" style="color: var(--state-error)">
+              <p class="text-xs text-error" >
                 Ingrese una descripción o motivo.
               </p>
             }
@@ -175,19 +147,12 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 
           <!-- Fecha (display-only) -->
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
-            >
+            <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Fecha
             </label>
             <div
-              class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg"
-              style="
-                background: var(--bg-surface);
-                border: 1px solid var(--border-muted);
-                color: var(--text-muted);
-              "
+              class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-muted"
+              
             >
               <app-icon name="calendar" [size]="14" />
               {{ fechaHoy() }}
@@ -198,17 +163,13 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 
         <!-- Footer con botones -->
         <div
-          class="flex items-center justify-end gap-3 px-6 py-4 border-t"
-          style="border-color: var(--border-muted)"
+          class="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-muted"
+          
         >
           <button
             type="button"
-            class="text-sm font-medium px-4 py-2 rounded-lg"
-            style="
-              background: var(--bg-surface);
-              border: 1px solid var(--border-muted);
-              color: var(--text-primary);
-            "
+            class="text-sm font-medium px-4 py-2 rounded-lg bg-surface border border-border-muted text-text-primary"
+            
             [disabled]="isSaving()"
             aria-label="Cancelar registro de egreso"
             (click)="onCerrar()"

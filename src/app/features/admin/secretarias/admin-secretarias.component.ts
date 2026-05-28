@@ -56,7 +56,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       @if (facade.isLoading()) {
         <!-- ── Skeleton State ────────────────────────────────────────────────── -->
         <!-- 4 KPIs Skeletons -->
-        @for (_ of [1,2,3,4]; track $index) {
+        @for (_ of [1, 2, 3, 4]; track $index) {
           <div class="bento-square">
             <div class="card p-6 h-full">
               <app-skeleton-block variant="circle" width="40px" height="40px" class="mb-4" />
@@ -72,14 +72,32 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <app-skeleton-block variant="text" width="180px" height="20px" />
               <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <app-skeleton-block variant="rect" width="100%" height="36px" class="md:w-[200px]" />
-                <app-skeleton-block variant="rect" width="100%" height="36px" class="sm:w-[120px]" />
-                <app-skeleton-block variant="rect" width="100%" height="36px" class="sm:w-[120px]" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="100%"
+                  height="36px"
+                  class="md:w-[200px]"
+                />
+                <app-skeleton-block
+                  variant="rect"
+                  width="100%"
+                  height="36px"
+                  class="sm:w-[120px]"
+                />
+                <app-skeleton-block
+                  variant="rect"
+                  width="100%"
+                  height="36px"
+                  class="sm:w-[120px]"
+                />
               </div>
             </div>
-            
+
             @for (_ of skeletonRows; track $index) {
-              <div class="flex items-center gap-4 py-4" style="border-bottom: 1px solid var(--border-subtle);">
+              <div
+                class="flex items-center gap-4 py-4"
+                style="border-bottom: 1px solid var(--border-subtle);"
+              >
                 <app-skeleton-block variant="circle" width="40px" height="40px" />
                 <div class="flex-1 flex flex-col gap-2">
                   <app-skeleton-block variant="text" width="180px" height="14px" />
@@ -95,15 +113,14 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
           <div class="card p-6 h-full">
             <app-skeleton-block variant="text" width="150px" height="18px" class="mb-4" />
             <app-skeleton-block variant="rect" width="100%" height="80px" class="mb-4" />
-            @for (_ of [1,2,3,4]; track $index) {
+            @for (_ of [1, 2, 3, 4]; track $index) {
               <app-skeleton-block variant="text" width="100%" height="12px" class="mb-3" />
             }
           </div>
         </div>
-
       } @else {
         <!-- ── Active View ──────────────────────────────────────────────────── -->
-        
+
         <!-- 4 KPIs -->
         <div class="bento-square">
           <app-kpi-card-variant
@@ -145,16 +162,17 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <div class="bento-wide" data-col-span="9">
           <div class="card p-6 flex flex-col h-full">
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
-              <h2 class="text-base font-bold whitespace-nowrap" style="color: var(--text-primary)">
+              <h2 class="text-base font-bold whitespace-nowrap text-text-primary">
                 Lista de Personal
               </h2>
 
               <!-- Search + Filters (Fully Responsive) -->
-              <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto">
+              <div
+                class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto"
+              >
                 <div class="relative flex-1 min-w-[200px]">
                   <span
-                    class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                    style="color: var(--text-muted)"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
                   >
                     <app-icon name="search" [size]="14" />
                   </span>
@@ -174,7 +192,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     optionValue="value"
                     placeholder="Sede"
                     appendTo="body"
-                    [style]="{ 'flex': '1', 'min-width': '120px', 'height': '36px' }"
+                    [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
                     class="flex-1 sm:flex-none"
                   />
                   <p-select
@@ -184,7 +202,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     optionValue="value"
                     placeholder="Estado"
                     appendTo="body"
-                    [style]="{ 'flex': '1', 'min-width': '120px', 'height': '36px' }"
+                    [style]="{ flex: '1', 'min-width': '120px', height: '36px' }"
                     class="flex-1 sm:flex-none"
                   />
                 </div>
@@ -196,7 +214,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 <div class="py-14 text-center">
                   <div class="flex flex-col items-center gap-2">
                     <app-icon name="users" [size]="36" />
-                    <p class="text-sm mt-1" style="color: var(--text-muted)">
+                    <p class="text-sm mt-1 text-text-muted">
                       No hay registros que coincidan con los filtros.
                     </p>
                   </div>
@@ -210,8 +228,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                     >
                       <!-- Avatar -->
                       <div
-                        class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-sm font-bold"
-                        style="background: var(--color-primary-tint); color: var(--color-primary);"
+                        class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-sm font-bold bg-brand-tint text-brand"
+                        
                       >
                         {{ sec.initials }}
                       </div>
@@ -219,23 +237,23 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                       <!-- Info principal -->
                       <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                          <span class="text-sm font-semibold truncate" style="color: var(--text-primary)">
+                          <span class="text-sm font-semibold truncate text-text-primary">
                             {{ sec.nombre }}
                           </span>
 
                           <!-- Badge estado -->
                           @if (sec.estado === 'activa') {
                             <span
-                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                              style="background: color-mix(in srgb, var(--state-success) 10%, transparent); color: var(--state-success);"
+                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md text-success bg-success/10"
+                              
                             >
                               <app-icon name="check" [size]="8" />
                               Activa
                             </span>
                           } @else {
                             <span
-                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md"
-                              style="background: var(--bg-subtle); color: var(--text-muted);"
+                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-text-muted"
+                              
                             >
                               Inactiva
                             </span>
@@ -243,10 +261,10 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                         </div>
 
                         <div class="flex items-center gap-3 mt-1 flex-wrap">
-                          <span class="text-xs" style="color: var(--ds-brand)">
+                          <span class="text-xs text-brand" >
                             {{ sec.email }}
                           </span>
-                          <span class="flex items-center gap-1 text-xs" style="color: var(--text-muted)">
+                          <span class="flex items-center gap-1 text-xs text-text-muted">
                             <app-icon name="map-pin" [size]="11" />
                             {{ sec.sede }}
                           </span>
@@ -255,18 +273,10 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
                       <!-- Acciones -->
                       <div class="flex items-center gap-2 shrink-0">
-                        <button
-                          class="action-btn"
-                          title="Ver detalle"
-                          (click)="openVerDrawer(sec)"
-                        >
+                        <button class="action-btn" title="Ver detalle" (click)="openVerDrawer(sec)">
                           <app-icon name="eye" [size]="15" />
                         </button>
-                        <button
-                          class="action-btn"
-                          title="Editar"
-                          (click)="openEditarDrawer(sec)"
-                        >
+                        <button class="action-btn" title="Editar" (click)="openEditarDrawer(sec)">
                           <app-icon name="pencil" [size]="15" />
                         </button>
                       </div>
@@ -282,8 +292,9 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 class="flex items-center justify-between pt-5 mt-auto"
                 style="border-top: 1px solid var(--border-subtle);"
               >
-                <p class="text-xs font-medium" style="color: var(--text-muted)">
-                  {{ paginationStart() }}-{{ paginationEnd() }} de {{ filteredSecretarias().length }}
+                <p class="text-xs font-medium text-text-muted">
+                  {{ paginationStart() }}-{{ paginationEnd() }} de
+                  {{ filteredSecretarias().length }}
                 </p>
                 <div class="flex items-center gap-2">
                   <button
@@ -309,35 +320,41 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <!-- Sidebar (Panel de Control) -->
         <div class="bento-tall" data-col-span="3">
           <div class="card p-6 h-full flex flex-col">
-            <h3 class="text-sm font-bold uppercase tracking-widest mb-6" style="color: var(--text-secondary)">
+            <h3 class="text-sm font-bold uppercase tracking-widest mb-6 text-text-secondary">
               Panel de Control
             </h3>
 
             <div class="flex-1">
               <div
-                class="rounded-xl p-5 mb-8"
-                style="background: var(--bg-subtle); border: 1px solid var(--border-subtle);"
+                class="rounded-xl p-5 mb-8 bg-subtle border border-border-subtle"
+                
               >
                 <div class="flex items-center gap-3 mb-3">
-                  <div class="p-2.5 rounded-xl bg-brand/10" style="background: color-mix(in srgb, var(--ds-brand) 10%, transparent)">
+                  <div
+                    class="p-2.5 rounded-xl bg-brand/10 bg-brand/10"
+                    
+                  >
                     <app-icon name="shield-check" [size]="20" color="var(--ds-brand)" />
                   </div>
-                  <span class="text-sm font-bold" style="color: var(--ds-brand)">
+                  <span class="text-sm font-bold text-brand" >
                     Rol Secretaria
                   </span>
                 </div>
-                <p class="text-xs leading-relaxed" style="color: var(--text-secondary)">
+                <p class="text-xs leading-relaxed text-text-secondary">
                   Acceso a matrículas, pagos, agenda y gestión de alumnos de su sede asignada.
                 </p>
               </div>
 
-              <h4 class="text-[11px] font-bold uppercase tracking-widest mb-4" style="color: var(--text-muted)">
+              <h4 class="text-[11px] font-bold uppercase tracking-widest mb-4 text-text-muted">
                 Permisos del Sistema
               </h4>
               <ul class="flex flex-col gap-4 mb-8">
                 @for (permiso of permisos; track permiso) {
-                  <li class="flex items-center gap-3 text-xs font-semibold" style="color: var(--text-secondary)">
-                    <div class="w-1.5 h-1.5 rounded-full" style="background: var(--state-success)"></div>
+                  <li class="flex items-center gap-3 text-xs font-semibold text-text-secondary">
+                    <div
+                      class="w-1.5 h-1.5 rounded-full bg-success"
+                      
+                    ></div>
                     {{ permiso }}
                   </li>
                 }
@@ -345,16 +362,11 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             </div>
 
             <div style="border-top: 1px solid var(--border-subtle);" class="pt-6">
-              <h4 class="text-sm font-bold mb-2" style="color: var(--text-primary)">
-                Auditoría de Acciones
-              </h4>
-              <p class="text-[11px] mb-5 leading-relaxed" style="color: var(--text-muted)">
+              <h4 class="text-sm font-bold mb-2 text-text-primary">Auditoría de Acciones</h4>
+              <p class="text-[11px] mb-5 leading-relaxed text-text-muted">
                 Historial de movimientos realizados por el personal administrativo.
               </p>
-              <button
-                class="quick-action-btn-primary"
-                (click)="goToAuditoria()"
-              >
+              <button class="quick-action-btn-primary" (click)="goToAuditoria()">
                 <app-icon name="clipboard-list" [size]="16" />
                 Explorar Auditoría
               </button>

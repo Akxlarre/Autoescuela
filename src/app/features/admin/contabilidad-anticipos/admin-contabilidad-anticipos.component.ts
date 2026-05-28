@@ -28,12 +28,7 @@ function clp(n: number): string {
 @Component({
   selector: 'app-admin-contabilidad-anticipos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    SectionHeroComponent,
-    IconComponent,
-    SkeletonBlockComponent,
-    AlertCardComponent,
-  ],
+  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, AlertCardComponent],
   template: `
     <div class="page-wide flex flex-col gap-6 pb-8" #pageRef>
       <!-- ── Hero ─────────────────────────────────────────────────────────── -->
@@ -65,11 +60,11 @@ function clp(n: number): string {
             <app-skeleton-block variant="rect" width="70%" height="36px" />
             <app-skeleton-block variant="text" width="40%" height="12px" />
           } @else {
-            <span class="kpi-label" style="color: var(--state-warning)">Anticipos Pendientes</span>
-            <span class="kpi-value" style="color: var(--state-warning)">
+            <span class="kpi-label text-warning" >Anticipos Pendientes</span>
+            <span class="kpi-value text-warning" >
               {{ clp(facade.kpis().totalPendiente) }}
             </span>
-            <span class="text-xs" style="color: var(--text-muted)">
+            <span class="text-xs text-text-muted">
               {{ facade.kpis().instructoresConSaldo }}
               {{ facade.kpis().instructoresConSaldo === 1 ? 'instructor' : 'instructores' }}
               con saldo
@@ -85,29 +80,25 @@ function clp(n: number): string {
             <app-skeleton-block variant="text" width="40%" height="12px" />
           } @else {
             <span class="kpi-label">Total Anticipado (histórico)</span>
-            <span class="kpi-value" style="color: var(--state-info)">
+            <span class="kpi-value text-info" >
               {{ clp(facade.kpis().totalHistorico) }}
             </span>
-            <span class="text-xs" style="color: var(--text-muted)"
-              >desde inicio de operaciones</span
-            >
+            <span class="text-xs text-text-muted">desde inicio de operaciones</span>
           }
         </div>
 
         <!-- Ya Descontados -->
-        <div class="card p-5 flex flex-col gap-2" style="border: 2px solid var(--state-success)">
+        <div class="card p-5 flex flex-col gap-2 border-2 border-success" >
           @if (facade.isLoading()) {
             <app-skeleton-block variant="text" width="60%" height="14px" />
             <app-skeleton-block variant="rect" width="70%" height="36px" />
             <app-skeleton-block variant="text" width="40%" height="12px" />
           } @else {
-            <span class="kpi-label" style="color: var(--state-success)">Ya Descontados</span>
-            <span class="kpi-value" style="color: var(--state-success)">
+            <span class="kpi-label text-success" >Ya Descontados</span>
+            <span class="kpi-value text-success" >
               {{ clp(facade.kpis().totalDescontado) }}
             </span>
-            <span class="text-xs" style="color: var(--text-muted)"
-              >en liquidaciones anteriores</span
-            >
+            <span class="text-xs text-text-muted">en liquidaciones anteriores</span>
           }
         </div>
       </div>
@@ -119,7 +110,7 @@ function clp(n: number): string {
           style="border-bottom: 1px solid var(--border-subtle)"
         >
           <span class="indicator-live"></span>
-          <span class="text-sm font-semibold" style="color: var(--text-primary)">
+          <span class="text-sm font-semibold text-text-primary">
             Cuenta Corriente por Instructor
           </span>
         </div>
@@ -129,44 +120,37 @@ function clp(n: number): string {
             <thead>
               <tr style="border-bottom: 1px solid var(--border-subtle)">
                 <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Instructor
                 </th>
                 <th
-                  class="text-left px-4 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-left px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Tipo
                 </th>
                 <th
-                  class="text-right px-4 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-right px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Anticipos Totales
                 </th>
                 <th
-                  class="text-right px-4 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-right px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Saldo Pendiente
                 </th>
                 <th
-                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Último Anticipo
                 </th>
                 <th
-                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Estado
                 </th>
                 <th
-                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-center px-4 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Acciones
                 </th>
@@ -185,11 +169,7 @@ function clp(n: number): string {
                 }
               } @else if (facade.cuentaCorriente().length === 0) {
                 <tr>
-                  <td
-                    colspan="7"
-                    class="px-5 py-10 text-center text-sm"
-                    style="color: var(--text-muted)"
-                  >
+                  <td colspan="7" class="px-5 py-10 text-center text-sm text-text-muted">
                     No hay instructores registrados.
                   </td>
                 </tr>
@@ -197,53 +177,53 @@ function clp(n: number): string {
                 @for (row of facade.cuentaCorriente(); track row.instructorId) {
                   <tr style="border-bottom: 1px solid var(--border-subtle)" class="hover-row">
                     <!-- Instructor -->
-                    <td class="px-5 py-3 font-semibold" style="color: var(--text-primary)">
+                    <td class="px-5 py-3 font-semibold text-text-primary">
                       {{ row.nombre }}
                     </td>
                     <!-- Tipo -->
                     <td class="px-4 py-3">
                       <span
-                        class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-                        style="background: var(--bg-surface-elevated); color: var(--text-secondary)"
+                        class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-elevated text-text-secondary"
+                        
                       >
                         {{ row.tipoLabel }}
                       </span>
                     </td>
                     <!-- Anticipos Totales -->
-                    <td class="px-4 py-3 text-right" style="color: var(--text-primary)">
+                    <td class="px-4 py-3 text-right text-text-primary">
                       {{ clp(row.anticiposTotales) }}
                     </td>
                     <!-- Saldo Pendiente -->
                     <td class="px-4 py-3 text-right font-semibold">
                       @if (row.saldoPendiente > 0) {
-                        <span style="color: var(--state-warning)">{{
+                        <span class="text-warning">{{
                           clp(row.saldoPendiente)
                         }}</span>
                       } @else {
-                        <span style="color: var(--state-success)">{{ clp(0) }}</span>
+                        <span class="text-success">{{ clp(0) }}</span>
                       }
                     </td>
                     <!-- Último Anticipo -->
                     <td class="px-4 py-3 text-center">
                       @if (row.ultimoAnticipo) {
-                        <span style="color: var(--ds-brand)">{{ row.ultimoAnticipo }}</span>
+                        <span class="text-brand">{{ row.ultimoAnticipo }}</span>
                       } @else {
-                        <span style="color: var(--text-muted)">—</span>
+                        <span class="text-text-muted">—</span>
                       }
                     </td>
                     <!-- Estado -->
                     <td class="px-4 py-3 text-center">
                       @if (row.estado === 'pendiente') {
                         <span
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-                          style="background: var(--state-warning-bg, rgba(251,146,60,0.12)); color: var(--state-warning)"
+                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-warning"
+                          class="bg-warning-subtle"
                         >
                           Saldo pendiente
                         </span>
                       } @else {
                         <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
-                          style="background: var(--state-success-bg, rgba(34,197,94,0.12)); color: var(--state-success)"
+                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-success"
+                          class="bg-success-subtle"
                         >
                           <app-icon name="check" [size]="10" />
                           Al día
@@ -257,7 +237,7 @@ function clp(n: number): string {
                           class="btn-ghost p-1.5 rounded-lg"
                           title="Ver historial de este instructor"
                           data-llm-action="ver-historial-instructor"
-                          style="color: var(--text-muted)"
+                          class="text-text-muted"
                         >
                           <app-icon name="file-text" [size]="16" />
                         </button>
@@ -266,7 +246,7 @@ function clp(n: number): string {
                             class="btn-ghost p-1.5 rounded-lg"
                             title="Registrar anticipo"
                             data-llm-action="registrar-anticipo-instructor"
-                            style="color: var(--text-muted)"
+                            class="text-text-muted"
                             (click)="onRegistrarAnticipo()"
                           >
                             <app-icon name="check" [size]="16" />
@@ -288,11 +268,9 @@ function clp(n: number): string {
           class="flex items-center justify-between px-5 py-4"
           style="border-bottom: 1px solid var(--border-subtle)"
         >
-          <span class="text-sm font-semibold" style="color: var(--text-primary)">
-            Historial de Anticipos
-          </span>
+          <span class="text-sm font-semibold text-text-primary"> Historial de Anticipos </span>
           @if (!facade.isLoading()) {
-            <span class="text-sm font-medium" style="color: var(--ds-brand)">
+            <span class="text-sm font-medium text-brand" >
               {{ facade.historial().length }} registros
             </span>
           }
@@ -303,32 +281,27 @@ function clp(n: number): string {
             <thead>
               <tr style="border-bottom: 1px solid var(--border-subtle)">
                 <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Fecha
                 </th>
                 <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Instructor
                 </th>
                 <th
-                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-left px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Motivo
                 </th>
                 <th
-                  class="text-right px-5 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-right px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Monto
                 </th>
                 <th
-                  class="text-center px-5 py-3 font-medium uppercase tracking-wide text-xs"
-                  style="color: var(--text-muted)"
+                  class="text-center px-5 py-3 font-medium uppercase tracking-wide text-xs text-text-muted"
                 >
                   Estado
                 </th>
@@ -347,11 +320,7 @@ function clp(n: number): string {
                 }
               } @else if (facade.historial().length === 0) {
                 <tr>
-                  <td
-                    colspan="5"
-                    class="px-5 py-10 text-center text-sm"
-                    style="color: var(--text-muted)"
-                  >
+                  <td colspan="5" class="px-5 py-10 text-center text-sm text-text-muted">
                     No hay anticipos registrados aún.
                   </td>
                 </tr>
@@ -359,17 +328,17 @@ function clp(n: number): string {
                 @for (adv of facade.historial(); track adv.id) {
                   <tr class="hover-row" style="border-bottom: 1px solid var(--border-subtle)">
                     <td class="px-5 py-3">
-                      <span style="color: var(--ds-brand)">{{ adv.fecha }}</span>
+                      <span class="text-brand">{{ adv.fecha }}</span>
                     </td>
-                    <td class="px-5 py-3 font-semibold" style="color: var(--text-primary)">
+                    <td class="px-5 py-3 font-semibold text-text-primary">
                       {{ adv.instructorNombre }}
                     </td>
-                    <td class="px-5 py-3" style="color: var(--text-secondary)">
+                    <td class="px-5 py-3 text-text-secondary">
                       {{ adv.motivo }}
                     </td>
                     <td
-                      class="px-5 py-3 text-right font-semibold"
-                      style="color: var(--state-warning)"
+                      class="px-5 py-3 text-right font-semibold text-warning"
+                      
                     >
                       {{ clp(adv.monto) }}
                     </td>
@@ -390,10 +359,10 @@ function clp(n: number): string {
 
         <!-- Nota informativa al pie -->
         <div
-          class="px-5 py-3 text-xs"
-          style="border-top: 1px solid var(--border-subtle); background: var(--state-warning-bg, rgba(251,146,60,0.06)); color: var(--text-muted)"
+          class="px-5 py-3 text-xs text-text-muted"
+          style="border-top: 1px solid var(--border-subtle); background: var(--state-warning-bg, rgba(251,146,60,0.06))"
         >
-          <span class="font-semibold" style="color: var(--text-secondary)">Nota:</span>
+          <span class="font-semibold text-text-secondary">Nota:</span>
           Los anticipos pendientes se descuentan automáticamente en la liquidación de sueldo
           mensual. El instructor puede solicitar anticipos hasta un máximo del 50% de su sueldo
           mensual.

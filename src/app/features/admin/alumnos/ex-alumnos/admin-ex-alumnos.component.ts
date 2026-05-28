@@ -94,8 +94,8 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
         <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-surface">
           <div class="flex items-center gap-3">
             <div
-              class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center"
-              style="color: var(--ds-brand)"
+              class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"
+              
             >
               <app-icon name="archive" [size]="18" />
             </div>

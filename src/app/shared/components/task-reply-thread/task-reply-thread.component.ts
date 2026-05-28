@@ -23,7 +23,7 @@ import type { TaskStatus } from '@core/models/ui/task.model';
     <div class="flex flex-col gap-3">
       <!-- Hilo de respuestas -->
       @if (replies().length === 0) {
-        <p class="text-xs text-center py-3" style="color: var(--text-muted)">Sin respuestas aún.</p>
+        <p class="text-xs text-center py-3 text-text-muted">Sin respuestas aún.</p>
       } @else {
         <ol
           #repliesList
@@ -42,16 +42,13 @@ import type { TaskStatus } from '@core/models/ui/task.model';
                   : 'var(--bg-subtle)'
               "
             >
-              <p class="text-xs font-medium" style="color: var(--text-secondary)">
+              <p class="text-xs font-medium text-text-secondary">
                 {{ reply.from_user_id === currentUserId() ? 'Tú' : 'Otro' }}
-                <span class="font-normal ml-1" style="color: var(--text-muted)">
+                <span class="font-normal ml-1 text-text-muted">
                   · {{ formatAge(reply.created_at) }}
                 </span>
               </p>
-              <p
-                class="text-sm"
-                style="color: var(--text-primary); word-break: break-word; white-space: pre-wrap"
-              >
+              <p class="text-sm text-text-primary break-words whitespace-pre-wrap">
                 {{ reply.body }}
               </p>
             </li>
@@ -64,14 +61,7 @@ import type { TaskStatus } from '@core/models/ui/task.model';
         <form class="flex items-end gap-2 mt-1" (submit)="$event.preventDefault(); submitReply()">
           <textarea
             #replyInput
-            class="flex-1 resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2"
-            style="
-              border-color: var(--border-default);
-              background: var(--bg-surface);
-              color: var(--text-primary);
-              min-height: 64px;
-              focus-ring-color: var(--ds-brand);
-            "
+            class="flex-1 resize-none rounded-lg border border-border-default px-3 py-2 text-sm bg-surface text-text-primary min-h-16 focus:outline-none focus:ring-2"
             placeholder="Escribí tu respuesta…"
             [attr.maxlength]="500"
             [value]="draftBody()"
@@ -91,10 +81,7 @@ import type { TaskStatus } from '@core/models/ui/task.model';
           </button>
         </form>
       } @else {
-        <p
-          class="text-xs text-center py-2 rounded-lg"
-          style="color: var(--text-muted); background: var(--bg-subtle)"
-        >
+        <p class="text-xs text-center py-2 rounded-lg text-text-muted bg-subtle">
           <app-icon name="lock" [size]="12" [ariaHidden]="true" class="inline mr-1" />
           La tarea está completada — no se permiten más respuestas.
         </p>

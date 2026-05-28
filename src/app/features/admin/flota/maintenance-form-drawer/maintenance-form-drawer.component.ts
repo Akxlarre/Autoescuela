@@ -71,143 +71,142 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
       <ng-template #content>
-      <form [formGroup]="form" class="flex-1 flex flex-col min-h-0" (ngSubmit)="onSubmit()">
-        <!-- Body Scrolleable -->
-        <div class="flex-1 overflow-y-auto px-6 py-8">
-          <div class="grid grid-cols-1 gap-6 max-w-xl mx-auto">
-            <!-- Tipo de Mantenimiento -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="mf-type"
-                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-              >
-                Tipo de Servicio <span class="text-error">*</span>
-              </label>
-              <p-select
-                inputId="mf-type"
-                formControlName="type"
-                [options]="typeOptions"
-                placeholder="Seleccionar tipo"
-                aria-required="true"
-                styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
-              ></p-select>
-            </div>
-
-            <!-- Kilometraje -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="mf-km"
-                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-              >
-                Kilometraje al momento <span class="text-error">*</span>
-              </label>
-              <p-inputNumber
-                inputId="mf-km"
-                formControlName="km_at_time"
-                placeholder="Ej: 45000"
-                aria-required="true"
-                inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
-              />
-            </div>
-
-            <!-- Taller / Fecha -->
-            <div class="grid grid-cols-2 gap-4">
+        <form [formGroup]="form" class="flex-1 flex flex-col min-h-0" (ngSubmit)="onSubmit()">
+          <!-- Body Scrolleable -->
+          <div class="flex-1 overflow-y-auto px-6 py-8">
+            <div class="grid grid-cols-1 gap-6 max-w-xl mx-auto">
+              <!-- Tipo de Mantenimiento -->
               <div class="flex flex-col gap-1.5">
                 <label
-                  for="mf-workshop"
+                  for="mf-type"
                   class="text-xs font-semibold text-text-muted uppercase tracking-wider"
                 >
-                  Taller / Proveedor
+                  Tipo de Servicio <span class="text-error">*</span>
                 </label>
-                <input
-                  id="mf-workshop"
-                  pInputText
-                  formControlName="workshop"
-                  placeholder="Ej: Nissan Center"
-                  class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
-                />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label
-                  for="mf-date"
-                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                >
-                  Fecha Realización <span class="text-error">*</span>
-                </label>
-                <input
-                  id="mf-date"
-                  type="date"
-                  formControlName="completed_date"
+                <p-select
+                  inputId="mf-type"
+                  formControlName="type"
+                  [options]="typeOptions"
+                  placeholder="Seleccionar tipo"
                   aria-required="true"
-                  class="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                  styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
+                ></p-select>
+              </div>
+
+              <!-- Kilometraje -->
+              <div class="flex flex-col gap-1.5">
+                <label
+                  for="mf-km"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
+                  Kilometraje al momento <span class="text-error">*</span>
+                </label>
+                <p-inputNumber
+                  inputId="mf-km"
+                  formControlName="km_at_time"
+                  placeholder="Ej: 45000"
+                  aria-required="true"
+                  inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
                 />
               </div>
-            </div>
 
-            <!-- Costo -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="mf-cost"
-                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-              >
-                Costo Total ($)
-              </label>
-              <p-inputNumber
-                inputId="mf-cost"
-                formControlName="cost"
-                mode="currency"
-                currency="CLP"
-                locale="es-CL"
-                placeholder="0"
-                inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
-              />
-            </div>
+              <!-- Taller / Fecha -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    for="mf-workshop"
+                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                  >
+                    Taller / Proveedor
+                  </label>
+                  <input
+                    id="mf-workshop"
+                    pInputText
+                    formControlName="workshop"
+                    placeholder="Ej: Nissan Center"
+                    class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                  />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    for="mf-date"
+                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                  >
+                    Fecha Realización <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="mf-date"
+                    type="date"
+                    formControlName="completed_date"
+                    aria-required="true"
+                    class="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                  />
+                </div>
+              </div>
 
-            <!-- Observaciones -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="mf-desc"
-                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-              >
-                Observaciones / Detalles
-              </label>
-              <textarea
-                id="mf-desc"
-                pTextarea
-                formControlName="description"
-                rows="4"
-                placeholder="Describe el trabajo realizado..."
-                class="w-full rounded-xl border-border-subtle bg-base p-4 resize-none"
-              ></textarea>
-            </div>
+              <!-- Costo -->
+              <div class="flex flex-col gap-1.5">
+                <label
+                  for="mf-cost"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
+                  Costo Total ($)
+                </label>
+                <p-inputNumber
+                  inputId="mf-cost"
+                  formControlName="cost"
+                  mode="currency"
+                  currency="CLP"
+                  locale="es-CL"
+                  placeholder="0"
+                  inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                />
+              </div>
 
-            <!-- Error -->
-            @if (errorMsg()) {
-              <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
-            }
+              <!-- Observaciones -->
+              <div class="flex flex-col gap-1.5">
+                <label
+                  for="mf-desc"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
+                  Observaciones / Detalles
+                </label>
+                <textarea
+                  id="mf-desc"
+                  pTextarea
+                  formControlName="description"
+                  rows="4"
+                  placeholder="Describe el trabajo realizado..."
+                  class="w-full rounded-xl border-border-subtle bg-base p-4 resize-none"
+                ></textarea>
+              </div>
+
+              <!-- Error -->
+              @if (errorMsg()) {
+                <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
+              }
+            </div>
           </div>
-        </div>
 
-        <!-- Footer Fixed -->
-        <div
-          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3"
-          style="border-color: var(--border-subtle);"
-        >
-          <button type="button" class="btn-secondary h-11 px-6" (click)="onCancel()">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="btn-primary h-11 px-8 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            [disabled]="form.invalid || isSaving()"
+          <!-- Footer Fixed -->
+          <div
+            class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3 border-border-subtle"
           >
-            @if (isSaving()) {
-              <app-icon name="loader-2" [size]="18" class="animate-spin" />
-            }
-            {{ isEdit() ? 'Guardar Cambios' : 'Registrar Mantenimiento' }}
-          </button>
-        </div>
-      </form>
+            <button type="button" class="btn-secondary h-11 px-6" (click)="onCancel()">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-primary h-11 px-8 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              [disabled]="form.invalid || isSaving()"
+            >
+              @if (isSaving()) {
+                <app-icon name="loader-2" [size]="18" class="animate-spin" />
+              }
+              {{ isEdit() ? 'Guardar Cambios' : 'Registrar Mantenimiento' }}
+            </button>
+          </div>
+        </form>
       </ng-template>
     </app-drawer-content-loader>
   `,

@@ -310,14 +310,14 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               class="flex items-center gap-4 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10"
             >
               <span
-                class="text-[11px] font-black uppercase tracking-widest opacity-80"
-                style="color: var(--color-primary)"
+                class="text-[11px] font-black uppercase tracking-widest opacity-80 text-brand"
+                
               >
                 Total Día
               </span>
               <span
-                class="text-[22px] font-black tabular-nums tracking-tight"
-                style="color: var(--color-primary)"
+                class="text-[22px] font-black tabular-nums tracking-tight text-brand"
+                
               >
                 {{ clp(totalIngresosHoy()) }}
               </span>
@@ -401,8 +401,8 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               >Total Egresos</span
             >
             <span
-              class="text-[17px] font-black tabular-nums tracking-tight"
-              style="color: var(--state-warning)"
+              class="text-[17px] font-black tabular-nums tracking-tight text-warning"
+              
             >
               {{ clp(totalEgresosHoy()) }}
             </span>
@@ -435,7 +435,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
             >
               <span>Ingresos de Sistema</span>
-              <span class="tabular-nums" style="color: var(--color-primary)">{{
+              <span class="tabular-nums text-brand" >{{
                 clp(totalIngresosHoy())
               }}</span>
             </div>
@@ -443,14 +443,14 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
             >
               <span>Egresos / Retiros (-)</span>
-              <span class="tabular-nums" style="color: var(--state-warning)">{{
+              <span class="tabular-nums text-warning" >{{
                 clp(totalEgresosHoy())
               }}</span>
             </div>
             <div class="mt-1 pt-3 border-t border-brand/10 flex items-center justify-between">
               <span
-                class="text-[11px] font-black uppercase tracking-widest"
-                style="color: var(--color-primary)"
+                class="text-[11px] font-black uppercase tracking-widest text-brand"
+                
                 >Debe Haber en Caja</span
               >
               <span class="text-[17px] font-black text-text-primary tabular-nums tracking-tight">{{

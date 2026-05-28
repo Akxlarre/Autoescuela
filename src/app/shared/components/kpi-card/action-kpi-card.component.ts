@@ -82,7 +82,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
         <!-- Valor principal — animado por GSAP al montar -->
         <p class="flex items-baseline gap-1 m-0 truncate">
           @if (prefix()) {
-            <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
+            <span class="text-2xl md:text-3xl font-bold text-text-primary">
               {{ prefix() }}
             </span>
           }
@@ -94,7 +94,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             >{{ value() }}</span
           >
           @if (suffix()) {
-            <span class="text-2xl md:text-3xl font-bold" style="color: var(--text-primary)">
+            <span class="text-2xl md:text-3xl font-bold text-text-primary">
               {{ suffix() }}
             </span>
           }

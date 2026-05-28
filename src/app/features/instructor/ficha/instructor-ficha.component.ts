@@ -145,8 +145,8 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       </p>
                     </div>
                     <span
-                      class="kpi-value shrink-0"
-                      style="color: var(--ds-brand); font-size: 2rem; line-height: 1"
+                      class="kpi-value shrink-0 text-brand"
+                      style="font-size: 2rem; line-height: 1"
                     >
                       {{
                         detail.totalSessions > 0
@@ -156,13 +156,10 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       }}%
                     </span>
                   </div>
-                  <div
-                    class="w-full rounded-full h-3 overflow-hidden mb-3"
-                    style="background: var(--bg-subtle)"
-                  >
+                  <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
                     <div
-                      class="h-full rounded-full transition-all"
-                      style="background: var(--ds-brand)"
+                      class="h-full rounded-full transition-all bg-brand"
+                      
                       [style.width.%]="
                         detail.totalSessions > 0
                           ? (detail.practiceProgress / detail.totalSessions) * 100
@@ -201,10 +198,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       {{ detail.theoryPercent }}%
                     </span>
                   </div>
-                  <div
-                    class="w-full rounded-full h-3 overflow-hidden mb-3"
-                    style="background: var(--bg-subtle)"
-                  >
+                  <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
                     <div
                       class="h-full rounded-full transition-all"
                       [style.background]="
@@ -234,7 +228,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             } @else if (facade.studentDetail(); as detail) {
               <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
                 <!-- Cabecera de tabla -->
-                <div class="px-4 md:px-6 py-4 border-b" style="border-color: var(--border-subtle)">
+                <div class="px-4 md:px-6 py-4 border-b border-border-subtle">
                   <h3 class="text-base md:text-lg font-bold" [style.color]="'var(--text-primary)'">
                     Ficha Técnica — Clases Prácticas
                   </h3>
@@ -248,8 +242,8 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                   <table class="w-full text-left border-collapse">
                     <thead>
                       <tr
-                        class="text-xs uppercase tracking-wider border-b"
-                        style="background: var(--bg-subtle); border-color: var(--border-subtle); color: var(--text-muted)"
+                        class="text-xs uppercase tracking-wider border-b bg-subtle border-border-subtle text-text-muted"
+                        
                       >
                         <th class="p-4 font-semibold">N°</th>
                         <th class="p-4 font-semibold">Fecha</th>
@@ -265,14 +259,13 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                     <tbody class="text-sm">
                       @for (row of detail.fichaTecnica; track row.classNumber) {
                         <tr
-                          class="border-b transition-colors"
-                          style="border-color: var(--border-subtle)"
+                          class="border-b transition-colors border-border-subtle"
                           [style.background]="row.date ? '' : 'var(--bg-elevated)'"
                         >
                           <td class="p-4 w-14">
                             <div
-                              class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm"
-                              style="background: var(--color-primary-muted); color: var(--color-primary)"
+                              class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
+                              
                             >
                               {{ row.classNumber }}
                             </div>
@@ -338,8 +331,8 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                                   'evaluacion',
                                   row.sessionId,
                                 ]"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all"
-                                style="background: var(--ds-brand); color: var(--color-primary-text)"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-brand"
+                                style="color: var(--color-primary-text)"
                                 data-llm-action="evaluate-class"
                               >
                                 <app-icon name="clipboard-pen" [size]="12" />
@@ -368,15 +361,15 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Mobile: lista de tarjetas -->
-                <div class="md:hidden divide-y" style="border-color: var(--border-subtle)">
+                <div class="md:hidden divide-y border-border-subtle">
                   @for (row of detail.fichaTecnica; track row.classNumber) {
                     <div class="p-4 space-y-3">
                       <!-- Fila 1: número + fecha + badge -->
                       <div class="flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 min-w-0">
                           <div
-                            class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0"
-                            style="background: var(--color-primary-muted); color: var(--color-primary)"
+                            class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 bg-brand-muted text-brand"
+                            
                           >
                             {{ row.classNumber }}
                           </div>
@@ -420,10 +413,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       </div>
 
                       <!-- Meta grid -->
-                      <div
-                        class="grid grid-cols-2 gap-2 text-xs p-3 rounded-lg"
-                        style="background: var(--bg-elevated)"
-                      >
+                      <div class="grid grid-cols-2 gap-2 text-xs p-3 rounded-lg bg-elevated">
                         <div>
                           <span class="kpi-label block mb-0.5">Kilómetros</span>
                           <span class="font-mono" [style.color]="'var(--text-primary)'">
@@ -453,8 +443,8 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                             'evaluacion',
                             row.sessionId,
                           ]"
-                          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all"
-                          style="background: var(--ds-brand); color: var(--color-primary-text)"
+                          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold transition-all bg-brand"
+                          style="color: var(--color-primary-text)"
                           data-llm-action="evaluate-class"
                         >
                           <app-icon name="clipboard-pen" [size]="14" />
@@ -468,30 +458,30 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                             'evaluacion',
                             row.sessionId,
                           ]"
-                          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all"
-                          style="border-color: var(--border-default); color: var(--text-secondary)"
+                          class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary"
+                          
                         >
                           <app-icon name="eye" [size]="14" />
                           Ver Detalles
                         </a>
                       } @else if (row.status === 'in_progress') {
                         <span
-                          class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold"
-                          style="background: var(--state-warning-bg); color: var(--state-warning)"
+                          class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold bg-warning-subtle text-warning"
+                          
                           >En Curso</span
                         >
                       } @else if (row.status === 'scheduled') {
                         <span
-                          class="flex items-center justify-center gap-1 w-full py-2 rounded-lg text-xs font-semibold"
-                          style="background: var(--color-primary-muted); color: var(--color-primary)"
+                          class="flex items-center justify-center gap-1 w-full py-2 rounded-lg text-xs font-semibold bg-brand-muted text-brand"
+                          
                         >
                           <app-icon name="calendar-check" [size]="13" />
                           Agendada
                         </span>
                       } @else {
                         <span
-                          class="flex items-center justify-center w-full py-2 rounded-lg text-xs"
-                          style="background: var(--bg-elevated); color: var(--text-muted)"
+                          class="flex items-center justify-center w-full py-2 rounded-lg text-xs bg-elevated text-text-muted"
+                          
                           >Pendiente de agendar</span
                         >
                       }

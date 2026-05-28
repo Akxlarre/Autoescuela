@@ -68,148 +68,151 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         </div>
       </ng-template>
       <ng-template #content>
-      <form [formGroup]="vehicleForm" class="flex-1 flex flex-col min-h-0" (ngSubmit)="onSubmit()">
-        <!-- Body Scrolleable -->
-        <div class="flex-1 overflow-y-auto px-6 py-8">
-          <div class="grid grid-cols-1 gap-6 max-w-xl mx-auto">
-            <!-- Patente -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="vf-plate"
-                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-              >
-                Patente <span class="text-error">*</span>
-              </label>
-              <input
-                id="vf-plate"
-                pInputText
-                formControlName="license_plate"
-                placeholder="ABC-123"
-                aria-required="true"
-                class="w-full h-11 rounded-xl border-border-subtle hover:border-border-strong focus:border-brand bg-base font-mono uppercase text-lg px-4"
-              />
-              @if (
-                vehicleForm.controls.license_plate.touched &&
-                vehicleForm.controls.license_plate.invalid
-              ) {
-                <small class="text-error text-xs">Formato inválido (Ej: AB1234 o ABCD12)</small>
+        <form
+          [formGroup]="vehicleForm"
+          class="flex-1 flex flex-col min-h-0"
+          (ngSubmit)="onSubmit()"
+        >
+          <!-- Body Scrolleable -->
+          <div class="flex-1 overflow-y-auto px-6 py-8">
+            <div class="grid grid-cols-1 gap-6 max-w-xl mx-auto">
+              <!-- Patente -->
+              <div class="flex flex-col gap-1.5">
+                <label
+                  for="vf-plate"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
+                  Patente <span class="text-error">*</span>
+                </label>
+                <input
+                  id="vf-plate"
+                  pInputText
+                  formControlName="license_plate"
+                  placeholder="ABC-123"
+                  aria-required="true"
+                  class="w-full h-11 rounded-xl border-border-subtle hover:border-border-strong focus:border-brand bg-base font-mono uppercase text-lg px-4"
+                />
+                @if (
+                  vehicleForm.controls.license_plate.touched &&
+                  vehicleForm.controls.license_plate.invalid
+                ) {
+                  <small class="text-error text-xs">Formato inválido (Ej: AB1234 o ABCD12)</small>
+                }
+              </div>
+
+              <!-- Marca / Modelo -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    for="vf-brand"
+                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                  >
+                    Marca <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="vf-brand"
+                    pInputText
+                    formControlName="brand"
+                    placeholder="Nissan"
+                    aria-required="true"
+                    class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                  />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    for="vf-model"
+                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                  >
+                    Modelo <span class="text-error">*</span>
+                  </label>
+                  <input
+                    id="vf-model"
+                    pInputText
+                    formControlName="model"
+                    placeholder="Versa"
+                    aria-required="true"
+                    class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                  />
+                </div>
+              </div>
+
+              <!-- Año / KM -->
+              <div class="grid grid-cols-2 gap-4">
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    for="vf-year"
+                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                  >
+                    Año <span class="text-error">*</span>
+                  </label>
+                  <p-inputNumber
+                    inputId="vf-year"
+                    formControlName="year"
+                    [useGrouping]="false"
+                    placeholder="2024"
+                    aria-required="true"
+                    inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                  />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label
+                    for="vf-km"
+                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                  >
+                    KM Actual
+                  </label>
+                  <p-inputNumber
+                    inputId="vf-km"
+                    formControlName="current_km"
+                    placeholder="0"
+                    inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                  />
+                </div>
+              </div>
+
+              <!-- Estado -->
+              <div class="flex flex-col gap-1.5">
+                <label
+                  for="vf-status"
+                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
+                >
+                  Estado Actual
+                </label>
+                <p-select
+                  inputId="vf-status"
+                  formControlName="status"
+                  [options]="statusOptions"
+                  placeholder="Seleccionar estado"
+                  styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
+                ></p-select>
+              </div>
+
+              <!-- Mensajes -->
+              @if (errorMsg()) {
+                <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
               }
             </div>
-
-            <!-- Marca / Modelo -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-1.5">
-                <label
-                  for="vf-brand"
-                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                >
-                  Marca <span class="text-error">*</span>
-                </label>
-                <input
-                  id="vf-brand"
-                  pInputText
-                  formControlName="brand"
-                  placeholder="Nissan"
-                  aria-required="true"
-                  class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
-                />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label
-                  for="vf-model"
-                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                >
-                  Modelo <span class="text-error">*</span>
-                </label>
-                <input
-                  id="vf-model"
-                  pInputText
-                  formControlName="model"
-                  placeholder="Versa"
-                  aria-required="true"
-                  class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
-                />
-              </div>
-            </div>
-
-            <!-- Año / KM -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="flex flex-col gap-1.5">
-                <label
-                  for="vf-year"
-                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                >
-                  Año <span class="text-error">*</span>
-                </label>
-                <p-inputNumber
-                  inputId="vf-year"
-                  formControlName="year"
-                  [useGrouping]="false"
-                  placeholder="2024"
-                  aria-required="true"
-                  inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
-                />
-              </div>
-              <div class="flex flex-col gap-1.5">
-                <label
-                  for="vf-km"
-                  class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                >
-                  KM Actual
-                </label>
-                <p-inputNumber
-                  inputId="vf-km"
-                  formControlName="current_km"
-                  placeholder="0"
-                  inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
-                />
-              </div>
-            </div>
-
-            <!-- Estado -->
-            <div class="flex flex-col gap-1.5">
-              <label
-                for="vf-status"
-                class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-              >
-                Estado Actual
-              </label>
-              <p-select
-                inputId="vf-status"
-                formControlName="status"
-                [options]="statusOptions"
-                placeholder="Seleccionar estado"
-                styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
-              ></p-select>
-            </div>
-
-            <!-- Mensajes -->
-            @if (errorMsg()) {
-              <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
-            }
           </div>
-        </div>
 
-        <!-- Footer Fixed — Estilo Premium consistent con LayoutDrawer -->
-        <div
-          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3"
-          style="border-color: var(--border-subtle);"
-        >
-          <button type="button" class="btn-secondary h-11 px-6" (click)="onCancel()">
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            class="btn-primary h-11 px-8 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            [disabled]="vehicleForm.invalid || isSaving()"
+          <!-- Footer Fixed — Estilo Premium consistent con LayoutDrawer -->
+          <div
+            class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3 border-border-subtle"
           >
-            @if (isSaving()) {
-              <app-icon name="loader-2" [size]="18" class="animate-spin" />
-            }
-            {{ isEdit() ? 'Guardar Cambios' : 'Crear Vehículo' }}
-          </button>
-        </div>
-      </form>
+            <button type="button" class="btn-secondary h-11 px-6" (click)="onCancel()">
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              class="btn-primary h-11 px-8 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              [disabled]="vehicleForm.invalid || isSaving()"
+            >
+              @if (isSaving()) {
+                <app-icon name="loader-2" [size]="18" class="animate-spin" />
+              }
+              {{ isEdit() ? 'Guardar Cambios' : 'Crear Vehículo' }}
+            </button>
+          </div>
+        </form>
       </ng-template>
     </app-drawer-content-loader>
   `,

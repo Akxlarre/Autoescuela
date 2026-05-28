@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   effect,
   ChangeDetectionStrategy,
@@ -25,6 +26,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
   selector: 'app-alumno-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TooltipModule,
     BentoGridLayoutDirective,
     CardHoverDirective,
     IconComponent,
@@ -80,7 +82,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
       <div class="bento-square">
         <div class="bento-card card-tinted flex flex-col gap-2 h-full" appCardHover>
           <div class="flex items-center gap-2">
-            <app-icon name="calendar" [size]="14" style="color: var(--ds-brand)" />
+            <app-icon name="calendar" [size]="14" class="text-brand" />
             <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted"
               >Próxima clase</span
             >
@@ -99,8 +101,8 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           }
           <a
             routerLink="/app/alumno/horario"
-            class="text-xs font-medium no-underline mt-auto"
-            style="color: var(--ds-brand)"
+            class="text-xs font-medium no-underline mt-auto text-brand"
+            
             data-llm-nav="alumno-horario"
           >
             Ver horario →
@@ -167,10 +169,10 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
         data-row-span="2"
       >
         <div class="flex items-center gap-2">
-          <app-icon name="trending-up" [size]="16" style="color: var(--ds-brand)" />
+          <app-icon name="trending-up" [size]="16" class="text-brand" />
           <h2 class="m-0 font-semibold text-text-primary text-sm">Mi Progreso</h2>
           @if (!loading()) {
-            <span class="ml-auto text-xs font-bold" style="color: var(--ds-brand)">
+            <span class="ml-auto text-xs font-bold text-brand" >
               {{ progress()?.pctOverall ?? 0 }}%
             </span>
           }
@@ -216,10 +218,10 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
                   {{ progress()?.practicesCompleted ?? 0 }}/{{ progress()?.practicesTotal ?? 12 }}
                 </span>
               </div>
-              <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-subtle)">
+              <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
                 <div
-                  class="h-full rounded-full transition-all"
-                  style="background: var(--ds-brand)"
+                  class="h-full rounded-full transition-all bg-brand"
+                  
                   [style.width.%]="practicesPct()"
                 ></div>
               </div>
@@ -229,10 +231,10 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
                   >{{ progress()?.pctTheoryAttendance ?? 0 }}%</span
                 >
               </div>
-              <div class="h-1.5 rounded-full overflow-hidden" style="background: var(--bg-subtle)">
+              <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
                 <div
-                  class="h-full rounded-full transition-all"
-                  style="background: var(--color-primary)"
+                  class="h-full rounded-full transition-all bg-brand"
+                  
                   [style.width.%]="progress()?.pctTheoryAttendance ?? 0"
                 ></div>
               </div>
@@ -287,7 +289,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
         data-row-span="2"
       >
         <div class="flex items-center gap-2">
-          <app-icon name="star" [size]="16" style="color: var(--state-warning)" />
+          <app-icon name="star" [size]="16" class="text-warning" />
           <h2 class="m-0 font-semibold text-text-primary text-sm">
             @if (licenseGroup() === 'class_b') {
               Examen y Certificado
@@ -306,16 +308,13 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
         } @else if (licenseGroup() === 'class_b') {
           <!-- Clase B: 1 examen final -->
           <div class="card-tinted rounded-lg p-3 flex items-center gap-3">
-            <div
-              class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0"
-              style="background: var(--bg-subtle)"
-            >
+            <div class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-subtle">
               @if (grades()?.finalExamGrade !== null) {
-                <span class="text-xl font-bold" style="color: var(--ds-brand)">
+                <span class="text-xl font-bold text-brand" >
                   {{ grades()?.finalExamGrade }}
                 </span>
               } @else {
-                <app-icon name="star" [size]="20" style="color: var(--text-muted)" />
+                <app-icon name="star" [size]="20" class="text-text-muted" />
               }
             </div>
             <div class="flex flex-col gap-0.5">
@@ -333,10 +332,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           <!-- Profesional: 7 módulos -->
           <div class="flex flex-col gap-1.5 flex-1 overflow-auto">
             @for (mod of grades()?.modules ?? []; track mod.number) {
-              <div
-                class="flex items-center gap-2 py-1.5 px-2 rounded-lg"
-                style="background: var(--bg-subtle)"
-              >
+              <div class="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-subtle">
                 <span
                   class="shrink-0 text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
                   [style.background]="
@@ -346,7 +342,12 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
                 >
                   {{ mod.number }}
                 </span>
-                <span class="text-xs text-text-secondary flex-1 truncate">{{ mod.name }}</span>
+                <span
+                  class="text-xs text-text-secondary flex-1 truncate"
+                  [pTooltip]="mod.name"
+                  tooltipPosition="top"
+                  >{{ mod.name }}</span
+                >
                 @if (mod.grade !== null) {
                   <span
                     class="shrink-0 text-xs font-bold"
@@ -361,11 +362,11 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
             }
             @if ((grades()?.averageGrade ?? null) !== null) {
               <div
-                class="flex items-center justify-between px-2 py-1.5 rounded-lg mt-1"
-                style="background: var(--bg-tinted)"
+                class="flex items-center justify-between px-2 py-1.5 rounded-lg mt-1 bg-brand-tint"
+                
               >
                 <span class="text-xs font-semibold text-text-primary">Promedio</span>
-                <span class="text-sm font-bold" style="color: var(--ds-brand)">
+                <span class="text-sm font-bold text-brand" >
                   {{ grades()?.averageGrade }}
                 </span>
               </div>
@@ -417,7 +418,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
       <!-- ── BANNER ASISTENCIA (full width) ────────────────────────────────── -->
       <div class="bento-banner bento-card flex flex-col gap-3" appCardHover appScrollReveal>
         <div class="flex items-center gap-2">
-          <app-icon name="calendar-check" [size]="16" style="color: var(--ds-brand)" />
+          <app-icon name="calendar-check" [size]="16" class="text-brand" />
           <h2 class="m-0 font-semibold text-text-primary text-sm">Asistencia reciente</h2>
           @if (!loading() && attendance()) {
             <span
@@ -504,7 +505,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
               gradeLabel()
             }}</span>
             <div class="flex-1 flex items-center justify-center">
-              <app-icon name="star" [size]="28" style="color: var(--text-muted)" />
+              <app-icon name="star" [size]="28" class="text-text-muted" />
             </div>
             <p class="text-xs text-text-muted text-center m-0">Sin calificación aún</p>
           </div>

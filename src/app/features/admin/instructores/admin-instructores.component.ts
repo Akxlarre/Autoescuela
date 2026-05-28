@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -32,7 +33,13 @@ type FilterTab = 'all' | 'active' | 'expiring';
   selector: 'app-admin-instructores',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
+  imports: [
+    TooltipModule,
+    SectionHeroComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    BentoGridLayoutDirective,
+  ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
@@ -46,11 +53,15 @@ type FilterTab = 'all' | 'active' | 'expiring';
       </div>
 
       <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
-      <div class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container" #listCard>
-        
+      <div
+        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
+        #listCard
+      >
         <!-- ── Filter Tabs (Toolbar) ──────────────────────────────────────── -->
-        <div class="p-4 md:px-6 border-b border-border-subtle bg-surface flex flex-wrap items-center gap-2">
-          <span class="text-sm font-medium" style="color: var(--text-secondary)">Filtros:</span>
+        <div
+          class="p-4 md:px-6 border-b border-border-subtle bg-surface flex flex-wrap items-center gap-2"
+        >
+          <span class="text-sm font-medium text-text-secondary">Filtros:</span>
           <button
             class="filter-pill whitespace-nowrap"
             [class.filter-pill--active]="activeFilter() === 'all'"
@@ -138,7 +149,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <div class="py-14 text-center">
                         <div class="flex flex-col items-center gap-2">
                           <app-icon name="user-check" [size]="36" color="var(--text-muted)" />
-                          <p class="text-sm mt-1" style="color: var(--text-muted)">
+                          <p class="text-sm mt-1 text-text-muted">
                             No hay instructores que coincidan con los filtros.
                           </p>
                         </div>
@@ -151,12 +162,11 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <!-- Nombre + email -->
                       <td>
                         <div class="flex flex-col">
-                          <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                          <span class="text-sm font-semibold text-text-primary">
                             {{ inst.nombre }}
                           </span>
                           <a
-                            class="text-xs"
-                            style="color: var(--text-muted); text-decoration: none;"
+                            class="text-xs text-text-muted no-underline"
                             [href]="'mailto:' + inst.email"
                           >
                             {{ inst.email }}
@@ -166,9 +176,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
 
                       <!-- RUT -->
                       <td>
-                        <span class="text-sm" style="color: var(--text-primary)">{{
-                          inst.rut
-                        }}</span>
+                        <span class="text-sm text-text-primary">{{ inst.rut }}</span>
                       </td>
 
                       <!-- Licencia -->
@@ -181,7 +189,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                             {{ inst.licenseStatusLabel }}
                           </span>
                           @if (inst.licenseExpiry) {
-                            <span class="text-xs" style="color: var(--text-muted)">
+                            <span class="text-xs text-text-muted">
                               Vence: {{ inst.licenseExpiry }}
                             </span>
                           }
@@ -192,23 +200,21 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <td>
                         @if (inst.vehiclePlate) {
                           <div class="flex flex-col">
-                            <span class="text-sm font-semibold" style="color: var(--text-primary)">
+                            <span class="text-sm font-semibold text-text-primary">
                               {{ inst.vehiclePlate }}
                             </span>
-                            <span class="text-xs" style="color: var(--text-muted)">
+                            <span class="text-xs text-text-muted">
                               {{ inst.vehicleModel }}
                             </span>
                           </div>
                         } @else {
-                          <span class="text-sm italic" style="color: var(--text-muted)">
-                            Sin asignar
-                          </span>
+                          <span class="text-sm italic text-text-muted"> Sin asignar </span>
                         }
                       </td>
 
                       <!-- Tipo -->
                       <td>
-                        <span class="text-sm" style="color: var(--text-primary)">
+                        <span class="text-sm text-text-primary">
                           {{ inst.tipoLabel }}
                         </span>
                       </td>
@@ -284,7 +290,12 @@ type FilterTab = 'all' | 'active' | 'expiring';
                       <span class="text-sm font-bold text-text-primary truncate">{{
                         inst.nombre
                       }}</span>
-                      <span class="text-xs text-text-muted truncate">{{ inst.email }}</span>
+                      <span
+                        class="text-xs text-text-muted truncate"
+                        [pTooltip]="inst.email"
+                        tooltipPosition="top"
+                        >{{ inst.email }}</span
+                      >
                     </div>
                     <span
                       class="license-badge shrink-0"

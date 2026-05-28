@@ -145,7 +145,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 data-llm-description="Hora de fin de la clase teórica"
               />
               @if (endTimeError()) {
-                <p class="text-xs font-medium" style="color: var(--state-error)">
+                <p class="text-xs font-medium text-error">
                   Debe ser posterior a la hora de inicio.
                 </p>
               }
@@ -184,8 +184,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               <label class="field-label mb-0">Alumnos</label>
               @if (!facade.isLoadingElegibles() && localAlumnos().length > 0) {
                 <button
-                  class="text-xs font-medium"
-                  style="color: var(--color-primary); background: none; border: none; cursor: pointer"
+                  class="text-xs font-medium text-brand border-none cursor-pointer bg-transparent"
                   (click)="toggleAll()"
                 >
                   {{ allSelected() ? 'Desmarcar todos' : 'Marcar todos' }}
@@ -194,7 +193,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             </div>
 
             @if (!selectedBranchId()) {
-              <p class="text-xs py-4 text-center" style="color: var(--text-muted)">
+              <p class="text-xs py-4 text-center text-text-muted">
                 Selecciona una sede para ver alumnos disponibles.
               </p>
             } @else if (facade.isLoadingElegibles()) {
@@ -204,7 +203,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 }
               </div>
             } @else if (localAlumnos().length === 0) {
-              <p class="text-xs py-4 text-center" style="color: var(--text-muted)">
+              <p class="text-xs py-4 text-center text-text-muted">
                 No hay alumnos con matrícula activa en esta sede.
               </p>
             } @else {
@@ -213,8 +212,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 <app-icon
                   name="search"
                   [size]="14"
-                  class="absolute top-1/2 -translate-y-1/2"
-                  style="left: 10px; color: var(--text-muted); pointer-events: none"
+                  class="absolute top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                  style="left: 10px"
                 />
                 <input
                   type="text"
@@ -242,21 +241,21 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                       class="accent-(--ds-brand)"
                     />
                     <div class="min-w-0 flex-1">
-                      <p class="text-sm font-medium truncate" style="color: var(--text-primary)">
+                      <p class="text-sm font-medium truncate text-text-primary">
                         {{ alumno.alumnoName }}
                       </p>
-                      <p class="text-xs truncate" style="color: var(--text-muted)">
+                      <p class="text-xs truncate text-text-muted">
                         {{ alumno.email }}
                       </p>
                     </div>
                   </label>
                 } @empty {
-                  <p class="text-xs py-3 text-center" style="color: var(--text-muted)">
+                  <p class="text-xs py-3 text-center text-text-muted">
                     Sin resultados para "{{ studentSearch() }}"
                   </p>
                 }
               </div>
-              <p class="text-xs" style="color: var(--text-muted)">
+              <p class="text-xs text-text-muted">
                 {{ selectedCount() }} de {{ localAlumnos().length }} seleccionados
               </p>
             }
@@ -269,9 +268,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             <div
               class="mx-5 mb-2 flex items-center gap-2 px-4 py-3 rounded-xl"
               [style.background]="
-                result.errors.length === 0
-                  ? 'color-mix(in srgb, var(--state-success) 12%, transparent)'
-                  : 'color-mix(in srgb, var(--state-warning) 12%, transparent)'
+                result.errors.length === 0 ? 'var(--state-success-bg)' : 'var(--state-warning-bg)'
               "
             >
               <app-icon
@@ -305,12 +302,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
         <!-- ── Footer ─────────────────────────────────────────────────────────── -->
         <div
-          class="p-4 border-t flex items-center justify-end gap-2"
-          style="border-color: var(--border-subtle); background: var(--bg-subtle)"
+          class="p-4 border-t flex items-center justify-end gap-2 border-border-subtle bg-subtle"
         >
           <button
-            class="px-4 py-2 rounded-lg text-sm font-medium"
-            style="background: transparent; color: var(--text-muted); border: none; cursor: pointer"
+            class="px-4 py-2 rounded-lg text-sm font-medium bg-transparent text-text-muted border-none cursor-pointer"
             (click)="onClose()"
             data-llm-action="cerrar-agendar-teoria-drawer"
           >

@@ -246,7 +246,7 @@ function formatCLP(value: number): string {
                   @if (celda.isToday) {
                     <span class="day-circle" aria-label="Hoy">{{ celda.day }}</span>
                   } @else {
-                    <span class="text-sm font-medium" style="color: var(--text-secondary)">
+                    <span class="text-sm font-medium text-text-secondary">
                       {{ celda.day }}
                     </span>
                   }
@@ -281,15 +281,15 @@ function formatCLP(value: number): string {
                   <div class="flex items-center gap-1">
                     <app-icon name="user" [size]="10" color="var(--text-muted)" />
                     <span
-                      class="text-xs truncate"
-                      style="color: var(--text-muted); max-width: calc(100% - 16px)"
+                      class="text-xs truncate text-text-muted"
+                      [style.max-width]="'calc(100% - 16px)'"
                       >{{ cierre.cajero }}</span
                     >
                   </div>
                 } @else if (celda.isToday) {
                   <p
-                    class="text-xs font-semibold text-center my-auto"
-                    style="color: var(--ds-brand)"
+                    class="text-xs font-semibold text-center my-auto text-brand"
+                    
                   >
                     En curso
                   </p>

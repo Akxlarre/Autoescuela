@@ -262,7 +262,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
             @if (!g.confirmed) {
               <div class="flex items-center gap-3">
                 <button
-                  class="btn-outline flex items-center gap-2"
+                  class="btn-secondary"
                   [disabled]="facade.isSaving() || !facade.hayDirty()"
                   (click)="guardarBorrador()"
                   data-llm-action="save-draft-grades"
@@ -271,7 +271,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
                   Guardar
                 </button>
                 <button
-                  class="btn-primary flex items-center gap-2"
+                  class="btn-primary"
                   [disabled]="facade.isSaving() || !todasConNota()"
                   (click)="confirmarNotas()"
                   data-llm-action="confirm-grades"

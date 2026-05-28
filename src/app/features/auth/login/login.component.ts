@@ -39,16 +39,16 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       <!-- Orbs decorativos — backdrop para el efecto glass de la card -->
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div
-          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl"
-          style="background: color-mix(in srgb, var(--ds-brand) 18%, transparent)"
+          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"
+          
         ></div>
         <div
-          class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl"
-          style="background: color-mix(in srgb, var(--color-primary-dark) 14%, transparent)"
+          class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl bg-brand-dark/14"
+          
         ></div>
         <div
-          class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-          style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent)"
+          class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl bg-brand/6"
+          
         ></div>
       </div>
 
@@ -73,7 +73,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           aria-label="Credenciales de prueba disponibles"
         >
           <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">
-            <app-icon name="info" [size]="14" style="color: var(--text-muted)" />
+            <app-icon name="info" [size]="14" class="text-text-muted" />
             Credenciales de prueba
           </p>
           <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 mb-2">

@@ -81,9 +81,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               <app-icon name="loader-2" [size]="24" class="animate-spin text-brand" />
             </div>
           } @else {
-            <span class="kpi-label" style="color:var(--state-success)">Total recaudado</span>
+            <span class="kpi-label text-success" >Total recaudado</span>
             <p class="kpi-value m-0">{{ kpis().totalCobrado | shortCurrency }}</p>
-            <p class="text-xs m-0 mt-auto" style="color:var(--text-muted)">
+            <p class="text-xs m-0 mt-auto text-text-muted">
               {{ kpis().ventasCobradas }} ventas cobradas
             </p>
           }
@@ -96,11 +96,11 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               <app-icon name="loader-2" [size]="24" class="animate-spin text-brand" />
             </div>
           } @else {
-            <span class="kpi-label" style="color:var(--state-warning)">Pendiente de cobro</span>
-            <p class="kpi-value m-0" style="color:var(--state-warning)">
+            <span class="kpi-label text-warning" >Pendiente de cobro</span>
+            <p class="kpi-value m-0 text-warning" >
               {{ kpis().pendientesCobro | shortCurrency }}
             </p>
-            <p class="text-xs m-0 mt-auto" style="color:var(--text-muted)">
+            <p class="text-xs m-0 mt-auto text-text-muted">
               {{ kpis().ventasSinCobrar }} ventas sin cobrar
             </p>
           }
@@ -183,8 +183,8 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <!-- Tarjeta agregar nuevo servicio -->
             <button
               type="button"
-              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-bg-subtle/50"
-              style="border: 2px dashed var(--border-default)"
+              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-bg-subtle/50 border-2 border-dashed border-border-default"
+              
               data-llm-action="open-nuevo-servicio-drawer-card"
               (click)="requestNuevoServicio.emit()"
             >
@@ -229,19 +229,11 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 @if (exportMenuOpen()) {
                   <div class="fixed inset-0 z-40" (click)="exportMenuOpen.set(false)"></div>
                   <div class="export-menu">
-                    <button
-                      type="button"
-                      class="export-menu-item"
-                      (click)="onExport('excel')"
-                    >
+                    <button type="button" class="export-menu-item" (click)="onExport('excel')">
                       <app-icon name="table-2" [size]="16" />
                       Exportar como Excel
                     </button>
-                    <button
-                      type="button"
-                      class="export-menu-item"
-                      (click)="onExport('pdf')"
-                    >
+                    <button type="button" class="export-menu-item" (click)="onExport('pdf')">
                       <app-icon name="file-text" [size]="16" />
                       Exportar como PDF
                     </button>
@@ -252,185 +244,195 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
           </div>
           <!-- (Contenido de la tabla sigue igual...) -->
 
-      <!-- Vista Desktop: Tabla (Visible en SM+) -->
-      <div class="hidden sm:block overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr style="border-bottom:1px solid var(--border-subtle)">
-              <th
-                class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Cliente
-              </th>
-              <th
-                class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Servicio
-              </th>
-              <th
-                class="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Monto
-              </th>
-              <th
-                class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Estado
-              </th>
-              <th
-                class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Cobro
-              </th>
-              <th
-                class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Fecha
-              </th>
-              <th
-                class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-              >
-                Acción
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+          <!-- Vista Desktop: Tabla (Visible en SM+) -->
+          <div class="hidden sm:block overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border-subtle)">
+                  <th
+                    class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Cliente
+                  </th>
+                  <th
+                    class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Servicio
+                  </th>
+                  <th
+                    class="text-right py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Monto
+                  </th>
+                  <th
+                    class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Estado
+                  </th>
+                  <th
+                    class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Cobro
+                  </th>
+                  <th
+                    class="text-left py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Fecha
+                  </th>
+                  <th
+                    class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                  >
+                    Acción
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (venta of ventasFiltradas(); track venta.id) {
+                  <tr
+                    class="transition-colors hover:bg-bg-subtle/50"
+                    style="border-bottom:1px solid var(--border-subtle)"
+                  >
+                    <td class="py-3 px-4">
+                      <p class="font-medium text-text-primary m-0">{{ venta.cliente }}</p>
+                      <p class="text-[10px] text-text-muted font-mono m-0 uppercase">
+                        {{ venta.rut }}
+                      </p>
+                      @if (venta.resultado) {
+                        <span
+                          class="text-xs font-medium"
+                          [style.color]="
+                            venta.resultado === 'Apto'
+                              ? 'var(--state-success)'
+                              : 'var(--state-error)'
+                          "
+                        >
+                          {{ venta.resultado === 'Apto' ? '✓' : '✗' }} {{ venta.resultado }}
+                        </span>
+                      }
+                    </td>
+                    <td class="py-3 px-4 text-text-secondary">{{ venta.servicio }}</td>
+                    <td class="py-3 px-4 text-right font-semibold text-text-primary">
+                      \${{ venta.precio.toLocaleString('es-CL') }}
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                      <span
+                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                        [style]="
+                          venta.estado === 'completado'
+                            ? 'background:var(--state-success-bg);color:var(--state-success)'
+                            : 'background:var(--state-warning-bg);color:var(--state-warning)'
+                        "
+                      >
+                        {{ venta.estado === 'completado' ? 'Completado' : 'Pendiente' }}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-center">
+                      @if (venta.cobrado) {
+                        <span
+                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border bg-success-subtle text-success border-success"
+                          
+                        >
+                          Cobrado
+                        </span>
+                      } @else {
+                        <button
+                          type="button"
+                          class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                          (click)="cobroRegistrado.emit(venta.id)"
+                        >
+                          Cobrar
+                        </button>
+                      }
+                    </td>
+                    <td class="py-3 px-4 text-text-muted">{{ venta.fecha }}</td>
+                    <td class="py-3 px-4 text-center">
+                      <button
+                        type="button"
+                        class="text-xs font-medium text-text-muted hover:text-text-primary transition-colors"
+                      >
+                        Ver
+                      </button>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="7" class="py-10 text-center text-text-muted text-sm">
+                      No hay ventas registradas.
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Vista Mobile: Card List (Visible solo en < SM) -->
+          <div class="sm:hidden flex flex-col gap-4">
             @for (venta of ventasFiltradas(); track venta.id) {
-              <tr
-                class="transition-colors hover:bg-bg-subtle/50"
-                style="border-bottom:1px solid var(--border-subtle)"
+              <div
+                class="p-4 rounded-xl bg-bg-surface border border-border-subtle flex flex-col gap-3"
               >
-                <td class="py-3 px-4">
-                  <p class="font-medium text-text-primary m-0">{{ venta.cliente }}</p>
-                  <p class="text-[10px] text-text-muted font-mono m-0 uppercase">{{ venta.rut }}</p>
-                  @if (venta.resultado) {
+                <div class="flex items-start justify-between gap-2">
+                  <div class="flex flex-col gap-0.5">
+                    <span class="font-bold text-text-primary">{{ venta.cliente }}</span>
                     <span
-                      class="text-xs font-medium"
-                      [style.color]="
-                        venta.resultado === 'Apto' ? 'var(--state-success)' : 'var(--state-error)'
-                      "
+                      class="text-[10px] text-text-muted font-mono uppercase tracking-tighter"
+                      >{{ venta.rut }}</span
                     >
-                      {{ venta.resultado === 'Apto' ? '✓' : '✗' }} {{ venta.resultado }}
-                    </span>
-                  }
-                </td>
-                <td class="py-3 px-4 text-text-secondary">{{ venta.servicio }}</td>
-                <td class="py-3 px-4 text-right font-semibold text-text-primary">
-                  \${{ venta.precio.toLocaleString('es-CL') }}
-                </td>
-                <td class="py-3 px-4 text-center">
+                  </div>
+                  <span class="text-sm font-black text-text-primary"
+                    >\${{ venta.precio.toLocaleString('es-CL') }}</span
+                  >
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-bg-subtle">{{
+                    venta.servicio
+                  }}</span>
+                  <span class="text-[10px] text-text-muted">{{ venta.fecha }}</span>
+                </div>
+
+                <div
+                  class="flex items-center justify-between pt-3 border-t border-border-subtle/50"
+                >
                   <span
-                    class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                    class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
                     [style]="
                       venta.estado === 'completado'
                         ? 'background:var(--state-success-bg);color:var(--state-success)'
                         : 'background:var(--state-warning-bg);color:var(--state-warning)'
                     "
                   >
-                    {{ venta.estado === 'completado' ? 'Completado' : 'Pendiente' }}
+                    {{ venta.estado }}
                   </span>
-                </td>
-                <td class="py-3 px-4 text-center">
-                  @if (venta.cobrado) {
-                    <span
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border"
-                      style="background:var(--state-success-bg);color:var(--state-success);border-color:var(--state-success)"
-                    >
-                      Cobrado
-                    </span>
-                  } @else {
-                    <button
-                      type="button"
-                      class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
-                      (click)="cobroRegistrado.emit(venta.id)"
-                    >
-                      Cobrar
-                    </button>
-                  }
-                </td>
-                <td class="py-3 px-4 text-text-muted">{{ venta.fecha }}</td>
-                <td class="py-3 px-4 text-center">
-                  <button
-                    type="button"
-                    class="text-xs font-medium text-text-muted hover:text-text-primary transition-colors"
-                  >
-                    Ver
-                  </button>
-                </td>
-              </tr>
+
+                  <div class="flex items-center gap-2">
+                    @if (venta.cobrado) {
+                      <span
+                        class="text-[10px] font-bold text-state-success uppercase px-2 py-1 bg-state-success-bg border border-state-success rounded"
+                        >Pagado</span
+                      >
+                    } @else {
+                      <button
+                        type="button"
+                        class="text-[10px] font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
+                        (click)="cobroRegistrado.emit(venta.id)"
+                      >
+                        Cobrar
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
             } @empty {
-              <tr>
-                <td colspan="7" class="py-10 text-center text-text-muted text-sm">
-                  No hay ventas registradas.
-                </td>
-              </tr>
+              <div class="py-10 text-center text-text-muted text-sm opacity-50">
+                <app-icon name="search-x" [size]="40" class="mb-3 opacity-30" />
+                <p>No hay ventas registradas.</p>
+              </div>
             }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Vista Mobile: Card List (Visible solo en < SM) -->
-      <div class="sm:hidden flex flex-col gap-4">
-        @for (venta of ventasFiltradas(); track venta.id) {
-          <div class="p-4 rounded-xl bg-bg-surface border border-border-subtle flex flex-col gap-3">
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex flex-col gap-0.5">
-                <span class="font-bold text-text-primary">{{ venta.cliente }}</span>
-                <span class="text-[10px] text-text-muted font-mono uppercase tracking-tighter">{{
-                  venta.rut
-                }}</span>
-              </div>
-              <span class="text-sm font-black text-text-primary"
-                >\${{ venta.precio.toLocaleString('es-CL') }}</span
-              >
-            </div>
-
-            <div class="flex items-center gap-2">
-              <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-bg-subtle">{{
-                venta.servicio
-              }}</span>
-              <span class="text-[10px] text-text-muted">{{ venta.fecha }}</span>
-            </div>
-
-            <div class="flex items-center justify-between pt-3 border-t border-border-subtle/50">
-              <span
-                class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
-                [style]="
-                  venta.estado === 'completado'
-                    ? 'background:var(--state-success-bg);color:var(--state-success)'
-                    : 'background:var(--state-warning-bg);color:var(--state-warning)'
-                "
-              >
-                {{ venta.estado }}
-              </span>
-
-              <div class="flex items-center gap-2">
-                @if (venta.cobrado) {
-                  <span
-                    class="text-[10px] font-bold text-state-success uppercase px-2 py-1 bg-state-success-bg border border-state-success rounded"
-                    >Pagado</span
-                  >
-                } @else {
-                  <button
-                    type="button"
-                    class="text-[10px] font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
-                    (click)="cobroRegistrado.emit(venta.id)"
-                  >
-                    Cobrar
-                  </button>
-                }
-              </div>
-            </div>
           </div>
-        } @empty {
-          <div class="py-10 text-center text-text-muted text-sm opacity-50">
-            <app-icon name="search-x" [size]="40" class="mb-3 opacity-30" />
-            <p>No hay ventas registradas.</p>
-          </div>
-        }
+        </section>
       </div>
-    </section>
-  </div>
+    </div>
   `,
   styles: [
     `

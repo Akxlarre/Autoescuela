@@ -19,11 +19,11 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
         <app-icon name="bar-chart-2" [size]="18" color="var(--text-primary)" />
-        <h2 class="text-base font-semibold" style="color: var(--text-primary)">
+        <h2 class="text-base font-semibold text-text-primary">
           Rentabilidad Estimada por Tipo de Curso (RF-040)
         </h2>
       </div>
-      <span class="text-sm font-medium" style="color: var(--color-primary)">
+      <span class="text-sm font-medium text-brand">
         {{ mesActual() }}
       </span>
     </div>
@@ -32,13 +32,8 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
     <div>
       <!-- Encabezado de columnas -->
       <div
-        class="hidden lg:grid gap-4 px-6 py-2 text-xs font-semibold tracking-wide uppercase border-b"
-        style="
-          grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
-          color: var(--text-muted);
-          background: var(--bg-surface);
-          border-color: var(--border-muted);
-        "
+        class="hidden lg:grid gap-4 px-6 py-2 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+        style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr"
       >
         <span>Tipo de Curso</span>
         <span class="text-right">Ingresos</span>
@@ -56,45 +51,36 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr"
           >
             <!-- Tipo de Curso -->
-            <span class="text-sm font-semibold" style="color: var(--text-primary)">
+            <span class="text-sm font-semibold text-text-primary">
               {{ item.tipoCurso }}
             </span>
 
             <!-- Finanzas (Ingresos, Gastos, Margen) -->
             <div
-              class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
-              style="background: color-mix(in srgb, var(--bg-surface) 60%, transparent)"
+              class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
+              
             >
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span
-                  class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                  style="color: var(--text-muted)"
+                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Ingresos</span
                 >
-                <span
-                  class="text-sm font-semibold lg:font-normal"
-                  style="color: var(--text-primary)"
-                >
+                <span class="text-sm font-semibold lg:font-normal text-text-primary">
                   {{ item.ingresos | shortCurrency }}
                 </span>
               </div>
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span
-                  class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                  style="color: var(--text-muted)"
+                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Gastos</span
                 >
-                <span class="text-sm font-medium" style="color: var(--state-error)">
+                <span class="text-sm font-medium text-error">
                   -{{ item.gastosDirectos | shortCurrency }}
                 </span>
               </div>
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span
-                  class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                  style="color: var(--text-muted)"
+                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Margen</span
                 >
-                <span class="text-sm font-semibold" style="color: var(--state-success)">
+                <span class="text-sm font-semibold text-success">
                   {{ item.margenNeto | shortCurrency }}
                 </span>
               </div>
@@ -102,19 +88,16 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
 
             <!-- Rentabilidad + Visual -->
             <div
-              class="flex items-center justify-between lg:contents mt-2 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-none"
-              style="border-color: var(--border-muted)"
+              class="flex items-center justify-between lg:contents mt-2 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-none border-border-muted"
             >
               <!-- Rentabilidad badge -->
               <div class="flex items-center gap-2 lg:justify-end">
-                <span
-                  class="text-[10px] lg:hidden uppercase font-bold"
-                  style="color: var(--text-muted)"
+                <span class="text-[10px] lg:hidden uppercase font-bold text-text-muted"
                   >Rentabilidad</span
                 >
                 <span
-                  class="text-xs font-bold px-2.5 py-1 rounded-full"
-                  style="background: color-mix(in srgb, var(--state-success) 15%, transparent); color: var(--state-success);"
+                  class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15"
+                  
                 >
                   {{ item.rentabilidadPorcentaje }}%
                 </span>
@@ -126,7 +109,8 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
               >
                 <div
                   class="h-2 rounded-full overflow-hidden w-full lg:w-full"
-                  style="background: var(--border-muted); max-width: 120px"
+                  class="bg-border-muted"
+                  style="max-width: 120px"
                 >
                   <div
                     class="h-full rounded-full"
@@ -142,12 +126,8 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
 
       <!-- Fila de TOTAL -->
       <div
-        class="flex flex-col lg:grid gap-3 lg:gap-4 px-4 py-4 border-t-2"
-        style="
-          border-color: var(--border-muted);
-          background: var(--bg-surface);
-          border-radius: 0 0 6px 6px;
-        "
+        class="flex flex-col lg:grid gap-3 lg:gap-4 px-4 py-4 border-t-2 border-border-muted bg-surface"
+        style="border-radius: 0 0 6px 6px"
       >
         <!-- Desktop Grid Container wrapper para que respete el lg:grid de arriba -->
         <div
@@ -155,61 +135,44 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
           style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;"
         >
           <div class="flex items-center justify-between lg:block">
-            <span
-              class="text-sm font-bold uppercase tracking-wider"
-              style="color: var(--text-primary)"
+            <span class="text-sm font-bold uppercase tracking-wider text-text-primary"
               >Total Mensual</span
             >
             <span
-              class="text-xs font-bold px-2.5 py-1 rounded-full lg:hidden"
-              style="background: color-mix(in srgb, var(--state-success) 15%, transparent); color: var(--state-success);"
+              class="text-xs font-bold px-2.5 py-1 rounded-full lg:hidden text-success bg-success/15"
+              
             >
               {{ totales().rentabilidadPorcentaje }}% Rentabilidad
             </span>
           </div>
 
           <div
-            class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
-            style="background: color-mix(in srgb, var(--bg-surface) 60%, transparent)"
+            class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
+            
           >
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span
-                class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                style="color: var(--text-muted)"
+              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Ingresos</span
               >
-              <span
-                class="text-sm font-bold text-center lg:text-right"
-                style="color: var(--text-primary)"
-              >
+              <span class="text-sm font-bold text-center lg:text-right text-text-primary">
                 {{ totales().ingresos | shortCurrency }}
               </span>
             </div>
 
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span
-                class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                style="color: var(--text-muted)"
+              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Gastos</span
               >
-              <span
-                class="text-sm font-bold text-center lg:text-right"
-                style="color: var(--state-error)"
-              >
+              <span class="text-sm font-bold text-center lg:text-right text-error">
                 -{{ totales().gastosDirectos | shortCurrency }}
               </span>
             </div>
 
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span
-                class="text-[10px] uppercase font-bold lg:hidden mb-1"
-                style="color: var(--text-muted)"
+              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Margen</span
               >
-              <span
-                class="text-sm font-bold text-center lg:text-right"
-                style="color: var(--state-success)"
-              >
+              <span class="text-sm font-bold text-center lg:text-right text-success">
                 {{ totales().margenNeto | shortCurrency }}
               </span>
             </div>
@@ -217,8 +180,8 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
 
           <div class="hidden lg:flex justify-end">
             <span
-              class="text-xs font-bold px-2.5 py-1 rounded-full"
-              style="background: color-mix(in srgb, var(--state-success) 15%, transparent); color: var(--state-success);"
+              class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15"
+              
             >
               {{ totales().rentabilidadPorcentaje }}%
             </span>
@@ -231,12 +194,8 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
 
     <!-- ── Nota al pie ────────────────────────────────────────────────────────── -->
     <div
-      class="mt-4 px-4 py-3 rounded-lg text-xs"
-      style="
-        background: color-mix(in srgb, var(--text-muted) 8%, transparent);
-        color: var(--text-muted);
-        border: 1px solid var(--border-muted);
-      "
+      class="mt-4 px-4 py-3 rounded-lg text-xs text-text-muted border border-border-muted bg-text-muted/8"
+      
     >
       <strong>Nota:</strong> Los gastos directos incluyen bencina, horas instructor, materiales y
       mantención asignables al tipo de curso. No incluyen gastos fijos (arriendo, servicios,

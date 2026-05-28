@@ -57,13 +57,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
       </div>
 
       @if (facade.error()) {
-        <div
-          class="flex items-start gap-3 p-4 rounded-lg"
-          style="background: var(--color-error-muted)"
-          role="alert"
-        >
-          <app-icon name="alert-circle" [size]="16" style="color: var(--color-error)" />
-          <p class="text-sm" style="color: var(--color-error)">{{ facade.error() }}</p>
+        <div class="flex items-start gap-3 p-4 rounded-lg bg-error-subtle" role="alert">
+          <app-icon name="alert-circle" [size]="16" class="text-error" />
+          <p class="text-sm text-error">{{ facade.error() }}</p>
         </div>
       } @else {
         <!-- ── KPI Grid ── -->
@@ -71,20 +67,18 @@ function toCompact(amount: number): { value: number; suffix: string } {
           <div class="bento-banner flex flex-col gap-4">
             <!-- Aviso pago presencial para alumnos Profesional -->
             @if (!facade.isClassB() && enroll.pendingBalance > 0) {
-              <div
-                class="flex items-start gap-3 p-4 rounded-lg"
-                style="background: var(--color-warning-muted)"
-              >
+              <div class="flex items-start gap-3 p-4 rounded-lg bg-warning-subtle">
                 <app-icon
                   name="info"
                   [size]="18"
-                  style="color: var(--color-warning); flex-shrink: 0; margin-top: 1px"
+                  class="text-warning shrink-0"
+                  style="margin-top: 1px"
                 />
                 <div>
-                  <p class="text-sm font-semibold" style="color: var(--color-warning)">
+                  <p class="text-sm font-semibold text-warning">
                     Saldo pendiente: {{ clp(enroll.pendingBalance) }}
                   </p>
-                  <p class="text-xs mt-0.5" style="color: var(--color-warning)">
+                  <p class="text-xs mt-0.5 text-warning">
                     El pago de matrículas de Clase Profesional se realiza directamente en
                     secretaría. Acércate a la sucursal <strong>{{ enroll.branchName }}</strong> para
                     regularizar tu saldo.
@@ -136,10 +130,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
           <!-- Sin deuda pendiente y sin enrollment (ya completado) -->
           <div class="bento-banner card p-6 flex items-center gap-4">
             <div
-              class="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-              style="background: var(--color-success-muted)"
+              class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 bg-success-subtle"
             >
-              <app-icon name="check-circle" [size]="22" style="color: var(--color-success)" />
+              <app-icon name="check-circle" [size]="22" class="text-success" />
             </div>
             <div>
               <p class="text-sm font-semibold text-text-primary">Matrícula al día</p>
@@ -164,18 +157,13 @@ function toCompact(amount: number): { value: number; suffix: string } {
               <p class="text-sm text-text-muted">Aún no se han registrado pagos.</p>
             </div>
           } @else {
-            <div class="flex flex-col divide-y" style="border-color: var(--color-border)">
+            <div class="flex flex-col divide-y divide-border-default">
               @for (payment of facade.payments(); track payment.id) {
                 <div class="flex items-center gap-3 py-3">
                   <div
-                    class="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-                    style="background: var(--bg-surface)"
+                    class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-surface"
                   >
-                    <app-icon
-                      [name]="paymentIcon(payment)"
-                      [size]="16"
-                      style="color: var(--ds-brand)"
-                    />
+                    <app-icon [name]="paymentIcon(payment)" [size]="16" class="text-brand" />
                   </div>
 
                   <div class="flex-1 min-w-0">
@@ -186,7 +174,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
                   </div>
 
                   <div class="flex flex-col items-end gap-0.5 shrink-0">
-                    <span class="text-sm font-semibold" style="color: var(--color-success)">
+                    <span class="text-sm font-semibold text-success">
                       {{ clp(payment.amount) }}
                     </span>
                     <span

@@ -79,8 +79,7 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
       <div class="bento-banner card p-0 overflow-hidden">
         <!-- Tabs -->
         <div
-          class="flex border-b"
-          style="border-color: var(--border-default)"
+          class="flex border-b border-border-default"
           role="tablist"
           aria-label="Filtros de observaciones"
         >
@@ -97,8 +96,8 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
               {{ tab.label }}
               @if (tab.count() > 0) {
                 <span
-                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5"
-                  style="background: var(--bg-subtle); color: var(--text-muted)"
+                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
+                  
                 >
                   {{ tab.count() }}
                 </span>
@@ -222,6 +221,7 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     recipientInactive: false,
     canEdit: false,
     canChangeStatus: false,
+    canDelete: false,
   };
 
   ngOnInit(): void {

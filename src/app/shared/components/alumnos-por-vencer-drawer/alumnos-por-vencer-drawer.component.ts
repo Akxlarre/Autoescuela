@@ -11,7 +11,14 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-alumnos-por-vencer-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, ButtonModule, TooltipModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    CommonModule,
+    ButtonModule,
+    TooltipModule,
+    IconComponent,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
@@ -46,7 +53,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             </div>
           }
         </div>
-        <div class="w-full flex gap-2 mt-auto pt-4 border-t border-border-subtle sticky bottom-0 bg-surface">
+        <div
+          class="w-full flex gap-2 mt-auto pt-4 border-t border-border-subtle sticky bottom-0 bg-surface"
+        >
           <button
             pButton
             label="Descargar Reporte Mora"
@@ -57,7 +66,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
     </app-drawer-content-loader>
-  `
+  `,
 })
 export class AlumnosPorVencerDrawerComponent {
   readonly facade = inject(AdminAlumnosFacade);

@@ -16,7 +16,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <!-- Instructor -->
           <div class="flex flex-col gap-1.5">
             <label for="ant-instructor" class="field-label">
-              INSTRUCTOR <span style="color: var(--state-error)">*</span>
+              INSTRUCTOR <span class="text-error">*</span>
             </label>
             <select
               id="ant-instructor"
@@ -38,7 +38,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <!-- Fecha -->
           <div class="flex flex-col gap-1.5">
             <label for="ant-fecha" class="field-label">
-              FECHA <span style="color: var(--state-error)">*</span>
+              FECHA <span class="text-error">*</span>
             </label>
             <input
               id="ant-fecha"
@@ -56,7 +56,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <!-- Monto -->
           <div class="flex flex-col gap-1.5">
             <label for="ant-monto" class="field-label">
-              MONTO (CLP) <span style="color: var(--state-error)">*</span>
+              MONTO (CLP) <span class="text-error">*</span>
             </label>
             <div class="input-prefix-wrapper">
               <span class="input-prefix">$</span>
@@ -109,7 +109,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       </div>
 
       <!-- Footer de acciones -->
-      <div class="border-t p-4 flex gap-3" style="border-color: var(--border-subtle)">
+      <div class="border-t p-4 flex gap-3 border-border-subtle">
         <button
           type="button"
           class="btn-ghost flex-1"

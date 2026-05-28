@@ -1,10 +1,4 @@
-import {
-  Component,
-  ChangeDetectionStrategy,
-  input,
-  output,
-  computed,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
 
@@ -104,8 +98,7 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
     @if (dismissible()) {
       <button
         type="button"
-        class="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer border-none bg-transparent p-0 self-start"
-        style="color: var(--text-muted)"
+        class="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer border-none bg-transparent p-0 self-start text-text-muted"
         [appPressFeedback]="'press'"
         aria-label="Cerrar"
         (click)="dismissed.emit()"
@@ -138,9 +131,9 @@ export class AlertCardComponent {
 
   protected readonly iconName = computed<string>(() => {
     const icons: Record<AlertSeverity, string> = {
-      error:   'circle-alert',
+      error: 'circle-alert',
       warning: 'alert-triangle',
-      info:    'info',
+      info: 'info',
       success: 'circle-check',
     };
     return icons[this.severity()];
@@ -148,9 +141,9 @@ export class AlertCardComponent {
 
   protected readonly accentColor = computed<string>(() => {
     const colors: Record<AlertSeverity, string> = {
-      error:   'var(--state-error)',
+      error: 'var(--state-error)',
       warning: 'var(--state-warning)',
-      info:    'var(--color-primary)',
+      info: 'var(--color-primary)',
       success: 'var(--state-success)',
     };
     return colors[this.severity()];
@@ -158,9 +151,9 @@ export class AlertCardComponent {
 
   protected readonly iconBg = computed<string>(() => {
     const bgs: Record<AlertSeverity, string> = {
-      error:   'var(--state-error-bg)',
+      error: 'var(--state-error-bg)',
       warning: 'var(--state-warning-bg)',
-      info:    'var(--color-primary-muted)',
+      info: 'var(--color-primary-muted)',
       success: 'var(--state-success-bg)',
     };
     return bgs[this.severity()];
