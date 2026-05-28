@@ -78,7 +78,11 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           <app-kpi-card-variant
             label="Clases Completadas (Mes)"
             [value]="target.breakdown[0]?.horas ?? 0"
-            [subValue]="target.breakdown[0]?.horas === 1 ? '1 clase' : (target.breakdown[0]?.horas ?? 0) + ' clases'"
+            [subValue]="
+              target.breakdown[0]?.horas === 1
+                ? '1 clase'
+                : (target.breakdown[0]?.horas ?? 0) + ' clases'
+            "
             icon="check-circle"
             color="success"
           />
@@ -115,7 +119,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 class="px-6 py-4 border-b border-divider bg-surface-hover flex justify-between items-center"
               >
                 <h3 class="text-lg font-bold text-text-primary">Registro Diario (Mes Actual)</h3>
-                <button class="btn btn-outline btn-sm" data-llm-action="export-pdf">
+                <button class="btn-secondary text-xs" data-llm-action="export-pdf">
                   <app-icon name="download" [size]="14" />
                   Exportar PDF
                 </button>
@@ -125,8 +129,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 <table class="w-full text-left border-collapse">
                   <thead>
                     <tr
-                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider"
-                      style="background: var(--bg-subtle)"
+                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider bg-subtle"
                     >
                       <th class="p-4 font-semibold">Fecha</th>
                       <th class="p-4 font-semibold">Tipo de Actividad</th>
@@ -153,13 +156,14 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                                 class="w-2 h-2 rounded-full"
                                 [style.backgroundColor]="getCategoryColor(log.category)"
                               ></span>
-                              <span class="text-text-muted"
-                                >{{ log.categoryLabel }}</span
-                              >
+                              <span class="text-text-muted">{{ log.categoryLabel }}</span>
                             </div>
                           </td>
                           <td class="p-4 text-center">
-                            <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary)">
+                            <span
+                              class="text-xs font-semibold px-2 py-0.5 rounded-full text-brand bg-brand/10"
+                              
+                            >
                               {{ log.quantity }} {{ log.quantity === 1 ? 'sesión' : 'sesiones' }}
                             </span>
                           </td>

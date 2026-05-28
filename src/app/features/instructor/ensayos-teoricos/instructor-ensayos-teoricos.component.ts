@@ -99,8 +99,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
                     <tr
-                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider"
-                      style="background: var(--bg-subtle)"
+                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider bg-subtle"
                     >
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
@@ -143,8 +142,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
                     <tr
-                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider"
-                      style="background: var(--bg-subtle)"
+                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider bg-subtle"
                     >
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>

@@ -40,7 +40,7 @@ import {
           <h1 class="text-2xl font-bold text-text-primary">Evaluación Práctica</h1>
           <p class="text-sm text-text-muted mt-1">Calificar el desempeño y firmar el registro</p>
         </div>
-        <button class="btn btn-outline" (click)="goBack()">
+        <button class="btn-secondary" (click)="goBack()">
           <app-icon name="arrow-left" [size]="16" />
           Volver
         </button>
@@ -51,14 +51,14 @@ import {
           <app-icon
             name="loader-2"
             [size]="32"
-            style="color: var(--color-primary)"
-            class="animate-spin"
+            
+            class="animate-spin text-brand"
           />
         </div>
       } @else if (clasesFacade.error()) {
         <div
-          class="card p-4 flex items-start gap-3"
-          style="background: var(--state-error-bg); color: var(--state-error)"
+          class="card p-4 flex items-start gap-3 bg-error-subtle text-error"
+          
         >
           <app-icon name="alert-circle" [size]="20" class="mt-0.5 shrink-0" />
           <p class="text-sm">{{ clasesFacade.error() }}</p>
@@ -111,7 +111,7 @@ import {
                   <h3
                     class="text-base font-semibold text-text-primary mb-1 flex items-center gap-2"
                   >
-                    <app-icon name="award" [size]="18" style="color: var(--state-warning)" />
+                    <app-icon name="award" [size]="18" class="text-warning" />
                     Nota Global
                   </h3>
                   <p class="text-sm text-text-muted mb-3">Asigna una calificación del 1 al 5.</p>
@@ -135,7 +135,7 @@ import {
                     }
                   </div>
                   @if (evalForm.get('grade')?.invalid && evalForm.get('grade')?.touched) {
-                    <p class="text-xs mt-2" style="color: var(--state-error)">
+                    <p class="text-xs mt-2 text-error" >
                       La nota es obligatoria.
                     </p>
                   }
@@ -188,10 +188,10 @@ import {
 
               <!-- Form Actions -->
               <div class="p-6 bg-surface-hover border-t border-divider flex justify-end gap-3">
-                <button type="button" class="btn btn-outline" (click)="goBack()">Cancelar</button>
+                <button type="button" class="btn-ghost" (click)="goBack()">Cancelar</button>
                 <button
                   type="submit"
-                  class="btn btn-primary"
+                  class="btn-primary"
                   [disabled]="evalForm.invalid || isSubmitting()"
                   data-llm-action="save-evaluation"
                 >

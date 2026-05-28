@@ -80,18 +80,16 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         } @else {
           <div class="bento-card flex flex-col gap-2 h-full" appCardHover>
             <div class="flex items-start justify-between gap-3 mb-2">
-              <span class="text-xs font-semibold" style="color: var(--color-primary)">PRÓXIMA</span>
+              <span class="text-xs font-semibold text-brand" >PRÓXIMA</span>
             </div>
             <p class="flex items-baseline gap-1 m-0 truncate">
-              <span class="text-3xl md:text-4xl font-bold" style="color: var(--ds-brand)">
+              <span class="text-3xl md:text-4xl font-bold text-brand" >
                 {{ proximaHora() }}
               </span>
             </p>
             @if (clasesFacade.nextClass(); as next) {
               <div class="flex items-center gap-1 mt-auto flex-wrap pt-2">
-                <span class="text-xs truncate" style="color: var(--text-muted)">{{
-                  next.studentName
-                }}</span>
+                <span class="text-xs truncate text-text-muted">{{ next.studentName }}</span>
               </div>
             }
           </div>
@@ -178,8 +176,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                         <div class="flex-1">
                           <div class="flex items-center gap-2 mb-1.5">
                             <span
-                              class="text-xs px-2.5 py-0.5 rounded-full font-semibold tracking-wide uppercase"
-                              style="background: color-mix(in srgb, var(--state-success) 15%, transparent); color: var(--state-success)"
+                              class="text-xs px-2.5 py-0.5 rounded-full font-semibold tracking-wide uppercase text-success bg-success/15"
+                              
                             >
                               Práctica
                             </span>
@@ -205,7 +203,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                                 <app-icon
                                   name="star"
                                   [size]="14"
-                                  style="color: var(--state-warning)"
+                                  class="text-warning"
                                 />
                                 Nota: {{ cls.evaluationGrade }}
                               </span>
@@ -272,7 +270,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                       class="flex items-center justify-between p-3 bg-surface rounded border border-border-default"
                     >
                       <p class="text-sm font-medium text-text-primary">{{ dia.fechaLabel }}</p>
-                      <span class="text-lg font-bold" style="color: var(--ds-brand)">{{
+                      <span class="text-lg font-bold text-brand" >{{
                         dia.cantidad
                       }}</span>
                     </div>
