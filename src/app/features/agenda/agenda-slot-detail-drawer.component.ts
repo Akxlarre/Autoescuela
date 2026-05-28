@@ -33,81 +33,86 @@ type StatusConfig = {
     @if (slot(); as s) {
       <app-drawer-content-loader class="flex-col h-full flex">
         <ng-template #skeletons>
-        <div class="flex flex-col gap-5 py-2">
-          <app-skeleton-block variant="text" width="100px" height="24px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <div class="grid grid-cols-2 gap-3">
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-            <app-skeleton-block variant="text" width="100%" height="60px" />
+          <div class="flex flex-col gap-5 py-2">
+            <app-skeleton-block variant="text" width="100px" height="24px" />
+            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <div class="grid grid-cols-2 gap-3">
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+              <app-skeleton-block variant="text" width="100%" height="60px" />
+            </div>
           </div>
-        </div>
         </ng-template>
         <ng-template #content>
-        <div class="flex flex-col h-full w-full">
-          <!-- Contenido -->
-          <div class="flex-1 flex flex-col gap-5 py-2">
-          <!-- ── Estado ─────────────────────────────────────────── -->
-          <div
-            class="status-pill"
-            [style.color]="statusPillStyle().color"
-            [style.background]="statusPillStyle().bg"
-          >
-            <app-icon [name]="statusCfg().icon" [size]="12" />
-            <span>{{ statusCfg().label }}</span>
-          </div>
-
-          <!-- ── Horario (prominente) ───────────────────────────── -->
-          <app-stat-box
-            label="Horario de clase"
-            [value]="s.startTime + ' – ' + s.endTime"
-            variant="brand"
-            [useMono]="true"
-          />
-
-          <!-- ── Instructor + Vehículo ─────────────────────────── -->
-          <div class="grid grid-cols-2 gap-3">
-             <app-stat-box
-                label="Instructor"
-                [value]="s.instructorName"
-                variant="surface"
-                [compact]="true"
-                icon="user"
-             />
-             <app-stat-box
-                label="Vehículo"
-                [value]="s.vehiclePlate"
-                variant="surface"
-                [compact]="true"
-                icon="car"
-             />
-          </div>
-
-          <!-- ── Alumno ────────────────────────────────────────── -->
-          @if (s.studentName) {
-            <div class="card p-4 flex flex-col gap-3">
-              <span class="text-xs font-bold uppercase tracking-widest text-muted">Alumno asignado</span>
-              <div class="flex flex-col gap-1">
-                <span class="student-name">{{ s.studentName }}</span>
-                @if (s.classNumber) {
-                  <div class="flex items-center gap-2 mt-1">
-                    <div class="px-1.5 py-0.5 rounded bg-bg-subtle border text-[10px] font-bold uppercase tracking-wider text-text-muted">
-                      Clase {{ s.classNumber }}
-                    </div>
-                  </div>
-                }
+          <div class="flex flex-col h-full w-full">
+            <!-- Contenido -->
+            <div class="flex-1 flex flex-col gap-5 py-2">
+              <!-- ── Estado ─────────────────────────────────────────── -->
+              <div
+                class="status-pill"
+                [style.color]="statusPillStyle().color"
+                [style.background]="statusPillStyle().bg"
+              >
+                <app-icon [name]="statusCfg().icon" [size]="12" />
+                <span>{{ statusCfg().label }}</span>
               </div>
-            </div>
-          }
-        </div>
 
-        <!-- ── Acción (Sticky Footer) ────────────────────────── -->
-        <div class="flex justify-end pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10"
-             style="border-color: var(--border-subtle);">
-          <button class="close-btn" (click)="close()" data-llm-action="close-slot-detail">
-            Cerrar detalle
-          </button>
-        </div>
-        </div>
+              <!-- ── Horario (prominente) ───────────────────────────── -->
+              <app-stat-box
+                label="Horario de clase"
+                [value]="s.startTime + ' – ' + s.endTime"
+                variant="brand"
+                [useMono]="true"
+              />
+
+              <!-- ── Instructor + Vehículo ─────────────────────────── -->
+              <div class="grid grid-cols-2 gap-3">
+                <app-stat-box
+                  label="Instructor"
+                  [value]="s.instructorName"
+                  variant="surface"
+                  [compact]="true"
+                  icon="user"
+                />
+                <app-stat-box
+                  label="Vehículo"
+                  [value]="s.vehiclePlate"
+                  variant="surface"
+                  [compact]="true"
+                  icon="car"
+                />
+              </div>
+
+              <!-- ── Alumno ────────────────────────────────────────── -->
+              @if (s.studentName) {
+                <div class="card p-4 flex flex-col gap-3">
+                  <span class="text-xs font-bold uppercase tracking-widest text-muted"
+                    >Alumno asignado</span
+                  >
+                  <div class="flex flex-col gap-1">
+                    <span class="student-name">{{ s.studentName }}</span>
+                    @if (s.classNumber) {
+                      <div class="flex items-center gap-2 mt-1">
+                        <div
+                          class="px-1.5 py-0.5 rounded bg-bg-subtle border text-[10px] font-bold uppercase tracking-wider text-text-muted"
+                        >
+                          Clase {{ s.classNumber }}
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- ── Acción (Sticky Footer) ────────────────────────── -->
+            <div
+              class="flex justify-end pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10 border-border-subtle"
+            >
+              <button class="btn-ghost" (click)="close()" data-llm-action="close-slot-detail">
+                Cerrar detalle
+              </button>
+            </div>
+          </div>
         </ng-template>
       </app-drawer-content-loader>
     }
@@ -131,26 +136,6 @@ type StatusConfig = {
       font-weight: var(--font-semibold);
       color: var(--text-primary);
       line-height: 1.3;
-    }
-
-    /* ── Close ── */
-
-    .close-btn {
-      padding: 0.625rem 1.25rem;
-      border-radius: var(--radius-lg);
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: var(--text-sm);
-      font-weight: var(--font-medium);
-      cursor: pointer;
-      transition: all var(--duration-standard) var(--ease-standard);
-
-      &:hover {
-        background: var(--bg-subtle);
-        color: var(--text-secondary);
-        border-color: var(--border-subtle);
-      }
     }
   `,
 })

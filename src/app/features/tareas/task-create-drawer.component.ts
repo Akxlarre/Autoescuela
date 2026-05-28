@@ -30,12 +30,8 @@ const ROLE_LABEL: Record<string, string> = {
       <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5">
         <!-- Tipo -->
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-            for="t-type"
-          >
-            Tipo <span style="color: var(--state-error)">*</span>
+          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="t-type">
+            Tipo <span class="text-error">*</span>
           </label>
           <p-select
             id="t-type"
@@ -51,16 +47,13 @@ const ROLE_LABEL: Record<string, string> = {
         <!-- Destinatario -->
         <div class="flex flex-col gap-1.5">
           <label
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
+            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="t-recipient"
           >
-            Destinatario <span style="color: var(--state-error)">*</span>
+            Destinatario <span class="text-error">*</span>
           </label>
           @if (recipientOptions().length === 0) {
-            <p class="text-xs py-1" style="color: var(--text-muted)">
-              No hay destinatarios disponibles.
-            </p>
+            <p class="text-xs py-1 text-text-muted">No hay destinatarios disponibles.</p>
           } @else {
             <p-select
               id="t-recipient"
@@ -78,11 +71,10 @@ const ROLE_LABEL: Record<string, string> = {
         <!-- Asunto -->
         <div class="flex flex-col gap-1.5">
           <label
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
+            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="t-subject"
           >
-            Asunto <span style="color: var(--state-error)">*</span>
+            Asunto <span class="text-error">*</span>
           </label>
           <input
             id="t-subject"
@@ -90,19 +82,14 @@ const ROLE_LABEL: Record<string, string> = {
             formControlName="subject"
             placeholder="Ej. Revisar documentación del alumno"
             maxlength="200"
-            class="w-full h-11 px-3 text-sm rounded-xl border focus:ring-2 focus:outline-none transition-all"
-            style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+            class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
             data-llm-description="task subject input - concise title for the task"
           />
         </div>
 
         <!-- Descripción -->
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold uppercase tracking-wide"
-            style="color: var(--text-muted)"
-            for="t-body"
-          >
+          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="t-body">
             Descripción
           </label>
           <textarea
@@ -111,8 +98,7 @@ const ROLE_LABEL: Record<string, string> = {
             placeholder="Detalle opcional de la tarea…"
             rows="3"
             maxlength="2000"
-            class="w-full px-3 py-2 text-sm rounded-xl border resize-none focus:ring-2 focus:outline-none transition-all"
-            style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+            class="w-full px-3 py-2 text-sm rounded-xl border border-border-default bg-surface text-text-primary resize-none focus:ring-2 focus:outline-none transition-all"
             data-llm-description="task body description - optional detailed content"
           ></textarea>
         </div>
@@ -121,8 +107,7 @@ const ROLE_LABEL: Record<string, string> = {
         @if (selectedType() === 'task') {
           <div class="flex flex-col gap-1.5">
             <label
-              class="text-xs font-semibold uppercase tracking-wide"
-              style="color: var(--text-muted)"
+              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="t-due"
             >
               Fecha límite
@@ -132,7 +117,7 @@ const ROLE_LABEL: Record<string, string> = {
               type="date"
               formControlName="due_date"
               class="w-full h-11 px-3 text-sm rounded-xl border focus:ring-2 focus:outline-none transition-all"
-              style="border-color: var(--border-default); background: var(--bg-surface); color: var(--text-primary)"
+              class="border-border-default bg-surface text-text-primary"
               data-llm-description="task due date picker - only shown for task type"
             />
           </div>
@@ -140,10 +125,7 @@ const ROLE_LABEL: Record<string, string> = {
 
         <!-- Error del facade -->
         @if (tasksFacade.error()) {
-          <p
-            class="text-xs rounded-lg px-3 py-2"
-            style="color: var(--state-error); background: var(--state-error-bg)"
-          >
+          <p class="text-xs rounded-lg px-3 py-2 text-error bg-error-subtle">
             <app-icon name="alert-circle" [size]="12" [ariaHidden]="true" class="inline mr-1" />
             {{ tasksFacade.error() }}
           </p>
@@ -153,31 +135,19 @@ const ROLE_LABEL: Record<string, string> = {
         <div class="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="submit"
-            class="flex-1 h-11 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:pointer-events-none"
-            style="background: var(--ds-brand); color: #fff"
+            class="btn-primary flex-1"
             [disabled]="form.invalid || isSaving()"
             data-llm-action="submit-create-task"
           >
             @if (isSaving()) {
-              <span class="flex items-center justify-center gap-2">
-                <app-icon name="loader-2" [size]="16" [ariaHidden]="true" class="animate-spin" />
-                Enviando…
-              </span>
+              <app-icon name="loader-2" [size]="16" [ariaHidden]="true" class="animate-spin" />
+              Enviando…
             } @else {
-              <span class="flex items-center justify-center gap-2">
-                <app-icon name="send" [size]="16" [ariaHidden]="true" />
-                Enviar tarea
-              </span>
+              <app-icon name="send" [size]="16" [ariaHidden]="true" />
+              Enviar tarea
             }
           </button>
-          <button
-            type="button"
-            class="h-11 px-6 text-sm font-semibold rounded-xl border transition-all"
-            style="border-color: var(--border-default); color: var(--text-secondary)"
-            (click)="drawer.close()"
-          >
-            Cancelar
-          </button>
+          <button type="button" class="btn-ghost" (click)="drawer.close()">Cancelar</button>
         </div>
       </form>
     </div>

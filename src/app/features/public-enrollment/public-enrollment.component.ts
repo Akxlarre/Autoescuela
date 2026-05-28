@@ -91,16 +91,16 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
       <!-- Orbs decorativos -->
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div
-          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl"
-          style="background: color-mix(in srgb, var(--ds-brand) 18%, transparent)"
+          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"
+          
         ></div>
         <div
-          class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl"
-          style="background: color-mix(in srgb, var(--color-primary-dark) 14%, transparent)"
+          class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl bg-brand-dark/14"
+          
         ></div>
         <div
-          class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-          style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent)"
+          class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl bg-brand/6"
+          
         ></div>
       </div>
 
@@ -265,7 +265,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                       <button
                         type="button"
                         class="group relative flex flex-col p-5 rounded-xl border-2 text-left transition-all cursor-pointer
-                               hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                              hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                         [class.border-[var(--ds-brand)]]="facade.paymentMode() === option.value"
                         [class.bg-brand-muted]="facade.paymentMode() === option.value"
                         [class.shadow-sm]="facade.paymentMode() === option.value"
@@ -276,13 +276,13 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                       >
                         <div class="flex items-center gap-3 mb-2">
                           <app-icon [name]="option.icon" [size]="20" color="var(--ds-brand)" />
-                          <p class="text-base font-bold" style="color: var(--text-primary)">
+                          <p class="text-base font-bold text-text-primary">
                             {{ option.label }}
                           </p>
                         </div>
                         <p class="text-xs text-secondary">{{ option.description }}</p>
                         <div class="mt-4 pt-3 border-t border-border flex items-baseline gap-1.5">
-                          <span class="text-2xl font-bold" style="color: var(--text-primary)">
+                          <span class="text-2xl font-bold text-text-primary">
                             {{ option.sessions }}
                           </span>
                           <span class="text-xs text-secondary">clases prácticas</span>

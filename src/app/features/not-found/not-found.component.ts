@@ -1,5 +1,5 @@
-import { Component, ChangeDetectionStrategy } from "@angular/core";
-import { RouterLink } from "@angular/router";
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 /**
  * NotFoundComponent — Página 404 genérica.
@@ -8,7 +8,7 @@ import { RouterLink } from "@angular/router";
  * Usa design tokens del sistema, compatible con light/dark mode.
  */
 @Component({
-  selector: "app-not-found",
+  selector: 'app-not-found',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink],
@@ -22,9 +22,7 @@ import { RouterLink } from "@angular/router";
         <h1 class="my-4 mb-2 font-display text-2xl font-bold text-text-primary">
           Página no encontrada
         </h1>
-        <p class="m-0 mb-6 text-base text-text-muted">
-          La ruta que buscas no existe o fue movida.
-        </p>
+        <p class="m-0 mb-6 text-base text-text-muted">La ruta que buscas no existe o fue movida.</p>
         <a
           routerLink="/app"
           data-llm-nav="/app"
@@ -35,6 +33,6 @@ import { RouterLink } from "@angular/router";
       </div>
     </div>
   `,
-  host: { style: "display: contents;" },
+  host: { style: 'display: contents;' },
 })
 export class NotFoundComponent {}

@@ -23,31 +23,49 @@ import gsap from 'gsap';
       class="relative flex min-h-dvh flex-col items-center justify-center gap-8 overflow-hidden bg-base p-4"
     >
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--ds-brand) 18%, transparent)"></div>
-        <div class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--color-primary-dark) 14%, transparent)"></div>
-        <div class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl" style="background: color-mix(in srgb, var(--ds-brand) 6%, transparent)"></div>
+        <div
+          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"
+          
+        ></div>
+        <div
+          class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl bg-brand-dark/14"
+          
+        ></div>
+        <div
+          class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl bg-brand/6"
+          
+        ></div>
       </div>
 
       <div #cardRef class="w-full max-w-110">
         <div class="surface-glass w-full rounded-2xl p-10">
           <div class="mb-8 text-center">
-            <div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl" style="background: var(--gradient-primary); box-shadow: 0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)">
+            <div
+              class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-primary"
+              style="box-shadow:  0 8px 40px color-mix(in srgb, var(--ds-brand) 35%, transparent)"
+            >
               <app-icon name="shield-alert" [size]="32" color="white" />
             </div>
-            <p class="m-0 mb-2 font-display text-xs font-bold uppercase tracking-[0.18em] text-text-muted">
+            <p
+              class="m-0 mb-2 font-display text-xs font-bold uppercase tracking-[0.18em] text-text-muted"
+            >
               Autoescuela
             </p>
             <h1 class="m-0 mb-1 font-display text-2xl font-bold text-text-primary">
               Actualiza tu contraseña
             </h1>
             <p class="m-0 text-sm text-text-muted">
-              Por motivos de seguridad, debes actualizar tu contraseña temporal en tu primer inicio de sesión.
+              Por motivos de seguridad, debes actualizar tu contraseña temporal en tu primer inicio
+              de sesión.
             </p>
           </div>
 
-          <div #errorMsgRef style="overflow: hidden">
+          <div #errorMsgRef class="overflow-hidden">
             @if (errorMsg()) {
-              <div class="flex items-center gap-2 rounded-md border border-(--state-error-border) bg-(--state-error-bg) px-4 py-3 text-sm text-error mb-4" role="alert">
+              <div
+                class="flex items-center gap-2 rounded-md border border-(--state-error-border) bg-(--state-error-bg) px-4 py-3 text-sm text-error mb-4"
+                role="alert"
+              >
                 <app-icon name="alert-triangle" [size]="14" />
                 {{ errorMsg() }}
               </div>
@@ -75,7 +93,9 @@ import gsap from 'gsap';
               [disabled]="form.invalid || loading()"
             >
               @if (loading()) {
-                <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-current"></span>
+                <span
+                  class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[rgba(255,255,255,0.3)] border-t-current"
+                ></span>
               }
               Actualizar y Continuar
             </button>
@@ -116,7 +136,13 @@ export class ForcePasswordChangeComponent {
     this.errorMsg.set(msg);
     const el = this.errorMsgRef()?.nativeElement;
     if (el) {
-      gsap.to(el, { height: 'auto', opacity: 1, marginBottom: 16, duration: 0.3, ease: 'power2.out' });
+      gsap.to(el, {
+        height: 'auto',
+        opacity: 1,
+        marginBottom: 16,
+        duration: 0.3,
+        ease: 'power2.out',
+      });
     }
   }
 

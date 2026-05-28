@@ -4,6 +4,7 @@ import { TaskStatusBadgeComponent } from '@shared/components/task-status-badge/t
 import { TaskReplyThreadComponent } from '@shared/components/task-reply-thread/task-reply-thread.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { formatTaskAge } from '@core/utils/task.utils';
 import type { TaskStatus } from '@core/models/ui/task.model';
 
@@ -35,10 +36,9 @@ const TYPE_ICON: Record<string, string> = {
                 [name]="typeIcon()"
                 [size]="18"
                 [ariaHidden]="true"
-                class="shrink-0"
-                style="color: var(--text-muted)"
+                class="shrink-0 text-text-muted"
               />
-              <h2 class="text-base font-semibold truncate" style="color: var(--text-primary)">
+              <h2 class="text-base font-semibold truncate text-text-primary">
                 {{ task()!.subject }}
               </h2>
             </div>
@@ -46,28 +46,23 @@ const TYPE_ICON: Record<string, string> = {
           </div>
 
           <div class="flex flex-wrap gap-x-4 gap-y-1">
-            <span class="text-xs" style="color: var(--text-muted)">
+            <span class="text-xs text-text-muted">
               <app-icon name="user" [size]="11" [ariaHidden]="true" class="inline mr-1" />
               {{ task()!.senderName }} → {{ task()!.recipientName }}
             </span>
             @if (task()!.due_date) {
-              <span class="text-xs" style="color: var(--text-muted)">
+              <span class="text-xs text-text-muted">
                 <app-icon name="calendar" [size]="11" [ariaHidden]="true" class="inline mr-1" />
                 Vence {{ dueDateLabel() }}
               </span>
             }
-            <span class="text-xs" style="color: var(--text-muted)">
-              {{ typeLabel() }} · {{ age() }}
-            </span>
+            <span class="text-xs text-text-muted"> {{ typeLabel() }} · {{ age() }} </span>
           </div>
         </div>
 
         <!-- Body -->
         @if (task()!.body) {
-          <p
-            class="text-sm leading-relaxed rounded-xl px-4 py-3"
-            style="color: var(--text-primary); background: var(--bg-subtle)"
-          >
+          <p class="text-sm leading-relaxed rounded-xl px-4 py-3 text-text-primary bg-subtle">
             {{ task()!.body }}
           </p>
         }
@@ -80,67 +75,61 @@ const TYPE_ICON: Record<string, string> = {
             task()!.type !== 'observation'
           ) {
             <button
-              class="h-9 px-4 text-xs font-semibold rounded-lg transition-all"
-              style="background: var(--state-warning-bg); color: var(--state-warning)"
+              class="btn-warning-soft text-xs"
               (click)="changeStatus('in_progress')"
               [disabled]="isMutating()"
               data-llm-action="mark-task-in-progress"
             >
-              <span class="flex items-center gap-1.5">
-                <app-icon name="circle-play" [size]="13" [ariaHidden]="true" />
-                Iniciar
-              </span>
+              <app-icon name="circle-play" [size]="13" [ariaHidden]="true" />
+              Iniciar
             </button>
             <button
-              class="h-9 px-4 text-xs font-semibold rounded-lg transition-all"
-              style="background: var(--state-success-bg); color: var(--state-success)"
+              class="btn-success-soft text-xs"
               (click)="changeStatus('completed')"
               [disabled]="isMutating()"
               data-llm-action="mark-task-completed"
             >
-              <span class="flex items-center gap-1.5">
-                <app-icon name="circle-check" [size]="13" [ariaHidden]="true" />
-                Completar
-              </span>
+              <app-icon name="circle-check" [size]="13" [ariaHidden]="true" />
+              Completar
             </button>
           }
 
           @if (task()!.canChangeStatus && task()!.status === 'in_progress') {
             <button
-              class="h-9 px-4 text-xs font-semibold rounded-lg transition-all"
-              style="background: var(--state-success-bg); color: var(--state-success)"
+              class="btn-success-soft text-xs"
               (click)="changeStatus('completed')"
               [disabled]="isMutating()"
               data-llm-action="mark-task-completed"
             >
-              <span class="flex items-center gap-1.5">
-                <app-icon name="circle-check" [size]="13" [ariaHidden]="true" />
-                Completar
-              </span>
+              <app-icon name="circle-check" [size]="13" [ariaHidden]="true" />
+              Completar
             </button>
           }
 
           @if (task()!.canEdit) {
+            <button class="btn-secondary ml-auto text-xs" data-llm-action="edit-task" disabled>
+              <app-icon name="edit-3" [size]="13" [ariaHidden]="true" />
+              Editar
+            </button>
+          }
+
+          @if (task()!.canDelete) {
             <button
-              class="h-9 px-4 text-xs font-semibold rounded-lg border transition-all ml-auto"
-              style="border-color: var(--border-default); color: var(--text-secondary)"
-              data-llm-action="edit-task"
-              disabled
+              class="btn-danger-ghost text-xs"
+              [class.ml-auto]="!task()!.canEdit"
+              (click)="onDeleteClicked()"
+              [disabled]="isMutating()"
+              data-llm-action="delete-task"
             >
-              <span class="flex items-center gap-1.5">
-                <app-icon name="edit-3" [size]="13" [ariaHidden]="true" />
-                Editar
-              </span>
+              <app-icon name="trash-2" [size]="13" [ariaHidden]="true" />
+              Eliminar
             </button>
           }
         </div>
 
         <!-- Hilo de respuestas -->
-        <div class="border-t pt-4" style="border-color: var(--border-default)">
-          <p
-            class="text-xs font-semibold uppercase tracking-wide mb-3"
-            style="color: var(--text-muted)"
-          >
+        <div class="border-t pt-4 border-border-default">
+          <p class="text-xs font-semibold uppercase tracking-wide mb-3 text-text-muted">
             Respuestas
           </p>
           <app-task-reply-thread
@@ -152,7 +141,7 @@ const TYPE_ICON: Record<string, string> = {
         </div>
       </div>
     } @else {
-      <p class="text-sm text-center py-8" style="color: var(--text-muted)">
+      <p class="text-sm text-center py-8 text-text-muted">
         Seleccioná una tarea para ver el detalle.
       </p>
     }
@@ -161,6 +150,7 @@ const TYPE_ICON: Record<string, string> = {
 export class TaskDetailModalComponent {
   protected readonly tasksFacade = inject(TasksFacade);
   private readonly authFacade = inject(AuthFacade);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   protected readonly task = this.tasksFacade.selectedTask;
   protected readonly isMutating = signal(false);
@@ -217,5 +207,25 @@ export class TaskDetailModalComponent {
     if (!t) return;
     const ok = await this.tasksFacade.addReply(t.id, body);
     if (ok) void this.tasksFacade.loadReplies(t.id);
+  }
+
+  protected async onDeleteClicked(): Promise<void> {
+    const t = this.task();
+    if (!t || this.isMutating()) return;
+
+    const typeLabel = TYPE_LABEL[t.type]?.toLowerCase() ?? 'mensaje';
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Eliminar mensaje',
+      message: `¿Eliminar esta ${typeLabel}? Esta acción no se puede deshacer.`,
+      severity: 'danger',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    this.isMutating.set(true);
+    const ok = await this.tasksFacade.softDelete(t.id);
+    if (ok) this.tasksFacade.selectTask(null);
+    this.isMutating.set(false);
   }
 }

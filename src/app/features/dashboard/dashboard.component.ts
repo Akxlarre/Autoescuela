@@ -1,3 +1,4 @@
+import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -64,6 +65,7 @@ import { Router } from '@angular/router';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './dashboard.component.scss',
   imports: [
+    TooltipModule,
     BentoGridLayoutDirective,
     CardHoverDirective,
     ScrollRevealDirective,
@@ -143,12 +145,12 @@ import { Router } from '@angular/router';
         <!-- Header de sección -->
         <div class="flex items-center justify-between mb-4">
           <div class="flex items-center gap-2">
-            <app-icon name="activity" [size]="16" style="color: var(--ds-brand)" />
+            <app-icon name="activity" [size]="16" class="text-brand" />
             <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
           </div>
           <button
-            class="text-xs font-medium cursor-pointer border-none bg-transparent p-0"
-            style="color: var(--color-primary)"
+            class="text-xs font-medium cursor-pointer border-none bg-transparent p-0 text-brand"
+            
             data-llm-action="view-all-activity"
           >
             Ver todo
@@ -158,10 +160,7 @@ import { Router } from '@angular/router';
         <!-- Lista de actividad con stagger -->
         <ul #activityList class="m-0 p-0 list-none flex flex-col gap-1">
           @for (item of activities(); track item.id) {
-            <li
-              class="flex items-start gap-3 py-2.5 border-b last:border-b-0"
-              style="border-color: var(--border-subtle)"
-            >
+            <li class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle">
               <!-- Ícono del evento -->
               <div
                 class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
@@ -173,7 +172,13 @@ import { Router } from '@angular/router';
 
               <!-- Contenido del evento -->
               <div class="flex-1 min-w-0">
-                <p class="m-0 text-sm font-medium text-text-primary truncate">{{ item.title }}</p>
+                <p
+                  class="m-0 text-sm font-medium text-text-primary truncate"
+                  [pTooltip]="item.title"
+                  tooltipPosition="top"
+                >
+                  {{ item.title }}
+                </p>
                 <p class="m-0 text-xs text-text-muted">{{ item.description }}</p>
               </div>
 
@@ -196,7 +201,7 @@ import { Router } from '@angular/router';
         data-row-span="2"
       >
         <div class="flex items-center gap-2 mb-2">
-          <app-icon name="bell" [size]="16" style="color: var(--state-warning)" />
+          <app-icon name="bell" [size]="16" class="text-warning" />
           <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
         </div>
 
@@ -230,7 +235,9 @@ export class DashboardComponent {
   // ── Estado ────────────────────────────────────────────────────────────────
 
   readonly loading = computed(() => this.dashboardFacade.loading());
-  protected readonly fallbackName = computed(() => this.auth.currentUser()?.name || 'Administrador');
+  protected readonly fallbackName = computed(
+    () => this.auth.currentUser()?.name || 'Administrador',
+  );
 
   // ── Datos derivados del Facade ────────────────────────────────────────────
 
