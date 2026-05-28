@@ -156,6 +156,7 @@
 
   /* Bordes */
   --border-subtle: rgba(9, 9, 11, 0.06);
+  --border-muted: var(--border-subtle);
   --border-default: rgba(9, 9, 11, 0.12);
   --border-strong: rgba(9, 9, 11, 0.2);
 
@@ -367,6 +368,7 @@
      Opacidades aumentadas para WCAG 1.4.11 (Non-text Contrast).
      Inputs sobre --bg-subtle necesitan ratio 3:1 contra su contenedor. */
   --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-muted: var(--border-subtle);
   --border-default: rgba(255, 255, 255, 0.12);
   --border-strong: rgba(255, 255, 255, 0.2);
 
