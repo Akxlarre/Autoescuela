@@ -3,6 +3,7 @@ import {
   isOverdue,
   canEditTask,
   canChangeStatus,
+  canDeleteTask,
   formatTaskAge,
   mapTaskDtoToRow,
 } from './task.utils';
@@ -105,6 +106,52 @@ describe('canEditTask', () => {
   });
 });
 
+// ─── canDeleteTask ───────────────────────────────────────────────────────────
+
+describe('canDeleteTask', () => {
+  it('admin puede borrar cualquier tarea en pending', () => {
+    expect(canDeleteTask(makeTask({ status: 'pending' }), 99, 'admin')).toBe(true);
+  });
+
+  it('admin puede borrar cualquier tarea en in_progress', () => {
+    expect(canDeleteTask(makeTask({ status: 'in_progress' }), 99, 'admin')).toBe(true);
+  });
+
+  it('admin puede borrar cualquier tarea en completed', () => {
+    expect(canDeleteTask(makeTask({ status: 'completed' }), 99, 'admin')).toBe(true);
+  });
+
+  it('secretaria (emisor) puede borrar si status=pending (AC1)', () => {
+    expect(canDeleteTask(makeTask({ from_user_id: 10, status: 'pending' }), 10, 'secretaria')).toBe(
+      true,
+    );
+  });
+
+  it('secretaria (emisor) NO puede borrar si status=in_progress (AC2)', () => {
+    expect(
+      canDeleteTask(makeTask({ from_user_id: 10, status: 'in_progress' }), 10, 'secretaria'),
+    ).toBe(false);
+  });
+
+  it('secretaria (emisor) NO puede borrar si status=completed (AC2)', () => {
+    expect(
+      canDeleteTask(makeTask({ from_user_id: 10, status: 'completed' }), 10, 'secretaria'),
+    ).toBe(false);
+  });
+
+  it('destinatario (no emisor) NUNCA puede borrar (AC5)', () => {
+    expect(canDeleteTask(makeTask({ from_user_id: 10, status: 'pending' }), 20, 'secretaria')).toBe(
+      false,
+    );
+  });
+
+  it('instructor (receptor puro) NUNCA puede borrar (AC-E1)', () => {
+    expect(canDeleteTask(makeTask({ from_user_id: 10, status: 'pending' }), 20, 'instructor')).toBe(
+      false,
+    );
+  });
+});
+
 // ─── canChangeStatus ─────────────────────────────────────────────────────────
 
 describe('canChangeStatus', () => {
@@ -176,7 +223,7 @@ describe('mapTaskDtoToRow', () => {
     created_at: '2026-05-17T10:00:00Z',
   });
 
-  const row = mapTaskDtoToRow(task, 'Ana Admin', 'Sara Sec', 3, 10, false, NOW);
+  const row = mapTaskDtoToRow(task, 'Ana Admin', 'Sara Sec', 3, 10, false, NOW, 'admin');
 
   it('propaga todos los campos del DTO', () => {
     expect(row.id).toBe(task.id);
@@ -200,18 +247,45 @@ describe('mapTaskDtoToRow', () => {
     expect(row.canEdit).toBe(true);
   });
 
+  it('calcula canDelete = true para admin (AC3)', () => {
+    expect(row.canDelete).toBe(true);
+  });
+
   it('calcula canEdit = false para el no-emisor', () => {
-    const rowOther = mapTaskDtoToRow(task, 'Ana Admin', 'Sara Sec', 3, 20, false, NOW);
+    const rowOther = mapTaskDtoToRow(
+      task,
+      'Ana Admin',
+      'Sara Sec',
+      3,
+      20,
+      false,
+      NOW,
+      'secretaria',
+    );
     expect(rowOther.canEdit).toBe(false);
   });
 
+  it('calcula canDelete = false para el destinatario no-admin (AC5)', () => {
+    const rowOther = mapTaskDtoToRow(
+      task,
+      'Ana Admin',
+      'Sara Sec',
+      3,
+      20,
+      false,
+      NOW,
+      'secretaria',
+    );
+    expect(rowOther.canDelete).toBe(false);
+  });
+
   it('calcula canChangeStatus = true para el destinatario en pending', () => {
-    const rowDest = mapTaskDtoToRow(task, 'Ana Admin', 'Sara Sec', 3, 20, false, NOW);
+    const rowDest = mapTaskDtoToRow(task, 'Ana Admin', 'Sara Sec', 3, 20, false, NOW, 'secretaria');
     expect(rowDest.canChangeStatus).toBe(true);
   });
 
   it('asigna recipientInactive correctamente', () => {
-    const rowInactive = mapTaskDtoToRow(task, 'Ana', 'Inactivo', 0, 20, true, NOW);
+    const rowInactive = mapTaskDtoToRow(task, 'Ana', 'Inactivo', 0, 20, true, NOW, 'instructor');
     expect(rowInactive.recipientInactive).toBe(true);
   });
 });

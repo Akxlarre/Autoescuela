@@ -70,6 +70,7 @@ function createMockSupabase(responseData: unknown = null, responseError: unknown
       from: vi.fn().mockReturnValue(builder),
       channel: vi.fn().mockReturnValue(channel),
       removeChannel: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
     },
     _builder: builder,
     _channel: channel,
@@ -452,18 +453,26 @@ describe('TasksFacade', () => {
   // ── softDelete() ─────────────────────────────────────────────────────────────
 
   describe('softDelete()', () => {
-    it('calls UPDATE with deleted_at and returns true', async () => {
+    it('calls soft_delete_task RPC and returns true', async () => {
+      mockSupabase.client.rpc.mockResolvedValue({ data: true, error: null });
       const result = await facade.softDelete('uuid-1');
       expect(result).toBe(true);
-      expect(mockSupabase._builder.update).toHaveBeenCalledWith(
-        expect.objectContaining({ deleted_at: expect.any(String) }),
-      );
+      expect(mockSupabase.client.rpc).toHaveBeenCalledWith('soft_delete_task', {
+        p_task_id: 'uuid-1',
+      });
     });
 
-    it('returns false on error', async () => {
-      mockSupabase.client.from.mockReturnValue(createMockQueryBuilder(null, { message: 'Error' }));
+    it('returns false when RPC returns false (permission denied)', async () => {
+      mockSupabase.client.rpc.mockResolvedValue({ data: false, error: null });
       const result = await facade.softDelete('uuid-1');
       expect(result).toBe(false);
+    });
+
+    it('returns false on RPC error', async () => {
+      mockSupabase.client.rpc.mockResolvedValue({ data: null, error: { message: 'Error' } });
+      const result = await facade.softDelete('uuid-1');
+      expect(result).toBe(false);
+      expect(mockToast.error).toHaveBeenCalled();
     });
   });
 
