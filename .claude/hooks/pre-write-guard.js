@@ -191,6 +191,41 @@ process.stdin.on('end', () => {
           'Toda tabla nueva DEBE tener RLS activado.\n' +
           '     Agrega: ALTER TABLE nombre ENABLE ROW LEVEL SECURITY;'
         );
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // CYBERSECURITY: RLS Security Validator
+      // ═══════════════════════════════════════════════════════════════════════
+      if (/CREATE\s+POLICY/i.test(newContent)) {
+        if (/USING\s*\(\s*true\s*\)/i.test(newContent) || /WITH\s+CHECK\s*\(\s*true\s*\)/i.test(newContent)) {
+          violations.push(
+            'Politica RLS insegura detectada (USING true absoluto).\n' +
+            '     Las politicas de Agentic Security prohíben politicas de acceso publico indiscriminado sin filtros.\n' +
+            '     Si es estrictamente necesario, el humano debe crearlo manualmente, o debes justificarlo usando una funcion especifica.'
+          );
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CYBERSECURITY: SECRET SCANNER GUARD
+    // ═══════════════════════════════════════════════════════════════════════
+    const secretPatterns = [
+      { re: /sk-ant-api03-[A-Za-z0-9\-_]{93}AA/, msg: 'Anthropic API Key' },
+      { re: /sk-[A-Za-z0-9]{48}/, msg: 'OpenAI API Key' },
+      { re: /eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/, msg: 'Supabase JWT (Posible Service Role Key)' },
+      { re: /AKIA[0-9A-Z]{16}/, msg: 'AWS Access Key' },
+      // Captura asignaciones sospechosas de contraseñas largas en duro
+      { re: /(?:password|apiKey|secret|token)\s*[:=]\s*['"][A-Za-z0-9\-_+=/]{16,}['"]/, msg: 'Posible credencial hardcodeada' }
+    ];
+
+    for (const { re, msg } of secretPatterns) {
+      if (re.test(newContent)) {
+         violations.push(
+            `\u{1F512} FUGA DE SECRETOS DETECTADA: ${msg}\n` +
+            `     Las politicas de Agentic Security prohiben escribir credenciales directamente en el codigo.\n` +
+            `     Usa environment variables (.env) o pide al humano que maneje este secreto.`
+         );
+      }
     }
 
     // --- Reportar violaciones ---

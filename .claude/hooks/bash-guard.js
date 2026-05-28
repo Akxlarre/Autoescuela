@@ -60,6 +60,29 @@ process.stdin.on('end', () => {
       }
     }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 3. SUPPLY CHAIN & EXECUTION GUARD (Ciberseguridad)
+    // ═══════════════════════════════════════════════════════════════════════
+    const securityPatterns = [
+      { re: /npm\s+(?:install|i|uninstall|rm)\s+[^-\s]+/, msg: 'Mutacion de dependencias (paquetes). Pide al humano que apruebe e instale paquetes por motivos de seguridad de la cadena de suministro.' },
+      { re: /(?:curl|wget)\s+/, msg: 'Ejecucion de comandos de red (curl/wget). Descargas arbitrarias bloqueadas por seguridad.' },
+      { re: /node\s+-e\s+.*(?:http|https)/, msg: 'Ejecucion de red inline con Node.js' }
+    ];
+
+    for (const { re, msg } of securityPatterns) {
+      if (re.test(command)) {
+        process.stderr.write(
+          `\u{1F6A8} BASH GUARD (CYBERSECURITY): Operacion bloqueada por seguridad.\n` +
+          `Razon: ${msg}\n` +
+          `Las politicas de Agentic Security impiden la instalacion de paquetes no verificados o descargas directas.\n` +
+          `Si esto es requerido, pide al humano que lo ejecute en su terminal.`
+        );
+        process.exit(2);
+      }
+    }
+
+
+
     process.exit(0);
   } catch {
     // Fail-open: si el hook falla, permitir el comando
