@@ -15,6 +15,46 @@
 | Archivo | Responsabilidad | Ubicación | Estado |
 |---------|----------------|-----------|--------|
 | `tailwind.css` | Capa de utilidades Tailwind v4. Mapea tokens del design system vía `@theme` para clases como `text-text-secondary`, `bg-surface`, `rounded-lg`. No usa Preflight (PrimeNG tiene su propio reset). | `src/tailwind.css` | ✅ Estable |
+
+### Tokens `@theme` disponibles (→ clases Tailwind generadas)
+
+| Token CSS (`var(--)`) | Clase `bg-*` | Clase `border-*` | Clase `text-*` |
+|-----------------------|-------------|-----------------|---------------|
+| `--ds-brand` | `bg-brand` / `bg-brand/N` | `border-brand` / `border-brand/N` | `text-brand` |
+| `--color-primary-muted` | `bg-brand-muted` | `border-brand-muted` | — |
+| `--color-primary-tint` | `bg-brand-tint` | — | — |
+| `--color-primary-dark` | `bg-brand-dark` / `bg-brand-dark/N` | — | — |
+| `--bg-base` | `bg-base` | — | — |
+| `--bg-surface` | `bg-surface` / `bg-surface/N` | — | — |
+| `--bg-elevated` | `bg-elevated` | — | — |
+| `--bg-subtle` | `bg-subtle` | — | — |
+| `--overlay-backdrop` | `bg-overlay` | — | — |
+| `--text-primary` | `bg-text-primary` | — | `text-text-primary` |
+| `--text-secondary` | — | — | `text-text-secondary` |
+| `--text-muted` | `bg-text-muted` / `bg-text-muted/N` | — | `text-text-muted` |
+| `--border-subtle` | `bg-border-subtle` | `border-border-subtle` | — |
+| `--border-muted` | `bg-border-muted` | `border-border-muted` | — |
+| `--border-default` | — | `border-border-default` | — |
+| `--state-success` | `bg-success` / `bg-success/N` | `border-success` / `border-success/N` | `text-success` |
+| `--state-success-bg` | `bg-success-subtle` | — | — |
+| `--state-success-border` | — | `border-success-border` | — |
+| `--state-warning` | `bg-warning` / `bg-warning/N` | `border-warning` / `border-warning/N` | `text-warning` |
+| `--state-warning-bg` | `bg-warning-subtle` | — | — |
+| `--state-warning-border` | — | `border-warning-border` | — |
+| `--state-error` | `bg-error` / `bg-error/N` | `border-error` / `border-error/N` | `text-error` |
+| `--state-error-bg` | `bg-error-subtle` | — | — |
+| `--state-error-border` | — | `border-error-border` | — |
+| `--state-info` | `bg-info` / `bg-info/N` | `border-info` | `text-info` |
+| `--state-info-bg` | `bg-info-subtle` | — | — |
+| `--state-info-border` | — | `border-info-border` | — |
+
+> **Patrón `/N` (opacity modifier):** En Tailwind v4, todos los colores en `@theme` soportan `bg-TOKEN/N` y `border-TOKEN/N` donde N es el porcentaje de opacidad (1–100). Equivale a `color-mix(in oklch, var(--color-TOKEN) N%, transparent)`. Reemplaza los `style="background: color-mix(...)"` inline.
+
+### Utilities `@utility` en `tailwind.css`
+
+| Clase | CSS generado | Cuándo usar |
+|-------|-------------|-------------|
+| `bg-gradient-primary` | `background: var(--gradient-primary)` | Fondo degradado sky→indigo (2 paradas) |
 | `postcss.config.json` | **Configuración PostCSS activa** para Tailwind v4. Angular `@angular/build:application` solo lee JSON (`postcss.config.json` / `.postcssrc.json`). Declara `@tailwindcss/postcss` como plugin. **CRÍTICO: nunca renombrar a .mjs/.js o Tailwind dejará de procesar CSS.** | `postcss.config.json` (root) | ✅ Estable |
 | `postcss.config.mjs` | Legado — Angular lo ignora. Solo referencia para entender la configuración. No modificar: usar `postcss.config.json`. | `postcss.config.mjs` (root) | ⚠️ Legado |
 
@@ -26,11 +66,28 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 |-------|-----------|-------------|
 | `btn-primary` | Fondo brand, texto blanco. Dentro de `surface-hero` se invierte (blanco + brand text) por cascade. | CTA principal de la sección |
 | `btn-secondary` | Borde sutil, fondo translúcido. **Afectado por cascade `surface-hero`** → glass blanco. | Acción secundaria estándar |
+| `btn-ghost` | Sin borde, fondo transparente. Hover: `bg-subtle` + texto sube a `text-primary`. Tokens `--btn-ghost-*`. | Acción terciaria discreta (filas de tabla, listas) |
+| `btn-warning-soft` | Fondo `--state-warning-bg`, texto `--state-warning`, borde `--state-warning-border`. Dark-mode aware vía tokens. | Acción de transición de estado warning (ej: "Iniciar") |
+| `btn-success-soft` | Fondo `--state-success-bg`, texto `--state-success`, borde `--state-success-border`. Dark-mode aware vía tokens. | Acción de confirmación positiva (ej: "Completar") |
 | `btn-danger-ghost` | **Fondo blanco puro, borde rojo-300, texto rojo-600**. Usa `theme()` — **inmune a cascade** de `surface-hero`. Hover: rojo-50. | Acción destructiva en heroes/cabeceras |
 | `btn-danger-solid` | **Fondo rojo-600, texto blanco**. Hover: rojo-700. Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
 | `btn-neutral` | **Fondo gris-100, texto gris-700**. Hover: gris-200. Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales (sin dependencia de cascade) |
+| `btn-outline` | Borde `--border-muted`, fondo `--bg-surface`, texto `--text-primary`. Hover: `--bg-elevated`. `:disabled` → opacity 0.4 + cursor not-allowed via CSS. Dark-mode aware vía tokens. | Botones secundarios de paginación, acciones de peso medio |
 
 > **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
+
+### Badge de estado (`badge-*`)
+
+Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS — dark-mode aware. Padding compacto `py-0.5 px-2`, `border-radius: var(--radius-md)`, `font-size: 0.75rem`.
+
+| Clase | Color de estado | Cuándo usar |
+|-------|----------------|-------------|
+| `badge-warning` | `--state-warning` (ámbar) | Advertencias, pendientes, estados intermedios |
+| `badge-success` | `--state-success` (verde) | Aprobados, completados, activos |
+| `badge-error` | `--state-error` (rojo) | Errores, rechazados, fallidos |
+| `badge-info` | `--state-info` (azul) | Información neutral, en progreso |
+
+> Preferir `[class.badge-success]="condition"` sobre `[style.background]="color-mix(...)"` para estado dinámico.
 
 ## Layout
 
@@ -49,7 +106,7 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 
 | Archivo | Responsabilidad | Ubicación | Estado |
 |---------|----------------|-----------|--------|
-| `_primeng-overrides.scss` | Mapeo de tokens PrimeNG a Design System. Overrides de toast, buttons, tables, stepper (`.stepper-premium` con `--step-2` a `--step-6` vía `@for` loop), datepicker, skeleton, dark mode fixes. | `styles/vendors/_primeng-overrides.scss` | ✅ Estable |
+| `_primeng-overrides.scss` | Mapeo de tokens PrimeNG a Design System. Overrides de toast, buttons, tables, stepper (`.stepper-premium`), datepicker, skeleton, dark mode fixes y **Tooltips Premium** (Glassmorphic dark charcoal, backdrop blur y alineación de flechas). | `styles/vendors/_primeng-overrides.scss` | ✅ Estable |
 
 ## Estilos Globales (`styles.scss`)
 
