@@ -235,9 +235,10 @@ export class AppShellComponent {
       }
     });
 
-    // Cargar sedes una sola vez cuando el usuario admin se autentica
+    // Cargar sedes una sola vez cuando el usuario admin o secretaria se autentica
     effect(() => {
-      if (this.auth.currentUser()?.role === 'admin') {
+      const role = this.auth.currentUser()?.role;
+      if (role === 'admin' || role === 'secretaria') {
         this.branchFacade.loadBranches();
       }
     });
