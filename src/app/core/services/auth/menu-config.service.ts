@@ -8,6 +8,7 @@ export interface NavItem {
   icon: string;
   routerLink: string;
   badge?: number;
+  requiresProfessional?: boolean;
 }
 
 /** Grupo de items de navegación con encabezado de sección. */
@@ -49,51 +50,92 @@ export class MenuConfigService {
 
 const ADMIN_NAV: NavGroup[] = [
   {
-    group: 'Dashboard',
-    items: [{ label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/admin/dashboard' }],
-  },
-  {
-    group: 'Operación Diaria',
+    group: 'Operaciones Diarias',
     items: [
-      { label: 'Notificaciones', icon: 'bell', routerLink: '/app/admin/notificaciones' },
+      { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/admin/dashboard' },
       { label: 'Comunicación', icon: 'message-circle', routerLink: '/app/admin/tareas' },
       { label: 'Nueva Matrícula', icon: 'file-plus', routerLink: '/app/admin/matricula' },
     ],
   },
   {
-    group: 'Alumnos',
+    group: 'Academia Clase B',
     items: [
-      { label: 'Base de Alumnos', icon: 'users', routerLink: '/app/admin/alumnos' },
-      { label: 'Certificados', icon: 'award', routerLink: '/app/admin/certificacion' },
+      { label: 'Agenda', icon: 'calendar', routerLink: '/app/admin/agenda' },
+      { label: 'Base Alumnos B', icon: 'users', routerLink: '/app/admin/alumnos' },
+      { label: 'Asistencia B', icon: 'clipboard-check', routerLink: '/app/admin/asistencia' },
+      { label: 'Certificaciones B', icon: 'award', routerLink: '/app/admin/certificacion' },
+    ],
+  },
+  {
+    group: 'Academia Profesional',
+    items: [
       {
-        label: 'Servicios Especiales',
-        icon: 'settings',
-        routerLink: '/app/admin/servicios-especiales',
+        label: 'Promociones',
+        icon: 'tag',
+        routerLink: '/app/admin/clase-profesional/promociones',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Relatores',
+        icon: 'monitor',
+        routerLink: '/app/admin/clase-profesional/relatores',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Asistencia Prof.',
+        icon: 'clipboard-list',
+        routerLink: '/app/admin/clase-profesional/asistencia',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Evaluaciones',
+        icon: 'file-spreadsheet',
+        routerLink: '/app/admin/clase-profesional/evaluaciones',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Libro de Clases',
+        icon: 'book-open',
+        routerLink: '/app/admin/libro-de-clases',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Certificados Prof.',
+        icon: 'award',
+        routerLink: '/app/admin/clase-profesional/certificados',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Archivo',
+        icon: 'archive',
+        routerLink: '/app/admin/clase-profesional/archivo',
+        requiresProfessional: true,
       },
     ],
   },
   {
-    group: 'Agenda y Clases',
+    group: 'Finanzas y Caja',
     items: [
-      { label: 'Agenda Semanal', icon: 'calendar', routerLink: '/app/admin/agenda' },
-      { label: 'Asistencia', icon: 'clipboard-check', routerLink: '/app/admin/asistencia' },
-    ],
-  },
-  {
-    group: 'Administración',
-    items: [
-      { label: 'Pagos', icon: 'credit-card', routerLink: '/app/admin/pagos' },
       {
-        label: 'Cuadratura Caja',
+        label: 'Caja Diaria',
         icon: 'calculator',
         routerLink: '/app/admin/contabilidad/cuadratura',
       },
-      { label: 'Secretarias', icon: 'users', routerLink: '/app/admin/secretarias' },
-      { label: 'Instructores', icon: 'user-check', routerLink: '/app/admin/instructores' },
+      {
+        label: 'Venta Servicios Especiales',
+        icon: 'briefcase',
+        routerLink: '/app/admin/servicios-especiales',
+      },
+      { label: 'Pagos', icon: 'credit-card', routerLink: '/app/admin/pagos' },
       {
         label: 'Reportes Contables',
         icon: 'bar-chart-2',
         routerLink: '/app/admin/contabilidad/reportes',
+      },
+      {
+        label: 'Liquidaciones',
+        icon: 'banknote',
+        routerLink: '/app/admin/contabilidad/liquidaciones',
       },
       {
         label: 'Cursos Singulares',
@@ -101,68 +143,24 @@ const ADMIN_NAV: NavGroup[] = [
         routerLink: '/app/admin/contabilidad/cursos',
       },
       { label: 'Anticipos', icon: 'receipt', routerLink: '/app/admin/contabilidad/anticipos' },
-      {
-        label: 'Liquidaciones',
-        icon: 'banknote',
-        routerLink: '/app/admin/contabilidad/liquidaciones',
-      },
-      { label: 'Flota', icon: 'truck', routerLink: '/app/admin/flota' },
-      { label: 'DMS', icon: 'folder-open', routerLink: '/app/admin/documentos' },
-      { label: 'Configuración Web', icon: 'globe', routerLink: '/app/admin/configuracion-web' },
+      { label: 'Ex Alumnos', icon: 'user-minus', routerLink: '/app/admin/ex-alumnos' },
     ],
   },
   {
-    group: 'Clase Profesional',
+    group: 'Recursos y Logística',
     items: [
-      {
-        label: 'Relatores',
-        icon: 'monitor',
-        routerLink: '/app/admin/clase-profesional/relatores',
-      },
-      {
-        label: 'Promociones',
-        icon: 'tag',
-        routerLink: '/app/admin/clase-profesional/promociones',
-      },
-      {
-        label: 'Clases y Asistencia',
-        icon: 'clipboard-list',
-        routerLink: '/app/admin/clase-profesional/asistencia',
-      },
-      {
-        label: 'Evaluaciones',
-        icon: 'file-spreadsheet',
-        routerLink: '/app/admin/clase-profesional/evaluaciones',
-      },
-      {
-        label: 'Libro de Clases',
-        icon: 'book-open',
-        routerLink: '/app/admin/libro-de-clases',
-      },
-      {
-        label: 'Certificados Prof.',
-        icon: 'award',
-        routerLink: '/app/admin/clase-profesional/certificados',
-      },
-      {
-        label: 'Archivo',
-        icon: 'archive',
-        routerLink: '/app/admin/clase-profesional/archivo',
-      },
+      { label: 'Instructores', icon: 'user-check', routerLink: '/app/admin/instructores' },
+      { label: 'Flota', icon: 'truck', routerLink: '/app/admin/flota' },
+      { label: 'DMS Documentos', icon: 'folder-open', routerLink: '/app/admin/documentos' },
     ],
-  },
-  {
-    group: 'Reportes',
-    items: [{ label: 'Auditoría', icon: 'shield-check', routerLink: '/app/admin/auditoria' }],
   },
 ];
 
 const SECRETARIA_NAV: NavGroup[] = [
   {
-    group: 'Mi Dashboard',
+    group: 'Operaciones Diarias',
     items: [
       { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/secretaria/dashboard' },
-      { label: 'Notificaciones', icon: 'bell', routerLink: '/app/secretaria/notificaciones' },
       {
         label: 'Comunicación',
         icon: 'message-circle',
@@ -172,34 +170,77 @@ const SECRETARIA_NAV: NavGroup[] = [
     ],
   },
   {
-    group: 'Gestión de Alumnos',
+    group: 'Academia Clase B',
     items: [
-      { label: 'Matrículas', icon: 'file-text', routerLink: '/app/secretaria/matricula' },
-      { label: 'Base de Alumnos', icon: 'users', routerLink: '/app/secretaria/alumnos' },
-      { label: 'Ex Alumnos', icon: 'user-minus', routerLink: '/app/secretaria/ex-alumnos' },
-      {
-        label: 'Comunicaciones',
-        icon: 'message-circle',
-        routerLink: '/app/secretaria/comunicaciones',
-      },
-      { label: 'Certificados', icon: 'award', routerLink: '/app/secretaria/certificados' },
-      { label: 'DMS', icon: 'folder-open', routerLink: '/app/secretaria/documentos' },
+      { label: 'Agenda', icon: 'calendar', routerLink: '/app/secretaria/agenda' },
+      { label: 'Base Alumnos B', icon: 'users', routerLink: '/app/secretaria/alumnos' },
+      { label: 'Asistencia B', icon: 'clipboard-check', routerLink: '/app/secretaria/asistencia' },
+      { label: 'Certificaciones B', icon: 'award', routerLink: '/app/secretaria/certificados' },
     ],
   },
   {
-    group: 'Operaciones',
+    group: 'Academia Profesional',
     items: [
-      { label: 'Agenda', icon: 'calendar', routerLink: '/app/secretaria/agenda' },
-      { label: 'Asistencia', icon: 'clipboard-check', routerLink: '/app/secretaria/asistencia' },
-      { label: 'Instructores', icon: 'user-check', routerLink: '/app/secretaria/instructores' },
-      { label: 'Pagos', icon: 'credit-card', routerLink: '/app/secretaria/pagos' },
       {
-        label: 'Cuadratura',
+        label: 'Promociones',
+        icon: 'tag',
+        routerLink: '/app/secretaria/profesional/promociones',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Relatores',
+        icon: 'monitor',
+        routerLink: '/app/secretaria/profesional/relatores',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Asistencia Prof.',
+        icon: 'clipboard-list',
+        routerLink: '/app/secretaria/profesional/asistencia',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Calificaciones',
+        icon: 'star',
+        routerLink: '/app/secretaria/profesional/notas',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Libro de Clases',
+        icon: 'book-open',
+        routerLink: '/app/secretaria/libro-de-clases',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Certificados Prof.',
+        icon: 'award',
+        routerLink: '/app/secretaria/profesional/certificados',
+        requiresProfessional: true,
+      },
+      {
+        label: 'Archivo',
+        icon: 'archive',
+        routerLink: '/app/secretaria/profesional/archivo',
+        requiresProfessional: true,
+      },
+    ],
+  },
+  {
+    group: 'Finanzas y Caja',
+    items: [
+      {
+        label: 'Caja Diaria',
         icon: 'calculator',
         routerLink: '/app/secretaria/contabilidad/cuadratura',
       },
       {
-        label: 'Reportes',
+        label: 'Venta Servicios Especiales',
+        icon: 'briefcase',
+        routerLink: '/app/secretaria/servicios-especiales',
+      },
+      { label: 'Pagos', icon: 'credit-card', routerLink: '/app/secretaria/pagos' },
+      {
+        label: 'Reportes Contables',
         icon: 'bar-chart-2',
         routerLink: '/app/secretaria/contabilidad/reportes',
       },
@@ -208,52 +249,19 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'banknote',
         routerLink: '/app/secretaria/contabilidad/liquidaciones',
       },
+      { label: 'Ex Alumnos', icon: 'user-minus', routerLink: '/app/secretaria/ex-alumnos' },
       {
-        label: 'Servicios Especiales',
-        icon: 'briefcase',
-        routerLink: '/app/secretaria/servicios-especiales',
+        label: 'Comunicaciones',
+        icon: 'message-circle',
+        routerLink: '/app/secretaria/comunicaciones',
       },
-      { label: 'Configuración Web', icon: 'globe', routerLink: '/app/secretaria/configuracion-web' },
     ],
   },
   {
-    group: 'Clase Profesional',
+    group: 'Recursos y Logística',
     items: [
-      {
-        label: 'Relatores',
-        icon: 'monitor',
-        routerLink: '/app/secretaria/profesional/relatores',
-      },
-      {
-        label: 'Promociones',
-        icon: 'tag',
-        routerLink: '/app/secretaria/profesional/promociones',
-      },
-      {
-        label: 'Clases y Asistencia',
-        icon: 'clipboard-list',
-        routerLink: '/app/secretaria/profesional/asistencia',
-      },
-      {
-        label: 'Libro de Clases',
-        icon: 'book-open',
-        routerLink: '/app/secretaria/libro-de-clases',
-      },
-      {
-        label: 'Calificaciones',
-        icon: 'star',
-        routerLink: '/app/secretaria/profesional/notas',
-      },
-      {
-        label: 'Certificados',
-        icon: 'award',
-        routerLink: '/app/secretaria/profesional/certificados',
-      },
-      {
-        label: 'Archivo',
-        icon: 'archive',
-        routerLink: '/app/secretaria/profesional/archivo',
-      },
+      { label: 'Instructores', icon: 'user-check', routerLink: '/app/secretaria/instructores' },
+      { label: 'DMS Documentos', icon: 'folder-open', routerLink: '/app/secretaria/documentos' },
     ],
   },
 ];
@@ -284,10 +292,7 @@ const INSTRUCTOR_NAV: NavGroup[] = [
 const ALUMNO_NAV: NavGroup[] = [
   {
     group: 'Mi Progreso',
-    items: [
-      { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/alumno/dashboard' },
-      { label: 'Notificaciones', icon: 'bell', routerLink: '/app/alumno/notificaciones' },
-    ],
+    items: [{ label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/alumno/dashboard' }],
   },
   {
     group: 'Mis Clases',
