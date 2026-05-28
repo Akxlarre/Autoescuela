@@ -183,6 +183,7 @@ import {
   Circle,
   CalendarPlus,
   MousePointerClick,
+  ShoppingCart,
   Unlock,
 } from 'lucide-angular';
 
@@ -423,6 +424,7 @@ export const appConfig: ApplicationConfig = {
         Car,
         Circle,
         MousePointerClick,
+        ShoppingCart,
         FlaskConical,
         Gauge,
         GraduationCap,

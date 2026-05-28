@@ -79,7 +79,7 @@ export class GsapAnimationsService {
     options: { skipOpacity?: boolean } = {},
   ): void {
     if (!containerEl) return;
-    
+
     this.ngZone.runOutsideAngular(() => {
       const cells = Array.from(containerEl.children) as HTMLElement[];
 
@@ -208,7 +208,10 @@ export class GsapAnimationsService {
         ease: 'power2.out',
         onUpdate: () => {
           const display = hasDecimals
-            ? obj.val.toLocaleString('es-CL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+            ? obj.val.toLocaleString('es-CL', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              })
             : Math.round(obj.val).toLocaleString('es-CL');
           el.textContent = display + suffix;
         },
@@ -273,18 +276,14 @@ export class GsapAnimationsService {
   addCardHover(el: HTMLElement | null | undefined): void {
     if (!el || !this.shouldAnimate()) return;
 
-    // Leer tokens una sola vez al registrar — evita getComputedStyle en cada mouseenter
-    const style = getComputedStyle(document.documentElement);
-    const t = (name: string) => style.getPropertyValue(name).trim();
-    const shadowHover = t('--card-shadow-hover') || t('--shadow-lg');
-    const shadowDefault = t('--card-shadow') || t('--shadow-md');
-    const borderStrong = t('--border-strong') || t('--border-default');
-    const borderDefault = t('--border-default') || t('--border-subtle');
+    // Tokens leídos en cada evento para reflejar el tema activo correctamente.
+    const t = (name: string) =>
+      getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
     const enter = () =>
       gsap.to(el, {
-        boxShadow: shadowHover,
-        borderColor: borderStrong,
+        boxShadow: t('--card-shadow-hover') || t('--shadow-lg'),
+        borderColor: t('--border-strong') || t('--border-default'),
         y: -2,
         duration: 0.22,
         ease: 'power2.out',
@@ -292,8 +291,8 @@ export class GsapAnimationsService {
 
     const leave = () =>
       gsap.to(el, {
-        boxShadow: shadowDefault,
-        borderColor: borderDefault,
+        boxShadow: t('--card-shadow') || t('--shadow-md'),
+        borderColor: t('--border-default') || t('--border-subtle'),
         y: 0,
         duration: 0.32,
         ease: 'power2.inOut',
