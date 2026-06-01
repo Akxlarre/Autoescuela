@@ -43,7 +43,7 @@
 | Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
 |------------|----------------|-------------------|-----------|--------|
 | `app-notifications-panel` | Dropdown / Panel | `notifications` (Notification[], req), `unreadCount` (number, 0) — outputs: `markRead` (string), `markAllRead` (void). Dumb: sin servicios. Entrada animada con `[appAnimateIn]` desde TopbarComponent. | `shared/components/notifications-panel/notifications-panel.component.ts` | ✅ Estable |
-| `app-search-panel` | Dropdown / Buscador global | Sin inputs. outputs: `queryChange` (string), `closed` (void). Dumb: query es estado local (`signal`). Autofocus al montar. Escape emite `closed`. Entrada animada con `[appAnimateIn]`. | `shared/components/search-panel/search-panel.component.ts` | ✅ Estable |
+| `app-search-panel` | Command Palette global | inputs: `groups` (SearchResultGroup[], req), `rightPx` (number, 24). outputs: `queryChange` (string), `closed` (void), `resultSelected` (SearchResult). Dumb puro sin inyección de facades. Chips rápidos en vacío, grupos Acciones/Alumnos con navegación ↑↓↵, footer de atajos. Coordinado por `AppShellComponent` + `GlobalSearchFacade`. | `shared/components/search-panel/search-panel.component.ts` | ✅ Estable |
 | `app-user-panel` | Dropdown / Panel | `user` (User, req) — outputs: `action` (string), `logout` (void). Dumb: sin servicios ni lógica de confirmación. El segundo paso de logout (`ConfirmModalService.confirm()`) es responsabilidad del TopbarComponent (Smart parent). Menú desplegable para opciones de usuario desde TopbarComponent animado con `[appAnimateIn]`. | `shared/components/user-panel/user-panel.component.ts` | ✅ Estable |
 
 ## Moléculas — Matrícula Pública
