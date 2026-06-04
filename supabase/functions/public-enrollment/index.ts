@@ -15,6 +15,7 @@
 //   - submit-pre-inscription: Pre-inscripción profesional
 //   - initiate-payment      : Crea enrollment pending_payment e inicia transacción Webpay
 //   - confirm-payment       : Confirma el pago tras retorno desde Webpay (commit)
+//   - check-duplicate       : Check anticipado RUT+curso (sin side-effects, falla silenciosa)
 //
 // Tarjetas de prueba Transbank (entorno integración):
 // Número: 4051 8856 0044 6623 (VISA - Genera transacciones aprobadas)
@@ -28,18 +29,47 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { type EnrollmentData, buildStructuredPdf } from '../_shared/contract-pdf.ts';
+import {
+  RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW_MS,
+  amountsMatch,
+  isHoneypotTripped,
+  isOriginAllowed,
+  isRateLimited,
+} from '../_shared/anti-abuse.ts';
 
-// ─── CORS headers ───
+// ─── CORS (S2 — allowlist por env var PUBLIC_ENROLLMENT_ALLOWED_ORIGINS) ───
+// Antes era Access-Control-Allow-Origin: '*' (abierto a cualquier origen, incluso
+// para mutaciones que envían email/inician pagos). Ahora se refleja el Origin SOLO
+// si está en la allowlist. La allowlist viene de env var (CSV) — sin redeploy.
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+const BASE_CORS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+function getAllowedOrigins(): string[] {
+  return (Deno.env.get('PUBLIC_ENROLLMENT_ALLOWED_ORIGINS') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** Aplica CORS al response: refleja el Origin solo si está en la allowlist. */
+function applyCors(res: Response, origin: string | null): Response {
+  for (const [k, v] of Object.entries(BASE_CORS)) res.headers.set(k, v);
+  if (isOriginAllowed(origin, getAllowedOrigins())) {
+    res.headers.set('Access-Control-Allow-Origin', origin as string);
+    res.headers.set('Vary', 'Origin');
+  }
+  return res;
+}
+
 function jsonResponse(data: unknown, status = 200) {
+  // CORS se aplica en el chokepoint (applyCors) del handler principal.
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
@@ -167,9 +197,49 @@ async function webpayCommit(token: string): Promise<WebpayCommitResponse> {
 
 // ─── Main handler ───
 
+// ── Anti-abuso (S1) ──────────────────────────────────────────────────────────
+// Acciones de mutación pesada sujetas a rate-limit por IP (las que crean usuarios,
+// envían email o inician pagos). Las acciones de solo-lectura (load-*) NO se limitan
+// para no romper el browsing legítimo de la agenda.
+const RATE_LIMITED_ACTIONS = new Set([
+  'submit-clase-b',
+  'submit-pre-inscription',
+  'initiate-payment',
+  'generate-contract-preview',
+  'get-carnet-upload-url',
+]);
+// Acciones cuyo formulario público incluye el campo honeypot.
+const HONEYPOT_ACTIONS = new Set([
+  'submit-clase-b',
+  'submit-pre-inscription',
+  'initiate-payment',
+  'generate-contract-preview',
+]);
+
+function getClientIp(req: Request): string {
+  const fwd = req.headers.get('x-forwarded-for');
+  if (fwd) return fwd.split(',')[0].trim();
+  return req.headers.get('x-real-ip') ?? 'unknown';
+}
+
+/** Registra el request en public_enrollment_throttle y cuenta los de la ventana. */
+async function checkRateLimit(supabase: any, ip: string, action: string): Promise<boolean> {
+  const since = new Date(Date.now() - RATE_LIMIT_WINDOW_MS).toISOString();
+  await supabase.from('public_enrollment_throttle').insert({ ip, action });
+  const { count } = await supabase
+    .from('public_enrollment_throttle')
+    .select('*', { count: 'exact', head: true })
+    .eq('ip', ip)
+    .eq('action', action)
+    .gte('created_at', since);
+  return isRateLimited(count ?? 0, RATE_LIMIT_MAX);
+}
+
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get('Origin');
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return applyCors(new Response('ok'), origin);
   }
 
   try {
@@ -177,7 +247,7 @@ Deno.serve(async (req: Request) => {
     const { action } = body;
 
     if (!action || typeof action !== 'string') {
-      return errorResponse('action (string) is required');
+      return applyCors(errorResponse('action (string) is required'), origin);
     }
 
     // Admin client (SERVICE_ROLE_KEY bypasses RLS)
@@ -185,33 +255,54 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    switch (action) {
-      case 'load-instructors':
-        return await handleLoadInstructors(supabase, body);
-      case 'load-schedule':
-        return await handleLoadSchedule(supabase, body);
-      case 'reserve-slots':
-        return await handleReserveSlots(supabase, body);
-      case 'release-slots':
-        return await handleReleaseSlots(supabase, body);
-      case 'submit-clase-b':
-        return await handleSubmitClaseB(supabase, body);
-      case 'submit-pre-inscription':
-        return await handleSubmitPreInscription(supabase, body);
-      case 'initiate-payment':
-        return await handleInitiatePayment(supabase, body);
-      case 'confirm-payment':
-        return await handleConfirmPayment(supabase, body);
-      case 'get-carnet-upload-url':
-        return await handleGetCarnetUploadUrl(supabase, body);
-      case 'generate-contract-preview':
-        return await handleGenerateContractPreview(supabase, body);
-      default:
-        return errorResponse(`Unknown action: ${action}`);
+    // ── Gate anti-abuso (S1): honeypot + rate-limit antes de tocar la BD ──
+    if (HONEYPOT_ACTIONS.has(action) && isHoneypotTripped(body.honeypot)) {
+      // Bot detectado (llenó el campo trampa): respuesta genérica, sin tocar la BD.
+      return applyCors(errorResponse('Solicitud rechazada.', 400), origin);
     }
+    if (RATE_LIMITED_ACTIONS.has(action)) {
+      const ip = getClientIp(req);
+      if (await checkRateLimit(supabase, ip, action)) {
+        return applyCors(
+          errorResponse('Demasiados intentos. Espera unos minutos e inténtalo de nuevo.', 429),
+          origin,
+        );
+      }
+    }
+
+    const dispatch = async (): Promise<Response> => {
+      switch (action) {
+        case 'load-instructors':
+          return await handleLoadInstructors(supabase, body);
+        case 'load-schedule':
+          return await handleLoadSchedule(supabase, body);
+        case 'reserve-slots':
+          return await handleReserveSlots(supabase, body);
+        case 'release-slots':
+          return await handleReleaseSlots(supabase, body);
+        case 'submit-clase-b':
+          return await handleSubmitClaseB(supabase, body);
+        case 'submit-pre-inscription':
+          return await handleSubmitPreInscription(supabase, body);
+        case 'initiate-payment':
+          return await handleInitiatePayment(supabase, body);
+        case 'confirm-payment':
+          return await handleConfirmPayment(supabase, body);
+        case 'get-carnet-upload-url':
+          return await handleGetCarnetUploadUrl(supabase, body);
+        case 'check-duplicate':
+          return await handleCheckDuplicate(supabase, body);
+        case 'generate-contract-preview':
+          return await handleGenerateContractPreview(supabase, body);
+        default:
+          return errorResponse(`Unknown action: ${action}`);
+      }
+    };
+
+    return applyCors(await dispatch(), origin);
   } catch (err) {
     console.error('public-enrollment error:', err);
-    return errorResponse('Internal server error', 500);
+    return applyCors(errorResponse('Internal server error', 500), req.headers.get('Origin'));
   }
 });
 
@@ -464,6 +555,17 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 
     if (!course) return errorResponse('No se encontró curso Clase B activo para esta sede', 404);
 
+    // 3.5. Verificar matrícula duplicada
+    const duplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+      return jsonResponse({
+        success: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+      });
+    }
+
     // 4. Create enrollment
     const { data: enrollment, error: enrollError } = await supabase
       .from('enrollments')
@@ -548,7 +650,7 @@ async function handleSubmitClaseB(supabase: any, body: any) {
     }
 
     // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
-    void inviteStudentToAuth(supabase, userId, personalData.email);
+    void inviteStudentToAuth(supabase, userId);
 
     return jsonResponse({
       success: true,
@@ -595,6 +697,50 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
   try {
     // 1. Find or create user
     const userId = await findOrCreateUser(supabase, personalData, branchId);
+
+    // 1.5. Verificar duplicados antes de crear la pre-inscripción
+    const licenseClass = courseTypeToLicenseClass(courseType);
+
+    // a) ¿Ya tiene un enrollment activo/completado para este mismo curso?
+    const { data: existingStudent } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingStudent) {
+      const enrollmentDuplicate = await checkDuplicateEnrollmentByLicenseClass(
+        supabase,
+        existingStudent.id,
+        licenseClass,
+      );
+      if (enrollmentDuplicate) {
+        const statusLabel = enrollmentDuplicate.status === 'completed' ? 'finalizada' : 'activa';
+        return jsonResponse({
+          success: false,
+          error: 'DUPLICATE_ENROLLMENT',
+          message: `Ya existe una matrícula ${statusLabel} en ${licenseClassLabel(licenseClass)} para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+        });
+      }
+    }
+
+    // b) ¿Ya tiene una pre-inscripción pendiente para este mismo curso?
+    const { data: existingPreReg } = await supabase
+      .from('professional_pre_registrations')
+      .select('id, status')
+      .eq('temp_user_id', userId)
+      .eq('requested_license_class', licenseClass)
+      .not('status', 'in', '("cancelled","rejected")')
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPreReg) {
+      return jsonResponse({
+        success: false,
+        error: 'DUPLICATE_PRE_INSCRIPTION',
+        message: `Ya tienes una pre-inscripción en curso para ${licenseClassLabel(licenseClass)}. La autoescuela revisará tu solicitud y se pondrá en contacto contigo.`,
+      });
+    }
 
     // 2. Create pre-registration con respuestas del test
     // NOTA: psych_test_result se deja NULL intencionalmente — lo determina el psicólogo.
@@ -754,6 +900,17 @@ async function handleInitiatePayment(supabase: any, body: any) {
     const isPartial = paymentMode === 'partial';
     const serverAmount = isPartial ? Math.ceil(courseBasePrice / 2) : courseBasePrice;
     console.log('[initiate-payment] Amount:', serverAmount, '(isPartial:', isPartial, ')');
+
+    // 2.5. Verificar matrícula duplicada
+    const duplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+      return jsonResponse({
+        success: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+      });
+    }
 
     // 3. Create enrollment as pending_payment (sin número — se asigna al confirmar)
     console.log('[initiate-payment] Step 3 — inserting enrollment');
@@ -942,6 +1099,26 @@ async function handleConfirmPayment(supabase: any, body: any) {
     // 3. Extraer datos del snapshot para operaciones financieras
     const snapshot = (attempt.draft_snapshot ?? {}) as any;
     const amountPaid = Number(snapshot.amount ?? 0);
+
+    // S6 — Reconciliación de monto: lo que Webpay confirmó haber cobrado debe coincidir
+    // con el esperado (calculado server-side en initiate-payment y guardado en el snapshot).
+    // Si difiere, anular por seguridad — nunca registrar un pago por un monto distinto.
+    if (!amountsMatch(Number(commitResponse.amount), amountPaid)) {
+      console.error('[confirm-payment] amount mismatch — anulando', { attemptId: attempt.id });
+      await supabase.from('payment_attempts').update({ status: 'failed' }).eq('id', attempt.id);
+      await supabase
+        .from('enrollments')
+        .update({ status: 'cancelled' })
+        .eq('id', attempt.enrollment_id);
+      await supabase.from('slot_holds').delete().eq('session_token', attempt.session_token);
+      return jsonResponse({
+        success: false,
+        rejected: true,
+        message:
+          'El monto del pago no coincide con el esperado. La transacción fue anulada por seguridad.',
+      });
+    }
+
     const payMode = (snapshot.paymentMode ?? 'total') as string;
     const sessionCount = Array.isArray(snapshot.selectedSlotIds)
       ? snapshot.selectedSlotIds.length
@@ -1042,7 +1219,7 @@ async function handleConfirmPayment(supabase: any, body: any) {
     // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
     //     userId y email vienen del draft_snapshot guardado en initiate-payment.
     if (snapshot.userId && snapshot.personalData?.email) {
-      void inviteStudentToAuth(supabase, snapshot.userId, snapshot.personalData.email);
+      void inviteStudentToAuth(supabase, snapshot.userId);
     }
 
     return jsonResponse({
@@ -1230,21 +1407,30 @@ async function moveContractPreview(
  * si aún no activó (first_login=true) reenvía la invitación.
  * Falla silenciosamente para no bloquear la matrícula ya confirmada.
  */
-async function inviteStudentToAuth(supabase: any, userId: number, email: string): Promise<void> {
+async function inviteStudentToAuth(supabase: any, userId: number): Promise<void> {
   try {
     const { data: userRow } = await supabase
       .from('users')
-      .select('supabase_uid, first_login')
+      .select('email, supabase_uid, first_login')
       .eq('id', userId)
       .maybeSingle();
 
     // Ya completó el onboarding → no tocar
     if (userRow?.supabase_uid && !userRow?.first_login) return;
 
+    // S3 — invitar SOLO al email almacenado del usuario, nunca al email crudo del
+    // request. Para un RUT ya existente esto evita que un atacante dispare la
+    // invitación (y el vínculo de cuenta) hacia un email que él controla.
+    const inviteEmail = userRow?.email;
+    if (!inviteEmail) {
+      console.error('inviteStudentToAuth — usuario sin email almacenado, se omite invite');
+      return;
+    }
+
     const siteUrl = Deno.env.get('SITE_URL') ?? '';
 
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
-      email,
+      inviteEmail,
       { redirectTo: siteUrl, data: { role: 'student' } },
     );
 
@@ -1267,6 +1453,79 @@ async function inviteStudentToAuth(supabase: any, userId: number, email: string)
   } catch (err) {
     console.error('inviteStudentToAuth — unexpected error:', err?.message);
   }
+}
+
+function licenseClassLabel(licenseClass: string): string {
+  if (licenseClass === 'B') return 'Clase B';
+  return `Clase Profesional ${licenseClass}`;
+}
+
+async function handleCheckDuplicate(supabase: any, body: any) {
+  const { rut, licenseClass } = body;
+  if (!rut || !licenseClass) return jsonResponse({ eligible: true });
+
+  const { data: user } = await supabase.from('users').select('id').eq('rut', rut).maybeSingle();
+
+  if (!user) return jsonResponse({ eligible: true });
+
+  const { data: student } = await supabase
+    .from('students')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (student) {
+    const duplicate = await checkDuplicateEnrollmentByLicenseClass(
+      supabase,
+      student.id,
+      licenseClass,
+    );
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+      return jsonResponse({
+        eligible: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en ${licenseClassLabel(licenseClass)} para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+      });
+    }
+  }
+
+  if (licenseClass !== 'B') {
+    const { data: existingPreReg } = await supabase
+      .from('professional_pre_registrations')
+      .select('id, status')
+      .eq('temp_user_id', user.id)
+      .eq('requested_license_class', licenseClass)
+      .not('status', 'in', '("cancelled","rejected")')
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPreReg) {
+      return jsonResponse({
+        eligible: false,
+        error: 'DUPLICATE_PRE_INSCRIPTION',
+        message: `Ya tienes una pre-inscripción en curso para ${licenseClassLabel(licenseClass)}. La autoescuela revisará tu solicitud y se pondrá en contacto contigo.`,
+      });
+    }
+  }
+
+  return jsonResponse({ eligible: true });
+}
+
+async function checkDuplicateEnrollmentByLicenseClass(
+  supabase: any,
+  studentId: number,
+  licenseClass: string,
+): Promise<{ status: string } | null> {
+  const { data } = await supabase
+    .from('enrollments')
+    .select('id, status, courses!inner(license_class)')
+    .eq('student_id', studentId)
+    .eq('courses.license_class', licenseClass)
+    .in('status', ['active', 'pending_payment', 'completed'])
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
 }
 
 async function findOrCreateUser(supabase: any, personalData: any, branchId: number) {
@@ -1305,7 +1564,7 @@ async function findOrCreateUser(supabase: any, personalData: any, branchId: numb
     typeof rutForValidation !== 'string' ||
     !/^\d{7,8}-[\dkK]$/.test(rutForValidation)
   ) {
-    throw new Error(`RUT inválido: "${rawRut}"`);
+    throw new Error('RUT inválido'); // S4 — sin el valor del RUT (PII) en el mensaje/logs
   }
   if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error('Email inválido');
@@ -1421,7 +1680,7 @@ function buildScheduleGrid(rows: any[]) {
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end ?? slotStart.getTime() + 45 * 60 * 1000);
 
-    const dateStr = slotStart.toISOString().split('T')[0];
+    const dateStr = slotStart.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
     const startTime = slotStart.toLocaleTimeString('es-CL', {
       hour: '2-digit',
       minute: '2-digit',

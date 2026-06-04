@@ -13,6 +13,7 @@ import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive'
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { StudentClasesFacade } from '@core/facades/student-clases.facade';
+import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
@@ -48,6 +49,32 @@ type TabId = 'practice' | 'theory';
           [animateOnInit]="false"
         />
       </div>
+
+      <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
+      @if (context.enrollments().length > 1) {
+        <div class="bento-banner">
+          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mis matrículas">
+            @for (enr of context.enrollments(); track enr.id) {
+              <button
+                type="button"
+                role="tab"
+                class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
+                [class.bg-brand-muted]="context.activeEnrollmentId() === enr.id"
+                [class.border-brand]="context.activeEnrollmentId() === enr.id"
+                [class.text-primary]="context.activeEnrollmentId() === enr.id"
+                [class.bg-surface]="context.activeEnrollmentId() !== enr.id"
+                [class.border-border-subtle]="context.activeEnrollmentId() !== enr.id"
+                [class.text-text-secondary]="context.activeEnrollmentId() !== enr.id"
+                [attr.aria-selected]="context.activeEnrollmentId() === enr.id"
+                [attr.data-llm-action]="'select-enrollment-' + enr.id"
+                (click)="selectEnrollment(enr.id)"
+              >
+                {{ enr.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
 
       <!-- ── KPIs ─────────────────────────────────────────────────────────────── -->
       <div class="bento-square">
@@ -332,6 +359,7 @@ type TabId = 'practice' | 'theory';
 })
 export class AlumnoClasesComponent {
   readonly facade = inject(StudentClasesFacade);
+  readonly context = inject(StudentEnrollmentContextFacade);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -393,6 +421,11 @@ export class AlumnoClasesComponent {
         Promise.resolve().then(() => this.gsap.animateBentoGrid(el));
       }
     });
+  }
+
+  selectEnrollment(id: number): void {
+    this.context.setActive(id);
+    void this.facade.initialize();
   }
 
   // ── Helpers de template ───────────────────────────────────────────────────

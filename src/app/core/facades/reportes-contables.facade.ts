@@ -1,8 +1,14 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
-import type { FiltrosReporte, ReporteContable } from '@core/models/ui/reportes-contables.model';
-import { computeDateRange } from '@core/models/ui/reportes-contables.model';
+import type { FixedExpense } from '@core/models/dto/fixed-expense.model';
+import type {
+  FiltrosReporte,
+  GastoFijoRow,
+  RegistrarGastoFijoPayload,
+  ReporteContable,
+} from '@core/models/ui/reportes-contables.model';
+import { GASTO_FIJO_CATEGORIES, computeDateRange } from '@core/models/ui/reportes-contables.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
@@ -23,8 +29,10 @@ export class ReportesContablesFacade {
   // ── 1. Estado privado ──────────────────────────────────────────────────────
   private readonly _isLoading = signal(false);
   private readonly _isExporting = signal(false);
+  private readonly _isRegistrando = signal(false);
   private readonly _error = signal<string | null>(null);
   private readonly _reporte = signal<ReporteContable | null>(null);
+  private readonly _gastosFijos = signal<GastoFijoRow[]>([]);
   private readonly _filtros = signal<FiltrosReporte>(
     (() => {
       const [desde, hasta] = computeDateRange('mes_actual');
@@ -36,8 +44,10 @@ export class ReportesContablesFacade {
   // ── 2. Estado público (readonly) ───────────────────────────────────────────
   public readonly isLoading = this._isLoading.asReadonly();
   public readonly isExporting = this._isExporting.asReadonly();
+  public readonly isRegistrando = this._isRegistrando.asReadonly();
   public readonly error = this._error.asReadonly();
   public readonly filtros = this._filtros.asReadonly();
+  public readonly gastosFijos = this._gastosFijos.asReadonly();
 
   public readonly kpis = computed(() => this._reporte()?.kpis ?? null);
   public readonly ingresosCategoria = computed(() => this._reporte()?.ingresosCategoria ?? []);
@@ -101,6 +111,32 @@ export class ReportesContablesFacade {
     }
   }
 
+  /** Registra un gasto fijo en `fixed_expenses` y recarga el reporte. */
+  async registrarGastoFijo(payload: RegistrarGastoFijoPayload): Promise<boolean> {
+    this._isRegistrando.set(true);
+    try {
+      const branchId = this._effectiveBranchId();
+      const user = this.authFacade.currentUser();
+      const { error } = await this.supabase.client.from('fixed_expenses').insert({
+        branch_id: branchId,
+        category: payload.category,
+        description: payload.description,
+        amount: payload.amount,
+        date: payload.date,
+        created_by: user?.dbId ?? null,
+      });
+      if (error) throw error;
+      this.toast.success('Gasto fijo registrado correctamente.');
+      await this.fetchReporte();
+      return true;
+    } catch {
+      this.toast.error('No se pudo registrar el gasto. Inténtalo de nuevo.');
+      return false;
+    } finally {
+      this._isRegistrando.set(false);
+    }
+  }
+
   async exportar(format: 'excel' | 'pdf'): Promise<void> {
     this._isExporting.set(true);
     try {
@@ -146,21 +182,47 @@ export class ReportesContablesFacade {
     const branchId = this._effectiveBranchId();
 
     try {
-      const [paymentsResult, expensesResult] = await Promise.all([
+      const [paymentsResult, expensesResult, fixedResult] = await Promise.all([
         this.queryPayments(desde, hasta),
         this.queryExpenses(desde, hasta, branchId),
+        this.queryFixedExpenses(desde, hasta, branchId),
       ]);
 
       if (paymentsResult.error) throw paymentsResult.error;
       if (expensesResult.error) throw expensesResult.error;
+      if (fixedResult.error) throw fixedResult.error;
 
       const payments = filterPaymentsByBranch(
         (paymentsResult.data ?? []) as PaymentRow[],
         branchId,
       );
-      const expenses = (expensesResult.data ?? []) as ExpenseRow[];
+      const operationalExpenses = (expensesResult.data ?? []) as ExpenseRow[];
 
-      this._reporte.set(buildReporte(payments, expenses, this._escuelaLabel(), branchId));
+      const fixedRaw = (fixedResult.data ?? []) as Pick<
+        FixedExpense,
+        'id' | 'category' | 'description' | 'amount' | 'date'
+      >[];
+
+      // Mapear a GastoFijoRow para display
+      const labelMap = Object.fromEntries(GASTO_FIJO_CATEGORIES.map((c) => [c.value, c.label]));
+      this._gastosFijos.set(
+        fixedRaw.map((r) => ({
+          id: r.id,
+          category: r.category,
+          categoryLabel: labelMap[r.category] ?? r.category,
+          description: r.description,
+          amount: r.amount,
+          date: r.date,
+        })),
+      );
+
+      // Concatenar para buildReporte (los fixed se tratan igual que operacionales)
+      const allExpenses: ExpenseRow[] = [
+        ...operationalExpenses,
+        ...fixedRaw.map((r) => ({ amount: r.amount, category: r.category, date: r.date })),
+      ];
+
+      this._reporte.set(buildReporte(payments, allExpenses, this._escuelaLabel(), branchId));
       this._error.set(null);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error al cargar el reporte contable.';
@@ -188,6 +250,22 @@ export class ReportesContablesFacade {
       .select('amount, category, date')
       .gte('date', desde)
       .lte('date', hasta);
+
+    if (branchId !== null) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    return query;
+  }
+
+  /** Consulta gastos fijos (admin-only) en el rango de fechas. */
+  private queryFixedExpenses(desde: string, hasta: string, branchId: number | null) {
+    let query = this.supabase.client
+      .from('fixed_expenses')
+      .select('id, category, description, amount, date')
+      .gte('date', desde)
+      .lte('date', hasta)
+      .order('date', { ascending: false });
 
     if (branchId !== null) {
       query = query.eq('branch_id', branchId);

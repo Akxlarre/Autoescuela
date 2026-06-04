@@ -327,62 +327,10 @@ export async function loadImageForPdf(
     return null;
   }
 
-  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-    return loadJpegForPdf(bytes);
-  }
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return loadJpegForPdf(bytes);
   const PNG_SIG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  if (PNG_SIG.every((b, i) => bytes[i] === b)) {
-    return loadPngFromBytes(bytes, maxW, maxH);
-  }
-  // WEBP: magic bytes RIFF....WEBP
-  if (
-    bytes[0] === 0x52 &&
-    bytes[1] === 0x49 &&
-    bytes[2] === 0x46 &&
-    bytes[3] === 0x46 &&
-    bytes[8] === 0x57 &&
-    bytes[9] === 0x45 &&
-    bytes[10] === 0x42 &&
-    bytes[11] === 0x50
-  ) {
-    return loadWebpForPdf(bytes, maxW, maxH);
-  }
+  if (PNG_SIG.every((b, i) => bytes[i] === b)) return loadPngFromBytes(bytes, maxW, maxH);
   return null;
-}
-
-async function loadWebpForPdf(
-  bytes: Uint8Array,
-  maxW = 9999,
-  maxH = 9999,
-): Promise<AnyPdfImage | null> {
-  try {
-    const blob = new Blob([bytes], { type: 'image/webp' });
-    const bitmap = await createImageBitmap(blob);
-    const { width, height } = bitmap;
-
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-
-    ctx.drawImage(bitmap, 0, 0);
-    const imageData = ctx.getImageData(0, 0, width, height);
-
-    const rgb = new Uint8Array(width * height * 3);
-    const alpha = new Uint8Array(width * height);
-    for (let i = 0; i < width * height; i++) {
-      rgb[i * 3] = imageData.data[i * 4];
-      rgb[i * 3 + 1] = imageData.data[i * 4 + 1];
-      rgb[i * 3 + 2] = imageData.data[i * 4 + 2];
-      alpha[i] = imageData.data[i * 4 + 3];
-    }
-
-    const scaled = downscaleRgb(rgb, width, height, maxW, maxH);
-    const scaledAlpha = downscaleAlpha(alpha, width, height, scaled.w, scaled.h);
-
-    return { kind: 'png', width: scaled.w, height: scaled.h, rgb: scaled.data, alpha: scaledAlpha };
-  } catch {
-    return null;
-  }
 }
 
 export async function loadPngForPdf(

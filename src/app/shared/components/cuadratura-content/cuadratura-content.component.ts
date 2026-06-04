@@ -309,16 +309,10 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             <div
               class="flex items-center gap-4 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10"
             >
-              <span
-                class="text-[11px] font-black uppercase tracking-widest opacity-80 text-brand"
-                
-              >
+              <span class="text-[11px] font-black uppercase tracking-widest opacity-80 text-brand">
                 Total Día
               </span>
-              <span
-                class="text-[22px] font-black tabular-nums tracking-tight text-brand"
-                
-              >
+              <span class="text-[22px] font-black tabular-nums tracking-tight text-brand">
                 {{ clp(totalIngresosHoy()) }}
               </span>
             </div>
@@ -334,7 +328,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               >
                 <app-icon name="trending-down" [size]="16" color="var(--state-warning)" />
               </div>
-              <h2 class="text-base font-bold text-text-primary">Egresos / Retiros</h2>
+              <h2 class="font-bold text-text-primary">Egresos / Retiros</h2>
             </div>
             <button
               class="btn-primary flex items-center gap-2 text-[13px] px-5 py-2.5 rounded-xl shrink-0 transition-transform active:scale-[0.98] shadow-sm"
@@ -400,10 +394,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
               >Total Egresos</span
             >
-            <span
-              class="text-[17px] font-black tabular-nums tracking-tight text-warning"
-              
-            >
+            <span class="text-[17px] font-black tabular-nums tracking-tight text-warning">
               {{ clp(totalEgresosHoy()) }}
             </span>
           </div>
@@ -412,7 +403,8 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 
       <!-- ─ Columna derecha (1/3): Panel Interactivo (Sticky Checkout) ───────────────────────── -->
       <div
-        class="bento-banner bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col"
+        class="bento-tall border-t-[3px] border-t-brand rounded-2xl shadow-sm sticky top-6 self-start flex flex-col"
+        data-col-span="4"
       >
         <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
         <div class="card-accent card p-0 flex flex-col overflow-hidden">
@@ -422,7 +414,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               <div class="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
                 <app-icon name="wallet" [size]="18" color="var(--color-primary)" />
               </div>
-              <h2 class="text-base font-bold text-text-primary">Arqueo y Cierre Operativo</h2>
+              <h2 class="font-bold text-text-primary">Arqueo y Cierre Operativo</h2>
             </div>
             <p class="text-[13px] text-text-muted pl-11">
               Conciliación entre lo esperado por el sistema y el efectivo declarado.
@@ -435,22 +427,16 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
             >
               <span>Ingresos de Sistema</span>
-              <span class="tabular-nums text-brand" >{{
-                clp(totalIngresosHoy())
-              }}</span>
+              <span class="tabular-nums text-brand">{{ clp(totalIngresosHoy()) }}</span>
             </div>
             <div
               class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
             >
               <span>Egresos / Retiros (-)</span>
-              <span class="tabular-nums text-warning" >{{
-                clp(totalEgresosHoy())
-              }}</span>
+              <span class="tabular-nums text-warning">{{ clp(totalEgresosHoy()) }}</span>
             </div>
             <div class="mt-1 pt-3 border-t border-brand/10 flex items-center justify-between">
-              <span
-                class="text-[11px] font-black uppercase tracking-widest text-brand"
-                
+              <span class="text-[11px] font-black uppercase tracking-widest text-brand"
                 >Debe Haber en Caja</span
               >
               <span class="text-[17px] font-black text-text-primary tabular-nums tracking-tight">{{

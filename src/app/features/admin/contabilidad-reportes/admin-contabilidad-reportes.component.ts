@@ -1,7 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { ReportesContablesFacade } from '@core/facades/reportes-contables.facade';
 import { ReportesContablesContentComponent } from '@shared/components/reportes-contables-content/reportes-contables-content.component';
-import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
+import type {
+  FiltrosReporte,
+  RegistrarGastoFijoPayload,
+} from '@core/models/ui/reportes-contables.model';
 
 @Component({
   selector: 'app-admin-contabilidad-reportes',
@@ -18,9 +21,12 @@ import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
       [escuela]="facade.escuela()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
+      [isRegistrando]="facade.isRegistrando()"
+      [gastosFijos]="facade.gastosFijos()"
       [filtros]="facade.filtros()"
       (aplicarFiltros)="onAplicarFiltros($event)"
       (exportRequested)="facade.exportar($event)"
+      (registrarGasto)="onRegistrarGasto($event)"
       (verDetalle)="onVerDetalle($event)"
     />
   `,
@@ -34,6 +40,10 @@ export class AdminContabilidadReportesComponent implements OnInit {
 
   protected async onAplicarFiltros(filtros: FiltrosReporte): Promise<void> {
     await this.facade.aplicarFiltros(filtros);
+  }
+
+  protected async onRegistrarGasto(payload: RegistrarGastoFijoPayload): Promise<void> {
+    await this.facade.registrarGastoFijo(payload);
   }
 
   protected onVerDetalle(fecha: string): void {

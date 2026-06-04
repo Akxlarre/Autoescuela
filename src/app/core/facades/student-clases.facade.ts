@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthFacade } from './auth.facade';
+import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { toISODate, to24hTime } from '@core/utils/date.utils';
 import type {
@@ -72,6 +73,7 @@ function mapAttendanceStatus(s: string): 'present' | 'absent' | 'late' | 'justif
 export class StudentClasesFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  readonly context = inject(StudentEnrollmentContextFacade);
 
   private _initialized = false;
 
@@ -124,14 +126,17 @@ export class StudentClasesFacade {
     const dbId = this.auth.currentUser()?.dbId;
     if (!dbId) throw new Error('Usuario no autenticado');
 
-    // Enrollment activo
+    await this.context.initialize(dbId);
+    const activeId = this.context.activeEnrollmentId();
+    if (!activeId) {
+      this._data.set(null);
+      return;
+    }
+
     const { data: enrollment, error: enrollmentError } = await this.supabase.client
       .from('enrollments')
       .select('id, license_group, student_id, promotion_course_id, students!inner(id)')
-      .eq('students.user_id', dbId)
-      .in('status', ['active', 'completed'])
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', activeId)
       .maybeSingle();
 
     if (enrollmentError) throw enrollmentError;

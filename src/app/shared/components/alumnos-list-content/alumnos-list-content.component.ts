@@ -415,14 +415,26 @@ interface AlumnoKpiItem {
                       {{ alumno.rut }}
                     </td>
                     <!-- Nº Expediente -->
-                    <td class="text-xs text-text-muted font-mono">{{ alumno.nroExpediente }}</td>
+                    <td class="text-xs text-text-muted font-mono">
+                      <div class="flex flex-wrap gap-1">
+                        @for (nro of alumno.nroExpedientes; track nro) {
+                          <span>{{ nro }}</span>
+                        }
+                      </div>
+                    </td>
                     <!-- Curso -->
                     <td>
-                      <span
-                        class="text-xs px-2 py-0.5 rounded-full bg-elevated border border-border-subtle text-text-secondary"
-                      >
-                        {{ alumno.cursa }}
-                      </span>
+                      <div class="flex flex-wrap gap-1">
+                        @for (curso of alumno.cursos; track curso.nombre) {
+                          <span
+                            class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary"
+                            [class.bg-elevated]="curso.licenseGroup === 'class_b'"
+                            [class.bg-brand-muted]="curso.licenseGroup === 'professional'"
+                          >
+                            {{ curso.nombre }}
+                          </span>
+                        }
+                      </div>
                     </td>
                     <!-- Fecha Ingreso -->
                     <td class="text-xs text-text-secondary">{{ alumno.fechaIngreso }}</td>
@@ -583,9 +595,16 @@ interface AlumnoKpiItem {
                       </div>
                       <div class="flex flex-col">
                         <span class="text-[11px] text-text-muted mb-0.5">Curso</span>
-                        <span class="font-medium text-text-secondary text-xs truncate">{{
-                          alumno.cursa
-                        }}</span>
+                        <div class="flex flex-wrap gap-1">
+                          @for (curso of alumno.cursos; track curso.nombre) {
+                            <span
+                              class="text-[10px] px-1.5 py-0.5 rounded-full border border-border-subtle text-text-secondary"
+                              [class.bg-elevated]="curso.licenseGroup === 'class_b'"
+                              [class.bg-brand-muted]="curso.licenseGroup === 'professional'"
+                              >{{ curso.nombre }}</span
+                            >
+                          }
+                        </div>
                       </div>
                       <div class="flex flex-col">
                         <span class="text-[11px] text-text-muted mb-0.5">Ingreso</span>
@@ -858,9 +877,10 @@ export class AlumnosListContentComponent implements AfterViewInit {
         a.nombre.toLowerCase().includes(term) ||
         a.apellido.toLowerCase().includes(term) ||
         a.rut.includes(term) ||
-        a.nroExpediente.toLowerCase().includes(term);
+        a.nroExpedientes.some((n) => n.toLowerCase().includes(term));
 
-      const matchCurso = !this.selectedCurso || a.cursa === this.selectedCurso;
+      const matchCurso =
+        !this.selectedCurso || a.cursos.some((c) => c.nombre === this.selectedCurso);
       const matchEstado = !this.selectedEstado || a.status === this.selectedEstado;
       const matchExpediente = (() => {
         if (!this.selectedExpediente) return true;

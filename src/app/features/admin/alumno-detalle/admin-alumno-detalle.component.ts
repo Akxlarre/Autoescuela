@@ -106,6 +106,32 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           />
         </div>
 
+        <!-- Selector de matrícula (solo visible cuando hay más de una) -->
+        @if (facade.enrollmentSummaries().length > 1) {
+          <div class="bento-banner">
+            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Selector de matrícula">
+              @for (enr of facade.enrollmentSummaries(); track enr.id) {
+                <button
+                  type="button"
+                  role="tab"
+                  class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
+                  [class.bg-brand-muted]="alumno.enrollmentId === enr.id"
+                  [class.border-brand]="alumno.enrollmentId === enr.id"
+                  [class.text-primary]="alumno.enrollmentId === enr.id"
+                  [class.bg-surface]="alumno.enrollmentId !== enr.id"
+                  [class.border-border-subtle]="alumno.enrollmentId !== enr.id"
+                  [class.text-text-secondary]="alumno.enrollmentId !== enr.id"
+                  [attr.aria-selected]="alumno.enrollmentId === enr.id"
+                  [attr.data-llm-action]="'select-enrollment-' + enr.id"
+                  (click)="facade.selectEnrollment(enr.id)"
+                >
+                  {{ enr.courseName }}{{ enr.number ? ' · #' + enr.number : '' }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+
         <!-- Bento Item 1: Info Personal (común) -->
         <div class="bento-card bento-tall">
           <div class="flex flex-col gap-5">
@@ -492,6 +518,33 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           </div>
         }
 
+        <!-- Banner: Segunda etapa sin agendar (solo Clase B) -->
+        @if (alumno.licenseGroup === 'class_b' && necesitaAgendarSegundaEtapa()) {
+          <div class="bento-card bento-banner bg-info-subtle border-info">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div class="flex items-center gap-4">
+                <div
+                  class="w-10 h-10 rounded-xl bg-bg-surface border border-state-info-border flex items-center justify-center text-state-info shadow-sm"
+                >
+                  <app-icon name="calendar-plus" [size]="20" />
+                </div>
+                <div class="flex flex-col">
+                  <span class="font-bold text-text-primary">Clases 7-12 sin agendar</span>
+                  <span class="text-xs text-text-secondary">{{ mensajeSegundaEtapa() }}</span>
+                </div>
+              </div>
+              <p-button
+                label="Ir a Agenda"
+                icon="pi pi-calendar"
+                size="small"
+                severity="info"
+                (onClick)="navigateToAgenda()"
+                data-llm-action="navigate-to-agenda-for-second-stage"
+              />
+            </div>
+          </div>
+        }
+
         <!-- Bento Item 4: Inasistencias (Banner, común) -->
         <div class="bento-card bento-banner bg-warning-subtle border-warning">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -725,6 +778,38 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
     () => this.facade.progresoTeorico().requeridas - this.facade.progresoTeorico().completadas,
   );
 
+  /** True cuando las 6 clases de la segunda etapa (7-12) están todas agendadas. */
+  private readonly puedeActualizarCarnet = computed(
+    () =>
+      !!this.facade.licensePdfPath() &&
+      this.facade.clasesPracticas().filter((c) => c.numero > 6 && c.sessionId !== null).length >= 6,
+  );
+
+  /**
+   * True cuando el carnet ya fue emitido pero la segunda etapa (clases 7-12) aún no
+   * está completa. Se activa en cuanto al menos 1 sesión 7-12 está agendada (segunda
+   * etapa en curso) O el alumno ya completó las 6 primeras (listo para la segunda).
+   */
+  protected readonly necesitaAgendarSegundaEtapa = computed(() => {
+    if (!this.facade.licensePdfPath()) return false;
+    if (this.puedeActualizarCarnet()) return false;
+    const clases = this.facade.clasesPracticas();
+    const segundaEnCurso = clases.filter((c) => c.numero > 6 && c.sessionId !== null).length > 0;
+    const primeraCompletada = this.facade.progresoPractico().completadas >= 6;
+    return segundaEnCurso || primeraCompletada;
+  });
+
+  /** Mensaje contextual del banner según el estado real de la segunda etapa. */
+  protected readonly mensajeSegundaEtapa = computed(() => {
+    const clases = this.facade.clasesPracticas();
+    const agendadas = clases.filter((c) => c.numero > 6 && c.sessionId !== null).length;
+    const faltantes = 6 - agendadas;
+    if (agendadas > 0) {
+      return `Faltan ${faltantes} de las 6 clases restantes por agendar para poder actualizar el carnet con el ciclo completo.`;
+    }
+    return 'El alumno completó las primeras 6 clases. Agenda las 6 restantes para poder actualizar el carnet.';
+  });
+
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {
     const alumno = this.facade.alumno();
@@ -791,41 +876,55 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
 
     const licensePath = this.facade.licensePdfPath();
     const isGenerating = this.facade.isGeneratingLicense();
-    let carnetAction: SectionHeroAction;
+    const carnetActions: SectionHeroAction[] = [];
 
     if (alumno.licenseGroup === 'class_b') {
       if (isGenerating) {
-        carnetAction = {
+        carnetActions.push({
           id: 'generar-carnet',
           label: 'Generando...',
           icon: 'loader-2',
           primary: false,
           disabled: true,
           loading: true,
-        };
+        });
+      } else if (this.puedeActualizarCarnet()) {
+        // Carnet de 6 clases ya emitido + clases 7-12 agendadas → ofrecer actualizar
+        carnetActions.push({
+          id: 'ver-carnet',
+          label: 'Ver Carnet',
+          icon: 'eye',
+          primary: false,
+        });
+        carnetActions.push({
+          id: 'actualizar-carnet',
+          label: 'Actualizar Carnet',
+          icon: 'refresh-cw',
+          primary: false,
+        });
       } else if (licensePath) {
-        carnetAction = {
+        carnetActions.push({
           id: 'ver-carnet',
           label: 'Ver Carnet',
           icon: 'id-card',
           primary: false,
-        };
+        });
       } else {
-        carnetAction = {
+        carnetActions.push({
           id: 'generar-carnet',
           label: 'Generar Carnet',
           icon: 'id-card',
           primary: false,
-        };
+        });
       }
     } else {
-      carnetAction = {
+      carnetActions.push({
         id: 'generar-carnet',
         label: 'Generar Carnet',
         icon: 'id-card',
         primary: false,
         disabled: true,
-      };
+      });
     }
 
     // ── Acciones de Contrato ───────────────────────────────────────────────────
@@ -874,7 +973,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
 
     return [
       ...contractActions,
-      carnetAction,
+      ...carnetActions,
       certAction,
       { id: 'editar-alumno', label: 'Editar Perfil', icon: 'user-pen', primary: true },
       {
@@ -924,6 +1023,9 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
       case 'generar-carnet':
       case 'ver-carnet':
         void this.handleCarnet();
+        break;
+      case 'actualizar-carnet':
+        void this.handleActualizarCarnet();
         break;
       case 'generar-certificado':
         void this.handleCertificado();
@@ -1023,6 +1125,17 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
     } else {
       await this.facade.generarCarnet(alumno.enrollmentId);
     }
+  }
+
+  /** Regenera el carnet incluyendo las 12 clases (sobreescribe el de 6 clases). */
+  private async handleActualizarCarnet(): Promise<void> {
+    const alumno = this.facade.alumno();
+    if (!alumno?.enrollmentId || alumno.licenseGroup !== 'class_b') return;
+    await this.facade.generarCarnet(alumno.enrollmentId);
+  }
+
+  protected navigateToAgenda(): void {
+    void this.router.navigate(['/app/admin/agenda']);
   }
 
   // ── Helpers de template ─────────────────────────────────────────────────────

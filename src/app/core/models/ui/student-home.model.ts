@@ -2,8 +2,15 @@ export type LicenseGroup = 'class_b' | 'professional';
 export type CertificateState = 'locked' | 'enabled' | 'issued';
 export type AttendanceSemaphore = 'green' | 'yellow' | 'red';
 
+export interface EnrollmentTab {
+  id: number;
+  label: string;
+  licenseGroup: LicenseGroup;
+}
+
 export interface StudentHomeHero {
   studentFirstName: string;
+  enrollmentId: number;
   enrollmentNumber: string;
   licenseGroup: LicenseGroup;
   branchName: string | null;
