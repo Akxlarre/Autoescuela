@@ -12,6 +12,10 @@
 /* Motion — View Transitions API (page navigation) */
 @use './styles/motion/view-transitions';
 
+/* Themes (scoped) — tematización por sede del flujo público (spec 0009).
+   Solo aplica bajo [data-public-theme]; nunca toca :root. */
+@use './styles/themes/public-enrollment';
+
 /* Typography — Bricolage Grotesque (referenced in --font-display / --font-body) */
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap');
 
@@ -44,7 +48,7 @@ body.modal-open {
   overflow: auto;
 }
 
-.modal-overlay__wrapper>* {
+.modal-overlay__wrapper > * {
   position: fixed !important;
   inset: 0 !important;
   width: 100% !important;

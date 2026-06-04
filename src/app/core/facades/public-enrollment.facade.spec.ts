@@ -3,6 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { PublicEnrollmentFacade } from './public-enrollment.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
+// `normalizePhoto` usa `<img>.onload`, que nunca dispara en el entorno de test
+// (happy-dom no decodifica imágenes) → colgaría `uploadCarnetPhoto`. Passthrough.
+vi.mock('@core/utils/image.utils', () => ({
+  normalizePhoto: vi.fn((file: File) => Promise.resolve(file)),
+}));
+
 // ── localStorage mock ──────────────────────────────────────────────────────────
 const createLocalStorageMock = () => {
   let store: Record<string, string> = {};
@@ -20,12 +26,47 @@ const createLocalStorageMock = () => {
   };
 };
 
+// ── Course fixtures (para resolver flows por sede) ──────────────────────────────
+const classBCourse = (branchId: number) => ({
+  id: 100 + branchId,
+  code: 'CLASEB',
+  name: 'Clase B',
+  license_class: 'B',
+  base_price: 180000,
+  type: null,
+  duration_weeks: 8,
+  practical_hours: 9,
+  branch_id: branchId,
+  active: true,
+  is_convalidation: false,
+});
+
+const professionalCourse = (branchId: number) => ({
+  id: 200 + branchId,
+  code: 'PROFA2',
+  name: 'Profesional A2',
+  license_class: 'A2',
+  base_price: 300000,
+  type: null,
+  duration_weeks: 12,
+  practical_hours: 0,
+  branch_id: branchId,
+  active: true,
+  is_convalidation: false,
+});
+
+const sampleBranches = [
+  { id: 1, name: 'Autoescuela Azul', slug: 'azul', address: 'Av. Azul 1' },
+  { id: 2, name: 'Autoescuela Roja', slug: 'roja', address: 'Av. Roja 2' },
+];
+
 describe('PublicEnrollmentFacade', () => {
   let facade: PublicEnrollmentFacade;
   let localStorageMock: ReturnType<typeof createLocalStorageMock>;
 
   const mockStorageChain = {
     upload: vi.fn().mockResolvedValue({ error: null }),
+    uploadToSignedUrl: vi.fn().mockResolvedValue({ error: null }),
     move: vi.fn().mockResolvedValue({ error: null }),
     remove: vi.fn().mockResolvedValue({ error: null }),
   };
@@ -51,6 +92,11 @@ describe('PublicEnrollmentFacade', () => {
       createObjectURL: vi.fn().mockReturnValue('blob:mock-preview'),
       revokeObjectURL: vi.fn(),
     });
+
+    // Resetear los mocks dinámicos a sus defaults en cada test (determinismo).
+    mockSupabaseClient.order = vi.fn().mockResolvedValue({ data: [], error: null });
+    mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue({ data: null, error: null });
+    mockStorageChain.uploadToSignedUrl = vi.fn().mockResolvedValue({ error: null });
 
     // Montar mock de localStorage antes de instanciar el facade
     localStorageMock = createLocalStorageMock();
@@ -95,8 +141,12 @@ describe('PublicEnrollmentFacade', () => {
       expect(facade.flowType()).toBeNull();
     });
 
-    it('should start at branch step', () => {
-      expect(facade.currentStep()).toBe('branch');
+    it('should start at license-type step (no more "branch" step)', () => {
+      expect(facade.currentStep()).toBe('license-type');
+    });
+
+    it('should start in "orientation" entry state until a valid branch resolves', () => {
+      expect(facade.entryState()).toBe('orientation');
     });
 
     it('should have empty steps', () => {
@@ -121,42 +171,122 @@ describe('PublicEnrollmentFacade', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // resolveEntry — resolución de entrada por branchId (AC6, AC6b, AC6c, AC6d, AC-E1, AC-E3)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('resolveEntry', () => {
+    it('goes to orientation when no branchId is provided (AC-E1)', async () => {
+      facade['_branches'].set(sampleBranches);
+
+      await facade.resolveEntry(null, null);
+
+      expect(facade.entryState()).toBe('orientation');
+      expect(facade.selectedBranch()).toBeNull();
+    });
+
+    it('goes to orientation when branchId is invalid / unknown (AC-E3)', async () => {
+      facade['_branches'].set(sampleBranches);
+
+      await facade.resolveEntry(999, null);
+
+      expect(facade.entryState()).toBe('orientation');
+    });
+
+    it('auto-skips license-type to personal-data when the sede offers a single flow (AC6b)', async () => {
+      facade['_branches'].set(sampleBranches);
+      mockSupabaseClient.order = vi
+        .fn()
+        .mockResolvedValue({ data: [classBCourse(1)], error: null });
+
+      await facade.resolveEntry(1, null);
+
+      expect(facade.entryState()).toBe('ready');
+      expect(facade.selectedBranch()?.id).toBe(1);
+      expect(facade.flowType()).toBe('class_b');
+      expect(facade.currentStep()).toBe('personal-data');
+    });
+
+    it('starts at license-type when the sede offers multiple flows and no courseId (AC6c)', async () => {
+      facade['_branches'].set(sampleBranches);
+      mockSupabaseClient.order = vi
+        .fn()
+        .mockResolvedValue({ data: [classBCourse(2), professionalCourse(2)], error: null });
+
+      await facade.resolveEntry(2, null);
+
+      expect(facade.entryState()).toBe('ready');
+      expect(facade.currentStep()).toBe('license-type');
+      expect(facade.flowType()).toBeNull();
+    });
+
+    it('resolves the flow from courseId and jumps to personal-data (AC6d)', async () => {
+      facade['_branches'].set(sampleBranches);
+      mockSupabaseClient.order = vi
+        .fn()
+        .mockResolvedValue({ data: [classBCourse(2), professionalCourse(2)], error: null });
+
+      await facade.resolveEntry(2, professionalCourse(2).id);
+
+      expect(facade.entryState()).toBe('ready');
+      expect(facade.flowType()).toBe('professional');
+      expect(facade.currentStep()).toBe('personal-data');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // availableFlows — flujos ofrecidos por la sede (computed)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('availableFlows', () => {
+    it('returns [class_b] for a sede with only Class B courses', () => {
+      facade['_courses'].set([classBCourse(1)] as never);
+      expect(facade.availableFlows()).toEqual(['class_b']);
+    });
+
+    it('returns both flows for a sede with Class B + professional courses', () => {
+      facade['_courses'].set([classBCourse(2), professionalCourse(2)] as never);
+      expect(facade.availableFlows()).toEqual(['class_b', 'professional']);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // selectFlowType / buildSteps
   // ══════════════════════════════════════════════════════════════════════════════
 
   describe('selectFlowType', () => {
-    it('should build 8 steps for class_b (including payment)', () => {
+    it('should build 8 steps for class_b starting with license-type (no "branch")', () => {
       facade.selectFlowType('class_b');
       expect(facade.flowType()).toBe('class_b');
       expect(facade.steps().length).toBe(8);
-      expect(facade.steps()[0].id).toBe('branch');
+      expect(facade.steps()[0].id).toBe('license-type');
       expect(facade.steps()[1].id).toBe('personal-data');
       expect(facade.steps()[6].id).toBe('payment');
       expect(facade.steps()[7].id).toBe('confirmation');
+      expect(facade.steps().some((s) => s.id === ('branch' as never))).toBe(false);
     });
 
-    it('should build 4 steps for professional', () => {
+    it('should build 4 steps for professional starting with license-type', () => {
       facade.selectFlowType('professional');
       expect(facade.flowType()).toBe('professional');
       expect(facade.steps().length).toBe(4);
-      expect(facade.steps()[0].id).toBe('branch');
+      expect(facade.steps()[0].id).toBe('license-type');
       expect(facade.steps()[3].id).toBe('pre-confirmation');
     });
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // confirmBranchSelection
+  // confirmLicenseType (reemplaza confirmBranchSelection)
   // ══════════════════════════════════════════════════════════════════════════════
 
-  describe('confirmBranchSelection', () => {
+  describe('confirmLicenseType', () => {
     it('should not advance without flow type', () => {
-      facade.confirmBranchSelection();
-      expect(facade.currentStep()).toBe('branch');
+      facade.confirmLicenseType();
+      expect(facade.currentStep()).toBe('license-type');
     });
 
     it('should advance to personal-data with flow type set', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       expect(facade.currentStep()).toBe('personal-data');
     });
   });
@@ -190,15 +320,15 @@ describe('PublicEnrollmentFacade', () => {
   describe('savePersonalData', () => {
     it('should advance to payment-mode for class_b', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.savePersonalData(samplePersonalData);
       expect(facade.currentStep()).toBe('payment-mode');
       expect(facade.personalData()).not.toBeNull();
     });
 
-    it('should advance to course-selection for professional', () => {
+    it('should advance to psych-test-intro for professional', () => {
       facade.selectFlowType('professional');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.savePersonalData({
         ...samplePersonalData,
         courseCategory: 'professional',
@@ -220,7 +350,7 @@ describe('PublicEnrollmentFacade', () => {
 
     it('should advance to schedule on confirmPaymentMode', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.setPaymentMode('total');
       facade.confirmPaymentMode();
       expect(facade.currentStep()).toBe('schedule');
@@ -234,7 +364,7 @@ describe('PublicEnrollmentFacade', () => {
   describe('confirmContract', () => {
     it('should advance to payment step (not confirmation)', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.confirmContract();
       expect(facade.currentStep()).toBe('payment');
     });
@@ -245,24 +375,24 @@ describe('PublicEnrollmentFacade', () => {
   // ══════════════════════════════════════════════════════════════════════════════
 
   describe('goBack', () => {
-    it('should navigate back through class_b steps', () => {
+    it('should navigate back from personal-data to license-type (no more "branch")', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       expect(facade.currentStep()).toBe('personal-data');
 
       facade.goBack();
-      expect(facade.currentStep()).toBe('branch');
+      expect(facade.currentStep()).toBe('license-type');
     });
 
-    it('should not go back from branch', () => {
+    it('should not go back from license-type (first step)', () => {
       facade.selectFlowType('class_b');
       facade.goBack();
-      expect(facade.currentStep()).toBe('branch');
+      expect(facade.currentStep()).toBe('license-type');
     });
 
     it('should navigate through payment → contract → documents → schedule', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.goToStep('payment');
 
       facade.goBack(); // payment → contract
@@ -277,7 +407,7 @@ describe('PublicEnrollmentFacade', () => {
 
     it('should call releaseSlots (fire & forget) when going back to schedule', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.goToStep('documents');
 
       mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue({ data: null, error: null });
@@ -292,7 +422,7 @@ describe('PublicEnrollmentFacade', () => {
 
     it('should not go back from confirmation step', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.goToStep('confirmation');
 
       facade.goBack();
@@ -302,7 +432,7 @@ describe('PublicEnrollmentFacade', () => {
 
     it('should mark current step as pending and previous as active when going back', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       // Simular que estamos en payment-mode activo
       facade.goToStep('payment-mode');
       facade['updateStepStatus']('payment-mode', 'active');
@@ -326,14 +456,15 @@ describe('PublicEnrollmentFacade', () => {
     it('should reset all state and generate a new session token', () => {
       const tokenBefore = facade.sessionToken();
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.setPaymentMode('total');
 
       facade.reset();
 
       expect(facade.selectedBranch()).toBeNull();
       expect(facade.flowType()).toBeNull();
-      expect(facade.currentStep()).toBe('branch');
+      expect(facade.currentStep()).toBe('license-type');
+      expect(facade.entryState()).toBe('orientation');
       expect(facade.steps()).toEqual([]);
       expect(facade.paymentMode()).toBeNull();
       // Token regenerado
@@ -348,33 +479,56 @@ describe('PublicEnrollmentFacade', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
-  // canAdvance
-  // ══════════════════════════════════════════════════════════════════════════════
-
-  // ══════════════════════════════════════════════════════════════════════════════
-  // uploadCarnetPhoto
+  // uploadCarnetPhoto — subida vía Signed Upload URL (Edge Function)
   // ══════════════════════════════════════════════════════════════════════════════
 
   describe('uploadCarnetPhoto', () => {
     const mockFile = new File(['content'], 'foto.jpg', { type: 'image/jpeg' });
+    const signedUrlResponse = {
+      data: { token: 'signed-token', path: 'public-uploads/carnet/session-xyz' },
+      error: null,
+    };
 
-    it('should upload to temp path and set carnetPhotoUrl on success', async () => {
-      mockStorageChain.upload = vi.fn().mockResolvedValue({ error: null });
+    it('should upload via signed URL and set carnetPhotoUrl on success', async () => {
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue(signedUrlResponse);
+      mockStorageChain.uploadToSignedUrl = vi.fn().mockResolvedValue({ error: null });
 
       const result = await facade.uploadCarnetPhoto(mockFile);
 
       expect(result).toBe(true);
+      expect(mockSupabaseClient.functions.invoke).toHaveBeenCalledWith(
+        'public-enrollment',
+        expect.objectContaining({
+          body: expect.objectContaining({ action: 'get-carnet-upload-url' }),
+        }),
+      );
       expect(mockSupabaseClient.storage.from).toHaveBeenCalledWith('documents');
-      expect(mockStorageChain.upload).toHaveBeenCalledWith(
-        expect.stringContaining('public-uploads/carnet/'),
+      expect(mockStorageChain.uploadToSignedUrl).toHaveBeenCalledWith(
+        'public-uploads/carnet/session-xyz',
+        'signed-token',
         mockFile,
-        expect.objectContaining({ upsert: true }),
+        expect.objectContaining({ contentType: 'image/jpeg' }),
       );
       expect(facade.carnetPhotoUrl()).toBeTruthy();
     });
 
+    it('should return false and set error when the signed-url request fails', async () => {
+      mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: null, error: { message: 'EF down' } });
+
+      const result = await facade.uploadCarnetPhoto(mockFile);
+
+      expect(result).toBe(false);
+      expect(facade.error()).toBeTruthy();
+      expect(facade.carnetPhotoUrl()).toBeNull();
+    });
+
     it('should return false and set error on upload failure', async () => {
-      mockStorageChain.upload = vi.fn().mockResolvedValue({ error: { message: 'Quota exceeded' } });
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue(signedUrlResponse);
+      mockStorageChain.uploadToSignedUrl = vi
+        .fn()
+        .mockResolvedValue({ error: { message: 'Quota exceeded' } });
 
       const result = await facade.uploadCarnetPhoto(mockFile);
 
@@ -384,10 +538,10 @@ describe('PublicEnrollmentFacade', () => {
     });
 
     it('should unblock canAdvance at documents step after upload', async () => {
-      facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      // canAdvance en 'documents' solo depende de carnetStoragePath → goToStep basta.
       facade.goToStep('documents');
-      mockStorageChain.upload = vi.fn().mockResolvedValue({ error: null });
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue(signedUrlResponse);
+      mockStorageChain.uploadToSignedUrl = vi.fn().mockResolvedValue({ error: null });
 
       expect(facade.canAdvance()).toBe(false);
       await facade.uploadCarnetPhoto(mockFile);
@@ -395,20 +549,21 @@ describe('PublicEnrollmentFacade', () => {
     });
 
     it('should reset isLoading after upload regardless of result', async () => {
-      mockStorageChain.upload = vi.fn().mockResolvedValue({ error: null });
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue(signedUrlResponse);
+      mockStorageChain.uploadToSignedUrl = vi.fn().mockResolvedValue({ error: null });
       await facade.uploadCarnetPhoto(mockFile);
       expect(facade.isLoading()).toBe(false);
     });
   });
 
   describe('canAdvance', () => {
-    it('should be false at branch step without selections', () => {
+    it('should be false at license-type step without selections', () => {
       expect(facade.canAdvance()).toBe(false);
     });
 
     it('should be false at payment-mode without selection', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.savePersonalData(samplePersonalData);
       expect(facade.currentStep()).toBe('payment-mode');
       expect(facade.canAdvance()).toBe(false);
@@ -416,7 +571,7 @@ describe('PublicEnrollmentFacade', () => {
 
     it('should be true at payment-mode with selection', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.savePersonalData(samplePersonalData);
       facade.setPaymentMode('total');
       expect(facade.canAdvance()).toBe(true);
@@ -424,7 +579,7 @@ describe('PublicEnrollmentFacade', () => {
 
     it('should always be true at payment step', () => {
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.goToStep('payment');
       expect(facade.canAdvance()).toBe(true);
     });
@@ -508,7 +663,7 @@ describe('PublicEnrollmentFacade', () => {
         .mockResolvedValue({ data: { success: true }, error: null });
 
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.setSelectedSlots(['slot-1']);
       facade['_selectedInstructorId'].set(5);
 
@@ -524,7 +679,7 @@ describe('PublicEnrollmentFacade', () => {
       });
 
       facade.selectFlowType('class_b');
-      facade.confirmBranchSelection();
+      facade.confirmLicenseType();
       facade.goToStep('schedule');
       facade.setSelectedSlots(['slot-1']);
       facade['_selectedInstructorId'].set(5);
@@ -540,8 +695,20 @@ describe('PublicEnrollmentFacade', () => {
   // ══════════════════════════════════════════════════════════════════════════════
 
   describe('draft persistence', () => {
+    const freshFacadeWithDraft = (draft: Record<string, unknown>) => {
+      localStorageMock.setItem('pec_draft', JSON.stringify(draft));
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          PublicEnrollmentFacade,
+          { provide: SupabaseService, useValue: { client: mockSupabaseClient } },
+        ],
+      });
+      return TestBed.inject(PublicEnrollmentFacade);
+    };
+
     it('should detect a stored draft on initialization', () => {
-      const draft = {
+      const freshFacade = freshFacadeWithDraft({
         version: 1,
         sessionToken: 'stored-token-123',
         savedAt: new Date().toISOString(),
@@ -558,26 +725,14 @@ describe('PublicEnrollmentFacade', () => {
         selectedCourseType: null,
         convalidatesSimultaneously: false,
         carnetStoragePath: null,
-      };
-      localStorageMock.setItem('pec_draft', JSON.stringify(draft));
-
-      // Crear nueva instancia del facade (simula nueva carga de página)
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          PublicEnrollmentFacade,
-          { provide: SupabaseService, useValue: { client: mockSupabaseClient } },
-        ],
       });
-      const freshFacade = TestBed.inject(PublicEnrollmentFacade);
 
       expect(freshFacade.hasDraftToRestore()).toBe(true);
-      // Debe usar el sessionToken del draft
       expect(freshFacade.sessionToken()).toBe('stored-token-123');
     });
 
-    it('should restore draft state', () => {
-      const draft = {
+    it('should restore draft state and recreate the carnet photo preview (AC-E2)', async () => {
+      const freshFacade = freshFacadeWithDraft({
         version: 1,
         sessionToken: 'restore-token',
         savedAt: new Date().toISOString(),
@@ -594,42 +749,27 @@ describe('PublicEnrollmentFacade', () => {
         selectedCourseType: null,
         convalidatesSimultaneously: false,
         carnetStoragePath: 'public-uploads/carnet/restore-token',
-      };
-      localStorageMock.setItem('pec_draft', JSON.stringify(draft));
-
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          PublicEnrollmentFacade,
-          { provide: SupabaseService, useValue: { client: mockSupabaseClient } },
-        ],
       });
-      const freshFacade = TestBed.inject(PublicEnrollmentFacade);
-      freshFacade.restoreDraft();
+
+      // La restauración genera una signed URL de preview para la foto subida.
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue({
+        data: { signedUrl: 'https://signed.example/carnet.jpg' },
+        error: null,
+      });
+
+      await freshFacade.restoreDraft();
 
       expect(freshFacade.currentStep()).toBe('documents');
       expect(freshFacade.flowType()).toBe('class_b');
       expect(freshFacade.paymentMode()).toBe('total');
       expect(freshFacade.selectedBranch()?.id).toBe(2);
       expect(freshFacade.hasDraftToRestore()).toBe(false);
-      // Foto restaurada → carnetPhotoUrl debe ser no nulo
+      // Foto restaurada → carnetPhotoUrl debe ser no nulo (AC-E2)
       expect(freshFacade.carnetPhotoUrl()).toBeTruthy();
     });
 
     it('should clear draft on discardDraft and generate new token', () => {
-      localStorageMock.setItem(
-        'pec_draft',
-        JSON.stringify({ version: 1, sessionToken: 'old-token' }),
-      );
-
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          PublicEnrollmentFacade,
-          { provide: SupabaseService, useValue: { client: mockSupabaseClient } },
-        ],
-      });
-      const freshFacade = TestBed.inject(PublicEnrollmentFacade);
+      const freshFacade = freshFacadeWithDraft({ version: 1, sessionToken: 'old-token' });
 
       freshFacade.discardDraft();
 
@@ -779,6 +919,23 @@ describe('PublicEnrollmentFacade', () => {
 
       expect(facade.selectedSlotIds()).not.toContain('2026-03-16T09:00:00-03:00');
       vi.useRealTimers();
+    });
+  });
+
+  // ── S5 — generateToken sin fallback inseguro (Spec 0010) ──────────────────────
+  describe('generateToken (S5)', () => {
+    it('usa crypto.randomUUID → token con formato UUID', () => {
+      const token = (facade as unknown as { generateToken(): string }).generateToken();
+      expect(token).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    });
+
+    it('lanza error si no hay crypto.randomUUID (sin fallback predecible)', () => {
+      vi.stubGlobal('crypto', {}); // entorno sin randomUUID
+      try {
+        expect(() => (facade as unknown as { generateToken(): string }).generateToken()).toThrow();
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
   });
 });

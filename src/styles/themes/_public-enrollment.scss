@@ -1,0 +1,244 @@
+/* ============================================================
+   _public-enrollment.scss — Tematización scoped del flujo público
+   spec 0009 · Rediseño UX del Flujo de Inscripción Online Público
+
+   Inyecta la identidad de cada sede (azul / roja) en el wizard
+   público SOLO bajo el atributo [data-public-theme], heredado por
+   los componentes vía los tokens estándar del DS (--ds-brand,
+   .surface-hero, btn-*, .card, utilities de Tailwind).
+
+   ⚠️ REGLAS DE ESTE ARCHIVO
+   - PROHIBIDO declarar nada en :root → no debe filtrar al app interno.
+   - Es el ÚNICO lugar autorizado a hardcodear los hex de sede.
+   - Fuerza modo claro: re-establece TODOS los tokens que
+     [data-mode='dark'] sobreescribe, con sus valores claros, para
+     que el wizard se vea claro aunque el usuario tenga dark mode.
+   - Valores aprobados en docs/mockups/inscripcion-rediseno.html
+     (ramps espejo de webs/src/styles/themes/*.css).
+   - El mapping branchId → 'azul'|'roja' vive en core/utils/sede-theme.utils.ts.
+   ============================================================ */
+
+/* ────────────────────────────────────────────────────────────
+   1. BASE COMÚN A AMBAS SEDES
+   Fuerza modo claro + fuentes de las landing, independiente de
+   [data-mode='dark'] del app interno. Lo sede-específico (marca,
+   superficies tintadas, bordes) vive en cada variante (§2 y §3).
+   ──────────────────────────────────────────────────────────── */
+[data-public-theme] {
+  color-scheme: light;
+
+  /* Fuentes de las landing Astro (cargadas vía <link> en index.html) */
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* Tipografía slate — coherente con las landing (mismo tono frío/legible) */
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --text-disabled: #cbd5e1;
+
+  /* Superficies blancas (cards / elevadas). Las tintadas de página e inputs
+     son sede-específicas → en cada variante. */
+  --bg-surface: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-surface-mix: #ffffff;
+  --bg-glass-surface: rgba(255, 255, 255, 0.92);
+  --shimmer-highlight: rgba(255, 255, 255, 0.6);
+  --overlay-backdrop: rgba(15, 23, 42, 0.4);
+
+  /* Sombras premium (slate) — del mockup aprobado. --pe-shadow-xl no existe
+     en el DS; se expone para que el shell/cards públicos lo consuman. */
+  --shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.05);
+  --shadow-lg: 0 16px 32px -8px rgba(15, 23, 42, 0.12), 0 6px 12px -6px rgba(15, 23, 42, 0.08);
+  --pe-shadow-xl: 0 32px 64px -12px rgba(15, 23, 42, 0.18), 0 12px 24px -8px rgba(15, 23, 42, 0.1);
+
+  /* Estados — valores claros (revierten las variantes glass de dark mode) */
+  --state-success: #15803d;
+  --state-success-bg: #f0fdf4;
+  --state-success-border: #bbf7d0;
+  --state-warning: #b45309;
+  --state-warning-bg: #fffbeb;
+  --state-warning-border: #fde68a;
+  --state-error: #b91c1c;
+  --state-error-bg: #fef2f2;
+  --state-error-border: #fecaca;
+  --state-info: #0369a1;
+  --state-info-bg: #f0f9ff;
+  --state-info-border: #bae6fd;
+
+  /* ── Puente Tailwind v4 (@theme) ──
+     Las utilities (text-text-*, bg-surface, text-error…) leen los alias
+     --color-*. Se re-declaran para que recojan los overrides locales en
+     lugar de los valores de :root. Mismo patrón que .surface-hero. */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-overlay: var(--overlay-backdrop);
+  --color-success: var(--state-success);
+  --color-success-subtle: var(--state-success-bg);
+  --color-success-border: var(--state-success-border);
+  --color-warning: var(--state-warning);
+  --color-warning-subtle: var(--state-warning-bg);
+  --color-warning-border: var(--state-warning-border);
+  --color-error: var(--state-error);
+  --color-error-subtle: var(--state-error-bg);
+  --color-error-border: var(--state-error-border);
+  --color-info: var(--state-info);
+  --color-info-subtle: var(--state-info-bg);
+  --color-info-border: var(--state-info-border);
+
+  /* Lienzo claro de página: cubre el <body> oscuro si el usuario llega con
+     dark mode guardado. El shell premium (T3.1) superpone los orbs encima. */
+  display: block;
+  min-height: 100vh;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+/* ────────────────────────────────────────────────────────────
+   2. SEDE AZUL (branchId 1) — Sky + Indigo
+   ──────────────────────────────────────────────────────────── */
+[data-public-theme='azul'] {
+  /* Escala de marca (sky). Namespaced --pe-* → disponible para los glows,
+     bordes y sombras de marca de los componentes públicos sin hardcodear hex. */
+  --pe-brand-50: #f0f9ff;
+  --pe-brand-100: #e0f2fe;
+  --pe-brand-200: #bae6fd;
+  --pe-brand-300: #7dd3fc;
+  --pe-brand-400: #38bdf8;
+  --pe-brand-500: #0ea5e9;
+  --pe-brand-600: #0284c7;
+  --pe-brand-700: #0369a1;
+  --pe-brand-800: #075985;
+  --pe-accent-400: #6366f1;
+  --pe-accent-500: #4f46e5;
+
+  /* Marca → tokens DS (+ puente Tailwind --color-brand-*) */
+  --ds-brand: var(--pe-brand-500);
+  --color-primary: var(--pe-brand-500);
+  --color-primary-hover: var(--pe-brand-600);
+  --color-primary-dark: var(--pe-brand-700);
+  --color-primary-muted: var(--pe-brand-50);
+  --color-primary-tint: color-mix(in srgb, var(--pe-brand-500) 5%, transparent);
+  --color-primary-text: #ffffff;
+  --color-brand: var(--ds-brand);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-brand-dark: var(--color-primary-dark);
+  --color-brand-muted: var(--color-primary-muted);
+  --color-brand-tint: var(--color-primary-tint);
+  --accent-border: color-mix(in srgb, var(--pe-brand-500) 22%, transparent);
+  --accent-glow: color-mix(in srgb, var(--pe-brand-500) 16%, transparent);
+  --color-border-brand: var(--accent-border);
+  --shadow-focus: 0 0 0 4px color-mix(in srgb, var(--pe-brand-500) 14%, transparent);
+
+  /* Gradientes de sede */
+  --gradient-hero: linear-gradient(135deg, var(--pe-brand-500) 0%, var(--pe-accent-400) 100%);
+  --gradient-primary: linear-gradient(135deg, var(--pe-brand-500) 0%, var(--pe-accent-400) 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--pe-brand-500) 6%, transparent) 0%,
+    color-mix(in srgb, var(--pe-brand-500) 2%, transparent) 100%
+  );
+  --pe-gradient-badge: linear-gradient(135deg, var(--pe-brand-100) 0%, var(--pe-brand-50) 100%);
+
+  /* Superficies tintadas de sede (página + inputs/chips) */
+  --bg-base: #f6f9fc;
+  --bg-subtle: #f6f9fc;
+
+  /* Bordes de sede (+ puente Tailwind) */
+  --border-subtle: #e6edf3;
+  --border-muted: #e6edf3;
+  --border-default: #e6edf3;
+  --border-strong: #d6e1ea;
+  --color-base: var(--bg-base);
+  --color-subtle: var(--bg-subtle);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-muted: var(--border-muted);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+}
+
+/* ────────────────────────────────────────────────────────────
+   2b. ACCESIBILIDAD — Touch targets (spec 0011 · AC-R1 §7.4)
+   Garantiza el mínimo de 44px de alto en los CTA del flujo
+   público en cualquier viewport, sin depender del `py-*` que
+   ponga cada step. Los `.btn-*` son @utility con inline-flex +
+   centrado, así que `min-height` centra el contenido. Scoped a
+   [data-public-theme] → NO afecta los botones del app interno.
+   ──────────────────────────────────────────────────────────── */
+[data-public-theme] .btn-primary,
+[data-public-theme] .btn-secondary {
+  min-height: 44px;
+}
+
+/* ────────────────────────────────────────────────────────────
+   3. SEDE ROJA (branchId 2) — Red + Orange
+   ──────────────────────────────────────────────────────────── */
+[data-public-theme='roja'] {
+  /* Escala de marca (red) */
+  --pe-brand-50: #fff1f0;
+  --pe-brand-100: #ffe2e0;
+  --pe-brand-200: #ffc8c4;
+  --pe-brand-300: #ffa29c;
+  --pe-brand-400: #ff736b;
+  --pe-brand-500: #fd2018;
+  --pe-brand-600: #e0120b;
+  --pe-brand-700: #bc0b05;
+  --pe-brand-800: #9c0c07;
+  --pe-accent-400: #f97316;
+  --pe-accent-500: #ea580c;
+
+  /* Marca → tokens DS (+ puente Tailwind --color-brand-*) */
+  --ds-brand: var(--pe-brand-500);
+  --color-primary: var(--pe-brand-500);
+  --color-primary-hover: var(--pe-brand-600);
+  --color-primary-dark: var(--pe-brand-700);
+  --color-primary-muted: var(--pe-brand-50);
+  --color-primary-tint: color-mix(in srgb, var(--pe-brand-500) 5%, transparent);
+  --color-primary-text: #ffffff;
+  --color-brand: var(--ds-brand);
+  --color-brand-hover: var(--color-primary-hover);
+  --color-brand-dark: var(--color-primary-dark);
+  --color-brand-muted: var(--color-primary-muted);
+  --color-brand-tint: var(--color-primary-tint);
+  --accent-border: color-mix(in srgb, var(--pe-brand-500) 22%, transparent);
+  --accent-glow: color-mix(in srgb, var(--pe-brand-500) 16%, transparent);
+  --color-border-brand: var(--accent-border);
+  --shadow-focus: 0 0 0 4px color-mix(in srgb, var(--pe-brand-500) 14%, transparent);
+
+  /* Gradientes de sede — el hero rojo viaja brand-700 → brand-500 → accent */
+  --gradient-hero: linear-gradient(
+    150deg,
+    var(--pe-brand-700) 0%,
+    var(--pe-brand-500) 55%,
+    var(--pe-accent-400) 130%
+  );
+  --gradient-primary: linear-gradient(135deg, var(--pe-brand-500) 0%, var(--pe-accent-400) 100%);
+  --gradient-subtle: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--pe-brand-500) 6%, transparent) 0%,
+    color-mix(in srgb, var(--pe-brand-500) 2%, transparent) 100%
+  );
+  --pe-gradient-badge: linear-gradient(135deg, var(--pe-brand-100) 0%, var(--pe-brand-50) 100%);
+
+  /* Superficies tintadas de sede (cálidas) */
+  --bg-base: #fbf8f7;
+  --bg-subtle: #fbf8f7;
+
+  /* Bordes de sede (+ puente Tailwind) */
+  --border-subtle: #f0e9e7;
+  --border-muted: #f0e9e7;
+  --border-default: #f0e9e7;
+  --border-strong: #e7dcd9;
+  --color-base: var(--bg-base);
+  --color-subtle: var(--bg-subtle);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-muted: var(--border-muted);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+}

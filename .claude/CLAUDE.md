@@ -67,13 +67,18 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 
 **Paths exentos del gate:** `specs/`, `indices/`, `docs/`, `.claude/`, `scripts/`, tests, configs.
 
+## Capacidades del Agente
+
+- **QA Visual activo:** El agente tiene acceso a Playwright MCP (`mcp__playwright__*`). Puede navegar la app en el navegador real, tomar capturas, leer la consola del browser y ejecutar scripts de auditoría del DOM. Ya **no es ciego a la UI renderizada**.
+- **Protocolo visual:** Usar el skill `/verify` después de implementar cualquier componente o fix con cambios de UI. Definición completa: `.claude/skills/verify/SKILL.md`.
+
 ## Flujo obligatorio y Estado Cero (6 pasos)
 
 0. **CONTEXT SEEDING (Día 0)** — Si es un proyecto/módulo nuevo, DEBES establecer el Lenguaje Ubicuo (`indices/DOMAIN_DICTIONARY.md`) y el modelo de datos (`indices/DATABASE.md`) ANTES de codificar. Si te falta contexto, pídeselo al humano (el Context Guard te obligará a hacerlo si lo olvidas).
 1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. **El Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR** — Define qué vas a tocar sin violar las reglas de arquitectura.
 3. **EJECUTAR** — Escribe el código. Reutiliza siempre lo existente primero. Los hooks validarán cada escritura en tiempo real. **Si hay lógica nueva, escribe el `.spec.ts` primero (TDD).**
-4. **VALIDAR** — Corre `npm run lint:arch` para auditoría arquitectónica y `npm run test:ci` para tests.
+4. **VALIDAR** — Corre `npm run lint:arch` para auditoría arquitectónica y `npm run test:ci` para tests. **Para cambios de UI, ejecutar también `/verify` (Playwright) para confirmar renderizado real en el navegador.**
 5. **SINCRONIZAR** — Actualiza `indices/*.md` con los componentes/servicios creados. El Stop hook te lo recordará si lo olvidas.
 
 ## Reglas del proyecto

@@ -278,3 +278,6 @@ Las clases `.kpi-value` / `.kpi-label` solo se usan directamente en composicione
 - [ ] Contraste WCAG AA (mínimo 4.5:1 en texto normal)
 - [ ] Radios respetan el sistema (`--radius-lg` mínimo en cards)
 - [ ] Regla 3-2-1: máximo 3 elementos con brand color por viewport
+
+> **Verificación automática:** Los ítems de colores, emojis, SVG inline y estructura bento
+> se validan en el browser real con `/verify` (Playwright MCP). Ejecutar siempre al terminar.

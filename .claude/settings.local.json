@@ -73,6 +73,8 @@
   "enabledMcpjsonServers": [
     "supabase",
     "typescript",
-    "angular"
-  ]
+    "angular",
+    "playwright"
+  ],
+  "enableAllProjectMcpServers": true
 }

@@ -33,6 +33,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `StepConfig` | `enrollment-wizard.model.ts` | Configuración de cada paso del wizard: número, label, status (pending / active / completed / error). Constante: `ENROLLMENT_STEPS` |
 | `EnrollmentAssignmentData` | `enrollment-assignment.model.ts` | Paso 2 del Wizard: modelo compuesto con vista condicional (class-b / professional / singular), modalidad de pago, instructor, slots seleccionados, promoción |
 | `StudentSummaryBanner` | `enrollment-assignment.model.ts` | Banner resumen del alumno: iniciales, nombre completo, etiqueta del curso seleccionado |
+| `PublicEnrollmentContext` | `public-enrollment-context.model.ts` | **Spec 0009:** Contexto del banner del flujo público de inscripción (AC3/AC5): curso + escuela + precio + tema de sede, resuelto por `PublicEnrollmentFacade` y mostrado antes del primer campo del formulario. Campos: `courseName`, `courseType` (reusa `CourseType`), `branchName`, `branchAddress`, `theme` (reusa `SedeTheme`), `priceLabel`, `price`. No persiste. |
 | `PaymentModeOption` | `enrollment-assignment.model.ts` | Opción de modalidad de pago (full / deposit) con cantidad de clases prácticas asociadas |
 | `InstructorOption` | `enrollment-assignment.model.ts` | Instructor disponible para asignación: nombre, vehículo, patente |
 | `TimeSlot`, `ScheduleGrid` | `enrollment-assignment.model.ts` | Grilla semanal de disponibilidad del instructor: slots por hora/día con status (available / selected / occupied) |
