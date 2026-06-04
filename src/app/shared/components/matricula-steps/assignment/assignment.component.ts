@@ -20,8 +20,8 @@ export class AssignmentComponent {
   /** Oculta la sección de modalidad de pago (cuando ya fue elegida en un paso previo). */
   hidePaymentMode = input<boolean>(false);
   /**
-   * Máximo de clases permitidas por día. Usar 2 para admin/secretaria, 1 (default) para alumnos.
-   * Con maxPerDay=2 el auto-avance ocurre solo cuando el día está lleno, no tras cada selección.
+   * Máximo de clases permitidas por día. Secretaría usa 3; 1 (default) para alumno/flujo público.
+   * Con maxPerDay > 1 el auto-avance ocurre solo cuando el día está lleno, no tras cada selección.
    */
   maxPerDay = input<number>(1);
   dataChange = output<EnrollmentAssignmentData>();
