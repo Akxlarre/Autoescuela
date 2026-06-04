@@ -1,4 +1,13 @@
-import { Component, ChangeDetectionStrategy, inject, effect, viewChild, ElementRef, afterNextRender, Injector } from '@angular/core';
+import {
+  Component,
+  ChangeDetectionStrategy,
+  inject,
+  effect,
+  viewChild,
+  ElementRef,
+  afterNextRender,
+  Injector,
+} from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 
 import { LayoutService } from '@core/services/ui/layout.service';
@@ -103,14 +112,16 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             </div>
           </div>
           <div class="flex items-center gap-3 justify-end">
-            <button
-              type="button"
-              class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-secondary-radius) border border-(--btn-secondary-border) bg-(--btn-secondary-bg) px-5 py-2 text-sm font-semibold text-(--btn-secondary-text) transition-colors hover:bg-(--btn-secondary-bg-hover)"
-              (click)="confirmModal.cancel()"
-              data-llm-action="confirm-modal-cancel"
-            >
-              {{ confirmModal.config()?.cancelLabel }}
-            </button>
+            @if (confirmModal.config()?.cancelLabel) {
+              <button
+                type="button"
+                class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-secondary-radius) border border-(--btn-secondary-border) bg-(--btn-secondary-bg) px-5 py-2 text-sm font-semibold text-(--btn-secondary-text) transition-colors hover:bg-(--btn-secondary-bg-hover)"
+                (click)="confirmModal.cancel()"
+                data-llm-action="confirm-modal-cancel"
+              >
+                {{ confirmModal.config()?.cancelLabel }}
+              </button>
+            }
             <button
               type="button"
               class="cursor-pointer inline-flex items-center justify-center rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-5 py-2 text-sm font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-colors hover:bg-(--btn-primary-bg-hover) hover:shadow-(--btn-primary-shadow-hover) active:scale-(--btn-press-scale-value)"
@@ -203,7 +214,7 @@ export class AppShellComponent {
         if (!contentEl) return;
 
         const componentRoot = Array.from(contentEl.children).find(
-          (el) => el.tagName.toLowerCase() !== 'router-outlet'
+          (el) => el.tagName.toLowerCase() !== 'router-outlet',
         );
 
         if (componentRoot) {

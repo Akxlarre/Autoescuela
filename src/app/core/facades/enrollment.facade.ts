@@ -401,6 +401,7 @@ export class EnrollmentFacade {
    * Retorna datos pre-mapeados para la UI (no DTOs crudos).
    */
   async findUserByRut(rut: string): Promise<{
+    studentId: number | null;
     firstNames: string;
     paternalLastName: string;
     maternalLastName: string;
@@ -422,11 +423,12 @@ export class EnrollmentFacade {
 
     const { data: student } = await this.supabase.client
       .from('students')
-      .select('birth_date, gender, address, current_license_class, license_obtained_date')
+      .select('id, birth_date, gender, address, current_license_class, license_obtained_date')
       .eq('user_id', user.id)
       .maybeSingle();
 
     return {
+      studentId: student?.id ?? null,
       firstNames: user.first_names,
       paternalLastName: user.paternal_last_name,
       maternalLastName: user.maternal_last_name,
@@ -470,6 +472,27 @@ export class EnrollmentFacade {
         if (existing) {
           const fullName =
             `${existing.firstNames} ${existing.paternalLastName} ${existing.maternalLastName}`.trim();
+          const licenseClass = this.courseTypeToLicenseClass(data.courseType);
+          const course = this._courses().find((c) => c.license_class === licenseClass);
+          const courseName = course?.name ?? licenseClass;
+
+          // Si ya tiene matrícula activa/completada en el mismo curso → modal de bloqueo sin opción de continuar
+          if (existing.studentId) {
+            const duplicate = await this.checkDuplicateEnrollment(existing.studentId, licenseClass);
+            if (duplicate) {
+              const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+              await this.confirm({
+                title: 'Matrícula duplicada',
+                message: `${fullName} ya tiene una matrícula ${statusLabel} en ${courseName}. No es posible crear una nueva matrícula para el mismo curso.`,
+                severity: 'danger',
+                confirmLabel: 'Entendido',
+              });
+              this._isLoading.set(false);
+              return false;
+            }
+          }
+
+          // RUT existe pero sin matrícula en este curso → pedir confirmación explícita
           const camposActualizados = [
             'Nombre completo',
             'Email',
@@ -482,11 +505,12 @@ export class EnrollmentFacade {
           const confirmed = await this.confirm({
             title: 'RUT ya registrado en el sistema',
             message:
-              `El RUT ingresado pertenece a ${fullName} (${existing.email}).\n\n` +
-              `Si continúas, se actualizarán los siguientes datos del alumno con los valores del formulario: ${camposActualizados}.\n\n` +
-              `Se creará una nueva matrícula que quedará visible junto a la(s) anterior(es) en el perfil del alumno.`,
+              `El RUT ingresado pertenece a ${fullName} (${existing.email}), quien ya tiene matrículas anteriores.\n\n` +
+              `Estás a punto de matricularlo/a en un nuevo curso: ${courseName}.\n\n` +
+              `Sus datos personales se actualizarán con los valores del formulario: ${camposActualizados}.\n\n` +
+              `Ambas matrículas quedarán visibles en su perfil.`,
             severity: 'warn',
-            confirmLabel: 'Sí, continuar con nueva matrícula',
+            confirmLabel: `Sí, matricular en ${courseName}`,
             cancelLabel: 'Cancelar',
           });
           if (!confirmed) {
