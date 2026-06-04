@@ -59,7 +59,7 @@ import type { PublicStepConfig } from '@core/facades/public-enrollment.facade';
           "
         ></div>
 
-        <div class="relative z-10 mx-auto max-w-3xl px-5 pb-12 pt-6 sm:pb-8">
+        <div class="relative z-10 mx-auto max-w-3xl px-5 pb-12 pt-6 sm:pb-14">
           <!-- Brand row -->
           <div class="flex items-center justify-between gap-4 mb-5">
             <div class="flex items-center gap-2.5">
