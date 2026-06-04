@@ -51,7 +51,10 @@ const FLOW_CARDS: Record<PublicFlowType, FlowCard> = {
       </div>
 
       <!-- Flow cards -->
-      <div class="grid gap-3 items-stretch" [class.grid-cols-2]="visibleCards().length > 1">
+      <div
+        class="grid gap-3 items-stretch grid-cols-1"
+        [class.sm:grid-cols-2]="visibleCards().length > 1"
+      >
         @for (card of visibleCards(); track card.flow) {
           <button
             type="button"
