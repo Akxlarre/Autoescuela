@@ -6,6 +6,7 @@ import type {
   AlumnoDetalleUI,
   ClasePracticaUI,
   ElegibilidadProfUI,
+  EnrollmentSummary,
   InasistenciaUI,
   PagoUI,
   ProgresoAsistenciaProf,
@@ -101,6 +102,8 @@ export class AdminAlumnoDetalleFacade {
   /** slot_start (timestamptz) → vehicle_id; rebuilt on each loadScheduleGrid call. */
   private _slotVehicleMap = new Map<string, number>();
 
+  private readonly _enrollmentSummaries = signal<EnrollmentSummary[]>([]);
+
   // ── SWR & Realtime State ───────────────────────────────────────────────────
   private _initialized = false;
   private _lastStudentId: number | null = null;
@@ -108,6 +111,7 @@ export class AdminAlumnoDetalleFacade {
 
   // ── 2. ESTADO EXPUESTO (Público, solo lectura) ───────────────────────────────
   readonly alumno = this._alumno.asReadonly();
+  readonly enrollmentSummaries = this._enrollmentSummaries.asReadonly();
   readonly inasistencias = this._inasistencias.asReadonly();
   readonly clasesPracticas = this._clasesPracticas.asReadonly();
   readonly historialPagos = this._historialPagos.asReadonly();
@@ -263,6 +267,41 @@ export class AdminAlumnoDetalleFacade {
     return this.initialize(studentId);
   }
 
+  /** Cambia el enrollment activo y recarga todos los signals dependientes del enrollment. */
+  async selectEnrollment(id: number): Promise<void> {
+    const summary = this._enrollmentSummaries().find((e) => e.id === id);
+    if (!summary) return;
+
+    const alumno = this._alumno();
+    if (!alumno) return;
+
+    // Actualizar signals de paths/contrato del enrollment seleccionado
+    this._certPdfPath.set(summary.certPdfUrl);
+    this._licensePdfPath.set(summary.licensePdfUrl);
+    this._contractGeneratedPath.set(summary.contractFileUrl);
+    this._contractSignedPath.set(summary.contractSignedUrl);
+    this._registrationChannel.set(summary.registrationChannel);
+
+    // Actualizar campos del alumno dependientes del enrollment
+    this._alumno.set({
+      ...alumno,
+      enrollmentId: id,
+      enrollments: alumno.enrollments,
+      matricula: summary.number ? `#${summary.number}` : '—',
+      curso: summary.courseName,
+      licenseGroup: summary.licenseGroup,
+      totalPagado: summary.totalPagado,
+      saldoPendiente: summary.saldoPendiente,
+    });
+
+    // Re-cargar progreso para el enrollment seleccionado
+    if (summary.licenseGroup === 'professional') {
+      await this.fetchProfessionalProgress(id, summary.promotionCourseId);
+    } else {
+      await this.fetchClassBProgress(id, alumno.id);
+    }
+  }
+
   private async fetchDetalleData(studentId: number): Promise<void> {
     try {
       // ── Step 1: Info personal ──
@@ -289,11 +328,10 @@ export class AdminAlumnoDetalleFacade {
 
       const rawU = s.users as any;
       const u = Array.isArray(rawU) ? rawU[0] : rawU;
-      const enrollments = (s.enrollments ?? []) as any[];
-      const lastEnrollment =
-        enrollments.sort(
-          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        )[0] ?? null;
+      const sorted = ((s.enrollments ?? []) as any[]).sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      const lastEnrollment = sorted[0] ?? null;
 
       const courseName = Array.isArray(lastEnrollment?.courses)
         ? lastEnrollment.courses[0]?.name
@@ -303,6 +341,40 @@ export class AdminAlumnoDetalleFacade {
       const licenseGroup: 'class_b' | 'professional' =
         lastEnrollment?.license_group === 'professional' ? 'professional' : 'class_b';
       const promotionCourseId = (lastEnrollment?.promotion_course_id as number | null) ?? null;
+
+      // Build enrollment summaries for tab selector
+      const summaries: EnrollmentSummary[] = sorted
+        .filter((e: any) => e.status !== 'draft')
+        .map((e: any) => {
+          const cName = Array.isArray(e.courses) ? e.courses[0]?.name : e.courses?.name;
+          const lg: 'class_b' | 'professional' =
+            e.license_group === 'professional' ? 'professional' : 'class_b';
+          const dcRaw = e.digital_contracts;
+          const dc = Array.isArray(dcRaw) ? dcRaw[0] : dcRaw;
+          const rawCh = e.registration_channel;
+          let ch: 'presential' | 'online' | null = null;
+          if (rawCh === 'in_person') ch = 'presential';
+          else if (rawCh === 'online') ch = 'online';
+          return {
+            id: e.id,
+            number: e.number ?? null,
+            courseName: cName ?? '—',
+            licenseGroup: lg,
+            promotionCourseId: (e.promotion_course_id as number | null) ?? null,
+            createdAt: e.created_at,
+            certPdfUrl:
+              lg === 'professional'
+                ? (e.certificate_professional_pdf_url ?? null)
+                : (e.certificate_b_pdf_url ?? null),
+            licensePdfUrl: e.license_pdf_url ?? null,
+            contractFileUrl: (dc?.file_url as string) ?? null,
+            contractSignedUrl: (dc?.signed_contract_url as string) ?? null,
+            registrationChannel: ch,
+            totalPagado: e.total_paid ?? 0,
+            saldoPendiente: e.pending_balance ?? 0,
+          };
+        });
+      this._enrollmentSummaries.set(summaries);
 
       this._certPdfPath.set(
         licenseGroup === 'professional'
@@ -328,6 +400,7 @@ export class AdminAlumnoDetalleFacade {
         id: s.id,
         userId: u.id,
         enrollmentId,
+        enrollments: summaries,
         nombre: `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name}`
           .replace(/\s+/g, ' ')
           .trim(),
@@ -352,127 +425,129 @@ export class AdminAlumnoDetalleFacade {
         return;
       }
 
-      // ── Clase B: queries en paralelo ──
-      const [practiceResult, theoryResult, evidenceResult, sessionResult, paymentsResult] =
-        await Promise.all([
-          this.supabase.client
-            .from('class_b_practice_attendance')
-            .select('status')
-            .eq('student_id', studentId),
-          this.supabase.client
-            .from('class_b_theory_attendance')
-            .select('status')
-            .eq('student_id', studentId),
-          enrollmentId
-            ? this.supabase.client
-                .from('absence_evidence')
-                .select('*')
-                .eq('enrollment_id', enrollmentId)
-                .order('document_date', { ascending: false })
-            : Promise.resolve({ data: [] }),
-          enrollmentId
-            ? this.supabase.client
-                .from('class_b_sessions')
-                .select(
-                  '*, instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))',
-                )
-                .eq('enrollment_id', enrollmentId)
-                .order('class_number', { ascending: true })
-            : Promise.resolve({ data: [] }),
-          enrollmentId
-            ? this.supabase.client
-                .from('payments')
-                .select('*')
-                .eq('enrollment_id', enrollmentId)
-                .order('payment_date', { ascending: true })
-            : Promise.resolve({ data: [] }),
-        ]);
-
-      this._progresoPractico.set({
-        completadas: (practiceResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
-          .length,
-        requeridas: PRACTICAS_REQUERIDAS_B,
-      });
-
-      this._progresoTeorico.set({
-        completadas: (theoryResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
-          .length,
-        requeridas: TEORICAS_REQUERIDAS_B,
-      });
-
-      this._inasistencias.set(
-        (evidenceResult.data ?? []).map((e: any) => ({
-          id: e.id,
-          fecha: this.formatDate(e.document_date),
-          documentType: e.document_type ?? '—',
-          description: e.description ?? null,
-          fileUrl: e.file_url ?? null,
-          status: e.status ?? 'pending',
-        })),
-      );
-
-      const sessionMap = new Map<number, any>(
-        (sessionResult.data ?? []).map((s: any) => [Number(s.class_number), s]),
-      );
-      this._clasesPracticas.set(
-        Array.from({ length: PRACTICAS_REQUERIDAS_B }, (_, i) => {
-          const num = i + 1;
-          const ses = sessionMap.get(num);
-          if (!ses)
-            return {
-              numero: num,
-              sessionId: null,
-              fecha: null,
-              scheduledDate: null,
-              hora: null,
-              instructor: null,
-              kmInicio: null,
-              kmFin: null,
-              observaciones: null,
-              completada: false,
-              alumnoFirmo: false,
-              instructorFirmo: false,
-            };
-
-          const instRaw = ses.instructors as any;
-          const inst = Array.isArray(instRaw) ? instRaw[0] : instRaw;
-          const uRaw = inst?.users as any;
-          const uInst = Array.isArray(uRaw) ? uRaw[0] : uRaw;
-          const instructor = uInst
-            ? `${uInst.first_names} ${uInst.paternal_last_name}`.trim()
-            : null;
-
-          return {
-            numero: num,
-            sessionId: ses.id ?? null,
-            fecha: this.formatClassDate(ses.scheduled_at),
-            scheduledDate: this.slotDateFromStart(ses.scheduled_at) || null,
-            hora: this.formatHour(ses.start_time, ses.end_time),
-            instructor,
-            kmInicio: ses.km_start,
-            kmFin: ses.km_end,
-            observaciones: ses.performance_notes ?? ses.notes ?? null,
-            completada: !!(ses.student_signature && ses.instructor_signature),
-            alumnoFirmo: !!ses.student_signature,
-            instructorFirmo: !!ses.instructor_signature,
-          };
-        }),
-      );
-
-      this._historialPagos.set(
-        (paymentsResult.data ?? []).map((p: any, idx: number) => ({
-          id: p.id,
-          fecha: this.formatDate(p.payment_date),
-          concepto: p.type?.trim() || `Pago #${idx + 1}`,
-          monto: p.total_amount ?? 0,
-          metodo: this.derivePaymentMethod(p),
-          estado: this.formatPaymentStatus(p.status),
-        })),
-      );
+      // ── Clase B: delegar al método reutilizable ──
+      await this.fetchClassBProgress(enrollmentId, studentId);
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Error al cargar la ficha del alumno');
       throw err;
     }
+  }
+
+  private async fetchClassBProgress(enrollmentId: number | null, studentId: number): Promise<void> {
+    const [practiceResult, theoryResult, evidenceResult, sessionResult, paymentsResult] =
+      await Promise.all([
+        this.supabase.client
+          .from('class_b_practice_attendance')
+          .select('status')
+          .eq('student_id', studentId),
+        this.supabase.client
+          .from('class_b_theory_attendance')
+          .select('status')
+          .eq('student_id', studentId),
+        enrollmentId
+          ? this.supabase.client
+              .from('absence_evidence')
+              .select('*')
+              .eq('enrollment_id', enrollmentId)
+              .order('document_date', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        enrollmentId
+          ? this.supabase.client
+              .from('class_b_sessions')
+              .select(
+                '*, instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))',
+              )
+              .eq('enrollment_id', enrollmentId)
+              .order('class_number', { ascending: true })
+          : Promise.resolve({ data: [] }),
+        enrollmentId
+          ? this.supabase.client
+              .from('payments')
+              .select('*')
+              .eq('enrollment_id', enrollmentId)
+              .order('payment_date', { ascending: true })
+          : Promise.resolve({ data: [] }),
+      ]);
+
+    this._progresoPractico.set({
+      completadas: (practiceResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
+        .length,
+      requeridas: PRACTICAS_REQUERIDAS_B,
+    });
+
+    this._progresoTeorico.set({
+      completadas: (theoryResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
+        .length,
+      requeridas: TEORICAS_REQUERIDAS_B,
+    });
+
+    this._inasistencias.set(
+      (evidenceResult.data ?? []).map((e: any) => ({
+        id: e.id,
+        fecha: this.formatDate(e.document_date),
+        documentType: e.document_type ?? '—',
+        description: e.description ?? null,
+        fileUrl: e.file_url ?? null,
+        status: e.status ?? 'pending',
+      })),
+    );
+
+    const sessionMap = new Map<number, any>(
+      (sessionResult.data ?? []).map((s: any) => [Number(s.class_number), s]),
+    );
+    this._clasesPracticas.set(
+      Array.from({ length: PRACTICAS_REQUERIDAS_B }, (_, i) => {
+        const num = i + 1;
+        const ses = sessionMap.get(num);
+        if (!ses)
+          return {
+            numero: num,
+            sessionId: null,
+            fecha: null,
+            scheduledDate: null,
+            hora: null,
+            instructor: null,
+            kmInicio: null,
+            kmFin: null,
+            observaciones: null,
+            completada: false,
+            alumnoFirmo: false,
+            instructorFirmo: false,
+          };
+
+        const instRaw = ses.instructors as any;
+        const inst = Array.isArray(instRaw) ? instRaw[0] : instRaw;
+        const uRaw = inst?.users as any;
+        const uInst = Array.isArray(uRaw) ? uRaw[0] : uRaw;
+        const instructor = uInst ? `${uInst.first_names} ${uInst.paternal_last_name}`.trim() : null;
+
+        return {
+          numero: num,
+          sessionId: ses.id ?? null,
+          fecha: this.formatClassDate(ses.scheduled_at),
+          scheduledDate: this.slotDateFromStart(ses.scheduled_at) || null,
+          hora: this.formatHour(ses.start_time, ses.end_time),
+          instructor,
+          kmInicio: ses.km_start,
+          kmFin: ses.km_end,
+          observaciones: ses.performance_notes ?? ses.notes ?? null,
+          completada: !!(ses.student_signature && ses.instructor_signature),
+          alumnoFirmo: !!ses.student_signature,
+          instructorFirmo: !!ses.instructor_signature,
+        };
+      }),
+    );
+
+    this._historialPagos.set(
+      (paymentsResult.data ?? []).map((p: any, idx: number) => ({
+        id: p.id,
+        fecha: this.formatDate(p.payment_date),
+        concepto: p.type?.trim() || `Pago #${idx + 1}`,
+        monto: p.total_amount ?? 0,
+        metodo: this.derivePaymentMethod(p),
+        estado: this.formatPaymentStatus(p.status),
+      })),
+    );
   }
 
   /**

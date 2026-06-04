@@ -380,11 +380,35 @@ export class PublicEnrollmentFacade {
   // 3. MÉTODOS DE ACCIÓN — Personal Data
   // ══════════════════════════════════════════════════════════════════════════════
 
-  savePersonalData(data: EnrollmentPersonalData): void {
+  async savePersonalData(data: EnrollmentPersonalData): Promise<void> {
+    const flow = this._flowType();
+    const courseType = flow === 'class_b' ? 'class_b' : (data.courseType ?? '');
+    const licenseClass = this.courseTypeToLicenseClass(courseType);
+
+    // Check anticipado de matrícula/pre-inscripción duplicada
+    this._isLoading.set(true);
+    this._error.set(null);
+    try {
+      const { data: check } = await this.supabase.client.functions.invoke('public-enrollment', {
+        body: {
+          action: 'check-duplicate',
+          rut: normalizeRutForStorage(data.rut),
+          licenseClass,
+        },
+      });
+      if (check && !check.eligible) {
+        this._error.set(check.message ?? 'No se puede continuar con la matrícula');
+        return;
+      }
+    } catch {
+      // Falla silenciosa — el check final en el submit es la validación definitiva
+    } finally {
+      this._isLoading.set(false);
+    }
+
     this._personalData.set(data);
     this.updateStepStatus('personal-data', 'completed');
 
-    const flow = this._flowType();
     if (flow === 'class_b') {
       this._currentStep.set('payment-mode');
       this.updateStepStatus('payment-mode', 'active');
@@ -740,7 +764,7 @@ export class PublicEnrollmentFacade {
       });
 
       if (error || !data?.success) {
-        const msg = error?.message ?? 'Error al iniciar el pago';
+        const msg = data?.message ?? error?.message ?? 'Error al iniciar el pago';
         this._error.set(msg);
         return { success: false, message: msg };
       }
@@ -892,9 +916,10 @@ export class PublicEnrollmentFacade {
         },
       });
 
-      if (error) {
-        this._error.set('Error al enviar matrícula: ' + error.message);
-        return { success: false, message: error.message };
+      if (error || !data?.success) {
+        const msg = data?.message ?? error?.message ?? 'Error al enviar matrícula';
+        this._error.set(msg);
+        return { success: false, message: msg };
       }
 
       const result: PublicEnrollmentResult = {
@@ -946,9 +971,10 @@ export class PublicEnrollmentFacade {
         },
       });
 
-      if (error) {
-        this._error.set('Error al enviar pre-inscripción: ' + error.message);
-        return { success: false, message: error.message };
+      if (error || !data?.success) {
+        const msg = data?.message ?? error?.message ?? 'Error al enviar pre-inscripción';
+        this._error.set(msg);
+        return { success: false, message: msg };
       }
 
       const result: PublicEnrollmentResult = { success: true, message: data?.message };

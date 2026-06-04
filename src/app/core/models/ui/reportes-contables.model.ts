@@ -77,6 +77,35 @@ export interface ReporteContable {
   escuela: string;
 }
 
+// ── Gastos Fijos (admin-only, tabla fixed_expenses) ───────────────────────────
+
+export const GASTO_FIJO_CATEGORIES = [
+  { label: 'Arriendo', value: 'rent' },
+  { label: 'Sueldos', value: 'salary' },
+  { label: 'Servicios Básicos', value: 'utility' },
+  { label: 'Seguros', value: 'insurance' },
+  { label: 'Reparaciones', value: 'repair' },
+  { label: 'Otros', value: 'other' },
+] as const;
+
+export type GastoFijoCategory = (typeof GASTO_FIJO_CATEGORIES)[number]['value'];
+
+export interface GastoFijoRow {
+  id: number;
+  category: GastoFijoCategory;
+  categoryLabel: string;
+  description: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+}
+
+export interface RegistrarGastoFijoPayload {
+  category: GastoFijoCategory;
+  description: string;
+  amount: number;
+  date: string; // YYYY-MM-DD
+}
+
 /**
  * Calcula el par [desde, hasta] en formato YYYY-MM-DD para un rango predefinido.
  * Función pura — usada tanto en el Facade como en el componente de filtros.

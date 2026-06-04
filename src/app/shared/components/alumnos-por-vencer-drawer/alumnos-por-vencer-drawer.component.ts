@@ -39,7 +39,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   {{ item.nombre }} {{ item.apellido }}
                 </span>
                 <span class="text-xs text-text-muted font-mono">
-                  {{ item.cursa }} — {{ item.nroExpediente }}
+                  {{ item.cursos[0]?.nombre ?? '—' }} — {{ item.nroExpedientes[0] }}
                 </span>
                 <span class="text-xs text-error font-medium">Vence: {{ item.vencimiento }}</span>
               </div>

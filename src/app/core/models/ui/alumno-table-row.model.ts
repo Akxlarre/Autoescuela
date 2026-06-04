@@ -1,6 +1,11 @@
 // UI Model for the "Base de Alumnos" table view.
 // Derived from: students + users + enrollments + courses + student_documents
 
+export interface EnrollmentCurso {
+  nombre: string;
+  licenseGroup: 'class_b' | 'professional';
+}
+
 export type AlumnoStatus =
   | 'Activo'
   | 'Finalizado'
@@ -38,14 +43,14 @@ export interface AlumnoTableRow {
   sucursal: string;
   /** students.district */
   comuna: string;
-  /** enrollments.number */
-  nroExpediente: string;
-  /** enrollments.created_at (formatted date) */
+  /** enrollments[].number — all non-draft enrollment numbers */
+  nroExpedientes: string[];
+  /** enrollments.created_at (formatted date) — from most recent enrollment */
   fechaIngreso: string;
-  /** Derived from enrollment.status + payment_status + docs_complete */
+  /** Derived from enrollment.status + payment_status + docs_complete — most recent */
   status: AlumnoStatus;
-  /** courses.name */
-  cursa: string;
+  /** All courses across enrollments */
+  cursos: EnrollmentCurso[];
   /** enrollments.pending_balance */
   pago_por_pagar: number;
   /** enrollments.total_paid */

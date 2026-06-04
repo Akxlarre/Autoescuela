@@ -15,6 +15,7 @@
 //   - submit-pre-inscription: Pre-inscripción profesional
 //   - initiate-payment      : Crea enrollment pending_payment e inicia transacción Webpay
 //   - confirm-payment       : Confirma el pago tras retorno desde Webpay (commit)
+//   - check-duplicate       : Check anticipado RUT+curso (sin side-effects, falla silenciosa)
 //
 // Tarjetas de prueba Transbank (entorno integración):
 // Número: 4051 8856 0044 6623 (VISA - Genera transacciones aprobadas)
@@ -289,6 +290,8 @@ Deno.serve(async (req: Request) => {
           return await handleConfirmPayment(supabase, body);
         case 'get-carnet-upload-url':
           return await handleGetCarnetUploadUrl(supabase, body);
+        case 'check-duplicate':
+          return await handleCheckDuplicate(supabase, body);
         case 'generate-contract-preview':
           return await handleGenerateContractPreview(supabase, body);
         default:
@@ -552,6 +555,17 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 
     if (!course) return errorResponse('No se encontró curso Clase B activo para esta sede', 404);
 
+    // 3.5. Verificar matrícula duplicada
+    const duplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+      return jsonResponse({
+        success: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+      });
+    }
+
     // 4. Create enrollment
     const { data: enrollment, error: enrollError } = await supabase
       .from('enrollments')
@@ -683,6 +697,50 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
   try {
     // 1. Find or create user
     const userId = await findOrCreateUser(supabase, personalData, branchId);
+
+    // 1.5. Verificar duplicados antes de crear la pre-inscripción
+    const licenseClass = courseTypeToLicenseClass(courseType);
+
+    // a) ¿Ya tiene un enrollment activo/completado para este mismo curso?
+    const { data: existingStudent } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (existingStudent) {
+      const enrollmentDuplicate = await checkDuplicateEnrollmentByLicenseClass(
+        supabase,
+        existingStudent.id,
+        licenseClass,
+      );
+      if (enrollmentDuplicate) {
+        const statusLabel = enrollmentDuplicate.status === 'completed' ? 'finalizada' : 'activa';
+        return jsonResponse({
+          success: false,
+          error: 'DUPLICATE_ENROLLMENT',
+          message: `Ya existe una matrícula ${statusLabel} en ${licenseClassLabel(licenseClass)} para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+        });
+      }
+    }
+
+    // b) ¿Ya tiene una pre-inscripción pendiente para este mismo curso?
+    const { data: existingPreReg } = await supabase
+      .from('professional_pre_registrations')
+      .select('id, status')
+      .eq('temp_user_id', userId)
+      .eq('requested_license_class', licenseClass)
+      .not('status', 'in', '("cancelled","rejected")')
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPreReg) {
+      return jsonResponse({
+        success: false,
+        error: 'DUPLICATE_PRE_INSCRIPTION',
+        message: `Ya tienes una pre-inscripción en curso para ${licenseClassLabel(licenseClass)}. La autoescuela revisará tu solicitud y se pondrá en contacto contigo.`,
+      });
+    }
 
     // 2. Create pre-registration con respuestas del test
     // NOTA: psych_test_result se deja NULL intencionalmente — lo determina el psicólogo.
@@ -841,6 +899,17 @@ async function handleInitiatePayment(supabase: any, body: any) {
     const isPartial = paymentMode === 'partial';
     const serverAmount = isPartial ? Math.ceil(courseBasePrice / 2) : courseBasePrice;
     console.log('[initiate-payment] Amount:', serverAmount, '(isPartial:', isPartial, ')');
+
+    // 2.5. Verificar matrícula duplicada
+    const duplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+      return jsonResponse({
+        success: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+      });
+    }
 
     // 3. Create enrollment as pending_payment (sin número — se asigna al confirmar)
     console.log('[initiate-payment] Step 3 — inserting enrollment');
@@ -1048,6 +1117,7 @@ async function handleConfirmPayment(supabase: any, body: any) {
           'El monto del pago no coincide con el esperado. La transacción fue anulada por seguridad.',
       });
     }
+
     const payMode = (snapshot.paymentMode ?? 'total') as string;
     const sessionCount = Array.isArray(snapshot.selectedSlotIds)
       ? snapshot.selectedSlotIds.length
@@ -1384,6 +1454,79 @@ async function inviteStudentToAuth(supabase: any, userId: number): Promise<void>
   } catch (err) {
     console.error('inviteStudentToAuth — unexpected error:', err?.message);
   }
+}
+
+function licenseClassLabel(licenseClass: string): string {
+  if (licenseClass === 'B') return 'Clase B';
+  return `Clase Profesional ${licenseClass}`;
+}
+
+async function handleCheckDuplicate(supabase: any, body: any) {
+  const { rut, licenseClass } = body;
+  if (!rut || !licenseClass) return jsonResponse({ eligible: true });
+
+  const { data: user } = await supabase.from('users').select('id').eq('rut', rut).maybeSingle();
+
+  if (!user) return jsonResponse({ eligible: true });
+
+  const { data: student } = await supabase
+    .from('students')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (student) {
+    const duplicate = await checkDuplicateEnrollmentByLicenseClass(
+      supabase,
+      student.id,
+      licenseClass,
+    );
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+      return jsonResponse({
+        eligible: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en ${licenseClassLabel(licenseClass)} para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+      });
+    }
+  }
+
+  if (licenseClass !== 'B') {
+    const { data: existingPreReg } = await supabase
+      .from('professional_pre_registrations')
+      .select('id, status')
+      .eq('temp_user_id', user.id)
+      .eq('requested_license_class', licenseClass)
+      .not('status', 'in', '("cancelled","rejected")')
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPreReg) {
+      return jsonResponse({
+        eligible: false,
+        error: 'DUPLICATE_PRE_INSCRIPTION',
+        message: `Ya tienes una pre-inscripción en curso para ${licenseClassLabel(licenseClass)}. La autoescuela revisará tu solicitud y se pondrá en contacto contigo.`,
+      });
+    }
+  }
+
+  return jsonResponse({ eligible: true });
+}
+
+async function checkDuplicateEnrollmentByLicenseClass(
+  supabase: any,
+  studentId: number,
+  licenseClass: string,
+): Promise<{ status: string } | null> {
+  const { data } = await supabase
+    .from('enrollments')
+    .select('id, status, courses!inner(license_class)')
+    .eq('student_id', studentId)
+    .eq('courses.license_class', licenseClass)
+    .in('status', ['active', 'pending_payment', 'completed'])
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
 }
 
 async function findOrCreateUser(supabase: any, personalData: any, branchId: number) {

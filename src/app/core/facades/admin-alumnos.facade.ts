@@ -7,6 +7,7 @@ import type {
   AlumnoTableRow,
   AlumnoExpediente,
   AlumnoStatus,
+  EnrollmentCurso,
 } from '@core/models/ui/alumno-table-row.model';
 
 // ─── Types for the raw Supabase join response ───────────────────────────────
@@ -31,6 +32,7 @@ interface RawEnrollment {
   docs_complete: boolean;
   created_at: string;
   expires_at: string | null;
+  license_group: string | null;
   courses: RawCourse | null;
   student_documents: RawDocument[];
 }
@@ -324,7 +326,7 @@ export class AdminAlumnosFacade {
           `
           id, status, address,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id),
-          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at,
+          enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at, license_group,
             courses(id, name),
             student_documents(type, status)
           ),
@@ -362,14 +364,25 @@ export class AdminAlumnosFacade {
 
   private mapToAlumnoTableRow(s: RawStudent): AlumnoTableRow {
     const u = s.users;
-    const enrollment =
+    const sorted =
       s.enrollments.length > 0
-        ? s.enrollments.sort(
+        ? [...s.enrollments].sort(
             (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          )[0]
-        : null;
-
+          )
+        : [];
+    const enrollment = sorted[0] ?? null;
     const docs = enrollment?.student_documents ?? [];
+
+    const nroExpedientes = sorted
+      .filter((e) => e.number && e.status !== 'draft')
+      .map((e) => e.number as string);
+
+    const cursos: EnrollmentCurso[] = sorted
+      .filter((e) => e.courses?.name)
+      .map((e) => ({
+        nombre: e.courses!.name,
+        licenseGroup: e.license_group === 'professional' ? 'professional' : 'class_b',
+      }));
 
     return {
       id: String(s.id),
@@ -380,10 +393,10 @@ export class AdminAlumnosFacade {
       celular: u.phone ?? '',
       sucursal: u.branch_id ? `Sucursal ${u.branch_id}` : '',
       comuna: s.address ?? '',
-      nroExpediente: enrollment?.number ?? '—',
+      nroExpedientes: nroExpedientes.length > 0 ? nroExpedientes : ['—'],
       fechaIngreso: enrollment ? enrollment.created_at.slice(0, 10) : '—',
       status: this.deriveStatus(enrollment, s.status),
-      cursa: enrollment?.courses?.name ?? '—',
+      cursos: cursos.length > 0 ? cursos : [{ nombre: '—', licenseGroup: 'class_b' }],
       pago_por_pagar: enrollment?.pending_balance ?? 0,
       pago_total: enrollment?.total_paid ?? 0,
       exp_teorico: 'pendiente',

@@ -264,7 +264,7 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
         </button>
         <button
           type="button"
-          class="btn-primary flex-[2]"
+          class="btn-primary flex-2"
           [disabled]="!canConfirm()"
           (click)="onConfirm()"
           data-llm-action="confirmar-reprogramar-clase"

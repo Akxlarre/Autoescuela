@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { AuthFacade } from './auth.facade';
+import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import {
@@ -25,6 +26,7 @@ export class StudentHomeFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly toast = inject(ToastService);
+  readonly context = inject(StudentEnrollmentContextFacade);
 
   // ─── Estado reactivo privado ───────────────────────────────────────────────
 
@@ -98,7 +100,15 @@ export class StudentHomeFacade {
     const dbId = this.auth.currentUser()?.dbId;
     if (!dbId) throw new Error('Usuario no autenticado');
 
-    // 1. Enrollment activo + info hero
+    // 1. Asegurar contexto de enrollment inicializado
+    await this.context.initialize(dbId);
+    const activeId = this.context.activeEnrollmentId();
+    if (!activeId) {
+      this._snapshot.set(null);
+      return;
+    }
+
+    // 2. Fetch del enrollment activo
     const { data: enrollmentRow, error: enrollmentError } = await this.supabase.client
       .from('enrollments')
       .select(
@@ -109,10 +119,7 @@ export class StudentHomeFacade {
          courses!inner(code),
          branches!inner(name)`,
       )
-      .eq('students.user_id', dbId)
-      .in('status', ['active', 'completed'])
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('id', activeId)
       .maybeSingle();
 
     if (enrollmentError) throw enrollmentError;
@@ -290,6 +297,7 @@ export class StudentHomeFacade {
     const certificateSnapshot: StudentHomeSnapshot = {
       hero: {
         studentFirstName: firstName,
+        enrollmentId: enrollmentId,
         enrollmentNumber: e.number ?? '',
         licenseGroup: 'class_b',
         branchName: e.branches?.name ?? null,
@@ -467,6 +475,7 @@ export class StudentHomeFacade {
     const snapshot: StudentHomeSnapshot = {
       hero: {
         studentFirstName: firstName,
+        enrollmentId: enrollmentId,
         enrollmentNumber: e.number ?? '',
         licenseGroup: 'professional',
         branchName: e.branches?.name ?? null,

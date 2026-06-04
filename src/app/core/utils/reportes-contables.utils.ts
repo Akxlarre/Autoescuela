@@ -48,6 +48,10 @@ const EXPENSE_LABEL: Record<string, string> = {
   rent: 'Arriendo',
   cleaning: 'Aseo',
   materials: 'Materiales',
+  salary: 'Sueldos',
+  utility: 'Servicios Básicos',
+  insurance: 'Seguros',
+  repair: 'Reparaciones',
   other: 'Otros',
 };
 

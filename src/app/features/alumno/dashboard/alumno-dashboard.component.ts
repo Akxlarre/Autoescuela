@@ -21,6 +21,7 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StudentHomeFacade } from '@core/facades/student-home.facade';
+import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 
 @Component({
   selector: 'app-alumno-dashboard',
@@ -52,6 +53,32 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           (actionClick)="onHeroAction($event)"
         />
       </div>
+
+      <!-- ── Selector de matrícula (solo con >1 enrollment) ───────────────── -->
+      @if (context.enrollments().length > 1) {
+        <div class="bento-banner">
+          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mis matrículas">
+            @for (enr of context.enrollments(); track enr.id) {
+              <button
+                type="button"
+                role="tab"
+                class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
+                [class.bg-brand-muted]="context.activeEnrollmentId() === enr.id"
+                [class.border-brand]="context.activeEnrollmentId() === enr.id"
+                [class.text-primary]="context.activeEnrollmentId() === enr.id"
+                [class.bg-surface]="context.activeEnrollmentId() !== enr.id"
+                [class.border-border-subtle]="context.activeEnrollmentId() !== enr.id"
+                [class.text-text-secondary]="context.activeEnrollmentId() !== enr.id"
+                [attr.aria-selected]="context.activeEnrollmentId() === enr.id"
+                [attr.data-llm-action]="'select-enrollment-' + enr.id"
+                (click)="selectEnrollment(enr.id)"
+              >
+                {{ enr.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
 
       <!-- ── KPI 1 — Prácticas ─────────────────────────────────────────────── -->
       <div class="bento-square">
@@ -102,7 +129,6 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           <a
             routerLink="/app/alumno/horario"
             class="text-xs font-medium no-underline mt-auto text-brand"
-            
             data-llm-nav="alumno-horario"
           >
             Ver horario →
@@ -172,7 +198,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           <app-icon name="trending-up" [size]="16" class="text-brand" />
           <h2 class="m-0 font-semibold text-text-primary text-sm">Mi Progreso</h2>
           @if (!loading()) {
-            <span class="ml-auto text-xs font-bold text-brand" >
+            <span class="ml-auto text-xs font-bold text-brand">
               {{ progress()?.pctOverall ?? 0 }}%
             </span>
           }
@@ -221,7 +247,6 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
               <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
                 <div
                   class="h-full rounded-full transition-all bg-brand"
-                  
                   [style.width.%]="practicesPct()"
                 ></div>
               </div>
@@ -234,7 +259,6 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
               <div class="h-1.5 rounded-full overflow-hidden bg-subtle">
                 <div
                   class="h-full rounded-full transition-all bg-brand"
-                  
                   [style.width.%]="progress()?.pctTheoryAttendance ?? 0"
                 ></div>
               </div>
@@ -310,7 +334,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
           <div class="card-tinted rounded-lg p-3 flex items-center gap-3">
             <div class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-subtle">
               @if (grades()?.finalExamGrade !== null) {
-                <span class="text-xl font-bold text-brand" >
+                <span class="text-xl font-bold text-brand">
                   {{ grades()?.finalExamGrade }}
                 </span>
               } @else {
@@ -363,10 +387,9 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
             @if ((grades()?.averageGrade ?? null) !== null) {
               <div
                 class="flex items-center justify-between px-2 py-1.5 rounded-lg mt-1 bg-brand-tint"
-                
               >
                 <span class="text-xs font-semibold text-text-primary">Promedio</span>
-                <span class="text-sm font-bold text-brand" >
+                <span class="text-sm font-bold text-brand">
                   {{ grades()?.averageGrade }}
                 </span>
               </div>
@@ -558,6 +581,7 @@ import { StudentHomeFacade } from '@core/facades/student-home.facade';
 })
 export class AlumnoDashboardComponent {
   private readonly facade = inject(StudentHomeFacade);
+  readonly context = inject(StudentEnrollmentContextFacade);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -735,6 +759,11 @@ export class AlumnoDashboardComponent {
   }
 
   // ── Acciones ───────────────────────────────────────────────────────────────
+
+  selectEnrollment(id: number): void {
+    this.context.setActive(id);
+    void this.facade.initialize();
+  }
 
   onHeroAction(actionId: string): void {
     if (actionId === 'cert') {
