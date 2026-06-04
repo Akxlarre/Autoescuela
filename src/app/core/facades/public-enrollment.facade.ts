@@ -22,8 +22,11 @@ import type {
 
 export type PublicFlowType = 'class_b' | 'professional';
 
+/** Estado de entrada del wizard público: orientación (sin sede válida) o listo para operar. */
+export type PublicEntryState = 'orientation' | 'ready';
+
 export type PublicWizardStep =
-  | 'branch'
+  | 'license-type'
   | 'personal-data'
   | 'payment-mode'
   | 'schedule'
@@ -35,10 +38,41 @@ export type PublicWizardStep =
   | 'psych-test'
   | 'pre-confirmation';
 
-interface PublicStepConfig {
+export interface PublicStepConfig {
   id: PublicWizardStep;
   label: string;
   status: 'pending' | 'active' | 'completed';
+}
+
+/** Metadatos del borrador almacenado, para mostrar en el banner de retoma (AC13). */
+export interface DraftMeta {
+  stepLabel: string;
+  savedAtHuman: string;
+}
+
+const STEP_LABEL_MAP: Readonly<Record<PublicWizardStep, string>> = {
+  'license-type': 'Tipo de licencia',
+  'personal-data': 'Datos personales',
+  'payment-mode': 'Modalidad de pago',
+  schedule: 'Horario',
+  documents: 'Foto carnet',
+  contract: 'Contrato',
+  payment: 'Pago',
+  confirmation: 'Confirmación',
+  'psych-test-intro': 'Test Psicológico',
+  'psych-test': 'Test Psicológico',
+  'pre-confirmation': 'Confirmación',
+};
+
+function formatRelativeTime(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diff / 60_000);
+  if (minutes < 1) return 'hace un momento';
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.floor(hours / 24);
+  return `hace ${days} día${days === 1 ? '' : 's'}`;
 }
 
 /** Result from the Edge Function after successful enrollment. */
@@ -69,6 +103,8 @@ export interface PublicEnrollmentResult {
 interface PendingPaymentRef {
   sessionToken: string;
   enrollmentId: number;
+  /** Sede del pago — permite tematizar la página /retorno por branchId. */
+  branchId: number;
 }
 
 // ─── Draft persistence ───
@@ -127,6 +163,7 @@ export class PublicEnrollmentFacade {
   // ── Session & draft ──
   private readonly _sessionToken = signal<string>(this.readOrCreateToken());
   private readonly _hasDraftToRestore = signal<boolean>(this.checkStoredDraft());
+  private readonly _draftMeta = signal<DraftMeta | null>(this.computeDraftMeta());
 
   // ── Branch & flow ──
   private readonly _branches = signal<BranchOption[]>([]);
@@ -135,7 +172,8 @@ export class PublicEnrollmentFacade {
   private readonly _flowType = signal<PublicFlowType | null>(null);
 
   // ── Wizard ──
-  private readonly _currentStep = signal<PublicWizardStep>('branch');
+  private readonly _currentStep = signal<PublicWizardStep>('license-type');
+  private readonly _entryState = signal<PublicEntryState>('orientation');
   private readonly _steps = signal<PublicStepConfig[]>([]);
   private readonly _isSubmitting = signal(false);
 
@@ -188,11 +226,13 @@ export class PublicEnrollmentFacade {
 
   readonly sessionToken = this._sessionToken.asReadonly();
   readonly hasDraftToRestore = this._hasDraftToRestore.asReadonly();
+  readonly draftMeta = this._draftMeta.asReadonly();
   readonly branches = this._branches.asReadonly();
   readonly branchCoursePricing = this._branchCoursePricing.asReadonly();
   readonly selectedBranch = this._selectedBranch.asReadonly();
   readonly flowType = this._flowType.asReadonly();
   readonly currentStep = this._currentStep.asReadonly();
+  readonly entryState = this._entryState.asReadonly();
   readonly steps = this._steps.asReadonly();
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly personalData = this._personalData.asReadonly();
@@ -244,6 +284,15 @@ export class PublicEnrollmentFacade {
     return hidden;
   });
 
+  /** Flujos (tipos de licencia) que ofrece la sede según su catálogo de cursos. */
+  readonly availableFlows = computed<PublicFlowType[]>(() => {
+    const categories = new Set(this.courseOptions().map((o) => o.category));
+    const flows: PublicFlowType[] = [];
+    if (categories.has('non-professional')) flows.push('class_b');
+    if (categories.has('professional')) flows.push('professional');
+    return flows;
+  });
+
   readonly studentSummary = computed<StudentSummaryBanner | null>(() => {
     const pd = this._personalData();
     if (!pd) return null;
@@ -278,8 +327,8 @@ export class PublicEnrollmentFacade {
   readonly canAdvance = computed<boolean>(() => {
     const step = this._currentStep();
     switch (step) {
-      case 'branch':
-        return this._selectedBranch() !== null && this._flowType() !== null;
+      case 'license-type':
+        return this._flowType() !== null;
       case 'personal-data':
         return this._personalData() !== null;
       case 'payment-mode':
@@ -347,15 +396,47 @@ export class PublicEnrollmentFacade {
     }
   }
 
-  async selectBranch(branch: BranchOption): Promise<void> {
-    const prev = this._selectedBranch();
-    // Si el usuario cambia de sede habiendo avanzado, descartar datos posteriores
-    if (prev !== null && prev.id !== branch.id) {
-      this.clearSubsequentStepData();
+  /**
+   * Resuelve la entrada al wizard a partir de la sede (tenant) y curso opcional de la URL.
+   * - Sin branchId o sede inválida → entryState 'orientation' (AC-E1/AC-E3).
+   * - Sede válida → carga cursos, entryState 'ready', y resuelve el flujo:
+   *   - courseId presente → flujo del curso → datos personales (AC6d).
+   *   - la sede ofrece un solo flujo → auto-skip a datos personales (AC6b).
+   *   - múltiples flujos sin courseId → paso de tipo de licencia (AC6c).
+   *
+   * Asume que `loadBranches()` ya pobló `branches` (lo hace el Smart component en init).
+   */
+  async resolveEntry(branchId: number | null, courseId: number | null): Promise<void> {
+    const branch =
+      branchId !== null ? (this._branches().find((b) => b.id === branchId) ?? null) : null;
+
+    if (!branch) {
+      this._entryState.set('orientation');
+      return;
     }
+
     this._selectedBranch.set(branch);
-    this._flowType.set(null);
     await this.loadCourses(branch.id);
+    this._entryState.set('ready');
+
+    // 1. courseId en la URL → flujo resuelto → datos personales (AC6d)
+    if (courseId !== null) {
+      const course = this._courses().find((c) => c.id === courseId);
+      if (course) {
+        this.startFlowAtPersonalData(this.licenseClassToFlow(course.license_class));
+        return;
+      }
+    }
+
+    // 2. La sede ofrece un solo flujo → auto-skip a datos personales (AC6b)
+    const flows = this.availableFlows();
+    if (flows.length === 1) {
+      this.startFlowAtPersonalData(flows[0]);
+      return;
+    }
+
+    // 3. Múltiples flujos sin courseId → elegir tipo de licencia (AC6c)
+    this._currentStep.set('license-type');
   }
 
   selectFlowType(flow: PublicFlowType): void {
@@ -368,12 +449,25 @@ export class PublicEnrollmentFacade {
     this.buildSteps(flow);
   }
 
-  confirmBranchSelection(): void {
+  /** Confirma el tipo de licencia elegido y avanza a datos personales. */
+  confirmLicenseType(): void {
     const flow = this._flowType();
     if (!flow) return;
+    this.startFlowAtPersonalData(flow);
+  }
+
+  /** Fija el flujo, construye los pasos y entra a datos personales (marca license-type hecho). */
+  private startFlowAtPersonalData(flow: PublicFlowType): void {
+    this._flowType.set(flow);
     this.buildSteps(flow);
+    this.updateStepStatus('license-type', 'completed');
     this._currentStep.set('personal-data');
     this.updateStepStatus('personal-data', 'active');
+  }
+
+  /** Deriva el flujo público desde la clase de licencia del curso (B → Clase B, resto → profesional). */
+  private licenseClassToFlow(licenseClass: string | null | undefined): PublicFlowType {
+    return licenseClass === 'B' ? 'class_b' : 'professional';
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -658,6 +752,7 @@ export class PublicEnrollmentFacade {
       const { data, error } = await this.supabase.client.functions.invoke('public-enrollment', {
         body: {
           action: 'generate-contract-preview',
+          honeypot: pd?.honeypot ?? null, // S1 — trampa anti-bot (la EF rechaza si viene con valor)
           sessionToken: this._sessionToken(),
           personalData: {
             rut: pd.rut,
@@ -741,6 +836,7 @@ export class PublicEnrollmentFacade {
       const { data, error } = await this.supabase.client.functions.invoke('public-enrollment', {
         body: {
           action: 'initiate-payment',
+          honeypot: pd?.honeypot ?? null, // S1 — trampa anti-bot (la EF rechaza si viene con valor)
           branchId: branch.id,
           personalData: {
             rut: normalizeRutForStorage(pd.rut),
@@ -774,6 +870,7 @@ export class PublicEnrollmentFacade {
       this.savePendingPaymentRef({
         sessionToken: this._sessionToken(),
         enrollmentId: data.enrollmentId,
+        branchId: branch.id,
       });
 
       // Redirigir a Webpay — Webpay exige POST con token_ws (no GET redirect)
@@ -873,6 +970,7 @@ export class PublicEnrollmentFacade {
     this._currentStep.set('pre-confirmation');
     this.updateStepStatus('pre-confirmation', 'active');
     this._hasDraftToRestore.set(false);
+    this._draftMeta.set(null);
     // No se guarda el draft: el submit ya limpió localStorage.
   }
 
@@ -895,6 +993,7 @@ export class PublicEnrollmentFacade {
       const { data, error } = await this.supabase.client.functions.invoke('public-enrollment', {
         body: {
           action: 'submit-clase-b',
+          honeypot: pd?.honeypot ?? null, // S1 — trampa anti-bot (la EF rechaza si viene con valor)
           branchId: branch.id,
           personalData: {
             rut: normalizeRutForStorage(pd.rut),
@@ -953,6 +1052,7 @@ export class PublicEnrollmentFacade {
       const { data, error } = await this.supabase.client.functions.invoke('public-enrollment', {
         body: {
           action: 'submit-pre-inscription',
+          honeypot: pd?.honeypot ?? null, // S1 — trampa anti-bot (la EF rechaza si viene con valor)
           branchId: branch.id,
           personalData: {
             rut: normalizeRutForStorage(pd.rut),
@@ -1045,7 +1145,7 @@ export class PublicEnrollmentFacade {
     if (current === 'confirmation' || current === 'pre-confirmation') return;
 
     const classBOrder: PublicWizardStep[] = [
-      'branch',
+      'license-type',
       'personal-data',
       'payment-mode',
       'schedule',
@@ -1069,7 +1169,7 @@ export class PublicEnrollmentFacade {
     }
 
     const professionalOrder: PublicWizardStep[] = [
-      'branch',
+      'license-type',
       'personal-data',
       'psych-test',
       'pre-confirmation',
@@ -1100,12 +1200,16 @@ export class PublicEnrollmentFacade {
    * Restaura el borrador guardado en localStorage.
    * Llama internamente a loadCourses para que los computed signals funcionen.
    */
-  restoreDraft(): void {
+  async restoreDraft(): Promise<void> {
     const draft = this.readDraft();
     if (!draft) {
       this._hasDraftToRestore.set(false);
+      this._draftMeta.set(null);
       return;
     }
+
+    // Un draft válido implica que la sede ya estaba resuelta → entrar al wizard.
+    this._entryState.set('ready');
 
     // Restaurar session token del draft (los slot_holds están asociados a él)
     this._sessionToken.set(draft.sessionToken);
@@ -1138,9 +1242,9 @@ export class PublicEnrollmentFacade {
     this._currentStep.set(draft.currentStep);
     const stepOrder: PublicWizardStep[] =
       draft.flowType === 'professional'
-        ? ['branch', 'personal-data', 'psych-test', 'pre-confirmation']
+        ? ['license-type', 'personal-data', 'psych-test', 'pre-confirmation']
         : [
-            'branch',
+            'license-type',
             'personal-data',
             'payment-mode',
             'schedule',
@@ -1159,10 +1263,36 @@ export class PublicEnrollmentFacade {
       }),
     );
 
+    // Recrear el preview de la foto de carnet subida (AC-E2): el bucket es privado,
+    // así que pedimos una signed URL a la Edge Function en vez de usar la ruta cruda.
+    if (draft.carnetStoragePath) {
+      await this.refreshCarnetPreview(draft.carnetStoragePath);
+    }
+
     // Cargar cursos para que funcionen los computed signals
     void this.loadCourses(draft.branchId);
 
     this._hasDraftToRestore.set(false);
+    this._draftMeta.set(null);
+  }
+
+  /**
+   * Pide a la Edge Function una signed URL (TTL corto) para previsualizar la foto de carnet
+   * ya subida al bucket privado, y la expone vía `carnetPhotoUrl`. Best-effort.
+   */
+  private async refreshCarnetPreview(path: string): Promise<void> {
+    try {
+      const { data, error } = await this.supabase.client.functions.invoke('public-enrollment', {
+        body: { action: 'get-carnet-preview-url', sessionToken: this._sessionToken(), path },
+      });
+      if (!error && data?.signedUrl) {
+        const prev = this._carnetPreviewUrl();
+        if (prev && prev.startsWith('blob:')) URL.revokeObjectURL(prev);
+        this._carnetPreviewUrl.set(data.signedUrl as string);
+      }
+    } catch {
+      // Fail silencioso — el preview es best-effort; el resto del draft ya se restauró.
+    }
   }
 
   /**
@@ -1179,6 +1309,7 @@ export class PublicEnrollmentFacade {
     this._sessionToken.set(this.generateToken());
     this._carnetStoragePath.set(null);
     this._hasDraftToRestore.set(false);
+    this._draftMeta.set(null);
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -1191,7 +1322,8 @@ export class PublicEnrollmentFacade {
     this._sessionToken.set(this.generateToken());
     this._selectedBranch.set(null);
     this._flowType.set(null);
-    this._currentStep.set('branch');
+    this._currentStep.set('license-type');
+    this._entryState.set('orientation');
     this._steps.set([]);
     this._isSubmitting.set(false);
     this._courses.set([]);
@@ -1283,7 +1415,7 @@ export class PublicEnrollmentFacade {
   private buildSteps(flow: PublicFlowType): void {
     if (flow === 'class_b') {
       this._steps.set([
-        { id: 'branch', label: 'Sede', status: 'completed' },
+        { id: 'license-type', label: 'Tipo de licencia', status: 'completed' },
         { id: 'personal-data', label: 'Datos personales', status: 'pending' },
         { id: 'payment-mode', label: 'Modalidad', status: 'pending' },
         { id: 'schedule', label: 'Horario', status: 'pending' },
@@ -1294,7 +1426,7 @@ export class PublicEnrollmentFacade {
       ]);
     } else {
       this._steps.set([
-        { id: 'branch', label: 'Sede', status: 'completed' },
+        { id: 'license-type', label: 'Tipo de licencia', status: 'completed' },
         { id: 'personal-data', label: 'Datos personales', status: 'pending' },
         { id: 'psych-test', label: 'Test Psicológico', status: 'pending' },
         { id: 'pre-confirmation', label: 'Confirmación', status: 'pending' },
@@ -1400,16 +1532,30 @@ export class PublicEnrollmentFacade {
     return draft !== null && !!draft.sessionToken;
   }
 
+  private computeDraftMeta(): DraftMeta | null {
+    const draft = this.readDraft();
+    if (!draft?.sessionToken) return null;
+    return {
+      stepLabel: STEP_LABEL_MAP[draft.currentStep] ?? 'Inicio',
+      savedAtHuman: formatRelativeTime(draft.savedAt),
+    };
+  }
+
   private readOrCreateToken(): string {
     const draft = this.readDraft();
     return draft?.sessionToken ?? this.generateToken();
   }
 
   private generateToken(): string {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
+    // S5 — sin fallback inseguro. El token gatea el acceso a la foto de carnet (PII):
+    // un fallback predecible (`Date.now()` + `Math.random`) habilitaría IDOR sobre el
+    // documento de identidad. Exigir CSPRNG (`crypto.randomUUID`).
+    if (typeof crypto === 'undefined' || typeof crypto.randomUUID !== 'function') {
+      throw new Error(
+        'Entorno sin crypto.randomUUID: no se puede generar un token de sesión seguro.',
+      );
     }
-    return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return crypto.randomUUID();
   }
 
   // ── Course mapping ──────────────────────────────────────────────────────────

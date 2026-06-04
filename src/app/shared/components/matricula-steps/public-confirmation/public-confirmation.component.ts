@@ -9,112 +9,135 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="text-center space-y-6 py-4">
-      <!-- Success icon -->
+      <!-- Success icon (premium gradient) -->
       <div
-        class="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-brand/15"
-        
+        class="mx-auto flex h-20 w-20 items-center justify-center rounded-full"
+        style="
+          background: var(--gradient-primary);
+          box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--ds-brand) 50%, transparent);
+        "
       >
-        <app-icon name="check-circle" [size]="36" color="var(--ds-brand)" />
+        <app-icon name="check" [size]="38" color="white" />
       </div>
 
       @if (type() === 'class_b') {
-        <div>
-          <h2 class="text-xl font-bold text-primary mb-2">Matrícula enviada</h2>
+        <div class="space-y-2">
+          <h2
+            class="font-bold"
+            style="font-family: var(--font-display); font-size: 1.5rem; color: var(--text-primary);"
+          >
+            ¡Matrícula completada!
+          </h2>
+
+          <!-- Folio number (prominent) -->
           @if (enrollmentNumber()) {
-            <p class="text-sm text-secondary mb-4">
-              Tu número de matrícula es
-              <span class="font-bold text-primary">{{ enrollmentNumber() }}</span>
-            </p>
+            <div
+              class="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold"
+              style="
+                background: var(--color-primary-muted);
+                border: 1px solid color-mix(in srgb, var(--ds-brand) 30%, transparent);
+                color: var(--color-primary);
+              "
+            >
+              <app-icon name="hash" [size]="14" color="var(--color-primary)" />
+              Folio {{ enrollmentNumber() }}
+            </div>
           }
-          <p class="text-sm text-secondary max-w-md mx-auto">
-            Hemos recibido tu solicitud de matrícula. Recibirás un correo de confirmación con los
-            detalles de tus clases prácticas agendadas y los próximos pasos.
+
+          <p class="text-sm max-w-sm mx-auto" style="color: var(--text-secondary);">
+            Recibirás un correo de confirmación con los detalles de tus clases prácticas y los
+            próximos pasos.
           </p>
         </div>
 
-        <div class="card p-5 text-left max-w-md mx-auto">
-          <h3 class="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
-            <app-icon name="list-checks" [size]="16" />
+        <!-- Next steps card -->
+        <div
+          class="rounded-xl p-5 text-left max-w-md mx-auto space-y-3"
+          style="background: var(--bg-surface); border: 1px solid var(--border-default);"
+        >
+          <h3
+            class="flex items-center gap-2 text-sm font-semibold"
+            style="color: var(--text-primary);"
+          >
+            <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
             Próximos pasos
           </h3>
-          <ol class="space-y-2.5 text-sm text-secondary">
-            <li class="flex items-start gap-2">
-              <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
-                
-                >1</span
-              >
-              Revisa tu correo para confirmar la matrícula.
-            </li>
-            <li class="flex items-start gap-2">
-              <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
-                
-                >2</span
-              >
-              Asiste a tu primera clase teórica según el horario indicado.
-            </li>
-            <li class="flex items-start gap-2">
-              <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
-                
-                >3</span
-              >
-              Tus clases prácticas comienzan según la agenda seleccionada.
-            </li>
+          <ol class="space-y-3">
+            @for (step of classBSteps; track step.n) {
+              <li class="flex items-start gap-3 text-sm" style="color: var(--text-secondary);">
+                <span
+                  class="flex h-6 w-6 items-center justify-center rounded-full shrink-0 text-xs font-bold"
+                  style="background: var(--color-primary-muted); color: var(--color-primary);"
+                >
+                  {{ step.n }}
+                </span>
+                {{ step.text }}
+              </li>
+            }
           </ol>
         </div>
       } @else {
-        <div>
-          <h2 class="text-xl font-bold text-primary mb-2">Pre-inscripción recibida</h2>
-          <p class="text-sm text-secondary max-w-md mx-auto">
-            Hemos recibido tu solicitud de pre-inscripción para Clase Profesional. Un ejecutivo se
-            pondrá en contacto contigo para completar el proceso de matrícula presencialmente.
+        <div class="space-y-2">
+          <h2
+            class="font-bold"
+            style="font-family: var(--font-display); font-size: 1.5rem; color: var(--text-primary);"
+          >
+            Pre-inscripción recibida
+          </h2>
+          <p class="text-sm max-w-sm mx-auto" style="color: var(--text-secondary);">
+            Hemos recibido tu solicitud para Clase Profesional. Un ejecutivo se pondrá en contacto
+            contigo para completar el proceso presencialmente.
           </p>
         </div>
 
-        <div class="card p-5 text-left max-w-md mx-auto">
-          <h3 class="text-sm font-semibold text-primary mb-3 flex items-center gap-2">
-            <app-icon name="list-checks" [size]="16" />
+        <!-- Professional next steps card (AC-E4) -->
+        <div
+          class="rounded-xl p-5 text-left max-w-md mx-auto space-y-3"
+          style="background: var(--bg-surface); border: 1px solid var(--border-default);"
+        >
+          <h3
+            class="flex items-center gap-2 text-sm font-semibold"
+            style="color: var(--text-primary);"
+          >
+            <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
             Próximos pasos
           </h3>
-          <ol class="space-y-2.5 text-sm text-secondary">
-            <li class="flex items-start gap-2">
-              <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
-                
-                >1</span
-              >
-              Te contactaremos por teléfono o WhatsApp para agendar tu visita.
-            </li>
-            <li class="flex items-start gap-2">
-              <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
-                
-                >2</span
-              >
-              Deberás presentar tu documentación original en la sede.
-            </li>
-            <li class="flex items-start gap-2">
-              <span
-                class="w-5 h-5 rounded-full bg-brand-muted text-xs font-bold flex items-center justify-center shrink-0 text-brand"
-                
-                >3</span
-              >
-              Se completará tu matrícula y se asignará tu promoción de curso.
-            </li>
+          <ol class="space-y-3">
+            @for (step of professionalSteps; track step.n) {
+              <li class="flex items-start gap-3 text-sm" style="color: var(--text-secondary);">
+                <span
+                  class="flex h-6 w-6 items-center justify-center rounded-full shrink-0 text-xs font-bold"
+                  style="background: var(--color-primary-muted); color: var(--color-primary);"
+                >
+                  {{ step.n }}
+                </span>
+                {{ step.text }}
+              </li>
+            }
           </ol>
         </div>
       }
 
       @if (message()) {
-        <p class="text-xs text-muted">{{ message() }}</p>
+        <p class="text-xs" style="color: var(--text-muted);">{{ message() }}</p>
       }
     </div>
   `,
 })
 export class PublicConfirmationComponent {
-  type = input.required<PublicConfirmationType>();
-  enrollmentNumber = input<string | null>(null);
-  message = input<string | null>(null);
+  readonly type = input.required<PublicConfirmationType>();
+  readonly enrollmentNumber = input<string | null>(null);
+  readonly message = input<string | null>(null);
+
+  protected readonly classBSteps = [
+    { n: 1, text: 'Revisa tu correo para confirmar la matrícula y ver tu folio.' },
+    { n: 2, text: 'Asiste a tu primera clase teórica según el horario indicado.' },
+    { n: 3, text: 'Tus clases prácticas comienzan según la agenda seleccionada.' },
+  ];
+
+  protected readonly professionalSteps = [
+    { n: 1, text: 'Te contactaremos por teléfono o WhatsApp para agendar tu visita a la sede.' },
+    { n: 2, text: 'Presenta tu documentación original: licencia vigente, cédula y examen médico.' },
+    { n: 3, text: 'Se completará tu matrícula y se asignará tu promoción de curso profesional.' },
+  ];
 }

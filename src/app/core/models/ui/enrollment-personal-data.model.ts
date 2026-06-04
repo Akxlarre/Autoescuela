@@ -86,6 +86,8 @@ export interface EnrollmentPersonalData {
   validationBook: ValidationBook | null;
   // Display options (populated by smart component, not persisted)
   courses: CourseOption[];
+  /** Honeypot anti-bot (Spec 0010 S1) — campo trampa oculto; vacío en humanos legítimos. No se persiste. */
+  honeypot?: string;
 }
 
 export interface AgeValidation {

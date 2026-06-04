@@ -71,7 +71,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
             <div class="flex gap-2">
               <button
                 type="button"
-                class="flex-1 py-2 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+                class="flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                 [class.border-border]="answers()[q.idx] !== true"
                 [class.text-secondary]="answers()[q.idx] !== true"
                 [class.bg-surface]="answers()[q.idx] !== true"
@@ -85,7 +85,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
               </button>
               <button
                 type="button"
-                class="flex-1 py-2 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+                class="flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                 [class.border-border]="answers()[q.idx] !== false"
                 [class.text-secondary]="answers()[q.idx] !== false"
                 [class.bg-surface]="answers()[q.idx] !== false"

@@ -276,7 +276,9 @@ export class PublicScheduleComponent {
   /** `grid-template-columns`: columna hora fija + una columna por día de la semana actual. */
   protected readonly gridColumns = computed(() => {
     const dayCount = this.currentWeekDays().length;
-    return `60px repeat(${dayCount}, 1fr)`;
+    // minmax(0, 200px): la columna llena el espacio pero con un máximo, para que con
+    // pocos días (ej. uno solo) los slots no se estiren a todo el ancho del card.
+    return `60px repeat(${dayCount}, minmax(0, 200px))`;
   });
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -319,9 +321,19 @@ export class PublicScheduleComponent {
   protected onSlotToggle(slot: TimeSlot): void {
     if (slot.status === 'occupied') return;
     const current = this.data().slotSelection.selectedSlotIds;
-    const selectedSlotIds = current.includes(slot.id)
-      ? current.filter((id) => id !== slot.id)
-      : [...current, slot.id];
+
+    let selectedSlotIds: string[];
+    if (current.includes(slot.id)) {
+      // Deseleccionar siempre permitido.
+      selectedSlotIds = current.filter((id) => id !== slot.id);
+    } else {
+      // Máximo una clase por día: bloquear si ya hay un slot seleccionado ese día.
+      const slots = this.data().scheduleGrid?.slots ?? [];
+      const hasSameDay = current.some((id) => slots.find((s) => s.id === id)?.date === slot.date);
+      if (hasSameDay) return;
+      selectedSlotIds = [...current, slot.id];
+    }
+
     this.dataChange.emit({
       ...this.data(),
       slotSelection: { ...this.data().slotSelection, selectedSlotIds },

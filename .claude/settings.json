@@ -1,4 +1,15 @@
-{
+{ "permissions": {
+    "allow": [
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_screenshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_fill",
+      "mcp__playwright__browser_hover",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_close"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

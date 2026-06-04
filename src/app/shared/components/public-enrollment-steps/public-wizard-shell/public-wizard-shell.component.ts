@@ -59,7 +59,7 @@ import type { PublicStepConfig } from '@core/facades/public-enrollment.facade';
           "
         ></div>
 
-        <div class="relative z-10 mx-auto max-w-3xl px-5 pb-8 pt-6">
+        <div class="relative z-10 mx-auto max-w-3xl px-5 pb-12 pt-6 sm:pb-14">
           <!-- Brand row -->
           <div class="flex items-center justify-between gap-4 mb-5">
             <div class="flex items-center gap-2.5">
@@ -83,7 +83,7 @@ import type { PublicStepConfig } from '@core/facades/public-enrollment.facade';
             <!-- WhatsApp help button -->
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-white text-xs font-semibold cursor-pointer transition-all"
+              class="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-white text-xs font-semibold cursor-pointer transition-all"
               style="
                 background: rgba(255,255,255,0.14);
                 border: 1px solid rgba(255,255,255,0.28);

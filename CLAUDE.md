@@ -27,12 +27,12 @@ Para cada solicitud que implique escribir código o ensamblar UI:
 1. **DESCUBRIR:** Revisa `indices/COMPONENTS.md`, `indices/FACADES.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md` y `indices/DATABASE.md`. ¿Ya existe algo que resuelva parcial o totalmente el problema? Úsalo. **En Claude Code, el Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR:** Define qué vas a tocar sin violar las reglas de Arquitectura y UI (ver abajo).
 3. **EJECUTAR:** Escribe el código. Prioriza reutilizar. Los hooks validarán cada escritura en tiempo real.
-4. **VALIDAR:** Corre `npm run lint:arch` para una auditoría completa.
+4. **VALIDAR:** Corre `npm run lint:arch` para auditoría completa. **Para cambios de UI, ejecutar también `/verify` (Playwright) para confirmar el renderizado real.**
 5. **SINCRONIZAR:** Actualiza `indices/*.md` con los componentes/servicios creados.
 
-## LÍMITES Y CAPACIDADES DEL AGENTE
+## CAPACIDADES DEL AGENTE
 
-- **NO tienes QA Visual:** Eres ciego a la UI renderizada. Dependes de escribir código HTML/CSS semántico perfecto según `BRAND_GUIDELINES.md` y esperar que el Humano lo revise.
+- **QA Visual activo (Playwright MCP):** El agente tiene acceso a `mcp__playwright__*`. Puede navegar el browser real, tomar capturas, leer consola y auditar el DOM. Ya **no es ciego a la UI renderizada**. Usar el skill `/verify` tras cualquier cambio visual.
 - **Project Knowledge:** Tu contexto de 200k tokens te permite leer este documento y toda la carpeta `docs/` y `skills/` al instante. Usa esto a tu favor. No alucines, consulta los archivos.
 
 ## ESTRUCTURA DE CARPETAS CANÓNICA (Skeleton Architecture)

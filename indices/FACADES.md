@@ -100,7 +100,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `NotificationsFacade` | `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/notifications.facade.ts` |
 | `PagosFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/pagos.facade.ts` |
 | `PromocionesFacade` | `SupabaseService`, `ToastService` | — | `src/app/core/facades/promociones.facade.ts` |
-| `PublicEnrollmentFacade` | `SupabaseService` | — | `src/app/core/facades/public-enrollment.facade.ts` |
+| `PublicEnrollmentFacade` | `SupabaseService` | `entryState` (`orientation\|ready`), `currentStep`, `steps`, `flowType`, `availableFlows`, `paymentAmount`, `carnetPhotoUrl`, `isLoading`, `error`. **Entrada (spec 0009):** `resolveEntry(branchId, courseId)` resuelve sede→`entryState` y auto-salta el tipo de licencia (1 flow o `courseId`); `confirmLicenseType()` reemplaza a `confirmBranchSelection`; primer step `license-type` (sin paso `branch`); `restoreDraft()` es `async` y recrea el preview de foto vía signed URL (AC-E2). | `src/app/core/facades/public-enrollment.facade.ts` |
 | `RelatoresFacade` | `SupabaseService`, `ToastService` | — | `src/app/core/facades/relatores.facade.ts` |
 | `ReportesContablesFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | `isLoading`, `isExporting`, `error`, `filtros`, `kpis`, `ingresosCategoria`, `gastosCategoria`, `evolucionMensual`, `detalleDiario`, `diasConMovimientos`, `escuela` | `src/app/core/facades/reportes-contables.facade.ts` |
 | `SecretariasFacade` | `SupabaseService`, `ToastService`, `BranchFacade` | — | `src/app/core/facades/secretarias.facade.ts` |
