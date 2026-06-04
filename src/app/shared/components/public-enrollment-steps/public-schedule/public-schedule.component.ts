@@ -276,7 +276,9 @@ export class PublicScheduleComponent {
   /** `grid-template-columns`: columna hora fija + una columna por día de la semana actual. */
   protected readonly gridColumns = computed(() => {
     const dayCount = this.currentWeekDays().length;
-    return `60px repeat(${dayCount}, 1fr)`;
+    // minmax(0, 200px): la columna llena el espacio pero con un máximo, para que con
+    // pocos días (ej. uno solo) los slots no se estiren a todo el ancho del card.
+    return `60px repeat(${dayCount}, minmax(0, 200px))`;
   });
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
