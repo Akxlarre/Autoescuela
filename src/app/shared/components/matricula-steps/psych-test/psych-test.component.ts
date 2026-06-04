@@ -20,11 +20,16 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
     <div class="space-y-6">
       <!-- Header -->
       <div>
-        <h2 class="text-lg font-semibold text-primary mb-1">Test Psicológico</h2>
-        <p class="text-sm text-secondary">
-          Responde cada pregunta con <strong class="text-primary">Sí</strong> o
-          <strong class="text-primary">No</strong> según tu realidad actual. No hay respuestas
-          correctas o incorrectas.
+        <h2
+          class="font-bold mb-1"
+          style="font-family: var(--font-display); font-size: 1.3rem; color: var(--text-primary);"
+        >
+          Test Psicológico
+        </h2>
+        <p class="text-sm" style="color: var(--text-secondary);">
+          Responde cada pregunta con <strong style="color: var(--text-primary);">Sí</strong> o
+          <strong style="color: var(--text-primary);">No</strong> según tu realidad actual. No hay
+          respuestas correctas o incorrectas.
         </p>
       </div>
 
@@ -37,7 +42,6 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
         <div class="h-1.5 w-full rounded-full bg-surface-elevated overflow-hidden">
           <div
             class="h-full rounded-full transition-all duration-300 bg-brand"
-            
             [style.width.%]="progressPct()"
           ></div>
         </div>
@@ -98,8 +102,16 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
         }
       </div>
 
-      <!-- Navigation -->
-      <div class="flex items-center justify-between pt-2">
+      <!-- Navigation — sticky bottom para que sea accesible en mobile sin scroll completo -->
+      <div
+        class="flex items-center justify-between pt-4 sticky bottom-0"
+        style="
+          border-top: 1px solid var(--border-subtle);
+          background: var(--bg-surface-elevated, var(--bg-surface));
+          z-index: 1;
+          padding-bottom: 0.25rem;
+        "
+      >
         <button
           type="button"
           class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
