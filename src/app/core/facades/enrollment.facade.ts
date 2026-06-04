@@ -440,6 +440,21 @@ export class EnrollmentFacade {
     };
   }
 
+  private async checkDuplicateEnrollment(
+    studentId: number,
+    licenseClass: string,
+  ): Promise<{ status: string } | null> {
+    const { data } = await this.supabase.client
+      .from('enrollments')
+      .select('id, status, courses!inner(license_class)')
+      .eq('student_id', studentId)
+      .eq('courses.license_class', licenseClass)
+      .in('status', ['active', 'pending_payment', 'completed'])
+      .limit(1)
+      .maybeSingle();
+    return data ? { status: (data as any).status } : null;
+  }
+
   /**
    * Step 1 → Persiste datos personales.
    * Crea o actualiza user+student, luego crea enrollment draft.
@@ -449,6 +464,38 @@ export class EnrollmentFacade {
     this._error.set(null);
 
     try {
+      // 0. Detectar RUT duplicado (solo si no es reanudación de un draft existente)
+      if (!this._draft().userId) {
+        const existing = await this.findUserByRut(data.rut);
+        if (existing) {
+          const fullName =
+            `${existing.firstNames} ${existing.paternalLastName} ${existing.maternalLastName}`.trim();
+          const camposActualizados = [
+            'Nombre completo',
+            'Email',
+            'Teléfono',
+            'Dirección',
+            'Fecha de nacimiento',
+            'Género',
+            'Licencia actual',
+          ].join(', ');
+          const confirmed = await this.confirm({
+            title: 'RUT ya registrado en el sistema',
+            message:
+              `El RUT ingresado pertenece a ${fullName} (${existing.email}).\n\n` +
+              `Si continúas, se actualizarán los siguientes datos del alumno con los valores del formulario: ${camposActualizados}.\n\n` +
+              `Se creará una nueva matrícula que quedará visible junto a la(s) anterior(es) en el perfil del alumno.`,
+            severity: 'warn',
+            confirmLabel: 'Sí, continuar con nueva matrícula',
+            cancelLabel: 'Cancelar',
+          });
+          if (!confirmed) {
+            this._isLoading.set(false);
+            return false;
+          }
+        }
+      }
+
       // 1. Upsert user
       const userId = await this.upsertUser(data, branchId);
       if (!userId) return false;
@@ -460,6 +507,21 @@ export class EnrollmentFacade {
       // 3. Resolve course_id
       const courseId = await this.resolveCourseId(data, branchId);
       if (!courseId) return false;
+
+      // 3.5. Verificar que no exista ya una matrícula activa/completada para el mismo curso
+      const courseForCheck = this._courses().find((c) => c.id === courseId);
+      const licenseClassForCheck = courseForCheck?.license_class;
+      if (licenseClassForCheck) {
+        const duplicate = await this.checkDuplicateEnrollment(studentId, licenseClassForCheck);
+        if (duplicate) {
+          const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+          this._error.set(
+            `El alumno ya tiene una matrícula ${statusLabel} en ${courseForCheck?.name ?? licenseClassForCheck}. No es posible crear una nueva matrícula para el mismo curso.`,
+          );
+          this._isLoading.set(false);
+          return false;
+        }
+      }
 
       // 4. Resolve sence_code_id (optional, from internal map)
       let senceCodeId: number | null = null;
@@ -1369,7 +1431,7 @@ export class EnrollmentFacade {
         .select('student_id, students(user_id)')
         .eq('id', enrollmentId)
         .single();
-        
+
       const studentId = enrInfo?.student_id;
       const userId = (enrInfo?.students as any)?.user_id;
 

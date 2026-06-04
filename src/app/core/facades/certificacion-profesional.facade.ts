@@ -27,11 +27,11 @@ const NOTA_MIN = 75;
  *   selectPromocion(id) → carga cursos de esa promoción.
  *   selectCurso(id) → carga alumnos del curso y evalúa elegibilidad.
  *
- * Criterios de elegibilidad (4 condiciones para habilitar "Generar"):
+ * Criterios de elegibilidad (2 condiciones bloqueantes para habilitar "Generar"):
  *   1. Asistencia teórica >= 75 %
  *   2. Pago completo (pending_balance <= 0)
- *   3. Nota promedio de módulos >= 75 (escala MTT 10-100)
- *   [4. Asistencia práctica = 100 %] → flexible: confirmation prompt si < 100
+ *   [Nota promedio] → informativo: se muestra en UI pero NO bloquea el certificado.
+ *   [Asistencia práctica = 100 %] → flexible: confirmation prompt si < 100
  *
  * Filtra alumnos por BranchFacade.selectedBranchId().
  */
@@ -545,7 +545,7 @@ export class CertificacionProfesionalFacade {
         pagoCorrecto,
         notaPromedio,
         elegibilidad,
-        elegible: elegibilidad.teoria && elegibilidad.pago && elegibilidad.nota,
+        elegible: elegibilidad.teoria && elegibilidad.pago,
         certificadoId: cert?.id ?? null,
         certificadoFolio:
           cert && hasPdf && certYear

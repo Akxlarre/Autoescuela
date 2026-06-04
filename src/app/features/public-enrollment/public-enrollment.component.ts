@@ -90,17 +90,12 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     <div class="relative flex min-h-dvh flex-col items-center overflow-hidden bg-base px-4 py-8">
       <!-- Orbs decorativos -->
       <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div
-          class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"
-          
-        ></div>
+        <div class="absolute -left-40 -top-40 h-96 w-96 rounded-full blur-3xl bg-brand/18"></div>
         <div
           class="absolute -bottom-40 -right-20 h-80 w-80 rounded-full blur-3xl bg-brand-dark/14"
-          
         ></div>
         <div
           class="absolute left-1/2 top-1/2 h-140 w-140 -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl bg-brand/6"
-          
         ></div>
       </div>
 
@@ -243,6 +238,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                   [branches]="[]"
                   [selectedBranchId]="facade.selectedBranch()?.id ?? null"
                   [hiddenCategories]="effectiveHiddenCategories()"
+                  [loading]="facade.isLoading()"
                   (dataChange)="onPersonalDataChange($event)"
                   (next)="onPersonalDataNext()"
                   (cancel)="facade.goBack()"
@@ -276,7 +272,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                       >
                         <div class="flex items-center gap-3 mb-2">
                           <app-icon [name]="option.icon" [size]="20" color="var(--ds-brand)" />
-                          <p class="text-base font-bold text-text-primary">
+                          <p class="font-bold text-text-primary">
                             {{ option.label }}
                           </p>
                         </div>
@@ -823,8 +819,11 @@ export class PublicEnrollmentComponent {
     this._step1Form.set(data);
   }
 
-  onPersonalDataNext(): void {
-    this.facade.savePersonalData(this._step1Form());
+  async onPersonalDataNext(): Promise<void> {
+    await this.facade.savePersonalData(this._step1Form());
+    if (this.facade.error()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   onPaymentModeConfirm(): void {

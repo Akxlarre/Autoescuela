@@ -33,7 +33,7 @@ export interface ElegibilidadCertProf {
   practica: boolean;
   /** Saldo pendiente <= 0. */
   pago: boolean;
-  /** Promedio de módulos >= 75 (escala MTT 10-100). */
+  /** Promedio de módulos >= 75 (escala MTT 10-100). Informativo: no bloquea el certificado. */
   nota: boolean;
 }
 

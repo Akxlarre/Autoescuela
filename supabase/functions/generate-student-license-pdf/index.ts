@@ -111,7 +111,7 @@ Deno.serve(async (req: Request) => {
         .from('documents')
         .createSignedUrl(photoDoc.storage_url, 120);
       if (photoSigned?.signedUrl) {
-        photoImage = await loadImageForPdf(photoSigned.signedUrl);
+        photoImage = await loadImageForPdf(photoSigned.signedUrl, 300, 375);
       }
     }
 
@@ -399,7 +399,21 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
   const photoY = ry - photoH; // 347 - 66 = 281
 
   if (d.photo) {
-    ops += `q ${r(photoW)} 0 0 ${r(photoH)} ${r(photoX)} ${r(photoY)} cm /Im2 Do Q\n`;
+    // Center-fill: scale image so the shorter side fits the box, clip the overflow.
+    const imgRatio = d.photo.width / d.photo.height;
+    const boxRatio = photoW / photoH;
+    let drawW: number, drawH: number;
+    if (imgRatio > boxRatio) {
+      drawH = photoH;
+      drawW = photoH * imgRatio;
+    } else {
+      drawW = photoW;
+      drawH = photoW / imgRatio;
+    }
+    const drawX = photoX + (photoW - drawW) / 2;
+    const drawY = photoY + (photoH - drawH) / 2;
+    ops += `q ${r(photoX)} ${r(photoY)} ${r(photoW)} ${r(photoH)} re W n `;
+    ops += `${r(drawW)} 0 0 ${r(drawH)} ${r(drawX)} ${r(drawY)} cm /Im2 Do Q\n`;
   } else {
     RECT(photoX, photoY, photoW, photoH, 0.4);
   }

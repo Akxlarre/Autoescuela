@@ -3,12 +3,30 @@
  * Derivados de: students + users + enrollments + class_b_*_attendance / professional_*
  */
 
+export interface EnrollmentSummary {
+  id: number;
+  number: string | null;
+  courseName: string;
+  licenseGroup: 'class_b' | 'professional';
+  promotionCourseId: number | null;
+  createdAt: string;
+  certPdfUrl: string | null;
+  licensePdfUrl: string | null;
+  contractFileUrl: string | null;
+  contractSignedUrl: string | null;
+  registrationChannel: 'presential' | 'online' | null;
+  totalPagado: number;
+  saldoPendiente: number;
+}
+
 export interface AlumnoDetalleUI {
   id: number;
   /** PK de la fila en tabla `users` — requerido para .update() al editar perfil */
   userId: number;
   /** PK de la matrícula activa — requerido para insertar en absence_evidence */
   enrollmentId: number | null;
+  /** Todas las matrículas del alumno, ordenadas de más reciente a más antigua */
+  enrollments: EnrollmentSummary[];
   /** Nombre completo para mostrar */
   nombre: string;
   /** Campos individuales para pre-rellenar el formulario de edición */

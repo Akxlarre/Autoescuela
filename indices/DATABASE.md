@@ -19,6 +19,7 @@
 | `payments` | M3 - Finanzas | `id`, `enrollment_id`| `enrollment_id`, `receipt_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Stu: R (self) | ✅ Definida |
 | `payment_denominations` | M3 - Finanzas | `id`, `payment_id` | `payment_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `expenses` | M3 - Finanzas | `id`, `branch_id` | `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
+| `fixed_expenses` | M3 - Finanzas | `id`, `branch_id`, `category` (salary\|utility\|insurance\|repair\|rent\|other), `description`, `amount`, `date`, `created_by`, `created_at` | `branch_id`, `date` | Admin: CRUD. Sec: Sin acceso (RLS) | ✅ Definida |
 | `sii_receipts` | M3 - Finanzas | `id`, `folio` | `branch_id` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `cash_closings` | M3 - Finanzas | `id`, `date` | `branch_id`, `closed_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructor_advances` | M3 - Finanzas | `id`, `instructor_id`| `instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
