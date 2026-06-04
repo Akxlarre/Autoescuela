@@ -28,6 +28,15 @@ bazel-out/
 .claude/temp/
 .gemini/
 
+# Playwright MCP
+.playwright-mcp/
+playwright-screenshots/
+**/*.playwright.png
+**/*.playwright.jpg
+
+# QA artifacts — screenshots de auditoría visual (no van al repo)
+docs/qa-ux/
+
 # SDD — artefactos privados de dev (no se comparten en el repo)
 # Si querés compartir una spec, copiala a docs/specs/ y commitéala ahí.
 specs/

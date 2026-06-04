@@ -723,7 +723,9 @@ function buildScheduleGrid(rows: any[]) {
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end ?? slotStart.getTime() + 45 * 60 * 1000);
 
-    const dateStr = slotStart.toISOString().split('T')[0];
+    const dateStr = slotStart.toLocaleDateString('en-CA', {
+      timeZone: 'America/Santiago',
+    });
     const startTime = slotStart.toLocaleTimeString('es-CL', {
       hour: '2-digit',
       minute: '2-digit',

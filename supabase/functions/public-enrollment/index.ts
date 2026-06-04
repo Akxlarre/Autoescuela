@@ -302,7 +302,7 @@ Deno.serve(async (req: Request) => {
     return applyCors(await dispatch(), origin);
   } catch (err) {
     console.error('public-enrollment error:', err);
-    return applyCors(errorResponse('Internal server error', 500), req.headers.get('Origin'));
+    return applyCors(errorResponse('Internal server error', 500), origin);
   }
 });
 
@@ -812,6 +812,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
     return errorResponse(`Campos requeridos faltantes: ${missing.join(', ')}`, 400);
   }
 
+  // S4 — sin PII en logs: NO loguear rut/email/nombre. Solo metadatos no sensibles.
   console.log(
     '[initiate-payment] START — branchId:',
     branchId,
@@ -819,8 +820,6 @@ async function handleInitiatePayment(supabase: any, body: any) {
     paymentMode,
     'slots:',
     selectedSlotIds?.length,
-    'rut:',
-    personalData?.rut,
   );
 
   try {
@@ -1420,7 +1419,9 @@ async function inviteStudentToAuth(supabase: any, userId: number): Promise<void>
 
     // S3 — invitar SOLO al email almacenado del usuario, nunca al email crudo del
     // request. Para un RUT ya existente esto evita que un atacante dispare la
-    // invitación (y el vínculo de cuenta) hacia un email que él controla.
+    // invitación (y el vínculo de cuenta) hacia un email que él controla. Para un
+    // usuario nuevo, el email almacenado es el que se acaba de insertar (== request),
+    // así que el alta legítima no cambia.
     const inviteEmail = userRow?.email;
     if (!inviteEmail) {
       console.error('inviteStudentToAuth — usuario sin email almacenado, se omite invite');
@@ -1680,7 +1681,9 @@ function buildScheduleGrid(rows: any[]) {
     const slotStart = new Date(row.slot_start);
     const slotEnd = new Date(row.slot_end ?? slotStart.getTime() + 45 * 60 * 1000);
 
-    const dateStr = slotStart.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' });
+    const dateStr = slotStart.toLocaleDateString('en-CA', {
+      timeZone: 'America/Santiago',
+    });
     const startTime = slotStart.toLocaleTimeString('es-CL', {
       hour: '2-digit',
       minute: '2-digit',

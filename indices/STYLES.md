@@ -10,6 +10,15 @@
 | `_scrollbar.scss` | Styling minimalista y dinámico para scrollbars. Integrado con tokens. Solo desktop. | `styles/tokens/_scrollbar.scss` | ✅ Estable |
 
 
+## Themes (scoped por sede)
+
+Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`). Se montan en `styles.scss` vía `@use`.
+
+| Archivo | Responsabilidad | Scope | Ubicación | Estado |
+|---------|----------------|-------|-----------|--------|
+| `_public-enrollment.scss` | Tematización del flujo público de inscripción (spec 0009): ramps de sede **azul** (sky+indigo) y **roja** (red+orange) mapeadas a los tokens DS (`--ds-brand`, `--color-primary*`, `--gradient-hero`, superficies, `--border-*`) + puente Tailwind `--color-*`. Override de fuentes a **Outfit/Inter** y **forzado de modo claro** (revierte `[data-mode='dark']`). Expone `--pe-brand-*`, `--pe-accent-*`, `--pe-gradient-badge`, `--pe-shadow-xl` para los componentes públicos. Hex de sede aprobados en `docs/mockups/inscripcion-rediseno.html`. | `[data-public-theme="azul"\|"roja"]` | `styles/themes/_public-enrollment.scss` | ✅ Estable |
+
+
 ## Utilities (Tailwind v4)
 
 | Archivo | Responsabilidad | Ubicación | Estado |
@@ -64,7 +73,7 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 
 | Clase | Apariencia | Cuándo usar |
 |-------|-----------|-------------|
-| `btn-primary` | Fondo brand, texto blanco. Dentro de `surface-hero` se invierte (blanco + brand text) por cascade. | CTA principal de la sección |
+| `btn-primary` | Fondo brand, texto blanco. `:disabled` → fondo `--bg-subtle`, texto `--text-muted`, sin sombra (hotfix-005) — visualmente gris neutro para máximo contraste vs estado habilitado. Dentro de `surface-hero` se invierte (blanco + brand text) por cascade. **NO agregar `[style.opacity]` o `[style.cursor]` inline — el `:disabled` CSS los maneja.** | CTA principal de la sección |
 | `btn-secondary` | Borde sutil, fondo translúcido. **Afectado por cascade `surface-hero`** → glass blanco. | Acción secundaria estándar |
 | `btn-ghost` | Sin borde, fondo transparente. Hover: `bg-subtle` + texto sube a `text-primary`. Tokens `--btn-ghost-*`. | Acción terciaria discreta (filas de tabla, listas) |
 | `btn-warning-soft` | Fondo `--state-warning-bg`, texto `--state-warning`, borde `--state-warning-border`. Dark-mode aware vía tokens. | Acción de transición de estado warning (ej: "Iniciar") |
