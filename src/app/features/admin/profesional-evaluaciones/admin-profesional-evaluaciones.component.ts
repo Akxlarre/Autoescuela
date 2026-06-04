@@ -162,7 +162,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
                       style="min-width:90px"
                       [title]="name"
                     >
-                      <span class="truncate block text-center max-w-[90px] mx-auto"
+                      <span class="truncate block text-center max-w-22.5 mx-auto"
                         >Mod {{ $index + 1 }}</span
                       >
                     </th>
@@ -201,7 +201,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
                         @if (g.confirmed) {
                           <!-- Vista solo lectura -->
                           <span
-                            class="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-bold min-w-[56px] border"
+                            class="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-bold min-w-14 border"
                             [class]="getReadonlyClasses(nota.passed)"
                           >
                             {{ nota.grade !== null ? nota.grade : '—' }}

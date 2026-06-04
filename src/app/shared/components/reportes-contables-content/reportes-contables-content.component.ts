@@ -12,6 +12,7 @@ import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { RegistrarGastoFijoDrawerComponent } from '@shared/components/registrar-gasto-fijo-drawer/registrar-gasto-fijo-drawer.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import {
   RANGOS_REPORTE,
@@ -21,7 +22,9 @@ import {
   type DetalleDiario,
   type EvolucionMensual,
   type FiltrosReporte,
+  type GastoFijoRow,
   type RangoReporte,
+  type RegistrarGastoFijoPayload,
   type ReporteKpis,
 } from '@core/models/ui/reportes-contables.model';
 
@@ -32,6 +35,7 @@ import {
     IconComponent,
     SectionHeroComponent,
     KpiCardVariantComponent,
+    RegistrarGastoFijoDrawerComponent,
     FormsModule,
     SelectModule,
   ],
@@ -318,9 +322,7 @@ import {
         @if (!isLoading() && kpis()) {
           <div class="flex items-center gap-2 ml-auto">
             <app-icon name="calendar" [size]="13" color="var(--text-muted)" />
-            <span
-              class="text-xs text-text-muted font-medium"
-            >
+            <span class="text-xs text-text-muted font-medium">
               {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
             </span>
             <span
@@ -374,25 +376,17 @@ import {
           <div class="card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <span class="cat-section-dot dot--success"></span>
-              <h2
-                class="text-base font-semibold text-text-primary"
-              >
-                Ingresos por Categoría
-              </h2>
+              <h2 class="text-base font-semibold text-text-primary">Ingresos por Categoría</h2>
             </div>
 
             <div class="flex flex-col gap-4">
               @for (cat of ingresosCategoria(); track cat.nombre) {
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between gap-2">
-                    <span
-                      class="text-sm font-medium text-text-primary"
-                    >
+                    <span class="text-sm font-medium text-text-primary">
                       {{ cat.nombre }}
                     </span>
-                    <span
-                      class="text-sm font-semibold text-success whitespace-nowrap"
-                    >
+                    <span class="text-sm font-semibold text-success whitespace-nowrap">
                       {{ clp(cat.monto) }}
                     </span>
                   </div>
@@ -404,9 +398,7 @@ import {
                     ></div>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-xs text-text-muted">
-                      {{ cat.operaciones }} operaciones
-                    </span>
+                    <span class="text-xs text-text-muted"> {{ cat.operaciones }} operaciones </span>
                     <span class="text-xs text-text-muted">
                       {{ pct(cat.porcentaje) }}
                     </span>
@@ -419,14 +411,8 @@ import {
                   class="flex justify-between pt-3"
                   style="border-top: 1px solid var(--border-subtle)"
                 >
-                  <span
-                    class="text-sm font-semibold text-text-primary"
-                  >
-                    Total Ingresos
-                  </span>
-                  <span
-                    class="text-sm font-bold text-success"
-                  >
+                  <span class="text-sm font-semibold text-text-primary"> Total Ingresos </span>
+                  <span class="text-sm font-bold text-success">
                     {{ clp(totalIngresos()) }}
                   </span>
                 </div>
@@ -438,39 +424,25 @@ import {
           <div class="card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <span class="cat-section-dot dot--error"></span>
-              <h2
-                class="text-base font-semibold text-text-primary"
-              >
-                Gastos por Categoría
-              </h2>
+              <h2 class="text-base font-semibold text-text-primary">Gastos por Categoría</h2>
             </div>
 
             <div class="flex flex-col gap-4">
               @for (cat of gastosCategoria(); track cat.nombre) {
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between gap-2">
-                    <span
-                      class="text-sm font-medium text-text-primary"
-                    >
+                    <span class="text-sm font-medium text-text-primary">
                       {{ cat.nombre }}
                     </span>
-                    <span
-                      class="text-sm font-semibold text-error whitespace-nowrap"
-                    >
+                    <span class="text-sm font-semibold text-error whitespace-nowrap">
                       {{ clp(cat.monto) }}
                     </span>
                   </div>
                   <div class="cat-bar-track">
-                    <div
-                      class="cat-bar-fill bg-error"
-                      [style.width.%]="cat.porcentaje"
-                      
-                    ></div>
+                    <div class="cat-bar-fill bg-error" [style.width.%]="cat.porcentaje"></div>
                   </div>
                   <div class="flex justify-between">
-                    <span class="text-xs text-text-muted">
-                      {{ cat.registros }} registros
-                    </span>
+                    <span class="text-xs text-text-muted"> {{ cat.registros }} registros </span>
                     <span class="text-xs text-text-muted">
                       {{ pct(cat.porcentaje) }}
                     </span>
@@ -483,14 +455,8 @@ import {
                   class="flex justify-between pt-3"
                   style="border-top: 1px solid var(--border-subtle)"
                 >
-                  <span
-                    class="text-sm font-semibold text-text-primary"
-                  >
-                    Total Gastos
-                  </span>
-                  <span
-                    class="text-sm font-bold text-error"
-                  >
+                  <span class="text-sm font-semibold text-text-primary"> Total Gastos </span>
+                  <span class="text-sm font-bold text-error">
                     {{ clp(totalGastos()) }}
                   </span>
                 </div>
@@ -500,11 +466,108 @@ import {
         </div>
       }
 
+      <!-- ── Gastos Fijos del Período ─────────────────────────────────────────── -->
+      @if (!isLoading()) {
+        <div class="card p-0 flex flex-col overflow-hidden shadow-sm">
+          <div
+            class="flex items-center justify-between px-6 py-4 border-b"
+            style="border-color: var(--border-muted)"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style="background: color-mix(in srgb, var(--state-error) 10%, transparent)"
+              >
+                <app-icon name="lock" [size]="16" color="var(--state-error)" />
+              </div>
+              <div>
+                <h2 class="text-sm font-bold" style="color: var(--text-primary)">
+                  Gastos Fijos del Período
+                </h2>
+                <p class="text-xs" style="color: var(--text-muted)">
+                  Arriendo, sueldos, servicios y otros — solo visible para admin
+                </p>
+              </div>
+            </div>
+            <button
+              class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
+              data-llm-action="abrir-registrar-gasto-fijo"
+              (click)="drawerVisible.set(true)"
+            >
+              <app-icon name="plus" [size]="14" />
+              Registrar Gasto Fijo
+            </button>
+          </div>
+
+          @if (gastosFijos().length === 0) {
+            <div class="px-6 py-10 flex flex-col items-center justify-center text-center gap-2">
+              <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
+              <p class="text-sm font-medium" style="color: var(--text-primary)">
+                Sin gastos fijos en este período
+              </p>
+              <p class="text-xs" style="color: var(--text-muted)">
+                Registra arriendo, sueldos u otros gastos estructurales para calcular el neto real.
+              </p>
+            </div>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th class="report-th">Fecha</th>
+                    <th class="report-th">Categoría</th>
+                    <th class="report-th">Descripción</th>
+                    <th class="report-th align-right">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (gasto of gastosFijos(); track gasto.id) {
+                    <tr>
+                      <td class="report-td text-xs" style="color: var(--text-muted)">
+                        {{ formatDate(gasto.date) }}
+                      </td>
+                      <td class="report-td">
+                        <span
+                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                          style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
+                        >
+                          {{ gasto.categoryLabel }}
+                        </span>
+                      </td>
+                      <td class="report-td text-sm" style="color: var(--text-secondary)">
+                        {{ gasto.description }}
+                      </td>
+                      <td
+                        class="report-td align-right text-sm font-semibold"
+                        style="color: var(--state-error)"
+                      >
+                        {{ clp(gasto.amount) }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="report-tfoot">
+                  <tr>
+                    <td class="report-td font-bold" colspan="3" style="color: var(--text-primary)">
+                      Total Gastos Fijos
+                    </td>
+                    <td class="report-td align-right font-black" style="color: var(--state-error)">
+                      {{ clp(totalGastosFijos()) }}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+        </div>
+      }
+
       <!-- ── Evolución Mensual ───────────────────────────────────────────────── -->
       @if (!isLoading() && evolucionMensual().length) {
         <div class="card p-5">
           <h2
-            class="text-base font-semibold text-text-primary" style="margin-bottom: var(--space-4)"
+            class="text-base font-semibold text-text-primary"
+            style="margin-bottom: var(--space-4)"
           >
             Evolución Mensual
           </h2>
@@ -522,19 +585,16 @@ import {
               <tbody>
                 @for (row of evolucionMensual(); track row.mes) {
                   <tr>
-                    <td class="report-td font-medium" >
+                    <td class="report-td font-medium">
                       {{ row.mes }}
                     </td>
-                    <td class="report-td align-right text-success" >
+                    <td class="report-td align-right text-success">
                       {{ clp(row.ingresos) }}
                     </td>
-                    <td class="report-td align-right text-error" >
+                    <td class="report-td align-right text-error">
                       {{ clp(row.gastos) }}
                     </td>
-                    <td
-                      class="report-td align-right text-brand font-semibold"
-                      
-                    >
+                    <td class="report-td align-right text-brand font-semibold">
                       {{ clp(row.neto) }}
                     </td>
                     <td class="report-td align-right">
@@ -552,14 +612,8 @@ import {
       @if (!isLoading() && detalleDiario().length) {
         <div class="card p-5">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2
-              class="text-base font-semibold text-text-primary"
-            >
-              Detalle Diario
-            </h2>
-            <span
-              class="text-sm text-brand font-medium"
-            >
+            <h2 class="text-base font-semibold text-text-primary">Detalle Diario</h2>
+            <span class="text-sm text-brand font-medium">
               {{ diasConMovimientos() }} días con movimientos
             </span>
           </div>
@@ -579,22 +633,15 @@ import {
               <tbody>
                 @for (row of detalleDiario(); track row.fecha) {
                   <tr>
-                    <td class="report-td text-sm" >
+                    <td class="report-td text-sm">
                       {{ row.fecha }}
                     </td>
-                    <td class="report-td align-right text-error" >
+                    <td class="report-td align-right text-error">
                       {{ row.operaciones }}
                     </td>
-                    <td class="report-td align-right text-success" >
-                      +{{ clp(row.ingresos) }}
-                    </td>
-                    <td class="report-td align-right text-error" >
-                      -{{ clp(row.gastos) }}
-                    </td>
-                    <td
-                      class="report-td align-right text-brand font-semibold"
-                      
-                    >
+                    <td class="report-td align-right text-success">+{{ clp(row.ingresos) }}</td>
+                    <td class="report-td align-right text-error">-{{ clp(row.gastos) }}</td>
+                    <td class="report-td align-right text-brand font-semibold">
                       {{ clp(row.neto) }}
                     </td>
                     <td class="report-td align-right">
@@ -611,29 +658,17 @@ import {
               </tbody>
               <tfoot class="report-tfoot">
                 <tr>
-                  <td class="report-td font-bold" >TOTAL</td>
-                  <td
-                    class="report-td align-right text-error font-bold"
-                    
-                  >
+                  <td class="report-td font-bold">TOTAL</td>
+                  <td class="report-td align-right text-error font-bold">
                     {{ totalesDiario().operaciones }}
                   </td>
-                  <td
-                    class="report-td align-right text-success font-bold"
-                    
-                  >
+                  <td class="report-td align-right text-success font-bold">
                     +{{ clp(totalesDiario().ingresos) }}
                   </td>
-                  <td
-                    class="report-td align-right text-error font-bold"
-                    
-                  >
+                  <td class="report-td align-right text-error font-bold">
                     -{{ clp(totalesDiario().gastos) }}
                   </td>
-                  <td
-                    class="report-td align-right text-brand font-bold"
-                    
-                  >
+                  <td class="report-td align-right text-brand font-bold">
                     {{ clp(totalesDiario().neto) }}
                   </td>
                   <td class="report-td"></td>
@@ -644,6 +679,14 @@ import {
         </div>
       }
     </div>
+
+    <!-- ── Drawer: Registrar Gasto Fijo ──────────────────────────────────────── -->
+    <app-registrar-gasto-fijo-drawer
+      [visible]="drawerVisible()"
+      [isSaving]="isRegistrando()"
+      (guardar)="onGuardarGastoFijo($event)"
+      (cerrar)="drawerVisible.set(false)"
+    />
   `,
 })
 export class ReportesContablesContentComponent {
@@ -657,16 +700,20 @@ export class ReportesContablesContentComponent {
   readonly escuela = input<string>('');
   readonly isLoading = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
+  readonly isRegistrando = input<boolean>(false);
+  readonly gastosFijos = input<GastoFijoRow[]>([]);
   readonly filtros = input.required<FiltrosReporte>();
 
   // ── Outputs ────────────────────────────────────────────────────────────────
   readonly aplicarFiltros = output<FiltrosReporte>();
   readonly exportRequested = output<'excel' | 'pdf'>();
+  readonly registrarGasto = output<RegistrarGastoFijoPayload>();
   /** Emite la fecha (YYYY-MM-DD) cuando el usuario hace clic en "Ver detalle". */
   readonly verDetalle = output<string>();
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly exportMenuOpen = signal(false);
+  protected readonly drawerVisible = signal(false);
 
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {
@@ -698,6 +745,10 @@ export class ReportesContablesContentComponent {
 
   protected readonly totalGastos = computed(() =>
     this.gastosCategoria().reduce((s, c) => s + c.monto, 0),
+  );
+
+  protected readonly totalGastosFijos = computed(() =>
+    this.gastosFijos().reduce((s, g) => s + g.amount, 0),
   );
 
   protected readonly totalesDiario = computed(() => {
@@ -741,6 +792,11 @@ export class ReportesContablesContentComponent {
   protected requestExport(format: 'excel' | 'pdf'): void {
     this.exportMenuOpen.set(false);
     this.exportRequested.emit(format);
+  }
+
+  protected onGuardarGastoFijo(payload: RegistrarGastoFijoPayload): void {
+    this.registrarGasto.emit(payload);
+    this.drawerVisible.set(false);
   }
 
   protected onRangoChange(rango: RangoReporte): void {

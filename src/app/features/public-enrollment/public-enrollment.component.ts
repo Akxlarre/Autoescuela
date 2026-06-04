@@ -668,9 +668,11 @@ export class PublicEnrollmentComponent {
     this._step1Form.set(data);
   }
 
-  onPersonalDataNext(): void {
-    // Persistimos la versión ajustada por flujo (courseType/courseCategory correctos).
-    this.facade.savePersonalData(this.step1Data());
+  async onPersonalDataNext(): Promise<void> {
+    await this.facade.savePersonalData(this.step1Data());
+    if (this.facade.error()) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   onPaymentModeConfirm(): void {

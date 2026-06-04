@@ -11,6 +11,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { StudentHorarioFacade } from '@core/facades/student-horario.facade';
+import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -44,6 +45,32 @@ import type {
         />
       </div>
 
+      <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
+      @if (context.enrollments().length > 1) {
+        <div class="bento-banner">
+          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mis matrículas">
+            @for (enr of context.enrollments(); track enr.id) {
+              <button
+                type="button"
+                role="tab"
+                class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
+                [class.bg-brand-muted]="context.activeEnrollmentId() === enr.id"
+                [class.border-brand]="context.activeEnrollmentId() === enr.id"
+                [class.text-primary]="context.activeEnrollmentId() === enr.id"
+                [class.bg-surface]="context.activeEnrollmentId() !== enr.id"
+                [class.border-border-subtle]="context.activeEnrollmentId() !== enr.id"
+                [class.text-text-secondary]="context.activeEnrollmentId() !== enr.id"
+                [attr.aria-selected]="context.activeEnrollmentId() === enr.id"
+                [attr.data-llm-action]="'select-enrollment-' + enr.id"
+                (click)="selectEnrollment(enr.id)"
+              >
+                {{ enr.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       <!-- ── PRÓXIMA CLASE — tarjeta destacada ─────────────────────────────────── -->
       @if (!loading() && nextSession()) {
         <div class="bento-banner" appScrollReveal>
@@ -53,15 +80,12 @@ import type {
           >
             <div
               class="flex items-center justify-center w-12 h-12 rounded-xl shrink-0 bg-brand-tint"
-              
             >
               <app-icon name="calendar-check" [size]="22" class="text-brand" />
             </div>
 
             <div class="flex flex-col gap-1 flex-1 min-w-0">
-              <span
-                class="text-[10px] uppercase font-bold tracking-wider text-brand"
-                
+              <span class="text-[10px] uppercase font-bold tracking-wider text-brand"
                 >Próxima clase</span
               >
               <p class="font-semibold text-text-primary m-0 leading-tight">
@@ -81,7 +105,6 @@ import type {
 
             <span
               class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full bg-brand-tint text-brand"
-              
             >
               {{ daysUntil(nextSession()!.date) }}
             </span>
@@ -96,7 +119,6 @@ import type {
           <button
             type="button"
             class="flex items-center justify-center w-8 h-8 rounded-lg border-0 cursor-pointer transition-colors bg-subtle text-text-secondary"
-            
             (click)="facade.goToPrevWeek()"
             aria-label="Semana anterior"
             data-llm-action="horario-semana-anterior"
@@ -111,7 +133,6 @@ import type {
           <button
             type="button"
             class="flex items-center justify-center w-8 h-8 rounded-lg border-0 cursor-pointer transition-colors bg-subtle text-text-secondary"
-            
             (click)="facade.goToNextWeek()"
             aria-label="Semana siguiente"
             data-llm-action="horario-semana-siguiente"
@@ -123,7 +144,6 @@ import type {
             <button
               type="button"
               class="text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-colors bg-brand-tint text-brand"
-              
               (click)="facade.goToToday()"
               data-llm-action="horario-hoy"
             >
@@ -227,7 +247,6 @@ import type {
                   @if (day.sessions.length === 0) {
                     <div
                       class="rounded-lg py-3 flex items-center justify-center border border-dashed border-border-subtle"
-                      
                     >
                       <span class="text-[10px] text-text-muted">—</span>
                     </div>
@@ -268,6 +287,7 @@ import type {
 })
 export class AlumnoHorarioComponent {
   readonly facade = inject(StudentHorarioFacade);
+  readonly context = inject(StudentEnrollmentContextFacade);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -313,6 +333,11 @@ export class AlumnoHorarioComponent {
         Promise.resolve().then(() => this.gsap.animateBentoGrid(el));
       }
     });
+  }
+
+  selectEnrollment(id: number): void {
+    this.context.setActive(id);
+    void this.facade.initialize();
   }
 
   // ── Helpers de template ───────────────────────────────────────────────────
