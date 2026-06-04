@@ -34,7 +34,7 @@ export class ConfirmModalService {
         message: config.message,
         severity: config.severity ?? 'secondary',
         confirmLabel: config.confirmLabel ?? 'Aceptar',
-        cancelLabel: config.cancelLabel ?? 'Cancelar',
+        cancelLabel: config.cancelLabel,
       });
     });
   }
