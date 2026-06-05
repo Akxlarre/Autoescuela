@@ -48,7 +48,7 @@ import type {
             (change)="onInstructorChange($event)"
             data-llm-description="Instructor selector for practical driving classes"
           >
-            <option value="">— Selecciona un instructor —</option>
+            <option value="" disabled>— Selecciona un instructor —</option>
             @for (inst of data().instructors; track inst.id) {
               <option [value]="inst.id">{{ inst.name }}</option>
             }
