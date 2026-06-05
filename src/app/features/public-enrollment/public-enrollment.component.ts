@@ -526,6 +526,8 @@ export class PublicEnrollmentComponent {
       theme: this.theme(),
       price: course.basePrice,
       priceLabel: formatCLP(course.basePrice),
+      // "Editar selección" solo tiene sentido si hay más de un flujo que elegir.
+      canEdit: this.facade.availableFlows().length > 1,
     };
   });
 
