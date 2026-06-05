@@ -58,9 +58,13 @@ import type {
 
       <!-- Schedule grid -->
       @if (data().scheduleLoading) {
-        <div class="space-y-2">
-          <app-skeleton-block variant="rect" width="100%" height="48px" />
-          <app-skeleton-block variant="rect" width="100%" height="160px" />
+        <!-- Skeleton con forma de grilla: header + filas, para reservar un alto
+             cercano al real y evitar el salto de layout al aparecer la grilla. -->
+        <div class="space-y-2" aria-busy="true" aria-label="Cargando horarios disponibles">
+          <app-skeleton-block variant="rect" width="100%" height="44px" />
+          @for (row of skeletonRows; track $index) {
+            <app-skeleton-block variant="rect" width="100%" height="40px" />
+          }
         </div>
       } @else if (data().scheduleGrid && data().instructorId) {
         <!-- Week navigation (solo si hay más de una semana) -->
@@ -227,6 +231,9 @@ export class PublicScheduleComponent {
   readonly dataChange = output<EnrollmentAssignmentData>();
   readonly next = output<void>();
   readonly back = output<void>();
+
+  /** Filas placeholder del skeleton de carga (aprox. el alto típico de una grilla). */
+  protected readonly skeletonRows = Array.from({ length: 9 });
 
   // ── Navegación semanal ──────────────────────────────────────────────────────
   protected readonly currentWeekIndex = signal(0);
