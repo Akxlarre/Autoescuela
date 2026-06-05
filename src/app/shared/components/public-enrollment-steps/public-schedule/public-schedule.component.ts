@@ -56,6 +56,28 @@ import type {
         </div>
       }
 
+      <!-- Aviso: el instructor no tiene cupo suficiente para el total requerido -->
+      @if (insufficientAvailability()) {
+        <div
+          class="flex items-start gap-2.5 rounded-xl p-3 text-sm"
+          style="background: var(--state-warning-bg); border: 1px solid var(--state-warning-border); color: var(--state-warning);"
+          role="alert"
+        >
+          <app-icon
+            name="alert-triangle"
+            [size]="16"
+            color="var(--state-warning)"
+            class="mt-0.5 shrink-0"
+          />
+          <span>
+            Este instructor tiene cupo en solo {{ maxSelectableSlots() }}
+            {{ maxSelectableSlots() === 1 ? 'día' : 'días' }} y necesitas
+            {{ data().slotSelection.requiredCount }} clases (máximo una por día). Elige otro
+            instructor para completar tu horario.
+          </span>
+        </div>
+      }
+
       <!-- Schedule grid -->
       @if (data().scheduleLoading) {
         <!-- Skeleton con forma de grilla: header + filas, para reservar un alto
@@ -278,6 +300,31 @@ export class PublicScheduleComponent {
   // ── Estado derivado ─────────────────────────────────────────────────────────
   protected readonly selectionComplete = computed(
     () => this.data().slotSelection.currentCount >= this.data().slotSelection.requiredCount,
+  );
+
+  /**
+   * Máximo de slots seleccionables = días distintos con cupo (regla "máx 1 por día").
+   * Cuenta días con algún slot disponible + los días ya seleccionados.
+   */
+  protected readonly maxSelectableSlots = computed<number>(() => {
+    const grid = this.data().scheduleGrid;
+    if (!grid) return 0;
+    const dates = new Set<string>();
+    for (const s of grid.slots) {
+      if (s.status === 'available') dates.add(s.date);
+    }
+    for (const id of this.data().slotSelection.selectedSlotIds) {
+      const s = grid.slots.find((x) => x.id === id);
+      if (s) dates.add(s.date);
+    }
+    return dates.size;
+  });
+
+  /** true si, aun tomando toda la disponibilidad, no se alcanza el total requerido. */
+  protected readonly insufficientAvailability = computed<boolean>(
+    () =>
+      !!this.data().scheduleGrid &&
+      this.maxSelectableSlots() < this.data().slotSelection.requiredCount,
   );
 
   /** `grid-template-columns`: columna hora fija + una columna por día de la semana actual. */
