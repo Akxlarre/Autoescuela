@@ -60,7 +60,7 @@ const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   email: '',
   phone: '',
   birthDate: '',
-  gender: 'M',
+  gender: '',
   address: '',
   courseCategory: 'non-professional',
   courseType: 'class_b',

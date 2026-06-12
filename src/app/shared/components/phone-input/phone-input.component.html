@@ -1,0 +1,109 @@
+<div class="flex flex-col gap-1.5">
+  <label class="text-xs font-semibold" style="color: var(--text-secondary)" [for]="id()">
+    {{ label() }}
+    @if (required()) {
+      <span style="color: var(--state-error)">*</span>
+    }
+  </label>
+
+  <div class="flex gap-2">
+    <!-- Custom dial code dropdown -->
+    <div
+      class="relative"
+      appClickOutside
+      [clickOutsideEnabled]="_dropdownOpen()"
+      (clickOutside)="_dropdownOpen.set(false)"
+    >
+      <button
+        type="button"
+        class="flex items-center gap-1.5 h-11 px-3 border border-border-default rounded-xl outline-none transition-all cursor-pointer whitespace-nowrap focus:ring-2 focus:ring-brand/20 focus:border-brand"
+        style="background: var(--bg-surface); color: var(--text-primary)"
+        (click)="_dropdownOpen.update(v => !v)"
+        [attr.aria-label]="'Prefijo de país: ' + selectedDialCode().label"
+        [attr.aria-expanded]="_dropdownOpen()"
+        aria-haspopup="listbox"
+        data-llm-action="toggle-dial-code-dropdown"
+      >
+        <span class="text-base leading-none">{{ selectedDialCode().flag }}</span>
+        <span class="text-sm font-medium">{{ selectedDialCode().dialCode }}</span>
+        <app-icon
+          name="chevron-down"
+          [size]="14"
+          color="var(--text-muted)"
+          class="transition-transform duration-200"
+          [class.rotate-180]="_dropdownOpen()"
+        />
+      </button>
+
+      @if (_dropdownOpen()) {
+        <div
+          class="absolute z-50 left-0 top-full mt-1 min-w-[190px] rounded-xl border shadow-lg overflow-hidden"
+          style="background: var(--bg-surface); border-color: var(--border-default)"
+          role="listbox"
+          [attr.aria-label]="'Seleccionar prefijo de país'"
+        >
+          @for (code of dialCodes; track code.countryCode) {
+            <button
+              type="button"
+              class="dial-option w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors cursor-pointer"
+              [class.selected]="code.dialCode === _dialCode()"
+              style="color: var(--text-primary)"
+              (click)="selectDialCode(code.dialCode)"
+              role="option"
+              [attr.aria-selected]="code.dialCode === _dialCode()"
+            >
+              <span class="text-base w-6 text-center leading-none">{{ code.flag }}</span>
+              <span
+                class="flex-1 truncate text-sm"
+                [class.font-semibold]="code.dialCode === _dialCode()"
+                >{{ code.label }}</span
+              >
+              <span class="font-mono text-xs shrink-0" style="color: var(--text-muted)">{{
+                code.dialCode
+              }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Digits input -->
+    <input
+      [id]="id()"
+      [name]="id()"
+      type="text"
+      inputmode="numeric"
+      [value]="_digits()"
+      (input)="onDigitsInput($any($event.target).value)"
+      (keydown)="onKeyDown($event)"
+      (blur)="onBlur()"
+      [placeholder]="placeholder()"
+      autocomplete="tel-national"
+      data-llm-description="Student phone number with dial code prefix for WhatsApp contact"
+      class="flex-1 h-11 px-4 text-sm border rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+      style="background: var(--bg-surface); color: var(--text-primary)"
+      [class.border-state-error]="showFeedback() && !isValid()"
+      [class.border-state-success]="showFeedback() && isValid()"
+      [class.border-border-default]="!showFeedback() || isValid() === null"
+      [attr.aria-required]="required()"
+      [attr.aria-invalid]="showFeedback() && !isValid()"
+      [attr.aria-describedby]="errorId()"
+    />
+  </div>
+
+  @if (showFeedback() && !isValid()) {
+    <p [id]="errorId()" class="text-xs text-state-error flex items-center gap-1">
+      <app-icon name="circle-alert" [size]="12" />
+      Número incompleto — verifica que el formato sea correcto (ej: 9 1234 5678 para Chile)
+    </p>
+  } @else if (showFeedback() && isValid()) {
+    <p [id]="errorId()" class="text-xs text-state-success flex items-center gap-1">
+      <app-icon name="check-circle" [size]="12" />
+      Número válido
+    </p>
+  } @else {
+    <p [id]="errorId()" class="text-xs italic" style="color: var(--text-muted)">
+      Formato: {{ placeholder() }}
+    </p>
+  }
+</div>

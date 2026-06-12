@@ -1,6 +1,6 @@
 // Enrollment Step 1 — Personal data, location, course selection
 
-export type Gender = 'M' | 'F';
+export type Gender = 'M' | 'F' | '';
 
 export type CourseCategory = 'non-professional' | 'professional' | 'singular';
 
