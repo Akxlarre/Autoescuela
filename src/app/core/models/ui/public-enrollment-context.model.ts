@@ -24,4 +24,9 @@ export interface PublicEnrollmentContext {
   priceLabel: string;
   /** Precio bruto en CLP (ej: 180000) para cálculos/comparaciones. */
   price: number;
+  /**
+   * `true` si hay algo que editar en la selección (la sede ofrece más de un flujo/curso).
+   * Cuando es `false` el banner oculta "Editar selección" (no hay alternativa que elegir).
+   */
+  canEdit: boolean;
 }

@@ -48,7 +48,7 @@ import type {
             (change)="onInstructorChange($event)"
             data-llm-description="Instructor selector for practical driving classes"
           >
-            <option value="">— Selecciona un instructor —</option>
+            <option value="" disabled>— Selecciona un instructor —</option>
             @for (inst of data().instructors; track inst.id) {
               <option [value]="inst.id">{{ inst.name }}</option>
             }
@@ -56,11 +56,37 @@ import type {
         </div>
       }
 
+      <!-- Aviso: el instructor no tiene cupo suficiente para el total requerido -->
+      @if (insufficientAvailability()) {
+        <div
+          class="flex items-start gap-2.5 rounded-xl p-3 text-sm"
+          style="background: var(--state-warning-bg); border: 1px solid var(--state-warning-border); color: var(--state-warning);"
+          role="alert"
+        >
+          <app-icon
+            name="alert-triangle"
+            [size]="16"
+            color="var(--state-warning)"
+            class="mt-0.5 shrink-0"
+          />
+          <span>
+            Este instructor tiene cupo en solo {{ maxSelectableSlots() }}
+            {{ maxSelectableSlots() === 1 ? 'día' : 'días' }} y necesitas
+            {{ data().slotSelection.requiredCount }} clases (máximo una por día). Elige otro
+            instructor para completar tu horario.
+          </span>
+        </div>
+      }
+
       <!-- Schedule grid -->
       @if (data().scheduleLoading) {
-        <div class="space-y-2">
-          <app-skeleton-block variant="rect" width="100%" height="48px" />
-          <app-skeleton-block variant="rect" width="100%" height="160px" />
+        <!-- Skeleton con forma de grilla: header + filas, para reservar un alto
+             cercano al real y evitar el salto de layout al aparecer la grilla. -->
+        <div class="space-y-2" aria-busy="true" aria-label="Cargando horarios disponibles">
+          <app-skeleton-block variant="rect" width="100%" height="44px" />
+          @for (row of skeletonRows; track $index) {
+            <app-skeleton-block variant="rect" width="100%" height="40px" />
+          }
         </div>
       } @else if (data().scheduleGrid && data().instructorId) {
         <!-- Week navigation (solo si hay más de una semana) -->
@@ -228,6 +254,9 @@ export class PublicScheduleComponent {
   readonly next = output<void>();
   readonly back = output<void>();
 
+  /** Filas placeholder del skeleton de carga (aprox. el alto típico de una grilla). */
+  protected readonly skeletonRows = Array.from({ length: 9 });
+
   // ── Navegación semanal ──────────────────────────────────────────────────────
   protected readonly currentWeekIndex = signal(0);
 
@@ -271,6 +300,31 @@ export class PublicScheduleComponent {
   // ── Estado derivado ─────────────────────────────────────────────────────────
   protected readonly selectionComplete = computed(
     () => this.data().slotSelection.currentCount >= this.data().slotSelection.requiredCount,
+  );
+
+  /**
+   * Máximo de slots seleccionables = días distintos con cupo (regla "máx 1 por día").
+   * Cuenta días con algún slot disponible + los días ya seleccionados.
+   */
+  protected readonly maxSelectableSlots = computed<number>(() => {
+    const grid = this.data().scheduleGrid;
+    if (!grid) return 0;
+    const dates = new Set<string>();
+    for (const s of grid.slots) {
+      if (s.status === 'available') dates.add(s.date);
+    }
+    for (const id of this.data().slotSelection.selectedSlotIds) {
+      const s = grid.slots.find((x) => x.id === id);
+      if (s) dates.add(s.date);
+    }
+    return dates.size;
+  });
+
+  /** true si, aun tomando toda la disponibilidad, no se alcanza el total requerido. */
+  protected readonly insufficientAvailability = computed<boolean>(
+    () =>
+      !!this.data().scheduleGrid &&
+      this.maxSelectableSlots() < this.data().slotSelection.requiredCount,
   );
 
   /** `grid-template-columns`: columna hora fija + una columna por día de la semana actual. */

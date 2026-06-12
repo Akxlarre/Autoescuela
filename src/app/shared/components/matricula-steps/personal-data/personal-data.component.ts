@@ -20,7 +20,7 @@ import type {
 import type { BranchOption } from '@core/models/ui/branch.model';
 import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
-import { calcAge } from '@core/utils/age.utils';
+import { calcAge, getAgeStatus } from '@core/utils/age.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 
 interface CategoryMeta {
@@ -100,14 +100,9 @@ export class PersonalDataComponent {
   readonly rutValid = computed(() => validateRut(this.data().rut));
   readonly emailValid = computed(() => validateEmail(this.data().email));
 
-  readonly ageStatus = computed((): AgeAlertStatus => {
-    const age = this.calcAge(this.data().birthDate);
-    if (age === null) return 'none';
-    if (age < 17) return 'under-17';
-    if (age < 18) return 'requires-authorization';
-    if (this.data().courseCategory === 'professional' && age < 20) return 'under-20-professional';
-    return 'ok';
-  });
+  readonly ageStatus = computed(
+    (): AgeAlertStatus => getAgeStatus(this.data().birthDate, this.data().courseType),
+  );
 
   readonly courseMeta = computed<CourseOption | null>(
     () => this.data().courses.find((c) => c.type === this.data().courseType) ?? null,

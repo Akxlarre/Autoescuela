@@ -81,16 +81,18 @@ const COURSE_ICON: Record<string, string> = {
           >
             {{ context().priceLabel }}
           </p>
-          <button
-            type="button"
-            class="mt-1 text-xs font-semibold cursor-pointer rounded-full px-2.5 py-1 transition-colors"
-            style="color: var(--color-primary-dark, var(--color-primary)); background: rgba(255,255,255,0.6);"
-            data-llm-action="edit-enrollment-selection"
-            data-llm-description="Edit selected course or license type in the enrollment wizard"
-            (click)="editRequested.emit()"
-          >
-            Editar selección
-          </button>
+          @if (context().canEdit) {
+            <button
+              type="button"
+              class="mt-1 text-xs font-semibold cursor-pointer rounded-full px-2.5 py-1 transition-colors"
+              style="color: var(--color-primary-dark, var(--color-primary)); background: rgba(255,255,255,0.6);"
+              data-llm-action="edit-enrollment-selection"
+              data-llm-description="Edit selected course or license type in the enrollment wizard"
+              (click)="editRequested.emit()"
+            >
+              Editar selección
+            </button>
+          }
         </div>
       </div>
 
@@ -114,16 +116,18 @@ const COURSE_ICON: Record<string, string> = {
         >
           {{ context().priceLabel }}
         </p>
-        <button
-          type="button"
-          class="text-xs font-semibold cursor-pointer rounded-full px-3 py-1.5 transition-colors"
-          style="color: var(--color-primary-dark, var(--color-primary)); background: rgba(255,255,255,0.6);"
-          data-llm-action="edit-enrollment-selection"
-          data-llm-description="Edit selected course or license type in the enrollment wizard"
-          (click)="editRequested.emit()"
-        >
-          Editar selección
-        </button>
+        @if (context().canEdit) {
+          <button
+            type="button"
+            class="text-xs font-semibold cursor-pointer rounded-full px-3 py-1.5 transition-colors"
+            style="color: var(--color-primary-dark, var(--color-primary)); background: rgba(255,255,255,0.6);"
+            data-llm-action="edit-enrollment-selection"
+            data-llm-description="Edit selected course or license type in the enrollment wizard"
+            (click)="editRequested.emit()"
+          >
+            Editar selección
+          </button>
+        }
       </div>
     </div>
   `,

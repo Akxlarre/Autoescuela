@@ -10,18 +10,9 @@ import type {
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
 import { validateRut, formatRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
-import { calcAge } from '@core/utils/age.utils';
+import { getAgeStatus } from '@core/utils/age.utils';
 
-// ── Functional Core (testeables sin framework) ────────────────────────────────
-
-export function getAgeStatus(birthDate: string, courseType: string): AgeAlertStatus {
-  const age = calcAge(birthDate);
-  if (age === null) return 'none';
-  if (age < 17) return 'under-17';
-  if (age < 18) return 'requires-authorization';
-  if (courseType?.startsWith('professional') && age < 20) return 'under-20-professional';
-  return 'ok';
-}
+export { getAgeStatus };
 
 export function canAdvanceFn(data: EnrollmentPersonalData, courseType: string): boolean {
   const age = getAgeStatus(data.birthDate, courseType);
@@ -29,6 +20,7 @@ export function canAdvanceFn(data: EnrollmentPersonalData, courseType: string): 
     validateRut(data.rut) &&
     validateEmail(data.email) &&
     age !== 'under-17' &&
+    age !== 'requires-authorization' &&
     age !== 'under-20-professional' &&
     data.firstNames.trim().length >= 2 &&
     data.paternalLastName.trim().length >= 2 &&
@@ -291,28 +283,63 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
 
       @if (ageStatus() === 'requires-authorization') {
         <div
-          class="flex items-start gap-3 rounded-xl p-4"
+          class="rounded-xl p-4 space-y-3"
           style="
-            background: var(--state-warning-bg);
-            border: 1.5px solid var(--state-warning-border);
+            background: var(--state-info-bg, color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface)));
+            border: 1.5px solid var(--state-info-border, color-mix(in srgb, var(--ds-brand) 30%, transparent));
           "
           role="alert"
+          aria-live="polite"
         >
-          <app-icon
-            name="alert-triangle"
-            [size]="18"
-            color="var(--state-warning)"
-            class="mt-0.5 shrink-0"
-          />
-          <div>
-            <p class="text-sm font-bold" style="color: var(--state-warning);">
-              17 años — Requiere Autorización Notarial
-            </p>
-            <p class="text-xs mt-0.5" style="color: var(--text-secondary);">
-              Deberás adjuntar una autorización notarial firmada por tu apoderado en el paso de
-              documentación.
-            </p>
+          <div class="flex items-start gap-3">
+            <app-icon name="info" [size]="18" color="var(--ds-brand)" class="mt-0.5 shrink-0" />
+            <div>
+              <p class="text-sm font-bold" style="color: var(--text-primary);">
+                Menores de 18 años no pueden inscribirse online
+              </p>
+              <p class="text-xs mt-0.5" style="color: var(--text-secondary);">
+                Para inscribirte debes seguir estos pasos presenciales:
+              </p>
+            </div>
           </div>
+          <ol class="space-y-2 pl-1">
+            <li class="flex items-start gap-2.5 text-xs" style="color: var(--text-secondary);">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                style="background: var(--ds-brand); color: white;"
+                aria-hidden="true"
+                >1</span
+              >
+              <span>
+                <strong style="color: var(--text-primary);">Realiza el trámite notarial</strong> —
+                pide a tu apoderado que firme una autorización ante notario.
+              </span>
+            </li>
+            <li class="flex items-start gap-2.5 text-xs" style="color: var(--text-secondary);">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                style="background: var(--ds-brand); color: white;"
+                aria-hidden="true"
+                >2</span
+              >
+              <span>
+                <strong style="color: var(--text-primary);">Preséntate en la sucursal</strong> con
+                la autorización notarial original.
+              </span>
+            </li>
+            <li class="flex items-start gap-2.5 text-xs" style="color: var(--text-secondary);">
+              <span
+                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                style="background: var(--ds-brand); color: white;"
+                aria-hidden="true"
+                >3</span
+              >
+              <span>
+                <strong style="color: var(--text-primary);">La secretaria te inscribirá</strong> en
+                el sistema con tu documentación en mano.
+              </span>
+            </li>
+          </ol>
         </div>
       }
 

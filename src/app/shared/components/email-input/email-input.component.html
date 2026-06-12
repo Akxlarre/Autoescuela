@@ -16,6 +16,7 @@
     autocomplete="email"
     data-llm-description="Email address input field with real-time format validation"
     class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+    style="color: var(--text-primary)"
     [class.border-state-error]="isDirty() && !isValid()"
     [class.border-state-success]="isDirty() && isValid()"
     [class.border-border-default]="!isDirty()"

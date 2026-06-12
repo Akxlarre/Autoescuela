@@ -509,23 +509,41 @@ export class PublicEnrollmentComponent {
     const pd = this.facade.personalData();
     const opts = this.facade.courseOptions();
 
-    let course = pd ? opts.find((o) => o.type === pd.courseType) : undefined;
-    if (!course) {
-      course =
-        flow === 'professional'
-          ? opts.find((o) => o.category === 'professional')
-          : opts.find((o) => o.type === 'class_b');
+    // Para profesional: precio mínimo entre todos los cursos disponibles.
+    // El alumno aún no eligió subtipo (A2/A3/A4/A5) — la escuela lo define al contactarlo.
+    if (flow === 'professional') {
+      const profCourses = opts.filter((o) => o.category === 'professional');
+      if (!profCourses.length) return null;
+      const minPrice = Math.min(...profCourses.map((c) => c.basePrice));
+      const maxPrice = Math.max(...profCourses.map((c) => c.basePrice));
+      const priceLabel =
+        minPrice === maxPrice ? formatCLP(minPrice) : `desde ${formatCLP(minPrice)}`;
+      return {
+        courseName: 'Clase Profesional',
+        courseType: profCourses[0].type,
+        branchName: branch.name,
+        branchAddress: branch.address ?? '',
+        theme: this.theme(),
+        price: minPrice,
+        priceLabel,
+        canEdit: this.facade.availableFlows().length > 1,
+      };
     }
+
+    let course = pd ? opts.find((o) => o.type === pd.courseType) : undefined;
+    if (!course) course = opts.find((o) => o.type === 'class_b');
     if (!course) return null;
 
     return {
-      courseName: flow === 'professional' ? 'Clase Profesional' : course.label,
+      courseName: course.label,
       courseType: course.type,
       branchName: branch.name,
       branchAddress: branch.address ?? '',
       theme: this.theme(),
       price: course.basePrice,
       priceLabel: formatCLP(course.basePrice),
+      // "Editar selección" solo tiene sentido si hay más de un flujo que elegir.
+      canEdit: this.facade.availableFlows().length > 1,
     };
   });
 

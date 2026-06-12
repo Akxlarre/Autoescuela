@@ -76,8 +76,12 @@ describe('canAdvanceFn()', () => {
     expect(canAdvanceFn({ ...VALID_DATA, birthDate: buildBirthDate(15) }, 'class_b')).toBe(false);
   });
 
-  it('es true con alumno de 17 años (warning, no bloquea Clase B)', () => {
-    expect(canAdvanceFn({ ...VALID_DATA, birthDate: buildBirthDate(17) }, 'class_b')).toBe(true);
+  it('es false con alumno de 17 años — bloqueado, debe ir a sucursal (fix-010)', () => {
+    expect(canAdvanceFn({ ...VALID_DATA, birthDate: buildBirthDate(17) }, 'class_b')).toBe(false);
+  });
+
+  it('es true con alumno de 18 años recién cumplidos (Clase B)', () => {
+    expect(canAdvanceFn({ ...VALID_DATA, birthDate: buildBirthDate(18) }, 'class_b')).toBe(true);
   });
 
   it('es false con alumno < 20 años en flujo profesional (AC-datos-4)', () => {
@@ -108,6 +112,10 @@ describe('getAgeStatus()', () => {
 
   it('retorna "ok" con alumno de 18+ en clase B', () => {
     expect(getAgeStatus(buildBirthDate(20), 'class_b')).toBe('ok');
+  });
+
+  it('retorna "under-20-professional" con alumno de 17 años en profesional (fix-013)', () => {
+    expect(getAgeStatus(buildBirthDate(17), 'professional_a2')).toBe('under-20-professional');
   });
 
   it('retorna "under-20-professional" con alumno de 19 en profesional', () => {
