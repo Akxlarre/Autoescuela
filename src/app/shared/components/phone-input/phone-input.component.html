@@ -24,7 +24,14 @@
         aria-haspopup="listbox"
         data-llm-action="toggle-dial-code-dropdown"
       >
-        <span class="text-base leading-none">{{ selectedDialCode().flag }}</span>
+        @if (selectedDialCode().countryCode !== 'OTHER') {
+          <span
+            [class]="'fi fis fi-' + selectedDialCode().countryCode.toLowerCase()"
+            style="font-size: 18px; border-radius: 3px; overflow: hidden; flex-shrink: 0"
+          ></span>
+        } @else {
+          <app-icon name="globe" [size]="18" color="var(--text-secondary)" />
+        }
         <span class="text-sm font-medium">{{ selectedDialCode().dialCode }}</span>
         <app-icon
           name="chevron-down"
@@ -37,7 +44,7 @@
 
       @if (_dropdownOpen()) {
         <div
-          class="absolute z-50 left-0 top-full mt-1 min-w-[190px] rounded-xl border shadow-lg overflow-hidden"
+          class="absolute z-50 left-0 top-full mt-1 min-w-[200px] rounded-xl border shadow-lg overflow-hidden"
           style="background: var(--bg-surface); border-color: var(--border-default)"
           role="listbox"
           [attr.aria-label]="'Seleccionar prefijo de país'"
@@ -52,7 +59,14 @@
               role="option"
               [attr.aria-selected]="code.dialCode === _dialCode()"
             >
-              <span class="text-base w-6 text-center leading-none">{{ code.flag }}</span>
+              @if (code.countryCode !== 'OTHER') {
+                <span
+                  [class]="'fi fis fi-' + code.countryCode.toLowerCase()"
+                  style="font-size: 20px; border-radius: 3px; overflow: hidden; flex-shrink: 0"
+                ></span>
+              } @else {
+                <app-icon name="globe" [size]="20" color="var(--text-secondary)" />
+              }
               <span
                 class="flex-1 truncate text-sm"
                 [class.font-semibold]="code.dialCode === _dialCode()"

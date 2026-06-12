@@ -1,18 +1,8 @@
-import { Component, ChangeDetectionStrategy, input, output, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { validateEmail } from '@core/utils/email.utils';
+import { validateEmail, normalizeEmail } from '@core/utils/email.utils';
 
-/**
- * Reusable email input with real-time validation feedback.
- * Dumb component — no service injection.
- *
- * Usage:
- *   <app-email-input
- *     [value]="email()"
- *     (valueChange)="email.set($event)"
- *   />
- */
 @Component({
   selector: 'app-email-input',
   imports: [FormsModule, IconComponent],
@@ -25,8 +15,16 @@ export class EmailInputComponent {
   label = input<string>('Email');
   required = input<boolean>(false);
   placeholder = input<string>('usuario@ejemplo.cl');
+  forceDirty = input<boolean>(false);
   valueChange = output<string>();
 
+  protected _blurred = signal(false);
+
   readonly isValid = computed(() => validateEmail(this.value()));
-  readonly isDirty = computed(() => this.value().length > 0);
+  readonly showFeedback = computed(() => this._blurred() || this.forceDirty());
+
+  onBlur(): void {
+    this._blurred.set(true);
+    this.valueChange.emit(normalizeEmail(this.value()));
+  }
 }

@@ -5,6 +5,9 @@
 /* PrimeNG overrides (design system tokens + toast position) */
 @use './styles/vendors/primeng-overrides';
 
+/* Flag icons — subconjunto 1x1 para el dropdown de teléfono */
+@use './styles/vendors/flag-icons';
+
 /* Layouts */
 @use './styles/layout/bento-grid';
 @use './styles/layout/page-shell';

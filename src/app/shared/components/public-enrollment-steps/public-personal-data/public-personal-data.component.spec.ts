@@ -56,8 +56,16 @@ describe('canAdvanceFn()', () => {
     expect(canAdvanceFn({ ...VALID_DATA, birthDate: '' }, 'class_b')).toBe(false);
   });
 
-  it('es false con teléfono corto < 8 chars (AC-datos-6)', () => {
+  it('es false con teléfono no E.164 (AC-datos-6, AC2)', () => {
     expect(canAdvanceFn({ ...VALID_DATA, phone: '12345' }, 'class_b')).toBe(false);
+  });
+
+  it('es false con nombre que contiene dígitos (AC13)', () => {
+    expect(canAdvanceFn({ ...VALID_DATA, firstNames: 'Juan123' }, 'class_b')).toBe(false);
+  });
+
+  it('es false con fecha imposible (AC19, AC-E5)', () => {
+    expect(canAdvanceFn({ ...VALID_DATA, birthDate: '2001-02-29' }, 'class_b')).toBe(false);
   });
 
   it('es false con género no seleccionado (AC-datos-5)', () => {

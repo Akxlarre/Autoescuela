@@ -1,0 +1,30 @@
+// Flag icons — subconjunto local (solo países del dropdown de teléfono)
+// Los SVGs vienen de node_modules/flag-icons/flags/1x1/ copiados como assets
+// a /flags/ (ver angular.json assets config). No pasan por esbuild bundling.
+
+.fi {
+  background-size: contain;
+  background-position: 50%;
+  background-repeat: no-repeat;
+  position: relative;
+  display: inline-block;
+  width: 1.333em;
+  line-height: 1em;
+
+  &::before {
+    content: ' ';
+  }
+
+  &.fis {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+$flag-codes: 'cl', 'ar', 'pe', 'bo', 'co', 've', 'es', 'us';
+
+@each $code in $flag-codes {
+  .fi-#{$code}.fis {
+    background-image: url('/flags/#{$code}.svg');
+  }
+}
