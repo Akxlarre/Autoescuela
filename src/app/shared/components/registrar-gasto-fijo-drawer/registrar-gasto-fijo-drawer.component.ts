@@ -32,7 +32,7 @@ import {
 
       <!-- Panel -->
       <div
-        class="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:w-[420px] shadow-2xl"
+        class="fixed inset-y-0 right-0 z-50 flex flex-col w-full md:w-105 shadow-2xl"
         style="background: var(--bg-surface)"
         role="dialog"
         aria-modal="true"

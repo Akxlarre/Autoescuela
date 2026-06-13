@@ -93,10 +93,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
           <!-- ── Lista de cobros por alumno ────────────────────────────────────── -->
           <div class="card p-0 overflow-hidden">
-            <div
-              class="px-4 py-3 border-b flex items-center gap-2 border-border-muted"
-              
-            >
+            <div class="px-4 py-3 border-b flex items-center gap-2 border-border-muted">
               <app-icon name="dollar-sign" [size]="16" color="var(--text-muted)" />
               <p class="text-sm font-semibold text-text-primary">Estado de cobro por alumno</p>
             </div>
@@ -105,7 +102,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               @for (i of [1, 2, 3]; track i) {
                 <div
                   class="px-4 py-3 flex items-center justify-between border-b border-border-muted"
-                  
                 >
                   <div class="flex flex-col gap-2">
                     <app-skeleton-block variant="text" width="140px" height="14px" />
@@ -122,7 +118,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               @for (alumno of facade.inscriptos(); track alumno.enrollmentId) {
                 <div
                   class="px-4 py-3 flex items-center justify-between gap-3 border-b last:border-b-0 border-border-muted"
-                  
                 >
                   <!-- Datos alumno -->
                   <div class="min-w-0">
@@ -131,8 +126,21 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                     </p>
                     <p class="text-xs text-text-muted">
                       {{ alumno.rutAlumno }}
-                      · {{ formatCLP(alumno.montoPagado) }}
+                      ·
+                      {{
+                        alumno.paymentStatus === 'paid'
+                          ? formatCLP(alumno.montoPagado)
+                          : 'A cobrar: ' + formatCLP(alumno.montoAPagar)
+                      }}
                     </p>
+                    @if (alumno.descuento > 0) {
+                      <p class="text-xs text-success">
+                        Descuento {{ formatCLP(alumno.descuento) }}
+                        @if (alumno.descuentoMotivo) {
+                          · {{ alumno.descuentoMotivo }}
+                        }
+                      </p>
+                    }
                   </div>
 
                   <!-- Estado + acción -->
@@ -140,7 +148,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                     @if (alumno.paymentStatus === 'paid') {
                       <span
                         class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-success bg-success/12"
-                        
                       >
                         <app-icon name="check-circle" [size]="12" />
                         Cobrado
@@ -171,7 +178,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
           @if (curso.tipo === 'sence') {
             <div
               class="px-4 py-3 rounded-lg text-xs text-text-secondary bg-brand/6 border border-brand/20"
-              
             >
               <strong class="text-brand">SENCE:</strong>
               Los cursos SENCE se facturan al organismo. El cobro al alumno es $0 si está 100%
@@ -205,11 +211,10 @@ export class AdminCursoSingularCobroDrawerComponent {
     () => this.facade.inscriptos().filter((i) => i.paymentStatus === 'paid').length,
   );
 
-  protected readonly totalCobrado = computed(() => {
-    const curso = this.facade.selectedCurso();
-    if (!curso) return 0;
-    return this.cobrados() * curso.precio;
-  });
+  /** Suma del dinero efectivamente recibido (respeta descuentos). */
+  protected readonly totalCobrado = computed(() =>
+    this.facade.inscriptos().reduce((s, i) => s + i.montoPagado, 0),
+  );
 
   protected async onMarcarPagado(alumno: InscriptoCursoSingular): Promise<void> {
     this._guardandoId.set(alumno.enrollmentId);

@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angular/forms';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
@@ -111,6 +113,29 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
             </div>
           </div>
 
+          <!-- Sede (solo admin: secretarias quedan ancladas a la suya) -->
+          @if (isAdmin()) {
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
+                Sede *
+              </label>
+              <p-select
+                formControlName="branchId"
+                [options]="branchOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona la sede"
+                styleClass="w-full"
+                data-llm-description="Sede a la que pertenece el curso singular"
+              />
+              @if (form.controls['branchId'].invalid && form.controls['branchId'].touched) {
+                <p class="text-xs text-state-error">
+                  El curso debe pertenecer a una sede específica.
+                </p>
+              }
+            </div>
+          }
+
           <!-- Cupos + Fecha inicio -->
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-1">
@@ -192,7 +217,15 @@ export class AdminCursoSingularCrearDrawerComponent {
   ];
 
   protected readonly facade = inject(CursosSingularesFacade);
+  private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+
+  protected readonly isAdmin = computed(() => this.auth.currentUser()?.role === 'admin');
+
+  protected readonly branchOptions = computed(() =>
+    this.branchFacade.branches().map((b) => ({ label: b.name, value: b.id })),
+  );
 
   protected readonly form = new FormGroup({
     nombre: new FormControl('', [Validators.required, Validators.minLength(3)]),
@@ -205,7 +238,16 @@ export class AdminCursoSingularCrearDrawerComponent {
     duracionHoras: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
     cupos: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
     inicio: new FormControl('', Validators.required),
+    // Admin: pre-carga la sede activa del topbar (null en "Todas" → debe elegir).
+    // Secretaria: anclada a su sede, sin selector visible.
+    branchId: new FormControl<number | null>(this.resolveInitialBranchId(), Validators.required),
   });
+
+  private resolveInitialBranchId(): number | null {
+    const user = this.auth.currentUser();
+    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
+    return user?.branchId ?? null;
+  }
 
   protected async onGuardar(): Promise<void> {
     if (this.form.invalid) {
@@ -221,6 +263,7 @@ export class AdminCursoSingularCrearDrawerComponent {
       duracionHoras: v.duracionHoras!,
       cupos: v.cupos!,
       inicio: v.inicio!,
+      branchId: v.branchId!,
     });
     if (ok) this.layoutDrawer.close();
   }

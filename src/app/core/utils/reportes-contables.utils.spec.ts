@@ -7,6 +7,7 @@ import {
   computeIngresosCategoria,
   computeKpis,
   filterPaymentsByBranch,
+  mapSingularSaleToPaymentRow,
   type ExpenseRow,
   type PaymentRow,
 } from './reportes-contables.utils';
@@ -246,5 +247,79 @@ describe('buildReporte', () => {
     expect(reporte.evolucionMensual).toEqual([]);
     expect(reporte.detalleDiario).toEqual([]);
     expect(reporte.diasConMovimientos).toBe(0);
+  });
+});
+
+// ── fix-016: cursos singulares como categoría de ingreso ──────────────────────
+
+describe('cursos singulares (standalone) en el reporte', () => {
+  it('mapSingularSaleToPaymentRow normaliza el cobro a PaymentRow', () => {
+    const row = mapSingularSaleToPaymentRow({
+      amount_paid: 200_000,
+      paid_at: '2026-04-10T15:30:00+00:00',
+      branch_id: 2,
+    });
+    expect(row.total_amount).toBe(200_000);
+    expect(row.type).toBe('standalone');
+    expect(row.payment_date).toBe('2026-04-10');
+    expect(row.enrollments[0]).toEqual({ branch_id: 2, license_group: 'standalone' });
+  });
+
+  it('mapSingularSaleToPaymentRow tolera amount_paid y paid_at nulos', () => {
+    const row = mapSingularSaleToPaymentRow({ amount_paid: null, paid_at: null, branch_id: 1 });
+    expect(row.total_amount).toBe(0);
+    expect(row.payment_date).toBeNull();
+  });
+
+  it('aparece como categoría "Cursos Singulares" en computeIngresosCategoria', () => {
+    const payments = [
+      ...PAYMENTS,
+      mapSingularSaleToPaymentRow({
+        amount_paid: 220_000,
+        paid_at: '2026-04-10T12:00:00+00:00',
+        branch_id: 1,
+      }),
+    ];
+    const categorias = computeIngresosCategoria(payments, false);
+    const singular = categorias.find((c) => c.nombre === 'Cursos Singulares');
+    expect(singular).toBeDefined();
+    expect(singular!.monto).toBe(220_000);
+    expect(singular!.operaciones).toBe(1);
+  });
+
+  it('con showBranch incluye la sede en la etiqueta', () => {
+    const payments = [
+      mapSingularSaleToPaymentRow({
+        amount_paid: 220_000,
+        paid_at: '2026-04-10T12:00:00+00:00',
+        branch_id: 1,
+      }),
+    ];
+    const categorias = computeIngresosCategoria(payments, true);
+    expect(categorias[0].nombre).toBe('Cursos Singulares (A. Chillán)');
+  });
+
+  it('filterPaymentsByBranch respeta la sede del curso singular', () => {
+    const payments = [
+      mapSingularSaleToPaymentRow({ amount_paid: 100, paid_at: '2026-04-10', branch_id: 1 }),
+      mapSingularSaleToPaymentRow({ amount_paid: 200, paid_at: '2026-04-10', branch_id: 2 }),
+    ];
+    expect(filterPaymentsByBranch(payments, 1)).toHaveLength(1);
+    expect(filterPaymentsByBranch(payments, 2)[0].total_amount).toBe(200);
+  });
+
+  it('suma en los KPIs y en el detalle diario como cualquier ingreso', () => {
+    const payments = [
+      mkPayment(100_000, 'enrollment', 'class_b', 1, '2026-04-10'),
+      mapSingularSaleToPaymentRow({
+        amount_paid: 220_000,
+        paid_at: '2026-04-10T12:00:00+00:00',
+        branch_id: 1,
+      }),
+    ];
+    expect(computeKpis(payments, []).totalIngresos).toBe(320_000);
+    const dia = computeDetalleDiario(payments, []).find((d) => d.fecha === '2026-04-10');
+    expect(dia?.ingresos).toBe(320_000);
+    expect(dia?.operaciones).toBe(2);
   });
 });

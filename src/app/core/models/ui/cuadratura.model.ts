@@ -1,6 +1,12 @@
-/** Fila de ingreso (payment) para la tabla de cuadratura diaria. */
+/** Fila de ingreso (payment o cobro de curso singular) para la cuadratura diaria. */
 export interface IngresoRow {
   id: number;
+  /**
+   * Origen del ingreso: 'payment' = tabla payments (matrículas/servicios);
+   * 'singular' = cobro de standalone_course_enrollments (cursos singulares).
+   * Determina cómo se revierte al eliminar.
+   */
+  source: 'payment' | 'singular';
   /** FK a enrollments — necesario para revertir saldos al eliminar. */
   enrollmentId: number | null;
   nBoleta: string | null;

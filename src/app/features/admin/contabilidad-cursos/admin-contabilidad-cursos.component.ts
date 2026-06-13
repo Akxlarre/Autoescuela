@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   OnInit,
@@ -10,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import type { CursoSingularRow } from '@core/models/ui/cursos-singulares.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -104,7 +106,7 @@ const BILLING_LABEL: Record<string, string> = {
         #heroRef
         title="Cursos Singulares"
         contextLine="Contabilidad"
-        subtitle="RF-035 · Cobro simplificado de cursos SENCE, Grúa, Retroexcavadora"
+        subtitle="Cobro simplificado de cursos SENCE, Grúa, Retroexcavadora"
         icon="graduation-cap"
         [actions]="heroActions"
         (actionClick)="onHeroAction($event)"
@@ -134,18 +136,27 @@ const BILLING_LABEL: Record<string, string> = {
 
       <div class="bento-square">
         <app-kpi-card-variant
-          [value]="facade.kpis().ingresosEstimados"
-          label="Ingresos"
+          [value]="facade.kpis().ingresosCobrados"
+          label="Ingresos Cobrados"
           icon="dollar-sign"
           prefix="$"
-          subValue="cursos no cancelados"
+          subValue="dinero recibido real"
           color="success"
           [loading]="facade.isLoading()"
         />
       </div>
 
-      <!-- Espacio reservado para completar la fila o KPI adicional -->
-      <div class="bento-square opacity-0 pointer-events-none hidden lg:block"></div>
+      <div class="bento-square">
+        <app-kpi-card-variant
+          [value]="facade.kpis().porCobrar"
+          label="Por Cobrar"
+          icon="clock"
+          prefix="$"
+          subValue="saldos pendientes"
+          [color]="facade.kpis().porCobrar > 0 ? 'warning' : 'default'"
+          [loading]="facade.isLoading()"
+        />
+      </div>
 
       <!-- ── Contenido Principal (Listado) ─────────────────────────────────── -->
       <div class="bento-banner">
@@ -153,7 +164,7 @@ const BILLING_LABEL: Record<string, string> = {
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div class="flex items-center gap-2">
               <app-icon name="list" [size]="18" color="var(--ds-brand)" />
-              <h2 class="text-base font-bold text-text-primary">Listado de Cursos</h2>
+              <h2 class="font-bold text-text-primary">Listado de Cursos</h2>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -250,16 +261,21 @@ const BILLING_LABEL: Record<string, string> = {
                     </div>
                     <div class="py-3 px-4 flex flex-col gap-0.5 text-right">
                       <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                        Ingreso Est.
+                        Cobrado
                       </p>
                       <p
                         class="text-sm font-bold"
                         [style.color]="
-                          curso.estado !== 'upcoming' ? 'var(--state-success)' : 'var(--text-muted)'
+                          curso.ingresoCobrado > 0 ? 'var(--state-success)' : 'var(--text-muted)'
                         "
                       >
-                        {{ curso.estado !== 'upcoming' ? formatCLP(curso.ingresoEstimado) : '—' }}
+                        {{ formatCLP(curso.ingresoCobrado) }}
                       </p>
+                      @if (curso.porCobrar > 0) {
+                        <p class="text-xs" [style.color]="'var(--state-warning)'">
+                          {{ formatCLP(curso.porCobrar) }} pendiente
+                        </p>
+                      }
                     </div>
                   </div>
 
@@ -306,7 +322,7 @@ const BILLING_LABEL: Record<string, string> = {
                     inscritos
                   </span>
                   <span class="text-sm font-bold text-success">
-                    {{ formatCLP(totales().ingresos) }}
+                    {{ formatCLP(totales().cobrado) }}
                   </span>
                 </div>
               </div>
@@ -353,16 +369,7 @@ const BILLING_LABEL: Record<string, string> = {
                   </tr>
                 } @else {
                   @for (curso of cursosFiltrados(); track curso.id) {
-                    <tr
-                      class="transition-colors"
-                      (mouseenter)="
-                        $any($event.currentTarget)?.setAttribute(
-                          'style',
-                          'background:color-mix(in srgb,var(--color-primary) 4%,transparent)'
-                        )
-                      "
-                      (mouseleave)="$any($event.currentTarget)?.setAttribute('style', '')"
-                    >
+                    <tr class="curso-row transition-colors">
                       <td class="py-3 px-4">
                         <p class="text-sm font-medium text-text-primary">
                           {{ curso.nombre }}
@@ -416,47 +423,30 @@ const BILLING_LABEL: Record<string, string> = {
                         <span
                           class="text-sm font-bold"
                           [style.color]="
-                            curso.estado !== 'upcoming'
-                              ? 'var(--state-success)'
-                              : 'var(--text-muted)'
+                            curso.ingresoCobrado > 0 ? 'var(--state-success)' : 'var(--text-muted)'
                           "
-                          >{{
-                            curso.estado !== 'upcoming' ? formatCLP(curso.ingresoEstimado) : '—'
-                          }}</span
+                          >{{ formatCLP(curso.ingresoCobrado) }}</span
                         >
+                        @if (curso.porCobrar > 0) {
+                          <p class="text-xs" [style.color]="'var(--state-warning)'">
+                            {{ formatCLP(curso.porCobrar) }} pend.
+                          </p>
+                        }
                       </td>
                       <td class="py-3 px-4 text-center">
                         <div class="flex items-center justify-center gap-1">
                           <button
-                            class="p-1.5 rounded transition-colors cursor-pointer text-text-muted"
+                            class="accion-btn accion-btn--ver p-1.5 rounded transition-colors cursor-pointer text-text-muted"
                             title="Ver detalle"
                             data-llm-action="view-curso-singular"
-                            (mouseenter)="
-                              $any($event.currentTarget).style.color = 'var(--color-primary)';
-                              $any($event.currentTarget).style.background =
-                                'color-mix(in srgb,var(--color-primary) 10%,transparent)'
-                            "
-                            (mouseleave)="
-                              $any($event.currentTarget).style.color = 'var(--text-muted)';
-                              $any($event.currentTarget).style.background = 'transparent'
-                            "
                             (click)="onVerDetalle(curso)"
                           >
                             <app-icon name="eye" [size]="16" />
                           </button>
                           <button
-                            class="p-1.5 rounded transition-colors cursor-pointer text-text-muted"
+                            class="accion-btn accion-btn--cobro p-1.5 rounded transition-colors cursor-pointer text-text-muted"
                             title="Registrar cobro"
                             data-llm-action="registrar-cobro-singular"
-                            (mouseenter)="
-                              $any($event.currentTarget).style.color = 'var(--state-success)';
-                              $any($event.currentTarget).style.background =
-                                'color-mix(in srgb,var(--state-success) 10%,transparent)'
-                            "
-                            (mouseleave)="
-                              $any($event.currentTarget).style.color = 'var(--text-muted)';
-                              $any($event.currentTarget).style.background = 'transparent'
-                            "
                             (click)="onRegistrarCobro(curso)"
                           >
                             <app-icon name="dollar-sign" [size]="16" />
@@ -478,7 +468,7 @@ const BILLING_LABEL: Record<string, string> = {
                     </td>
                     <td colspan="2"></td>
                     <td class="py-3 px-4 text-right text-sm font-bold text-success">
-                      {{ formatCLP(totales().ingresos) }}
+                      {{ formatCLP(totales().cobrado) }}
                     </td>
                     <td></td>
                   </tr>
@@ -501,9 +491,25 @@ const BILLING_LABEL: Record<string, string> = {
       </div>
     </div>
   `,
+  styles: [
+    `
+      .curso-row:hover {
+        background: color-mix(in srgb, var(--color-primary) 4%, transparent);
+      }
+      .accion-btn--ver:hover {
+        color: var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+      }
+      .accion-btn--cobro:hover {
+        color: var(--state-success);
+        background: color-mix(in srgb, var(--state-success) 10%, transparent);
+      }
+    `,
+  ],
 })
 export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(CursosSingularesFacade);
+  private readonly branchFacade = inject(BranchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
@@ -522,7 +528,7 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
     { label: 'Inscritos', align: 'center' as const },
     { label: 'Estado', align: 'center' as const },
     { label: 'Facturación', align: 'center' as const },
-    { label: 'Ingreso Est.', align: 'right' as const },
+    { label: 'Cobrado', align: 'right' as const },
     { label: 'Acciones', align: 'center' as const },
   ];
 
@@ -558,14 +564,13 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
     });
   });
 
-  /** Totales de la fila footer de la tabla filtrada. */
+  /** Totales de la fila footer de la tabla filtrada — mismo criterio que los KPIs. */
   protected readonly totales = computed(() => {
     const lista = this.cursosFiltrados();
     return {
       inscritos: lista.reduce((s, c) => s + c.inscritos, 0),
-      ingresos: lista
-        .filter((c) => c.estado !== 'upcoming')
-        .reduce((s, c) => s + c.ingresoEstimado, 0),
+      cobrado: lista.reduce((s, c) => s + c.ingresoCobrado, 0),
+      porCobrar: lista.reduce((s, c) => s + c.porCobrar, 0),
     };
   });
 
@@ -574,6 +579,15 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
+
+  constructor() {
+    // Reactividad de sede: el initialize() del facade detecta el cambio de
+    // branch (_lastBranchId) y recarga la lista con skeleton (facades.md §7).
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      void this.facade.initialize();
+    });
+  }
 
   ngOnInit(): void {
     void this.facade.initialize();

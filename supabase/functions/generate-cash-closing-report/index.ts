@@ -100,6 +100,27 @@ Deno.serve(async (req: Request) => {
     const { data: rawPayments, error: payErr } = await paymentsQ;
     if (payErr) throw payErr;
 
+    // ── Cobros de cursos singulares del día (fix-016 AC3) ──────────────────────
+    // No existen en `payments`: viven en standalone_course_enrollments.paid_at.
+    let singularsQ = adminClient
+      .from('standalone_course_enrollments')
+      .select(
+        `id, paid_at, amount_paid, payment_method,
+         standalone_courses!inner(name, branch_id),
+         students!inner(users!inner(first_names, paternal_last_name, rut))`,
+      )
+      .eq('payment_status', 'paid')
+      .gte('paid_at', dayStart)
+      .lte('paid_at', dayEnd)
+      .order('paid_at', { ascending: true });
+
+    if (branchId !== null) {
+      singularsQ = singularsQ.eq('standalone_courses.branch_id', branchId);
+    }
+
+    const { data: rawSingulars, error: singErr } = await singularsQ;
+    if (singErr) throw singErr;
+
     // ── Egresos del día (expenses) ─────────────────────────────────────────────
     let expQ = adminClient
       .from('expenses')
@@ -136,7 +157,7 @@ Deno.serve(async (req: Request) => {
     // ── Normalizar datos ───────────────────────────────────────────────────────
     const FONDO_INICIAL = 50_000;
 
-    const ingresos: IngresoRow[] = (rawPayments ?? []).map((p: any) => ({
+    const ingresosPagos: IngresoRow[] = (rawPayments ?? []).map((p: any) => ({
       hora: formatTimeCL(p.created_at),
       nBoleta: p.document_number ?? '—',
       alumno: formatAlumno(p.enrollments?.students?.users),
@@ -148,6 +169,29 @@ Deno.serve(async (req: Request) => {
       otros: p.card_amount ?? 0,
       total: p.total_amount ?? 0,
     }));
+
+    // Mismos buckets que CuadraturaFacade.mapSingularSaleToIngreso():
+    // efectivo→efectivo · transferencia→transferencia · tarjeta→otros · sence→sence
+    const ingresosSingulares: IngresoRow[] = (rawSingulars ?? []).map((s: any) => {
+      const monto = s.amount_paid ?? 0;
+      const metodo = s.payment_method ?? 'efectivo';
+      return {
+        hora: formatTimeCL(s.paid_at),
+        nBoleta: '—',
+        alumno: formatAlumno(s.students?.users),
+        rut: s.students?.users?.rut ?? '—',
+        concepto: `Curso: ${s.standalone_courses?.name ?? 'singular'}`,
+        efectivo: metodo === 'efectivo' ? monto : 0,
+        transferencia: metodo === 'transferencia' ? monto : 0,
+        sence: metodo === 'sence' ? monto : 0,
+        otros: metodo === 'tarjeta' ? monto : 0,
+        total: monto,
+      };
+    });
+
+    const ingresos: IngresoRow[] = [...ingresosPagos, ...ingresosSingulares].sort((a, b) =>
+      a.hora.localeCompare(b.hora),
+    );
 
     const egresos: EgresoRow[] = [
       ...(expRes.data ?? []).map((e: any) => ({

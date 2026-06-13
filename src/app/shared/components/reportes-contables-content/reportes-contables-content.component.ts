@@ -12,7 +12,6 @@ import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
-import { RegistrarGastoFijoDrawerComponent } from '@shared/components/registrar-gasto-fijo-drawer/registrar-gasto-fijo-drawer.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import {
@@ -25,7 +24,6 @@ import {
   type FiltrosReporte,
   type GastoFijoRow,
   type RangoReporte,
-  type RegistrarGastoFijoPayload,
   type ReporteKpis,
 } from '@core/models/ui/reportes-contables.model';
 
@@ -36,7 +34,6 @@ import {
     IconComponent,
     SectionHeroComponent,
     KpiCardVariantComponent,
-    RegistrarGastoFijoDrawerComponent,
     FormsModule,
     SelectModule,
     DateInputComponent,
@@ -374,7 +371,7 @@ import {
           <div class="card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <span class="cat-section-dot dot--success"></span>
-              <h2 class="text-base font-semibold text-text-primary">Ingresos por Categoría</h2>
+              <h2 class="font-semibold text-text-primary">Ingresos por Categoría</h2>
             </div>
 
             <div class="flex flex-col gap-4">
@@ -422,7 +419,7 @@ import {
           <div class="card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <span class="cat-section-dot dot--error"></span>
-              <h2 class="text-base font-semibold text-text-primary">Gastos por Categoría</h2>
+              <h2 class="font-semibold text-text-primary">Gastos por Categoría</h2>
             </div>
 
             <div class="flex flex-col gap-4">
@@ -490,7 +487,7 @@ import {
             <button
               class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
               data-llm-action="abrir-registrar-gasto-fijo"
-              (click)="drawerVisible.set(true)"
+              (click)="registrarGastoClick.emit()"
             >
               <app-icon name="plus" [size]="14" />
               Registrar Gasto Fijo
@@ -564,7 +561,7 @@ import {
       @if (!isLoading() && evolucionMensual().length) {
         <div class="card p-5">
           <h2
-            class="text-base font-semibold text-text-primary"
+            class="font-semibold text-text-primary"
             style="margin-bottom: var(--space-4)"
           >
             Evolución Mensual
@@ -610,7 +607,7 @@ import {
       @if (!isLoading() && detalleDiario().length) {
         <div class="card p-5">
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 class="text-base font-semibold text-text-primary">Detalle Diario</h2>
+            <h2 class="font-semibold text-text-primary">Detalle Diario</h2>
             <span class="text-sm text-brand font-medium">
               {{ diasConMovimientos() }} días con movimientos
             </span>
@@ -677,14 +674,6 @@ import {
         </div>
       }
     </div>
-
-    <!-- ── Drawer: Registrar Gasto Fijo ──────────────────────────────────────── -->
-    <app-registrar-gasto-fijo-drawer
-      [visible]="drawerVisible()"
-      [isSaving]="isRegistrando()"
-      (guardar)="onGuardarGastoFijo($event)"
-      (cerrar)="drawerVisible.set(false)"
-    />
   `,
 })
 export class ReportesContablesContentComponent {
@@ -698,20 +687,18 @@ export class ReportesContablesContentComponent {
   readonly escuela = input<string>('');
   readonly isLoading = input<boolean>(false);
   readonly isExporting = input<boolean>(false);
-  readonly isRegistrando = input<boolean>(false);
   readonly gastosFijos = input<GastoFijoRow[]>([]);
   readonly filtros = input.required<FiltrosReporte>();
 
   // ── Outputs ────────────────────────────────────────────────────────────────
   readonly aplicarFiltros = output<FiltrosReporte>();
   readonly exportRequested = output<'excel' | 'pdf'>();
-  readonly registrarGasto = output<RegistrarGastoFijoPayload>();
+  readonly registrarGastoClick = output<void>();
   /** Emite la fecha (YYYY-MM-DD) cuando el usuario hace clic en "Ver detalle". */
   readonly verDetalle = output<string>();
 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly exportMenuOpen = signal(false);
-  protected readonly drawerVisible = signal(false);
 
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {
@@ -790,11 +777,6 @@ export class ReportesContablesContentComponent {
   protected requestExport(format: 'excel' | 'pdf'): void {
     this.exportMenuOpen.set(false);
     this.exportRequested.emit(format);
-  }
-
-  protected onGuardarGastoFijo(payload: RegistrarGastoFijoPayload): void {
-    this.registrarGasto.emit(payload);
-    this.drawerVisible.set(false);
   }
 
   protected onRangoChange(rango: RangoReporte): void {
