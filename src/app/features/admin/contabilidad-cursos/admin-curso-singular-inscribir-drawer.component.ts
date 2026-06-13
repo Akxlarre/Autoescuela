@@ -7,11 +7,13 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import type { Gender } from '@core/models/ui/enrollment-personal-data.model';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { formatRut, validateRut, normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -21,6 +23,12 @@ import type {
   SingularPaymentForm,
   SingularPaymentMethod,
 } from '@core/models/ui/cursos-singulares.model';
+
+const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
+  { value: 'M', label: 'Masculino' },
+  { value: 'F', label: 'Femenino' },
+  { value: 'X', label: 'Prefiero no especificar' },
+];
 
 const EMPTY_PERSONAL: SingularPersonalDataForm = {
   rut: '',
@@ -60,19 +68,19 @@ const PAYMENT_METHODS: {
   selector: 'app-admin-curso-singular-inscribir-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, AsyncBtnComponent, SkeletonBlockComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    AsyncBtnComponent,
+    SkeletonBlockComponent,
+    DateInputComponent,
+  ],
   template: `
     <div class="flex flex-col gap-6 p-1">
       <!-- ── Encabezado del curso ──────────────────────────────────────────── -->
       @if (facade.selectedCurso(); as curso) {
-        <div
-          class="flex items-center gap-3 p-3 rounded-xl border bg-brand/8 border-brand/20"
-          
-        >
-          <div
-            class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-brand/15"
-            
-          >
+        <div class="flex items-center gap-3 p-3 rounded-xl border bg-brand/8 border-brand/20">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-brand/15">
             <app-icon name="star" [size]="16" color="var(--ds-brand)" />
           </div>
           <div class="min-w-0">
@@ -172,7 +180,6 @@ const PAYMENT_METHODS: {
           @if (facade.studentSearch(); as found) {
             <div
               class="flex items-center gap-3 p-3 rounded-xl border bg-success/8 border-success/25"
-              
             >
               <app-icon name="check-circle" [size]="18" color="var(--state-success)" />
               <div>
@@ -183,10 +190,7 @@ const PAYMENT_METHODS: {
               </div>
             </div>
           } @else if (facade.studentNotFound()) {
-            <div
-              class="flex items-start gap-3 p-3 rounded-xl border bg-info/8 border-info/25"
-              
-            >
+            <div class="flex items-start gap-3 p-3 rounded-xl border bg-info/8 border-info/25">
               <app-icon
                 name="alert-circle"
                 [size]="18"
@@ -271,28 +275,43 @@ const PAYMENT_METHODS: {
 
               <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1">
-                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                    >Fecha de nacimiento</label
-                  >
-                  <input
-                    type="date"
-                    [(ngModel)]="form().birthDate"
-                    (ngModelChange)="patchForm('birthDate', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                  <app-date-input
+                    label="Fecha de nacimiento"
+                    [value]="form().birthDate"
+                    (valueChange)="patchForm('birthDate', $event)"
                   />
                 </div>
                 <div class="flex flex-col gap-1">
                   <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Género</label
                   >
-                  <select
-                    [(ngModel)]="form().gender"
-                    (ngModelChange)="patchForm('gender', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                  <div
+                    class="flex rounded-lg overflow-hidden"
+                    [style.border]="'1.5px solid var(--border-default)'"
+                    role="radiogroup"
                   >
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                  </select>
+                    @for (opt of genderOptions; track opt.value; let last = $last) {
+                      <button
+                        type="button"
+                        class="flex-1 py-2 text-xs text-center cursor-pointer transition-all"
+                        [style.background]="
+                          form().gender === opt.value
+                            ? 'color-mix(in srgb, var(--ds-brand) 10%, transparent)'
+                            : 'var(--bg-surface)'
+                        "
+                        [style.color]="
+                          form().gender === opt.value ? 'var(--ds-brand)' : 'var(--text-secondary)'
+                        "
+                        [style.font-weight]="form().gender === opt.value ? '600' : '400'"
+                        [style.border-right]="!last ? '1px solid var(--border-default)' : 'none'"
+                        (click)="patchForm('gender', opt.value)"
+                        [attr.aria-pressed]="form().gender === opt.value"
+                        [attr.data-llm-action]="'select-gender-' + opt.value"
+                      >
+                        {{ opt.label }}
+                      </button>
+                    }
+                  </div>
                 </div>
               </div>
 
@@ -310,10 +329,7 @@ const PAYMENT_METHODS: {
               </div>
 
               @if (facade.error()) {
-                <p
-                  class="text-xs px-3 py-2 rounded-lg text-error bg-error/10"
-                  
-                >
+                <p class="text-xs px-3 py-2 rounded-lg text-error bg-error/10">
                   {{ facade.error() }}
                 </p>
               }
@@ -346,10 +362,7 @@ const PAYMENT_METHODS: {
           </div>
 
           <!-- Resumen financiero -->
-          <div
-            class="rounded-2xl p-5 relative overflow-hidden"
-            class="bg-[#0a0a0a] text-white"
-          >
+          <div class="rounded-2xl p-5 relative overflow-hidden" class="bg-[#0a0a0a] text-white">
             <div class="absolute right-0 top-0 p-6 opacity-10 pointer-events-none">
               <app-icon name="banknote" [size]="56" color="white" />
             </div>
@@ -393,7 +406,6 @@ const PAYMENT_METHODS: {
           } @else if (discountApplied()) {
             <div
               class="flex items-center justify-between p-3 rounded-xl border bg-success/8 border-success/25"
-              
             >
               <div class="flex items-center gap-2">
                 <app-icon name="tag" [size]="15" color="var(--state-success)" />
@@ -405,7 +417,6 @@ const PAYMENT_METHODS: {
               <button
                 type="button"
                 class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors text-error bg-error/10"
-                
                 (click)="clearDiscount()"
                 data-llm-action="quitar-descuento-singular"
               >
@@ -504,10 +515,7 @@ const PAYMENT_METHODS: {
           </div>
 
           @if (facade.error()) {
-            <p
-              class="text-xs px-3 py-2 rounded-lg text-error bg-error/10"
-              
-            >
+            <p class="text-xs px-3 py-2 rounded-lg text-error bg-error/10">
               {{ facade.error() }}
             </p>
           }
@@ -546,6 +554,8 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
   protected readonly formatCLP = formatCLP;
 
   // ── Estado local — Step 1 ─────────────────────────────────────────────────
+  protected readonly genderOptions = GENDER_OPTIONS;
+
   protected readonly rutInput = signal('');
   protected readonly form = signal<SingularPersonalDataForm>({ ...EMPTY_PERSONAL });
 

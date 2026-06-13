@@ -1,13 +1,23 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { AnticiosFacade } from '@core/facades/anticipos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+
+const MOTIVO_OPTIONS = [
+  { value: '', label: 'Sin categoría' },
+  { value: 'salary', label: 'Anticipo de sueldo' },
+  { value: 'allowance', label: 'Anticipo viático' },
+  { value: 'materials', label: 'Anticipo materiales' },
+  { value: 'other', label: 'Otros' },
+];
 
 @Component({
   selector: 'app-registrar-anticipo-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, SelectModule, IconComponent, DateInputComponent],
   template: `
     <div class="flex flex-col h-full">
       <!-- Cuerpo del formulario -->
@@ -18,18 +28,17 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <label for="ant-instructor" class="field-label">
               INSTRUCTOR <span class="text-error">*</span>
             </label>
-            <select
+            <p-select
               id="ant-instructor"
               formControlName="instructorId"
-              class="field-input field-select"
+              [options]="facade.instructores()"
+              optionLabel="nombre"
+              optionValue="id"
+              styleClass="w-full"
+              placeholder="Seleccionar instructor..."
               data-llm-description="Selector del instructor al que se registra el anticipo"
               [class.field-input--error]="isInvalid('instructorId')"
-            >
-              <option value="" disabled>Seleccionar instructor...</option>
-              @for (inst of facade.instructores(); track inst.id) {
-                <option [value]="inst.id">{{ inst.nombre }}</option>
-              }
-            </select>
+            />
             @if (isInvalid('instructorId')) {
               <span class="field-error">Seleccione un instructor.</span>
             }
@@ -37,16 +46,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 
           <!-- Fecha -->
           <div class="flex flex-col gap-1.5">
-            <label for="ant-fecha" class="field-label">
-              FECHA <span class="text-error">*</span>
-            </label>
-            <input
-              id="ant-fecha"
-              type="date"
-              formControlName="date"
-              class="field-input"
+            <app-date-input
+              label="Fecha"
+              [required]="true"
+              [value]="form.get('date')?.value ?? ''"
+              (valueChange)="form.get('date')?.setValue($event); form.get('date')?.markAsTouched()"
               data-llm-description="Fecha del anticipo"
-              [class.field-input--error]="isInvalid('date')"
             />
             @if (isInvalid('date')) {
               <span class="field-error">Ingrese una fecha válida.</span>
@@ -79,18 +84,15 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <!-- Motivo -->
           <div class="flex flex-col gap-1.5">
             <label for="ant-reason" class="field-label">MOTIVO</label>
-            <select
+            <p-select
               id="ant-reason"
               formControlName="reason"
-              class="field-input field-select"
+              [options]="motivoOptions"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
               data-llm-description="Categoría o motivo del anticipo"
-            >
-              <option value="">Sin categoría</option>
-              <option value="salary">Anticipo de sueldo</option>
-              <option value="allowance">Anticipo viático</option>
-              <option value="materials">Anticipo materiales</option>
-              <option value="other">Otros</option>
-            </select>
+            />
           </div>
 
           <!-- Descripción libre -->
@@ -142,6 +144,8 @@ export class RegistrarAnticipoDrawerComponent {
   protected readonly facade = inject(AnticiosFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
+
+  protected readonly motivoOptions = MOTIVO_OPTIONS;
 
   protected readonly errorMsg = signal<string | null>(null);
 

@@ -81,7 +81,7 @@ export interface SingularPersonalDataForm {
   email: string;
   phone: string;
   birthDate: string;
-  gender: 'M' | 'F';
+  gender: 'M' | 'F' | 'X';
   address: string;
 }
 

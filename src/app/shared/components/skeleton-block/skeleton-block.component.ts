@@ -22,6 +22,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       [class.!rounded-sm]="variant() === 'text'"
       [style.width]="width()"
       [style.height]="variant() === 'text' ? '1em' : height()"
+      [style.border-radius]="borderRadius()"
       [style.background-color]="'var(--bg-subtle)'"
       aria-hidden="true"
     ></div>
@@ -32,6 +33,7 @@ export class SkeletonBlockComponent implements OnDestroy {
   readonly variant = input<'rect' | 'circle' | 'text'>('rect');
   readonly width = input('100%');
   readonly height = input('16px');
+  readonly borderRadius = input<string | undefined>();
 
   private readonly block = viewChild.required<ElementRef<HTMLElement>>('block');
   private readonly gsap = inject(GsapAnimationsService);

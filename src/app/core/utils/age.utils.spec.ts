@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcAge, isMinor, getAgeStatus } from './age.utils';
+import { calcAge, isMinor, getAgeStatus, isInvalidDate } from './age.utils';
 
 function buildBirthDate(yearsAgo: number): string {
   const d = new Date();
@@ -77,5 +77,35 @@ describe('getAgeStatus()', () => {
     ]) {
       expect(getAgeStatus(buildBirthDate(19), type)).toBe('under-20-professional');
     }
+  });
+});
+
+describe('isInvalidDate()', () => {
+  it('detecta 29/02 en año no bisiesto como inválida (AC-E5)', () => {
+    expect(isInvalidDate('2001-02-29')).toBe(true);
+  });
+
+  it('acepta 29/02 en año bisiesto como válida (AC20)', () => {
+    expect(isInvalidDate('2000-02-29')).toBe(false);
+  });
+
+  it('acepta fecha normal como válida', () => {
+    expect(isInvalidDate('1990-06-15')).toBe(false);
+  });
+
+  it('retorna false con string vacío (ausencia ≠ fecha imposible)', () => {
+    expect(isInvalidDate('')).toBe(false);
+  });
+
+  it('retorna false con string malformado (no es fecha imposible)', () => {
+    expect(isInvalidDate('abc')).toBe(false);
+  });
+
+  it('acepta 2024-02-29 (año bisiesto 2024)', () => {
+    expect(isInvalidDate('2024-02-29')).toBe(false);
+  });
+
+  it('detecta 31 de abril como inválido', () => {
+    expect(isInvalidDate('2023-04-31')).toBe(true);
   });
 });

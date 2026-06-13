@@ -30,6 +30,7 @@
               type="text"
               [ngModel]="data().rut"
               (ngModelChange)="onRutInput($event)"
+              (change)="onRutInput($any($event.target).value)"
               (keydown)="onRutKeydown($event)"
               (paste)="onRutPaste($event)"
               placeholder="12.345.678-9"
@@ -82,6 +83,7 @@
               type="text"
               [ngModel]="data().firstNames"
               (ngModelChange)="emitField('firstNames', $event)"
+              (change)="emitField('firstNames', $any($event.target).value)"
               placeholder="Juan Pablo"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
               [class.border-state-error]="
@@ -102,6 +104,7 @@
               type="text"
               [ngModel]="data().paternalLastName"
               (ngModelChange)="emitField('paternalLastName', $event)"
+              (change)="emitField('paternalLastName', $any($event.target).value)"
               placeholder="González"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
               [class.border-state-error]="
@@ -122,6 +125,7 @@
               type="text"
               [ngModel]="data().maternalLastName"
               (ngModelChange)="emitField('maternalLastName', $event)"
+              (change)="emitField('maternalLastName', $any($event.target).value)"
               placeholder="Pérez"
               class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
@@ -131,16 +135,12 @@
         <!-- Fecha de nacimiento, Email y Teléfono -->
         <div class="grid md:grid-cols-3 gap-4">
           <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-secondary" for="birthDate">
-              Fecha de nacimiento <span class="text-state-error">*</span>
-            </label>
-            <input
-              id="birthDate"
-              name="birthDate"
-              type="date"
-              [ngModel]="data().birthDate"
-              (ngModelChange)="emitField('birthDate', $event)"
-              class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
+            <app-date-input
+              label="Fecha de nacimiento"
+              [required]="true"
+              [value]="data().birthDate"
+              (valueChange)="emitField('birthDate', $event)"
+              data-llm-description="Student birth date for enrollment age verification"
             />
           </div>
           <app-email-input
@@ -160,6 +160,7 @@
               type="tel"
               [ngModel]="data().phone"
               (ngModelChange)="emitField('phone', $event)"
+              (change)="emitField('phone', $any($event.target).value)"
               placeholder="+56 9 1234 5678"
               class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
             />
@@ -231,6 +232,7 @@
             type="text"
             [ngModel]="data().address"
             (ngModelChange)="emitField('address', $event)"
+            (change)="emitField('address', $any($event.target).value)"
             placeholder="Calle Ejemplo 123, Depto 45"
             class="w-full h-11 px-4 text-sm bg-surface border border-border-default rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
           />

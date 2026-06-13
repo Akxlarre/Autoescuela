@@ -7,6 +7,7 @@ import { TasksFacade } from '@core/facades/tasks.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { TaskCreateContextService } from '@core/services/ui/task-create-context.service';
 import type { TaskType } from '@core/models/ui/task.model';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 const TYPE_OPTIONS: { label: string; value: TaskType }[] = [
   { label: 'Tarea', value: 'task' },
@@ -24,7 +25,7 @@ const ROLE_LABEL: Record<string, string> = {
   selector: 'app-task-create-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule, DateInputComponent],
   template: `
     <div class="flex flex-col gap-5 py-2">
       <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5">
@@ -106,18 +107,10 @@ const ROLE_LABEL: Record<string, string> = {
         <!-- Fecha límite (solo type='task') -->
         @if (selectedType() === 'task') {
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-              for="t-due"
-            >
-              Fecha límite
-            </label>
-            <input
-              id="t-due"
-              type="date"
-              formControlName="due_date"
-              class="w-full h-11 px-3 text-sm rounded-xl border focus:ring-2 focus:outline-none transition-all"
-              class="border-border-default bg-surface text-text-primary"
+            <app-date-input
+              label="Fecha límite"
+              [value]="form.get('due_date')?.value ?? ''"
+              (valueChange)="form.get('due_date')?.setValue($event)"
               data-llm-description="task due date picker - only shown for task type"
             />
           </div>

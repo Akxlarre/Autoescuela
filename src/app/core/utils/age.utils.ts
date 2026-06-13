@@ -1,6 +1,23 @@
 import type { AgeAlertStatus } from '@core/models/ui/enrollment-personal-data.model';
 
 /**
+ * Returns true if the date string represents a calendar-impossible date
+ * (e.g. Feb 29 on a non-leap year, April 31).
+ * Returns false for empty strings and malformed input — those are "absent", not "impossible".
+ */
+export function isInvalidDate(dateStr: string): boolean {
+  if (!dateStr) return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!match) return false;
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10);
+  const day = parseInt(match[3], 10);
+  // Date constructor rolls over impossible dates (e.g. Feb 29 → Mar 1 in non-leap years).
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() !== year || date.getMonth() + 1 !== month || date.getDate() !== day;
+}
+
+/**
  * Determines the age-related alert status for the enrollment wizard.
  * Profesional age check (< 20) is evaluated BEFORE the minor check (< 18) so that
  * a 17-year-old selecting a professional course sees the professional restriction,

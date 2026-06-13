@@ -324,6 +324,14 @@ export class PublicEnrollmentFacade {
     return this._paymentMode() === 'partial' ? Math.ceil(total / 2) : total;
   });
 
+  readonly maxClassesPerDay = computed<number>(() => {
+    const pd = this._personalData();
+    if (!pd || pd.courseCategory !== 'non-professional') return 1;
+    const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
+    const course = this._courses().find((c) => c.license_class === licenseClass);
+    return (course as any)?.max_classes_per_day ?? 1;
+  });
+
   readonly canAdvance = computed<boolean>(() => {
     const step = this._currentStep();
     switch (step) {
@@ -1271,6 +1279,11 @@ export class PublicEnrollmentFacade {
 
     // Cargar cursos para que funcionen los computed signals
     void this.loadCourses(draft.branchId);
+    
+    // Cargar horario si hay slots seleccionados para que el resumen de pago los muestre
+    if (draft.selectedSlotIds && draft.selectedSlotIds.length > 0 && draft.instructorId) {
+      void this.loadScheduleGrid(draft.instructorId, true);
+    }
 
     this._hasDraftToRestore.set(false);
     this._draftMeta.set(null);
@@ -1615,6 +1628,8 @@ export class PublicEnrollmentFacade {
       basePrice: course.base_price ?? 0,
       durationWeeks: course.duration_weeks ?? null,
       practicalHours: course.practical_hours ?? null,
+      maxClassesPerDay: (course as any).max_classes_per_day ?? 1,
+      convalidation: course.is_convalidation ?? undefined,
     };
   }
 

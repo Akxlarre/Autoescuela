@@ -7,7 +7,9 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -19,7 +21,14 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
   selector: 'app-admin-iniciar-clase-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TooltipModule, ReactiveFormsModule, IconComponent, AlertCardComponent],
+  imports: [
+    TooltipModule,
+    FormsModule,
+    ReactiveFormsModule,
+    SelectModule,
+    IconComponent,
+    AlertCardComponent,
+  ],
   template: `
     @if (facade.selectedPractica(); as cls) {
       <!-- Ticket resumen -->
@@ -79,20 +88,15 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
             <label class="text-xs font-bold text-secondary uppercase tracking-widest">
               Vehículo
             </label>
-            <select
-              class="text-sm rounded-xl border px-3 py-2.5 bg-surface text-primary focus:outline-none cursor-pointer w-full"
-              [style.border-color]="'var(--border-default)'"
-              [value]="selectedVehicleId()"
-              (change)="onVehicleChange($event)"
+            <p-select
+              [ngModel]="selectedVehicleId()"
+              (ngModelChange)="onVehicleSelectChange($event)"
+              [options]="vehicleOptions()"
+              optionLabel="label"
+              optionValue="id"
+              styleClass="w-full"
               data-llm-description="Selector de vehículo para la clase práctica"
-            >
-              @for (v of facade.vehiclesPorSede(); track v.id) {
-                <option [value]="v.id" class="cursor-pointer">
-                  {{ v.plate }}{{ v.brand ? ' · ' + v.brand : ''
-                  }}{{ v.model ? ' ' + v.model : '' }}
-                </option>
-              }
-            </select>
+            />
           </div>
         }
 
@@ -193,6 +197,14 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     return this.facade.vehiclesPorSede().find((v) => v.id === id) ?? null;
   });
 
+  /** Opciones formateadas para p-select (plate · brand model). */
+  protected readonly vehicleOptions = computed(() =>
+    this.facade.vehiclesPorSede().map((v) => ({
+      id: v.id,
+      label: `${v.plate}${v.brand ? ' · ' + v.brand : ''}${v.model ? ' ' + v.model : ''}`,
+    })),
+  );
+
   form!: FormGroup;
 
   ngOnInit(): void {
@@ -210,8 +222,7 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     }
   }
 
-  protected onVehicleChange(event: Event): void {
-    const id = Number((event.target as HTMLSelectElement).value);
+  protected onVehicleSelectChange(id: number): void {
     this.selectedVehicleId.set(id);
     const vehicle = this.facade.vehiclesPorSede().find((v) => v.id === id);
     if (vehicle?.currentKm != null) {

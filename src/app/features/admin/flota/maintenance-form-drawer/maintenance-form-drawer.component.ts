@@ -21,7 +21,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { MessageModule } from 'primeng/message';
 import { TextareaModule } from 'primeng/textarea';
-import { DatePickerModule } from 'primeng/datepicker';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 // Shared
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -50,7 +50,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     InputNumberModule,
     MessageModule,
     TextareaModule,
-    DatePickerModule,
+    DateInputComponent,
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
@@ -128,18 +128,15 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
-                  <label
-                    for="mf-date"
-                    class="text-xs font-semibold text-text-muted uppercase tracking-wider"
-                  >
-                    Fecha Realización <span class="text-error">*</span>
-                  </label>
-                  <input
-                    id="mf-date"
-                    type="date"
-                    formControlName="completed_date"
-                    aria-required="true"
-                    class="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                  <app-date-input
+                    label="Fecha Realización"
+                    [required]="true"
+                    [value]="form.get('completed_date')?.value ?? ''"
+                    (valueChange)="
+                      form.get('completed_date')?.setValue($event);
+                      form.get('completed_date')?.markAsTouched()
+                    "
+                    data-llm-description="Fecha en que se realizó el mantenimiento"
                   />
                 </div>
               </div>

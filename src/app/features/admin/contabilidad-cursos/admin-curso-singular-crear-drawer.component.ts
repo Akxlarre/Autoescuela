@@ -7,6 +7,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 @Component({
   selector: 'app-admin-curso-singular-crear-drawer',
@@ -19,6 +20,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DateInputComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -124,13 +126,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Fecha inicio *
-              </label>
-              <input
-                formControlName="inicio"
-                type="date"
-                class="h-10 px-3 text-sm rounded-lg border w-full bg-base text-text-primary border-border-subtle focus:border-brand"
+              <app-date-input
+                label="Fecha inicio"
+                [required]="true"
+                [value]="form.controls['inicio'].value ?? ''"
+                (valueChange)="
+                  form.controls['inicio'].setValue($event); form.controls['inicio'].markAsTouched()
+                "
               />
               @if (form.controls['inicio'].invalid && form.controls['inicio'].touched) {
                 <p class="text-xs text-state-error">La fecha es requerida.</p>

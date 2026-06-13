@@ -237,6 +237,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         selectedSlotIds: slotIds,
         requiredCount,
         currentCount: slotIds.length,
+        maxClassesPerDay: selectedCourse?.maxClassesPerDay ?? 1,
         isComplete: slotIds.length >= requiredCount,
       },
       promotionId: this.enrollment.selectedPromotionCourseId(),

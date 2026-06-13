@@ -23,6 +23,13 @@ export function toISODate(date: Date | string): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+/** Converts an ISO date string ('YYYY-MM-DD') to a local Date. Returns null if empty or invalid. */
+export function isoToDate(iso: string): Date | null {
+  if (!iso) return null;
+  const d = new Date(iso + 'T12:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
+
 /**
  * Returns a time string in HH:MM format (24h).
  * Replaces the 'en-GB' locale trick.

@@ -64,6 +64,7 @@ export interface SlotSelection {
   selectedSlotIds: string[];
   requiredCount: number;
   currentCount: number;
+  maxClassesPerDay: number;
   isComplete: boolean;
 }
 

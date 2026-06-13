@@ -723,6 +723,33 @@ app-main-layout p-toast.p-toast-top-center,
   color: var(--ds-brand) !important;
 }
 
+/* DatePicker — panel popup compacto (alinea font-size con el form context) */
+[data-pc-section='panel'],
+.p-datepicker-panel {
+  font-size: 0.875rem !important;
+
+  /* Números de días */
+  [data-pc-section='day'],
+  .p-datepicker-day {
+    font-size: 0.8125rem !important;
+  }
+
+  /* Botones mes y año en el header */
+  [data-pc-section='selectmonth'],
+  [data-pc-section='selectyear'],
+  .p-datepicker-select-month,
+  .p-datepicker-select-year {
+    font-size: 0.875rem !important;
+  }
+
+  /* Cabeceras L M X J V S D */
+  [data-pc-section='weekday'],
+  .p-datepicker-weekday {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+  }
+}
+
 /* Tables - Overrides adicionales */
 .p-datatable {
   background: var(--bg-surface) !important;
@@ -1236,4 +1263,3 @@ i.pi {
 .p-tooltip-right .p-tooltip-arrow {
   border-right-color: rgba(9, 9, 11, 0.95) !important;
 }
-

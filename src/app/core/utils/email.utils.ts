@@ -9,3 +9,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export function validateEmail(email: string): boolean {
   return EMAIL_REGEX.test(email.trim());
 }
+
+/** Returns the email trimmed and lowercased — ready for storage and comparison. */
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
