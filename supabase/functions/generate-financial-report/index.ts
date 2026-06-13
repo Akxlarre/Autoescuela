@@ -35,6 +35,7 @@ const LICENSE_LABELS: Record<string, string> = {
   professional: 'Clase Profesional',
   complement: 'Complemento',
   special_service: 'Servicio Especial',
+  standalone: 'Cursos Singulares',
 };
 
 const EXPENSE_LABELS: Record<string, string> = {
@@ -116,6 +117,27 @@ Deno.serve(async (req: Request) => {
     const { data: rawPayments, error: payErr } = await paymentsQ;
     if (payErr) throw payErr;
 
+    // ── Cobros de cursos singulares en el rango (fix-016) ──────────────────────
+    // No existen en `payments`: viven en standalone_course_enrollments.paid_at.
+    let singularsQ = adminClient
+      .from('standalone_course_enrollments')
+      .select(
+        `amount_paid, paid_at,
+         standalone_courses!inner(name, branch_id),
+         students!inner(users!inner(first_names, paternal_last_name, rut))`,
+      )
+      .eq('payment_status', 'paid')
+      .gte('paid_at', `${desde}T00:00:00`)
+      .lte('paid_at', `${hasta}T23:59:59`)
+      .order('paid_at', { ascending: true });
+
+    if (branchId !== null) {
+      singularsQ = singularsQ.eq('standalone_courses.branch_id', branchId);
+    }
+
+    const { data: rawSingulars, error: singErr } = await singularsQ;
+    if (singErr) throw singErr;
+
     // ── Gastos en el rango ────────────────────────────────────────────────────
     let expQ = adminClient
       .from('expenses')
@@ -132,7 +154,7 @@ Deno.serve(async (req: Request) => {
     if (expErr) throw expErr;
 
     // ── Filtro adicional de payments por branch (PostgREST inner join) ────────
-    const payments: PaymentRow[] = (rawPayments ?? [])
+    const paymentsFromTable: PaymentRow[] = (rawPayments ?? [])
       .filter((p: any) => branchId === null || p.enrollments?.branch_id === branchId)
       .map((p: any) => ({
         date: p.payment_date ?? '',
@@ -142,6 +164,21 @@ Deno.serve(async (req: Request) => {
         rut: p.enrollments?.students?.users?.rut ?? '—',
         type: p.type ?? '—',
       }));
+
+    const singularPayments: PaymentRow[] = (rawSingulars ?? [])
+      .filter((s: any) => branchId === null || s.standalone_courses?.branch_id === branchId)
+      .map((s: any) => ({
+        date: s.paid_at ? String(s.paid_at).slice(0, 10) : '',
+        licenseGroup: 'standalone',
+        amount: s.amount_paid ?? 0,
+        alumno: formatName(s.students?.users),
+        rut: s.students?.users?.rut ?? '—',
+        type: `Curso: ${s.standalone_courses?.name ?? 'singular'}`,
+      }));
+
+    const payments: PaymentRow[] = [...paymentsFromTable, ...singularPayments].sort((a, b) =>
+      a.date.localeCompare(b.date),
+    );
 
     const expenses: ExpenseRow[] = (rawExpenses ?? []).map((e: any) => ({
       date: e.date ?? '',

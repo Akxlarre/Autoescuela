@@ -21,6 +21,7 @@ import type { CashClosing } from '@core/models/dto/cash-closing.model';
 function mapPaymentToIngreso(p: Payment): IngresoRow {
   return {
     id: p.id,
+    source: 'payment',
     enrollmentId: p.enrollment_id ?? null,
     nBoleta: p.document_number ?? null,
     glosa: p.type ?? '—',
@@ -29,6 +30,37 @@ function mapPaymentToIngreso(p: Payment): IngresoRow {
     sence: p.voucher_amount ?? 0,
     otros: p.card_amount ?? 0,
     total: p.total_amount ?? 0,
+  };
+}
+
+/** Cobro de curso singular (standalone_course_enrollments pagado hoy). */
+export interface SingularSaleDto {
+  id: number;
+  amount_paid: number | null;
+  payment_method: string | null;
+  courseName: string;
+  studentName: string;
+}
+
+/**
+ * Mapea un cobro de curso singular a la fila de cuadratura.
+ * Buckets por método de pago (mismas columnas legacy que payments):
+ * efectivo → claseB (cash) · transferencia → claseA · tarjeta → otros · sence → sence.
+ */
+export function mapSingularSaleToIngreso(s: SingularSaleDto): IngresoRow {
+  const monto = s.amount_paid ?? 0;
+  const method = s.payment_method ?? 'efectivo';
+  return {
+    id: s.id,
+    source: 'singular',
+    enrollmentId: null,
+    nBoleta: null,
+    glosa: `Curso singular: ${s.courseName} — ${s.studentName}`,
+    claseB: method === 'efectivo' ? monto : 0,
+    claseA: method === 'transferencia' ? monto : 0,
+    sence: method === 'sence' ? monto : 0,
+    otros: method === 'tarjeta' ? monto : 0,
+    total: monto,
   };
 }
 
@@ -117,6 +149,11 @@ export class CuadraturaFacade {
         { event: '*', schema: 'public', table: 'cash_closings' },
         () => void this.refreshSilently(),
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'standalone_course_enrollments' },
+        () => void this.refreshSilently(),
+      )
       .subscribe();
   }
 
@@ -192,8 +229,56 @@ export class CuadraturaFacade {
     }
 
     // El ordenamiento y limitación siempre al final de la cadena de filtros
-    const { data } = await query.order('created_at', { ascending: true });
-    this._pagosHoy.set((data ?? []).map(mapPaymentToIngreso));
+    const [{ data }, singulares] = await Promise.all([
+      query.order('created_at', { ascending: true }),
+      this.fetchSingularSales(start, end, branchId),
+    ]);
+    this._pagosHoy.set([...(data ?? []).map(mapPaymentToIngreso), ...singulares]);
+  }
+
+  /**
+   * Cobros de cursos singulares pagados hoy (RF-035 · fix-016 AC3).
+   * Fuente: standalone_course_enrollments.paid_at — no existe fila en payments
+   * para estas ventas, por eso se integran aquí como IngresoRow propios.
+   */
+  private async fetchSingularSales(
+    start: string,
+    end: string,
+    branchId: number | null,
+  ): Promise<IngresoRow[]> {
+    let query: any = this.supabase.client
+      .from('standalone_course_enrollments')
+      .select(
+        `
+        id,
+        amount_paid,
+        payment_method,
+        paid_at,
+        standalone_courses!inner(name, branch_id),
+        students!inner(users!inner(first_names, paternal_last_name))
+      `,
+      )
+      .eq('payment_status', 'paid')
+      .gte('paid_at', start)
+      .lte('paid_at', end);
+
+    if (branchId) {
+      query = query.eq('standalone_courses.branch_id', branchId);
+    }
+
+    const { data, error } = await query.order('paid_at', { ascending: true });
+    if (error) return [];
+
+    return (data ?? []).map((row: any) =>
+      mapSingularSaleToIngreso({
+        id: row.id,
+        amount_paid: row.amount_paid,
+        payment_method: row.payment_method,
+        courseName: row.standalone_courses?.name ?? 'Curso singular',
+        studentName:
+          `${row.students?.users?.first_names ?? ''} ${row.students?.users?.paternal_last_name ?? ''}`.trim(),
+      }),
+    );
   }
 
   private async fetchExpensesAndAdvances(today: string, branchId: number | null): Promise<void> {
@@ -226,6 +311,18 @@ export class CuadraturaFacade {
   async eliminarIngreso(row: IngresoRow): Promise<boolean> {
     this._isSaving.set(true);
     try {
+      if (row.source === 'singular') {
+        // Cobro de curso singular: no se borra la inscripción, se revierte
+        // el pago a pendiente (la inscripción sigue vigente).
+        await this.supabase.client
+          .from('standalone_course_enrollments')
+          .update({ payment_status: 'pending', amount_paid: 0, paid_at: null })
+          .eq('id', row.id);
+        this.toast.success('Cobro revertido: la inscripción quedó pendiente de pago.');
+        void this.refreshSilently();
+        return true;
+      }
+
       if (row.enrollmentId !== null) {
         const { data: enr } = await this.supabase.client
           .from('enrollments')

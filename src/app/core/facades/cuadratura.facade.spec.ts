@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { CuadraturaFacade } from './cuadratura.facade';
+import { CuadraturaFacade, mapSingularSaleToIngreso } from './cuadratura.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -206,5 +206,50 @@ describe('CuadraturaFacade', () => {
 
   it('isSaving debe inicializar en false', () => {
     expect(facade.isSaving()).toBe(false);
+  });
+});
+
+// ─── fix-016 AC3: cobros de cursos singulares en la cuadratura ────────────────
+
+describe('mapSingularSaleToIngreso', () => {
+  const base = {
+    id: 44,
+    amount_paid: 200_000,
+    courseName: 'Operador de Grúa',
+    studentName: 'Pedro Rojas',
+  };
+
+  it('efectivo va al bucket de caja (claseB) y marca source singular', () => {
+    const row = mapSingularSaleToIngreso({ ...base, payment_method: 'efectivo' });
+    expect(row.source).toBe('singular');
+    expect(row.claseB).toBe(200_000);
+    expect(row.claseA).toBe(0);
+    expect(row.otros).toBe(0);
+    expect(row.total).toBe(200_000);
+    expect(row.enrollmentId).toBeNull();
+    expect(row.glosa).toContain('Operador de Grúa');
+    expect(row.glosa).toContain('Pedro Rojas');
+  });
+
+  it('transferencia va a claseA y tarjeta a otros', () => {
+    expect(mapSingularSaleToIngreso({ ...base, payment_method: 'transferencia' }).claseA).toBe(
+      200_000,
+    );
+    expect(mapSingularSaleToIngreso({ ...base, payment_method: 'tarjeta' }).otros).toBe(200_000);
+  });
+
+  it('método desconocido o nulo cae a efectivo (caja)', () => {
+    const row = mapSingularSaleToIngreso({ ...base, payment_method: null });
+    expect(row.claseB).toBe(200_000);
+  });
+
+  it('amount_paid nulo no rompe el total', () => {
+    const row = mapSingularSaleToIngreso({
+      ...base,
+      amount_paid: null,
+      payment_method: 'efectivo',
+    });
+    expect(row.total).toBe(0);
+    expect(row.claseB).toBe(0);
   });
 });

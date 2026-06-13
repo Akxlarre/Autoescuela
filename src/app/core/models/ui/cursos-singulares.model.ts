@@ -24,7 +24,11 @@ export interface CursoSingularRow {
   cupos: number;
   estado: EstadoCursoSingular;
   inicio: string; // ISO date string
-  ingresoEstimado: number; // precio × inscritos
+  branchId: number;
+  /** Dinero efectivamente cobrado: Σ amount_paid de las inscripciones. */
+  ingresoCobrado: number;
+  /** Saldo pendiente: Σ (precio − descuento − pagado) de inscripciones no pagadas. */
+  porCobrar: number;
 }
 
 /** KPIs del módulo Cursos Singulares. */
@@ -32,7 +36,10 @@ export interface CursosSingularesKpis {
   cursosActivos: number;
   totalCursos: number;
   totalInscritos: number;
-  ingresosEstimados: number; // solo cursos activos + completados
+  /** Cobrado real (Σ amount_paid), cursos no cancelados. */
+  ingresosCobrados: number;
+  /** Pendiente de cobro (Σ saldos), cursos no cancelados. */
+  porCobrar: number;
 }
 
 /** Inscripto individual en un curso singular (para el drawer de detalle/cobro). */
@@ -42,6 +49,11 @@ export interface InscriptoCursoSingular {
   nombreAlumno: string;
   rutAlumno: string;
   montoPagado: number;
+  /** Descuento acordado al inscribir (persiste en BD). */
+  descuento: number;
+  descuentoMotivo: string | null;
+  /** Lo que corresponde cobrar: precio del curso − descuento. */
+  montoAPagar: number;
   paymentStatus: SingularPaymentStatus;
   paymentMethod: SingularPaymentMethod;
   enrolledAt: string;
@@ -56,6 +68,8 @@ export interface NuevoCursoSingularFormData {
   duracionHoras: number;
   cupos: number;
   inicio: string; // ISO date string
+  /** Sede dueña del curso — siempre requerida (branch_id NOT NULL). */
+  branchId: number;
 }
 
 /** Resultado de búsqueda de alumno por RUT para el wizard de inscripción. */
@@ -67,9 +81,15 @@ export interface SingularStudentSearch {
   /** Nombres separados para pre-cargar el formulario correctamente. */
   firstNames: string;
   paternalLastName: string;
+  maternalLastName: string;
   rut: string;
   email: string;
   phone: string;
+  /** Datos del registro `students` (si existe) para pre-cargar el formulario
+   *  completo y evitar sobrescribir datos reales con valores vacíos. */
+  birthDate: string;
+  gender: 'M' | 'F';
+  address: string;
 }
 
 /** Formulario de datos personales del wizard de inscripción a curso singular. */
@@ -90,4 +110,7 @@ export interface SingularPaymentForm {
   amountPaid: number;
   paymentMethod: SingularPaymentMethod;
   paymentStatus: SingularPaymentStatus;
+  /** Descuento acordado — se persiste aunque el pago quede pendiente. */
+  discountAmount: number;
+  discountReason: string | null;
 }

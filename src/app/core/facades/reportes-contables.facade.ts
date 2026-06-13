@@ -15,6 +15,7 @@ import { downloadExcel } from '@core/utils/excel.utils';
 import {
   buildReporte,
   filterPaymentsByBranch,
+  mapSingularSaleToPaymentRow,
   type ExpenseRow,
   type PaymentRow,
 } from '@core/utils/reportes-contables.utils';
@@ -182,18 +183,30 @@ export class ReportesContablesFacade {
     const branchId = this._effectiveBranchId();
 
     try {
-      const [paymentsResult, expensesResult, fixedResult] = await Promise.all([
+      const [paymentsResult, singularsResult, expensesResult, fixedResult] = await Promise.all([
         this.queryPayments(desde, hasta),
+        this.querySingularSales(desde, hasta),
         this.queryExpenses(desde, hasta, branchId),
         this.queryFixedExpenses(desde, hasta, branchId),
       ]);
 
       if (paymentsResult.error) throw paymentsResult.error;
+      if (singularsResult.error) throw singularsResult.error;
       if (expensesResult.error) throw expensesResult.error;
       if (fixedResult.error) throw fixedResult.error;
 
+      // Cobros de cursos singulares normalizados a PaymentRow (fix-016):
+      // participan de KPIs, categorías y evolución como categoría 'standalone'.
+      const singularRows: PaymentRow[] = ((singularsResult.data ?? []) as any[]).map((s) =>
+        mapSingularSaleToPaymentRow({
+          amount_paid: s.amount_paid,
+          paid_at: s.paid_at,
+          branch_id: s.standalone_courses?.branch_id ?? 0,
+        }),
+      );
+
       const payments = filterPaymentsByBranch(
-        (paymentsResult.data ?? []) as PaymentRow[],
+        [...((paymentsResult.data ?? []) as PaymentRow[]), ...singularRows],
         branchId,
       );
       const operationalExpenses = (expensesResult.data ?? []) as ExpenseRow[];
@@ -238,6 +251,21 @@ export class ReportesContablesFacade {
       .select('total_amount, type, payment_date, enrollments!inner(branch_id, license_group)')
       .gte('payment_date', desde)
       .lte('payment_date', hasta);
+  }
+
+  /**
+   * Cobros de cursos singulares pagados en el rango (fix-016).
+   * Viven en standalone_course_enrollments.paid_at — no existen en `payments`.
+   * El filtro de sede se aplica client-side junto al de payments
+   * (filterPaymentsByBranch) usando standalone_courses.branch_id.
+   */
+  private querySingularSales(desde: string, hasta: string) {
+    return this.supabase.client
+      .from('standalone_course_enrollments')
+      .select('amount_paid, paid_at, standalone_courses!inner(branch_id)')
+      .eq('payment_status', 'paid')
+      .gte('paid_at', `${desde}T00:00:00`)
+      .lte('paid_at', `${hasta}T23:59:59`);
   }
 
   /**

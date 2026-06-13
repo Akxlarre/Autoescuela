@@ -63,7 +63,7 @@ const PAYMENT_LABEL: Record<string, string> = {
             <!-- Nombre + tipo badge -->
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-base font-bold text-text-primary">
+                <p class="font-bold text-text-primary">
                   {{ curso.nombre }}
                 </p>
                 <div class="flex items-center gap-1.5 mt-1">
@@ -111,9 +111,9 @@ const PAYMENT_LABEL: Record<string, string> = {
             />
 
             <app-stat-box
-              label="Ingresos"
-              [value]="formatCLP(curso.ingresoEstimado)"
-              [variant]="curso.ingresoEstimado > 0 ? 'success' : 'default'"
+              label="Cobrado"
+              [value]="formatCLP(curso.ingresoCobrado)"
+              [variant]="curso.ingresoCobrado > 0 ? 'success' : 'default'"
               [compact]="true"
               [useMono]="true"
             />

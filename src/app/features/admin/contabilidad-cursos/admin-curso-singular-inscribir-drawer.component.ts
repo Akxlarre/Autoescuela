@@ -15,6 +15,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { formatRut, validateRut, normalizeRutForStorage } from '@core/utils/rut.utils';
+import { calcAge } from '@core/utils/age.utils';
 import { formatCLP } from '@core/utils/date.utils';
 import type {
   SingularPersonalDataForm,
@@ -65,14 +66,8 @@ const PAYMENT_METHODS: {
     <div class="flex flex-col gap-6 p-1">
       <!-- ── Encabezado del curso ──────────────────────────────────────────── -->
       @if (facade.selectedCurso(); as curso) {
-        <div
-          class="flex items-center gap-3 p-3 rounded-xl border bg-brand/8 border-brand/20"
-          
-        >
-          <div
-            class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-brand/15"
-            
-          >
+        <div class="flex items-center gap-3 p-3 rounded-xl border bg-brand/8 border-brand/20">
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-brand/15">
             <app-icon name="star" [size]="16" color="var(--ds-brand)" />
           </div>
           <div class="min-w-0">
@@ -123,6 +118,11 @@ const PAYMENT_METHODS: {
             <label class="text-xs font-bold uppercase tracking-wide text-text-muted">
               RUT del alumno *
             </label>
+            <p class="text-xs leading-relaxed text-text-secondary">
+              Puedes inscribir a cualquier persona, sea alumno nuevo o ya registrado. Al buscar el
+              RUT, si ya existe en la escuela (Clase B o Profesional) sus datos se pre-cargarán
+              automáticamente; si es nuevo, lo registras aquí mismo.
+            </p>
             <div class="flex gap-2">
               <input
                 type="text"
@@ -172,30 +172,33 @@ const PAYMENT_METHODS: {
           @if (facade.studentSearch(); as found) {
             <div
               class="flex items-center gap-3 p-3 rounded-xl border bg-success/8 border-success/25"
-              
             >
               <app-icon name="check-circle" [size]="18" color="var(--state-success)" />
               <div>
                 <p class="text-sm font-semibold text-text-primary">
                   {{ found.nombreCompleto }}
                 </p>
-                <p class="text-xs text-text-muted">Alumno encontrado — datos pre-cargados</p>
+                <p class="text-xs text-text-muted">
+                  Alumno encontrado — datos pre-cargados. Su identidad está protegida; solo puedes
+                  actualizar email, teléfono y dirección.
+                </p>
               </div>
             </div>
           } @else if (facade.studentNotFound()) {
-            <div
-              class="flex items-start gap-3 p-3 rounded-xl border bg-info/8 border-info/25"
-              
-            >
+            <div class="flex items-start gap-3 p-3 rounded-xl border bg-info/8 border-info/25">
               <app-icon
-                name="alert-circle"
+                name="user-plus"
                 [size]="18"
                 color="var(--state-info)"
                 class="mt-0.5 shrink-0"
               />
-              <p class="text-xs leading-relaxed text-text-secondary">
-                RUT no encontrado. Completa los datos para registrar al alumno en el sistema.
-              </p>
+              <div>
+                <p class="text-sm font-semibold text-text-primary">Alumno nuevo</p>
+                <p class="text-xs leading-relaxed text-text-secondary">
+                  Este RUT aún no está registrado en la escuela. Completa sus datos a continuación
+                  para registrarlo e inscribirlo en el curso.
+                </p>
+              </div>
             </div>
           }
 
@@ -211,7 +214,8 @@ const PAYMENT_METHODS: {
                     type="text"
                     [(ngModel)]="form().firstNames"
                     (ngModelChange)="patchForm('firstNames', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                    [disabled]="esAlumnoExistente()"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle disabled:opacity-60"
                     placeholder="Juan Carlos"
                     data-llm-description="Nombres del alumno"
                   />
@@ -224,7 +228,8 @@ const PAYMENT_METHODS: {
                     type="text"
                     [(ngModel)]="form().paternalLastName"
                     (ngModelChange)="patchForm('paternalLastName', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                    [disabled]="esAlumnoExistente()"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle disabled:opacity-60"
                     placeholder="González"
                     data-llm-description="Apellido paterno del alumno"
                   />
@@ -237,7 +242,8 @@ const PAYMENT_METHODS: {
                     type="text"
                     [(ngModel)]="form().maternalLastName"
                     (ngModelChange)="patchForm('maternalLastName', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                    [disabled]="esAlumnoExistente()"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle disabled:opacity-60"
                     placeholder="Pérez"
                   />
                 </div>
@@ -272,14 +278,24 @@ const PAYMENT_METHODS: {
               <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1">
                   <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                    >Fecha de nacimiento</label
+                    >Fecha de nacimiento *</label
                   >
                   <input
                     type="date"
                     [(ngModel)]="form().birthDate"
                     (ngModelChange)="patchForm('birthDate', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                    [disabled]="esAlumnoExistente() && form().birthDate.length > 0"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary disabled:opacity-60"
+                    [class.border-state-error]="form().birthDate.length > 0 && !edadValida()"
+                    [class.border-border-subtle]="!form().birthDate.length || edadValida()"
+                    data-llm-description="Fecha de nacimiento del alumno (requerida, mínimo 17 años)"
                   />
+                  @if (form().birthDate.length > 0 && !edadValida()) {
+                    <p class="text-xs text-state-error flex items-center gap-1">
+                      <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
+                      El alumno debe tener al menos 17 años
+                    </p>
+                  }
                 </div>
                 <div class="flex flex-col gap-1">
                   <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
@@ -288,7 +304,8 @@ const PAYMENT_METHODS: {
                   <select
                     [(ngModel)]="form().gender"
                     (ngModelChange)="patchForm('gender', $event)"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle"
+                    [disabled]="esAlumnoExistente()"
+                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle disabled:opacity-60"
                   >
                     <option value="M">Masculino</option>
                     <option value="F">Femenino</option>
@@ -310,10 +327,7 @@ const PAYMENT_METHODS: {
               </div>
 
               @if (facade.error()) {
-                <p
-                  class="text-xs px-3 py-2 rounded-lg text-error bg-error/10"
-                  
-                >
+                <p class="text-xs px-3 py-2 rounded-lg text-error bg-error/10">
                   {{ facade.error() }}
                 </p>
               }
@@ -346,10 +360,7 @@ const PAYMENT_METHODS: {
           </div>
 
           <!-- Resumen financiero -->
-          <div
-            class="rounded-2xl p-5 relative overflow-hidden"
-            class="bg-[#0a0a0a] text-white"
-          >
+          <div class="rounded-2xl p-5 relative overflow-hidden surface-hero">
             <div class="absolute right-0 top-0 p-6 opacity-10 pointer-events-none">
               <app-icon name="banknote" [size]="56" color="white" />
             </div>
@@ -372,28 +383,25 @@ const PAYMENT_METHODS: {
               >
                 <div>
                   <p class="text-xs font-bold uppercase tracking-tighter text-brand">
-                    Total a pagar
+                    {{ selectedMethod() === 'pendiente' ? 'Total por cobrar' : 'Total a pagar' }}
                   </p>
                   <p class="text-3xl font-black tracking-tight text-white">
-                    {{ selectedMethod() === 'pendiente' ? '$0' : formatCLP(effectiveTotal()) }}
+                    {{ formatCLP(effectiveTotal()) }}
                   </p>
                 </div>
                 @if (selectedMethod() === 'pendiente') {
                   <span class="text-xs italic" style="color: rgba(255,255,255,0.4)"
-                    >Por cobrar</span
+                    >Queda pendiente</span
                   >
                 }
               </div>
             </div>
           </div>
 
-          <!-- Descuento manual (oculto si el pago queda pendiente) -->
-          @if (selectedMethod() === 'pendiente') {
-            <!-- Sin descuento cuando el pago queda pendiente -->
-          } @else if (discountApplied()) {
+          <!-- Descuento manual — se persiste aunque el pago quede pendiente -->
+          @if (discountApplied()) {
             <div
               class="flex items-center justify-between p-3 rounded-xl border bg-success/8 border-success/25"
-              
             >
               <div class="flex items-center gap-2">
                 <app-icon name="tag" [size]="15" color="var(--state-success)" />
@@ -405,7 +413,6 @@ const PAYMENT_METHODS: {
               <button
                 type="button"
                 class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer transition-colors text-error bg-error/10"
-                
                 (click)="clearDiscount()"
                 data-llm-action="quitar-descuento-singular"
               >
@@ -504,10 +511,7 @@ const PAYMENT_METHODS: {
           </div>
 
           @if (facade.error()) {
-            <p
-              class="text-xs px-3 py-2 rounded-lg text-error bg-error/10"
-              
-            >
+            <p class="text-xs px-3 py-2 rounded-lg text-error bg-error/10">
               {{ facade.error() }}
             </p>
           }
@@ -564,6 +568,9 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
     () => this.facade.studentSearch() !== null || this.facade.studentNotFound(),
   );
 
+  /** Alumno ya registrado: su identidad queda protegida (solo lectura). */
+  protected readonly esAlumnoExistente = computed(() => this.facade.studentSearch() !== null);
+
   protected readonly nombreAlumnoResumen = computed(() => {
     const f = this.form();
     return `${f.firstNames} ${f.paternalLastName} ${f.maternalLastName}`.trim();
@@ -575,13 +582,20 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
     Math.max(0, this.basePrice() - this.discountAmount()),
   );
 
+  /** Espejo del CHECK de BD: birth_date NOT NULL y edad mínima 17 años. */
+  protected readonly edadValida = computed(() => {
+    const age = calcAge(this.form().birthDate);
+    return age !== null && age >= 17;
+  });
+
   protected readonly isStep1Valid = computed(() => {
     const f = this.form();
     return (
       validateRut(f.rut) &&
       f.firstNames.trim().length >= 2 &&
       f.paternalLastName.trim().length >= 2 &&
-      f.email.trim().includes('@')
+      f.email.trim().includes('@') &&
+      this.edadValida()
     );
   });
 
@@ -615,16 +629,18 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
     await this.facade.searchByRut(this.rutInput());
     const found = this.facade.studentSearch();
     if (found) {
+      // Pre-cargar TODOS los datos existentes: lo que el formulario no
+      // muestre con valor real terminaría sobrescribiendo la ficha del alumno.
       this.form.set({
         rut: found.rut,
         firstNames: found.firstNames,
         paternalLastName: found.paternalLastName,
-        maternalLastName: '',
+        maternalLastName: found.maternalLastName,
         email: found.email,
         phone: found.phone,
-        birthDate: '',
-        gender: 'M',
-        address: '',
+        birthDate: found.birthDate,
+        gender: found.gender,
+        address: found.address,
       });
     } else {
       this.form.set({ ...EMPTY_PERSONAL, rut: normalizeRutForStorage(this.rutInput()) });
@@ -666,6 +682,10 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
       amountPaid: method === 'pendiente' ? 0 : this.effectiveTotal(),
       paymentMethod: method,
       paymentStatus: method === 'pendiente' ? 'pending' : 'paid',
+      // El descuento acordado se persiste aunque el pago quede pendiente:
+      // el cobro posterior será precio − descuento.
+      discountAmount: this.discountApplied() ? this.discountAmount() : 0,
+      discountReason: this.discountApplied() ? this.discountReason() : null,
     };
     const ok = await this.facade.inscribirAlumno(curso.id, payload);
     if (ok) this.layoutDrawer.back();

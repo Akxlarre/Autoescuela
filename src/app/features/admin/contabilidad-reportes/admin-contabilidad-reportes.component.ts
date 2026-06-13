@@ -1,10 +1,9 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { ReportesContablesFacade } from '@core/facades/reportes-contables.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ReportesContablesContentComponent } from '@shared/components/reportes-contables-content/reportes-contables-content.component';
-import type {
-  FiltrosReporte,
-  RegistrarGastoFijoPayload,
-} from '@core/models/ui/reportes-contables.model';
+import { RegistrarGastoFijoDrawerComponent } from './registrar-gasto-fijo-drawer.component';
+import type { FiltrosReporte } from '@core/models/ui/reportes-contables.model';
 
 @Component({
   selector: 'app-admin-contabilidad-reportes',
@@ -21,18 +20,18 @@ import type {
       [escuela]="facade.escuela()"
       [isLoading]="facade.isLoading()"
       [isExporting]="facade.isExporting()"
-      [isRegistrando]="facade.isRegistrando()"
       [gastosFijos]="facade.gastosFijos()"
       [filtros]="facade.filtros()"
       (aplicarFiltros)="onAplicarFiltros($event)"
       (exportRequested)="facade.exportar($event)"
-      (registrarGasto)="onRegistrarGasto($event)"
+      (registrarGastoClick)="onAbrirRegistrarGasto()"
       (verDetalle)="onVerDetalle($event)"
     />
   `,
 })
 export class AdminContabilidadReportesComponent implements OnInit {
   protected readonly facade = inject(ReportesContablesFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   ngOnInit(): void {
     void this.facade.initialize();
@@ -42,8 +41,8 @@ export class AdminContabilidadReportesComponent implements OnInit {
     await this.facade.aplicarFiltros(filtros);
   }
 
-  protected async onRegistrarGasto(payload: RegistrarGastoFijoPayload): Promise<void> {
-    await this.facade.registrarGastoFijo(payload);
+  protected onAbrirRegistrarGasto(): void {
+    this.layoutDrawer.open(RegistrarGastoFijoDrawerComponent, 'Registrar Gasto Fijo', 'receipt');
   }
 
   protected onVerDetalle(fecha: string): void {

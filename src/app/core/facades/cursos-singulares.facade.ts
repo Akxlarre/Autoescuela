@@ -22,6 +22,8 @@ import type {
 } from '@core/models/ui/cursos-singulares.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
+import { calcAge, isMinor } from '@core/utils/age.utils';
+import { toFriendlyDbMessage } from '@core/utils/db-error.utils';
 
 // ── Helpers de mapeo ──────────────────────────────────────────────────────────
 
@@ -41,11 +43,25 @@ function toBillingType(raw: string): 'sence_franchise' | 'boleta' | 'factura' {
   return 'sence_franchise';
 }
 
-function mapCursoDto(
-  dto: StandaloneCourse & { standalone_course_enrollments?: { count: number }[] },
+/** Subconjunto de la inscripción necesario para computar finanzas del curso. */
+interface EnrollmentFinanceDto {
+  amount_paid: number | null;
+  payment_status: string | null;
+  discount_amount: number | null;
+}
+
+export function mapCursoDto(
+  dto: StandaloneCourse & { standalone_course_enrollments?: EnrollmentFinanceDto[] },
 ): CursoSingularRow {
-  const inscritos = dto.standalone_course_enrollments?.[0]?.count ?? 0;
+  const enrollments = dto.standalone_course_enrollments ?? [];
   const estado = computeEstado(dto.status, dto.start_date);
+  // Cobrado real: lo que efectivamente entró.
+  const ingresoCobrado = enrollments.reduce((s, e) => s + (e.amount_paid ?? 0), 0);
+  // Por cobrar: saldo de cada inscripción (precio − descuento − pagado), nunca negativo.
+  const porCobrar = enrollments.reduce(
+    (s, e) => s + Math.max(0, dto.base_price - (e.discount_amount ?? 0) - (e.amount_paid ?? 0)),
+    0,
+  );
   return {
     id: dto.id,
     nombre: dto.name,
@@ -53,11 +69,13 @@ function mapCursoDto(
     billingType: toBillingType(dto.billing_type),
     precio: dto.base_price,
     duracionHoras: dto.duration_hours,
-    inscritos,
+    inscritos: enrollments.length,
     cupos: dto.max_students,
     estado,
     inicio: dto.start_date,
-    ingresoEstimado: dto.base_price * inscritos,
+    branchId: dto.branch_id ?? 0,
+    ingresoCobrado,
+    porCobrar,
   };
 }
 
@@ -79,6 +97,8 @@ export class CursosSingularesFacade {
   private readonly _isSaving = signal(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  /** Sede del último fetch — invalida la caché SWR cuando el admin cambia de sede. */
+  private _lastBranchId: number | null | undefined = undefined;
 
   // ── Estado del wizard de inscripción ──────────────────────────────────────
   private readonly _wizardStep = signal<1 | 2>(1);
@@ -109,23 +129,27 @@ export class CursosSingularesFacade {
   readonly kpis = computed<CursosSingularesKpis>(() => {
     const list = this._cursos();
     const activos = list.filter((c) => c.estado === 'active');
-    const conIngresos = list.filter((c) => c.estado !== 'cancelled');
+    const noCancelados = list.filter((c) => c.estado !== 'cancelled');
     return {
       cursosActivos: activos.length,
       totalCursos: list.length,
       totalInscritos: list.reduce((s, c) => s + c.inscritos, 0),
-      ingresosEstimados: conIngresos.reduce((s, c) => s + c.ingresoEstimado, 0),
+      ingresosCobrados: noCancelados.reduce((s, c) => s + c.ingresoCobrado, 0),
+      porCobrar: noCancelados.reduce((s, c) => s + c.porCobrar, 0),
     };
   });
 
   // ── 4. Métodos de acción — Cursos ──────────────────────────────────────────
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const branchId = this.branchFacade.selectedBranchId();
+    if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
+    // Primera carga o cambio de sede → recarga completa con skeleton
     this._initialized = true;
+    this._lastBranchId = branchId;
     this._isLoading.set(true);
     try {
       await this.fetchCursos();
@@ -151,6 +175,7 @@ export class CursosSingularesFacade {
 
   async loadInscriptos(cursoId: number): Promise<void> {
     this._isLoadingInscriptos.set(true);
+    const precio = this._selectedCurso()?.precio ?? 0;
     try {
       const { data, error } = await this.supabase.client
         .from('standalone_course_enrollments')
@@ -159,6 +184,8 @@ export class CursosSingularesFacade {
           id,
           student_id,
           amount_paid,
+          discount_amount,
+          discount_reason,
           payment_status,
           payment_method,
           enrolled_at,
@@ -183,13 +210,18 @@ export class CursosSingularesFacade {
           nombreAlumno: `${row.students.users.first_names} ${row.students.users.paternal_last_name}`,
           rutAlumno: row.students.users.rut ?? '',
           montoPagado: row.amount_paid ?? 0,
+          descuento: row.discount_amount ?? 0,
+          descuentoMotivo: row.discount_reason ?? null,
+          montoAPagar: Math.max(0, precio - (row.discount_amount ?? 0)),
           paymentStatus: row.payment_status ?? 'pending',
           paymentMethod: row.payment_method ?? 'efectivo',
           enrolledAt: row.enrolled_at,
         })),
       );
-    } catch {
+    } catch (err) {
+      // No silenciar: la lista vacía engañaría en una vista de cobros
       this._inscriptos.set([]);
+      this.setSafeError(err, 'No se pudo cargar la lista de inscritos. Intenta actualizar.');
     } finally {
       this._isLoadingInscriptos.set(false);
     }
@@ -199,7 +231,11 @@ export class CursosSingularesFacade {
     this._isSaving.set(true);
     this._error.set(null);
     try {
-      const branchId = this.branchFacade.selectedBranchId();
+      // branch_id es NOT NULL: la sede viene siempre explícita del formulario
+      if (!form.branchId) {
+        this._error.set('Selecciona la sede a la que pertenece el curso.');
+        return false;
+      }
       const { error } = await this.supabase.client.from('standalone_courses').insert({
         name: form.nombre,
         type: form.tipo,
@@ -208,15 +244,15 @@ export class CursosSingularesFacade {
         duration_hours: form.duracionHoras,
         max_students: form.cupos,
         start_date: form.inicio,
-        ...(branchId !== null ? { branch_id: branchId } : {}),
+        branch_id: form.branchId,
+        registered_by: this.auth.currentUser()?.dbId ?? null,
       });
 
       if (error) throw error;
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al crear el curso';
-      this._error.set(msg);
+      this.setSafeError(err, 'No se pudo crear el curso. Intenta nuevamente.');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -236,7 +272,7 @@ export class CursosSingularesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al finalizar el curso');
+      this.setSafeError(err, 'No se pudo finalizar el curso. Intenta nuevamente.');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -256,7 +292,7 @@ export class CursosSingularesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al cancelar el curso');
+      this.setSafeError(err, 'No se pudo cancelar el curso. Intenta nuevamente.');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -270,9 +306,23 @@ export class CursosSingularesFacade {
       const cursoId = this._selectedCurso()?.id;
       const precio = this._selectedCurso()?.precio ?? 0;
 
+      // Respetar el descuento acordado al inscribir: se cobra precio − descuento
+      const { data: enr, error: readError } = await this.supabase.client
+        .from('standalone_course_enrollments')
+        .select('discount_amount')
+        .eq('id', enrollmentId)
+        .maybeSingle();
+      if (readError) throw readError;
+
+      const montoACobrar = Math.max(0, precio - (enr?.discount_amount ?? 0));
+
       const { error } = await this.supabase.client
         .from('standalone_course_enrollments')
-        .update({ payment_status: 'paid', amount_paid: precio })
+        .update({
+          payment_status: 'paid',
+          amount_paid: montoACobrar,
+          paid_at: new Date().toISOString(),
+        })
         .eq('id', enrollmentId);
 
       if (error) throw error;
@@ -280,8 +330,7 @@ export class CursosSingularesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar el cobro';
-      this._error.set(msg);
+      this.setSafeError(err, 'No se pudo registrar el cobro. Intenta nuevamente.');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -302,7 +351,10 @@ export class CursosSingularesFacade {
 
   /**
    * Busca un alumno por RUT en las tablas users + students.
-   * Pre-llena el resultado en `studentSearch`; si no existe setea `studentNotFound`.
+   * Pre-llena el resultado COMPLETO (incl. fecha de nacimiento, género y
+   * dirección) en `studentSearch` para que el formulario quede pre-cargado
+   * y un alumno existente nunca pierda datos al ser re-inscrito.
+   * Si no existe setea `studentNotFound`.
    */
   async searchByRut(rut: string): Promise<void> {
     this._isSearching.set(true);
@@ -312,22 +364,26 @@ export class CursosSingularesFacade {
 
     try {
       const normalized = normalizeRutForStorage(rut);
-      const { data: user } = await this.supabase.client
+      const { data: user, error: userError } = await this.supabase.client
         .from('users')
-        .select('id, first_names, paternal_last_name, email, phone')
+        .select('id, first_names, paternal_last_name, maternal_last_name, email, phone')
         .eq('rut', normalized)
         .maybeSingle();
+
+      if (userError) throw userError;
 
       if (!user) {
         this._studentNotFound.set(true);
         return;
       }
 
-      const { data: student } = await this.supabase.client
+      const { data: student, error: studentError } = await this.supabase.client
         .from('students')
-        .select('id')
+        .select('id, birth_date, gender, address')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      if (studentError) throw studentError;
 
       this._studentSearch.set({
         userId: user.id,
@@ -335,12 +391,16 @@ export class CursosSingularesFacade {
         nombreCompleto: `${user.first_names} ${user.paternal_last_name}`,
         firstNames: user.first_names,
         paternalLastName: user.paternal_last_name,
+        maternalLastName: user.maternal_last_name ?? '',
         rut: normalized,
         email: user.email ?? '',
         phone: user.phone ?? '',
+        birthDate: student?.birth_date ?? '',
+        gender: student?.gender === 'F' ? 'F' : 'M',
+        address: student?.address ?? '',
       });
-    } catch {
-      this._error.set('Error al buscar el alumno');
+    } catch (err) {
+      this.setSafeError(err, 'No se pudo buscar el alumno. Intenta nuevamente.');
     } finally {
       this._isSearching.set(false);
     }
@@ -354,6 +414,17 @@ export class CursosSingularesFacade {
     this._error.set(null);
     if (!form.firstNames.trim() || !form.paternalLastName.trim()) {
       this._error.set('Completa los datos requeridos del alumno.');
+      return false;
+    }
+    // La BD exige birth_date NOT NULL y edad mínima 17 — validar aquí con
+    // mensaje claro en vez de dejar que explote el constraint de PostgreSQL.
+    const age = calcAge(form.birthDate);
+    if (age === null) {
+      this._error.set('Ingresa la fecha de nacimiento del alumno.');
+      return false;
+    }
+    if (age < 17) {
+      this._error.set('El alumno debe tener al menos 17 años para inscribirse.');
       return false;
     }
     this._pendingPersonalData.set(form);
@@ -379,26 +450,29 @@ export class CursosSingularesFacade {
     try {
       const branchId = this._pendingBranchId();
 
-      // 1. Crear o actualizar usuario
-      const userId = await this.upsertUser(form, branchId);
-      if (!userId) return false;
-
-      // 2. Crear o actualizar alumno
-      const studentId = await this.upsertStudent(form, userId);
-      if (!studentId) return false;
-
-      // 3. Verificar que no esté ya inscrito
-      const { data: existing } = await this.supabase.client
-        .from('standalone_course_enrollments')
-        .select('id')
-        .eq('standalone_course_id', cursoId)
-        .eq('student_id', studentId)
-        .maybeSingle();
-
-      if (existing) {
+      // 1. Verificar duplicado ANTES de escribir nada: si el alumno ya está
+      //    inscrito, no se debe mutar su ficha de usuario/alumno.
+      const yaInscrito = await this.isAlreadyEnrolled(cursoId, form.rut);
+      if (yaInscrito) {
         this._error.set('Este alumno ya está inscrito en el curso.');
         return false;
       }
+
+      // 1b. Verificar cupos disponibles (el trigger de BD es el backstop
+      //     contra inscripciones concurrentes).
+      const hayCupo = await this.hasAvailableSeats(cursoId);
+      if (!hayCupo) {
+        this._error.set('No quedan cupos disponibles en este curso.');
+        return false;
+      }
+
+      // 2. Crear o actualizar usuario
+      const userId = await this.upsertUser(form, branchId);
+      if (!userId) return false;
+
+      // 3. Crear o actualizar alumno
+      const studentId = await this.upsertStudent(form, userId);
+      if (!studentId) return false;
 
       // 4. Insertar inscripción
       const registeredBy = this.auth.currentUser()?.dbId ?? null;
@@ -406,9 +480,12 @@ export class CursosSingularesFacade {
         standalone_course_id: cursoId,
         student_id: studentId,
         amount_paid: payment.amountPaid,
+        discount_amount: payment.discountAmount,
+        discount_reason: payment.discountAmount > 0 ? payment.discountReason : null,
         payment_status: payment.paymentStatus,
         payment_method: payment.paymentMethod,
         enrolled_at: new Date().toISOString(),
+        paid_at: payment.paymentStatus === 'paid' ? new Date().toISOString() : null,
         registered_by: registeredBy,
       });
 
@@ -419,8 +496,7 @@ export class CursosSingularesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al inscribir al alumno';
-      this._error.set(msg);
+      this.setSafeError(err, 'No se pudo completar la inscripción. Intenta nuevamente.');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -433,12 +509,65 @@ export class CursosSingularesFacade {
 
   // ── Privado ────────────────────────────────────────────────────────────────
 
+  /**
+   * Registra el error real en consola (diagnóstico) y expone a la UI solo un
+   * mensaje amigable — nunca texto crudo de PostgreSQL (AC2 fix-015).
+   */
+  private setSafeError(err: unknown, fallback: string): void {
+    console.error('[CursosSingularesFacade]', err);
+    this._error.set(toFriendlyDbMessage(err, fallback));
+  }
+
+  /** Lookup read-only: ¿el RUT ya tiene una inscripción en este curso? */
+  private async isAlreadyEnrolled(cursoId: number, rut: string): Promise<boolean> {
+    const normalized = normalizeRutForStorage(rut);
+    const { data: user } = await this.supabase.client
+      .from('users')
+      .select('id')
+      .eq('rut', normalized)
+      .maybeSingle();
+    if (!user) return false;
+
+    const { data: student } = await this.supabase.client
+      .from('students')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!student) return false;
+
+    const { data: existing } = await this.supabase.client
+      .from('standalone_course_enrollments')
+      .select('id')
+      .eq('standalone_course_id', cursoId)
+      .eq('student_id', student.id)
+      .maybeSingle();
+    return existing !== null;
+  }
+
+  /** Compara inscripciones actuales contra max_students con datos frescos de BD. */
+  private async hasAvailableSeats(cursoId: number): Promise<boolean> {
+    const { data: curso, error: cursoError } = await this.supabase.client
+      .from('standalone_courses')
+      .select('max_students')
+      .eq('id', cursoId)
+      .maybeSingle();
+    if (cursoError || !curso) return false;
+
+    const { count, error: countError } = await this.supabase.client
+      .from('standalone_course_enrollments')
+      .select('id', { count: 'exact', head: true })
+      .eq('standalone_course_id', cursoId);
+    if (countError) return false;
+
+    return (count ?? 0) < curso.max_students;
+  }
+
   private async fetchCursos(): Promise<void> {
     const branchId = this.branchFacade.selectedBranchId();
 
     let query = this.supabase.client
       .from('standalone_courses')
-      .select('*, standalone_course_enrollments(count)')
+      .select('*, standalone_course_enrollments(amount_paid, payment_status, discount_amount)')
       .order('start_date', { ascending: false });
 
     if (branchId !== null) {
@@ -472,12 +601,16 @@ export class CursosSingularesFacade {
       .maybeSingle();
 
     if (existing) {
+      // Solo actualizar campos con valor — nunca borrar datos existentes
+      // con strings vacíos del formulario.
       const updatePayload: Record<string, unknown> = {
-        first_names: form.firstNames || undefined,
-        paternal_last_name: form.paternalLastName || undefined,
-        maternal_last_name: form.maternalLastName || undefined,
         updated_at: new Date().toISOString(),
       };
+      if (form.firstNames.trim()) updatePayload['first_names'] = form.firstNames.trim();
+      if (form.paternalLastName.trim())
+        updatePayload['paternal_last_name'] = form.paternalLastName.trim();
+      if (form.maternalLastName.trim())
+        updatePayload['maternal_last_name'] = form.maternalLastName.trim();
       if (form.email) updatePayload['email'] = form.email;
       if (form.phone) updatePayload['phone'] = form.phone;
 
@@ -487,7 +620,7 @@ export class CursosSingularesFacade {
         .eq('id', existing.id);
 
       if (error) {
-        this._error.set('Error al actualizar usuario: ' + error.message);
+        this.setSafeError(error, 'No se pudieron actualizar los datos del alumno.');
         return null;
       }
       return existing.id;
@@ -517,7 +650,7 @@ export class CursosSingularesFacade {
       .single();
 
     if (error || !newUser) {
-      this._error.set('Error al crear usuario: ' + (error?.message ?? 'Sin datos'));
+      this.setSafeError(error, 'No se pudo registrar al alumno. Intenta nuevamente.');
       return null;
     }
     return newUser.id;
@@ -527,20 +660,6 @@ export class CursosSingularesFacade {
     form: SingularPersonalDataForm,
     userId: number,
   ): Promise<number | null> {
-    const today = new Date();
-    const birth = form.birthDate ? new Date(form.birthDate) : null;
-    const age = birth ? today.getFullYear() - birth.getFullYear() : 25;
-    const isMinor = age < 18;
-
-    const payload = {
-      birth_date: form.birthDate || null,
-      gender: form.gender || null,
-      address: form.address || null,
-      is_minor: isMinor,
-      has_notarial_auth: false,
-      status: 'active',
-    };
-
     const { data: existing } = await this.supabase.client
       .from('students')
       .select('id')
@@ -548,13 +667,25 @@ export class CursosSingularesFacade {
       .maybeSingle();
 
     if (existing) {
+      // UPDATE conservador: solo campos con valor real. `birth_date` es
+      // NOT NULL en BD — jamás enviarle null a un alumno existente.
+      const updatePayload: Record<string, unknown> = {};
+      if (form.birthDate) {
+        updatePayload['birth_date'] = form.birthDate;
+        updatePayload['is_minor'] = isMinor(form.birthDate);
+      }
+      if (form.gender) updatePayload['gender'] = form.gender;
+      if (form.address) updatePayload['address'] = form.address;
+
+      if (Object.keys(updatePayload).length === 0) return existing.id;
+
       const { error } = await this.supabase.client
         .from('students')
-        .update(payload)
+        .update(updatePayload)
         .eq('id', existing.id);
 
       if (error) {
-        this._error.set('Error al actualizar alumno: ' + error.message);
+        this.setSafeError(error, 'No se pudieron actualizar los datos del alumno.');
         return null;
       }
       return existing.id;
@@ -562,12 +693,20 @@ export class CursosSingularesFacade {
 
     const { data: newStudent, error } = await this.supabase.client
       .from('students')
-      .insert({ user_id: userId, ...payload })
+      .insert({
+        user_id: userId,
+        birth_date: form.birthDate,
+        gender: form.gender || null,
+        address: form.address || null,
+        is_minor: isMinor(form.birthDate),
+        has_notarial_auth: false,
+        status: 'active',
+      })
       .select('id')
       .single();
 
     if (error || !newStudent) {
-      this._error.set('Error al crear alumno: ' + (error?.message ?? 'Sin datos'));
+      this.setSafeError(error, 'No se pudo registrar al alumno. Intenta nuevamente.');
       return null;
     }
     return newStudent.id;

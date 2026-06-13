@@ -41,6 +41,7 @@ const INCOME_COLORS: Record<string, string> = {
   professional: '#7c3aed',
   complement: 'var(--state-warning)',
   special_service: 'var(--state-success)',
+  standalone: '#0d9488',
 };
 
 const EXPENSE_LABEL: Record<string, string> = {
@@ -73,7 +74,8 @@ function incomeCategoryKey(p: PaymentRow, showBranch: boolean): string {
   const type = p.type ?? 'unknown';
   if (type === 'complement') return 'complement';
   if (type === 'special_service') return 'special_service';
-  // enrollment | monthly_fee → agrupar por license_group (+ branch si showBranch)
+  // enrollment | monthly_fee | standalone → agrupar por license_group (+ branch si showBranch)
+  // Los cursos singulares llegan con license_group='standalone' (fix-016).
   const enr = p.enrollments[0];
   const lg = enr?.license_group ?? 'unknown';
   return showBranch ? `${lg}:${enr?.branch_id ?? 0}` : lg;
@@ -84,7 +86,14 @@ function incomeCategoryLabel(key: string, showBranch: boolean): string {
   if (key === 'complement') return 'Clases Extra';
   if (key === 'special_service') return 'Psicotécnico / Servicios';
   const [lg, branchIdStr] = key.split(':');
-  const base = lg === 'class_b' ? 'Clase B' : lg === 'professional' ? 'Profesional' : 'Otros';
+  const base =
+    lg === 'class_b'
+      ? 'Clase B'
+      : lg === 'professional'
+        ? 'Profesional'
+        : lg === 'standalone'
+          ? 'Cursos Singulares'
+          : 'Otros';
   if (showBranch && branchIdStr) {
     const abbrev = BRANCH_ABBREV[Number(branchIdStr)] ?? `Sede ${branchIdStr}`;
     return `${base} (${abbrev})`;
@@ -101,6 +110,27 @@ function incomeBarColor(key: string): string {
 }
 
 // ── Funciones exportadas (usadas por el Facade) ───────────────────────────────
+
+/** Cobro de curso singular tal como llega de standalone_course_enrollments. */
+export interface SingularSaleReportDto {
+  amount_paid: number | null;
+  paid_at: string | null;
+  branch_id: number;
+}
+
+/**
+ * Normaliza un cobro de curso singular a la forma `PaymentRow` para que
+ * participe de todos los cómputos del reporte (KPIs, categorías, evolución,
+ * detalle diario) sin ramas especiales. Categoría: `license_group='standalone'`.
+ */
+export function mapSingularSaleToPaymentRow(s: SingularSaleReportDto): PaymentRow {
+  return {
+    total_amount: s.amount_paid ?? 0,
+    type: 'standalone',
+    payment_date: s.paid_at ? s.paid_at.slice(0, 10) : null,
+    enrollments: [{ branch_id: s.branch_id, license_group: 'standalone' }],
+  };
+}
 
 /**
  * Filtra los pagos según la sede efectiva.
