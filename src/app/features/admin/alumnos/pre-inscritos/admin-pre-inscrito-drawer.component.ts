@@ -688,7 +688,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             </p>
                           </div>
                           <span
-                            class="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-elevated"
+                            class="text-xs font-semibold px-2 py-0.5 rounded-full bg-elevated"
                             [class.text-success]="course.available > 5"
                             [class.text-warning]="course.available > 0 && course.available <= 5"
                             [class.text-danger]="course.available === 0"
@@ -793,7 +793,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             class="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors"
                             [class.border-border]="!docFileSignal(doc.key)()"
                             [class.text-secondary]="!docFileSignal(doc.key)()"
-                            [class.hover:bg-surface-elevated]="!docFileSignal(doc.key)()"
+                            [class.hover:bg-elevated]="!docFileSignal(doc.key)()"
                             [class.border-success-muted]="!!docFileSignal(doc.key)()"
                             [class.text-success]="!!docFileSignal(doc.key)()"
                             [style.border-color]="

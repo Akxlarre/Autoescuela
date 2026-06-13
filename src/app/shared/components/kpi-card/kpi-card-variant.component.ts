@@ -84,7 +84,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           @if (progressPercent() !== undefined) {
             <div class="w-full flex flex-col gap-1.5 mt-1">
               <div
-                class="w-full bg-surface-elevated rounded-full overflow-hidden"
+                class="w-full bg-elevated rounded-full overflow-hidden"
                 style="height: 6px;"
               >
                 <div

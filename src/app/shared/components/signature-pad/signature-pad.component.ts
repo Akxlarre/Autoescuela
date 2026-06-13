@@ -28,7 +28,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <button
             type="button"
             (click)="clear()"
-            class="text-xs font-semibold px-3 py-1.5 rounded-full bg-surface-elevated border border-border-default text-text-secondary hover:text-error hover:border-error/30 hover:bg-error/5 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm"
+            class="text-xs font-semibold px-3 py-1.5 rounded-full bg-elevated border border-border-default text-text-secondary hover:text-error hover:border-error/30 hover:bg-error/5 transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-sm"
           >
             <app-icon name="eraser" [size]="14"></app-icon> Limpiar
           </button>

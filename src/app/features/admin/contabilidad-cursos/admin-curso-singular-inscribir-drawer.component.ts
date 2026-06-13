@@ -107,7 +107,7 @@ const PAYMENT_METHODS: {
             <div
               class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
               [style.background]="
-                facade.wizardStep() >= step ? 'var(--ds-brand)' : 'var(--bg-surface-elevated)'
+                facade.wizardStep() >= step ? 'var(--ds-brand)' : 'var(--bg-elevated)'
               "
               [style.color]="facade.wizardStep() >= step ? 'white' : 'var(--text-muted)'"
             >
@@ -139,8 +139,8 @@ const PAYMENT_METHODS: {
                 placeholder="12.345.678-9"
                 maxlength="12"
                 class="flex-1 h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary"
-                [class.border-state-error]="rutInput().length > 0 && !rutValido()"
-                [class.border-state-success]="rutValido()"
+                [class.border-error]="rutInput().length > 0 && !rutValido()"
+                [class.border-success]="rutValido()"
                 [class.border-border-subtle]="!rutInput().length"
                 data-llm-description="RUT del alumno a inscribir en el curso singular"
               />
@@ -162,12 +162,12 @@ const PAYMENT_METHODS: {
               </button>
             </div>
             @if (rutInput().length > 0 && !rutValido()) {
-              <p class="text-xs text-state-error flex items-center gap-1 mt-1">
+              <p class="text-xs text-error flex items-center gap-1 mt-1">
                 <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
                 RUT inválido — verifica el dígito verificador
               </p>
             } @else if (rutValido()) {
-              <p class="text-xs text-state-success flex items-center gap-1 mt-1">
+              <p class="text-xs text-success flex items-center gap-1 mt-1">
                 <app-icon name="check-circle" [size]="12" color="var(--state-success)" />
                 RUT válido
               </p>
@@ -485,7 +485,7 @@ const PAYMENT_METHODS: {
                     [style.background]="
                       selectedMethod() === method.value
                         ? 'var(--ds-brand)'
-                        : 'var(--bg-surface-elevated)'
+                        : 'var(--bg-elevated)'
                     "
                   >
                     <app-icon

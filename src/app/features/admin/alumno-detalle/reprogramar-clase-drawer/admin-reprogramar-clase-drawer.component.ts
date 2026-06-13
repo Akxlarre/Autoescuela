@@ -77,7 +77,7 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
                     class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
                     [class.bg-brand]="selectedInstructorId() === instructor.id"
                     [class.text-surface]="selectedInstructorId() === instructor.id"
-                    [class.bg-bg-subtle]="selectedInstructorId() !== instructor.id"
+                    [class.bg-subtle]="selectedInstructorId() !== instructor.id"
                     [class.text-text-muted]="selectedInstructorId() !== instructor.id"
                   >
                     <app-icon name="user" [size]="16" />

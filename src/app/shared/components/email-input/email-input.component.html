@@ -20,7 +20,7 @@
     data-llm-description="Email address input field with real-time format validation"
     class="w-full h-11 px-4 text-sm border rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
     style="background: var(--bg-surface); color: var(--text-primary)"
-    [class.border-state-error]="showFeedback() && !isValid()"
+    [class.border-error]="showFeedback() && !isValid()"
     [class.border-border-default]="!showFeedback() || isValid()"
     [attr.aria-required]="required()"
     [attr.aria-invalid]="showFeedback() && !isValid()"
@@ -28,12 +28,12 @@
   />
 
   @if (showFeedback() && !isValid()) {
-    <p [id]="id() + '-feedback'" class="text-xs text-state-error flex items-center gap-1">
+    <p [id]="id() + '-feedback'" class="text-xs text-error flex items-center gap-1">
       <app-icon name="circle-alert" [size]="12" />
       Correo inválido — verifica que tenga el formato correcto (ej: usuario&#64;dominio.cl)
     </p>
   } @else if (showFeedback() && isValid()) {
-    <p [id]="id() + '-feedback'" class="text-xs text-state-success flex items-center gap-1">
+    <p [id]="id() + '-feedback'" class="text-xs text-success flex items-center gap-1">
       <app-icon name="check-circle" [size]="12" />
       Correo válido
     </p>

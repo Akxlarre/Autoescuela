@@ -89,7 +89,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
           <!-- Tabla de historial -->
           <div class="card p-0 overflow-hidden">
             <div
-              class="px-6 py-4 border-b border-divider bg-surface-hover flex items-center justify-between"
+              class="px-6 py-4 border-b border-border-subtle bg-subtle flex items-center justify-between"
             >
               <h3 class="text-lg font-bold text-text-primary">Historial de Puntajes</h3>
             </div>
@@ -99,7 +99,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
                     <tr
-                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider bg-subtle"
+                      class="border-b border-border-subtle text-xs text-text-muted uppercase tracking-wider bg-subtle"
                     >
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
@@ -108,7 +108,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
                       <th class="p-4 font-semibold">Estado</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-divider text-sm">
+                  <tbody class="divide-y divide-border-subtle text-sm">
                     @for (_ of skeletonRows; track $index) {
                       <tr>
                         <td class="p-4">
@@ -142,7 +142,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
                 <table class="w-full text-left border-collapse min-w-[640px]">
                   <thead>
                     <tr
-                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider bg-subtle"
+                      class="border-b border-border-subtle text-xs text-text-muted uppercase tracking-wider bg-subtle"
                     >
                       <th class="p-4 font-semibold">Alumno</th>
                       <th class="p-4 font-semibold">RUT</th>
@@ -151,9 +151,9 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
                       <th class="p-4 font-semibold">Estado</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-divider text-sm">
+                  <tbody class="divide-y divide-border-subtle text-sm">
                     @for (item of facade.examScores(); track item.id) {
-                      <tr class="hover:bg-surface-hover/50 transition-colors">
+                      <tr class="hover:bg-subtle/50 transition-colors">
                         <td class="p-4 font-medium text-text-primary">{{ item.studentName }}</td>
                         <td class="p-4 text-text-muted">{{ item.studentRut }}</td>
                         <td class="p-4">

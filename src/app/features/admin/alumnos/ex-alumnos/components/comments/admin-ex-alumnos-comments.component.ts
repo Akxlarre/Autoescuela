@@ -17,7 +17,7 @@ export interface ComentarioMock {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TooltipModule, CommonModule, IconComponent, Button],
   template: `
-    <div class="bento-card bento-tall p-6 flex flex-col h-full bg-bg-surface overflow-hidden">
+    <div class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden">
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div class="flex flex-col">

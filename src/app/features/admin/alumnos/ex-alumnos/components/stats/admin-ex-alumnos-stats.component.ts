@@ -7,7 +7,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `
-    <div class="bento-card bento-tall p-6 flex flex-col h-full bg-bg-surface overflow-hidden">
+    <div class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden">
       <div class="flex flex-col mb-6">
         <h3 class="text-base font-bold text-text-primary m-0">Tasas de Aprobación</h3>
         <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"
@@ -71,7 +71,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 
         <div class="grid grid-cols-2 gap-4 mb-6">
           <div
-            class="relative overflow-hidden p-4 rounded-2xl bg-bg-elevated/10 border border-border-subtle/30 group hover:bg-bg-elevated/20 transition-all duration-300"
+            class="relative overflow-hidden p-4 rounded-2xl bg-elevated/10 border border-border-subtle/30 group hover:bg-elevated/20 transition-all duration-300"
           >
             <div
               class="absolute -right-2 -top-2 opacity-5 group-hover:opacity-10 transition-opacity"
@@ -87,7 +87,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           </div>
 
           <div
-            class="relative overflow-hidden p-4 rounded-2xl bg-bg-elevated/10 border border-border-subtle/30 group hover:bg-bg-elevated/20 transition-all duration-300"
+            class="relative overflow-hidden p-4 rounded-2xl bg-elevated/10 border border-border-subtle/30 group hover:bg-elevated/20 transition-all duration-300"
           >
             <div
               class="absolute -right-2 -top-2 opacity-5 group-hover:opacity-10 transition-opacity"
@@ -97,7 +97,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1"
               >Licencias</span
             >
-            <span class="text-3xl font-display font-black text-state-success tracking-tighter">{{
+            <span class="text-3xl font-display font-black text-success tracking-tighter">{{
               licensesTotal
             }}</span>
           </div>
@@ -122,7 +122,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               >
                 {{ successRate }}<span class="text-lg opacity-40 ml-0.5">%</span>
               </span>
-              <div class="mt-2 h-1 w-16 bg-bg-subtle rounded-full overflow-hidden">
+              <div class="mt-2 h-1 w-16 bg-subtle rounded-full overflow-hidden">
                 <div
                   class="h-full bg-brand shadow-[0_0_8px_var(--ds-brand)] transition-all duration-1000 ease-out"
                   [style.width.%]="successRate || 5"

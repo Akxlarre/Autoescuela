@@ -24,7 +24,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="v-servicio"
           >
-            Servicio <span class="text-state-error">*</span>
+            Servicio <span class="text-error">*</span>
           </label>
           <p-select
             id="v-servicio"
@@ -44,7 +44,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="v-nombre"
             >
-              Nombre del cliente <span class="text-state-error">*</span>
+              Nombre del cliente <span class="text-error">*</span>
             </label>
             <input
               id="v-nombre"
@@ -59,7 +59,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="v-rut"
             >
-              RUT <span class="text-state-error">*</span>
+              RUT <span class="text-error">*</span>
             </label>
             <input
               id="v-rut"
@@ -107,7 +107,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="v-precio"
             >
-              Monto ($) <span class="text-state-error">*</span>
+              Monto ($) <span class="text-error">*</span>
             </label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
@@ -126,7 +126,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 
         <!-- Cobrado al registrar -->
         <label
-          class="flex items-center gap-3 p-4 rounded-xl border border-border-default cursor-pointer hover:bg-bg-subtle transition-colors"
+          class="flex items-center gap-3 p-4 rounded-xl border border-border-default cursor-pointer hover:bg-subtle transition-colors"
         >
           <input
             type="checkbox"
@@ -159,7 +159,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           </button>
           <button
             type="button"
-            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-bg-subtle active:scale-95 transition-all"
+            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-subtle active:scale-95 transition-all"
             (click)="drawer.close()"
           >
             Cancelar

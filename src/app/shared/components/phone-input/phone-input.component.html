@@ -98,7 +98,7 @@
       data-llm-description="Student phone number with dial code prefix for WhatsApp contact"
       class="flex-1 h-11 px-4 text-sm border rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
       style="background: var(--bg-surface); color: var(--text-primary)"
-      [class.border-state-error]="showFeedback() && !isValid()"
+      [class.border-error]="showFeedback() && !isValid()"
       [class.border-border-default]="!showFeedback() || isValid() === null || isValid()"
       [attr.aria-required]="required()"
       [attr.aria-invalid]="showFeedback() && !isValid()"
@@ -107,12 +107,12 @@
   </div>
 
   @if (showFeedback() && !isValid()) {
-    <p [id]="errorId()" class="text-xs text-state-error flex items-center gap-1">
+    <p [id]="errorId()" class="text-xs text-error flex items-center gap-1">
       <app-icon name="circle-alert" [size]="12" />
       Número incompleto — verifica que el formato sea correcto (ej: 9 1234 5678 para Chile)
     </p>
   } @else if (showFeedback() && isValid()) {
-    <p [id]="errorId()" class="text-xs text-state-success flex items-center gap-1">
+    <p [id]="errorId()" class="text-xs text-success flex items-center gap-1">
       <app-icon name="check-circle" [size]="12" />
       Número válido
     </p>

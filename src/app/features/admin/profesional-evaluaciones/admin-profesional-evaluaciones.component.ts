@@ -149,7 +149,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
             <table class="w-full border-collapse text-sm">
               <!-- Encabezados -->
               <thead>
-                <tr class="border-b border-border bg-surface-elevated">
+                <tr class="border-b border-border bg-elevated">
                   <th
                     class="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-secondary"
                     style="min-width:220px"
@@ -179,7 +179,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
               <!-- Filas de alumnos -->
               <tbody>
                 @for (fila of g.filas; track fila.enrollmentId) {
-                  <tr class="border-b border-border/50 transition-colors hover:bg-surface-hover">
+                  <tr class="border-b border-border/50 transition-colors hover:bg-subtle">
                     <!-- Alumno -->
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-3">
@@ -246,7 +246,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
 
           <!-- Footer: leyenda + acciones -->
           <div
-            class="p-4 bg-surface-elevated border-t border-border flex items-center justify-between flex-wrap gap-4"
+            class="p-4 bg-elevated border-t border-border flex items-center justify-between flex-wrap gap-4"
           >
             <!-- Leyenda -->
             <div class="flex items-center gap-4 text-xs font-medium text-secondary">

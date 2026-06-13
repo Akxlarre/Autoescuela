@@ -116,7 +116,7 @@ interface BranchCardMeta {
                 </div>
                 <p class="text-xs text-secondary">{{ flow.description }}</p>
                 @if (flow.value === 'professional') {
-                  <div class="mt-3 p-2.5 rounded-lg bg-surface-elevated border border-border">
+                  <div class="mt-3 p-2.5 rounded-lg bg-elevated border border-border">
                     <p class="text-xs text-muted flex items-center gap-1.5">
                       <app-icon name="info" [size]="14" />
                       Solo pre-inscripción. La matrícula completa se realiza presencialmente.

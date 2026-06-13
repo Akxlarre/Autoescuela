@@ -126,7 +126,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
       } @else {
         <!-- Photo input methods (Tabs) -->
         <div class="flex flex-col gap-3">
-          <div class="flex gap-2 p-1 rounded-lg" style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);">
+          <div class="flex gap-2 p-1 rounded-lg" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
             <button
               type="button"
               class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer"
@@ -187,7 +187,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             <div class="flex flex-col items-center gap-3 rounded-xl p-4 overflow-hidden relative"
                  style="background: var(--bg-surface); border: 1px solid var(--border-default);">
               
-              <div class="w-full rounded-lg overflow-hidden relative" style="aspect-ratio: 4/3; background: var(--bg-surface-elevated);">
+              <div class="w-full rounded-lg overflow-hidden relative" style="aspect-ratio: 4/3; background: var(--bg-elevated);">
                 <video #videoElement autoplay playsinline class="w-full h-full object-cover" [class.hidden]="!isCameraActive()"></video>
                 
                 @if (!isCameraActive()) {

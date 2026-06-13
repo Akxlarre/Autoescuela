@@ -30,7 +30,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
         </h3>
 
         <div
-          class="bg-surface-elevated border border-divider rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm"
+          class="bg-elevated border border-border-subtle rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm"
         >
           <span class="text-xs font-bold text-brand">{{ checkedCount }}</span>
           <span class="text-xs text-muted">de {{ items.length }}</span>
@@ -44,7 +44,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
             class="group w-full flex items-center justify-between gap-4 p-4 rounded-2xl border text-left transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
             [ngClass]="{
               'bg-brand-muted border-brand shadow-sm': item.checked,
-              'bg-surface-base border-border-default hover:border-border-strong': !item.checked,
+              'bg-subtle border-border-default hover:border-border-strong': !item.checked,
             }"
             (click)="toggleItem(item)"
           >

@@ -80,8 +80,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
           <div class="flex items-start gap-4">
             <div
               class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              [class.bg-state-warning-bg]="confirmModal.config()?.severity === 'warn'"
-              [class.bg-state-error-bg]="confirmModal.config()?.severity === 'danger'"
+              [class.bg-warning-subtle]="confirmModal.config()?.severity === 'warn'"
+              [class.bg-error-subtle]="confirmModal.config()?.severity === 'danger'"
               [class.bg-brand-muted]="
                 confirmModal.config()?.severity === 'secondary' || !confirmModal.config()?.severity
               "
@@ -91,8 +91,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                   confirmModal.config()?.severity === 'danger' ? 'circle-alert' : 'alert-triangle'
                 "
                 [size]="20"
-                [class.text-state-warning]="confirmModal.config()?.severity === 'warn'"
-                [class.text-state-error]="confirmModal.config()?.severity === 'danger'"
+                [class.text-warning]="confirmModal.config()?.severity === 'warn'"
+                [class.text-error]="confirmModal.config()?.severity === 'danger'"
                 [class.text-brand]="
                   confirmModal.config()?.severity === 'secondary' ||
                   !confirmModal.config()?.severity

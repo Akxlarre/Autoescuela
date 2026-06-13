@@ -123,7 +123,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <h2 class="text-lg font-semibold text-text-primary m-0">Catálogo de Servicios</h2>
             <button
               type="button"
-              class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+              class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-border-default text-text-secondary hover:bg-subtle transition-colors"
               data-llm-action="open-nuevo-servicio-drawer"
               (click)="requestNuevoServicio.emit()"
             >
@@ -170,7 +170,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   >
                   <button
                     type="button"
-                    class="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                    class="cursor-pointer text-sm font-medium px-3 py-1.5 rounded-lg border border-border-default text-text-secondary hover:bg-subtle transition-colors"
                     [attr.data-llm-action]="'vender-' + servicio.id"
                     (click)="requestRegistrarVenta.emit(servicio)"
                   >
@@ -183,7 +183,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <!-- Tarjeta agregar nuevo servicio -->
             <button
               type="button"
-              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-bg-subtle/50 border-2 border-dashed border-border-default"
+              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-subtle/50 border-2 border-dashed border-border-default"
               
               data-llm-action="open-nuevo-servicio-drawer-card"
               (click)="requestNuevoServicio.emit()"
@@ -289,7 +289,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               <tbody>
                 @for (venta of ventasFiltradas(); track venta.id) {
                   <tr
-                    class="transition-colors hover:bg-bg-subtle/50"
+                    class="transition-colors hover:bg-subtle/50"
                     style="border-bottom:1px solid var(--border-subtle)"
                   >
                     <td class="py-3 px-4">
@@ -337,7 +337,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       } @else {
                         <button
                           type="button"
-                          class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-bg-subtle transition-colors"
+                          class="text-xs font-medium px-2.5 py-1 rounded border border-border-default text-text-secondary hover:bg-subtle transition-colors"
                           (click)="cobroRegistrado.emit(venta.id)"
                         >
                           Cobrar
@@ -369,7 +369,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
           <div class="sm:hidden flex flex-col gap-4">
             @for (venta of ventasFiltradas(); track venta.id) {
               <div
-                class="p-4 rounded-xl bg-bg-surface border border-border-subtle flex flex-col gap-3"
+                class="p-4 rounded-xl bg-surface border border-border-subtle flex flex-col gap-3"
               >
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex flex-col gap-0.5">
@@ -385,7 +385,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 </div>
 
                 <div class="flex items-center gap-2">
-                  <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-bg-subtle">{{
+                  <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-subtle">{{
                     venta.servicio
                   }}</span>
                   <span class="text-[10px] text-text-muted">{{ venta.fecha }}</span>
@@ -408,7 +408,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <div class="flex items-center gap-2">
                     @if (venta.cobrado) {
                       <span
-                        class="text-[10px] font-bold text-state-success uppercase px-2 py-1 bg-state-success-bg border border-state-success rounded"
+                        class="text-[10px] font-bold text-success uppercase px-2 py-1 bg-success-subtle border border-success rounded"
                         >Pagado</span
                       >
                     } @else {

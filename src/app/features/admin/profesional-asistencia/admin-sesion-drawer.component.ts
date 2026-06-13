@@ -120,7 +120,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               [class]="
                 mode() === 'attendance' && !isFuture()
                   ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-surface border-border text-secondary hover:bg-surface-elevated hover:text-primary'
+                  : 'bg-surface border-border text-secondary hover:bg-elevated hover:text-primary'
               "
               [class.opacity-50]="isFuture()"
               [disabled]="isFuture()"
@@ -135,7 +135,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               [class]="
                 mode() === 'edit'
                   ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-surface border-border text-secondary hover:bg-surface-elevated hover:text-primary'
+                  : 'bg-surface border-border text-secondary hover:bg-elevated hover:text-primary'
               "
               (click)="mode.set('edit')"
               data-llm-action="switch-to-edit-mode"
@@ -184,7 +184,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               <!-- Bulk actions -->
               @if (facade.asistenciaAlumnos().length > 0) {
                 <div
-                  class="mb-3 flex items-center justify-between rounded-lg bg-surface-elevated p-2"
+                  class="mb-3 flex items-center justify-between rounded-lg bg-elevated p-2"
                 >
                   <span class="text-xs text-secondary">
                     {{ facade.asistenciaAlumnos().length }} alumnos

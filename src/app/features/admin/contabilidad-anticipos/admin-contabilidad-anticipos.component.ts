@@ -372,7 +372,7 @@ function clp(n: number): string {
   `,
   styles: `
     .hover-row:hover {
-      background: var(--bg-surface-elevated);
+      background: var(--bg-elevated);
     }
     .hover-row {
       transition: background 0.15s;

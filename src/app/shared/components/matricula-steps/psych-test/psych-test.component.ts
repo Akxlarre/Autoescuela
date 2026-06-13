@@ -39,7 +39,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
           <span>{{ answeredCount() }} de {{ totalQuestions }} respondidas</span>
           <span>Página {{ currentPage() }} / {{ totalPages }}</span>
         </div>
-        <div class="h-1.5 w-full rounded-full bg-surface-elevated overflow-hidden">
+        <div class="h-1.5 w-full rounded-full bg-elevated overflow-hidden">
           <div
             class="h-full rounded-full transition-all duration-300 bg-brand"
             [style.width.%]="progressPct()"
@@ -107,7 +107,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
         class="flex items-center justify-between pt-4 sticky bottom-0"
         style="
           border-top: 1px solid var(--border-subtle);
-          background: var(--bg-surface-elevated, var(--bg-surface));
+          background: var(--bg-elevated, var(--bg-surface));
           z-index: 1;
           padding-bottom: 0.25rem;
         "

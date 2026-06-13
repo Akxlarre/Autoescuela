@@ -120,7 +120,7 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
             Kilometraje Actual
           </label>
           <div
-            class="flex items-center gap-3 bg-surface-hover rounded-2xl border border-border-default/60 px-6 py-3"
+            class="flex items-center gap-3 bg-subtle rounded-2xl border border-border-default/60 px-6 py-3"
           >
             <input
               id="kmStartAdmin"

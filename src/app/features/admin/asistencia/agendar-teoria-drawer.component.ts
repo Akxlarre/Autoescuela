@@ -232,7 +232,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               >
                 @for (alumno of filteredAlumnos(); track alumno.enrollmentId) {
                   <label
-                    class="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:bg-surface-elevated"
+                    class="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors hover:bg-elevated"
                   >
                     <input
                       type="checkbox"

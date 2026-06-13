@@ -87,7 +87,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
               >
                 <div class="flex items-center gap-3">
                   <div
-                    class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0"
+                    class="w-8 h-8 rounded-full bg-subtle flex items-center justify-center shrink-0"
                   >
                     <app-icon name="clock" [size]="16" class="text-text-secondary" />
                   </div>
@@ -100,7 +100,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 </div>
                 <div class="flex items-center gap-3">
                   <div
-                    class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0"
+                    class="w-8 h-8 rounded-full bg-subtle flex items-center justify-center shrink-0"
                   >
                     <app-icon name="car" [size]="16" class="text-text-secondary" />
                   </div>
@@ -149,7 +149,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                     </label>
 
                     <div
-                      class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-surface-base rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors group-focus-within:border-brand/50 group-focus-within:bg-surface-hover"
+                      class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-subtle rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors group-focus-within:border-brand/50 group-focus-within:bg-subtle"
                     >
                       <input
                         id="kmStart"
@@ -213,7 +213,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 class="card p-10 flex flex-col justify-center items-center text-center border-dashed"
               >
                 <div
-                  class="w-16 h-16 rounded-full bg-surface-hover flex items-center justify-center mb-4"
+                  class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center mb-4"
                 >
                   <app-icon name="lock" [size]="28" class="text-text-muted opacity-60" />
                 </div>

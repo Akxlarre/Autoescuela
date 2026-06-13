@@ -528,7 +528,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
       color: var(--state-success);
     }
     .firma-pending {
-      background: var(--color-bg-surface-elevated, var(--bg-elevated));
+      background: var(--color-bg-elevated, var(--bg-elevated));
       color: var(--text-muted);
     }
     .border-muted {

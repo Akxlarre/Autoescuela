@@ -128,7 +128,7 @@ interface SimulatorLink {
                 </div>
 
                 <div
-                  class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-divider text-brand"
+                  class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-border-subtle text-brand"
                   
                 >
                   <span>Ir al simulador</span>

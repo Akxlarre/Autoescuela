@@ -48,7 +48,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               placeholder="Ej: Operador de Grúa Horquilla"
             />
             @if (form.controls['nombre'].invalid && form.controls['nombre'].touched) {
-              <p class="text-xs text-state-error">El nombre es requerido (mín. 3 caps).</p>
+              <p class="text-xs text-error">El nombre es requerido (mín. 3 caps).</p>
             }
           </div>
 
@@ -94,7 +94,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                 placeholder="280000"
               />
               @if (form.controls['precio'].invalid && form.controls['precio'].touched) {
-                <p class="text-xs text-state-error">Ingrese un precio válido.</p>
+                <p class="text-xs text-error">Ingrese un precio válido.</p>
               }
             </div>
             <div class="flex flex-col gap-1">
@@ -135,7 +135,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                 "
               />
               @if (form.controls['inicio'].invalid && form.controls['inicio'].touched) {
-                <p class="text-xs text-state-error">La fecha es requerida.</p>
+                <p class="text-xs text-error">La fecha es requerida.</p>
               }
             </div>
           </div>
@@ -143,7 +143,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
           <!-- Error global -->
           @if (facade.error()) {
             <div
-              class="p-3 rounded-lg bg-state-error-subtle text-state-error text-xs flex items-center gap-2"
+              class="p-3 rounded-lg bg-error-subtle text-error text-xs flex items-center gap-2"
             >
               <app-icon name="alert-circle" [size]="14" />
               <span>{{ facade.error() }}</span>

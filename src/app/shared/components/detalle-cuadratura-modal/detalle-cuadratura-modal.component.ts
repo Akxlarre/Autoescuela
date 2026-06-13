@@ -25,13 +25,13 @@ interface DenominacionRow {
       @if (facade.cierreSeleccionado(); as d) {
         <!-- 1. Header Information (Non-numeric info in Bento-style cards) -->
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <div class="card p-3 flex flex-col gap-1 bg-bg-surface-elevated">
+          <div class="card p-3 flex flex-col gap-1 bg-elevated">
             <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
               >Cajero</span
             >
             <span class="text-sm font-bold text-text-primary">{{ d.cajero }}</span>
           </div>
-          <div class="card p-3 flex flex-col gap-1 bg-bg-surface-elevated">
+          <div class="card p-3 flex flex-col gap-1 bg-elevated">
             <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
               >Fecha Cierre</span
             >
@@ -39,8 +39,8 @@ interface DenominacionRow {
           </div>
           <div
             class="card p-3 flex flex-col gap-1 border-border-muted"
-            [class.border-state-success]="d.estadoDiferencia === 'balanced'"
-            [class.border-state-error]="d.estadoDiferencia === 'shortage'"
+            [class.border-success]="d.estadoDiferencia === 'balanced'"
+            [class.border-error]="d.estadoDiferencia === 'shortage'"
           >
             <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
               >Estado</span
@@ -48,9 +48,9 @@ interface DenominacionRow {
             <div class="flex items-center gap-1.5">
               <div
                 class="w-1.5 h-1.5 rounded-full"
-                [class.bg-state-success]="d.estadoDiferencia === 'balanced'"
-                [class.bg-state-warning]="d.estadoDiferencia === 'surplus'"
-                [class.bg-state-error]="d.estadoDiferencia === 'shortage'"
+                [class.bg-success]="d.estadoDiferencia === 'balanced'"
+                [class.bg-warning]="d.estadoDiferencia === 'surplus'"
+                [class.bg-error]="d.estadoDiferencia === 'shortage'"
               ></div>
               <span class="text-sm font-bold text-text-primary">
                 {{
@@ -101,7 +101,7 @@ interface DenominacionRow {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div class="lg:col-span-2 flex flex-col gap-5">
             <div
-              class="card p-5 relative overflow-hidden bg-bg-surface-elevated border-border-muted shadow-sm"
+              class="card p-5 relative overflow-hidden bg-elevated border-border-muted shadow-sm"
             >
               <div
                 class="absolute top-0 right-0 w-32 h-32 bg-brand/5 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"
@@ -134,7 +134,7 @@ interface DenominacionRow {
                       class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
                       >Ingresos Registrados</span
                     >
-                    <span class="text-lg font-black tabular-nums tracking-tight text-state-success"
+                    <span class="text-lg font-black tabular-nums tracking-tight text-success"
                       >+ {{ formatAmt(d.totalIngresos) }}</span
                     >
                   </div>
@@ -143,12 +143,12 @@ interface DenominacionRow {
                       class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
                       >Egresos / Gastos</span
                     >
-                    <span class="text-lg font-black tabular-nums tracking-tight text-state-error"
+                    <span class="text-lg font-black tabular-nums tracking-tight text-error"
                       >- {{ formatAmt(d.totalEgresos) }}</span
                     >
                   </div>
                   <div
-                    class="flex flex-col p-3 rounded-xl bg-bg-surface border border-border-muted/30 shadow-subtle"
+                    class="flex flex-col p-3 rounded-xl bg-surface border border-border-muted/30 shadow-subtle"
                   >
                     <span
                       class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
@@ -156,9 +156,9 @@ interface DenominacionRow {
                     >
                     <span
                       class="text-xl font-black tabular-nums tracking-tighter"
-                      [class.text-state-error]="d.estadoDiferencia === 'shortage'"
-                      [class.text-state-warning]="d.estadoDiferencia === 'surplus'"
-                      [class.text-state-success]="d.estadoDiferencia === 'balanced'"
+                      [class.text-error]="d.estadoDiferencia === 'shortage'"
+                      [class.text-warning]="d.estadoDiferencia === 'surplus'"
+                      [class.text-success]="d.estadoDiferencia === 'balanced'"
                     >
                       {{ formatAmt(d.saldoFisico) }}
                     </span>
@@ -168,7 +168,7 @@ interface DenominacionRow {
             </div>
 
             @if (d.notes) {
-              <div class="card p-5 bg-bg-subtle/30 border-dashed border-border-muted">
+              <div class="card p-5 bg-subtle/30 border-dashed border-border-muted">
                 <div class="flex items-center gap-2 mb-2">
                   <app-icon name="info" [size]="14" class="text-text-muted" />
                   <h4 class="text-[10px] font-black text-text-primary uppercase tracking-widest">
@@ -186,7 +186,7 @@ interface DenominacionRow {
           <div class="flex flex-col gap-4">
             <div class="card p-0 overflow-hidden border-border-muted shadow-sm">
               <div
-                class="px-4 py-3 bg-bg-subtle border-b border-border-muted flex items-center justify-between"
+                class="px-4 py-3 bg-subtle border-b border-border-muted flex items-center justify-between"
               >
                 <span class="text-[10px] font-bold text-text-primary uppercase tracking-widest"
                   >Desglose Físico</span
@@ -197,7 +197,7 @@ interface DenominacionRow {
               <div class="divide-y divide-border-muted/30 max-h-[340px] overflow-y-auto">
                 @for (den of denominaciones(); track den.label) {
                   <div
-                    class="px-4 py-2.5 flex items-center justify-between hover:bg-bg-subtle/50 transition-colors"
+                    class="px-4 py-2.5 flex items-center justify-between hover:bg-subtle/50 transition-colors"
                   >
                     <div class="flex flex-col">
                       <span class="text-[11px] font-semibold text-text-secondary">{{
@@ -213,7 +213,7 @@ interface DenominacionRow {
               </div>
 
               <div
-                class="p-4 bg-bg-surface-elevated border-t border-border-muted flex justify-between items-center mt-auto"
+                class="p-4 bg-elevated border-t border-border-muted flex justify-between items-center mt-auto"
               >
                 <span class="text-[11px] font-black text-text-primary uppercase"
                   >Total Efectivo</span
@@ -232,7 +232,7 @@ interface DenominacionRow {
         >
           <div class="relative w-full sm:w-auto">
             <button
-              class="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-bold px-6 py-3.5 rounded-xl transition-all cursor-pointer border border-border-muted bg-bg-surface text-text-secondary hover:bg-bg-subtle"
+              class="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-bold px-6 py-3.5 rounded-xl transition-all cursor-pointer border border-border-muted bg-surface text-text-secondary hover:bg-subtle"
               [disabled]="facade.isExporting()"
               (click)="exportMenuOpen.set(!exportMenuOpen())"
               data-llm-action="exportar-detalle-cuadratura"
@@ -250,11 +250,11 @@ interface DenominacionRow {
             @if (exportMenuOpen()) {
               <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
               <div
-                class="absolute top-full mt-2 right-0 z-20 min-w-50 bg-bg-surface border border-border-muted rounded-lg shadow-[0_8px_24px_rgb(0_0_0/12%)] overflow-hidden"
+                class="absolute top-full mt-2 right-0 z-20 min-w-50 bg-surface border border-border-muted rounded-lg shadow-[0_8px_24px_rgb(0_0_0/12%)] overflow-hidden"
               >
                 <button
                   type="button"
-                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-[13px] text-text-primary hover:bg-bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
+                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-[13px] text-text-primary hover:bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
                   (click)="requestExport('excel')"
                   data-llm-action="export-detalle-cuadratura-excel"
                 >
@@ -263,7 +263,7 @@ interface DenominacionRow {
                 </button>
                 <button
                   type="button"
-                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-[13px] text-text-primary hover:bg-bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
+                  class="flex items-center gap-2 w-full px-3.5 py-2.5 text-[13px] text-text-primary hover:bg-elevated transition-colors border-none bg-transparent cursor-pointer text-left"
                   (click)="requestExport('pdf')"
                   data-llm-action="export-detalle-cuadratura-pdf"
                 >

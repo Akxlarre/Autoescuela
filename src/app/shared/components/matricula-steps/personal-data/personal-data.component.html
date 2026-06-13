@@ -22,7 +22,7 @@
         <div class="grid md:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-text-secondary" for="rut">
-              RUT del alumno <span class="text-state-error">*</span>
+              RUT del alumno <span class="text-error">*</span>
             </label>
             <input
               id="rut"
@@ -37,17 +37,17 @@
               maxlength="12"
               data-llm-description="Chilean RUT number of the student"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
-              [class.border-state-error]="data().rut.length > 0 && !rutValid()"
-              [class.border-state-success]="rutValid()"
+              [class.border-error]="data().rut.length > 0 && !rutValid()"
+              [class.border-success]="rutValid()"
               [class.border-border-default]="!data().rut.length"
             />
             @if (data().rut.length > 0 && !rutValid()) {
-              <p class="text-xs text-state-error flex items-center gap-1">
+              <p class="text-xs text-error flex items-center gap-1">
                 <app-icon name="circle-alert" [size]="12" />
                 RUT inválido — verifica el dígito verificador
               </p>
             } @else if (rutValid()) {
-              <p class="text-xs text-state-success flex items-center gap-1">
+              <p class="text-xs text-success flex items-center gap-1">
                 <app-icon name="check-circle" [size]="12" />
                 RUT válido
               </p>
@@ -75,7 +75,7 @@
         <div class="grid md:grid-cols-3 gap-4">
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-text-secondary" for="firstNames">
-              Nombres <span class="text-state-error">*</span>
+              Nombres <span class="text-error">*</span>
             </label>
             <input
               id="firstNames"
@@ -86,7 +86,7 @@
               (change)="emitField('firstNames', $any($event.target).value)"
               placeholder="Juan Pablo"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
-              [class.border-state-error]="
+              [class.border-error]="
                 data().firstNames.length > 0 && data().firstNames.trim().length < 2
               "
               [class.border-border-default]="
@@ -96,7 +96,7 @@
           </div>
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-text-secondary" for="paternalLastName">
-              Apellido Paterno <span class="text-state-error">*</span>
+              Apellido Paterno <span class="text-error">*</span>
             </label>
             <input
               id="paternalLastName"
@@ -107,7 +107,7 @@
               (change)="emitField('paternalLastName', $any($event.target).value)"
               placeholder="González"
               class="w-full h-11 px-4 text-sm bg-surface border rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
-              [class.border-state-error]="
+              [class.border-error]="
                 data().paternalLastName.length > 0 && data().paternalLastName.trim().length < 2
               "
               [class.border-border-default]="
@@ -152,7 +152,7 @@
           />
           <div class="flex flex-col gap-1.5">
             <label class="text-sm font-medium text-text-secondary" for="phone">
-              Teléfono / WhatsApp <span class="text-state-error">*</span>
+              Teléfono / WhatsApp <span class="text-error">*</span>
             </label>
             <input
               id="phone"
@@ -171,11 +171,11 @@
         <div class="space-y-3">
           @if (ageStatus() === 'under-17') {
             <div
-              class="p-4 rounded-xl border-2 border-state-error-border bg-state-error-bg flex gap-3 items-start"
+              class="p-4 rounded-xl border-2 border-error-border bg-error-subtle flex gap-3 items-start"
             >
-              <app-icon name="ban" [size]="20" class="text-state-error mt-0.5 shrink-0" />
+              <app-icon name="ban" [size]="20" class="text-error mt-0.5 shrink-0" />
               <div>
-                <p class="text-sm font-bold text-state-error">
+                <p class="text-sm font-bold text-error">
                   Menor de 17 años — No se puede matricular
                 </p>
                 <p class="text-xs text-text-secondary mt-1">
@@ -187,15 +187,15 @@
 
           @if (ageStatus() === 'requires-authorization') {
             <div
-              class="p-4 rounded-xl border-2 border-state-warning-border bg-state-warning-bg flex gap-3 items-start"
+              class="p-4 rounded-xl border-2 border-warning-border bg-warning-subtle flex gap-3 items-start"
             >
               <app-icon
                 name="alert-triangle"
                 [size]="20"
-                class="text-state-warning mt-0.5 shrink-0"
+                class="text-warning mt-0.5 shrink-0"
               />
               <div>
-                <p class="text-sm font-bold text-state-warning">
+                <p class="text-sm font-bold text-warning">
                   Alumno de 17 años — Requiere Autorización Notarial
                 </p>
                 <p class="text-xs text-text-secondary mt-1">
@@ -208,11 +208,11 @@
 
           @if (ageStatus() === 'under-20-professional') {
             <div
-              class="p-4 rounded-xl border-2 border-state-error-border bg-state-error-bg flex gap-3 items-start"
+              class="p-4 rounded-xl border-2 border-error-border bg-error-subtle flex gap-3 items-start"
             >
-              <app-icon name="ban" [size]="20" class="text-state-error mt-0.5 shrink-0" />
+              <app-icon name="ban" [size]="20" class="text-error mt-0.5 shrink-0" />
               <div>
-                <p class="text-sm font-bold text-state-error">
+                <p class="text-sm font-bold text-error">
                   Menor de 20 años — No puede matricularse en Clase Profesional
                 </p>
                 <p class="text-xs text-text-secondary mt-1">
@@ -259,7 +259,7 @@
                     class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors"
                     [class.bg-brand]="selectedCategory() === cat.value"
                     [class.text-surface]="selectedCategory() === cat.value"
-                    [class.bg-bg-subtle]="selectedCategory() !== cat.value"
+                    [class.bg-subtle]="selectedCategory() !== cat.value"
                     [class.text-text-muted]="selectedCategory() !== cat.value"
                   >
                     <app-icon [name]="cat.icon" [size]="20" />
@@ -288,7 +288,7 @@
               </div>
             } @else if (filteredCourses().length === 0) {
               <div
-                class="flex items-center gap-2 py-4 px-4 rounded-xl bg-bg-subtle text-text-muted"
+                class="flex items-center gap-2 py-4 px-4 rounded-xl bg-subtle text-text-muted"
               >
                 <app-icon name="info" [size]="16" class="shrink-0" />
                 <span class="text-sm">No hay cursos disponibles en esta categoría</span>
@@ -324,7 +324,7 @@
                         class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
                         [class.bg-brand]="isSelected"
                         [class.text-surface]="isSelected"
-                        [class.bg-bg-subtle]="!isSelected"
+                        [class.bg-subtle]="!isSelected"
                         [class.text-text-muted]="!isSelected"
                       >
                         <app-icon [name]="course.icon" [size]="16" />
@@ -367,7 +367,7 @@
           <button
             type="button"
             (click)="onCancel()"
-            class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors cursor-pointer"
+            class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-subtle rounded-lg transition-colors cursor-pointer"
           >
             Cancelar
           </button>

@@ -20,7 +20,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="ns-nombre"
           >
-            Nombre del servicio <span class="text-state-error">*</span>
+            Nombre del servicio <span class="text-error">*</span>
           </label>
           <input
             id="ns-nombre"
@@ -36,7 +36,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="ns-descripcion"
           >
-            Descripción <span class="text-state-error">*</span>
+            Descripción <span class="text-error">*</span>
           </label>
           <textarea
             id="ns-descripcion"
@@ -52,7 +52,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="ns-precio"
           >
-            Precio Base ($) <span class="text-state-error">*</span>
+            Precio Base ($) <span class="text-error">*</span>
           </label>
           <div class="relative">
             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted">$</span>
@@ -84,7 +84,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           </button>
           <button
             type="button"
-            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-bg-subtle active:scale-95 transition-all"
+            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-subtle active:scale-95 transition-all"
             (click)="drawer.close()"
           >
             Cancelar

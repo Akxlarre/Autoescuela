@@ -118,7 +118,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               </div>
 
               <div
-                class="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-bg-elevated/50"
+                class="flex items-center gap-3 p-3 rounded-xl border border-border-subtle bg-elevated/50"
               >
                 <app-icon name="clock" [size]="15" color="var(--text-muted)" />
                 <div class="flex flex-col">

@@ -69,7 +69,7 @@ import {
           <div class="lg:col-span-1 space-y-6">
             <div class="card p-5">
               <h3
-                class="text-xs font-bold uppercase tracking-wider text-text-muted mb-4 border-b border-divider pb-2"
+                class="text-xs font-bold uppercase tracking-wider text-text-muted mb-4 border-b border-border-subtle pb-2"
               >
                 Información Clase #{{ cls.classNumber }}
               </h3>
@@ -116,7 +116,7 @@ import {
                   </h3>
                   <p class="text-sm text-text-muted mb-3">Asigna una calificación del 1 al 5.</p>
                   <div
-                    class="flex gap-2 p-1 bg-surface-hover rounded-lg w-max border border-divider"
+                    class="flex gap-2 p-1 bg-subtle rounded-lg w-max border border-border-subtle"
                   >
                     @for (grade of gradeOptions; track grade) {
                       <label class="cursor-pointer">
@@ -127,7 +127,7 @@ import {
                           class="peer sr-only"
                         />
                         <div
-                          class="w-12 h-10 flex items-center justify-center font-bold text-text-muted rounded transition-colors peer-checked:bg-brand-primary peer-checked:text-white hover:bg-divider"
+                          class="w-12 h-10 flex items-center justify-center font-bold text-text-muted rounded transition-colors peer-checked:bg-brand-primary peer-checked:text-white hover:bg-border-subtle"
                         >
                           {{ grade }}
                         </div>
@@ -141,7 +141,7 @@ import {
                   }
                 </div>
 
-                <hr class="border-divider" />
+                <hr class="border-border-subtle" />
 
                 <!-- Checklist -->
                 <app-evaluation-checklist
@@ -149,7 +149,7 @@ import {
                   (itemsChange)="onChecklistChange($event)"
                 />
 
-                <hr class="border-divider" />
+                <hr class="border-border-subtle" />
 
                 <!-- Observaciones -->
                 <div class="space-y-1.5">
@@ -169,7 +169,7 @@ import {
                   ></textarea>
                 </div>
 
-                <hr class="border-divider" />
+                <hr class="border-border-subtle" />
 
                 <!-- Firmas -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -187,7 +187,7 @@ import {
               </div>
 
               <!-- Form Actions -->
-              <div class="p-6 bg-surface-hover border-t border-divider flex justify-end gap-3">
+              <div class="p-6 bg-subtle border-t border-border-subtle flex justify-end gap-3">
                 <button type="button" class="btn-ghost" (click)="goBack()">Cancelar</button>
                 <button
                   type="submit"

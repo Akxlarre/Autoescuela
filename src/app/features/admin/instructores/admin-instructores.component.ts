@@ -329,7 +329,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
                         >Estado</span
                       >
                       <span
-                        [class.text-state-success]="inst.estado === 'activo'"
+                        [class.text-success]="inst.estado === 'activo'"
                         [class.text-text-muted]="inst.estado !== 'activo'"
                         class="font-medium"
                       >

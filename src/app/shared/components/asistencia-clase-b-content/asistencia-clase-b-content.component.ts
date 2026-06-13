@@ -322,7 +322,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <tbody>
                   @for (row of filteredPracticas(); track row.id) {
                     <tr
-                      class="border-b transition-colors hover:bg-surface-elevated"
+                      class="border-b transition-colors hover:bg-elevated"
                       [style.border-color]="'var(--border-subtle)'"
                     >
                       <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
@@ -548,7 +548,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <tbody>
                   @for (clase of clasesTeorias(); track clase.id) {
                     <tr
-                      class="border-b transition-colors hover:bg-surface-elevated"
+                      class="border-b transition-colors hover:bg-elevated"
                       [style.border-color]="'var(--border-subtle)'"
                     >
                       <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
