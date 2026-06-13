@@ -44,7 +44,7 @@
 
       @if (_dropdownOpen()) {
         <div
-          class="absolute z-50 left-0 top-full mt-1 min-w-[200px] rounded-xl border shadow-lg overflow-hidden"
+          class="absolute z-50 left-0 top-full mt-1 min-w-[200px] max-h-[240px] overflow-y-auto rounded-xl border shadow-lg"
           style="background: var(--bg-surface); border-color: var(--border-default)"
           role="listbox"
           [attr.aria-label]="'Seleccionar prefijo de país'"
@@ -85,20 +85,21 @@
     <input
       [id]="id()"
       [name]="id()"
+      [attr.name]="id()"
       type="text"
       inputmode="numeric"
       [value]="_digits()"
       (input)="onDigitsInput($any($event.target).value)"
+      (change)="onDigitsInput($any($event.target).value)"
       (keydown)="onKeyDown($event)"
-      (blur)="onBlur()"
+      (blur)="onBlur($any($event.target).value)"
       [placeholder]="placeholder()"
       autocomplete="tel-national"
       data-llm-description="Student phone number with dial code prefix for WhatsApp contact"
       class="flex-1 h-11 px-4 text-sm border rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all"
       style="background: var(--bg-surface); color: var(--text-primary)"
       [class.border-state-error]="showFeedback() && !isValid()"
-      [class.border-state-success]="showFeedback() && isValid()"
-      [class.border-border-default]="!showFeedback() || isValid() === null"
+      [class.border-border-default]="!showFeedback() || isValid() === null || isValid()"
       [attr.aria-required]="required()"
       [attr.aria-invalid]="showFeedback() && !isValid()"
       [attr.aria-describedby]="errorId()"

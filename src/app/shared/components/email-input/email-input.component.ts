@@ -23,8 +23,8 @@ export class EmailInputComponent {
   readonly isValid = computed(() => validateEmail(this.value()));
   readonly showFeedback = computed(() => this._blurred() || this.forceDirty());
 
-  onBlur(): void {
+  onBlur(nativeValue?: string): void {
     this._blurred.set(true);
-    this.valueChange.emit(normalizeEmail(this.value()));
+    this.valueChange.emit(normalizeEmail(nativeValue || this.value()));
   }
 }

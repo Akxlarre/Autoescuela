@@ -13,10 +13,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 import { PhoneInputComponent } from '@shared/components/phone-input/phone-input.component';
 import { PublicContextBannerComponent } from '../public-context-banner/public-context-banner.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type {
   EnrollmentPersonalData,
   AgeAlertStatus,
+  Gender,
 } from '@core/models/ui/enrollment-personal-data.model';
+
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
 import { validateRut, formatRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
@@ -56,6 +59,12 @@ const FIELD_STYLE_SUCCESS = `${FIELD_STYLE} border-color: var(--state-success);`
 
 const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-none';
 
+const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
+  { value: 'M', label: 'Masculino' },
+  { value: 'F', label: 'Femenino' },
+  { value: 'X', label: 'Prefiero no especificar' },
+];
+
 @Component({
   selector: 'app-public-personal-data',
   standalone: true,
@@ -66,6 +75,7 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
     EmailInputComponent,
     PhoneInputComponent,
     PublicContextBannerComponent,
+    DateInputComponent,
   ],
   template: `
     @if (context()) {
@@ -111,9 +121,10 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
             maxlength="12"
             [ngModel]="formData().rut"
             (ngModelChange)="onRutInput($event)"
+            (change)="onRutInput($any($event.target).value)"
             (keydown)="onRutKeydown($event)"
             (paste)="onRutPaste($event)"
-            (blur)="markDirty('rut')"
+            (blur)="onRutInput($any($event.target).value); markDirty('rut')"
             autocomplete="off"
             aria-required="true"
             [attr.aria-invalid]="isDirty('rut') && !rutValid()"
@@ -147,27 +158,42 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
 
         <div class="flex flex-col gap-1.5">
           <label
+            id="pub-gender-label"
             class="text-xs font-semibold"
             style="color: var(--text-secondary);"
-            for="pub-gender"
           >
             Género <span style="color: var(--state-error);">*</span>
           </label>
-          <select
-            id="pub-gender"
-            [class]="fieldClass"
-            [style]="fieldStyle"
-            name="gender"
-            [ngModel]="formData().gender"
-            (ngModelChange)="patch('gender', $event)"
-            (blur)="markDirty('gender')"
+          <div
+            class="flex rounded-xl overflow-hidden"
+            style="border: 1.5px solid var(--border-default);"
+            role="radiogroup"
+            aria-labelledby="pub-gender-label"
             aria-required="true"
             data-llm-description="Student gender for enrollment records and certificate"
           >
-            <option value="">— Seleccionar —</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-          </select>
+            @for (opt of genderOptions; track opt.value; let last = $last) {
+              <button
+                type="button"
+                class="flex-1 py-2.5 text-xs text-center cursor-pointer transition-all"
+                [style.background]="
+                  formData().gender === opt.value
+                    ? 'color-mix(in srgb, var(--ds-brand) 10%, transparent)'
+                    : 'var(--bg-surface)'
+                "
+                [style.color]="
+                  formData().gender === opt.value ? 'var(--ds-brand)' : 'var(--text-secondary)'
+                "
+                [style.font-weight]="formData().gender === opt.value ? '600' : '400'"
+                [style.border-right]="!last ? '1px solid var(--border-default)' : 'none'"
+                (click)="patch('gender', opt.value); markDirty('gender')"
+                [attr.aria-pressed]="formData().gender === opt.value"
+                [attr.data-llm-action]="'select-gender-' + opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            }
+          </div>
         </div>
       </div>
 
@@ -191,7 +217,8 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
             maxlength="80"
             [ngModel]="formData().firstNames"
             (ngModelChange)="onNamesInput('firstNames', $event)"
-            (blur)="markDirty('firstNames')"
+            (change)="onNamesInput('firstNames', $any($event.target).value)"
+            (blur)="onNamesInput('firstNames', $any($event.target).value); markDirty('firstNames')"
             autocomplete="given-name"
             aria-required="true"
             [attr.aria-invalid]="isDirty('firstNames') && !firstNamesValid()"
@@ -231,7 +258,8 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
             maxlength="80"
             [ngModel]="formData().paternalLastName"
             (ngModelChange)="onNamesInput('paternalLastName', $event)"
-            (blur)="markDirty('paternalLastName')"
+            (change)="onNamesInput('paternalLastName', $any($event.target).value)"
+            (blur)="onNamesInput('paternalLastName', $any($event.target).value); markDirty('paternalLastName')"
             autocomplete="family-name"
             aria-required="true"
             [attr.aria-invalid]="isDirty('paternalLastName') && !paternalLastNameValid()"
@@ -275,6 +303,8 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
           maxlength="80"
           [ngModel]="formData().maternalLastName"
           (ngModelChange)="patch('maternalLastName', $event)"
+          (change)="patch('maternalLastName', $any($event.target).value)"
+          (blur)="patch('maternalLastName', $any($event.target).value)"
           autocomplete="additional-name"
           data-llm-description="Student maternal last name for enrollment"
         />
@@ -301,43 +331,22 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
         />
 
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold"
-            style="color: var(--text-secondary);"
-            for="pub-birth"
-          >
-            Fecha de nacimiento <span style="color: var(--state-error);">*</span>
-          </label>
-          <input
-            id="pub-birth"
-            type="date"
-            [class]="fieldClass"
-            [style]="fieldStyle"
-            name="birthDate"
+          <app-date-input
+            label="Fecha de nacimiento"
+            [required]="true"
             min="1920-01-01"
-            [attr.max]="today()"
-            [ngModel]="formData().birthDate"
-            (ngModelChange)="patch('birthDate', $event)"
-            (blur)="onBirthDateBlur()"
-            autocomplete="bday"
-            aria-required="true"
-            [attr.aria-invalid]="isDirty('birthDate') && _birthDateInvalid()"
-            aria-describedby="pub-birth-error"
+            [max]="today()"
+            [value]="formData().birthDate"
+            (valueChange)="patch('birthDate', $event); onBirthDateBlur()"
             data-llm-description="Student birth date for age verification and enrollment records"
           />
           @if (isDirty('birthDate') && _birthDateInvalid()) {
-            <p
-              id="pub-birth-error"
-              class="text-xs flex items-center gap-1"
-              style="color: var(--state-error);"
-            >
+            <p class="text-xs flex items-center gap-1" style="color: var(--state-error);">
               <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
               Fecha inválida — verifica día y mes
             </p>
           } @else {
-            <p id="pub-birth-error" class="text-xs italic" style="color: var(--text-muted);">
-              Formato: DD/MM/AAAA
-            </p>
+            <p class="text-xs italic" style="color: var(--text-muted);">Formato: DD/MM/AAAA</p>
           }
         </div>
       </div>
@@ -462,6 +471,8 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
           name="address"
           [ngModel]="formData().address"
           (ngModelChange)="patch('address', $event)"
+          (change)="patch('address', $any($event.target).value)"
+          (blur)="patch('address', $any($event.target).value)"
           autocomplete="street-address"
           data-llm-description="Student home address for enrollment records"
         />
@@ -501,11 +512,16 @@ export class PublicPersonalDataComponent {
   // CSS helpers
   protected readonly fieldStyle = FIELD_STYLE;
   protected readonly fieldClass = FIELD_CLASS;
+  protected readonly genderOptions = GENDER_OPTIONS;
 
   // Dirty-state tracking
   protected readonly _dirtyFields = signal<Record<string, boolean>>({});
   protected readonly _allDirty = signal(false);
   protected readonly _birthDateInvalid = signal(false);
+  
+  // Anti-Race-Condition para Autofill
+  private _lastEmitted: EnrollmentPersonalData | null = null;
+  private _emitTimeout: any = null;
 
   // Derived from input
   protected readonly formData = computed(() => this.data());
@@ -531,18 +547,18 @@ export class PublicPersonalDataComponent {
   protected readonly rutBorderStyle = computed(() => {
     const rut = this.formData().rut;
     if (!rut) return FIELD_STYLE;
-    if (this.rutValid()) return FIELD_STYLE_SUCCESS;
+    if (this.rutValid()) return FIELD_STYLE; // Diseño neutral (sin remarcado verde de éxito)
     return FIELD_STYLE_ERROR;
   });
 
   protected readonly firstNamesBorderStyle = computed(() => {
     if (!this.isDirty('firstNames')) return FIELD_STYLE;
-    return this.firstNamesValid() ? FIELD_STYLE_SUCCESS : FIELD_STYLE_ERROR;
+    return this.firstNamesValid() ? FIELD_STYLE : FIELD_STYLE_ERROR;
   });
 
   protected readonly paternalLastNameBorderStyle = computed(() => {
     if (!this.isDirty('paternalLastName')) return FIELD_STYLE;
-    return this.paternalLastNameValid() ? FIELD_STYLE_SUCCESS : FIELD_STYLE_ERROR;
+    return this.paternalLastNameValid() ? FIELD_STYLE : FIELD_STYLE_ERROR;
   });
 
   protected readonly canAdvance = computed(() =>
@@ -560,7 +576,7 @@ export class PublicPersonalDataComponent {
 
   // RUT handlers
   protected onRutInput(raw: string): void {
-    this.dataChange.emit({ ...this.formData(), rut: formatRut(raw) });
+    this.patch('rut', formatRut(raw));
   }
 
   protected onRutKeydown(event: KeyboardEvent): void {
@@ -573,13 +589,13 @@ export class PublicPersonalDataComponent {
   protected onRutPaste(event: ClipboardEvent): void {
     event.preventDefault();
     const pasted = event.clipboardData?.getData('text') ?? '';
-    this.dataChange.emit({ ...this.formData(), rut: formatRut(pasted) });
+    this.patch('rut', formatRut(pasted));
   }
 
   // Names handler — auto-strips invalid chars on input
   protected onNamesInput(field: keyof EnrollmentPersonalData, raw: string): void {
     const cleaned = stripInvalidNameChars(raw);
-    this.dataChange.emit({ ...this.formData(), [field]: cleaned });
+    this.patch(field, cleaned);
   }
 
   // Birth date handler
@@ -590,7 +606,21 @@ export class PublicPersonalDataComponent {
 
   // Generic field patch
   protected patch(field: keyof EnrollmentPersonalData, value: string): void {
-    this.dataChange.emit({ ...this.formData(), [field]: value });
+    // Autofill Race Condition fix: Cuando Chrome inyecta 5 campos en el mismo milisegundo,
+    // Angular OnPush aún no propaga el Signal del padre. Acumulamos en un buffer sincrónico.
+    const base = this._lastEmitted ?? this.formData();
+    this._lastEmitted = { ...base, [field]: value };
+    
+    // Emitimos de inmediato al padre (si el padre es síncrono, bien; si no, el buffer salva el ciclo)
+    this.dataChange.emit(this._lastEmitted);
+
+    // Limpiamos el buffer al final del macrotask para volver a sincronizar con Input
+    if (!this._emitTimeout) {
+      this._emitTimeout = setTimeout(() => {
+        this._lastEmitted = null;
+        this._emitTimeout = null;
+      }, 0);
+    }
   }
 
   protected focusFirstError(): void {
@@ -600,17 +630,44 @@ export class PublicPersonalDataComponent {
   }
 
   protected onNext(): void {
-    if (!this.canAdvance()) {
-      this._allDirty.set(true);
-      this.markDirty('rut');
-      this.markDirty('gender');
-      this.markDirty('firstNames');
-      this.markDirty('paternalLastName');
-      this.markDirty('birthDate');
-      this._birthDateInvalid.set(isInvalidDate(this.formData().birthDate));
-      setTimeout(() => this.focusFirstError(), 0);
-      return;
-    }
-    this.next.emit();
+    // Silver Bullet para Chrome Autofill en Angular:
+    // Los navegadores a veces rellenan los inputs visualmente pero no emiten `input` o `change`,
+    // dejando a Angular desincronizado. Al dar 'Continuar', despachamos eventos falsos
+    // sobre todos los inputs, obligando a los bindings locales (ngModel) y subcomponentes a
+    // actualizar su estado interno antes de evaluar.
+    const host = this.el.nativeElement as HTMLElement;
+    const inputs = host.querySelectorAll('input');
+    
+    // Forzamos la emisión nativa en todos los inputs
+    inputs.forEach(input => {
+      if (input.value && !input.readOnly) {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        // El blur también asegura que los componentes hijos como Email actualicen su validación
+        input.dispatchEvent(new Event('blur', { bubbles: true })); 
+      }
+    });
+
+    // Como `dispatchEvent` ejecuta de forma síncrona los handlers,
+    // el estado de Angular (incluso si depende del padre) recibirá los eventos.
+    // Usamos un ligero delay de microtask para garantizar que todos los EventEmitter
+    // hayan propagado el `dataChange` y Angular haya bajado el nuevo `data()` al hijo.
+    setTimeout(() => {
+      const d = this.formData();
+      const advance = canAdvanceFn(d, this.courseTypeForValidation());
+      
+      if (!advance) {
+        this._allDirty.set(true);
+        this.markDirty('rut');
+        this.markDirty('gender');
+        this.markDirty('firstNames');
+        this.markDirty('paternalLastName');
+        this.markDirty('birthDate');
+        this._birthDateInvalid.set(isInvalidDate(d.birthDate));
+        setTimeout(() => this.focusFirstError(), 0);
+      } else {
+        this.next.emit();
+      }
+    }, 10);
   }
 }

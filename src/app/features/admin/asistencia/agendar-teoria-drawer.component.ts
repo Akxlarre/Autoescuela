@@ -18,6 +18,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { TeoriaAlumnoElegible } from '@core/models/ui/asistencia-clase-b.model';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 /**
  * AgendarTeoriaDrawerComponent — Smart.
@@ -40,6 +41,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     SkeletonBlockComponent,
     SelectModule,
     DrawerContentLoaderComponent,
+    DateInputComponent,
   ],
   styles: `
     .field-label {
@@ -112,12 +114,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
           <!-- Fecha -->
           <div class="flex flex-col gap-1.5">
-            <label class="field-label">Fecha</label>
-            <input
-              type="date"
-              class="field-input"
-              [ngModel]="scheduledDate()"
-              (ngModelChange)="scheduledDate.set($event)"
+            <app-date-input
+              label="Fecha"
+              [value]="scheduledDate()"
+              (valueChange)="scheduledDate.set($event)"
               data-llm-description="Fecha de la clase teórica"
             />
           </div>

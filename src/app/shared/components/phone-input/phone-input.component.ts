@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, input, output, signal, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, input, output, signal, computed, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ClickOutsideDirective } from '@core/directives/click-outside.directive';
@@ -54,11 +54,33 @@ export class PhoneInputComponent {
 
   readonly errorId = computed(() => `${this.id()}-phone-error`);
 
+  constructor() {
+    effect(() => {
+      const incoming = this.value();
+      if (incoming && incoming !== this.e164Value()) {
+        const code = this.dialCodes.find(d => incoming.startsWith(d.dialCode));
+        if (code) {
+          this._dialCode.set(code.dialCode);
+          this._digits.set(incoming.slice(code.dialCode.length));
+        } else {
+          this._dialCode.set('+56');
+          const digitsOnly = incoming.replace(/\D/g, '');
+          // Keep at most 15 digits (or 9 for Chile)
+          this._digits.set(digitsOnly.slice(0, 15));
+        }
+      } else if (!incoming && this._digits()) {
+        this._digits.set('');
+      }
+    }, { allowSignalWrites: true });
+  }
+
   selectDialCode(dialCode: string): void {
     this._dialCode.set(dialCode);
     this._dropdownOpen.set(false);
     if (this.isValid()) {
       this.valueChange.emit(this.e164Value());
+    } else {
+      this.valueChange.emit(this._digits() ? this.e164Value() : '');
     }
   }
 
@@ -67,6 +89,8 @@ export class PhoneInputComponent {
     this._digits.set(digitsOnly);
     if (this.isValid()) {
       this.valueChange.emit(this.e164Value());
+    } else {
+      this.valueChange.emit(this._digits() ? this.e164Value() : '');
     }
   }
 
@@ -77,10 +101,15 @@ export class PhoneInputComponent {
     event.preventDefault();
   }
 
-  onBlur(): void {
+  onBlur(nativeValue?: string): void {
     this._blurred.set(true);
+    if (nativeValue && nativeValue.replace(/\D/g, '') !== this._digits()) {
+      this.onDigitsInput(nativeValue);
+    }
     if (this.isValid()) {
       this.valueChange.emit(this.e164Value());
+    } else {
+      this.valueChange.emit(this._digits() ? this.e164Value() : '');
     }
   }
 }

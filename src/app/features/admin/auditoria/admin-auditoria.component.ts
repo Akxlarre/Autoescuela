@@ -21,6 +21,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 const ACTION_OPTIONS = [
   { label: 'Todas las acciones', value: null },
@@ -40,6 +41,7 @@ const ACTION_OPTIONS = [
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    DateInputComponent,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -58,24 +60,20 @@ const ACTION_OPTIONS = [
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <!-- Fecha desde -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-secondary">Fecha desde</label>
-            <input
-              type="date"
-              class="filter-input"
-              [ngModel]="fechaDesde()"
-              (ngModelChange)="fechaDesde.set($event); applyFilters()"
+            <app-date-input
+              label="Fecha desde"
+              [value]="fechaDesde() ?? ''"
+              (valueChange)="fechaDesde.set($event); applyFilters()"
               data-llm-description="Filtrar logs desde esta fecha"
             />
           </div>
 
           <!-- Fecha hasta -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-secondary">Fecha hasta</label>
-            <input
-              type="date"
-              class="filter-input"
-              [ngModel]="fechaHasta()"
-              (ngModelChange)="fechaHasta.set($event); applyFilters()"
+            <app-date-input
+              label="Fecha hasta"
+              [value]="fechaHasta() ?? ''"
+              (valueChange)="fechaHasta.set($event); applyFilters()"
               data-llm-description="Filtrar logs hasta esta fecha"
             />
           </div>
@@ -252,7 +250,7 @@ const ACTION_OPTIONS = [
                 <span class="text-sm text-secondary">{{ log.modulo }}</span>
 
                 <!-- Detalles -->
-                <span class="text-sm text-brand" >{{ log.detalle }}</span>
+                <span class="text-sm text-brand">{{ log.detalle }}</span>
 
                 <!-- IP -->
                 <span class="text-sm tabular-nums text-muted">{{ log.ip }}</span>
@@ -266,7 +264,7 @@ const ACTION_OPTIONS = [
           <div
             class="flex flex-wrap items-center justify-between gap-3 px-6 py-4 pagination-border"
           >
-            <p class="text-xs text-brand" >
+            <p class="text-xs text-brand">
               Mostrando {{ facade.paginationStart() }}-{{ facade.paginationEnd() }} de
               {{ facade.totalCount() }} registros
             </p>
@@ -324,9 +322,7 @@ const ACTION_OPTIONS = [
           <strong>Política de correos:</strong> El log registra el
           <strong>correo personal</strong> de cada secretaria (no el alias institucional) para
           garantizar trazabilidad inequívoca. El alias público (ej.
-          <span class="font-semibold text-brand" >
-            secretaria&#64;autoescuela-chillan.cl
-          </span>
+          <span class="font-semibold text-brand"> secretaria&#64;autoescuela-chillan.cl </span>
           ) puede ser compartido; el correo personal identifica a la persona real.
         </p>
       </div>

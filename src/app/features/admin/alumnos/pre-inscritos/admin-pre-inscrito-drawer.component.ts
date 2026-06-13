@@ -22,6 +22,7 @@ import { PAYMENT_METHODS, type PaymentMethod } from '@core/models/ui/enrollment-
 import { EPQ_QUESTIONS } from '@core/utils/epq-questions.const';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type {
   EvaluarTestPayload,
   CompletarMatriculaPayload,
@@ -43,6 +44,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DateInputComponent,
   ],
   template: `
     @if (facade.selected(); as p) {
@@ -217,7 +219,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 @if (p.isVencido) {
                   <div
                     class="flex items-start gap-3 rounded-lg p-3 bg-error/10 border border-error/25"
-                    
                   >
                     <app-icon name="alert-triangle" [size]="15" color="var(--color-danger)" />
                     <p class="text-sm text-danger">
@@ -433,7 +434,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   <!-- Banner matrícula creada -->
                   <div
                     class="flex items-center gap-3 rounded-xl p-3 bg-success/10 border border-success/30"
-                    
                   >
                     <app-icon name="check-circle" [size]="16" color="var(--color-success)" />
                     <div>
@@ -482,7 +482,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           target="_blank"
                           rel="noopener"
                           class="text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer text-success bg-success/12 border border-success/30"
-                          
                           data-llm-action="download-contract-pdf"
                         >
                           <app-icon name="download" [size]="13" />
@@ -516,7 +515,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                     @if (contractPdfUrl()) {
                       <div
                         class="flex gap-2 rounded-lg p-3 text-xs bg-brand/6 border border-brand/15"
-                        
                       >
                         <app-icon
                           name="printer"
@@ -560,7 +558,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         } @else {
                           <div
                             class="flex items-center justify-between rounded-xl p-3 bg-success/10 border border-success/30"
-                            
                           >
                             <div class="flex items-center gap-2">
                               <app-icon
@@ -624,7 +621,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   <!-- Banner aprobado -->
                   <div
                     class="flex items-center gap-3 rounded-xl p-3 bg-brand/8 border border-brand/20"
-                    
                   >
                     <app-icon name="check-circle" [size]="16" color="var(--ds-brand)" />
                     <p class="text-sm text-primary">
@@ -726,14 +722,10 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         />
                       </div>
                       <div class="space-y-1">
-                        <label class="text-xs text-secondary uppercase tracking-wide"
-                          >Fecha obtención</label
-                        >
-                        <input
-                          type="date"
-                          class="w-full border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface focus:outline-none"
+                        <app-date-input
+                          label="Fecha obtención"
                           [value]="formLicenseDate()"
-                          (change)="formLicenseDate.set($any($event.target).value)"
+                          (valueChange)="formLicenseDate.set($event)"
                         />
                       </div>
                     </div>
@@ -783,11 +775,9 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         <div class="flex items-center gap-2 shrink-0">
                           <!-- Fecha emisión HVC -->
                           @if (doc.key === 'hvc' && docHvcFile()) {
-                            <input
-                              type="date"
-                              class="border border-border rounded px-2 py-1 text-xs text-primary bg-surface focus:outline-none w-32"
+                            <app-date-input
                               [value]="docHvcIssueDate()"
-                              (change)="docHvcIssueDate.set($any($event.target).value)"
+                              (valueChange)="docHvcIssueDate.set($event)"
                               data-llm-description="HVC issue date"
                             />
                           }
@@ -868,7 +858,6 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                     @if (formDiscountAmount() > 0) {
                       <div
                         class="flex items-center justify-between rounded-lg px-3 py-2 bg-success/10 border border-success/30"
-                        
                       >
                         <div class="flex items-center gap-2">
                           <app-icon name="tag" [size]="13" color="var(--color-success)" />

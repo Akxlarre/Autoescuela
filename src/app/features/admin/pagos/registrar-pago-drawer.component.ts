@@ -26,6 +26,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 /** Validador a nivel de FormGroup: suma de canales debe igualar total_amount. */
 function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | null {
@@ -61,6 +62,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
     DrawerContentLoaderComponent,
     AsyncBtnComponent,
     AnimateInDirective,
+    DateInputComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -84,7 +86,6 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                 @if (facade.alumnosConDeuda().length === 0) {
                   <p
                     class="text-xs py-2 px-3 rounded-lg text-text-muted bg-surface border border-border-muted"
-                    
                   >
                     No hay alumnos con saldo pendiente. El pago se registrará sin matrícula
                     asociada.
@@ -109,10 +110,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                 @if (selectedAlumno; as alumno) {
                   <div class="alumno-info-card" style="margin-top: 4px" appAnimateIn>
                     <div class="flex flex-col gap-0.5">
-                      <span
-                        class="text-xs font-semibold uppercase tracking-wide text-brand"
-                        
-                      >
+                      <span class="text-xs font-semibold uppercase tracking-wide text-brand">
                         Seleccionado
                       </span>
                       <span class="text-sm font-semibold text-text-primary">
@@ -124,7 +122,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                       <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                         Saldo Pendiente
                       </span>
-                      <span class="text-base font-bold text-warning" >
+                      <span class="text-base font-bold text-warning">
                         {{ clp(alumno.saldo) }}
                       </span>
                       <span class="text-xs text-text-muted">
@@ -140,10 +138,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             @if (facade.enrollmentSeleccionado() !== null && facade.estadoCuentaResumen(); as ctx) {
               <div class="alumno-info-card" appAnimateIn>
                 <div class="flex flex-col gap-0.5">
-                  <span
-                    class="text-xs font-semibold uppercase tracking-wide text-brand"
-                    
-                  >
+                  <span class="text-xs font-semibold uppercase tracking-wide text-brand">
                     Alumno
                   </span>
                   <span class="text-sm font-semibold text-text-primary">
@@ -154,7 +149,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Saldo Pendiente
                   </span>
-                  <span class="text-base font-bold text-warning" >
+                  <span class="text-base font-bold text-warning">
                     {{ clp(ctx.saldoPendiente) }}
                   </span>
                 </div>
@@ -164,9 +159,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
               @if (selectedFromList; as alumno) {
                 <div class="alumno-info-card" appAnimateIn>
                   <div class="flex flex-col gap-0.5">
-                    <span
-                      class="text-xs font-semibold uppercase tracking-wide text-brand"
-                      
+                    <span class="text-xs font-semibold uppercase tracking-wide text-brand"
                       >Alumno</span
                     >
                     <span class="text-sm font-semibold text-text-primary">{{ alumno.alumno }}</span>
@@ -175,9 +168,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     <span class="text-xs font-semibold uppercase tracking-wide text-text-muted"
                       >Saldo Pendiente</span
                     >
-                    <span class="text-base font-bold text-warning" >{{
-                      clp(alumno.saldo)
-                    }}</span>
+                    <span class="text-base font-bold text-warning">{{ clp(alumno.saldo) }}</span>
                   </div>
                 </div>
               }
@@ -186,16 +177,15 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             <div class="flex flex-col gap-5" [appAnimateIn]="{ useBlur: true, delay: 0.1 }">
               <!-- Fecha de pago -->
               <div class="flex flex-col gap-1.5">
-                <label for="pago-date" class="field-label">
-                  FECHA DE PAGO <span class="text-error">*</span>
-                </label>
-                <input
-                  id="pago-date"
-                  type="date"
-                  formControlName="payment_date"
-                  class="field-input"
+                <app-date-input
+                  label="FECHA DE PAGO"
+                  [required]="true"
+                  [value]="form.get('payment_date')?.value ?? ''"
+                  (valueChange)="
+                    form.get('payment_date')?.setValue($event);
+                    form.get('payment_date')?.markAsTouched()
+                  "
                   data-llm-description="Fecha en que se realiza el pago"
-                  [class.field-input--error]="isInvalid('payment_date')"
                 />
                 @if (isInvalid('payment_date')) {
                   <span class="field-error">Este campo es obligatorio.</span>
@@ -342,12 +332,12 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   <div class="flex items-center gap-2">
                     @if (balanceStatus.ok) {
                       <app-icon name="check-circle" [size]="15" color="var(--state-success)" />
-                      <span class="text-xs font-semibold text-success" >
+                      <span class="text-xs font-semibold text-success">
                         Los montos cuadran correctamente
                       </span>
                     } @else {
                       <app-icon name="alert-triangle" [size]="15" color="var(--state-warning)" />
-                      <span class="text-xs font-semibold text-warning" >
+                      <span class="text-xs font-semibold text-warning">
                         @if (balanceStatus.diff > 0) {
                           Faltan {{ clp(balanceStatus.diff) }} por asignar a un método
                         } @else {
@@ -383,13 +373,9 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
 
             <!-- Error global -->
             @if (saveError()) {
-              <div
-                class="flex items-start gap-2 p-3 rounded-lg bg-error/8"
-                
-                appAnimateIn
-              >
+              <div class="flex items-start gap-2 p-3 rounded-lg bg-error/8" appAnimateIn>
                 <app-icon name="circle-alert" [size]="15" color="var(--state-error)" />
-                <p class="text-sm text-error" >{{ saveError() }}</p>
+                <p class="text-sm text-error">{{ saveError() }}</p>
               </div>
             }
           </form>

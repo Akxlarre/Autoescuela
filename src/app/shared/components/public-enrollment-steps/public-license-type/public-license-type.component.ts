@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, OnInit } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { PublicFlowType } from '@core/facades/public-enrollment.facade';
 
@@ -158,12 +158,19 @@ const FLOW_CARDS: Record<PublicFlowType, FlowCard> = {
     </div>
   `,
 })
-export class PublicLicenseTypeComponent {
+export class PublicLicenseTypeComponent implements OnInit {
   readonly availableFlows = input<PublicFlowType[]>(['class_b', 'professional']);
+  readonly currentFlow = input<PublicFlowType | null>(null);
   readonly flowSelect = output<PublicFlowType>();
   readonly next = output<void>();
 
   protected readonly selected = signal<PublicFlowType | null>(null);
+
+  ngOnInit(): void {
+    if (this.currentFlow()) {
+      this.selected.set(this.currentFlow()!);
+    }
+  }
 
   protected readonly visibleCards = computed<FlowCard[]>(() =>
     this.availableFlows()
@@ -173,10 +180,13 @@ export class PublicLicenseTypeComponent {
 
   protected onSelect(flow: PublicFlowType): void {
     this.selected.set(flow);
-    this.flowSelect.emit(flow);
   }
 
   protected onNext(): void {
-    if (this.selected()) this.next.emit();
+    const s = this.selected();
+    if (s) {
+      this.flowSelect.emit(s);
+      this.next.emit();
+    }
   }
 }

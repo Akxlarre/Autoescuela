@@ -18,6 +18,7 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 @Component({
   selector: 'app-admin-sesion-drawer',
@@ -31,6 +32,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     AsyncBtnComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
+    DateInputComponent,
   ],
   template: `
     @if (facade.selectedSesion(); as sesion) {
@@ -68,7 +70,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 @if (sesion.status !== 'cancelled') {
                   <button
                     class="cancel-btn flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors border-error text-error"
-                    
                     (click)="cancelarSesion()"
                     data-llm-action="cancel-session"
                   >
@@ -78,7 +79,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 } @else {
                   <button
                     class="cancel-btn flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors border-success text-success"
-                    
                     (click)="reactivarSesion()"
                     data-llm-action="reactivate-session"
                   >
@@ -218,7 +218,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                     <div class="flex items-center gap-3 mb-3">
                       <div
                         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-brand bg-brand/15"
-                        
                       >
                         {{ alumno.initials }}
                       </div>
@@ -308,12 +307,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             <div class="space-y-4">
               <!-- Fecha -->
               <div>
-                <label class="mb-1 block text-xs font-medium text-secondary">Fecha</label>
-                <input
-                  type="date"
-                  class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary"
-                  [ngModel]="editDate()"
-                  (ngModelChange)="editDate.set($event)"
+                <app-date-input
+                  label="Fecha"
+                  [value]="editDate()"
+                  (valueChange)="editDate.set($event)"
                   data-llm-description="input for session date change"
                 />
               </div>

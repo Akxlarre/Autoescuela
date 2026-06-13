@@ -1929,6 +1929,8 @@ export class EnrollmentFacade {
       basePrice: course.base_price ?? 0,
       durationWeeks: course.duration_weeks ?? null,
       practicalHours: course.practical_hours ?? null,
+      maxClassesPerDay: (course as any).max_classes_per_day ?? 1,
+      convalidation: course.is_convalidation ?? undefined,
     };
   }
 

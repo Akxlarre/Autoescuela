@@ -23,6 +23,7 @@ export default defineConfig({
       'src/app/shared/components/alert-card/alert-card.component.spec.ts',
       'src/app/shared/components/empty-state/empty-state.component.spec.ts',
       'src/app/shared/components/kpi-card/kpi-card.component.spec.ts',
+      'src/app/shared/components/date-input/date-input.component.spec.ts',
     ],
     coverage: {
       provider: 'v8',
