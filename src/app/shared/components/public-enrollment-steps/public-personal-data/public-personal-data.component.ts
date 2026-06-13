@@ -1,32 +1,50 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
+import { PhoneInputComponent } from '@shared/components/phone-input/phone-input.component';
 import { PublicContextBannerComponent } from '../public-context-banner/public-context-banner.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type {
   EnrollmentPersonalData,
   AgeAlertStatus,
+  Gender,
 } from '@core/models/ui/enrollment-personal-data.model';
+
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
 import { validateRut, formatRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
-import { getAgeStatus } from '@core/utils/age.utils';
+import { getAgeStatus, isInvalidDate } from '@core/utils/age.utils';
+import { validateName, stripInvalidNameChars } from '@core/utils/name.utils';
 
 export { getAgeStatus };
 
 export function canAdvanceFn(data: EnrollmentPersonalData, courseType: string): boolean {
   const age = getAgeStatus(data.birthDate, courseType);
+  const today = new Date().toISOString().split('T')[0];
   return (
     validateRut(data.rut) &&
     validateEmail(data.email) &&
     age !== 'under-17' &&
     age !== 'requires-authorization' &&
     age !== 'under-20-professional' &&
-    data.firstNames.trim().length >= 2 &&
-    data.paternalLastName.trim().length >= 2 &&
+    validateName(data.firstNames.trim()) &&
+    validateName(data.paternalLastName.trim()) &&
     data.gender.length > 0 &&
-    data.phone.trim().length >= 8 &&
-    data.birthDate.length > 0
+    /^\+\d{7,15}$/.test(data.phone) &&
+    data.birthDate.length > 0 &&
+    data.birthDate >= '1920-01-01' &&
+    data.birthDate <= today &&
+    !isInvalidDate(data.birthDate)
   );
 }
 
@@ -36,16 +54,30 @@ const FIELD_STYLE = `
   color: var(--text-primary);
   font-family: var(--font-body);
 `;
+const FIELD_STYLE_ERROR = `${FIELD_STYLE} border-color: var(--state-error);`;
+const FIELD_STYLE_SUCCESS = `${FIELD_STYLE} border-color: var(--state-success);`;
 
 const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-none';
+
+const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
+  { value: 'M', label: 'Masculino' },
+  { value: 'F', label: 'Femenino' },
+  { value: 'X', label: 'Prefiero no especificar' },
+];
 
 @Component({
   selector: 'app-public-personal-data',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, EmailInputComponent, PublicContextBannerComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    EmailInputComponent,
+    PhoneInputComponent,
+    PublicContextBannerComponent,
+    DateInputComponent,
+  ],
   template: `
-    <!-- Context banner (AC3/AC5) -->
     @if (context()) {
       <app-public-context-banner [context]="context()!" (editRequested)="back.emit()" />
     }
@@ -75,7 +107,6 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
 
       <!-- RUT + Género -->
       <div class="grid sm:grid-cols-2 gap-4">
-        <!-- RUT con validación inline -->
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-semibold" style="color: var(--text-secondary);" for="pub-rut">
             RUT <span style="color: var(--state-error);">*</span>
@@ -90,48 +121,79 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
             maxlength="12"
             [ngModel]="formData().rut"
             (ngModelChange)="onRutInput($event)"
+            (change)="onRutInput($any($event.target).value)"
             (keydown)="onRutKeydown($event)"
             (paste)="onRutPaste($event)"
+            (blur)="onRutInput($any($event.target).value); markDirty('rut')"
             autocomplete="off"
+            aria-required="true"
+            [attr.aria-invalid]="isDirty('rut') && !rutValid()"
+            aria-describedby="pub-rut-error"
             data-llm-description="Chilean RUT (tax ID) of the student enrolling"
           />
           @if (formData().rut.length > 0 && !rutValid()) {
-            <p class="text-xs flex items-center gap-1" style="color: var(--state-error);">
+            <p
+              id="pub-rut-error"
+              class="text-xs flex items-center gap-1"
+              style="color: var(--state-error);"
+            >
               <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
               RUT inválido — verifica el dígito verificador
             </p>
           } @else if (rutValid()) {
-            <p class="text-xs flex items-center gap-1" style="color: var(--state-success);">
+            <p
+              id="pub-rut-error"
+              class="text-xs flex items-center gap-1"
+              style="color: var(--state-success);"
+            >
               <app-icon name="check-circle" [size]="12" color="var(--state-success)" />
               RUT válido
             </p>
           } @else {
-            <p class="text-xs italic" style="color: var(--text-muted);">Formato: 12.345.678-9</p>
+            <p id="pub-rut-error" class="text-xs italic" style="color: var(--text-muted);">
+              Formato: 12.345.678-9
+            </p>
           }
         </div>
 
-        <!-- Género -->
         <div class="flex flex-col gap-1.5">
           <label
+            id="pub-gender-label"
             class="text-xs font-semibold"
             style="color: var(--text-secondary);"
-            for="pub-gender"
           >
             Género <span style="color: var(--state-error);">*</span>
           </label>
-          <select
-            id="pub-gender"
-            [class]="fieldClass"
-            [style]="fieldStyle"
-            name="gender"
-            [ngModel]="formData().gender"
-            (ngModelChange)="patch('gender', $event)"
+          <div
+            class="flex rounded-xl overflow-hidden"
+            style="border: 1.5px solid var(--border-default);"
+            role="radiogroup"
+            aria-labelledby="pub-gender-label"
+            aria-required="true"
             data-llm-description="Student gender for enrollment records and certificate"
           >
-            <option value="">— Seleccionar —</option>
-            <option value="M">Masculino</option>
-            <option value="F">Femenino</option>
-          </select>
+            @for (opt of genderOptions; track opt.value; let last = $last) {
+              <button
+                type="button"
+                class="flex-1 py-2.5 text-xs text-center cursor-pointer transition-all"
+                [style.background]="
+                  formData().gender === opt.value
+                    ? 'color-mix(in srgb, var(--ds-brand) 10%, transparent)'
+                    : 'var(--bg-surface)'
+                "
+                [style.color]="
+                  formData().gender === opt.value ? 'var(--ds-brand)' : 'var(--text-secondary)'
+                "
+                [style.font-weight]="formData().gender === opt.value ? '600' : '400'"
+                [style.border-right]="!last ? '1px solid var(--border-default)' : 'none'"
+                (click)="patch('gender', opt.value); markDirty('gender')"
+                [attr.aria-pressed]="formData().gender === opt.value"
+                [attr.data-llm-action]="'select-gender-' + opt.value"
+              >
+                {{ opt.label }}
+              </button>
+            }
+          </div>
         </div>
       </div>
 
@@ -149,14 +211,34 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
             id="pub-names"
             type="text"
             [class]="fieldClass"
-            [style]="fieldStyle"
+            [style]="firstNamesBorderStyle()"
             placeholder="María José"
             name="firstNames"
+            maxlength="80"
             [ngModel]="formData().firstNames"
-            (ngModelChange)="patch('firstNames', $event)"
+            (ngModelChange)="onNamesInput('firstNames', $event)"
+            (change)="onNamesInput('firstNames', $any($event.target).value)"
+            (blur)="onNamesInput('firstNames', $any($event.target).value); markDirty('firstNames')"
             autocomplete="given-name"
+            aria-required="true"
+            [attr.aria-invalid]="isDirty('firstNames') && !firstNamesValid()"
+            aria-describedby="pub-names-error"
             data-llm-description="Student first names for enrollment"
           />
+          @if (isDirty('firstNames') && !firstNamesValid()) {
+            <p
+              id="pub-names-error"
+              class="text-xs flex items-center gap-1"
+              style="color: var(--state-error);"
+            >
+              <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
+              Verifica que no contenga números ni símbolos especiales
+            </p>
+          } @else {
+            <p id="pub-names-error" class="text-xs italic" style="color: var(--text-muted);">
+              Mín. 2 letras
+            </p>
+          }
         </div>
         <div class="flex flex-col gap-1.5">
           <label
@@ -170,14 +252,34 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
             id="pub-lastname"
             type="text"
             [class]="fieldClass"
-            [style]="fieldStyle"
+            [style]="paternalLastNameBorderStyle()"
             placeholder="Orellana"
             name="paternalLastName"
+            maxlength="80"
             [ngModel]="formData().paternalLastName"
-            (ngModelChange)="patch('paternalLastName', $event)"
+            (ngModelChange)="onNamesInput('paternalLastName', $event)"
+            (change)="onNamesInput('paternalLastName', $any($event.target).value)"
+            (blur)="onNamesInput('paternalLastName', $any($event.target).value); markDirty('paternalLastName')"
             autocomplete="family-name"
+            aria-required="true"
+            [attr.aria-invalid]="isDirty('paternalLastName') && !paternalLastNameValid()"
+            aria-describedby="pub-lastname-error"
             data-llm-description="Student paternal last name for enrollment"
           />
+          @if (isDirty('paternalLastName') && !paternalLastNameValid()) {
+            <p
+              id="pub-lastname-error"
+              class="text-xs flex items-center gap-1"
+              style="color: var(--state-error);"
+            >
+              <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
+              Verifica que no contenga números ni símbolos especiales
+            </p>
+          } @else {
+            <p id="pub-lastname-error" class="text-xs italic" style="color: var(--text-muted);">
+              Mín. 2 letras
+            </p>
+          }
         </div>
       </div>
 
@@ -198,8 +300,11 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
           [style]="fieldStyle"
           placeholder="González"
           name="maternalLastName"
+          maxlength="80"
           [ngModel]="formData().maternalLastName"
           (ngModelChange)="patch('maternalLastName', $event)"
+          (change)="patch('maternalLastName', $any($event.target).value)"
+          (blur)="patch('maternalLastName', $any($event.target).value)"
           autocomplete="additional-name"
           data-llm-description="Student maternal last name for enrollment"
         />
@@ -211,51 +316,38 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
         label="Correo electrónico"
         [required]="true"
         placeholder="correo@ejemplo.com"
+        [forceDirty]="_allDirty()"
         (valueChange)="patch('email', $event)"
       />
 
       <!-- Teléfono + Fecha de nacimiento -->
       <div class="grid sm:grid-cols-2 gap-4">
+        <app-phone-input
+          [value]="formData().phone"
+          id="pub-phone"
+          [required]="true"
+          [forceDirty]="_allDirty()"
+          (valueChange)="patch('phone', $event)"
+        />
+
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold"
-            style="color: var(--text-secondary);"
-            for="pub-phone"
-          >
-            Teléfono / WhatsApp <span style="color: var(--state-error);">*</span>
-          </label>
-          <input
-            id="pub-phone"
-            type="tel"
-            [class]="fieldClass"
-            [style]="fieldStyle"
-            placeholder="+56 9 1234 5678"
-            name="phone"
-            [ngModel]="formData().phone"
-            (ngModelChange)="patch('phone', $event)"
-            autocomplete="tel"
-            data-llm-description="Student phone number for enrollment contact"
-          />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold"
-            style="color: var(--text-secondary);"
-            for="pub-birth"
-          >
-            Fecha de nacimiento <span style="color: var(--state-error);">*</span>
-          </label>
-          <input
-            id="pub-birth"
-            type="date"
-            [class]="fieldClass"
-            [style]="fieldStyle"
-            name="birthDate"
-            [ngModel]="formData().birthDate"
-            (ngModelChange)="patch('birthDate', $event)"
-            autocomplete="bday"
+          <app-date-input
+            label="Fecha de nacimiento"
+            [required]="true"
+            min="1920-01-01"
+            [max]="today()"
+            [value]="formData().birthDate"
+            (valueChange)="patch('birthDate', $event); onBirthDateBlur()"
             data-llm-description="Student birth date for age verification and enrollment records"
           />
+          @if (isDirty('birthDate') && _birthDateInvalid()) {
+            <p class="text-xs flex items-center gap-1" style="color: var(--state-error);">
+              <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
+              Fecha inválida — verifica día y mes
+            </p>
+          } @else {
+            <p class="text-xs italic" style="color: var(--text-muted);">Formato: DD/MM/AAAA</p>
+          }
         </div>
       </div>
 
@@ -263,11 +355,9 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
       @if (ageStatus() === 'under-17') {
         <div
           class="flex items-start gap-3 rounded-xl p-4"
-          style="
-            background: var(--state-error-bg);
-            border: 1.5px solid var(--state-error-border);
-          "
+          style="background: var(--state-error-bg); border: 1.5px solid var(--state-error-border);"
           role="alert"
+          aria-live="polite"
         >
           <app-icon name="ban" [size]="18" color="var(--state-error)" class="mt-0.5 shrink-0" />
           <div>
@@ -346,11 +436,9 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
       @if (ageStatus() === 'under-20-professional') {
         <div
           class="flex items-start gap-3 rounded-xl p-4"
-          style="
-            background: var(--state-error-bg);
-            border: 1.5px solid var(--state-error-border);
-          "
+          style="background: var(--state-error-bg); border: 1.5px solid var(--state-error-border);"
           role="alert"
+          aria-live="polite"
         >
           <app-icon name="ban" [size]="18" color="var(--state-error)" class="mt-0.5 shrink-0" />
           <div>
@@ -383,6 +471,8 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
           name="address"
           [ngModel]="formData().address"
           (ngModelChange)="patch('address', $event)"
+          (change)="patch('address', $any($event.target).value)"
+          (blur)="patch('address', $any($event.target).value)"
           autocomplete="street-address"
           data-llm-description="Student home address for enrollment records"
         />
@@ -402,7 +492,6 @@ const FIELD_CLASS = 'w-full rounded-xl px-4 py-3 text-sm transition-all outline-
         <button
           type="submit"
           class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm"
-          [disabled]="!canAdvance()"
           data-llm-action="submit-personal-data"
         >
           Continuar
@@ -418,15 +507,34 @@ export class PublicPersonalDataComponent {
   readonly next = output<void>();
   readonly back = output<void>();
 
-  // ── CSS helpers (evita repetir inline styles en el template) ──────────────
+  private readonly el = inject(ElementRef);
+
+  // CSS helpers
   protected readonly fieldStyle = FIELD_STYLE;
   protected readonly fieldClass = FIELD_CLASS;
+  protected readonly genderOptions = GENDER_OPTIONS;
 
-  // ── Derived from input ────────────────────────────────────────────────────
+  // Dirty-state tracking
+  protected readonly _dirtyFields = signal<Record<string, boolean>>({});
+  protected readonly _allDirty = signal(false);
+  protected readonly _birthDateInvalid = signal(false);
+  
+  // Anti-Race-Condition para Autofill
+  private _lastEmitted: EnrollmentPersonalData | null = null;
+  private _emitTimeout: any = null;
+
+  // Derived from input
   protected readonly formData = computed(() => this.data());
+  protected readonly today = computed(() => new Date().toISOString().split('T')[0]);
 
-  // ── Validation computeds (delegan a Functional Core) ─────────────────────
+  // Validation computeds
   protected readonly rutValid = computed(() => validateRut(this.formData().rut));
+  protected readonly firstNamesValid = computed(() =>
+    validateName(this.formData().firstNames.trim()),
+  );
+  protected readonly paternalLastNameValid = computed(() =>
+    validateName(this.formData().paternalLastName.trim()),
+  );
 
   private readonly courseTypeForValidation = computed(
     () => this.context()?.courseType ?? this.formData().courseType,
@@ -439,17 +547,36 @@ export class PublicPersonalDataComponent {
   protected readonly rutBorderStyle = computed(() => {
     const rut = this.formData().rut;
     if (!rut) return FIELD_STYLE;
-    if (this.rutValid()) return `${FIELD_STYLE} border-color: var(--state-success);`;
-    return `${FIELD_STYLE} border-color: var(--state-error);`;
+    if (this.rutValid()) return FIELD_STYLE; // Diseño neutral (sin remarcado verde de éxito)
+    return FIELD_STYLE_ERROR;
+  });
+
+  protected readonly firstNamesBorderStyle = computed(() => {
+    if (!this.isDirty('firstNames')) return FIELD_STYLE;
+    return this.firstNamesValid() ? FIELD_STYLE : FIELD_STYLE_ERROR;
+  });
+
+  protected readonly paternalLastNameBorderStyle = computed(() => {
+    if (!this.isDirty('paternalLastName')) return FIELD_STYLE;
+    return this.paternalLastNameValid() ? FIELD_STYLE : FIELD_STYLE_ERROR;
   });
 
   protected readonly canAdvance = computed(() =>
     canAdvanceFn(this.formData(), this.courseTypeForValidation()),
   );
 
-  // ── RUT handlers ──────────────────────────────────────────────────────────
+  // Dirty helpers
+  protected isDirty(field: string): boolean {
+    return !!this._dirtyFields()[field] || this._allDirty();
+  }
+
+  protected markDirty(field: string): void {
+    this._dirtyFields.update((m) => ({ ...m, [field]: true }));
+  }
+
+  // RUT handlers
   protected onRutInput(raw: string): void {
-    this.dataChange.emit({ ...this.formData(), rut: formatRut(raw) });
+    this.patch('rut', formatRut(raw));
   }
 
   protected onRutKeydown(event: KeyboardEvent): void {
@@ -462,15 +589,85 @@ export class PublicPersonalDataComponent {
   protected onRutPaste(event: ClipboardEvent): void {
     event.preventDefault();
     const pasted = event.clipboardData?.getData('text') ?? '';
-    this.dataChange.emit({ ...this.formData(), rut: formatRut(pasted) });
+    this.patch('rut', formatRut(pasted));
   }
 
-  // ── Generic field patch ───────────────────────────────────────────────────
+  // Names handler — auto-strips invalid chars on input
+  protected onNamesInput(field: keyof EnrollmentPersonalData, raw: string): void {
+    const cleaned = stripInvalidNameChars(raw);
+    this.patch(field, cleaned);
+  }
+
+  // Birth date handler
+  protected onBirthDateBlur(): void {
+    this.markDirty('birthDate');
+    this._birthDateInvalid.set(isInvalidDate(this.formData().birthDate));
+  }
+
+  // Generic field patch
   protected patch(field: keyof EnrollmentPersonalData, value: string): void {
-    this.dataChange.emit({ ...this.formData(), [field]: value });
+    // Autofill Race Condition fix: Cuando Chrome inyecta 5 campos en el mismo milisegundo,
+    // Angular OnPush aún no propaga el Signal del padre. Acumulamos en un buffer sincrónico.
+    const base = this._lastEmitted ?? this.formData();
+    this._lastEmitted = { ...base, [field]: value };
+    
+    // Emitimos de inmediato al padre (si el padre es síncrono, bien; si no, el buffer salva el ciclo)
+    this.dataChange.emit(this._lastEmitted);
+
+    // Limpiamos el buffer al final del macrotask para volver a sincronizar con Input
+    if (!this._emitTimeout) {
+      this._emitTimeout = setTimeout(() => {
+        this._lastEmitted = null;
+        this._emitTimeout = null;
+      }, 0);
+    }
+  }
+
+  protected focusFirstError(): void {
+    const host = this.el.nativeElement as HTMLElement;
+    const first = host.querySelector('[aria-invalid="true"]') as HTMLElement | null;
+    first?.focus();
   }
 
   protected onNext(): void {
-    if (this.canAdvance()) this.next.emit();
+    // Silver Bullet para Chrome Autofill en Angular:
+    // Los navegadores a veces rellenan los inputs visualmente pero no emiten `input` o `change`,
+    // dejando a Angular desincronizado. Al dar 'Continuar', despachamos eventos falsos
+    // sobre todos los inputs, obligando a los bindings locales (ngModel) y subcomponentes a
+    // actualizar su estado interno antes de evaluar.
+    const host = this.el.nativeElement as HTMLElement;
+    const inputs = host.querySelectorAll('input');
+    
+    // Forzamos la emisión nativa en todos los inputs
+    inputs.forEach(input => {
+      if (input.value && !input.readOnly) {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        // El blur también asegura que los componentes hijos como Email actualicen su validación
+        input.dispatchEvent(new Event('blur', { bubbles: true })); 
+      }
+    });
+
+    // Como `dispatchEvent` ejecuta de forma síncrona los handlers,
+    // el estado de Angular (incluso si depende del padre) recibirá los eventos.
+    // Usamos un ligero delay de microtask para garantizar que todos los EventEmitter
+    // hayan propagado el `dataChange` y Angular haya bajado el nuevo `data()` al hijo.
+    setTimeout(() => {
+      const d = this.formData();
+      const advance = canAdvanceFn(d, this.courseTypeForValidation());
+      
+      if (!advance) {
+        this._allDirty.set(true);
+        this.markDirty('rut');
+        this.markDirty('gender');
+        this.markDirty('firstNames');
+        this.markDirty('paternalLastName');
+        this.markDirty('birthDate');
+        this._birthDateInvalid.set(isInvalidDate(d.birthDate));
+        setTimeout(() => this.focusFirstError(), 0);
+      } else {
+        this.next.emit();
+      }
+    }, 10);
   }
 }

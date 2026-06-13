@@ -3,6 +3,7 @@ import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 
@@ -13,7 +14,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   selector: 'app-registrar-venta-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule, DateInputComponent],
   template: `
     <div class="flex flex-col gap-5 py-2">
       <form [formGroup]="ventaForm" (ngSubmit)="submitVenta()" class="flex flex-col gap-5">
@@ -23,7 +24,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             class="text-xs font-semibold uppercase tracking-wide text-text-muted"
             for="v-servicio"
           >
-            Servicio <span class="text-state-error">*</span>
+            Servicio <span class="text-error">*</span>
           </label>
           <p-select
             id="v-servicio"
@@ -43,7 +44,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="v-nombre"
             >
-              Nombre del cliente <span class="text-state-error">*</span>
+              Nombre del cliente <span class="text-error">*</span>
             </label>
             <input
               id="v-nombre"
@@ -58,7 +59,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="v-rut"
             >
-              RUT <span class="text-state-error">*</span>
+              RUT <span class="text-error">*</span>
             </label>
             <input
               id="v-rut"
@@ -93,17 +94,12 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
         <!-- Fecha + Monto -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-              for="v-fecha"
-            >
-              Fecha <span class="text-state-error">*</span>
-            </label>
-            <input
-              id="v-fecha"
-              type="date"
-              formControlName="fecha"
-              class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
+            <app-date-input
+              label="Fecha"
+              [required]="true"
+              [value]="ventaForm.get('fecha')?.value ?? ''"
+              (valueChange)="ventaForm.get('fecha')?.setValue($event)"
+              data-llm-description="fecha de la venta del servicio especial"
             />
           </div>
           <div class="flex flex-col gap-1.5">
@@ -111,7 +107,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
               class="text-xs font-semibold uppercase tracking-wide text-text-muted"
               for="v-precio"
             >
-              Monto ($) <span class="text-state-error">*</span>
+              Monto ($) <span class="text-error">*</span>
             </label>
             <div class="relative">
               <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-text-muted"
@@ -130,7 +126,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 
         <!-- Cobrado al registrar -->
         <label
-          class="flex items-center gap-3 p-4 rounded-xl border border-border-default cursor-pointer hover:bg-bg-subtle transition-colors"
+          class="flex items-center gap-3 p-4 rounded-xl border border-border-default cursor-pointer hover:bg-subtle transition-colors"
         >
           <input
             type="checkbox"
@@ -163,7 +159,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           </button>
           <button
             type="button"
-            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-bg-subtle active:scale-95 transition-all"
+            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-subtle active:scale-95 transition-all"
             (click)="drawer.close()"
           >
             Cancelar

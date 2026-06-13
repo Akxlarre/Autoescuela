@@ -93,7 +93,7 @@ type StatusConfig = {
                     @if (s.classNumber) {
                       <div class="flex items-center gap-2 mt-1">
                         <div
-                          class="px-1.5 py-0.5 rounded bg-bg-subtle border text-[10px] font-bold uppercase tracking-wider text-text-muted"
+                          class="px-1.5 py-0.5 rounded bg-subtle border text-[10px] font-bold uppercase tracking-wider text-text-muted"
                         >
                           Clase {{ s.classNumber }}
                         </div>

@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, viewChild, OnDestroy, ElementRef } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.model';
 
 @Component({
   selector: 'app-public-documents',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, AsyncBtnComponent],
   template: `
     <div class="space-y-5">
       <div>
@@ -107,7 +108,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             </p>
           </div>
           <label
-            class="text-xs font-semibold cursor-pointer"
+            class="text-xs font-semibold cursor-pointer rounded-md px-2 py-1 focus-within:outline focus-within:outline-2 focus-within:outline-[var(--ds-brand)] focus-within:outline-offset-2"
             style="color: var(--text-muted);"
             for="pub-carnet-rechange"
           >
@@ -116,43 +117,114 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
               id="pub-carnet-rechange"
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              capture="user"
               class="sr-only"
               (change)="onFileChange($event)"
             />
           </label>
         </div>
       } @else {
-        <!-- Upload area -->
-        <label
-          class="flex flex-col items-center gap-3 rounded-xl px-6 py-8 cursor-pointer transition-all"
-          style="
-            background: var(--bg-surface);
-            border: 2px dashed var(--border-default);
-          "
-          for="pub-carnet-upload"
-          data-llm-description="Carnet photo upload area for driving school enrollment"
-        >
-          <div
-            class="flex h-12 w-12 items-center justify-center rounded-xl"
-            style="background: var(--gradient-subtle);"
-            aria-hidden="true"
-          >
-            <app-icon name="camera" [size]="24" color="var(--ds-brand)" />
+        <!-- Photo input methods (Tabs) -->
+        <div class="flex flex-col gap-3">
+          <div class="flex gap-2 p-1 rounded-lg" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+            <button
+              type="button"
+              class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer"
+              [style.background]="activeTab() === 'upload' ? 'var(--bg-surface)' : 'transparent'"
+              [style.color]="activeTab() === 'upload' ? 'var(--text-primary)' : 'var(--text-secondary)'"
+              [style.box-shadow]="activeTab() === 'upload' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
+              (click)="switchTab('upload')"
+            >
+              Subir archivo
+            </button>
+            <button
+              type="button"
+              class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer"
+              [style.background]="activeTab() === 'camera' ? 'var(--bg-surface)' : 'transparent'"
+              [style.color]="activeTab() === 'camera' ? 'var(--text-primary)' : 'var(--text-secondary)'"
+              [style.box-shadow]="activeTab() === 'camera' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
+              (click)="switchTab('camera')"
+            >
+              Usar cámara
+            </button>
           </div>
-          <div class="text-center">
-            <p class="text-sm font-semibold" style="color: var(--text-primary);">
-              Subir foto carnet
-            </p>
-            <p class="text-xs mt-0.5" style="color: var(--text-muted);">JPG o PNG · Máx. 5 MB</p>
-          </div>
-          <input
-            id="pub-carnet-upload"
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            class="sr-only"
-            (change)="onFileChange($event)"
-          />
-        </label>
+
+          @if (activeTab() === 'upload') {
+            <!-- Upload area -->
+            <label
+              class="flex flex-col items-center gap-3 rounded-xl px-6 py-8 cursor-pointer transition-all focus-within:outline focus-within:outline-2 focus-within:outline-[var(--ds-brand)] focus-within:outline-offset-2"
+              style="
+                background: var(--bg-surface);
+                border: 2px dashed var(--border-default);
+              "
+              for="pub-carnet-upload"
+              data-llm-description="Carnet photo upload area for driving school enrollment"
+            >
+              <div
+                class="flex h-12 w-12 items-center justify-center rounded-xl"
+                style="background: var(--gradient-subtle);"
+                aria-hidden="true"
+              >
+                <app-icon name="camera" [size]="24" color="var(--ds-brand)" />
+              </div>
+              <div class="text-center">
+                <p class="text-sm font-semibold" style="color: var(--text-primary);">
+                  Subir foto carnet
+                </p>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted);">JPG o PNG · Máx. 5 MB</p>
+              </div>
+              <input
+                id="pub-carnet-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="user"
+                class="sr-only"
+                (change)="onFileChange($event)"
+              />
+            </label>
+          } @else {
+            <!-- Camera area -->
+            <div class="flex flex-col items-center gap-3 rounded-xl p-4 overflow-hidden relative"
+                 style="background: var(--bg-surface); border: 1px solid var(--border-default);">
+              
+              <div class="w-full rounded-lg overflow-hidden relative" style="aspect-ratio: 4/3; background: var(--bg-elevated);">
+                <video #videoElement autoplay playsinline class="w-full h-full object-cover" [class.hidden]="!isCameraActive()"></video>
+                
+                @if (!isCameraActive()) {
+                  <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl mb-3" style="background: rgba(150,150,150,0.1);">
+                      <app-icon name="camera" [size]="24" color="var(--text-secondary)" />
+                    </div>
+                    <p class="text-sm font-medium" style="color: var(--text-primary);">La cámara está inactiva</p>
+                    <p class="text-xs mt-1 mb-4" style="color: var(--text-muted);">Presiona el botón para solicitar acceso</p>
+                    <button type="button" class="btn-primary px-4 py-2 text-xs rounded-lg font-semibold" (click)="startCamera()">
+                      Activar cámara
+                    </button>
+                  </div>
+                }
+              </div>
+
+              @if (cameraError()) {
+                <p class="text-xs text-center px-2" style="color: var(--state-error);">
+                  {{ cameraError() }}
+                </p>
+              }
+
+              @if (isCameraActive()) {
+                <app-async-btn
+                  class="w-full"
+                  label="Capturar foto"
+                  icon="camera"
+                  [loading]="isProcessingCapture()"
+                  loadingLabel="Procesando..."
+                  (click)="capturePhoto()"
+                />
+              }
+              
+              <canvas #canvasElement class="hidden"></canvas>
+            </div>
+          }
+        </div>
       }
 
       <!-- Nav -->
@@ -179,13 +251,24 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
     </div>
   `,
 })
-export class PublicDocumentsComponent {
+export class PublicDocumentsComponent implements OnDestroy {
   readonly data = input.required<EnrollmentDocumentsData>();
   readonly fileSelected = output<{ type: string; file: File }>();
   readonly next = output<void>();
   readonly back = output<void>();
 
   protected readonly hasPhoto = computed(() => !!this.data().carnetPhoto);
+
+  // Local state for camera feature
+  protected readonly activeTab = signal<'upload' | 'camera'>('upload');
+  protected readonly isCameraActive = signal(false);
+  protected readonly isProcessingCapture = signal(false);
+  protected readonly cameraError = signal<string | null>(null);
+
+  protected readonly videoElement = viewChild<ElementRef<HTMLVideoElement>>('videoElement');
+  protected readonly canvasElement = viewChild<ElementRef<HTMLCanvasElement>>('canvasElement');
+
+  private mediaStream: MediaStream | null = null;
 
   protected readonly validTips = [
     'Fondo blanco o claro',
@@ -198,6 +281,83 @@ export class PublicDocumentsComponent {
     'Cara cortada o de perfil',
     'Lentes de sol o gorra',
   ];
+
+  ngOnDestroy(): void {
+    this.stopCamera();
+  }
+
+  protected switchTab(tab: 'upload' | 'camera'): void {
+    this.activeTab.set(tab);
+    if (tab === 'upload') {
+      this.stopCamera();
+    }
+  }
+
+  protected async startCamera(): Promise<void> {
+    this.cameraError.set(null);
+    this.isProcessingCapture.set(false);
+    try {
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' }
+      });
+      const video = this.videoElement()?.nativeElement;
+      if (video) {
+        video.srcObject = this.mediaStream;
+        this.isCameraActive.set(true);
+      }
+    } catch (err) {
+      this.cameraError.set('No se pudo acceder a la cámara. Por favor, revisa los permisos del navegador.');
+      this.isCameraActive.set(false);
+    }
+  }
+
+  protected stopCamera(): void {
+    if (this.mediaStream) {
+      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream = null;
+    }
+    this.isCameraActive.set(false);
+  }
+
+  protected capturePhoto(): void {
+    const video = this.videoElement()?.nativeElement;
+    const canvas = this.canvasElement()?.nativeElement;
+    
+    if (video && canvas && !this.isProcessingCapture()) {
+      this.isProcessingCapture.set(true);
+      video.pause(); // Freeze frame to provide immediate visual feedback
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], 'foto-carnet-webcam.jpg', { type: 'image/jpeg' });
+            this.fileSelected.emit({ type: 'id_photo', file });
+            // Do NOT stop camera or change tab yet. The parent will upload and set data().carnetPhoto,
+            // which automatically destroys this view and shows the success preview.
+            
+            // Fallback timeout in case the upload fails silently or takes too long,
+            // to allow the user to try again.
+            setTimeout(() => {
+              if (this.isProcessingCapture()) {
+                this.isProcessingCapture.set(false);
+                video.play().catch(() => {}); // Resume camera
+              }
+            }, 5000);
+          } else {
+            this.isProcessingCapture.set(false);
+            video.play().catch(() => {});
+          }
+        }, 'image/jpeg', 0.9);
+      } else {
+        this.isProcessingCapture.set(false);
+        video.play().catch(() => {});
+      }
+    }
+  }
 
   protected onFileChange(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];

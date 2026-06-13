@@ -16,7 +16,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     >
       <!-- Header -->
       <div
-        class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-bg-elevated/30"
+        class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30"
       >
         <div class="flex items-center gap-3">
           <div
@@ -58,7 +58,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             @for (clase of clases(); track clase.numero) {
               <tr
                 [class.fila-pendiente]="!clase.completada"
-                class="group transition-colors hover:bg-bg-elevated/50"
+                class="group transition-colors hover:bg-elevated/50"
               >
                 <td class="font-bold text-text-primary">#{{ clase.numero }}</td>
                 <td>
@@ -140,15 +140,15 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       </div>
 
       <!-- Mobile Card View (Visible on mobile only) -->
-      <div class="md:hidden flex-1 overflow-y-auto p-4 space-y-3 bg-bg-surface/50">
+      <div class="md:hidden flex-1 overflow-y-auto p-4 space-y-3 bg-surface/50">
         @for (clase of clases(); track clase.numero) {
           <div
-            class="p-4 rounded-xl border border-border-subtle bg-bg-surface shadow-sm flex flex-col gap-3"
+            class="p-4 rounded-xl border border-border-subtle bg-surface shadow-sm flex flex-col gap-3"
             [class.opacity-60]="!clase.completada"
           >
             <div class="flex items-center justify-between">
               <span
-                class="px-2 py-0.5 rounded bg-bg-elevated text-[10px] font-bold text-text-primary"
+                class="px-2 py-0.5 rounded bg-elevated text-[10px] font-bold text-text-primary"
                 >SESIÓN #{{ clase.numero }}</span
               >
               <div class="flex items-center gap-2">
@@ -200,7 +200,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             </div>
 
             @if (clase.observaciones) {
-              <div class="p-2 rounded bg-bg-elevated/50 border-l-2 border-brand/30">
+              <div class="p-2 rounded bg-elevated/50 border-l-2 border-brand/30">
                 <p class="text-[11px] text-text-secondary m-0 line-clamp-2 italic">
                   "{{ clase.observaciones }}"
                 </p>

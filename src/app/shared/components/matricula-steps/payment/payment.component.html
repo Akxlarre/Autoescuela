@@ -2,7 +2,7 @@
   <div
     class="bg-surface rounded-2xl border border-border-default shadow-sm overflow-hidden text-text-primary"
   >
-    <div class="p-6 border-b border-border-subtle bg-bg-base/50">
+    <div class="p-6 border-b border-border-subtle bg-base/50">
       <h2 class="text-xl font-semibold flex items-center gap-2">
         <app-icon name="credit-card" [size]="20" class="text-brand" />
         Paso 4: Método de Pago y Descuentos
@@ -15,7 +15,7 @@
     <div class="p-6 space-y-8">
       <!-- Resumen Informativo de Opciones -->
       <div
-        class="bg-state-info-bg border border-state-info-border rounded-xl p-4 flex gap-3 text-state-info"
+        class="bg-info-subtle border border-info-border rounded-xl p-4 flex gap-3 text-info"
       >
         <app-icon name="info" [size]="20" class="mt-0.5 shrink-0" />
         <div class="space-y-2">
@@ -57,7 +57,7 @@
             </div>
 
             @if (data().discount.enabled) {
-              <div class="flex justify-between items-center text-state-success">
+              <div class="flex justify-between items-center text-success">
                 <span class="text-sm">{{ data().discount.reason || 'Descuento Aplicado' }}</span>
                 <span class="text-sm font-bold"
                   >- {{ data().discount.amount | currency: 'CLP' : '$' : '1.0-0' }}</span
@@ -90,30 +90,30 @@
 
         @if (data().discount.enabled) {
           <div
-            class="flex items-center justify-between p-4 bg-state-success-bg border border-state-success-border rounded-xl"
+            class="flex items-center justify-between p-4 bg-success-subtle border border-success-border rounded-xl"
           >
             <div class="flex items-center gap-3">
-              <app-icon name="tag" [size]="18" class="text-state-success shrink-0" />
+              <app-icon name="tag" [size]="18" class="text-success shrink-0" />
               <div>
-                <p class="text-sm font-bold text-state-success">Descuento aplicado</p>
+                <p class="text-sm font-bold text-success">Descuento aplicado</p>
                 <p class="text-xs text-text-secondary">{{ data().discount.reason }}</p>
               </div>
             </div>
             <div class="flex items-center gap-3">
-              <span class="text-sm font-black text-state-success">
+              <span class="text-sm font-black text-success">
                 - {{ data().discount.amount | currency: 'CLP' : '$' : '1.0-0' }}
               </span>
               <button
                 type="button"
                 (click)="clearDiscount()"
-                class="w-7 h-7 rounded-lg bg-state-error/10 text-state-error flex items-center justify-center hover:bg-state-error/20 transition-colors"
+                class="w-7 h-7 rounded-lg bg-error/10 text-error flex items-center justify-center hover:bg-error/20 transition-colors"
               >
                 <app-icon name="x" [size]="12" />
               </button>
             </div>
           </div>
         } @else {
-          <div class="p-4 bg-bg-base border border-border-default rounded-xl space-y-3">
+          <div class="p-4 bg-base border border-border-default rounded-xl space-y-3">
             <!-- Descuentos predefinidos desde la BD -->
             @if (data().availableDiscounts.length > 0) {
               <div class="space-y-2">
@@ -170,7 +170,7 @@
               />
             </div>
             @if (discountError()) {
-              <p class="flex items-center gap-1.5 text-xs text-state-error">
+              <p class="flex items-center gap-1.5 text-xs text-error">
                 <app-icon name="circle-alert" [size]="12" class="shrink-0" />
                 {{ discountError() }}
               </p>
@@ -180,7 +180,7 @@
               (click)="applyManualDiscount()"
               [disabled]="!discountAmountInput() || !discountReason()"
               data-llm-action="apply-discount"
-              class="w-full h-10 bg-bg-subtle text-text-primary text-xs font-bold rounded-lg hover:bg-bg-base border border-border-default transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+              class="w-full h-10 bg-subtle text-text-primary text-xs font-bold rounded-lg hover:bg-base border border-border-default transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
             >
               <app-icon name="tag" [size]="14" />
               Aplicar Descuento
@@ -233,11 +233,11 @@
     </div>
 
     <!-- Acciones Inferiores -->
-    <div class="p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
+    <div class="p-6 bg-base border-t border-border-subtle flex items-center justify-between">
       <button
         type="button"
         (click)="onBack()"
-        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
       >
         <app-icon name="arrow-left" [size]="14" />
         Volver

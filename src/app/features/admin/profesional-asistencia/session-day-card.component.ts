@@ -178,7 +178,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
     }
 
     .session-row:hover {
-      background: var(--bg-surface-hover) !important;
+      background: var(--bg-subtle) !important;
       transform: translateY(-1px);
       box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.06);
     }

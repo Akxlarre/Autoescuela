@@ -524,7 +524,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                       @for (nota of fila.notas; track $index) {
                         <td class="text-center">
                           @if (nota !== null) {
-                            <span [class.text-state-error]="nota < 75">{{ nota }}</span>
+                            <span [class.text-error]="nota < 75">{{ nota }}</span>
                           } @else {
                             <span class="text-muted">—</span>
                           }
@@ -533,8 +533,8 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                       <td class="text-center font-semibold">
                         @if (fila.notaFinal !== null) {
                           <span
-                            [class.text-state-success]="fila.aprobado"
-                            [class.text-state-error]="!fila.aprobado"
+                            [class.text-success]="fila.aprobado"
+                            [class.text-error]="!fila.aprobado"
                           >
                             {{ fila.notaFinal }}
                           </span>
@@ -597,18 +597,18 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                       <td>{{ r.nombre }}</td>
                       <td class="text-center font-mono">
                         <span
-                          [class.text-state-success]="r.pctPractica >= 75"
-                          [class.text-state-warning]="r.pctPractica >= 50 && r.pctPractica < 75"
-                          [class.text-state-error]="r.pctPractica < 50"
+                          [class.text-success]="r.pctPractica >= 75"
+                          [class.text-warning]="r.pctPractica >= 50 && r.pctPractica < 75"
+                          [class.text-error]="r.pctPractica < 50"
                         >
                           {{ r.pctPractica }}%
                         </span>
                       </td>
                       <td class="text-center font-mono">
                         <span
-                          [class.text-state-success]="r.pctTeorica >= 75"
-                          [class.text-state-warning]="r.pctTeorica >= 50 && r.pctTeorica < 75"
-                          [class.text-state-error]="r.pctTeorica < 50"
+                          [class.text-success]="r.pctTeorica >= 75"
+                          [class.text-warning]="r.pctTeorica >= 50 && r.pctTeorica < 75"
+                          [class.text-error]="r.pctTeorica < 50"
                         >
                           {{ r.pctTeorica }}%
                         </span>
@@ -656,7 +656,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     }
 
     .ldc-table tbody tr:hover {
-      background: var(--bg-surface-hover, var(--bg-surface));
+      background: var(--bg-subtle, var(--bg-surface));
     }
 
     .ldc-table-compact th,
@@ -664,13 +664,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       padding: 0.25rem 0.5rem;
     }
 
-    .text-state-success {
+    .text-success {
       color: var(--state-success);
     }
-    .text-state-warning {
+    .text-warning {
       color: var(--state-warning);
     }
-    .text-state-error {
+    .text-error {
       color: var(--state-error);
     }
 
@@ -749,7 +749,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
     .section-toggle:hover {
       background: var(
-        --bg-surface-hover,
+        --bg-subtle,
         color-mix(in srgb, var(--bg-surface) 92%, var(--text-primary))
       );
     }

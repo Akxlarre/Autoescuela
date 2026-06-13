@@ -1,6 +1,6 @@
 // Enrollment Step 1 — Personal data, location, course selection
 
-export type Gender = 'M' | 'F';
+export type Gender = 'M' | 'F' | 'X' | '';
 
 export type CourseCategory = 'non-professional' | 'professional' | 'singular';
 
@@ -47,6 +47,7 @@ export interface CourseOption {
   basePrice: number;
   durationWeeks: number | null;
   practicalHours: number | null;
+  maxClassesPerDay: number;
   /** true = opción visual de convalidación simultánea (A2 conv. A4 / A5 conv. A3). */
   convalidation?: boolean;
 }

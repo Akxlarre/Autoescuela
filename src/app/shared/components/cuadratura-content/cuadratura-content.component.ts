@@ -123,7 +123,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             <div class="hidden sm:block" [class.!hidden]="layoutDrawer.isOpen()">
               <!-- Header Columnas -->
               <div
-                class="px-6 py-3 grid items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-bg-subtle border-y border-border-muted/50"
+                class="px-6 py-3 grid items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
                 style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px"
               >
                 <span>N° Boleta</span>
@@ -183,7 +183,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               } @else if (pagosHoy().length === 0) {
                 <div class="px-6 py-20 flex flex-col items-center justify-center text-center">
                   <div
-                    class="w-14 h-14 rounded-2xl bg-bg-subtle flex items-center justify-center mb-4 border border-border-muted/50 shadow-sm"
+                    class="w-14 h-14 rounded-2xl bg-subtle flex items-center justify-center mb-4 border border-border-muted/50 shadow-sm"
                   >
                     <app-icon name="receipt" [size]="24" color="var(--text-muted)" />
                   </div>
@@ -196,7 +196,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                 <div class="divide-y divide-border-muted/50">
                   @for (fila of pagosHoy(); track fila.id) {
                     <div
-                      class="px-6 py-3.5 grid gap-2 items-center hover:bg-bg-subtle transition-colors group"
+                      class="px-6 py-3.5 grid gap-2 items-center hover:bg-subtle transition-colors group"
                       style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px"
                     >
                       <span class="text-[13px] font-mono font-medium text-text-secondary">
@@ -223,7 +223,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         {{ clp(fila.total) }}
                       </span>
                       <button
-                        class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-state-error/10 hover:text-state-error transition-all focus-visible:opacity-100 ml-auto"
+                        class="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100 ml-auto"
                         [disabled]="cajaYaCerrada()"
                         [attr.aria-label]="'Eliminar ingreso ' + (fila.nBoleta ?? fila.id)"
                         (click)="onEliminarIngreso(fila, $event)"
@@ -261,7 +261,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         }}</span>
                       </div>
                       <button
-                        class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-state-error transition-colors"
+                        class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors"
                         [disabled]="cajaYaCerrada()"
                         (click)="onEliminarIngreso(fila, $event)"
                       >
@@ -301,7 +301,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 
           <!-- Footer total Ingresos -->
           <div
-            class="px-6 py-5 flex items-center justify-between border-t border-border-muted/50 bg-bg-surface mt-auto"
+            class="px-6 py-5 flex items-center justify-between border-t border-border-muted/50 bg-surface mt-auto"
           >
             <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted">
               Mostrando {{ pagosHoy().length }} ingresos
@@ -324,7 +324,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted/50">
             <div class="flex items-center gap-3">
               <div
-                class="w-8 h-8 rounded-lg bg-state-warning/10 flex items-center justify-center shrink-0"
+                class="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center shrink-0"
               >
                 <app-icon name="trending-down" [size]="16" color="var(--state-warning)" />
               </div>
@@ -343,7 +343,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           </div>
 
           <div
-            class="px-6 py-2 grid grid-cols-[1fr_80px_24px] gap-3 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-bg-subtle border-b border-border-muted/50"
+            class="px-6 py-2 grid grid-cols-[1fr_80px_24px] gap-3 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-subtle border-b border-border-muted/50"
           >
             <span>Motivo</span>
             <span class="text-right">Monto</span>
@@ -368,7 +368,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             <div class="divide-y divide-border-muted/50">
               @for (egreso of gastosHoy(); track egreso.id + egreso.tipo) {
                 <div
-                  class="px-6 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center group hover:bg-bg-subtle transition-colors"
+                  class="px-6 py-3 grid grid-cols-[1fr_80px_24px] gap-3 items-center group hover:bg-subtle transition-colors"
                 >
                   <span class="text-[13px] font-medium text-text-primary truncate">
                     {{ egreso.descripcion }}
@@ -377,7 +377,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                     {{ clp(egreso.monto) }}
                   </span>
                   <button
-                    class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-state-error/10 hover:text-state-error transition-all focus-visible:opacity-100"
+                    class="flex items-center justify-center w-7 h-7 rounded-md text-text-muted opacity-0 group-hover:opacity-100 hover:bg-error/10 hover:text-error transition-all focus-visible:opacity-100"
                     [disabled]="cajaYaCerrada()"
                     (click)="onEliminarEgreso(egreso)"
                   >
@@ -389,7 +389,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           }
 
           <div
-            class="px-6 py-4 flex items-center justify-between border-t border-border-muted/50 bg-bg-surface mt-auto"
+            class="px-6 py-4 flex items-center justify-between border-t border-border-muted/50 bg-surface mt-auto"
           >
             <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
               >Total Egresos</span
@@ -409,7 +409,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
         <div class="card-accent card p-0 flex flex-col overflow-hidden">
           <!-- Titular principal -->
-          <div class="px-6 py-5 border-b border-border-muted/50 bg-bg-surface">
+          <div class="px-6 py-5 border-b border-border-muted/50 bg-surface">
             <div class="flex items-center gap-3 mb-1.5">
               <div class="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
                 <app-icon name="wallet" [size]="18" color="var(--color-primary)" />
@@ -446,7 +446,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           </div>
 
           <!-- 2. Arqueo Form (Billetes y Monedas) -->
-          <div class="px-6 py-6 grid grid-cols-1 gap-y-4 bg-bg-surface">
+          <div class="px-6 py-6 grid grid-cols-1 gap-y-4 bg-surface">
             <!-- Billetes -->
             <div class="flex flex-col gap-3">
               <div
@@ -476,7 +476,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       inputmode="numeric"
                       pattern="[0-9]*"
                       autocomplete="off"
-                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                       [value]="cantidades()[billete.key] || ''"
                       placeholder="0"
                       [disabled]="cajaYaCerrada()"
@@ -512,7 +512,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       inputmode="numeric"
                       pattern="[0-9]*"
                       autocomplete="off"
-                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-bg-subtle border border-border-muted focus:bg-bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                       [value]="cantidades()[moneda.key] || ''"
                       placeholder="0"
                       [disabled]="cajaYaCerrada()"
@@ -559,7 +559,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 
           <!-- 4. Justificación y CTAs (Fondo de Tarjeta) -->
           <div
-            class="px-6 py-6 border-t border-border-muted/50 mt-auto flex flex-col gap-5 bg-bg-subtle/30"
+            class="px-6 py-6 border-t border-border-muted/50 mt-auto flex flex-col gap-5 bg-subtle/30"
           >
             <div class="flex flex-col gap-2.5">
               <div class="flex items-center justify-between">
@@ -580,7 +580,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               </div>
               <textarea
                 rows="2"
-                class="w-full text-[13px] px-4 py-3.5 rounded-xl resize-none bg-bg-surface border border-border-muted focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-shadow placeholder:text-text-muted/60"
+                class="w-full text-[13px] px-4 py-3.5 rounded-xl resize-none bg-surface border border-border-muted focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-shadow placeholder:text-text-muted/60"
                 placeholder="Ej: Faltan $500 por vuelto mal dado..."
                 [disabled]="cajaYaCerrada()"
                 [value]="notas()"

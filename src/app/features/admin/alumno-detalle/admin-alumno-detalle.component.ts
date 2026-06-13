@@ -137,7 +137,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           <div class="flex flex-col gap-5">
             <div class="flex items-center gap-4">
               <div
-                class="w-14 h-14 rounded-full bg-bg-elevated border border-border-default flex items-center justify-center text-text-muted shrink-0"
+                class="w-14 h-14 rounded-full bg-elevated border border-border-default flex items-center justify-center text-text-muted shrink-0"
                 aria-hidden="true"
               >
                 <app-icon name="user" [size]="24" />
@@ -235,13 +235,13 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
               <div class="flex items-start justify-between w-full">
                 <div class="flex flex-col">
                   <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
-                  <span class="text-xs text-state-success font-medium">
+                  <span class="text-xs text-success font-medium">
                     {{ facade.progresoTeorico().completadas }} de
                     {{ facade.progresoTeorico().requeridas }} asistidas
                   </span>
                 </div>
                 <div class="flex flex-col items-end">
-                  <span class="kpi-value text-state-success text-3xl"
+                  <span class="kpi-value text-success text-3xl"
                     >{{ facade.porcentajeTeoricas() }}%</span
                   >
                   <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
@@ -272,7 +272,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <div
                   class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
                 >
-                  <span class="text-state-success"
+                  <span class="text-success"
                     >{{ facade.progresoTeorico().completadas }} OK</span
                   >
                   <span class="text-text-muted">{{ restantesTeoricas() }} Pendientes</span>
@@ -298,8 +298,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <div class="flex flex-col items-end">
                   <span
                     class="kpi-value text-3xl"
-                    [class.text-state-success]="facade.elegibilidadProf().teoria"
-                    [class.text-state-error]="
+                    [class.text-success]="facade.elegibilidadProf().teoria"
+                    [class.text-error]="
                       !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
                     "
                     [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
@@ -341,8 +341,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
                 >
                   <span
-                    [class.text-state-success]="facade.elegibilidadProf().teoria"
-                    [class.text-state-error]="
+                    [class.text-success]="facade.elegibilidadProf().teoria"
+                    [class.text-error]="
                       !facade.elegibilidadProf().teoria && facade.progresoTeoriaProf().totales > 0
                     "
                     [class.text-text-muted]="facade.progresoTeoriaProf().totales === 0"
@@ -374,8 +374,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <div class="flex flex-col items-end">
                   <span
                     class="kpi-value text-3xl"
-                    [class.text-state-success]="facade.elegibilidadProf().practica"
-                    [class.text-state-warning]="
+                    [class.text-success]="facade.elegibilidadProf().practica"
+                    [class.text-warning]="
                       !facade.elegibilidadProf().practica &&
                       facade.progresoPracticaProf().totales > 0
                     "
@@ -418,8 +418,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
                 >
                   <span
-                    [class.text-state-success]="facade.elegibilidadProf().practica"
-                    [class.text-state-warning]="
+                    [class.text-success]="facade.elegibilidadProf().practica"
+                    [class.text-warning]="
                       !facade.elegibilidadProf().practica &&
                       facade.progresoPracticaProf().totales > 0
                     "
@@ -450,8 +450,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <div class="flex flex-col items-end">
                   <span
                     class="kpi-value text-3xl"
-                    [class.text-state-success]="facade.elegibilidadProf().nota"
-                    [class.text-state-error]="
+                    [class.text-success]="facade.elegibilidadProf().nota"
+                    [class.text-error]="
                       !facade.elegibilidadProf().nota && facade.notaPromedioProf() !== null
                     "
                     [class.text-text-muted]="facade.notaPromedioProf() === null"
@@ -524,7 +524,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div class="flex items-center gap-4">
                 <div
-                  class="w-10 h-10 rounded-xl bg-bg-surface border border-state-info-border flex items-center justify-center text-state-info shadow-sm"
+                  class="w-10 h-10 rounded-xl bg-surface border border-info-border flex items-center justify-center text-info shadow-sm"
                 >
                   <app-icon name="calendar-plus" [size]="20" />
                 </div>
@@ -550,7 +550,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div class="flex items-center gap-4">
               <div
-                class="w-10 h-10 rounded-xl bg-bg-surface border border-state-warning-border flex items-center justify-center text-state-warning shadow-sm"
+                class="w-10 h-10 rounded-xl bg-surface border border-warning-border flex items-center justify-center text-warning shadow-sm"
               >
                 <app-icon name="alert-triangle" [size]="20" />
               </div>
@@ -579,9 +579,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
               @for (item of facade.inasistencias().slice(0, 3); track item.id) {
                 <div
-                  class="flex items-center gap-3 p-3 rounded-lg bg-bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
+                  class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
                 >
-                  <div class="inas-date-pill border-none! bg-bg-elevated!">
+                  <div class="inas-date-pill border-none! bg-elevated!">
                     <span class="text-[10px] font-bold text-text-secondary">{{ item.fecha }}</span>
                   </div>
                   <div class="flex-1 min-w-0">

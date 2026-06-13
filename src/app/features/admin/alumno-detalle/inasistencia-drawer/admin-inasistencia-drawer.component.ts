@@ -6,6 +6,7 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SelectModule } from 'primeng/select';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 @Component({
   selector: 'app-admin-inasistencia-drawer',
@@ -17,6 +18,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DateInputComponent,
   ],
   template: `
     <div class="flex flex-col h-full bg-surface">
@@ -50,17 +52,15 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
             <!-- Fecha de inasistencia -->
             <div class="flex flex-col gap-1.5">
-              <label for="inas-date" class="field-label">
-                FECHA DE INASISTENCIA <span class="text-error">*</span>
-              </label>
-              <input
-                id="inas-date"
-                type="date"
-                formControlName="document_date"
-                class="field-input"
-                aria-required="true"
+              <app-date-input
+                label="FECHA DE INASISTENCIA"
+                [required]="true"
+                [value]="form.get('document_date')?.value ?? ''"
+                (valueChange)="
+                  form.get('document_date')?.setValue($event);
+                  form.get('document_date')?.markAsTouched()
+                "
                 data-llm-description="Fecha en que ocurrió la inasistencia del alumno"
-                [class.field-input--error]="isInvalid('document_date')"
               />
               @if (isInvalid('document_date')) {
                 <span class="field-error">Este campo es obligatorio.</span>
@@ -122,7 +122,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   data-llm-description="Archivo PDF o imagen que respalda la justificación"
                 />
                 @if (selectedFileName()) {
-                  <div class="flex items-center gap-2 text-success" >
+                  <div class="flex items-center gap-2 text-success">
                     <app-icon name="check-circle" [size]="16" />
                     <span class="text-sm font-medium">{{ selectedFileName() }}</span>
                   </div>
@@ -142,7 +142,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             </div>
 
             @if (saveError()) {
-              <p class="text-sm text-error" >
+              <p class="text-sm text-error">
                 {{ saveError() }}
               </p>
             }

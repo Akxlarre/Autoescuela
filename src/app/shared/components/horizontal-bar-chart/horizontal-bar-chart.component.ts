@@ -45,7 +45,7 @@ const COLOR_MAP: Record<string, string> = {
       }
 
       <!-- Stacked Bar -->
-      <div class="w-full bg-divider rounded-full h-4 overflow-hidden flex">
+      <div class="w-full bg-border-subtle rounded-full h-4 overflow-hidden flex">
         @for (item of data(); track item.label) {
           <div
             [style.width.%]="item.percent"

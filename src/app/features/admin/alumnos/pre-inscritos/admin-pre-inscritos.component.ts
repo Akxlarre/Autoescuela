@@ -216,7 +216,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
                 <td>
                   <button
                     type="button"
-                    class="p-1.5 rounded-lg hover:bg-surface-elevated transition-colors cursor-pointer"
+                    class="p-1.5 rounded-lg hover:bg-elevated transition-colors cursor-pointer"
                     pTooltip="Ver detalle"
                     tooltipPosition="left"
                     data-llm-action="view-pre-inscrito"

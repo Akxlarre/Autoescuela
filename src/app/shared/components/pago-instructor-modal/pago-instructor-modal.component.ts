@@ -111,7 +111,7 @@ function formatCLP(value: number): string {
                   [style.background]="
                     paymentMethod() === 'cash'
                       ? 'color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface))'
-                      : 'var(--bg-surface-elevated)'
+                      : 'var(--bg-elevated)'
                   "
                   [style.color]="
                     paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'var(--text-secondary)'
@@ -131,7 +131,7 @@ function formatCLP(value: number): string {
                   [style.background]="
                     paymentMethod() === 'transfer'
                       ? 'color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface))'
-                      : 'var(--bg-surface-elevated)'
+                      : 'var(--bg-elevated)'
                   "
                   [style.color]="
                     paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'var(--text-secondary)'

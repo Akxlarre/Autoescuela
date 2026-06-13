@@ -7,11 +7,13 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import type { Gender } from '@core/models/ui/enrollment-personal-data.model';
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { formatRut, validateRut, normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -22,6 +24,12 @@ import type {
   SingularPaymentForm,
   SingularPaymentMethod,
 } from '@core/models/ui/cursos-singulares.model';
+
+const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
+  { value: 'M', label: 'Masculino' },
+  { value: 'F', label: 'Femenino' },
+  { value: 'X', label: 'Prefiero no especificar' },
+];
 
 const EMPTY_PERSONAL: SingularPersonalDataForm = {
   rut: '',
@@ -61,7 +69,13 @@ const PAYMENT_METHODS: {
   selector: 'app-admin-curso-singular-inscribir-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, AsyncBtnComponent, SkeletonBlockComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    AsyncBtnComponent,
+    SkeletonBlockComponent,
+    DateInputComponent,
+  ],
   template: `
     <div class="flex flex-col gap-6 p-1">
       <!-- ── Encabezado del curso ──────────────────────────────────────────── -->
@@ -94,7 +108,7 @@ const PAYMENT_METHODS: {
             <div
               class="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold transition-colors"
               [style.background]="
-                facade.wizardStep() >= step ? 'var(--ds-brand)' : 'var(--bg-surface-elevated)'
+                facade.wizardStep() >= step ? 'var(--ds-brand)' : 'var(--bg-elevated)'
               "
               [style.color]="facade.wizardStep() >= step ? 'white' : 'var(--text-muted)'"
             >
@@ -131,8 +145,8 @@ const PAYMENT_METHODS: {
                 placeholder="12.345.678-9"
                 maxlength="12"
                 class="flex-1 h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary"
-                [class.border-state-error]="rutInput().length > 0 && !rutValido()"
-                [class.border-state-success]="rutValido()"
+                [class.border-error]="rutInput().length > 0 && !rutValido()"
+                [class.border-success]="rutValido()"
                 [class.border-border-subtle]="!rutInput().length"
                 data-llm-description="RUT del alumno a inscribir en el curso singular"
               />
@@ -154,12 +168,12 @@ const PAYMENT_METHODS: {
               </button>
             </div>
             @if (rutInput().length > 0 && !rutValido()) {
-              <p class="text-xs text-state-error flex items-center gap-1 mt-1">
+              <p class="text-xs text-error flex items-center gap-1 mt-1">
                 <app-icon name="circle-alert" [size]="12" color="var(--state-error)" />
                 RUT inválido — verifica el dígito verificador
               </p>
             } @else if (rutValido()) {
-              <p class="text-xs text-state-success flex items-center gap-1 mt-1">
+              <p class="text-xs text-success flex items-center gap-1 mt-1">
                 <app-icon name="check-circle" [size]="12" color="var(--state-success)" />
                 RUT válido
               </p>
@@ -277,18 +291,10 @@ const PAYMENT_METHODS: {
 
               <div class="grid grid-cols-2 gap-3">
                 <div class="flex flex-col gap-1">
-                  <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
-                    >Fecha de nacimiento *</label
-                  >
-                  <input
-                    type="date"
-                    [(ngModel)]="form().birthDate"
-                    (ngModelChange)="patchForm('birthDate', $event)"
-                    [disabled]="esAlumnoExistente() && form().birthDate.length > 0"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary disabled:opacity-60"
-                    [class.border-state-error]="form().birthDate.length > 0 && !edadValida()"
-                    [class.border-border-subtle]="!form().birthDate.length || edadValida()"
-                    data-llm-description="Fecha de nacimiento del alumno (requerida, mínimo 17 años)"
+                  <app-date-input
+                    label="Fecha de nacimiento"
+                    [value]="form().birthDate"
+                    (valueChange)="patchForm('birthDate', $event)"
                   />
                   @if (form().birthDate.length > 0 && !edadValida()) {
                     <p class="text-xs text-state-error flex items-center gap-1">
@@ -301,15 +307,33 @@ const PAYMENT_METHODS: {
                   <label class="text-xs font-bold uppercase tracking-wide text-text-muted"
                     >Género</label
                   >
-                  <select
-                    [(ngModel)]="form().gender"
-                    (ngModelChange)="patchForm('gender', $event)"
-                    [disabled]="esAlumnoExistente()"
-                    class="h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary border-border-subtle disabled:opacity-60"
+                  <div
+                    class="flex rounded-lg overflow-hidden"
+                    [style.border]="'1.5px solid var(--border-default)'"
+                    role="radiogroup"
                   >
-                    <option value="M">Masculino</option>
-                    <option value="F">Femenino</option>
-                  </select>
+                    @for (opt of genderOptions; track opt.value; let last = $last) {
+                      <button
+                        type="button"
+                        class="flex-1 py-2 text-xs text-center cursor-pointer transition-all"
+                        [style.background]="
+                          form().gender === opt.value
+                            ? 'color-mix(in srgb, var(--ds-brand) 10%, transparent)'
+                            : 'var(--bg-surface)'
+                        "
+                        [style.color]="
+                          form().gender === opt.value ? 'var(--ds-brand)' : 'var(--text-secondary)'
+                        "
+                        [style.font-weight]="form().gender === opt.value ? '600' : '400'"
+                        [style.border-right]="!last ? '1px solid var(--border-default)' : 'none'"
+                        (click)="patchForm('gender', opt.value)"
+                        [attr.aria-pressed]="form().gender === opt.value"
+                        [attr.data-llm-action]="'select-gender-' + opt.value"
+                      >
+                        {{ opt.label }}
+                      </button>
+                    }
+                  </div>
                 </div>
               </div>
 
@@ -481,7 +505,7 @@ const PAYMENT_METHODS: {
                     [style.background]="
                       selectedMethod() === method.value
                         ? 'var(--ds-brand)'
-                        : 'var(--bg-surface-elevated)'
+                        : 'var(--bg-elevated)'
                     "
                   >
                     <app-icon
@@ -550,6 +574,8 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
   protected readonly formatCLP = formatCLP;
 
   // ── Estado local — Step 1 ─────────────────────────────────────────────────
+  protected readonly genderOptions = GENDER_OPTIONS;
+
   protected readonly rutInput = signal('');
   protected readonly form = signal<SingularPersonalDataForm>({ ...EMPTY_PERSONAL });
 

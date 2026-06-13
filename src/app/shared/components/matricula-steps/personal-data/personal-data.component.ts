@@ -22,6 +22,7 @@ import { formatRut, validateRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { calcAge, getAgeStatus } from '@core/utils/age.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 interface CategoryMeta {
   value: CourseCategory;
@@ -39,6 +40,7 @@ interface CategoryMeta {
     AsyncBtnComponent,
     EmailInputComponent,
     BranchSelectorComponent,
+    DateInputComponent,
   ],
   templateUrl: './personal-data.component.html',
   styleUrl: './personal-data.component.scss',

@@ -88,7 +88,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
             Kilometraje al Retorno
           </label>
           <div
-            class="flex items-center gap-3 bg-surface-hover rounded-2xl border border-border-default/60 px-5 py-3"
+            class="flex items-center gap-3 bg-subtle rounded-2xl border border-border-default/60 px-5 py-3"
           >
             <input
               id="kmEndAdmin"
@@ -128,12 +128,12 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
         </div>
 
         <!-- Calificación -->
-        <div class="flex flex-col items-center border-t border-b border-divider py-5">
+        <div class="flex flex-col items-center border-t border-b border-border-subtle py-5">
           <h3 class="text-xs font-bold text-secondary uppercase tracking-widest text-center mb-4">
             Calificación General
           </h3>
           <div
-            class="flex gap-2 p-2 bg-surface-hover rounded-2xl border border-border-default/50 w-max mx-auto"
+            class="flex gap-2 p-2 bg-subtle rounded-2xl border border-border-default/50 w-max mx-auto"
           >
             @for (grade of [3, 4, 5, 6, 7]; track grade) {
               <button
@@ -211,7 +211,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
         </div>
 
         <!-- Acciones -->
-        <div class="flex gap-3 pt-2 border-t border-divider">
+        <div class="flex gap-3 pt-2 border-t border-border-subtle">
           <button
             type="button"
             class="btn-secondary flex-1"

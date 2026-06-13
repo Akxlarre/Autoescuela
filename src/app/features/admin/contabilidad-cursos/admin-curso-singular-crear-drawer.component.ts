@@ -9,6 +9,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 @Component({
   selector: 'app-admin-curso-singular-crear-drawer',
@@ -21,6 +22,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DateInputComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -48,7 +50,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               placeholder="Ej: Operador de Grúa Horquilla"
             />
             @if (form.controls['nombre'].invalid && form.controls['nombre'].touched) {
-              <p class="text-xs text-state-error">El nombre es requerido (mín. 3 caps).</p>
+              <p class="text-xs text-error">El nombre es requerido (mín. 3 caps).</p>
             }
           </div>
 
@@ -94,7 +96,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                 placeholder="280000"
               />
               @if (form.controls['precio'].invalid && form.controls['precio'].touched) {
-                <p class="text-xs text-state-error">Ingrese un precio válido.</p>
+                <p class="text-xs text-error">Ingrese un precio válido.</p>
               }
             </div>
             <div class="flex flex-col gap-1">
@@ -149,16 +151,16 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               />
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold uppercase tracking-wide text-text-muted">
-                Fecha inicio *
-              </label>
-              <input
-                formControlName="inicio"
-                type="date"
-                class="h-10 px-3 text-sm rounded-lg border w-full bg-base text-text-primary border-border-subtle focus:border-brand"
+              <app-date-input
+                label="Fecha inicio"
+                [required]="true"
+                [value]="form.controls['inicio'].value ?? ''"
+                (valueChange)="
+                  form.controls['inicio'].setValue($event); form.controls['inicio'].markAsTouched()
+                "
               />
               @if (form.controls['inicio'].invalid && form.controls['inicio'].touched) {
-                <p class="text-xs text-state-error">La fecha es requerida.</p>
+                <p class="text-xs text-error">La fecha es requerida.</p>
               }
             </div>
           </div>
@@ -166,7 +168,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
           <!-- Error global -->
           @if (facade.error()) {
             <div
-              class="p-3 rounded-lg bg-state-error-subtle text-state-error text-xs flex items-center gap-2"
+              class="p-3 rounded-lg bg-error-subtle text-error text-xs flex items-center gap-2"
             >
               <app-icon name="alert-circle" [size]="14" />
               <span>{{ facade.error() }}</span>

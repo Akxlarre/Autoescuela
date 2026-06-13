@@ -29,6 +29,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { optimizeImage } from '@core/utils/image-optimizer';
 import { MediaUploadControlComponent } from '@shared/components/media-upload-control/media-upload-control.component';
+import { SelectModule } from 'primeng/select';
+
+const TEMA_OPTIONS = [
+  { value: 'azul', label: 'Azul (Sky/Indigo)' },
+  { value: 'roja', label: 'Roja (Red/Orange)' },
+];
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -38,6 +44,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    SelectModule,
     SectionHeroComponent,
     KpiCardVariantComponent,
     BentoGridLayoutDirective,
@@ -298,14 +305,14 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                     </div>
                     <div class="flex flex-col gap-1.5">
                       <label class="field-label">Tema Visual</label>
-                      <select
+                      <p-select
                         formControlName="theme"
-                        class="field-input field-select cursor-not-allowed"
-                        style="opacity: 0.8"
-                      >
-                        <option value="azul">Azul (Sky/Indigo)</option>
-                        <option value="roja">Roja (Red/Orange)</option>
-                      </select>
+                        [options]="temaOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        styleClass="w-full opacity-80"
+                        [disabled]="true"
+                      />
                       <span class="text-xs text-text-muted mt-1"
                         >El tema visual está fijado para cada sede.</span
                       >
@@ -1095,7 +1102,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                 } @else if (coursesFacade.availableCourses().length === 0) {
                   <div
                     class="p-8 text-center border rounded-xl border-dashed flex flex-col items-center gap-3 border-warning bg-warning/5"
-                    
                   >
                     <app-icon name="alert-triangle" [size]="28" />
                     <p class="text-text-primary text-sm font-semibold">
@@ -1150,7 +1156,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             @if (isOrphan) {
                               <span
                                 class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-error bg-error/12"
-                                
                               >
                                 <app-icon name="x-circle" [size]="11" />
                                 Curso no existe
@@ -1158,7 +1163,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             } @else if (isInactive) {
                               <span
                                 class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-warning bg-warning/12"
-                                
                               >
                                 <app-icon name="alert-triangle" [size]="11" />
                                 Curso inactivo — no visible en web
@@ -1179,19 +1183,16 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                         <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
                           <div class="md:col-span-6 flex flex-col gap-1.5">
                             <label class="field-label">Curso del Catálogo Operacional *</label>
-                            <select
+                            <p-select
                               formControlName="course_id"
-                              class="field-input field-select"
+                              [options]="courseOptions()"
+                              optionLabel="label"
+                              optionValue="id"
+                              styleClass="w-full"
+                              placeholder="— Seleccionar curso —"
                               data-llm-action="select-website-course"
                               data-llm-description="dropdown to link a course card to an operational course from the catalog"
-                            >
-                              <option [ngValue]="null">— Seleccionar curso —</option>
-                              @for (course of coursesFacade.availableCourses(); track course.id) {
-                                <option [ngValue]="course.id">
-                                  {{ course.name }} ({{ course.license_class }})
-                                </option>
-                              }
-                            </select>
+                            />
                           </div>
                           <div class="md:col-span-3 flex flex-col gap-1.5">
                             <label class="field-label">Precio Base (heredado)</label>
@@ -1234,7 +1235,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                             @if (courseGroup.get('priceOverride')?.value != null) {
                               <span
                                 class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-brand bg-brand/12"
-                                
                               >
                                 <app-icon name="tag" [size]="10" />
                                 Override activo
@@ -1503,7 +1503,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                 @if (form.get('promo.active')?.value) {
                   <div
                     class="grid grid-cols-1 md:grid-cols-3 gap-5 p-4 rounded-xl border border-solid border-success bg-success/4"
-                    
                   >
                     <div class="md:col-span-2 flex flex-col gap-1.5">
                       <label class="field-label">Título de la Oferta / Promoción *</label>
@@ -2370,6 +2369,15 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   protected readonly renderedIcons = computed(() => {
     return this.filteredIcons().slice(0, this.visibleIconsCount());
   });
+
+  protected readonly temaOptions = TEMA_OPTIONS;
+
+  protected readonly courseOptions = computed(() =>
+    this.coursesFacade.availableCourses().map((c) => ({
+      id: c.id,
+      label: `${c.name} (${c.license_class})`,
+    })),
+  );
 
   protected readonly iconCategories = [
     { id: 'popular', label: 'Populares', icon: 'star' },

@@ -202,7 +202,7 @@ import type { PublicStepConfig } from '@core/facades/public-enrollment.facade';
           #cardRef
           class="rounded-2xl p-6 sm:p-8"
           style="
-            background: var(--bg-surface-elevated, var(--bg-surface));
+            background: var(--bg-elevated, var(--bg-surface));
             border: 1px solid var(--border-color, var(--border-subtle));
             box-shadow:
               var(--pe-shadow-xl, var(--shadow-lg)),

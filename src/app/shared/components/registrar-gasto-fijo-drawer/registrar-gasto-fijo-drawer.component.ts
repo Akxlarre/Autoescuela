@@ -10,6 +10,7 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import {
   GASTO_FIJO_CATEGORIES,
   type RegistrarGastoFijoPayload,
@@ -18,7 +19,7 @@ import {
 @Component({
   selector: 'app-registrar-gasto-fijo-drawer',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule, DateInputComponent],
   template: `
     @if (visible()) {
       <!-- Backdrop -->
@@ -152,17 +153,11 @@ import {
 
           <!-- Fecha -->
           <div class="flex flex-col gap-1.5">
-            <label
-              class="text-xs font-semibold uppercase tracking-wider"
-              style="color: var(--text-muted)"
-            >
-              Fecha *
-            </label>
-            <input
-              type="date"
-              formControlName="date"
-              class="h-10 px-3 rounded-xl text-sm outline-none transition-all"
-              style="background: var(--bg-subtle); border: 1px solid var(--border-muted); color: var(--text-primary)"
+            <app-date-input
+              label="Fecha"
+              [required]="true"
+              [value]="form.get('date')?.value ?? ''"
+              (valueChange)="form.get('date')?.setValue($event); form.get('date')?.markAsTouched()"
               data-llm-description="fecha en que ocurrió o se registra el gasto fijo"
             />
             @if (form.get('date')?.invalid && form.get('date')?.touched) {

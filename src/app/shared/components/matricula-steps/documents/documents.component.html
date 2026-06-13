@@ -12,13 +12,13 @@
 
     <div class="p-6 space-y-8">
       <!-- Módulo: Foto para Carnet -->
-      <div class="border border-border-default rounded-2xl overflow-hidden bg-bg-base/30">
+      <div class="border border-border-default rounded-2xl overflow-hidden bg-base/30">
         <div
-          class="px-4 py-3 border-b border-border-default bg-bg-base flex items-center justify-between"
+          class="px-4 py-3 border-b border-border-default bg-base flex items-center justify-between"
         >
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-text-primary">Foto de rostro para Carnet</span>
-            <span class="text-state-error font-bold">*</span>
+            <span class="text-error font-bold">*</span>
           </div>
           <span class="text-xs font-medium text-text-muted uppercase tracking-tight"
             >Rostro completo · Frente · Fondo blanco</span
@@ -34,7 +34,7 @@
           </p>
 
           <!-- Tabs Selector -->
-          <div class="flex p-1 bg-bg-subtle rounded-lg w-fit">
+          <div class="flex p-1 bg-subtle rounded-lg w-fit">
             <button
               (click)="setPhotoTab('camera')"
               class="cursor-pointer px-4 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-2"
@@ -67,7 +67,7 @@
               @if (!data().carnetPhoto?.capturedDataUrl) {
                 <div class="text-center space-y-3">
                   <div
-                    class="w-16 h-16 bg-bg-base rounded-full flex items-center justify-center mx-auto mb-2 text-text-muted/30"
+                    class="w-16 h-16 bg-base rounded-full flex items-center justify-center mx-auto mb-2 text-text-muted/30"
                   >
                     <app-icon name="camera" [size]="32" />
                   </div>
@@ -90,7 +90,7 @@
                     alt="Foto carnet"
                   />
                   <button
-                    class="absolute -top-2 -right-2 bg-state-error text-surface w-6 h-6 rounded-full shadow-md flex items-center justify-center"
+                    class="absolute -top-2 -right-2 bg-error text-surface w-6 h-6 rounded-full shadow-md flex items-center justify-center"
                   >
                     <app-icon name="x" [size]="10" />
                   </button>
@@ -143,7 +143,7 @@
                   <button
                     type="button"
                     (click)="carnetReplaceInput.click()"
-                    class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-text-secondary text-xs font-medium rounded-lg hover:bg-bg-base transition-all flex items-center gap-1.5"
+                    class="cursor-pointer px-3 py-1.5 bg-surface border border-border-default text-text-secondary text-xs font-medium rounded-lg hover:bg-base transition-all flex items-center gap-1.5"
                   >
                     <app-icon name="refresh-cw" [size]="12" />
                     Cambiar foto
@@ -152,7 +152,7 @@
               } @else {
                 <div class="text-center space-y-3">
                   <div
-                    class="w-16 h-16 bg-bg-base rounded-full flex items-center justify-center mx-auto mb-2 text-text-muted/30"
+                    class="w-16 h-16 bg-base rounded-full flex items-center justify-center mx-auto mb-2 text-text-muted/30"
                   >
                     <app-icon name="image" [size]="32" />
                   </div>
@@ -169,7 +169,7 @@
                   <button
                     type="button"
                     (click)="carnetFileInput.click()"
-                    class="cursor-pointer px-4 py-2 bg-surface border border-border-default text-text-primary text-xs font-bold rounded-lg hover:bg-bg-base transition-all"
+                    class="cursor-pointer px-4 py-2 bg-surface border border-border-default text-text-primary text-xs font-bold rounded-lg hover:bg-base transition-all"
                   >
                     Elegir Archivo
                   </button>
@@ -197,20 +197,20 @@
                   <div
                     class="w-10 h-10 rounded-lg flex items-center justify-center"
                     [class.bg-brand-muted]="!isUploaded(doc.type)"
-                    [class.bg-state-success-bg]="isUploaded(doc.type)"
+                    [class.bg-success-subtle]="isUploaded(doc.type)"
                   >
                     <app-icon
                       name="file-text"
                       [size]="20"
                       [class.text-brand]="!isUploaded(doc.type)"
-                      [class.text-state-success]="isUploaded(doc.type)"
+                      [class.text-success]="isUploaded(doc.type)"
                     />
                   </div>
                   <div>
                     <p class="text-sm font-bold text-text-primary">
                       {{ doc.label }}
                       @if (doc.required) {
-                        <span class="text-state-error font-bold">* (Obligatoria)</span>
+                        <span class="text-error font-bold">* (Obligatoria)</span>
                       }
                     </p>
                     <p class="text-xs text-text-muted uppercase tracking-tight">{{ doc.hint }}</p>
@@ -220,7 +220,7 @@
                 <div class="flex items-center gap-3">
                   @if (isUploaded(doc.type)) {
                     <span
-                      class="px-2 py-1 bg-state-success-bg text-state-success text-xs font-bold rounded-md flex items-center gap-1"
+                      class="px-2 py-1 bg-success-subtle text-success text-xs font-bold rounded-md flex items-center gap-1"
                     >
                       <app-icon name="check" [size]="10" /> LISTO
                     </span>
@@ -243,13 +243,13 @@
                     [class.bg-surface]="!isUploaded(doc.type)"
                     [class.border-border-default]="!isUploaded(doc.type)"
                     [class.text-text-primary]="!isUploaded(doc.type)"
-                    [class.hover:bg-bg-base]="
+                    [class.hover:bg-base]="
                       !isUploaded(doc.type) && uploadingDocType() !== doc.type
                     "
-                    [class.bg-bg-subtle]="isUploaded(doc.type)"
+                    [class.bg-subtle]="isUploaded(doc.type)"
                     [class.border-border-subtle]="isUploaded(doc.type)"
                     [class.text-text-secondary]="isUploaded(doc.type)"
-                    [class.hover:bg-bg-base]="
+                    [class.hover:bg-base]="
                       isUploaded(doc.type) && uploadingDocType() !== doc.type
                     "
                   >
@@ -274,11 +274,11 @@
       <!-- Alerta de Autorización Notarial (menor de edad) -->
       @if (data().isMinor) {
         <div
-          class="p-4 bg-state-warning-bg border border-state-warning-border rounded-xl flex gap-3"
+          class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3"
         >
-          <app-icon name="alert-triangle" [size]="20" class="text-state-warning mt-0.5 shrink-0" />
+          <app-icon name="alert-triangle" [size]="20" class="text-warning mt-0.5 shrink-0" />
           <div>
-            <p class="text-sm font-bold text-state-warning">Alumno menor de edad</p>
+            <p class="text-sm font-bold text-warning">Alumno menor de edad</p>
             <p class="text-xs text-text-secondary leading-relaxed mt-1">
               Se requiere Autorización Notarial firmada por el apoderado. Súbela en la sección de
               documentos del expediente.
@@ -290,11 +290,11 @@
       <!-- Alerta HVC Vencida (RF-082.3) -->
       @if (data().hvcValidation?.expired) {
         <div
-          class="p-4 bg-state-warning-bg border border-state-warning-border rounded-xl flex gap-3"
+          class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3"
         >
-          <app-icon name="alert-triangle" [size]="20" class="text-state-warning mt-0.5 shrink-0" />
+          <app-icon name="alert-triangle" [size]="20" class="text-warning mt-0.5 shrink-0" />
           <div>
-            <p class="text-sm font-bold text-state-warning">Hoja de Vida del Conductor vencida</p>
+            <p class="text-sm font-bold text-warning">Hoja de Vida del Conductor vencida</p>
             <p class="text-xs text-text-secondary leading-relaxed">
               {{ data().hvcValidation?.message }}
             </p>
@@ -304,11 +304,11 @@
     </div>
 
     <!-- Acciones Inferiores -->
-    <div class="p-6 bg-bg-base border-t border-border-subtle flex items-center justify-between">
+    <div class="p-6 bg-base border-t border-border-subtle flex items-center justify-between">
       <button
         type="button"
         (click)="onBack()"
-        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+        class="px-6 py-2.5 text-sm font-medium text-text-secondary hover:bg-subtle rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
       >
         <app-icon name="arrow-left" [size]="14" />
         Volver

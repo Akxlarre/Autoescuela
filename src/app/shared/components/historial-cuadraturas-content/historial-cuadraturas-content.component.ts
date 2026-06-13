@@ -59,7 +59,7 @@ function formatCLP(value: number): string {
       background: var(--bg-surface);
     }
     .cal-cell--empty {
-      background: var(--bg-surface-elevated);
+      background: var(--bg-elevated);
     }
     .cal-cell--clickable {
       cursor: pointer;
@@ -211,7 +211,7 @@ function formatCLP(value: number): string {
       >
         @for (dia of diasSemana; track dia) {
           <div
-            class="px-2 py-3.5 text-center text-[10px] font-bold text-text-muted bg-bg-subtle uppercase tracking-widest"
+            class="px-2 py-3.5 text-center text-[10px] font-bold text-text-muted bg-subtle uppercase tracking-widest"
           >
             {{ dia }}
           </div>
@@ -222,7 +222,7 @@ function formatCLP(value: number): string {
       <div class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/30 flex-1">
         @if (isLoading()) {
           @for (i of skeletonCells; track i) {
-            <div class="cal-cell bg-bg-surface-elevated p-2 flex flex-col justify-between">
+            <div class="cal-cell bg-elevated p-2 flex flex-col justify-between">
               <app-skeleton-block variant="text" width="40%" height="13px" />
             </div>
           }
@@ -307,7 +307,7 @@ function formatCLP(value: number): string {
       <div class="flex lg:hidden flex-col divide-y divide-border-muted/30">
         @if (isLoading()) {
           @for (i of [1, 2, 3, 4]; track i) {
-            <div class="p-4 flex items-center justify-between bg-bg-surface">
+            <div class="p-4 flex items-center justify-between bg-surface">
               <div class="flex gap-3 items-center w-full">
                 <app-skeleton-block variant="circle" width="44px" height="44px" />
                 <div class="flex flex-col gap-2 flex-1">
@@ -321,7 +321,7 @@ function formatCLP(value: number): string {
           @for (celda of calendarDays(); track $index) {
             @if (celda.day && (celda.cierre || celda.isToday)) {
               <button
-                class="flex items-center justify-between p-4 bg-bg-surface hover:bg-bg-subtle active:bg-border-muted/30 transition-colors w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
+                class="flex items-center justify-between p-4 bg-surface hover:bg-subtle active:bg-border-muted/30 transition-colors w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
                 (click)="celda.cierre && cierreClicked.emit(celda.cierre)"
                 [attr.aria-disabled]="!celda.cierre"
               >
@@ -330,7 +330,7 @@ function formatCLP(value: number): string {
                     class="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl"
                     [class.bg-brand]="celda.isToday"
                     [class.text-white]="celda.isToday"
-                    [class.bg-bg-subtle]="!celda.isToday"
+                    [class.bg-subtle]="!celda.isToday"
                     [class.border]="!celda.isToday"
                     [class.border-border-muted]="!celda.isToday"
                   >
@@ -353,13 +353,13 @@ function formatCLP(value: number): string {
                     @if (celda.cierre; as cierre) {
                       <div class="flex items-center gap-1.5 mb-0.5">
                         @if (cierre.estadoDiferencia === 'balanced') {
-                          <div class="w-1.5 h-1.5 rounded-full bg-state-success"></div>
+                          <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
                           <span class="text-[13px] font-bold text-text-primary">Cuadrado</span>
                         } @else if (cierre.estadoDiferencia === 'surplus') {
-                          <div class="w-1.5 h-1.5 rounded-full bg-state-warning"></div>
+                          <div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
                           <span class="text-[13px] font-bold text-text-primary">Sobrante</span>
                         } @else {
-                          <div class="w-1.5 h-1.5 rounded-full bg-state-error"></div>
+                          <div class="w-1.5 h-1.5 rounded-full bg-error"></div>
                           <span class="text-[13px] font-bold text-text-primary">Descuadre</span>
                         }
                       </div>
@@ -385,9 +385,9 @@ function formatCLP(value: number): string {
                   @if (celda.cierre; as cierre) {
                     <span
                       class="text-[13px] font-black tabular-nums tracking-tight"
-                      [class.text-state-error]="cierre.estadoDiferencia === 'shortage'"
-                      [class.text-state-warning]="cierre.estadoDiferencia === 'surplus'"
-                      [class.text-state-success]="cierre.estadoDiferencia === 'balanced'"
+                      [class.text-error]="cierre.estadoDiferencia === 'shortage'"
+                      [class.text-warning]="cierre.estadoDiferencia === 'surplus'"
+                      [class.text-success]="cierre.estadoDiferencia === 'balanced'"
                     >
                       {{ formatDiferencia(cierre.diferencia) }}
                     </span>
@@ -400,10 +400,10 @@ function formatCLP(value: number): string {
 
           @if (mesSinCierresMobile()) {
             <div
-              class="flex flex-col items-center justify-center py-12 px-4 shadow-inner text-center bg-bg-subtle text-text-muted"
+              class="flex flex-col items-center justify-center py-12 px-4 shadow-inner text-center bg-subtle text-text-muted"
             >
               <div
-                class="w-12 h-12 rounded-full bg-bg-surface border border-border-muted flex items-center justify-center mb-3"
+                class="w-12 h-12 rounded-full bg-surface border border-border-muted flex items-center justify-center mb-3"
               >
                 <app-icon name="calendar-x" [size]="20" class="opacity-50" />
               </div>

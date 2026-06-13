@@ -107,7 +107,7 @@ function formatCLP(value: number): string {
       .liq-table tfoot td {
         padding: 12px 16px;
         border-top: 2px solid var(--border-color);
-        background: var(--bg-surface-elevated);
+        background: var(--bg-elevated);
         font-weight: 700;
       }
       .liq-table.compact-mode tfoot td {
@@ -118,7 +118,7 @@ function formatCLP(value: number): string {
         background: color-mix(in srgb, var(--ds-brand) 3%, var(--bg-surface));
       }
       .liq-table tfoot tr:hover td {
-        background: var(--bg-surface-elevated);
+        background: var(--bg-elevated);
       }
 
       .anticipo-box {
@@ -163,7 +163,7 @@ function formatCLP(value: number): string {
         padding: 6px 12px;
         border-radius: 8px;
         border: 1px solid var(--border-muted);
-        background: var(--bg-surface-elevated);
+        background: var(--bg-elevated);
         color: var(--state-success);
         cursor: default;
         white-space: nowrap;

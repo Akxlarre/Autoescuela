@@ -36,6 +36,10 @@ playwright-screenshots/
 
 # QA artifacts — screenshots de auditoría visual (no van al repo)
 docs/qa-ux/
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
 
 # SDD — artefactos privados de dev (no se comparten en el repo)
 # Si querés compartir una spec, copiala a docs/specs/ y commitéala ahí.

@@ -37,7 +37,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       </div>
 
       <div class="bento-banner">
-        <div class="card p-0 overflow-hidden divide-y divide-divider">
+        <div class="card p-0 overflow-hidden divide-y divide-border-subtle">
           @if (notifications().length === 0) {
             <div class="p-12 text-center">
               <app-icon
@@ -51,7 +51,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           } @else {
             @for (notif of notifications(); track notif.id) {
               <div
-                class="p-4 sm:p-5 flex gap-4 transition-colors hover:bg-surface-hover/50"
+                class="p-4 sm:p-5 flex gap-4 transition-colors hover:bg-subtle/50"
                 [class.bg-brand-muted]="notif.unread"
               >
                 <div

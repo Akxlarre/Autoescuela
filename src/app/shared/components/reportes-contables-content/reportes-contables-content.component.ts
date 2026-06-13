@@ -12,6 +12,7 @@ import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import {
   RANGOS_REPORTE,
@@ -35,6 +36,7 @@ import {
     KpiCardVariantComponent,
     FormsModule,
     SelectModule,
+    DateInputComponent,
   ],
   styles: [
     `
@@ -280,26 +282,22 @@ import {
 
         <!-- Desde -->
         <div>
-          <label class="filter-label">Desde</label>
-          <input
-            type="date"
-            class="filter-control"
+          <app-date-input
+            label="Desde"
             [value]="localDesde()"
             [disabled]="localRango() !== 'personalizado'"
-            (change)="localDesde.set($any($event.target).value)"
+            (valueChange)="localDesde.set($event)"
             data-llm-description="fecha de inicio del rango del reporte"
           />
         </div>
 
         <!-- Hasta -->
         <div>
-          <label class="filter-label">Hasta</label>
-          <input
-            type="date"
-            class="filter-control"
+          <app-date-input
+            label="Hasta"
             [value]="localHasta()"
             [disabled]="localRango() !== 'personalizado'"
-            (change)="localHasta.set($any($event.target).value)"
+            (valueChange)="localHasta.set($event)"
             data-llm-description="fecha de fin del rango del reporte"
           />
         </div>

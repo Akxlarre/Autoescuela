@@ -87,7 +87,7 @@ export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'bran
     /* ─── Variants ─── */
 
     .stat-box--surface {
-      background: var(--bg-surface-elevated);
+      background: var(--bg-elevated);
       border-color: var(--border-subtle);
     }
 

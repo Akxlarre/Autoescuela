@@ -16,7 +16,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
     <div class="bento-card !p-0 flex flex-col h-full w-full overflow-hidden">
       <!-- Header -->
       <div
-        class="flex items-center justify-between p-5 border-b border-border-subtle bg-bg-elevated/30"
+        class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
       >
         <div class="flex flex-col">
           <h2 class="text-base font-bold text-text-primary m-0">Estado Financiero</h2>
@@ -25,7 +25,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
           >
         </div>
         <div
-          class="w-8 h-8 rounded-full bg-state-success/10 flex items-center justify-center text-state-success"
+          class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center text-success"
         >
           <app-icon name="dollar-sign" [size]="18" />
         </div>
@@ -61,7 +61,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
           @for (pago of pagos(); track pago.id) {
             <div
-              class="flex flex-col gap-1.5 p-3 rounded-xl bg-bg-elevated/50 border border-border-subtle shadow-sm transition-all hover:bg-bg-elevated"
+              class="flex flex-col gap-1.5 p-3 rounded-xl bg-elevated/50 border border-border-subtle shadow-sm transition-all hover:bg-elevated"
             >
               <div class="flex items-start justify-between gap-2">
                 <span
@@ -80,7 +80,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
                   <span class="text-[10px] text-text-muted font-medium">{{ pago.fecha }}</span>
                   @if (pago.metodo) {
                     <span
-                      class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-bg-subtle text-text-muted border border-border-subtle"
+                      class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-subtle text-text-muted border border-border-subtle"
                     >
                       {{ pago.metodo }}
                     </span>

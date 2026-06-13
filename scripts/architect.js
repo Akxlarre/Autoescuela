@@ -105,6 +105,11 @@ const RULES = {
         doc: 'docs/TECH-STACK-RULES.md#arch-10',
         fix: 'Extrae lógica a helpers/servicios y reduce inject() y métodos largos. Mantén la Facade como orquestador.',
     },
+      'ARCH-11': {
+        name: 'Clases de token no canónicas (no generan CSS)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-011)',
+        fix: 'Usa clases del @theme: bg-{base,surface,elevated,subtle}, text/bg/border-{success,warning,error,info}(-subtle|-border), border-border-subtle. NO uses bg-bg-*, *-state-*, bg-surface-{elevated,hover,base}, *-divider.',
+    },
 };
 
 const targetDirs = [
@@ -325,6 +330,17 @@ function analyzeTypeScript(filePath) {
                 );
             }
         });
+    }
+
+    // ── Regla 11: Clases de token NO canónicas (no existen en @theme) ────────
+    const deadTokenClassRe =
+        /\b(?:bg-bg-(?:base|surface|elevated|subtle|overlay)|(?:text|bg|border)-state-(?:success|warning|error|info)|bg-surface-(?:elevated|hover|base)|(?:border|bg|divide)-divider)\b/g;
+    const deadTokenMatches = content.match(deadTokenClassRe);
+    if (deadTokenMatches) {
+        reportError(
+            'ARCH-11', filePath,
+            `Clases de token no canónicas (no generan CSS): ${[...new Set(deadTokenMatches)].join(', ')}`,
+        );
     }
 }
 

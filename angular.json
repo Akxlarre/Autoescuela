@@ -50,6 +50,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.svg",
+                "input": "node_modules/flag-icons/flags/1x1",
+                "output": "/flags/"
               }
             ],
             "styles": [

@@ -110,10 +110,10 @@ import {
                 class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 pt-4 sm:pt-5 border-t border-border-default/50 relative z-10"
               >
                 <div
-                  class="flex items-center gap-3 bg-surface-hover/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none"
+                  class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none"
                 >
                   <div
-                    class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0 shadow-sm sm:shadow-none"
+                    class="w-8 h-8 rounded-full bg-subtle flex items-center justify-center shrink-0 shadow-sm sm:shadow-none"
                   >
                     <app-icon name="gauge" [size]="16" class="text-text-secondary" />
                   </div>
@@ -129,10 +129,10 @@ import {
                   </div>
                 </div>
                 <div
-                  class="flex items-center gap-3 bg-surface-hover/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none"
+                  class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none"
                 >
                   <div
-                    class="w-8 h-8 rounded-full bg-surface-hover flex items-center justify-center shrink-0 shadow-sm sm:shadow-none"
+                    class="w-8 h-8 rounded-full bg-subtle flex items-center justify-center shrink-0 shadow-sm sm:shadow-none"
                   >
                     <app-icon name="clock" [size]="16" class="text-text-secondary" />
                   </div>
@@ -162,7 +162,7 @@ import {
                     />
                   </div>
 
-                  <div class="w-full h-px bg-divider/60 max-w-2xl mx-auto"></div>
+                  <div class="w-full h-px bg-border-subtle/60 max-w-2xl mx-auto"></div>
 
                   <!-- Observaciones Premium -->
                   <div class="space-y-4 relative z-10 w-full max-w-2xl mx-auto">
@@ -178,7 +178,7 @@ import {
                         id="obs"
                         [(ngModel)]="observations"
                         rows="4"
-                        class="form-control w-full resize-none rounded-2xl p-5 bg-surface-base border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
+                        class="form-control w-full resize-none rounded-2xl p-5 bg-subtle border-border-default/60 focus:bg-surface focus:border-brand/40 focus:ring-4 focus:ring-brand/10 transition-all text-sm sm:text-base shadow-inner placeholder:text-text-muted/60 hover:border-border-strong cursor-text"
                         placeholder="Documenta áreas de mejora, destrezas adquiridas o tareas pendientes para la próxima sesión..."
                       ></textarea>
                     </div>
@@ -211,7 +211,7 @@ import {
                       Kilometraje al Retorno
                     </label>
                     <div
-                      class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-surface-base rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors focus-within:border-brand/50 focus-within:bg-surface-hover"
+                      class="flex items-center justify-center gap-3 w-full max-w-sm mx-auto bg-subtle rounded-2xl shadow-inner border border-border-default/60 px-6 py-4 mt-2 transition-colors focus-within:border-brand/50 focus-within:bg-subtle"
                     >
                       <input
                         type="number"
@@ -243,7 +243,7 @@ import {
 
                   <!-- NOTA GLOBAL (Estrellas / Premium UI) -->
                   <div
-                    class="space-y-4 flex flex-col items-center border-t border-b border-divider py-8 my-8"
+                    class="space-y-4 flex flex-col items-center border-t border-b border-border-subtle py-8 my-8"
                   >
                     <h3
                       class="font-bold text-text-primary uppercase tracking-widest text-sm text-center"
@@ -251,7 +251,7 @@ import {
                       Calificación General
                     </h3>
                     <div
-                      class="flex gap-2 sm:gap-4 p-2 bg-surface-base rounded-2xl shadow-inner border border-border-default/50 w-max mx-auto"
+                      class="flex gap-2 sm:gap-4 p-2 bg-subtle rounded-2xl shadow-inner border border-border-default/50 w-max mx-auto"
                     >
                       @for (grade of [3, 4, 5, 6, 7]; track grade) {
                         <button
@@ -262,7 +262,7 @@ import {
                           [class.scale-110]="selectedGrade() === grade"
                           [class.bg-transparent]="selectedGrade() !== grade"
                           [class.text-text-muted]="selectedGrade() !== grade"
-                          [class.hover:bg-surface-hover]="selectedGrade() !== grade"
+                          [class.hover:bg-subtle]="selectedGrade() !== grade"
                           (click)="selectedGrade.set(grade)"
                         >
                           <span class="leading-none">{{ grade }}</span>

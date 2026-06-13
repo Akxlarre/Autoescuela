@@ -24,7 +24,7 @@
     class="bg-surface rounded-3xl border border-border-default shadow-sm overflow-hidden text-left"
     [appAnimateIn]="{ delay: 0.2 }"
   >
-    <div class="p-6 bg-bg-base border-b border-border-subtle flex justify-between items-center">
+    <div class="p-6 bg-base border-b border-border-subtle flex justify-between items-center">
       <div>
         <p class="text-xs font-bold text-text-muted uppercase tracking-widest">ID de Matrícula</p>
         <p class="text-sm font-mono font-bold text-text-primary">#{{ data().enrollmentNumber }}</p>
@@ -53,9 +53,9 @@
       <!-- Sección Curso -->
       <div class="flex items-start gap-4" [appScrollReveal]="{ delay: 0.1 }">
         <div
-          class="w-12 h-12 bg-state-warning-bg rounded-2xl flex items-center justify-center shrink-0"
+          class="w-12 h-12 bg-warning-subtle rounded-2xl flex items-center justify-center shrink-0"
         >
-          <app-icon name="car" [size]="20" class="text-state-warning" />
+          <app-icon name="car" [size]="20" class="text-warning" />
         </div>
         <div class="space-y-1">
           <p class="text-xs font-bold text-text-muted uppercase tracking-tighter">
@@ -103,10 +103,10 @@
   </div>
 
   @if (data().pendingDocuments.visible) {
-    <div class="p-4 bg-state-warning-bg border border-state-warning-border rounded-xl flex gap-3" [appAnimateIn]="{ delay: 0.5 }">
-      <app-icon name="alert-triangle" [size]="18" class="text-state-warning mt-0.5 shrink-0" />
+    <div class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3" [appAnimateIn]="{ delay: 0.5 }">
+      <app-icon name="alert-triangle" [size]="18" class="text-warning mt-0.5 shrink-0" />
       <div>
-        <p class="text-sm font-bold text-state-warning">Documentos Pendientes</p>
+        <p class="text-sm font-bold text-warning">Documentos Pendientes</p>
         <p class="text-xs text-text-secondary mt-0.5">{{ data().pendingDocuments.message }}</p>
       </div>
     </div>

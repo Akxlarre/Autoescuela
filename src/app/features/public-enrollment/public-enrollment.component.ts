@@ -60,7 +60,7 @@ const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   email: '',
   phone: '',
   birthDate: '',
-  gender: 'M',
+  gender: '',
   address: '',
   courseCategory: 'non-professional',
   courseType: 'class_b',
@@ -208,6 +208,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
           @case ('license-type') {
             <app-public-license-type
               [availableFlows]="facade.availableFlows()"
+              [currentFlow]="facade.flowType()"
               (flowSelect)="onFlowSelect($event)"
               (next)="onLicenseTypeNext()"
             />
@@ -580,6 +581,7 @@ export class PublicEnrollmentComponent {
         selectedSlotIds: slotIds,
         requiredCount: required,
         currentCount: slotIds.length,
+        maxClassesPerDay: this.facade.maxClassesPerDay(),
         isComplete: slotIds.length >= required,
       },
       promotionId: null,

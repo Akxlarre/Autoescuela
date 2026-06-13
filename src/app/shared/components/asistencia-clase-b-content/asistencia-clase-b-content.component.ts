@@ -18,6 +18,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { todayIso } from '@core/utils/date.utils';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
@@ -59,6 +60,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    DateInputComponent,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -221,16 +223,10 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             <div class="flex items-center gap-2">
               <!-- Selector de fecha -->
               <div class="flex items-center gap-1.5">
-                <app-icon name="calendar" [size]="14" [style.color]="'var(--text-muted)'" />
-                <input
-                  type="date"
-                  class="text-sm rounded-md border px-2 py-2 focus:outline-none"
-                  [style.border-color]="'var(--border-subtle)'"
-                  [style.background]="'var(--bg-surface)'"
-                  [style.color]="'var(--text-secondary)'"
+                <app-date-input
                   [value]="selectedDate()"
                   data-llm-description="Selector de fecha para clases prácticas"
-                  (change)="onDateChange($event)"
+                  (valueChange)="onDateChange($event)"
                 />
                 @if (isFutureDate()) {
                   <span
@@ -326,7 +322,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <tbody>
                   @for (row of filteredPracticas(); track row.id) {
                     <tr
-                      class="border-b transition-colors hover:bg-surface-elevated"
+                      class="border-b transition-colors hover:bg-elevated"
                       [style.border-color]="'var(--border-subtle)'"
                     >
                       <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
@@ -495,16 +491,10 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             <div class="flex items-center gap-2">
               <!-- Selector de fecha -->
               <div class="flex items-center gap-1.5">
-                <app-icon name="calendar" [size]="14" [style.color]="'var(--text-muted)'" />
-                <input
-                  type="date"
-                  class="text-sm rounded-md border px-2 py-2 focus:outline-none"
-                  [style.border-color]="'var(--border-subtle)'"
-                  [style.background]="'var(--bg-surface)'"
-                  [style.color]="'var(--text-secondary)'"
+                <app-date-input
                   [value]="selectedDate()"
                   data-llm-description="Selector de fecha para clases teóricas"
-                  (change)="onDateChange($event)"
+                  (valueChange)="onDateChange($event)"
                 />
                 @if (isFutureDate()) {
                   <span
@@ -558,7 +548,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <tbody>
                   @for (clase of clasesTeorias(); track clase.id) {
                     <tr
-                      class="border-b transition-colors hover:bg-surface-elevated"
+                      class="border-b transition-colors hover:bg-elevated"
                       [style.border-color]="'var(--border-subtle)'"
                     >
                       <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
@@ -736,8 +726,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   // ── Template helpers ─────────────────────────────────────────────────────────
 
-  protected onDateChange(event: Event): void {
-    const val = (event.target as HTMLInputElement).value;
+  protected onDateChange(val: string): void {
     if (val) this.dateChange.emit(val);
   }
 

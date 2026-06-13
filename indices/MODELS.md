@@ -21,7 +21,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ActivityItem` | `dashboard.model.ts` | Elemento de la lista de actividad reciente del dashboard |
 | `QuickActionItem` | `dashboard.model.ts` | Definición de configuración para los botones de acceso rápido |
 | `SystemStatusItem` | `dashboard.model.ts` | Datos para el panel de estado de servicios del sistema |
-| `EnrollmentPersonalData` | `enrollment-personal-data.model.ts` | Paso 1 del Wizard de Matrícula: datos personales (RUT, nombres, email, teléfono, fecha nacimiento, sexo, dirección, región, comuna), selección de categoría y tipo de curso, campos profesionales (licencia actual, convalidación A2+A4, libro habilitado) |
+| `EnrollmentPersonalData` | `enrollment-personal-data.model.ts` | Paso 1 del Wizard de Matrícula: datos personales (RUT, nombres, email, teléfono, fecha nacimiento, sexo, dirección, región, comuna), selección de categoría y tipo de curso, campos profesionales (licencia actual, convalidación A2+A4, libro habilitado). `Gender = 'M' \| 'F' \| 'X' \| ''` — **Spec 0013:** añadido `'X'` (Prefiero no especificar, ley REC Chile 2022). |
 | `AgeValidation` | `enrollment-personal-data.model.ts` | Resultado de validación de edad del alumno: status (ok / under-17 / requires-authorization / none), edad calculada y mensaje UI |
 | `LicenseValidation` | `enrollment-personal-data.model.ts` | Resultado de validación de licencia previa para cursos profesionales: validez, mensaje y antigüedad en años (RF-062) |
 | `RegionOption`, `CommuneOption` | `enrollment-personal-data.model.ts` | Opciones para dropdowns de región y comuna |

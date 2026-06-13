@@ -107,7 +107,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           <div class="flex flex-col gap-6">
             <!-- Breakdown Chart -->
             <div class="card p-6" appScrollReveal>
-              <h3 class="text-base font-bold text-text-primary mb-4 border-b border-divider pb-2">
+              <h3 class="text-base font-bold text-text-primary mb-4 border-b border-border-subtle pb-2">
                 Desglose de Horas Realizadas
               </h3>
               <app-horizontal-bar-chart [data]="buildChartData(target.breakdown)" />
@@ -116,7 +116,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             <!-- Daily Logs Table -->
             <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
               <div
-                class="px-6 py-4 border-b border-divider bg-surface-hover flex justify-between items-center"
+                class="px-6 py-4 border-b border-border-subtle bg-subtle flex justify-between items-center"
               >
                 <h3 class="text-lg font-bold text-text-primary">Registro Diario (Mes Actual)</h3>
                 <button class="btn-secondary text-xs" data-llm-action="export-pdf">
@@ -129,7 +129,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 <table class="w-full text-left border-collapse">
                   <thead>
                     <tr
-                      class="border-b border-divider text-xs text-text-muted uppercase tracking-wider bg-subtle"
+                      class="border-b border-border-subtle text-xs text-text-muted uppercase tracking-wider bg-subtle"
                     >
                       <th class="p-4 font-semibold">Fecha</th>
                       <th class="p-4 font-semibold">Tipo de Actividad</th>
@@ -137,7 +137,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                       <th class="p-4 font-semibold text-right">Horas</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-divider align-top text-sm">
+                  <tbody class="divide-y divide-border-subtle align-top text-sm">
                     @if (facade.sessionsLog().length === 0) {
                       <tr>
                         <td colspan="3" class="p-8 text-center text-text-muted italic">
@@ -146,7 +146,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                       </tr>
                     } @else {
                       @for (log of facade.sessionsLog(); track log.date) {
-                        <tr class="hover:bg-surface-hover/50 transition-colors">
+                        <tr class="hover:bg-subtle/50 transition-colors">
                           <td class="p-4 whitespace-nowrap text-text-primary font-medium">
                             {{ log.date | date: 'dd MMM yyyy' }}
                           </td>

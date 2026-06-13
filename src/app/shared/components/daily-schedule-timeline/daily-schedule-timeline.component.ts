@@ -130,7 +130,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             class="rounded-3xl p-8 mb-8 bg-elevated flex flex-col items-center justify-center min-h-[180px] border border-dashed border-border-subtle"
           >
             <div
-              class="w-16 h-16 rounded-full bg-surface-base flex items-center justify-center mb-4 border border-border-subtle"
+              class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center mb-4 border border-border-subtle"
             >
               <app-icon name="calendar-check" [size]="32" [color]="'var(--text-muted)'" />
             </div>

@@ -144,7 +144,14 @@ process.stdin.on('end', () => {
           'No usar colores Tailwind hardcodeados (ej: text-red-500, bg-blue-200).\n' +
           '     Usa tokens semanticos: text-primary, text-muted, bg-surface, bg-base, var(--ds-brand).'
         );
-
+      // Clases de token NO canonicas (no existen en @theme -> no generan CSS)
+      const deadTokenClassRe =
+        /\b(?:bg-bg-(?:base|surface|elevated|subtle|overlay)|(?:text|bg|border)-state-(?:success|warning|error|info)|bg-surface-(?:elevated|hover|base)|(?:border|bg|divide)-divider)\b/;
+      if (deadTokenClassRe.test(newContent))
+        violations.push(
+          'Clases de token no canonicas que no generan CSS (Tailwind v4 las ignora silenciosamente).\n' +
+          '     Usa: bg-{base,surface,elevated,subtle}, text/bg/border-{success,warning,error,info}(-subtle|-border), border-border-subtle. NO uses bg-bg-*, *-state-*, bg-surface-{elevated,hover,base}, *-divider. Ver AP-011.'
+        );
       // Dumb component con inject de Facade (shared/ no debe tener Facades)
       if (normalizedPath.includes('shared/') && normalizedPath.endsWith('.component.ts')) {
         if (/inject\s*\(\s*\w*Facade/.test(newContent))
