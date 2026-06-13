@@ -42,3 +42,21 @@
 ## AP-010 — `MessageService` directo de PrimeNG (evitar)
 - **NO** inyectes `MessageService` directamente en componentes ni en Facades.
 - **Sí** usa `ToastService` (`core/services/ui/toast.service.ts`) que wrappea PrimeNG con duraciones pre-configuradas.
+
+## AP-011 — Clases de token NO canónicas que no generan CSS (evitar)
+- **NO** uses clases con forma de token-válido-pero-inexistente. **Tailwind v4 las ignora en silencio** (no generan CSS) → el elemento renderiza con el color heredado, no el esperado. El Architect Guard NO las detecta (no son colores hardcodeados).
+- Clases muertas frecuentes y su equivalente **canónico** (definido en `@theme` de `src/tailwind.css`):
+
+| ❌ No existe | ✅ Canónica |
+|---|---|
+| `bg-bg-{base,surface,elevated,subtle}` | `bg-{base,surface,elevated,subtle}` |
+| `bg-surface-elevated` | `bg-elevated` |
+| `bg-surface-hover`, `bg-surface-base` | `bg-subtle` |
+| `text-state-{success,warning,error,info}` | `text-{success,warning,error,info}` |
+| `bg-state-{x}` / `bg-state-{x}-bg` | `bg-{x}` / `bg-{x}-subtle` |
+| `border-state-{x}` / `border-state-{x}-border` | `border-{x}` / `border-{x}-border` |
+| `border-divider`, `bg-divider`, `divide-divider` | `border-border-subtle`, `bg-border-subtle`, `divide-border-subtle` |
+
+- **OJO (sí son canónicas, no confundir):** `text-text-primary`, `text-text-muted`, `bg-text-muted`, `bg-brand-dark`, `bg-brand-muted`. Y `rows-divider` es una clase CSS **custom** legítima (en `pagos`), NO Tailwind — no tocar.
+- Detección (regex para `architect.js` / CI): `\b(bg-bg-(base|surface|elevated|subtle|overlay)|(text|bg|border)-state-(success|warning|error|info)|bg-surface-(elevated|hover|base)|(border|bg|divide)-divider)\b`
+- Remediado masivamente en `fix-015` (jun 2026). Ver `indices/UI-CONSISTENCY-AUDIT.md` (H1).
