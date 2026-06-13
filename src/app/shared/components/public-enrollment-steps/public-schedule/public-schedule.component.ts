@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type {
   EnrollmentAssignmentData,
   TimeSlot,
@@ -13,7 +12,7 @@ import type {
   selector: 'app-public-schedule',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, FormsModule, SelectModule],
+  imports: [IconComponent, FormsModule, SelectModule],
   styles: [
     `
       /* Estilos para el p-select para igualar los inputs premium de la UI */
@@ -344,9 +343,6 @@ export class PublicScheduleComponent {
   readonly dataChange = output<EnrollmentAssignmentData>();
   readonly next = output<void>();
   readonly back = output<void>();
-
-  /** Filas placeholder del skeleton de carga (aprox. el alto típico de una grilla). */
-  protected readonly skeletonRows = Array.from({ length: 13 });
 
   // ── Navegación semanal ──────────────────────────────────────────────────────
   protected readonly currentWeekIndex = signal(0);
