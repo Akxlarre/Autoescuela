@@ -1,12 +1,11 @@
 import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.model';
 
 @Component({
   selector: 'app-evaluation-checklist',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
@@ -42,10 +41,12 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
           <button
             type="button"
             class="group w-full flex items-center justify-between gap-4 p-4 rounded-2xl border text-left transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
-            [ngClass]="{
-              'bg-brand-muted border-brand shadow-sm': item.checked,
-              'bg-subtle border-border-default hover:border-border-strong': !item.checked,
-            }"
+            [class.bg-brand-muted]="item.checked"
+            [class.border-brand]="item.checked"
+            [class.shadow-sm]="item.checked"
+            [class.bg-subtle]="!item.checked"
+            [class.border-border-default]="!item.checked"
+            [class.hover:border-border-strong]="!item.checked"
             (click)="toggleItem(item)"
           >
             <span
@@ -57,10 +58,12 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
 
             <div
               class="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-300"
-              [ngClass]="{
-                'border-brand bg-brand scale-110': item.checked,
-                'border-border-default border-dashed bg-surface': !item.checked,
-              }"
+              [class.border-brand]="item.checked"
+              [class.bg-brand]="item.checked"
+              [class.scale-110]="item.checked"
+              [class.border-border-default]="!item.checked"
+              [class.border-dashed]="!item.checked"
+              [class.bg-surface]="!item.checked"
             >
               @if (item.checked) {
                 <app-icon name="check" [size]="16" class="text-white" />

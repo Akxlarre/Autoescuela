@@ -36,10 +36,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Examen Psicotécnico</span
             >
-            <span class="text-sm font-black text-cyan-400">{{ psychoRate }}%</span>
+            <span class="text-sm font-black text-info">{{ psychoRate }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-cyan-400" [style.width.%]="psychoRate"></div>
+            <div class="progress-bar-fill bg-info" [style.width.%]="psychoRate"></div>
           </div>
         </div>
 
@@ -48,10 +48,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Licencia Obtenida</span
             >
-            <span class="text-sm font-black text-amber-500">{{ successRate }}%</span>
+            <span class="text-sm font-black text-warning">{{ successRate }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-amber-500" [style.width.%]="successRate"></div>
+            <div class="progress-bar-fill bg-warning" [style.width.%]="successRate"></div>
           </div>
         </div>
       </div>
