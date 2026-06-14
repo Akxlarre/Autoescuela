@@ -29,4 +29,17 @@ export class ToastService {
   info(summary: string, detail?: string): void {
     this.msg.add({ severity: 'info', summary, detail, life: 3000 });
   }
+
+  infoWith(
+    summary: string,
+    options: { life?: number; detail?: string; styleClass?: string },
+  ): void {
+    this.msg.add({
+      severity: 'info',
+      summary,
+      detail: options.detail ?? '',
+      life: options.life ?? 3000,
+      styleClass: options.styleClass,
+    });
+  }
 }

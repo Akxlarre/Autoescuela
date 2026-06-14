@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 @Component({
@@ -21,13 +21,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Aprobación Municipal</span
             >
-            <span class="text-sm font-black text-text-primary">{{ municipalRate }}%</span>
+            <span class="text-sm font-black text-text-primary">{{ municipalRate() }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-brand" [style.width.%]="municipalRate"></div>
+            <div class="progress-bar-fill bg-brand" [style.width.%]="municipalRate()"></div>
           </div>
           <p class="text-[10px] text-text-muted mt-2">
-            Basado en {{ totalExams }} exámenes este año.
+            Basado en {{ totalExams() }} exámenes este año.
           </p>
         </div>
 
@@ -36,10 +36,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Examen Psicotécnico</span
             >
-            <span class="text-sm font-black text-cyan-400">{{ psychoRate }}%</span>
+            <span class="text-sm font-black text-info">{{ psychoRate() }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-cyan-400" [style.width.%]="psychoRate"></div>
+            <div class="progress-bar-fill bg-info" [style.width.%]="psychoRate()"></div>
           </div>
         </div>
 
@@ -48,10 +48,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Licencia Obtenida</span
             >
-            <span class="text-sm font-black text-amber-500">{{ successRate }}%</span>
+            <span class="text-sm font-black text-warning">{{ successRate() }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-amber-500" [style.width.%]="successRate"></div>
+            <div class="progress-bar-fill bg-warning" [style.width.%]="successRate()"></div>
           </div>
         </div>
       </div>
@@ -78,12 +78,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             >
               <app-icon name="users" [size]="48" />
             </div>
-            <span class="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1"
-              >Egresados</span
-            >
-            <span class="text-3xl font-display font-black text-text-primary tracking-tighter">{{
-              egresadosTotal
-            }}</span>
+            <span class="kpi-label block mb-1">Egresados</span>
+            <span class="kpi-value">{{ egresadosTotal() }}</span>
           </div>
 
           <div
@@ -94,12 +90,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             >
               <app-icon name="award" [size]="48" />
             </div>
-            <span class="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1"
-              >Licencias</span
-            >
-            <span class="text-3xl font-display font-black text-success tracking-tighter">{{
-              licensesTotal
-            }}</span>
+            <span class="kpi-label block mb-1">Licencias</span>
+            <span class="kpi-value text-success">{{ licensesTotal() }}</span>
           </div>
         </div>
 
@@ -109,23 +101,19 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           ></div>
           <div class="relative flex items-center justify-between">
             <div class="flex flex-col">
-              <span class="text-[10px] font-black text-text-primary uppercase tracking-wider mb-0.5"
-                >Tasa de Efectividad</span
-              >
+              <span class="kpi-label mb-0.5">Tasa de Efectividad</span>
               <span class="text-[9px] text-text-muted font-medium pr-8"
                 >Conversión de egresados a conductores licenciados.</span
               >
             </div>
             <div class="flex flex-col items-end">
-              <span
-                class="text-4xl font-display font-black text-brand tracking-tighter leading-none"
-              >
-                {{ successRate }}<span class="text-lg opacity-40 ml-0.5">%</span>
+              <span class="kpi-value text-brand leading-none">
+                {{ successRate() }}<span class="text-lg opacity-40 ml-0.5">%</span>
               </span>
               <div class="mt-2 h-1 w-16 bg-subtle rounded-full overflow-hidden">
                 <div
                   class="h-full bg-brand shadow-[0_0_8px_var(--ds-brand)] transition-all duration-1000 ease-out"
-                  [style.width.%]="successRate || 5"
+                  [style.width.%]="successRate() || 5"
                 ></div>
               </div>
             </div>
@@ -160,10 +148,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   `,
 })
 export class AdminStatsPanelComponent {
-  @Input() municipalRate: number = 0;
-  @Input() psychoRate: number = 0;
-  @Input() totalExams: number = 0;
-  @Input() egresadosTotal: number = 0;
-  @Input() licensesTotal: number = 0;
-  @Input() successRate: number = 0;
+  municipalRate = input<number>(0);
+  psychoRate = input<number>(0);
+  totalExams = input<number>(0);
+  egresadosTotal = input<number>(0);
+  licensesTotal = input<number>(0);
+  successRate = input<number>(0);
 }

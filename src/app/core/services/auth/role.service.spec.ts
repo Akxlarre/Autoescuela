@@ -31,13 +31,8 @@ describe('RoleService', () => {
     expect(service.currentRole()).toBe('alumno');
   });
 
-  it('should persist the role to sessionStorage on setRole', () => {
-    service.setRole('relator');
-    expect(sessionStorage.getItem('devRole')).toBe('relator');
-  });
-
   it('should support all valid roles', () => {
-    const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno', 'relator'];
+    const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno'];
     for (const role of roles) {
       service.setRole(role);
       expect(service.currentRole()).toBe(role);

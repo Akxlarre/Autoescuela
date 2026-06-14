@@ -137,7 +137,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
               </span>
             } @else {
               <span
-                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600 border border-amber-500/30"
+                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-warning-subtle text-warning border border-warning-border"
               >
                 <app-icon name="edit-3" [size]="12" /> En edición
               </span>

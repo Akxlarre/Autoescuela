@@ -38,8 +38,6 @@ export class MenuConfigService {
         return INSTRUCTOR_NAV;
       case 'alumno':
         return ALUMNO_NAV;
-      case 'relator':
-        return RELATOR_NAV;
       default:
         return [];
     }
@@ -309,19 +307,5 @@ const ALUMNO_NAV: NavGroup[] = [
   {
     group: 'Ayuda',
     items: [{ label: 'Ayuda', icon: 'help-circle', routerLink: '/app/alumno/ayuda' }],
-  },
-];
-
-const RELATOR_NAV: NavGroup[] = [
-  {
-    group: 'Mi Trabajo',
-    items: [
-      { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/relator/dashboard' },
-      { label: 'Asistencia', icon: 'clipboard-check', routerLink: '/app/relator/asistencia' },
-      { label: 'Alumnos', icon: 'users', routerLink: '/app/relator/alumnos' },
-      { label: 'Notas', icon: 'star', routerLink: '/app/relator/notas' },
-      { label: 'Maquinaria', icon: 'wrench', routerLink: '/app/relator/maquinaria' },
-      { label: 'Acta Final', icon: 'flag', routerLink: '/app/relator/acta-final' },
-    ],
   },
 ];

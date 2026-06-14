@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { kpiDisplayValue } from '@core/utils/kpi-display-value.util';
 import { IconComponent } from '../icon/icon.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
@@ -82,7 +83,9 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             {{ prefix() }}
           </span>
         }
-        <span #valueEl class="truncate align-baseline" title="{{ value() }}">{{ value() }}</span>
+        <span #valueEl class="truncate align-baseline" title="{{ displayValue() }}">{{
+          displayValue()
+        }}</span>
         @if (suffix()) {
           <span
             class="font-semibold align-baseline text-text-secondary"
@@ -113,8 +116,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
   `,
 })
 export class KpiCardComponent {
-  /** Valor numérico principal. Se anima desde 0 al montar. */
-  readonly value = input.required<number>();
+  /** Valor principal (número o texto). Numbers se animan con GSAP; strings se renderizan directo. */
+  readonly value = input.required<string | number>();
 
   /** Etiqueta descriptiva del KPI (ej: "Usuarios activos"). Se muestra en .kpi-label. */
   readonly label = input.required<string>();
@@ -149,6 +152,10 @@ export class KpiCardComponent {
 
   /** Variante de color semántica — afecta al ícono. Default: 'default'. */
   readonly color = input<'default' | 'success' | 'warning' | 'error'>('default');
+
+  // ── Valor a mostrar (AC1, AC2, AC3, AC-E1, AC-E2) ───────────────────────
+
+  protected readonly displayValue = computed<string>(() => kpiDisplayValue(this.value()));
 
   // ── Señales derivadas del trend ───────────────────────────────────────────
 
@@ -185,13 +192,10 @@ export class KpiCardComponent {
     // afterNextRender: garantiza que el elemento está en el DOM antes de animar.
     // GsapAnimationsService.animateCounter() respeta prefers-reduced-motion.
     afterNextRender(() => {
-      this.gsap.animateCounter(
-        this.valueEl().nativeElement,
-        this.value(),
-        // El suffix se omite aquí porque se renderiza fuera del span animado.
-        // Esto evita duplicar el sufijo durante la animación.
-        '',
-      );
+      const v = this.value();
+      if (typeof v === 'number') {
+        this.gsap.animateCounter(this.valueEl().nativeElement, v, '');
+      }
     });
   }
 }

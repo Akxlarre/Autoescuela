@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { IconComponent } from '../icon/icon.component';
 
 export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'brand' | 'surface';
@@ -8,12 +7,12 @@ export type StatBoxVariant = 'default' | 'success' | 'warning' | 'error' | 'bran
   selector: 'app-stat-box',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IconComponent],
+  imports: [IconComponent],
   template: `
     <div
       class="stat-box transition-all duration-300"
       [class.stat-box--compact]="compact()"
-      [ngClass]="'stat-box--' + variant()"
+      [class]="'stat-box--' + variant()"
     >
       <div class="flex flex-col gap-1 w-full">
         <div class="flex items-center justify-between gap-2">

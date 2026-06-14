@@ -15,7 +15,6 @@ import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
  *   /app/secretaria → portal Secretaria
  *   /app/instructor → portal Instructor
  *   /app/alumno     → portal Alumno
- *   /app/relator    → portal Relator
  *
  * Cada grupo de rol usa `path: '<rol>'` como prefijo para que
  * el router de Angular solo ejecute el guard del rol correcto.
@@ -747,72 +746,6 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/alumno/ayuda/alumno-ayuda.component').then(
                 (m) => m.AlumnoAyudaComponent,
-              ),
-          },
-        ],
-      },
-
-      // ─────────────────────────────────────
-      // RELATOR
-      // ─────────────────────────────────────
-      {
-        path: 'relator',
-        canActivate: [hasRoleGuard(['relator'])],
-        children: [
-          {
-            path: 'dashboard',
-            loadComponent: () =>
-              import('./features/relator/dashboard/relator-dashboard.component').then(
-                (m) => m.RelatorDashboardComponent,
-              ),
-          },
-          {
-            path: 'alumnos',
-            loadComponent: () =>
-              import('./features/relator/alumnos/relator-alumnos.component').then(
-                (m) => m.RelatorAlumnosComponent,
-              ),
-          },
-          {
-            path: 'asistencia',
-            loadComponent: () =>
-              import('./features/relator/asistencia/relator-asistencia.component').then(
-                (m) => m.RelatorAsistenciaComponent,
-              ),
-          },
-          {
-            path: 'notas',
-            loadComponent: () =>
-              import('./features/relator/notas/relator-notas.component').then(
-                (m) => m.RelatorNotasComponent,
-              ),
-          },
-          {
-            path: 'maquinaria',
-            loadComponent: () =>
-              import('./features/relator/maquinaria/relator-maquinaria.component').then(
-                (m) => m.RelatorMaquinariaComponent,
-              ),
-          },
-          {
-            path: 'acta-final',
-            loadComponent: () =>
-              import('./features/relator/acta-final/relator-acta-final.component').then(
-                (m) => m.RelatorActaFinalComponent,
-              ),
-          },
-          {
-            path: 'notificaciones',
-            loadComponent: () =>
-              import('./features/relator/notificaciones/relator-notificaciones.component').then(
-                (m) => m.RelatorNotificacionesComponent,
-              ),
-          },
-          {
-            path: 'alumno/:id',
-            loadComponent: () =>
-              import('./features/relator/alumno-detail/relator-alumno-detail.component').then(
-                (m) => m.RelatorAlumnoDetailComponent,
               ),
           },
         ],
