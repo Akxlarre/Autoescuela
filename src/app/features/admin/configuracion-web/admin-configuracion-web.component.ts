@@ -236,18 +236,18 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             <!-- Skeletons loader -->
             <div class="flex flex-col gap-6">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div class="h-4 w-24 rounded bg-subtle mb-2"></div>
-                  <div class="h-10 rounded bg-subtle animate-pulse"></div>
+                <div class="flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="96px" height="16px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
                 </div>
-                <div>
-                  <div class="h-4 w-24 rounded bg-subtle mb-2"></div>
-                  <div class="h-10 rounded bg-subtle animate-pulse"></div>
+                <div class="flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="96px" height="16px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
                 </div>
               </div>
-              <div>
-                <div class="h-4 w-32 rounded bg-subtle mb-2"></div>
-                <div class="h-32 rounded bg-subtle animate-pulse"></div>
+              <div class="flex flex-col gap-2">
+                <app-skeleton-block variant="text" width="128px" height="16px" />
+                <app-skeleton-block variant="rect" width="100%" height="128px" />
               </div>
             </div>
           } @else {
@@ -1853,19 +1853,6 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
   `,
   styles: [
     `
-      .animate-fade-in {
-        animation: fadeIn 0.25s ease-out;
-      }
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: translateY(4px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
       button:disabled {
         opacity: 0.55;
         cursor: not-allowed !important;
@@ -2799,6 +2786,18 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
       untracked(() => {
         this.visibleIconsCount.set(100);
       });
+    });
+
+    // 4. GSAP fade-in on tab change (replaces @keyframes fadeIn)
+    effect(() => {
+      this.activeTab(); // track
+      setTimeout(() => {
+        const grid = this.bentoGrid()?.nativeElement;
+        if (!grid) return;
+        grid.querySelectorAll<HTMLElement>('.animate-fade-in').forEach((el) => {
+          this.gsap.fadeIn(el);
+        });
+      }, 0);
     });
   }
 
