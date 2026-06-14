@@ -67,14 +67,18 @@
       "PowerShell(head *)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Akxlarre\\\\Landing\\\\Landing\\\\src\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName, LastWriteTime)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Akxlarre\\\\Autoescuela\\\\webs\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName | Select-Object -First 50)",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Akxlarre\\\\Autoescuela\\\\webs\\\\src\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName)"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Akxlarre\\\\Autoescuela\\\\webs\\\\src\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName)",
+      "Skill(spec-verify)",
+      "Skill(spec-verify:*)",
+      "mcp__playwright__browser_fill_form",
+      "mcp__playwright__browser_snapshot"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "supabase",
     "typescript",
     "angular",
     "playwright"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }
