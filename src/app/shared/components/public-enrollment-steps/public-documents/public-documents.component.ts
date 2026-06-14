@@ -1,4 +1,14 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal, viewChild, OnDestroy, ElementRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  viewChild,
+  OnDestroy,
+  ElementRef,
+} from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.model';
@@ -108,7 +118,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             </p>
           </div>
           <label
-            class="text-xs font-semibold cursor-pointer rounded-md px-2 py-1 focus-within:outline focus-within:outline-2 focus-within:outline-[var(--ds-brand)] focus-within:outline-offset-2"
+            class="text-xs font-semibold cursor-pointer rounded-md px-2 py-1 focus-within:outline focus-within:outline-(--ds-brand) focus-within:outline-offset-2"
             style="color: var(--text-muted);"
             for="pub-carnet-rechange"
           >
@@ -126,12 +136,17 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
       } @else {
         <!-- Photo input methods (Tabs) -->
         <div class="flex flex-col gap-3">
-          <div class="flex gap-2 p-1 rounded-lg" style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);">
+          <div
+            class="flex gap-2 p-1 rounded-lg"
+            style="background: var(--bg-elevated); border: 1px solid var(--border-subtle);"
+          >
             <button
               type="button"
               class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer"
               [style.background]="activeTab() === 'upload' ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="activeTab() === 'upload' ? 'var(--text-primary)' : 'var(--text-secondary)'"
+              [style.color]="
+                activeTab() === 'upload' ? 'var(--text-primary)' : 'var(--text-secondary)'
+              "
               [style.box-shadow]="activeTab() === 'upload' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
               (click)="switchTab('upload')"
             >
@@ -141,7 +156,9 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
               type="button"
               class="flex-1 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer"
               [style.background]="activeTab() === 'camera' ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="activeTab() === 'camera' ? 'var(--text-primary)' : 'var(--text-secondary)'"
+              [style.color]="
+                activeTab() === 'camera' ? 'var(--text-primary)' : 'var(--text-secondary)'
+              "
               [style.box-shadow]="activeTab() === 'camera' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'"
               (click)="switchTab('camera')"
             >
@@ -152,7 +169,9 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
           @if (activeTab() === 'upload') {
             <!-- Upload area -->
             <label
-              class="flex flex-col items-center gap-3 rounded-xl px-6 py-8 cursor-pointer transition-all focus-within:outline focus-within:outline-2 focus-within:outline-[var(--ds-brand)] focus-within:outline-offset-2"
+              class="flex flex-col items-center gap-3 rounded-xl px-6 py-8 cursor-pointer transition-all focus-within:outline focus-within:outline-(--ds-brand) focus-within:outline-offset-2"
+              [class.opacity-50]="isUploading()"
+              [class.pointer-events-none]="isUploading()"
               style="
                 background: var(--bg-surface);
                 border: 2px dashed var(--border-default);
@@ -165,13 +184,28 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
                 style="background: var(--gradient-subtle);"
                 aria-hidden="true"
               >
-                <app-icon name="camera" [size]="24" color="var(--ds-brand)" />
+                @if (isUploading()) {
+                  <app-icon
+                    name="loader"
+                    [size]="24"
+                    color="var(--ds-brand)"
+                    class="animate-spin"
+                  />
+                } @else {
+                  <app-icon name="camera" [size]="24" color="var(--ds-brand)" />
+                }
               </div>
               <div class="text-center">
                 <p class="text-sm font-semibold" style="color: var(--text-primary);">
-                  Subir foto carnet
+                  @if (isUploading()) {
+                    Subiendo imagen...
+                  } @else {
+                    Subir foto carnet
+                  }
                 </p>
-                <p class="text-xs mt-0.5" style="color: var(--text-muted);">JPG o PNG · Máx. 5 MB</p>
+                <p class="text-xs mt-0.5" style="color: var(--text-muted);">
+                  JPG o PNG · Máx. 5 MB
+                </p>
               </div>
               <input
                 id="pub-carnet-upload"
@@ -179,25 +213,49 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
                 accept="image/jpeg,image/png,image/webp"
                 capture="user"
                 class="sr-only"
+                [disabled]="isUploading()"
                 (change)="onFileChange($event)"
               />
             </label>
           } @else {
             <!-- Camera area -->
-            <div class="flex flex-col items-center gap-3 rounded-xl p-4 overflow-hidden relative"
-                 style="background: var(--bg-surface); border: 1px solid var(--border-default);">
-              
-              <div class="w-full rounded-lg overflow-hidden relative" style="aspect-ratio: 4/3; background: var(--bg-elevated);">
-                <video #videoElement autoplay playsinline class="w-full h-full object-cover" [class.hidden]="!isCameraActive()"></video>
-                
+            <div
+              class="flex flex-col items-center gap-3 rounded-xl p-4 overflow-hidden relative"
+              style="background: var(--bg-surface); border: 1px solid var(--border-default);"
+            >
+              <div
+                class="w-full rounded-lg overflow-hidden relative"
+                style="aspect-ratio: 4/3; background: var(--bg-elevated);"
+              >
+                <video
+                  #videoElement
+                  autoplay
+                  playsinline
+                  class="w-full h-full object-cover"
+                  [class.hidden]="!isCameraActive()"
+                ></video>
+
                 @if (!isCameraActive()) {
-                  <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl mb-3" style="background: rgba(150,150,150,0.1);">
+                  <div
+                    class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center"
+                  >
+                    <div
+                      class="flex h-12 w-12 items-center justify-center rounded-xl mb-3"
+                      style="background: rgba(150,150,150,0.1);"
+                    >
                       <app-icon name="camera" [size]="24" color="var(--text-secondary)" />
                     </div>
-                    <p class="text-sm font-medium" style="color: var(--text-primary);">La cámara está inactiva</p>
-                    <p class="text-xs mt-1 mb-4" style="color: var(--text-muted);">Presiona el botón para solicitar acceso</p>
-                    <button type="button" class="btn-primary px-4 py-2 text-xs rounded-lg font-semibold" (click)="startCamera()">
+                    <p class="text-sm font-medium" style="color: var(--text-primary);">
+                      La cámara está inactiva
+                    </p>
+                    <p class="text-xs mt-1 mb-4" style="color: var(--text-muted);">
+                      Presiona el botón para solicitar acceso
+                    </p>
+                    <button
+                      type="button"
+                      class="btn-primary px-4 py-2 text-xs rounded-lg font-semibold"
+                      (click)="startCamera()"
+                    >
                       Activar cámara
                     </button>
                   </div>
@@ -220,7 +278,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
                   (click)="capturePhoto()"
                 />
               }
-              
+
               <canvas #canvasElement class="hidden"></canvas>
             </div>
           }
@@ -240,12 +298,17 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
         </button>
         <button
           type="button"
-          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm"
-          [disabled]="!hasPhoto()"
+          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2"
+          [disabled]="!hasPhoto() || isUploading()"
           data-llm-action="confirm-carnet-photo"
-          (click)="hasPhoto() && next.emit()"
+          (click)="!isUploading() && hasPhoto() && next.emit()"
         >
-          Continuar
+          @if (isUploading()) {
+            <app-icon name="loader" [size]="16" class="animate-spin" />
+            Subiendo...
+          } @else {
+            Continuar
+          }
         </button>
       </div>
     </div>
@@ -253,6 +316,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
 })
 export class PublicDocumentsComponent implements OnDestroy {
   readonly data = input.required<EnrollmentDocumentsData>();
+  readonly isUploading = input<boolean>(false);
   readonly fileSelected = output<{ type: string; file: File }>();
   readonly next = output<void>();
   readonly back = output<void>();
@@ -298,7 +362,7 @@ export class PublicDocumentsComponent implements OnDestroy {
     this.isProcessingCapture.set(false);
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user' }
+        video: { facingMode: 'user' },
       });
       const video = this.videoElement()?.nativeElement;
       if (video) {
@@ -306,14 +370,16 @@ export class PublicDocumentsComponent implements OnDestroy {
         this.isCameraActive.set(true);
       }
     } catch (err) {
-      this.cameraError.set('No se pudo acceder a la cámara. Por favor, revisa los permisos del navegador.');
+      this.cameraError.set(
+        'No se pudo acceder a la cámara. Por favor, revisa los permisos del navegador.',
+      );
       this.isCameraActive.set(false);
     }
   }
 
   protected stopCamera(): void {
     if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream.getTracks().forEach((track) => track.stop());
       this.mediaStream = null;
     }
     this.isCameraActive.set(false);
@@ -322,36 +388,40 @@ export class PublicDocumentsComponent implements OnDestroy {
   protected capturePhoto(): void {
     const video = this.videoElement()?.nativeElement;
     const canvas = this.canvasElement()?.nativeElement;
-    
+
     if (video && canvas && !this.isProcessingCapture()) {
       this.isProcessingCapture.set(true);
       video.pause(); // Freeze frame to provide immediate visual feedback
-      
+
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], 'foto-carnet-webcam.jpg', { type: 'image/jpeg' });
-            this.fileSelected.emit({ type: 'id_photo', file });
-            // Do NOT stop camera or change tab yet. The parent will upload and set data().carnetPhoto,
-            // which automatically destroys this view and shows the success preview.
-            
-            // Fallback timeout in case the upload fails silently or takes too long,
-            // to allow the user to try again.
-            setTimeout(() => {
-              if (this.isProcessingCapture()) {
-                this.isProcessingCapture.set(false);
-                video.play().catch(() => {}); // Resume camera
-              }
-            }, 5000);
-          } else {
-            this.isProcessingCapture.set(false);
-            video.play().catch(() => {});
-          }
-        }, 'image/jpeg', 0.9);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const file = new File([blob], 'foto-carnet-webcam.jpg', { type: 'image/jpeg' });
+              this.fileSelected.emit({ type: 'id_photo', file });
+              // Do NOT stop camera or change tab yet. The parent will upload and set data().carnetPhoto,
+              // which automatically destroys this view and shows the success preview.
+
+              // Fallback timeout in case the upload fails silently or takes too long,
+              // to allow the user to try again.
+              setTimeout(() => {
+                if (this.isProcessingCapture()) {
+                  this.isProcessingCapture.set(false);
+                  video.play().catch(() => {}); // Resume camera
+                }
+              }, 5000);
+            } else {
+              this.isProcessingCapture.set(false);
+              video.play().catch(() => {});
+            }
+          },
+          'image/jpeg',
+          0.9,
+        );
       } else {
         this.isProcessingCapture.set(false);
         video.play().catch(() => {});

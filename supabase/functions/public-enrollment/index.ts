@@ -577,6 +577,7 @@ async function handleSubmitClaseB(supabase: any, body: any) {
         current_step: 6,
         payment_mode: paymentMode === 'partial' ? 'partial' : 'total',
         registration_channel: 'online',
+        docs_complete: true,
       })
       .select('id')
       .single();
@@ -823,7 +824,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
   );
 
   try {
-    // ── Idempotencia: verificar si ya existe un intento para esta sesión ──────
+    // ── Idempotencia: ya confirmado en sesión anterior ────────────────────────
     const { data: existing } = await supabase
       .from('payment_attempts')
       .select('status, enrollment_id')
@@ -831,10 +832,7 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .maybeSingle();
 
     if (existing?.status === 'confirmed' && existing.enrollment_id) {
-      console.log(
-        '[initiate-payment] Idempotent — already confirmed, enrollment:',
-        existing.enrollment_id,
-      );
+      console.log('[initiate-payment] Idempotent — already confirmed:', existing.enrollment_id);
       const { data: enrollment } = await supabase
         .from('enrollments')
         .select('number')
@@ -850,30 +848,19 @@ async function handleInitiatePayment(supabase: any, body: any) {
       });
     }
 
-    if (existing?.status === 'pending' && existing.enrollment_id) {
-      console.log(
-        '[initiate-payment] Idempotent — already pending, enrollment:',
-        existing.enrollment_id,
-      );
+    // 1. Verificar duplicado por RUT (lectura pura — no crea nada en BD)
+    console.log('[initiate-payment] Step 1 — duplicate check by RUT');
+    const duplicate = await checkDuplicateByRut(supabase, personalData?.rut, 'B');
+    if (duplicate) {
+      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
       return jsonResponse({
-        success: true,
-        enrollmentId: existing.enrollment_id,
-        webpayUrl: null,
-        webpayToken: null,
-        idempotent: true,
+        success: false,
+        error: 'DUPLICATE_ENROLLMENT',
+        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
       });
     }
 
-    // 1. Find or create user/student
-    console.log('[initiate-payment] Step 1 — findOrCreateUser');
-    const userId = await findOrCreateUser(supabase, personalData, branchId);
-    console.log('[initiate-payment] Step 1 — userId:', userId);
-
-    console.log('[initiate-payment] Step 1b — findOrCreateStudent');
-    const studentId = await findOrCreateStudent(supabase, userId, personalData);
-    console.log('[initiate-payment] Step 1b — studentId:', studentId);
-
-    // 2. Find Clase B course for this branch
+    // 2. Obtener curso Clase B de la sede (necesario para el monto)
     console.log('[initiate-payment] Step 2 — querying course for branchId:', branchId);
     const { data: course, error: courseError } = await supabase
       .from('courses')
@@ -888,57 +875,13 @@ async function handleInitiatePayment(supabase: any, body: any) {
 
     if (courseError) console.error('[initiate-payment] Course query error:', courseError);
     if (!course) return errorResponse('No se encontró curso Clase B activo para esta sede', 404);
-    console.log(
-      '[initiate-payment] Step 2 — courseId:',
-      course.id,
-      'base_price:',
-      course.base_price,
-    );
 
     const courseBasePrice = course.base_price ?? 0;
     const isPartial = paymentMode === 'partial';
     const serverAmount = isPartial ? Math.ceil(courseBasePrice / 2) : courseBasePrice;
-    console.log('[initiate-payment] Amount:', serverAmount, '(isPartial:', isPartial, ')');
+    console.log('[initiate-payment] courseId:', course.id, 'amount:', serverAmount);
 
-    // 2.5. Verificar matrícula duplicada
-    const duplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
-    if (duplicate) {
-      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
-      return jsonResponse({
-        success: false,
-        error: 'DUPLICATE_ENROLLMENT',
-        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
-      });
-    }
-
-    // 3. Create enrollment as pending_payment (sin número — se asigna al confirmar)
-    console.log('[initiate-payment] Step 3 — inserting enrollment');
-    const { data: enrollment, error: enrollError } = await supabase
-      .from('enrollments')
-      .insert({
-        student_id: studentId,
-        course_id: course.id,
-        branch_id: branchId,
-        status: 'pending_payment',
-        current_step: 6,
-        payment_mode: isPartial ? 'partial' : 'total',
-        registration_channel: 'online',
-        base_price: courseBasePrice,
-        pending_balance: courseBasePrice,
-        total_paid: 0,
-        payment_status: 'pending',
-      })
-      .select('id')
-      .single();
-
-    if (enrollError) {
-      console.error('[initiate-payment] Enrollment insert error:', enrollError);
-      return errorResponse('Error al crear matrícula: ' + enrollError.message, 500);
-    }
-    console.log('[initiate-payment] Step 3 — enrollmentId:', enrollment.id);
-
-    // 4. Get vehicle assignment for instructor (guardado en snapshot para confirm-payment)
-    console.log('[initiate-payment] Step 4 — vehicle assignment for instructorId:', instructorId);
+    // 3. Obtener vehículo del instructor (guardado en snapshot para confirm-payment)
     const { data: va, error: vaError } = await supabase
       .from('vehicle_assignments')
       .select('vehicle_id')
@@ -947,10 +890,9 @@ async function handleInitiatePayment(supabase: any, body: any) {
       .limit(1)
       .single();
     if (vaError) console.warn('[initiate-payment] No vehicle assignment found:', vaError.message);
-    console.log('[initiate-payment] Step 4 — vehicleId:', va?.vehicle_id ?? null);
 
-    // 5. Registrar payment_attempt con draft_snapshot completo
-    console.log('[initiate-payment] Step 5 — upserting payment_attempt');
+    // 4. Persistir intento con snapshot completo (sin enrollment_id — se asigna en confirm-payment)
+    console.log('[initiate-payment] Step 4 — upserting payment_attempt');
     const { error: paError } = await supabase.from('payment_attempts').upsert(
       {
         session_token: sessionToken,
@@ -964,41 +906,36 @@ async function handleInitiatePayment(supabase: any, body: any) {
           vehicleId: va?.vehicle_id ?? null,
           carnetStoragePath: body.carnetStoragePath ?? null,
           amount: serverAmount,
-          userId,
+          courseId: course.id,
+          courseBasePrice,
         },
-        enrollment_id: enrollment.id,
       },
       { onConflict: 'session_token' },
     );
     if (paError) console.error('[initiate-payment] payment_attempt upsert error:', paError);
 
-    // 6. Iniciar transacción Webpay Plus
+    // 5. Iniciar transacción Webpay Plus
     const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:4200';
     const returnUrl = `${appUrl}/inscripcion/retorno`;
-    const tokenSuffix = sessionToken.replace(/-/g, '').slice(0, 8).toUpperCase();
-    const buyOrder = `PAY-${enrollment.id}-${tokenSuffix}`;
+    const buyOrder = `PAY-${sessionToken.replace(/-/g, '').slice(0, 16).toUpperCase()}`;
     console.log(
-      '[initiate-payment] Step 6 — webpayCreate buyOrder:',
+      '[initiate-payment] Step 5 — webpayCreate buyOrder:',
       buyOrder,
       'amount:',
       serverAmount,
-      'returnUrl:',
-      returnUrl,
     );
 
     const wpResponse = await webpayCreate(buyOrder, sessionToken, serverAmount, returnUrl);
-    console.log('[initiate-payment] Step 6 — Webpay token received, url:', wpResponse.url);
+    console.log('[initiate-payment] Step 5 — Webpay token received');
 
-    // Guardar transbank_token para poder hacer el commit en confirm-payment
     await supabase
       .from('payment_attempts')
       .update({ transbank_token: wpResponse.token })
       .eq('session_token', sessionToken);
 
-    console.log('[initiate-payment] SUCCESS — enrollmentId:', enrollment.id);
+    console.log('[initiate-payment] SUCCESS — session:', sessionToken);
     return jsonResponse({
       success: true,
-      enrollmentId: enrollment.id,
       webpayUrl: wpResponse.url,
       webpayToken: wpResponse.token,
     });
@@ -1038,7 +975,8 @@ async function handleConfirmPayment(supabase: any, body: any) {
       return errorResponse('Intento de pago no encontrado para este token', 404);
     }
 
-    if (attempt.status === 'confirmed') {
+    // 2. Idempotencia: ya procesado anteriormente
+    if (attempt.status === 'confirmed' && attempt.enrollment_id) {
       const { data: enrollment } = await supabase
         .from('enrollments')
         .select('number, total_paid, pending_balance, payment_status, course_id, branch_id')
@@ -1061,7 +999,7 @@ async function handleConfirmPayment(supabase: any, body: any) {
         branchAddress: bd?.address ?? null,
         courseName: cd?.name ?? null,
         amountPaid: Number(snap.amount ?? 0),
-        courseBasePrice: Number(snap.amount ?? 0) + Number(enrollment?.pending_balance ?? 0),
+        courseBasePrice: Number(snap.courseBasePrice ?? snap.amount ?? 0),
         pendingBalance: Number(enrollment?.pending_balance ?? 0),
         sessionCount: Array.isArray(snap.selectedSlotIds) ? snap.selectedSlotIds.length : 0,
         paymentMode: snap.paymentMode ?? null,
@@ -1076,18 +1014,17 @@ async function handleConfirmPayment(supabase: any, body: any) {
       return jsonResponse({ success: false, rejected: true, message: 'El pago fue rechazado.' });
     }
 
-    // 2. Confirmar transacción con Webpay (commit)
+    // 3. Confirmar transacción con Webpay (commit)
     const commitResponse = await webpayCommit(tokenWs);
 
-    if (commitResponse.response_code !== 0 || commitResponse.status !== 'AUTHORIZED') {
+    // Helpers para el rechazo: sin enrollment que cancelar (aún no existe)
+    const markFailedAndFreeSlots = async () => {
       await supabase.from('payment_attempts').update({ status: 'failed' }).eq('id', attempt.id);
-      await supabase
-        .from('enrollments')
-        .update({ status: 'cancelled' })
-        .eq('id', attempt.enrollment_id);
-      // No hay class_b_sessions que cancelar: desde el cambio arquitectónico las
-      // sesiones solo se crean en confirm-payment tras commit exitoso.
       await supabase.from('slot_holds').delete().eq('session_token', attempt.session_token);
+    };
+
+    if (commitResponse.response_code !== 0 || commitResponse.status !== 'AUTHORIZED') {
+      await markFailedAndFreeSlots();
       return jsonResponse({
         success: false,
         rejected: true,
@@ -1095,21 +1032,13 @@ async function handleConfirmPayment(supabase: any, body: any) {
       });
     }
 
-    // 3. Extraer datos del snapshot para operaciones financieras
+    // 4. Extraer snapshot y verificar monto (S6 — reconciliación server-side)
     const snapshot = (attempt.draft_snapshot ?? {}) as any;
     const amountPaid = Number(snapshot.amount ?? 0);
 
-    // S6 — Reconciliación de monto: lo que Webpay confirmó haber cobrado debe coincidir
-    // con el esperado (calculado server-side en initiate-payment y guardado en el snapshot).
-    // Si difiere, anular por seguridad — nunca registrar un pago por un monto distinto.
     if (!amountsMatch(Number(commitResponse.amount), amountPaid)) {
       console.error('[confirm-payment] amount mismatch — anulando', { attemptId: attempt.id });
-      await supabase.from('payment_attempts').update({ status: 'failed' }).eq('id', attempt.id);
-      await supabase
-        .from('enrollments')
-        .update({ status: 'cancelled' })
-        .eq('id', attempt.enrollment_id);
-      await supabase.from('slot_holds').delete().eq('session_token', attempt.session_token);
+      await markFailedAndFreeSlots();
       return jsonResponse({
         success: false,
         rejected: true,
@@ -1119,119 +1048,154 @@ async function handleConfirmPayment(supabase: any, body: any) {
     }
 
     const payMode = (snapshot.paymentMode ?? 'total') as string;
-    const sessionCount = Array.isArray(snapshot.selectedSlotIds)
-      ? snapshot.selectedSlotIds.length
-      : 0;
+    const courseBasePrice = Number(snapshot.courseBasePrice ?? amountPaid);
     const carnetStoragePath = (snapshot.carnetStoragePath ?? null) as string | null;
 
-    // Obtener base_price del enrollment para calcular pending_balance
-    const { data: enrollmentRow } = await supabase
-      .from('enrollments')
-      .select('course_id, base_price, branch_id')
-      .eq('id', attempt.enrollment_id)
-      .single();
+    // ── POST-PAYMENT COMMIT ───────────────────────────────────────────────────
+    // El pago fue autorizado por Webpay. A partir de aquí creamos todos los
+    // registros en BD. Si algo falla, el snapshot queda logueado con nivel error
+    // para recuperación manual (el dinero ya fue cobrado).
+    let enrollmentId: number;
+    let enrollmentNumber: string | null = null;
+    let userId: number;
 
-    const basePrice = Number(enrollmentRow?.base_price ?? 0);
+    try {
+      // 5. Crear usuario y alumno (idempotentes por RUT)
+      userId = await findOrCreateUser(supabase, snapshot.personalData, snapshot.branchId);
+      const studentId = await findOrCreateStudent(supabase, userId, snapshot.personalData);
 
-    // 4. Crear class_b_sessions como 'scheduled' directamente (pago ya confirmado)
-    // Se crean aquí y no en initiate-payment para evitar sesiones huérfanas si el
-    // alumno abandona Transbank sin completar el pago.
-    const sortedSlotIds = [...(snapshot.selectedSlotIds ?? [])].sort();
-    const sessionRows = sortedSlotIds.map((slotId: string, i: number) => ({
-      enrollment_id: attempt.enrollment_id,
-      instructor_id: snapshot.instructorId,
-      vehicle_id: snapshot.vehicleId ?? null,
-      scheduled_at: slotId,
-      duration_min: 45,
-      status: 'scheduled',
-      class_number: i + 1,
-    }));
-
-    if (sessionRows.length > 0) {
-      const { error: sessionsError } = await supabase.from('class_b_sessions').insert(sessionRows);
-      if (sessionsError) {
-        console.error('sessions insert error on confirm:', sessionsError);
-        return errorResponse('Error al crear sesiones: ' + sessionsError.message, 500);
+      // 6. Guardia contra race condition: dos pagos simultáneos con el mismo RUT
+      const raceDuplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
+      if (raceDuplicate) {
+        console.error('[confirm-payment] RACE_DUPLICATE — pago cobrado sin matrícula creada', {
+          attemptId: attempt.id,
+          sessionToken: attempt.session_token,
+          snapshot,
+        });
+        // No marcamos el intento como failed: el pago existe y debe reembolsarse.
+        return jsonResponse({
+          success: false,
+          error: 'DUPLICATE_ENROLLMENT',
+          requiresRefund: true,
+          message:
+            'Ya existe una matrícula activa para este RUT. El equipo ha sido notificado para procesar el reembolso.',
+        });
       }
+
+      // 7. Generar número de matrícula antes del INSERT
+      //    (constraint chk_enrollment_number exige number IS NOT NULL cuando status='active')
+      const { data: numData } = await supabase.rpc('get_next_enrollment_number', {
+        p_course_id: snapshot.courseId,
+      });
+      enrollmentNumber = numData ?? null;
+
+      // 8. Crear matrícula directamente como 'active' (sin pasar por pending_payment)
+      const { data: enrollment, error: enrollError } = await supabase
+        .from('enrollments')
+        .insert({
+          student_id: studentId,
+          course_id: snapshot.courseId,
+          branch_id: snapshot.branchId,
+          status: 'active',
+          number: enrollmentNumber,
+          current_step: 6,
+          payment_mode: payMode === 'partial' ? 'partial' : 'total',
+          registration_channel: 'online',
+          base_price: courseBasePrice,
+          pending_balance: courseBasePrice,
+          total_paid: 0,
+          payment_status: 'pending',
+          docs_complete: true,
+        })
+        .select('id')
+        .single();
+
+      if (enrollError) throw new Error('enrollment insert: ' + enrollError.message);
+      enrollmentId = enrollment.id;
+
+      // 9. Crear class_b_sessions como 'scheduled'
+      const sortedSlotIds = [...(snapshot.selectedSlotIds ?? [])].sort();
+      if (sortedSlotIds.length > 0) {
+        const sessionRows = sortedSlotIds.map((slotId: string, i: number) => ({
+          enrollment_id: enrollmentId,
+          instructor_id: snapshot.instructorId,
+          vehicle_id: snapshot.vehicleId ?? null,
+          scheduled_at: slotId,
+          duration_min: 45,
+          status: 'scheduled',
+          class_number: i + 1,
+        }));
+        const { error: sessionsError } = await supabase
+          .from('class_b_sessions')
+          .insert(sessionRows);
+        if (sessionsError) throw new Error('sessions insert: ' + sessionsError.message);
+      }
+
+      // 10. Registrar pago — el trigger trg_update_balance recalcula total_paid /
+      //     pending_balance / payment_status del enrollment automáticamente.
+      await supabase.from('payments').insert({
+        enrollment_id: enrollmentId,
+        type: 'online',
+        total_amount: amountPaid,
+        cash_amount: 0,
+        transfer_amount: 0,
+        card_amount: amountPaid,
+        voucher_amount: 0,
+        status: 'paid',
+        payment_date: new Date().toISOString(),
+        requires_receipt: false,
+      });
+
+      // 11. Confirmar intento + liberar slot_holds
+      await supabase
+        .from('payment_attempts')
+        .update({ status: 'confirmed', enrollment_id: enrollmentId })
+        .eq('id', attempt.id);
+      await supabase.from('slot_holds').delete().eq('session_token', attempt.session_token);
+
+      // 12. Mover archivos (falla silenciosa — no bloquean la matrícula)
+      if (carnetStoragePath) await moveCarnetPhoto(supabase, carnetStoragePath, enrollmentId);
+      await moveContractPreview(supabase, attempt.session_token, enrollmentId);
+
+      // 13. Invitar al alumno a crear su cuenta (fire-and-forget)
+      void inviteStudentToAuth(supabase, userId);
+    } catch (commitErr) {
+      const msg = commitErr instanceof Error ? commitErr.message : String(commitErr);
+      // ALERTA CRÍTICA: el pago fue cobrado pero la matrícula no pudo crearse.
+      // El snapshot contiene todos los datos para recuperación manual.
+      console.error('[confirm-payment] POST-COMMIT FAILURE — PAGO COBRADO SIN MATRÍCULA', {
+        attemptId: attempt.id,
+        sessionToken: attempt.session_token,
+        snapshot,
+        error: msg,
+      });
+      return errorResponse(
+        'El pago fue procesado pero ocurrió un error al crear la matrícula. El equipo ha sido notificado.',
+        500,
+      );
     }
 
-    // 5. Generar número de matrícula primero — la constraint chk_enrollment_number
-    //    exige que number IS NOT NULL cuando status = 'active', por lo que ambos
-    //    deben actualizarse en el mismo UPDATE.
-    const { data: enrollmentNumber } = await supabase.rpc('get_next_enrollment_number', {
-      p_course_id: enrollmentRow?.course_id,
-    });
-
-    // 6. Activar matrícula + asignar número en un solo UPDATE.
-    //    Los campos financieros (total_paid, pending_balance, payment_status) los
-    //    recalcula automáticamente el trigger trg_update_balance al insertar el pago.
-    await supabase
-      .from('enrollments')
-      .update({
-        status: 'active',
-        number: enrollmentNumber ?? undefined,
-      })
-      .eq('id', attempt.enrollment_id);
-
-    // 7. Registrar pago en tabla payments con status='paid'.
-    //    El trigger trg_update_balance recalcula total_paid / pending_balance /
-    //    payment_status del enrollment automáticamente (solo suma pagos con status='paid').
-    await supabase.from('payments').insert({
-      enrollment_id: attempt.enrollment_id,
-      type: 'online',
-      total_amount: amountPaid,
-      cash_amount: 0,
-      transfer_amount: 0,
-      card_amount: amountPaid,
-      voucher_amount: 0,
-      status: 'paid',
-      payment_date: new Date().toISOString(),
-      requires_receipt: false,
-    });
-
-    // 8. Confirmar payment_attempt y liberar slot_holds
-    await supabase.from('payment_attempts').update({ status: 'confirmed' }).eq('id', attempt.id);
-    await supabase.from('slot_holds').delete().eq('session_token', attempt.session_token);
-
-    // 9. Mover foto de carnet al destino final (guardada temporalmente en initiate-payment)
-    if (carnetStoragePath) {
-      await moveCarnetPhoto(supabase, carnetStoragePath, attempt.enrollment_id);
-    }
-
-    // 9b. Mover preview del contrato a ruta permanente y registrar en digital_contracts
-    await moveContractPreview(supabase, attempt.session_token, attempt.enrollment_id);
-
-    // 10. Obtener nombres de sede y curso para la respuesta enriquecida
+    // 14. Respuesta enriquecida
     const [{ data: courseData }, { data: branchData }] = await Promise.all([
-      supabase.from('courses').select('name').eq('id', enrollmentRow?.course_id).maybeSingle(),
-      supabase
-        .from('branches')
-        .select('name, address')
-        .eq('id', enrollmentRow?.branch_id)
-        .maybeSingle(),
+      supabase.from('courses').select('name').eq('id', snapshot.courseId).maybeSingle(),
+      supabase.from('branches').select('name, address').eq('id', snapshot.branchId).maybeSingle(),
     ]);
 
     const studentName = snapshot.personalData
       ? `${snapshot.personalData.firstNames ?? ''} ${snapshot.personalData.paternalLastName ?? ''}`.trim()
       : null;
 
-    // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
-    //     userId y email vienen del draft_snapshot guardado en initiate-payment.
-    if (snapshot.userId && snapshot.personalData?.email) {
-      void inviteStudentToAuth(supabase, snapshot.userId);
-    }
-
     return jsonResponse({
       success: true,
-      enrollmentId: attempt.enrollment_id,
-      enrollmentNumber: enrollmentNumber ?? null,
+      enrollmentId,
+      enrollmentNumber,
       branchName: branchData?.name ?? null,
       branchAddress: branchData?.address ?? null,
       courseName: courseData?.name ?? null,
       amountPaid,
-      courseBasePrice: basePrice,
-      pendingBalance: Math.max(0, basePrice - amountPaid),
-      sessionCount,
+      courseBasePrice,
+      pendingBalance: Math.max(0, courseBasePrice - amountPaid),
+      sessionCount: Array.isArray(snapshot.selectedSlotIds) ? snapshot.selectedSlotIds.length : 0,
       paymentMode: payMode,
       studentName,
     });
@@ -1523,10 +1487,45 @@ async function checkDuplicateEnrollmentByLicenseClass(
     .select('id, status, courses!inner(license_class)')
     .eq('student_id', studentId)
     .eq('courses.license_class', licenseClass)
-    .in('status', ['active', 'pending_payment', 'completed'])
+    .in('status', ['active', 'completed'])
     .limit(1)
     .maybeSingle();
   return data ?? null;
+}
+
+/**
+ * Verifica duplicado de matrícula por RUT sin crear nada en BD.
+ * Usado en initiate-payment para validar antes de iniciar el pago.
+ */
+async function checkDuplicateByRut(
+  supabase: any,
+  rawRut: string,
+  licenseClass: string,
+): Promise<{ status: string } | null> {
+  if (!rawRut) return null;
+
+  const clean = rawRut.replace(/[^0-9kK]/g, '');
+  const body = clean.slice(0, -1);
+  const dv = clean.slice(-1).toUpperCase();
+  const rev = body.split('').reverse().join('');
+  const withDots = rev
+    .replace(/(\d{3})(?=\d)/g, '$1.')
+    .split('')
+    .reverse()
+    .join('');
+  const rut = `${withDots}-${dv}`;
+
+  const { data: user } = await supabase.from('users').select('id').eq('rut', rut).maybeSingle();
+  if (!user) return null;
+
+  const { data: student } = await supabase
+    .from('students')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!student) return null;
+
+  return checkDuplicateEnrollmentByLicenseClass(supabase, student.id, licenseClass);
 }
 
 async function findOrCreateUser(supabase: any, personalData: any, branchId: number) {
