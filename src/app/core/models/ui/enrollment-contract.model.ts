@@ -42,6 +42,7 @@ export interface EnrollmentContractData {
   studentSummary: StudentSummaryBanner;
   contractGeneration: ContractGeneration;
   signedContract: SignedContractUpload | null;
+  isMinor: boolean;
   /** Upload or signature is required to advance to step 6 */
   canAdvance: boolean;
 }

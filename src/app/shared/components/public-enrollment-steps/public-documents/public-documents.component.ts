@@ -8,6 +8,8 @@ import {
   viewChild,
   OnDestroy,
   ElementRef,
+  effect,
+  untracked,
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
@@ -105,12 +107,22 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             border: 1.5px solid color-mix(in srgb, var(--state-success) 30%, transparent);
           "
         >
-          <img
-            [src]="data().carnetPhoto!.capturedDataUrl"
-            alt="Foto carnet subida"
-            class="h-16 w-16 rounded-lg object-cover shrink-0"
-            style="border: 2px solid var(--state-success);"
-          />
+          <div class="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden" style="border: 2px solid var(--state-success); background: var(--bg-elevated);">
+            <!-- Loader skeleton -->
+            @if (!isImageLoaded()) {
+              <div class="absolute inset-0 flex items-center justify-center animate-pulse" style="background: var(--bg-inverted-subtle);">
+                <app-icon name="loader" [size]="16" class="animate-spin" color="var(--text-muted)" />
+              </div>
+            }
+            <img
+              [src]="data().carnetPhoto!.capturedDataUrl"
+              alt="Foto carnet subida"
+              class="h-full w-full object-cover transition-opacity duration-300"
+              [class.opacity-0]="!isImageLoaded()"
+              (load)="isImageLoaded.set(true)"
+              (error)="isImageLoaded.set(true)"
+            />
+          </div>
           <div class="flex-1">
             <p class="text-sm font-semibold" style="color: var(--state-success);">Foto subida</p>
             <p class="text-xs" style="color: var(--text-secondary);">
@@ -123,14 +135,18 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             for="pub-carnet-rechange"
           >
             Cambiar
-            <input
-              id="pub-carnet-rechange"
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              capture="user"
+            <button
+              type="button"
               class="sr-only"
-              (change)="onFileChange($event)"
-            />
+              id="pub-carnet-rechange"
+            ></button>
+            <button
+              type="button"
+              (click)="handleClearPhoto()"
+              class="cursor-pointer"
+            >
+              Cambiar
+            </button>
           </label>
         </div>
       } @else {
@@ -172,11 +188,12 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
               class="flex flex-col items-center gap-3 rounded-xl px-6 py-8 cursor-pointer transition-all focus-within:outline focus-within:outline-(--ds-brand) focus-within:outline-offset-2"
               [class.opacity-50]="isUploading()"
               [class.pointer-events-none]="isUploading()"
-              style="
-                background: var(--bg-surface);
-                border: 2px dashed var(--border-default);
-              "
+              [style.background]="isDragging() ? 'color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface))' : 'var(--bg-surface)'"
+              [style.border]="isDragging() ? '2px dashed var(--ds-brand)' : '2px dashed var(--border-default)'"
               for="pub-carnet-upload"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave($event)"
+              (drop)="onDrop($event)"
               data-llm-description="Carnet photo upload area for driving school enrollment"
             >
               <div
@@ -206,12 +223,17 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
                 <p class="text-xs mt-0.5" style="color: var(--text-muted);">
                   JPG o PNG · Máx. 5 MB
                 </p>
+                <span
+                  class="mt-3 inline-flex items-center justify-center rounded-lg px-5 py-2 text-sm font-semibold transition-colors"
+                  style="background: color-mix(in srgb, var(--ds-brand) 8%, transparent); color: var(--ds-brand);"
+                >
+                  Seleccionar foto
+                </span>
               </div>
               <input
                 id="pub-carnet-upload"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                capture="user"
                 class="sr-only"
                 [disabled]="isUploading()"
                 (change)="onFileChange($event)"
@@ -323,16 +345,26 @@ export class PublicDocumentsComponent implements OnDestroy {
 
   protected readonly hasPhoto = computed(() => !!this.data().carnetPhoto);
 
-  // Local state for camera feature
   protected readonly activeTab = signal<'upload' | 'camera'>('upload');
   protected readonly isCameraActive = signal(false);
   protected readonly isProcessingCapture = signal(false);
   protected readonly cameraError = signal<string | null>(null);
+  protected readonly isDragging = signal(false);
+  protected readonly isImageLoaded = signal(false);
 
   protected readonly videoElement = viewChild<ElementRef<HTMLVideoElement>>('videoElement');
   protected readonly canvasElement = viewChild<ElementRef<HTMLCanvasElement>>('canvasElement');
 
   private mediaStream: MediaStream | null = null;
+
+  constructor() {
+    effect(() => {
+      const url = this.data().carnetPhoto?.capturedDataUrl;
+      if (url) {
+        untracked(() => this.isImageLoaded.set(false));
+      }
+    });
+  }
 
   protected readonly validTips = [
     'Fondo blanco o claro',
@@ -350,14 +382,51 @@ export class PublicDocumentsComponent implements OnDestroy {
     this.stopCamera();
   }
 
-  protected switchTab(tab: 'upload' | 'camera'): void {
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    if (!this.isUploading()) {
+      this.isDragging.set(true);
+    }
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragging.set(false);
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    this.isDragging.set(false);
+    
+    if (this.isUploading()) return;
+    
+    const file = event.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      this.fileSelected.emit({ type: 'id_photo', file });
+    }
+  }
+
+  switchTab(tab: 'upload' | 'camera'): void {
+    if (this.isUploading()) return;
+
     this.activeTab.set(tab);
-    if (tab === 'upload') {
+    if (tab === 'camera') {
+      void this.startCamera();
+    } else {
       this.stopCamera();
     }
   }
 
-  protected async startCamera(): Promise<void> {
+  handleClearPhoto(): void {
+    if (this.isUploading()) return;
+    
+    this.fileSelected.emit({ type: 'clear', file: null as any });
+    
+    this.activeTab.set('upload');
+    this.stopCamera();
+  }
+
+  async startCamera(): Promise<void> {
     this.cameraError.set(null);
     this.isProcessingCapture.set(false);
     try {

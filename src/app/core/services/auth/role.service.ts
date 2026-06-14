@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type UserRole = 'admin' | 'secretaria' | 'instructor' | 'alumno' | 'relator';
+export type UserRole = 'admin' | 'secretaria' | 'instructor' | 'alumno';
 
 const SESSION_KEY = 'devRole';
 

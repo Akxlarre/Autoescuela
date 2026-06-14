@@ -1,10 +1,9 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'app-badge',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <span
@@ -16,11 +15,12 @@ import { CommonModule } from '@angular/common';
   `,
 })
 export class BadgeComponent {
-  @Input() variant: 'success' | 'warning' | 'error' | 'info' | 'default' | 'neutral' | string =
-    'default';
+  variant = input<'success' | 'warning' | 'error' | 'info' | 'default' | 'neutral' | string>(
+    'default',
+  );
 
   getClasses() {
-    switch (this.variant) {
+    switch (this.variant()) {
       case 'success':
         return 'bg-[var(--state-success-bg)] text-[var(--state-success)] dark:bg-[var(--state-success-bg)]/30 dark:text-[var(--state-success)]';
       case 'warning':
@@ -33,7 +33,7 @@ export class BadgeComponent {
         return 'bg-[var(--bg-subtle)] text-[var(--text-secondary)]';
       default:
         // Allows passing literal class strings
-        if (this.variant.includes('bg-')) return this.variant;
+        if (this.variant().includes('bg-')) return this.variant();
         return 'bg-brand-muted text-brand-primary';
     }
   }

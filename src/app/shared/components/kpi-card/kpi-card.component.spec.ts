@@ -130,3 +130,5 @@ describe.skip('KpiCardComponent', () => {
     expect(card?.classList).toContain('card-tinted');
   });
 });
+
+// spec-0012: tests de la lógica de displayValue → ver kpi-display-value.util.spec.ts

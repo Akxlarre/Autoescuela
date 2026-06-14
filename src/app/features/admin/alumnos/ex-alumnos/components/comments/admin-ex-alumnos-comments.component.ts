@@ -27,7 +27,7 @@ export interface ComentarioMock {
           >
         </div>
         <div
-          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-bold shadow-sm"
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 text-warning text-xs font-bold shadow-sm"
         >
           <app-icon name="star" [size]="14" />
           <span>{{ avgRate() }}</span>

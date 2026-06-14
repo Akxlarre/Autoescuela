@@ -111,13 +111,6 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
                     <app-icon name="graduation-cap" [size]="11" />Alumno
                   </span>
                 }
-                @if (currentUser()?.role === 'relator') {
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border text-text-secondary bg-base border-border-default"
-                  >
-                    <app-icon name="book-open" [size]="11" />Relator
-                  </span>
-                }
               </div>
 
               <!-- Email chip -->

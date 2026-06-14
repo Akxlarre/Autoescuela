@@ -3,27 +3,30 @@ import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { PagoInstructorModalComponent } from '@shared/components/pago-instructor-modal/pago-instructor-modal.component';
 import { LiquidacionesContentComponent } from '@shared/components/liquidaciones-content/liquidaciones-content.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 
 @Component({
   selector: 'app-secretaria-contabilidad-liquidaciones',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LiquidacionesContentComponent],
+  imports: [LiquidacionesContentComponent, BentoGridLayoutDirective],
   template: `
-    <app-liquidaciones-content
-      [liquidaciones]="facade.liquidaciones()"
-      [isLoading]="facade.isLoading()"
-      [isExporting]="facade.isExporting()"
-      [kpis]="facade.kpis()"
-      [mesActual]="facade.mesActual()"
-      [anioActual]="facade.anioActual()"
-      [isDrawerOpen]="layoutDrawer.isOpen()"
-      (mesAnterior)="facade.mesAnterior()"
-      (mesSiguiente)="facade.mesSiguiente()"
-      (deshacer)="facade.deshacerPago($event)"
-      (pagar)="onPagar($event)"
-      (exportRequested)="facade.exportar($event)"
-    />
+    <div class="bento-grid" appBentoGridLayout>
+      <app-liquidaciones-content
+        [liquidaciones]="facade.liquidaciones()"
+        [isLoading]="facade.isLoading()"
+        [isExporting]="facade.isExporting()"
+        [kpis]="facade.kpis()"
+        [mesActual]="facade.mesActual()"
+        [anioActual]="facade.anioActual()"
+        [isDrawerOpen]="layoutDrawer.isOpen()"
+        (mesAnterior)="facade.mesAnterior()"
+        (mesSiguiente)="facade.mesSiguiente()"
+        (deshacer)="facade.deshacerPago($event)"
+        (pagar)="onPagar($event)"
+        (exportRequested)="facade.exportar($event)"
+      />
+    </div>
   `,
 })
 export class SecretariaContabilidadLiquidacionesComponent implements OnInit {

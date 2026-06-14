@@ -742,6 +742,26 @@ app-main-layout p-toast.p-toast-top-center,
     font-size: 0.875rem !important;
   }
 
+  /* Botones anterior y siguiente (chevrons) */
+  .p-datepicker-header .p-datepicker-prev,
+  .p-datepicker-header .p-datepicker-next,
+  .p-datepicker-header button.p-button-icon-only,
+  .p-datepicker-header [data-pc-section='previousbutton'],
+  .p-datepicker-header [data-pc-section='nextbutton'] {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+  }
+  .p-datepicker-header .p-datepicker-prev > svg,
+  .p-datepicker-header .p-datepicker-next > svg,
+  .p-datepicker-header [data-pc-section='previousbutton'] > svg,
+  .p-datepicker-header [data-pc-section='nextbutton'] > svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+
   /* Cabeceras L M X J V S D */
   [data-pc-section='weekday'],
   .p-datepicker-weekday {

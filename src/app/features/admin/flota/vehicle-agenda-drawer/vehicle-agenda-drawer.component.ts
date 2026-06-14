@@ -58,7 +58,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               @for (slot of flotaFacade.vehicleAgenda(); track slot.hour) {
                 <div
                   class="group p-4 rounded-xl border bg-base hover:border-ds-brand hover:shadow-sm transition-all cursor-default"
-                  [ngClass]="{ 'opacity-50': slot.type === 'empty' }"
+                  [class.opacity-50]="slot.type === 'empty'"
                 >
                   <div class="flex items-start justify-between">
                     <div class="flex items-center gap-3">
