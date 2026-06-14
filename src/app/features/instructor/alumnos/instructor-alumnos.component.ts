@@ -64,14 +64,12 @@ const PAGE_SIZE = 9;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ══ HERO ══ -->
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Mis Alumnos"
-          subtitle="Gestiona y haz seguimiento a tus alumnos asignados"
-          [actions]="heroActions"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Mis Alumnos"
+        subtitle="Gestiona y haz seguimiento a tus alumnos asignados"
+        [actions]="heroActions"
+      />
 
       <!-- ══ KPIs ══ -->
       <div class="bento-square">
@@ -539,7 +537,6 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   public facade = inject(InstructorAlumnosFacade);
   private gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   public searchTerm = signal('');
@@ -636,8 +633,6 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     requestAnimationFrame(() => {
-      const hero = this.heroRef();
-      if (hero) this.gsap.animateHero(hero.nativeElement);
       const grid = this.bentoGrid();
       if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
     });

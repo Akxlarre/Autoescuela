@@ -36,16 +36,14 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Ensayos Teóricos"
-          subtitle="Consulta los puntajes de preparación para el examen municipal"
-          backRoute="/app/instructor/dashboard"
-          backLabel="Dashboard"
-          [actions]="[]"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Ensayos Teóricos"
+        subtitle="Consulta los puntajes de preparación para el examen municipal"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="[]"
+      />
 
       <!-- KPIs -->
       <div class="bento-square">
@@ -183,7 +181,6 @@ export class InstructorEnsayosTeoricosComponent implements OnInit, AfterViewInit
   readonly facade = inject(InstructorAlumnosFacade);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly skeletonRows = Array(5);
@@ -205,8 +202,6 @@ export class InstructorEnsayosTeoricosComponent implements OnInit, AfterViewInit
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }

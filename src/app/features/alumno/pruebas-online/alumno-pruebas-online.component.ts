@@ -40,21 +40,19 @@ interface SimulatorLink {
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <div class="bento-hero">
-        <app-section-hero
-          #heroRef
-          title="Pruebas Online"
-          [subtitle]="
-            isProfessional()
-              ? 'Practica para tu examen teórico de Licencia Profesional'
-              : 'Practica con simuladores del examen teórico y llega preparado a tu prueba municipal'
-          "
-          icon="graduation-cap"
-          backRoute="/app/alumno/inicio"
-          backLabel="Inicio"
-          [actions]="[]"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Pruebas Online"
+        [subtitle]="
+          isProfessional()
+            ? 'Practica para tu examen teórico de Licencia Profesional'
+            : 'Practica con simuladores del examen teórico y llega preparado a tu prueba municipal'
+        "
+        icon="graduation-cap"
+        backRoute="/app/alumno/inicio"
+        backLabel="Inicio"
+        [actions]="[]"
+      />
 
       <!-- FORMATO DEL EXAMEN (solo Clase B) -->
       @if (!isProfessional()) {
@@ -109,7 +107,6 @@ interface SimulatorLink {
                 <div class="flex items-start justify-between gap-2">
                   <div
                     class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-elevated"
-                    
                   >
                     <app-icon [name]="sim.icon" [size]="18" />
                   </div>
@@ -129,7 +126,6 @@ interface SimulatorLink {
 
                 <div
                   class="flex items-center gap-1.5 text-xs font-semibold mt-auto pt-2 border-t border-border-subtle text-brand"
-                  
                 >
                   <span>Ir al simulador</span>
                   <app-icon name="external-link" [size]="12" />
@@ -146,7 +142,6 @@ export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly homeFacade = inject(StudentHomeFacade);
 
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly isProfessional = computed(() => this.homeFacade.licenseGroup() === 'professional');
@@ -213,8 +208,6 @@ export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }

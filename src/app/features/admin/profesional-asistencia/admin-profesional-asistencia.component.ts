@@ -44,7 +44,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
       <app-section-hero
-        #heroRef
+        class="bento-hero"
         title="Clases y Asistencia"
         subtitle="Gestión de sesiones teóricas y prácticas de Clase Profesional"
         [actions]="[]"
@@ -98,7 +98,6 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
           <!-- TOOLBAR: Filtros + Navegación -->
           <div
             class="p-4 lg:px-6 lg:py-4 flex flex-col xl:flex-row gap-4 border-b xl:items-center justify-between bg-surface border-border-muted"
-            
           >
             <!-- Selectores -->
             <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
@@ -542,7 +541,6 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild('heroRef', { read: ElementRef });
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly skeletonDays = [1, 2, 3, 4, 5, 6];
@@ -604,10 +602,7 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

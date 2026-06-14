@@ -27,14 +27,13 @@ type FilterTab = 'all' | 'active' | 'expiring';
   template: `
     <div class="bento-grid" appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          title="Instructores"
-          subtitle="Gestión de instructores Clase B con licencias y vehículos"
-          [actions]="heroActions()"
-          (actionClick)="handleHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Instructores"
+        subtitle="Gestión de instructores Clase B con licencias y vehículos"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
+      />
 
       <!-- ── Filter Tabs ──────────────────────────────────────────────────── -->
       <div class="bento-banner flex items-center gap-2">

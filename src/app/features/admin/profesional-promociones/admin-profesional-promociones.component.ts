@@ -48,7 +48,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        #heroRef
+        class="bento-hero"
         title="Promociones Profesionales"
         subtitle="Programación y gestión de ciclos de cursos Clase Profesional"
         [actions]="heroActions()"
@@ -100,7 +100,6 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
         <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden">
           <div
             class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
-            
           >
             <div class="flex items-center justify-between">
               <h2 class="text-base font-semibold text-text-primary">Historial de Promociones</h2>
@@ -120,7 +119,6 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                   type="search"
                   placeholder="Buscar por nombre o código..."
                   class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
-                  
                   [ngModel]="searchTerm()"
                   (ngModelChange)="searchTerm.set($event)"
                   (input)="currentPage.set(1)"
@@ -168,7 +166,6 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                 </p>
                 <button
                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-brand bg-brand/8"
-                  
                   (click)="limpiarFiltros()"
                   data-llm-action="limpiar-filtros-promociones"
                 >
@@ -191,7 +188,6 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                         </span>
                         <span
                           class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
-                          
                         >
                           {{ promo.code }}
                         </span>
@@ -358,7 +354,6 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild('heroRef', { read: ElementRef });
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   ngOnInit(): void {
@@ -371,10 +366,7 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

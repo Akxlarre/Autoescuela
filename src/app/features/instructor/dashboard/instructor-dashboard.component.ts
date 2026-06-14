@@ -48,14 +48,12 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Mi Día"
-          subtitle="Resumen de tus clases programadas para hoy"
-          [actions]="heroActions"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Mi Día"
+        subtitle="Resumen de tus clases programadas para hoy"
+        [actions]="heroActions"
+      />
       <div class="bento-square">
         <app-kpi-card-variant
           label="Clases de Hoy"
@@ -80,10 +78,10 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         } @else {
           <div class="bento-card flex flex-col gap-2 h-full" appCardHover>
             <div class="flex items-start justify-between gap-3 mb-2">
-              <span class="text-xs font-semibold text-brand" >PRÓXIMA</span>
+              <span class="text-xs font-semibold text-brand">PRÓXIMA</span>
             </div>
             <p class="flex items-baseline gap-1 m-0 truncate">
-              <span class="text-3xl md:text-4xl font-bold text-brand" >
+              <span class="text-3xl md:text-4xl font-bold text-brand">
                 {{ proximaHora() }}
               </span>
             </p>
@@ -177,7 +175,6 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                           <div class="flex items-center gap-2 mb-1.5">
                             <span
                               class="text-xs px-2.5 py-0.5 rounded-full font-semibold tracking-wide uppercase text-success bg-success/15"
-                              
                             >
                               Práctica
                             </span>
@@ -200,11 +197,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                             </span>
                             @if (cls.evaluationGrade) {
                               <span class="flex items-center gap-1.5">
-                                <app-icon
-                                  name="star"
-                                  [size]="14"
-                                  class="text-warning"
-                                />
+                                <app-icon name="star" [size]="14" class="text-warning" />
                                 Nota: {{ cls.evaluationGrade }}
                               </span>
                             }
@@ -270,9 +263,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                       class="flex items-center justify-between p-3 bg-surface rounded border border-border-default"
                     >
                       <p class="text-sm font-medium text-text-primary">{{ dia.fechaLabel }}</p>
-                      <span class="text-lg font-bold text-brand" >{{
-                        dia.cantidad
-                      }}</span>
+                      <span class="text-lg font-bold text-brand">{{ dia.cantidad }}</span>
                     </div>
                   }
                 </div>
@@ -296,7 +287,6 @@ export class InstructorDashboardComponent implements OnInit, AfterViewInit {
   private gsap = inject(GsapAnimationsService);
   private destroyRef = inject(DestroyRef);
 
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly proximaHora = computed(() => {
@@ -344,9 +334,6 @@ export class InstructorDashboardComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     requestAnimationFrame(() => {
-      const hero = this.heroRef();
-      if (hero) this.gsap.animateHero(hero.nativeElement);
-
       const grid = this.bentoGrid();
       if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
     });

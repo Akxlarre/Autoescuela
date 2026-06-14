@@ -37,7 +37,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ═══ -->
       <app-section-hero
-        #heroRef
+        class="bento-hero"
         title="Evaluaciones"
         subtitle="Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75"
         icon="graduation-cap"
@@ -293,7 +293,6 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy,
   private readonly confirmModalService = inject(ConfirmModalService);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   protected readonly gradePass = GRADE_PASS;
@@ -419,10 +418,7 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy,
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

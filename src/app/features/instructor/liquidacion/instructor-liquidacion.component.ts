@@ -39,16 +39,14 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Mis Horas"
-          subtitle="Registro de horas trabajadas del mes actual"
-          backRoute="/app/instructor/dashboard"
-          backLabel="Dashboard"
-          [actions]="heroActions"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Mis Horas"
+        subtitle="Registro de horas trabajadas del mes actual"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="heroActions"
+      />
 
       @if (facade.isLoading()) {
         <!-- KPI Skeletons como hijos directos del bento-grid -->
@@ -107,7 +105,9 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           <div class="flex flex-col gap-6">
             <!-- Breakdown Chart -->
             <div class="card p-6" appScrollReveal>
-              <h3 class="text-base font-bold text-text-primary mb-4 border-b border-border-subtle pb-2">
+              <h3
+                class="text-base font-bold text-text-primary mb-4 border-b border-border-subtle pb-2"
+              >
                 Desglose de Horas Realizadas
               </h3>
               <app-horizontal-bar-chart [data]="buildChartData(target.breakdown)" />
@@ -162,7 +162,6 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                           <td class="p-4 text-center">
                             <span
                               class="text-xs font-semibold px-2 py-0.5 rounded-full text-brand bg-brand/10"
-                              
                             >
                               {{ log.quantity }} {{ log.quantity === 1 ? 'sesión' : 'sesiones' }}
                             </span>
@@ -187,7 +186,6 @@ export class InstructorLiquidacionComponent implements OnInit, AfterViewInit {
   public facade = inject(InstructorHorasFacade);
   private gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly heroActions: SectionHeroAction[] = [];
@@ -197,8 +195,6 @@ export class InstructorLiquidacionComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    const hero = this.heroRef();
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }

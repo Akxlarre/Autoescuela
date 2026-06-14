@@ -56,14 +56,13 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
   template: `
     <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
-      <div class="bento-banner">
-        <app-section-hero
-          [title]="facade.needsSlotSelection() ? 'Agendar y Pagar' : 'Pagar'"
-          subtitle="Completa el pago de tu matrícula y agenda tus clases restantes"
-          icon="calendar-check"
-          [actions]="[]"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        [title]="facade.needsSlotSelection() ? 'Agendar y Pagar' : 'Pagar'"
+        subtitle="Completa el pago de tu matrícula y agenda tus clases restantes"
+        icon="calendar-check"
+        [actions]="[]"
+      />
 
       <!-- ── Stepper ── -->
       <div class="bento-banner card px-6 py-4">

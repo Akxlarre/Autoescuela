@@ -44,14 +44,13 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid style="--bento-row-min: 125px;">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Gestión de Secretarias"
-          subtitle="Control de acceso y gestión de personal de secretaría"
-          [actions]="heroActions()"
-          (actionClick)="handleHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Gestión de Secretarias"
+        subtitle="Control de acceso y gestión de personal de secretaría"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
+      />
 
       @if (facade.isLoading()) {
         <!-- ── Skeleton State ────────────────────────────────────────────────── -->
@@ -229,7 +228,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                       <!-- Avatar -->
                       <div
                         class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-sm font-bold bg-brand-tint text-brand"
-                        
                       >
                         {{ sec.initials }}
                       </div>
@@ -245,7 +243,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           @if (sec.estado === 'activa') {
                             <span
                               class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md text-success bg-success/10"
-                              
                             >
                               <app-icon name="check" [size]="8" />
                               Activa
@@ -253,7 +250,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           } @else {
                             <span
                               class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-text-muted"
-                              
                             >
                               Inactiva
                             </span>
@@ -261,7 +257,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                         </div>
 
                         <div class="flex items-center gap-3 mt-1 flex-wrap">
-                          <span class="text-xs text-brand" >
+                          <span class="text-xs text-brand">
                             {{ sec.email }}
                           </span>
                           <span class="flex items-center gap-1 text-xs text-text-muted">
@@ -325,20 +321,12 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             </h3>
 
             <div class="flex-1">
-              <div
-                class="rounded-xl p-5 mb-8 bg-subtle border border-border-subtle"
-                
-              >
+              <div class="rounded-xl p-5 mb-8 bg-subtle border border-border-subtle">
                 <div class="flex items-center gap-3 mb-3">
-                  <div
-                    class="p-2.5 rounded-xl bg-brand/10 bg-brand/10"
-                    
-                  >
+                  <div class="p-2.5 rounded-xl bg-brand/10 bg-brand/10">
                     <app-icon name="shield-check" [size]="20" color="var(--ds-brand)" />
                   </div>
-                  <span class="text-sm font-bold text-brand" >
-                    Rol Secretaria
-                  </span>
+                  <span class="text-sm font-bold text-brand"> Rol Secretaria </span>
                 </div>
                 <p class="text-xs leading-relaxed text-text-secondary">
                   Acceso a matrículas, pagos, agenda y gestión de alumnos de su sede asignada.
@@ -351,10 +339,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
               <ul class="flex flex-col gap-4 mb-8">
                 @for (permiso of permisos; track permiso) {
                   <li class="flex items-center gap-3 text-xs font-semibold text-text-secondary">
-                    <div
-                      class="w-1.5 h-1.5 rounded-full bg-success"
-                      
-                    ></div>
+                    <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
                     {{ permiso }}
                   </li>
                 }
@@ -467,7 +452,6 @@ export class AdminSecretariasComponent {
   // ── Internal ────────────────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   protected readonly facade = inject(SecretariasFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly branchFacade = inject(BranchFacade);
@@ -485,12 +469,10 @@ export class AdminSecretariasComponent {
     effect(() => {
       const loading = this.facade.isLoading();
       const grid = this.bentoGrid();
-      const hero = this.heroRef();
 
       // El effect corre después del Change Detection, por lo que el DOM
       // ya tiene los elementos correspondientes (Skeletons o Contenido Real)
       if (loading) {
-        if (hero) this.gsap.animateHero(hero.nativeElement);
         if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
       } else {
         // Al transicionar a contenido real, animamos los elementos nuevos

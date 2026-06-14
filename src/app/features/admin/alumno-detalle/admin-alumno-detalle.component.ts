@@ -93,18 +93,17 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- ── Vista Principal ── -->
       } @else if (facade.alumno(); as alumno) {
-        <div class="bento-banner" #heroRef>
-          <app-section-hero
-            [title]="alumno.nombre"
-            [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
-            icon="user"
-            backRoute="/app/admin/alumnos"
-            backLabel="Listado de Alumnos"
-            [actions]="heroActions()"
-            [chips]="heroChips()"
-            (actionClick)="handleHeroAction($event)"
-          />
-        </div>
+        <app-section-hero
+          class="bento-hero"
+          [title]="alumno.nombre"
+          [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
+          icon="user"
+          backRoute="/app/admin/alumnos"
+          backLabel="Listado de Alumnos"
+          [actions]="heroActions()"
+          [chips]="heroChips()"
+          (actionClick)="handleHeroAction($event)"
+        />
 
         <!-- Selector de matrícula (solo visible cuando hay más de una) -->
         @if (facade.enrollmentSummaries().length > 1) {
@@ -272,9 +271,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <div
                   class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
                 >
-                  <span class="text-success"
-                    >{{ facade.progresoTeorico().completadas }} OK</span
-                  >
+                  <span class="text-success">{{ facade.progresoTeorico().completadas }} OK</span>
                   <span class="text-text-muted">{{ restantesTeoricas() }} Pendientes</span>
                 </div>
               </div>
@@ -761,7 +758,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly signedContractInputRef = viewChild<ElementRef>('signedContractInput');
 
@@ -1007,10 +1003,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
