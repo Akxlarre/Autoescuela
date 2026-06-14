@@ -78,12 +78,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             >
               <app-icon name="users" [size]="48" />
             </div>
-            <span class="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1"
-              >Egresados</span
-            >
-            <span class="text-3xl font-display font-black text-text-primary tracking-tighter">{{
-              egresadosTotal()
-            }}</span>
+            <span class="kpi-label block mb-1">Egresados</span>
+            <span class="kpi-value">{{ egresadosTotal() }}</span>
           </div>
 
           <div
@@ -94,12 +90,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             >
               <app-icon name="award" [size]="48" />
             </div>
-            <span class="text-[9px] font-black text-text-muted uppercase tracking-widest block mb-1"
-              >Licencias</span
-            >
-            <span class="text-3xl font-display font-black text-success tracking-tighter">{{
-              licensesTotal()
-            }}</span>
+            <span class="kpi-label block mb-1">Licencias</span>
+            <span class="kpi-value text-success">{{ licensesTotal() }}</span>
           </div>
         </div>
 
@@ -109,17 +101,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           ></div>
           <div class="relative flex items-center justify-between">
             <div class="flex flex-col">
-              <span class="text-[10px] font-black text-text-primary uppercase tracking-wider mb-0.5"
-                >Tasa de Efectividad</span
-              >
+              <span class="kpi-label mb-0.5">Tasa de Efectividad</span>
               <span class="text-[9px] text-text-muted font-medium pr-8"
                 >Conversión de egresados a conductores licenciados.</span
               >
             </div>
             <div class="flex flex-col items-end">
-              <span
-                class="text-4xl font-display font-black text-brand tracking-tighter leading-none"
-              >
+              <span class="kpi-value text-brand leading-none">
                 {{ successRate() }}<span class="text-lg opacity-40 ml-0.5">%</span>
               </span>
               <div class="mt-2 h-1 w-16 bg-subtle rounded-full overflow-hidden">
