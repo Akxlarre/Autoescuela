@@ -8,6 +8,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { FormsModule } from '@angular/forms';
+import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
 
 @Component({
   selector: 'app-ajustes-drawer',
@@ -238,6 +239,26 @@ import { FormsModule } from '@angular/forms';
               </button>
             </div>
 
+            <!-- Horarios Config card -->
+            @if (isAdmin()) {
+              <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
+                <div class="space-y-0.5">
+                  <p class="text-sm font-semibold text-text-primary">Grilla Horaria Base</p>
+                  <p class="text-xs text-text-muted">
+                    Configura la estructura matemática de los bloques de horarios
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                  (click)="abrirGeneradorHorario()"
+                >
+                  <app-icon name="calendar-clock" [size]="14" />
+                  <span>Generar Bloques Horarios</span>
+                </button>
+              </div>
+            }
+
             <!-- Branch details and switcher -->
             @if (isAdmin()) {
               <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
@@ -395,6 +416,10 @@ export class AjustesDrawerComponent {
     this.layoutDrawer.close();
     const role = this.currentUser()?.role;
     void this.router.navigate([`/app/${role}/configuracion-web`]);
+  }
+
+  abrirGeneradorHorario(): void {
+    this.layoutDrawer.push(ConfiguradorHorariosDrawerComponent, 'Horarios Base', 'calendar-clock');
   }
 
   navigateToAuditoria(): void {
