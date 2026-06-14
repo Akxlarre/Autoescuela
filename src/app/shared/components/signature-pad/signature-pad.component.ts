@@ -3,9 +3,8 @@ import {
   ElementRef,
   ViewChild,
   AfterViewInit,
-  Input,
-  Output,
-  EventEmitter,
+  input,
+  output,
   ChangeDetectionStrategy,
   HostListener,
   ChangeDetectorRef,
@@ -22,7 +21,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     <div class="flex flex-col gap-2 w-full">
       <div class="flex justify-between items-end mb-1">
         <label class="text-xs sm:text-sm font-bold text-primary uppercase tracking-widest">{{
-          label
+          label()
         }}</label>
         @if (!isEmpty) {
           <button
@@ -37,7 +36,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 
       <div
         class="relative bg-surface focus-within:ring-4 focus-within:ring-brand/10 focus-within:border-brand/40 border-2 border-border-default rounded-2xl overflow-hidden w-full transition-all group shadow-inner"
-        [style.height.px]="height"
+        [style.height.px]="height()"
       >
         <!-- Sign Line & Placeholder -->
         @if (isEmpty) {
@@ -80,10 +79,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 export class SignaturePadComponent implements AfterViewInit {
   @ViewChild('canvas') canvasRef!: ElementRef<HTMLCanvasElement>;
 
-  @Input() label: string = 'Firma';
-  @Input() height: number = 200;
+  label = input<string>('Firma');
+  height = input<number>(200);
 
-  @Output() signatureChange = new EventEmitter<string | null>();
+  signatureChange = output<string | null>();
 
   private ctx!: CanvasRenderingContext2D;
   private isDrawing = false;

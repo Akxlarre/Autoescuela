@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 @Component({
@@ -21,13 +21,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Aprobación Municipal</span
             >
-            <span class="text-sm font-black text-text-primary">{{ municipalRate }}%</span>
+            <span class="text-sm font-black text-text-primary">{{ municipalRate() }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-brand" [style.width.%]="municipalRate"></div>
+            <div class="progress-bar-fill bg-brand" [style.width.%]="municipalRate()"></div>
           </div>
           <p class="text-[10px] text-text-muted mt-2">
-            Basado en {{ totalExams }} exámenes este año.
+            Basado en {{ totalExams() }} exámenes este año.
           </p>
         </div>
 
@@ -36,10 +36,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Examen Psicotécnico</span
             >
-            <span class="text-sm font-black text-info">{{ psychoRate }}%</span>
+            <span class="text-sm font-black text-info">{{ psychoRate() }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-info" [style.width.%]="psychoRate"></div>
+            <div class="progress-bar-fill bg-info" [style.width.%]="psychoRate()"></div>
           </div>
         </div>
 
@@ -48,10 +48,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             <span class="text-xs font-bold text-text-muted uppercase tracking-wider"
               >Licencia Obtenida</span
             >
-            <span class="text-sm font-black text-warning">{{ successRate }}%</span>
+            <span class="text-sm font-black text-warning">{{ successRate() }}%</span>
           </div>
           <div class="progress-bar-track">
-            <div class="progress-bar-fill bg-warning" [style.width.%]="successRate"></div>
+            <div class="progress-bar-fill bg-warning" [style.width.%]="successRate()"></div>
           </div>
         </div>
       </div>
@@ -82,7 +82,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               >Egresados</span
             >
             <span class="text-3xl font-display font-black text-text-primary tracking-tighter">{{
-              egresadosTotal
+              egresadosTotal()
             }}</span>
           </div>
 
@@ -98,7 +98,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               >Licencias</span
             >
             <span class="text-3xl font-display font-black text-success tracking-tighter">{{
-              licensesTotal
+              licensesTotal()
             }}</span>
           </div>
         </div>
@@ -120,12 +120,12 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               <span
                 class="text-4xl font-display font-black text-brand tracking-tighter leading-none"
               >
-                {{ successRate }}<span class="text-lg opacity-40 ml-0.5">%</span>
+                {{ successRate() }}<span class="text-lg opacity-40 ml-0.5">%</span>
               </span>
               <div class="mt-2 h-1 w-16 bg-subtle rounded-full overflow-hidden">
                 <div
                   class="h-full bg-brand shadow-[0_0_8px_var(--ds-brand)] transition-all duration-1000 ease-out"
-                  [style.width.%]="successRate || 5"
+                  [style.width.%]="successRate() || 5"
                 ></div>
               </div>
             </div>
@@ -160,10 +160,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   `,
 })
 export class AdminStatsPanelComponent {
-  @Input() municipalRate: number = 0;
-  @Input() psychoRate: number = 0;
-  @Input() totalExams: number = 0;
-  @Input() egresadosTotal: number = 0;
-  @Input() licensesTotal: number = 0;
-  @Input() successRate: number = 0;
+  municipalRate = input<number>(0);
+  psychoRate = input<number>(0);
+  totalExams = input<number>(0);
+  egresadosTotal = input<number>(0);
+  licensesTotal = input<number>(0);
+  successRate = input<number>(0);
 }

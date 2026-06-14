@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.model';
 
@@ -32,12 +32,12 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
           class="bg-elevated border border-border-subtle rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm"
         >
           <span class="text-xs font-bold text-brand">{{ checkedCount }}</span>
-          <span class="text-xs text-muted">de {{ items.length }}</span>
+          <span class="text-xs text-muted">de {{ items().length }}</span>
         </div>
       </div>
 
       <div class="flex flex-col gap-3">
-        @for (item of items; track item.id) {
+        @for (item of items(); track item.id) {
           <button
             type="button"
             class="group w-full flex items-center justify-between gap-4 p-4 rounded-2xl border text-left transition-all duration-300 transform active:scale-[0.98] cursor-pointer"
@@ -76,15 +76,15 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
   `,
 })
 export class EvaluationChecklistComponent {
-  @Input() items: EvaluationChecklistItem[] = [];
-  @Output() itemsChange = new EventEmitter<EvaluationChecklistItem[]>();
+  items = input<EvaluationChecklistItem[]>([]);
+  itemsChange = output<EvaluationChecklistItem[]>();
 
   get checkedCount(): number {
-    return this.items.filter((i) => i.checked).length;
+    return this.items().filter((i) => i.checked).length;
   }
 
   toggleItem(item: EvaluationChecklistItem) {
-    const updated = this.items.map((i) => {
+    const updated = this.items().map((i) => {
       if (i.id === item.id) {
         return { ...i, checked: !i.checked };
       }
