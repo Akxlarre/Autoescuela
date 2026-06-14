@@ -246,6 +246,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
           @case ('documents') {
             <app-public-documents
               [data]="step3Data()"
+              [isUploading]="facade.isLoading()"
               (fileSelected)="onFileSelected($event)"
               (next)="facade.confirmDocuments()"
               (back)="facade.goBack()"

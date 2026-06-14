@@ -259,7 +259,10 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
             [ngModel]="formData().paternalLastName"
             (ngModelChange)="onNamesInput('paternalLastName', $event)"
             (change)="onNamesInput('paternalLastName', $any($event.target).value)"
-            (blur)="onNamesInput('paternalLastName', $any($event.target).value); markDirty('paternalLastName')"
+            (blur)="
+              onNamesInput('paternalLastName', $any($event.target).value);
+              markDirty('paternalLastName')
+            "
             autocomplete="family-name"
             aria-required="true"
             [attr.aria-invalid]="isDirty('paternalLastName') && !paternalLastNameValid()"
@@ -491,10 +494,16 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
         </button>
         <button
           type="submit"
-          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm"
+          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2"
+          [disabled]="_isLoading()"
           data-llm-action="submit-personal-data"
         >
-          Continuar
+          @if (_isLoading()) {
+            <app-icon name="loader" [size]="16" class="animate-spin" />
+            Procesando...
+          } @else {
+            Continuar
+          }
         </button>
       </div>
     </form>
@@ -503,6 +512,7 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
 export class PublicPersonalDataComponent {
   readonly data = input.required<EnrollmentPersonalData>();
   readonly context = input<PublicEnrollmentContext | null>(null);
+  readonly loading = input<boolean>(false);
   readonly dataChange = output<EnrollmentPersonalData>();
   readonly next = output<void>();
   readonly back = output<void>();
@@ -518,7 +528,9 @@ export class PublicPersonalDataComponent {
   protected readonly _dirtyFields = signal<Record<string, boolean>>({});
   protected readonly _allDirty = signal(false);
   protected readonly _birthDateInvalid = signal(false);
-  
+  protected readonly _submitting = signal(false);
+  protected readonly _isLoading = computed(() => this.loading() || this._submitting());
+
   // Anti-Race-Condition para Autofill
   private _lastEmitted: EnrollmentPersonalData | null = null;
   private _emitTimeout: any = null;
@@ -610,7 +622,7 @@ export class PublicPersonalDataComponent {
     // Angular OnPush aún no propaga el Signal del padre. Acumulamos en un buffer sincrónico.
     const base = this._lastEmitted ?? this.formData();
     this._lastEmitted = { ...base, [field]: value };
-    
+
     // Emitimos de inmediato al padre (si el padre es síncrono, bien; si no, el buffer salva el ciclo)
     this.dataChange.emit(this._lastEmitted);
 
@@ -630,6 +642,9 @@ export class PublicPersonalDataComponent {
   }
 
   protected onNext(): void {
+    if (this._isLoading()) return;
+    this._submitting.set(true);
+
     // Silver Bullet para Chrome Autofill en Angular:
     // Los navegadores a veces rellenan los inputs visualmente pero no emiten `input` o `change`,
     // dejando a Angular desincronizado. Al dar 'Continuar', despachamos eventos falsos
@@ -637,14 +652,14 @@ export class PublicPersonalDataComponent {
     // actualizar su estado interno antes de evaluar.
     const host = this.el.nativeElement as HTMLElement;
     const inputs = host.querySelectorAll('input');
-    
+
     // Forzamos la emisión nativa en todos los inputs
-    inputs.forEach(input => {
+    inputs.forEach((input) => {
       if (input.value && !input.readOnly) {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
         // El blur también asegura que los componentes hijos como Email actualicen su validación
-        input.dispatchEvent(new Event('blur', { bubbles: true })); 
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
       }
     });
 
@@ -655,8 +670,9 @@ export class PublicPersonalDataComponent {
     setTimeout(() => {
       const d = this.formData();
       const advance = canAdvanceFn(d, this.courseTypeForValidation());
-      
+
       if (!advance) {
+        this._submitting.set(false);
         this._allDirty.set(true);
         this.markDirty('rut');
         this.markDirty('gender');

@@ -345,12 +345,21 @@ export class AdminAlumnosFacade {
       const rawData = (data ?? []) as unknown as RawStudent[];
 
       // Filtrar alumnos que SOLO tienen inscripciones a cursos singulares (y cero matrículas regulares/drafts)
+      const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment']);
       const validStudents = rawData.filter((s) => {
         const hasRegular = s.enrollments && s.enrollments.length > 0;
         const hasSingular =
           s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
         // Si no tiene regular pero sí singular, es exclusivamente de Curso Singular -> Ocultar
         if (!hasRegular && hasSingular) return false;
+        // Ocultar alumnos cuyas únicas matrículas son canceladas o pago pendiente online
+        // (transacciones Webpay abandonadas/fallidas que nunca completaron el proceso)
+        if (hasRegular && !hasSingular) {
+          const hasValidEnrollment = s.enrollments.some(
+            (e) => !INCOMPLETE_STATUSES.has(e.status ?? ''),
+          );
+          if (!hasValidEnrollment) return false;
+        }
         return true;
       });
 
@@ -364,11 +373,14 @@ export class AdminAlumnosFacade {
 
   private mapToAlumnoTableRow(s: RawStudent): AlumnoTableRow {
     const u = s.users;
+    // Excluir enrollments incompletos (Webpay abandonado/rechazado) del display.
+    // El enrollment principal es el más reciente con estado válido.
+    const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment']);
     const sorted =
       s.enrollments.length > 0
-        ? [...s.enrollments].sort(
-            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-          )
+        ? [...s.enrollments]
+            .filter((e) => !INCOMPLETE_STATUSES.has(e.status ?? ''))
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         : [];
     const enrollment = sorted[0] ?? null;
     const docs = enrollment?.student_documents ?? [];
