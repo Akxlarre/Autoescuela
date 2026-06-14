@@ -92,18 +92,47 @@ export class DashboardFacade {
     const [year, month] = todayStr.split('-');
     const firstOfMonth = `${year}-${month}-01`;
 
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = toISODate(yesterday);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = toISODate(sevenDaysAgo);
+
+    const prevMonthDate = new Date(Number(year), Number(month) - 2, 1); // getMonth is 0-indexed, but here month is string "06". 06-2=4 => May
+    const prevMonthYear = prevMonthDate.getFullYear();
+    const prevMonthNum = String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+    const firstOfPrevMonth = `${prevMonthYear}-${prevMonthNum}-01`;
+    const lastOfPrevMonthDate = new Date(Number(year), Number(month) - 1, 0);
+    const lastOfPrevMonthStr = toISODate(lastOfPrevMonthDate);
+
     let studentsQuery: any = this.supabase.client
       .from('enrollments')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'active');
     if (branchId !== null) studentsQuery = studentsQuery.eq('branch_id', branchId);
 
+    let recentStudentsQuery: any = this.supabase.client
+      .from('enrollments')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active')
+      .gte('created_at', `${sevenDaysAgoStr}T00:00:00`);
+    if (branchId !== null) recentStudentsQuery = recentStudentsQuery.eq('branch_id', branchId);
+
     let classesQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select('id', { count: 'exact', head: true })
+      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
       .gte('scheduled_at', `${todayStr}T00:00:00`)
       .lte('scheduled_at', `${todayStr}T23:59:59`);
-    if (branchId !== null) classesQuery = classesQuery.eq('branch_id', branchId);
+    if (branchId !== null) classesQuery = classesQuery.eq('enrollments.branch_id', branchId);
+
+    let classesYesterdayQuery: any = this.supabase.client
+      .from('class_b_sessions')
+      .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
+      .gte('scheduled_at', `${yesterdayStr}T00:00:00`)
+      .lte('scheduled_at', `${yesterdayStr}T23:59:59`);
+    if (branchId !== null) classesYesterdayQuery = classesYesterdayQuery.eq('enrollments.branch_id', branchId);
 
     let revenueQuery: any = this.supabase.client
       .from('payments')
@@ -111,20 +140,59 @@ export class DashboardFacade {
       .gte('payment_date', firstOfMonth);
     if (branchId !== null) revenueQuery = revenueQuery.eq('enrollments.branch_id', branchId);
 
+    let prevRevenueQuery: any = this.supabase.client
+      .from('payments')
+      .select('total_amount, enrollments!inner(branch_id)')
+      .gte('payment_date', firstOfPrevMonth)
+      .lte('payment_date', lastOfPrevMonthStr);
+    if (branchId !== null) prevRevenueQuery = prevRevenueQuery.eq('enrollments.branch_id', branchId);
+
     let vehiclesQuery: any = this.supabase.client.from('vehicles').select('id, status');
     if (branchId !== null) vehiclesQuery = vehiclesQuery.eq('branch_id', branchId);
 
-    const [activeStudents, classesToday, monthlyRevenue, vehiclesStatus] = await Promise.all([
+    let auditLogQuery: any = this.supabase.client
+      .from('audit_log')
+      .select('id, action, entity, entity_id, detail, created_at, users(first_names, paternal_last_name)')
+      .order('created_at', { ascending: false })
+      .limit(6);
+    if (branchId !== null) {
+      auditLogQuery = auditLogQuery.or(`branch_id.eq.${branchId},branch_id.is.null`);
+    }
+
+    const [
+      activeStudents,
+      recentStudents,
+      classesToday,
+      classesYesterday,
+      monthlyRevenue,
+      prevMonthlyRevenue,
+      vehiclesStatus,
+      auditLogsResponse,
+    ] = await Promise.all([
       studentsQuery,
+      recentStudentsQuery,
       classesQuery,
+      classesYesterdayQuery,
       revenueQuery,
+      prevRevenueQuery,
       vehiclesQuery,
+      auditLogQuery,
     ]);
 
     const revenue = (monthlyRevenue.data ?? []).reduce(
       (acc: number, r: any) => acc + (r.total_amount ?? 0),
       0,
     );
+    const prevRevenue = (prevMonthlyRevenue.data ?? []).reduce(
+      (acc: number, r: any) => acc + (r.total_amount ?? 0),
+      0,
+    );
+    let revenueTrend = 0;
+    if (prevRevenue > 0) {
+      revenueTrend = Math.round(((revenue - prevRevenue) / prevRevenue) * 100);
+    } else if (revenue > 0) {
+      revenueTrend = 100;
+    }
     const vehicles = vehiclesStatus.data ?? [];
 
     const user = this.auth.currentUser();
@@ -150,8 +218,9 @@ export class DashboardFacade {
           id: 'users',
           label: 'Alumnos Activos',
           value: activeStudents.count ?? 0,
-          trend: 0,
-          trendLabel: 'vs ayer',
+          trend: recentStudents.count ?? 0,
+          trendLabel: 'nuevos últ. 7 días',
+          trendSuffix: '',
           icon: 'users',
           color: 'default',
         },
@@ -159,6 +228,9 @@ export class DashboardFacade {
           id: 'classes',
           label: 'Clases Hoy',
           value: classesToday.count ?? 0,
+          trend: (classesToday.count ?? 0) - (classesYesterday.count ?? 0),
+          trendLabel: 'vs ayer',
+          trendSuffix: '',
           subValue: 'Programadas para hoy',
           icon: 'book-open',
           color: 'success',
@@ -169,8 +241,8 @@ export class DashboardFacade {
           value: revenue / 1000000,
           prefix: '$',
           suffix: 'M',
-          trend: 0,
-          trendLabel: 'acumulado mes',
+          trend: revenueTrend,
+          trendLabel: 'vs mes pasado',
           icon: 'credit-card',
           color: 'default',
         },
@@ -183,7 +255,7 @@ export class DashboardFacade {
           color: 'warning',
         },
       ],
-      activities: [], // Could be fetched from a dedicated 'audit_logs' or 'recent_activity' view
+      activities: (auditLogsResponse.data ?? []).map((log: any) => this.mapAuditLogToActivity(log)),
       alerts: [],
       quickActions: [
         {
@@ -216,5 +288,95 @@ export class DashboardFacade {
         { name: 'Realtime', ok: !!this._realtimeChannel },
       ],
     });
+  }
+
+  async fetchActivityHistory(limit: number = 50): Promise<any[]> {
+    const branchId = this.getActiveBranchId();
+    let query: any = this.supabase.client
+      .from('audit_log')
+      .select('id, action, entity, entity_id, detail, created_at, users(first_names, paternal_last_name)')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+      
+    if (branchId !== null) {
+      query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
+    }
+
+    const { data } = await query;
+
+    return (data ?? []).map((log: any) => this.mapAuditLogToActivity(log));
+  }
+
+  private mapAuditLogToActivity(log: any): any {
+    const entityNames: Record<string, string> = {
+      enrollments: 'Matrícula',
+      payments: 'Pago',
+      users: 'Usuario',
+      students: 'Alumno',
+      class_b_sessions: 'Clase Práctica',
+      vehicles: 'Vehículo',
+      professional_pre_registrations: 'Preinscripción',
+      standalone_course_enrollments: 'Curso Singular',
+      special_service_sales: 'Servicio Especial'
+    };
+    const entityLabel = entityNames[log.entity] || 'Registro';
+    const userName = log.users ? `${log.users.first_names} ${log.users.paternal_last_name}` : 'Sistema / Online';
+
+    let title = `${entityLabel} actualizado`;
+    let desc = log.detail || '';
+    let icon = 'activity';
+    let iconBg = 'var(--color-surface-hover)';
+    let iconColor = 'var(--text-secondary)';
+
+    // Determinar artículo según terminación
+    const isFeminine = entityLabel.endsWith('a') || entityLabel.endsWith('ón');
+    const artO = isFeminine ? 'a' : 'o';
+
+    if (log.action === 'INSERT') {
+      title = `Nuev${artO} ${entityLabel.toLowerCase()}`;
+      desc = `Registrad${artO} por ${userName}`;
+      icon = 'plus';
+      iconBg = 'var(--color-success-muted)';
+      iconColor = 'var(--color-success)';
+      
+      if (log.entity === 'enrollments') icon = 'user-plus';
+      if (log.entity === 'payments') icon = 'dollar-sign';
+
+    } else if (log.action === 'UPDATE') {
+      title = `${entityLabel} actualizad${artO}`;
+      icon = 'edit-2';
+      iconBg = 'var(--color-primary-muted)';
+      iconColor = 'var(--color-primary)';
+      // Limpiar prefix redundante [Entidad]
+      desc = desc.replace(/^\[.*?\]\s*/, '');
+      desc = `${userName} modificó: ${desc}`;
+
+    } else if (log.action === 'DELETE') {
+      title = `${entityLabel} eliminad${artO}`;
+      desc = `Eliminad${artO} por ${userName}`;
+      icon = 'trash-2';
+      iconBg = 'var(--color-error-muted)';
+      iconColor = 'var(--color-error)';
+    }
+
+    const logTime = new Date(log.created_at);
+    // Para historial completo, mostrar fecha si no es de hoy
+    const isToday = new Date().toDateString() === logTime.toDateString();
+    const timeStr = isToday 
+      ? logTime.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+      : logTime.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+    return {
+      id: log.id.toString(),
+      title,
+      description: desc,
+      time: timeStr,
+      icon,
+      iconBg,
+      iconColor,
+      entity: log.entity,
+      entityId: log.entity_id,
+      action: log.action,
+    };
   }
 }

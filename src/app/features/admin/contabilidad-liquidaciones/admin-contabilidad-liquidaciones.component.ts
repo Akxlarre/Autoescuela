@@ -11,22 +11,20 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [LiquidacionesContentComponent],
   template: `
-    <div class="page-wide">
-      <app-liquidaciones-content
-        [liquidaciones]="facade.liquidaciones()"
-        [isLoading]="facade.isLoading()"
-        [isExporting]="facade.isExporting()"
-        [kpis]="facade.kpis()"
-        [mesActual]="facade.mesActual()"
-        [anioActual]="facade.anioActual()"
-        [isDrawerOpen]="layoutDrawer.isOpen()"
-        (mesAnterior)="facade.mesAnterior()"
-        (mesSiguiente)="facade.mesSiguiente()"
-        (deshacer)="facade.deshacerPago($event)"
-        (pagar)="onPagar($event)"
-        (exportRequested)="facade.exportar($event)"
-      />
-    </div>
+    <app-liquidaciones-content
+      [liquidaciones]="facade.liquidaciones()"
+      [isLoading]="facade.isLoading()"
+      [isExporting]="facade.isExporting()"
+      [kpis]="facade.kpis()"
+      [mesActual]="facade.mesActual()"
+      [anioActual]="facade.anioActual()"
+      [isDrawerOpen]="layoutDrawer.isOpen()"
+      (mesAnterior)="facade.mesAnterior()"
+      (mesSiguiente)="facade.mesSiguiente()"
+      (deshacer)="facade.deshacerPago($event)"
+      (pagar)="onPagar($event)"
+      (exportRequested)="facade.exportar($event)"
+    />
   `,
 })
 export class AdminContabilidadLiquidacionesComponent {

@@ -22,6 +22,7 @@ export interface KpiModel {
     value: number;
     trend?: number;
     trendLabel?: string;
+    trendSuffix?: string;
     icon: string;
     color?: 'default' | 'success' | 'warning' | 'error';
     subValue?: string;

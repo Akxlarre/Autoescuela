@@ -12,20 +12,18 @@ import { ServiciosEspecialesContentComponent } from '@shared/components/servicio
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ServiciosEspecialesContentComponent],
   template: `
-    <div class="p-6">
-      <app-servicios-especiales-content
-        [catalogo]="facade.catalogo()"
-        [ventas]="facade.ventas()"
-        [kpis]="facade.kpis()"
-        [isLoading]="facade.isLoading()"
-        [isExporting]="facade.isExporting()"
-        backRoute="/app/secretaria/dashboard"
-        (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
-        (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
-        (cobroRegistrado)="facade.registrarCobro($event)"
-        (exportarHistorial)="onExportar($event)"
-      />
-    </div>
+    <app-servicios-especiales-content
+      [catalogo]="facade.catalogo()"
+      [ventas]="facade.ventas()"
+      [kpis]="facade.kpis()"
+      [isLoading]="facade.isLoading()"
+      [isExporting]="facade.isExporting()"
+      backRoute="/app/secretaria/dashboard"
+      (requestRegistrarVenta)="facade.openRegistrarVentaDrawer($event)"
+      (requestNuevoServicio)="facade.openAgregarServicioDrawer()"
+      (cobroRegistrado)="facade.registrarCobro($event)"
+      (exportarHistorial)="onExportar($event)"
+    />
   `,
 })
 export class SecretariaServiciosEspecialesComponent implements OnInit {

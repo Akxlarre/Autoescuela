@@ -337,7 +337,6 @@ import {
           label="Total Ingresos"
           icon="trending-up"
           color="success"
-          [accent]="true"
           prefix="$ "
           [subValue]="(kpis()?.operacionesIngresos ?? 0) + ' operaciones en período'"
           [loading]="isLoading()"
@@ -347,7 +346,6 @@ import {
           label="Total Gastos"
           icon="trending-down"
           color="error"
-          [accent]="true"
           prefix="$ "
           [subValue]="(kpis()?.operacionesGastos ?? 0) + ' egresos en período'"
           [loading]="isLoading()"
@@ -357,7 +355,6 @@ import {
           label="Total Neto"
           icon="coins"
           color="default"
-          [accent]="true"
           prefix="$ "
           subValue="Ingresos Totales – Gastos Totales"
           [loading]="isLoading()"
@@ -560,10 +557,7 @@ import {
       <!-- ── Evolución Mensual ───────────────────────────────────────────────── -->
       @if (!isLoading() && evolucionMensual().length) {
         <div class="card p-5">
-          <h2
-            class="font-semibold text-text-primary"
-            style="margin-bottom: var(--space-4)"
-          >
+          <h2 class="font-semibold text-text-primary" style="margin-bottom: var(--space-4)">
             Evolución Mensual
           </h2>
           <div class="overflow-x-auto w-full">
