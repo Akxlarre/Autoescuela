@@ -103,7 +103,7 @@ const BILLING_LABEL: Record<string, string> = {
     >
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        #heroRef
+        class="bento-hero"
         title="Cursos Singulares"
         contextLine="Contabilidad"
         subtitle="Cobro simplificado de cursos SENCE, Grúa, Retroexcavadora"
@@ -575,7 +575,6 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   });
 
   // ── GSAP refs ─────────────────────────────────────────────────────────────
-  private readonly heroRef = viewChild('heroRef', { read: ElementRef });
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
@@ -594,10 +593,7 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

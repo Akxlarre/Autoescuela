@@ -63,16 +63,15 @@ const POR_PAGINA = 5;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Gestión de Pagos"
-          subtitle="Registro y seguimiento financiero"
-          icon="wallet"
-          [actions]="heroActions"
-          [chips]="heroChips()"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Gestión de Pagos"
+        subtitle="Registro y seguimiento financiero"
+        icon="wallet"
+        [actions]="heroActions"
+        [chips]="heroChips()"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
       <div class="bento-square">
@@ -728,7 +727,6 @@ export class AdminPagosComponent implements AfterViewInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild('heroRef', { read: ElementRef });
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly heroActions: SectionHeroAction[] = [
@@ -861,10 +859,7 @@ export class AdminPagosComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

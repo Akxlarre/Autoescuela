@@ -43,14 +43,13 @@ type FilterTab = 'all' | 'active' | 'expiring';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Instructores"
-          subtitle="Gestión de instructores Clase B con licencias y vehículos"
-          [actions]="heroActions()"
-          (actionClick)="handleHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Instructores"
+        subtitle="Gestión de instructores Clase B con licencias y vehículos"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
+      />
 
       <!-- ── Table / Cards (Dual-Viewport) ─────────────────────────────────── -->
       <div
@@ -553,7 +552,6 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly listCard = viewChild<ElementRef<HTMLElement>>('listCard');
 
@@ -578,10 +576,7 @@ export class AdminInstructoresComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {}
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

@@ -34,16 +34,15 @@ import type {
   template: `
     <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mi horario">
       <!-- ── HERO ─────────────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          icon="calendar-days"
-          title="Mi Horario"
-          [contextLine]="heroContextLine()"
-          [chips]="heroChips()"
-          [actions]="[]"
-          [animateOnInit]="false"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        icon="calendar-days"
+        title="Mi Horario"
+        [contextLine]="heroContextLine()"
+        [chips]="heroChips()"
+        [actions]="[]"
+        [animateOnInit]="false"
+      />
 
       <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
       @if (context.enrollments().length > 1) {

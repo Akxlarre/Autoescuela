@@ -1,22 +1,9 @@
 import { TooltipModule } from 'primeng/tooltip';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-  AfterViewInit,
-  ElementRef,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
 
@@ -59,7 +46,6 @@ function formatCLP(value: number): string {
     SkeletonBlockComponent,
     SectionHeroComponent,
     KpiCardVariantComponent,
-    BentoGridLayoutDirective,
   ],
   styles: [
     `
@@ -264,12 +250,13 @@ function formatCLP(value: number): string {
   ],
   template: `
     <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
-    <div class="bento-banner relative overflow-visible" #heroRef>
+    <div class="bento-banner relative overflow-visible">
       <app-section-hero
         title="Liquidaciones de Instructores"
         subtitle="Nómina mensual y registro de pagos"
+        icon="banknote"
         [actions]="heroActions()"
-        class="block mb-6"
+        class="block mb-5"
         [class.force-compact]="isDrawerOpen()"
         (actionClick)="onHeroAction($event)"
       />
@@ -298,535 +285,490 @@ function formatCLP(value: number): string {
       }
     </div>
 
-    <!-- ── KPIs: 3 tarjetas uniformes (mismo patrón bento canónico) ── -->
-    <div class="bento-grid mb-5" appBentoGridLayout #bentoGrid>
-      <!-- KPI 1: Total Nómina -->
-      <div class="bento-square">
+    <!-- ── Contenido (padding consistente con reportes-contables-content) ── -->
+    <div class="px-4 sm:px-6 pb-6 flex flex-col gap-5">
+      <!-- ── KPIs: grid plano (3 tarjetas no dividen las columnas bento 4/8/12) ── -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- KPI 1: Total Nómina -->
         <app-kpi-card-variant
           [value]="kpis().totalNomina"
           label="Total Nómina"
           icon="banknote"
           color="default"
-          [accent]="true"
           prefix="$ "
           subValue="Suma bruta del periodo"
           [loading]="isLoading()"
         />
-      </div>
 
-      <!-- KPI 2: Anticipos -->
-      <div class="bento-square">
+        <!-- KPI 2: Anticipos -->
         <app-kpi-card-variant
           [value]="kpis().totalAnticipos"
           label="Anticipos a Descontar"
           icon="trending-down"
           color="error"
-          [accent]="true"
           [prefix]="kpis().totalAnticipos > 0 ? '-$ ' : '$ '"
           subValue="Total de adelantos entregados"
           [loading]="isLoading()"
         />
-      </div>
 
-      <!-- KPI 3: Estado Pagos — usa progressPercent integrado en kpi-card-variant -->
-      <div class="bento-square">
+        <!-- KPI 3: Estado Pagos — usa progressPercent integrado en kpi-card-variant -->
         <app-kpi-card-variant
           [value]="kpis().totalPagados"
           label="Progreso de Pagos"
           icon="check-circle"
           color="success"
-          [accent]="true"
           [suffix]="' / ' + kpis().totalInstructores"
           [subValue]="progresoPagos().toFixed(1) + '% de la nómina pagada'"
           [progressPercent]="progresoPagos()"
           [loading]="isLoading()"
         />
       </div>
-    </div>
 
-    <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
-    <div
-      class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 px-4 py-3 shadow-sm bg-surface"
-      style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
-    >
-      <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-        <!-- Navegación de mes -->
-        <div
-          class="flex items-center shrink-0 bg-elevated border border-border-muted overflow-hidden"
-          style="border-radius:8px"
-        >
-          <button
-            class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75 text-text-secondary"
-            style="border-right:1px solid var(--border-muted)"
-            (click)="mesAnterior.emit()"
-            aria-label="Mes anterior"
+      <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
+      <div
+        class="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 py-3 shadow-sm bg-surface"
+        style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
+      >
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+          <!-- Navegación de mes -->
+          <div
+            class="flex items-center shrink-0 bg-elevated border border-border-muted overflow-hidden"
+            style="border-radius:8px"
           >
-            <app-icon name="chevron-left" [size]="16" />
-          </button>
-          <span
-            class="text-sm font-semibold px-4 text-primary"
-            style="min-width: 140px; text-align: center"
-          >
-            {{ mesLabel() }}
-          </span>
-          <button
-            class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75 text-text-secondary"
-            style="border-left:1px solid var(--border-muted)"
-            (click)="mesSiguiente.emit()"
-            aria-label="Mes siguiente"
-          >
-            <app-icon name="chevron-right" [size]="16" />
-          </button>
-        </div>
-
-        <!-- Buscador -->
-        <div class="relative w-64">
-          <app-icon
-            name="search"
-            [size]="15"
-            class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
-          />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o RUT..."
-            class="w-full h-9 pl-8 pr-8 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
-            
-            [value]="query()"
-            (input)="query.set($any($event.target).value)"
-            data-llm-description="Search filter for instructor liquidations by name or RUT"
-            aria-label="Buscar instructor"
-          />
-          @if (query()) {
             <button
-              class="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-text-muted"
-              (click)="query.set('')"
-              aria-label="Limpiar búsqueda"
+              class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75 text-text-secondary"
+              style="border-right:1px solid var(--border-muted)"
+              (click)="mesAnterior.emit()"
+              aria-label="Mes anterior"
             >
-              <app-icon name="x" [size]="13" />
+              <app-icon name="chevron-left" [size]="16" />
             </button>
-          }
+            <span
+              class="text-sm font-semibold px-4 text-primary"
+              style="min-width: 140px; text-align: center"
+            >
+              {{ mesLabel() }}
+            </span>
+            <button
+              class="px-3 py-2 transition-colors cursor-pointer hover:opacity-75 text-text-secondary"
+              style="border-left:1px solid var(--border-muted)"
+              (click)="mesSiguiente.emit()"
+              aria-label="Mes siguiente"
+            >
+              <app-icon name="chevron-right" [size]="16" />
+            </button>
+          </div>
+
+          <!-- Buscador -->
+          <div class="relative w-64">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
+            />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o RUT..."
+              class="w-full h-9 pl-8 pr-8 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
+              [value]="query()"
+              (input)="query.set($any($event.target).value)"
+              data-llm-description="Search filter for instructor liquidations by name or RUT"
+              aria-label="Buscar instructor"
+            />
+            @if (query()) {
+              <button
+                class="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer text-text-muted"
+                (click)="query.set('')"
+                aria-label="Limpiar búsqueda"
+              >
+                <app-icon name="x" [size]="13" />
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Contadores de estado -->
+        <div class="flex items-center gap-4 justify-end shrink-0">
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-warning">
+            <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
+            {{ contadores().pendientes }} Pendientes
+          </span>
+          <span class="flex items-center gap-1.5 text-xs font-semibold text-brand">
+            <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
+            {{ contadores().pagados }} Pagados
+          </span>
         </div>
       </div>
 
-      <!-- Contadores de estado -->
-      <div class="flex items-center gap-4 justify-end shrink-0">
-        <span
-          class="flex items-center gap-1.5 text-xs font-semibold text-warning"
-          
-        >
-          <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
-          {{ contadores().pendientes }} Pendientes
-        </span>
-        <span class="flex items-center gap-1.5 text-xs font-semibold text-brand" >
-          <span style="width:8px;height:8px;border-radius:50%;background:currentColor"></span>
-          {{ contadores().pagados }} Pagados
-        </span>
-      </div>
-    </div>
-
-    <div
-      style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px); container-type:inline-size; container-name:liq-container"
-      class="shadow-sm bg-surface overflow-hidden"
-    >
-      <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
-      @if (!isDrawerOpen()) {
-        <div class="hidden md:block w-full">
-          <table
-            class="w-full liq-table"
-            [class.compact-mode]="isDrawerOpen()"
-            role="table"
-            aria-label="Tabla de liquidaciones de instructores"
-          >
-            <thead>
-              <tr class="bg-elevated">
-                <th class="text-left">Instructor</th>
-                <th class="text-right">Clases Impartidas</th>
-                <th class="text-right">Horas Equivalentes</th>
-                <th class="text-right">Base (Ganado)</th>
-                <th class="text-right">Anticipos (Descuento)</th>
-                <th class="text-right">Total a Pagar</th>
-                <th class="text-center" style="width:180px">Acciones</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              @if (isLoading()) {
-                @for (i of skeletonRows; track i) {
-                  <tr>
-                    <td>
-                      <div class="flex items-center gap-3">
-                        <app-skeleton-block variant="circle" width="38px" height="38px" />
-                        <div class="flex flex-col gap-1.5">
-                          <app-skeleton-block variant="text" width="130px" height="13px" />
-                          <app-skeleton-block variant="text" width="80px" height="11px" />
-                        </div>
-                      </div>
-                    </td>
-                    @for (j of [1, 2, 3, 4, 5, 6]; track j) {
-                      <td><app-skeleton-block variant="text" width="75%" height="13px" /></td>
-                    }
-                  </tr>
-                }
-              } @else if (filtradas().length === 0) {
-                <tr>
-                  <td colspan="7" class="py-12 text-center text-sm text-muted border-none" >
-                    @if (query()) {
-                      No se encontraron instructores para "{{ query() }}".
-                    } @else {
-                      No hay instructores registrados para este período.
-                    }
-                  </td>
+      <div
+        style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px); container-type:inline-size; container-name:liq-container"
+        class="shadow-sm bg-surface overflow-hidden"
+      >
+        <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
+        @if (!isDrawerOpen()) {
+          <div class="hidden md:block w-full">
+            <table
+              class="w-full liq-table"
+              [class.compact-mode]="isDrawerOpen()"
+              role="table"
+              aria-label="Tabla de liquidaciones de instructores"
+            >
+              <thead>
+                <tr class="bg-elevated">
+                  <th class="text-left">Instructor</th>
+                  <th class="text-right">Clases Impartidas</th>
+                  <th class="text-right">Horas Equivalentes</th>
+                  <th class="text-right">Base (Ganado)</th>
+                  <th class="text-right">Anticipos (Descuento)</th>
+                  <th class="text-right">Total a Pagar</th>
+                  <th class="text-center" style="width:180px">Acciones</th>
                 </tr>
-              } @else {
-                @for (row of filtradas(); track row.instructorId) {
+              </thead>
+
+              <tbody>
+                @if (isLoading()) {
+                  @for (i of skeletonRows; track i) {
+                    <tr>
+                      <td>
+                        <div class="flex items-center gap-3">
+                          <app-skeleton-block variant="circle" width="38px" height="38px" />
+                          <div class="flex flex-col gap-1.5">
+                            <app-skeleton-block variant="text" width="130px" height="13px" />
+                            <app-skeleton-block variant="text" width="80px" height="11px" />
+                          </div>
+                        </div>
+                      </td>
+                      @for (j of [1, 2, 3, 4, 5, 6]; track j) {
+                        <td><app-skeleton-block variant="text" width="75%" height="13px" /></td>
+                      }
+                    </tr>
+                  }
+                } @else if (filtradas().length === 0) {
                   <tr>
-                    <!-- Instructor -->
-                    <td>
-                      <div class="flex items-center gap-3">
-                        <div
-                          class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
-                          style="width:38px;height:38px;border-radius:50%;background:{{
-                            row.avatarColor
-                          }}"
-                          aria-hidden="true"
-                        >
-                          {{ row.initials }}
-                        </div>
-                        <div class="min-w-0">
-                          <p
-                            class="text-sm font-semibold text-primary leading-tight truncate max-w-30 lg:max-w-50"
-                          >
-                            {{ row.nombre }}
-                          </p>
-                          <p
-                            class="text-xs text-muted mt-0.5 truncate"
-                            [pTooltip]="row.rut"
-                            tooltipPosition="top"
-                          >
-                            {{ row.rut }}
-                          </p>
-                        </div>
-                      </div>
+                    <td colspan="7" class="py-12 text-center text-sm text-muted border-none">
+                      @if (query()) {
+                        No se encontraron instructores para "{{ query() }}".
+                      } @else {
+                        No hay instructores registrados para este período.
+                      }
                     </td>
+                  </tr>
+                } @else {
+                  @for (row of filtradas(); track row.instructorId) {
+                    <tr>
+                      <!-- Instructor -->
+                      <td>
+                        <div class="flex items-center gap-3">
+                          <div
+                            class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                            style="width:38px;height:38px;border-radius:50%;background:{{
+                              row.avatarColor
+                            }}"
+                            aria-hidden="true"
+                          >
+                            {{ row.initials }}
+                          </div>
+                          <div class="min-w-0">
+                            <p
+                              class="text-sm font-semibold text-primary leading-tight truncate max-w-30 lg:max-w-50"
+                            >
+                              {{ row.nombre }}
+                            </p>
+                            <p
+                              class="text-xs text-muted mt-0.5 truncate"
+                              [pTooltip]="row.rut"
+                              tooltipPosition="top"
+                            >
+                              {{ row.rut }}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
 
-                    <!-- Clases impartidas -->
+                      <!-- Clases impartidas -->
+                      <td class="text-right tabular-nums">
+                        <span class="text-sm font-semibold text-primary">{{
+                          row.practicalSessions
+                        }}</span>
+                        <span class="text-xs text-muted ml-1">{{
+                          row.practicalSessions === 1 ? 'clase' : 'clases'
+                        }}</span>
+                      </td>
+
+                      <!-- Horas equivalentes -->
+                      <td class="text-right tabular-nums">
+                        <span class="text-sm font-semibold text-brand">{{ row.totalHours }}</span>
+                        <span class="text-xs text-muted ml-1">hrs</span>
+                      </td>
+
+                      <!-- Base ganado -->
+                      <td class="text-right tabular-nums">
+                        <span class="text-sm font-semibold text-success">
+                          {{ formatCLP(row.totalBaseAmount) }}
+                        </span>
+                      </td>
+
+                      <!-- Anticipos -->
+                      <td class="text-right">
+                        @if (row.totalAdvances > 0) {
+                          <div class="flex flex-col items-end gap-1">
+                            <span class="anticipo-box">{{ formatCLP(row.totalAdvances) }}</span>
+                            <span class="text-xs font-medium tabular-nums text-error">
+                              - {{ formatCLP(row.totalAdvances) }}
+                            </span>
+                          </div>
+                        } @else {
+                          <span class="text-sm text-muted">—</span>
+                        }
+                      </td>
+
+                      <!-- Total a pagar -->
+                      <td class="text-right tabular-nums">
+                        <span class="text-sm font-bold text-primary">{{
+                          formatCLP(row.finalPaymentAmount)
+                        }}</span>
+                      </td>
+
+                      <!-- Acciones -->
+                      <td class="text-center">
+                        @if (row.status === 'paid') {
+                          <div class="flex items-center justify-center gap-2">
+                            <span class="btn-pagado">
+                              <app-icon
+                                name="check-circle"
+                                [size]="13"
+                                color="var(--state-success)"
+                              />
+                              Pagado
+                            </span>
+                            <button
+                              class="btn-deshacer shadow-sm"
+                              (click)="onDeshacer(row)"
+                              [attr.aria-label]="'Deshacer pago de ' + row.nombre"
+                              data-llm-action="deshacer-pago-instructor"
+                            >
+                              <app-icon name="rotate-ccw" [size]="11" />
+                              Deshacer
+                            </button>
+                          </div>
+                        } @else {
+                          <button
+                            class="btn-pagar shadow-sm"
+                            (click)="abrirModal(row)"
+                            [attr.aria-label]="'Registrar pago para ' + row.nombre"
+                            data-llm-action="pagar-instructor"
+                          >
+                            <app-icon name="banknote" [size]="13" />
+                            Pagar
+                          </button>
+                        }
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+
+              <!-- Fila de totales escritorio -->
+              @if (!isLoading() && filtradas().length > 0) {
+                <tfoot>
+                  <tr>
+                    <td class="text-xs font-bold text-secondary uppercase tracking-wide">
+                      TOTALES — {{ filtradas().length }}
+                      {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
+                    </td>
                     <td class="text-right tabular-nums">
-                      <span class="text-sm font-semibold text-primary">{{
-                        row.practicalSessions
-                      }}</span>
+                      <span class="text-sm font-bold text-primary">{{ totales().clases }}</span>
                       <span class="text-xs text-muted ml-1">{{
-                        row.practicalSessions === 1 ? 'clase' : 'clases'
+                        totales().clases === 1 ? 'clase' : 'clases'
                       }}</span>
                     </td>
-
-                    <!-- Horas equivalentes -->
                     <td class="text-right tabular-nums">
-                      <span class="text-sm font-semibold text-brand" >{{
-                        row.totalHours
-                      }}</span>
+                      <span class="text-sm font-bold text-brand">{{ totales().horas }}</span>
                       <span class="text-xs text-muted ml-1">hrs</span>
                     </td>
-
-                    <!-- Base ganado -->
                     <td class="text-right tabular-nums">
-                      <span class="text-sm font-semibold text-success" >
-                        {{ formatCLP(row.totalBaseAmount) }}
+                      <span class="text-sm font-bold text-success">
+                        {{ formatCLP(totales().base) }}
                       </span>
                     </td>
-
-                    <!-- Anticipos -->
                     <td class="text-right">
-                      @if (row.totalAdvances > 0) {
-                        <div class="flex flex-col items-end gap-1">
-                          <span class="anticipo-box">{{ formatCLP(row.totalAdvances) }}</span>
-                          <span
-                            class="text-xs font-medium tabular-nums text-error"
-                            
-                          >
-                            - {{ formatCLP(row.totalAdvances) }}
-                          </span>
-                        </div>
+                      @if (totales().anticipos > 0) {
+                        <span class="anticipo-box">{{ formatCLP(totales().anticipos) }}</span>
                       } @else {
                         <span class="text-sm text-muted">—</span>
                       }
                     </td>
-
-                    <!-- Total a pagar -->
                     <td class="text-right tabular-nums">
-                      <span class="text-sm font-bold text-primary">{{
-                        formatCLP(row.finalPaymentAmount)
+                      <span class="text-base font-bold text-brand">{{
+                        formatCLP(totales().total)
                       }}</span>
                     </td>
-
-                    <!-- Acciones -->
-                    <td class="text-center">
-                      @if (row.status === 'paid') {
-                        <div class="flex items-center justify-center gap-2">
-                          <span class="btn-pagado">
-                            <app-icon
-                              name="check-circle"
-                              [size]="13"
-                              color="var(--state-success)"
-                            />
-                            Pagado
-                          </span>
-                          <button
-                            class="btn-deshacer shadow-sm"
-                            (click)="onDeshacer(row)"
-                            [attr.aria-label]="'Deshacer pago de ' + row.nombre"
-                            data-llm-action="deshacer-pago-instructor"
-                          >
-                            <app-icon name="rotate-ccw" [size]="11" />
-                            Deshacer
-                          </button>
-                        </div>
-                      } @else {
-                        <button
-                          class="btn-pagar shadow-sm"
-                          (click)="abrirModal(row)"
-                          [attr.aria-label]="'Registrar pago para ' + row.nombre"
-                          data-llm-action="pagar-instructor"
-                        >
-                          <app-icon name="banknote" [size]="13" />
-                          Pagar
-                        </button>
-                      }
-                    </td>
+                    <td></td>
                   </tr>
-                }
+                </tfoot>
               }
-            </tbody>
-
-            <!-- Fila de totales escritorio -->
-            @if (!isLoading() && filtradas().length > 0) {
-              <tfoot>
-                <tr>
-                  <td class="text-xs font-bold text-secondary uppercase tracking-wide">
-                    TOTALES — {{ filtradas().length }}
-                    {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
-                  </td>
-                  <td class="text-right tabular-nums">
-                    <span class="text-sm font-bold text-primary">{{ totales().clases }}</span>
-                    <span class="text-xs text-muted ml-1">{{
-                      totales().clases === 1 ? 'clase' : 'clases'
-                    }}</span>
-                  </td>
-                  <td class="text-right tabular-nums">
-                    <span class="text-sm font-bold text-brand" >{{
-                      totales().horas
-                    }}</span>
-                    <span class="text-xs text-muted ml-1">hrs</span>
-                  </td>
-                  <td class="text-right tabular-nums">
-                    <span class="text-sm font-bold text-success" >
-                      {{ formatCLP(totales().base) }}
-                    </span>
-                  </td>
-                  <td class="text-right">
-                    @if (totales().anticipos > 0) {
-                      <span class="anticipo-box">{{ formatCLP(totales().anticipos) }}</span>
-                    } @else {
-                      <span class="text-sm text-muted">—</span>
-                    }
-                  </td>
-                  <td class="text-right tabular-nums">
-                    <span class="text-base font-bold text-brand" >{{
-                      formatCLP(totales().total)
-                    }}</span>
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
-            }
-          </table>
-        </div>
-      }
-
-      <!-- VISTA ADAPTATIVA (Móvil o Desktop con Drawer Abierto) -->
-      <div
-        [class.md:hidden]="!isDrawerOpen()"
-        class="flex flex-col gap-4 p-4 bg-elevated"
-        [class.adaptive-grid]="isDrawerOpen()"
-        
-      >
-        @if (isLoading()) {
-          @for (i of skeletonRows; track i) {
-            <div class="p-5 rounded-xl border border-border-muted bg-surface">
-              <div class="flex items-center gap-3 mb-4">
-                <app-skeleton-block variant="circle" width="38px" height="38px" />
-                <div class="flex flex-col gap-2 flex-1">
-                  <app-skeleton-block variant="text" width="60%" height="14px" />
-                  <app-skeleton-block variant="text" width="40%" height="12px" />
-                </div>
-              </div>
-              <app-skeleton-block variant="text" width="100%" height="40px" />
-            </div>
-          }
-        } @else if (filtradas().length === 0) {
-          <div class="py-10 text-center text-sm text-muted">
-            @if (query()) {
-              No se encontraron instructores para "{{ query() }}".
-            } @else {
-              No hay instructores registrados para este período.
-            }
-          </div>
-        } @else {
-          @for (row of filtradas(); track row.instructorId) {
-            <div class="card-mobile-liq shadow-sm">
-              <!-- Header Card (Instructor info) -->
-              <div class="flex justify-between items-start mb-4">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
-                    style="width:42px;height:42px;border-radius:50%;background:{{
-                      row.avatarColor
-                    }}"
-                    aria-hidden="true"
-                  >
-                    {{ row.initials }}
-                  </div>
-                  <div>
-                    <h3 class="text-[15px] font-bold text-primary leading-tight">
-                      {{ row.nombre }}
-                    </h3>
-                    <p class="text-[12px] text-muted mt-0.5">{{ row.rut }}</p>
-                  </div>
-                </div>
-
-                @if (row.status === 'paid') {
-                  <span
-                    class="badge-liq text-success bg-success/12"
-                    
-                  >
-                    <app-icon name="check-circle" [size]="12" /> Pagado
-                  </span>
-                } @else {
-                  <span
-                    class="badge-liq text-warning bg-warning/12"
-                    
-                  >
-                    Pendiente
-                  </span>
-                }
-              </div>
-
-              <!-- Content Card (Metrics) -->
-              <div
-                class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated"
-                
-              >
-                <div class="flex flex-col gap-1">
-                  <span class="text-[10px] uppercase font-bold text-muted">Base (Ganado)</span>
-                  <span class="text-[13px] font-bold text-success" >
-                    {{ formatCLP(row.totalBaseAmount) }}
-                  </span>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <span class="text-[10px] uppercase font-bold text-muted">Horas Equivalentes</span>
-                  <div class="text-[13px] font-bold tabular-nums text-brand" >
-                    {{ row.totalHours }}
-                    <span class="font-normal text-muted">hrs</span>
-                    <span class="text-[11px] font-normal text-muted ml-1"
-                      >({{ row.practicalSessions }}
-                      {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
-                    >
-                  </div>
-                </div>
-                <div
-                  class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1 border-border-muted"
-                  
-                >
-                  <div class="flex justify-between items-center w-full">
-                    <span class="text-[10px] uppercase font-bold text-muted"
-                      >Anticipos Emitidos</span
-                    >
-                    <span
-                      class="text-[13px] font-bold tabular-nums text-error"
-                      
-                    >
-                      {{ row.totalAdvances > 0 ? '-' + formatCLP(row.totalAdvances) : '—' }}
-                    </span>
-                  </div>
-                </div>
-                <div
-                  class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted"
-                  
-                >
-                  <div class="flex justify-between items-center w-full">
-                    <span class="text-[11px] uppercase font-black text-primary">A Pagar</span>
-                    <span
-                      class="text-[18px] font-black tracking-tight text-brand"
-                      
-                    >
-                      {{ formatCLP(row.finalPaymentAmount) }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Actions Card -->
-              <div class="flex flex-col sm:flex-row justify-end gap-2 mt-2">
-                @if (row.status === 'paid') {
-                  <button
-                    class="btn-deshacer w-full sm:w-auto justify-center py-2.5 shadow-sm"
-                    (click)="onDeshacer(row)"
-                  >
-                    <app-icon name="rotate-ccw" [size]="14" />
-                    Deshacer Pago
-                  </button>
-                } @else {
-                  <button
-                    class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-[14px] shadow-sm"
-                    (click)="abrirModal(row)"
-                  >
-                    <app-icon name="banknote" [size]="15" />
-                    Registrar Pago
-                  </button>
-                }
-              </div>
-            </div>
-          }
-
-          <!-- Mobile Totals Summary -->
-          <div
-            class="mt-4 p-4 rounded-xl border-2 border-brand/30 bg-brand/5"
-            
-          >
-            <h4 class="text-[11px] uppercase font-black tracking-widest text-primary mb-3">
-              Resumen de Totales
-            </h4>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs text-muted font-medium">Bases Registradas</span>
-              <span class="text-sm font-bold tabular-nums text-success" >{{
-                formatCLP(totales().base)
-              }}</span>
-            </div>
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs text-muted font-medium">Anticipos a Descontar</span>
-              <span class="text-sm font-bold tabular-nums text-error" 
-                >- {{ formatCLP(totales().anticipos) }}</span
-              >
-            </div>
-            <div
-              class="flex justify-between items-center pt-2 mt-2 border-t border-brand/20"
-              
-            >
-              <span class="text-xs font-black uppercase text-primary">Total Final</span>
-              <span
-                class="text-[18px] font-black tabular-nums tracking-tight text-brand"
-                
-                >{{ formatCLP(totales().total) }}</span
-              >
-            </div>
+            </table>
           </div>
         }
-      </div>
-    </div>
 
-    <!-- El modal ha sido migrado a LayoutDrawer -->
+        <!-- VISTA ADAPTATIVA (Móvil o Desktop con Drawer Abierto) -->
+        <div
+          [class.md:hidden]="!isDrawerOpen()"
+          class="flex flex-col gap-4 p-4 bg-elevated"
+          [class.adaptive-grid]="isDrawerOpen()"
+        >
+          @if (isLoading()) {
+            @for (i of skeletonRows; track i) {
+              <div class="p-5 rounded-xl border border-border-muted bg-surface">
+                <div class="flex items-center gap-3 mb-4">
+                  <app-skeleton-block variant="circle" width="38px" height="38px" />
+                  <div class="flex flex-col gap-2 flex-1">
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="40%" height="12px" />
+                  </div>
+                </div>
+                <app-skeleton-block variant="text" width="100%" height="40px" />
+              </div>
+            }
+          } @else if (filtradas().length === 0) {
+            <div class="py-10 text-center text-sm text-muted">
+              @if (query()) {
+                No se encontraron instructores para "{{ query() }}".
+              } @else {
+                No hay instructores registrados para este período.
+              }
+            </div>
+          } @else {
+            @for (row of filtradas(); track row.instructorId) {
+              <div class="card-mobile-liq shadow-sm">
+                <!-- Header Card (Instructor info) -->
+                <div class="flex justify-between items-start mb-4">
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm"
+                      style="width:42px;height:42px;border-radius:50%;background:{{
+                        row.avatarColor
+                      }}"
+                      aria-hidden="true"
+                    >
+                      {{ row.initials }}
+                    </div>
+                    <div>
+                      <h3 class="text-[15px] font-bold text-primary leading-tight">
+                        {{ row.nombre }}
+                      </h3>
+                      <p class="text-[12px] text-muted mt-0.5">{{ row.rut }}</p>
+                    </div>
+                  </div>
+
+                  @if (row.status === 'paid') {
+                    <span class="badge-liq text-success bg-success/12">
+                      <app-icon name="check-circle" [size]="12" /> Pagado
+                    </span>
+                  } @else {
+                    <span class="badge-liq text-warning bg-warning/12"> Pendiente </span>
+                  }
+                </div>
+
+                <!-- Content Card (Metrics) -->
+                <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[10px] uppercase font-bold text-muted">Base (Ganado)</span>
+                    <span class="text-[13px] font-bold text-success">
+                      {{ formatCLP(row.totalBaseAmount) }}
+                    </span>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[10px] uppercase font-bold text-muted"
+                      >Horas Equivalentes</span
+                    >
+                    <div class="text-[13px] font-bold tabular-nums text-brand">
+                      {{ row.totalHours }}
+                      <span class="font-normal text-muted">hrs</span>
+                      <span class="text-[11px] font-normal text-muted ml-1"
+                        >({{ row.practicalSessions }}
+                        {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1 border-border-muted"
+                  >
+                    <div class="flex justify-between items-center w-full">
+                      <span class="text-[10px] uppercase font-bold text-muted"
+                        >Anticipos Emitidos</span
+                      >
+                      <span class="text-[13px] font-bold tabular-nums text-error">
+                        {{ row.totalAdvances > 0 ? '-' + formatCLP(row.totalAdvances) : '—' }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted">
+                    <div class="flex justify-between items-center w-full">
+                      <span class="text-[11px] uppercase font-black text-primary">A Pagar</span>
+                      <span class="text-[18px] font-black tracking-tight text-brand">
+                        {{ formatCLP(row.finalPaymentAmount) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions Card -->
+                <div class="flex flex-col sm:flex-row justify-end gap-2 mt-2">
+                  @if (row.status === 'paid') {
+                    <button
+                      class="btn-deshacer w-full sm:w-auto justify-center py-2.5 shadow-sm"
+                      (click)="onDeshacer(row)"
+                    >
+                      <app-icon name="rotate-ccw" [size]="14" />
+                      Deshacer Pago
+                    </button>
+                  } @else {
+                    <button
+                      class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-[14px] shadow-sm"
+                      (click)="abrirModal(row)"
+                    >
+                      <app-icon name="banknote" [size]="15" />
+                      Registrar Pago
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Mobile Totals Summary -->
+            <div class="mt-4 p-4 rounded-xl border-2 border-brand/30 bg-brand/5">
+              <h4 class="text-[11px] uppercase font-black tracking-widest text-primary mb-3">
+                Resumen de Totales
+              </h4>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs text-muted font-medium">Bases Registradas</span>
+                <span class="text-sm font-bold tabular-nums text-success">{{
+                  formatCLP(totales().base)
+                }}</span>
+              </div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs text-muted font-medium">Anticipos a Descontar</span>
+                <span class="text-sm font-bold tabular-nums text-error"
+                  >- {{ formatCLP(totales().anticipos) }}</span
+                >
+              </div>
+              <div class="flex justify-between items-center pt-2 mt-2 border-t border-brand/20">
+                <span class="text-xs font-black uppercase text-primary">Total Final</span>
+                <span class="text-[18px] font-black tabular-nums tracking-tight text-brand">{{
+                  formatCLP(totales().total)
+                }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- El modal ha sido migrado a LayoutDrawer -->
+    </div>
   `,
 })
-export class LiquidacionesContentComponent implements AfterViewInit {
+export class LiquidacionesContentComponent {
   // ── Inputs ──────────────────────────────────────────────────────────────────
   liquidaciones = input.required<LiquidacionRow[]>();
   kpis = input.required<LiquidacionesKpis>();
@@ -848,10 +790,6 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   // ── Estado UI interno ───────────────────────────────────────────────────────
   protected readonly query = signal('');
   protected readonly exportMenuOpen = signal(false);
-  private readonly gsap = inject(GsapAnimationsService);
-
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
-  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
@@ -928,13 +866,5 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   protected requestExport(format: 'excel' | 'pdf'): void {
     this.exportMenuOpen.set(false);
     this.exportRequested.emit(format);
-  }
-
-  ngAfterViewInit(): void {
-    const hero = this.heroRef();
-    const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

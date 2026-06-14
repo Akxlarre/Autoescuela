@@ -24,17 +24,15 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- HERO -->
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Notificaciones"
-          subtitle="Centro de alertas y mensajes importantes"
-          backRoute="/app/instructor/dashboard"
-          backLabel="Dashboard"
-          [actions]="heroActions"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Notificaciones"
+        subtitle="Centro de alertas y mensajes importantes"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="heroActions"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <div class="bento-banner">
         <div class="card p-0 overflow-hidden divide-y divide-border-subtle">
@@ -79,20 +77,14 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                     {{ notif.message }}
                   </p>
                   @if (notif.actionLabel) {
-                    <button
-                      class="text-sm font-medium hover:underline text-brand"
-                      
-                    >
+                    <button class="text-sm font-medium hover:underline text-brand">
                       {{ notif.actionLabel }}
                     </button>
                   }
                 </div>
 
                 @if (notif.unread) {
-                  <div
-                    class="w-2.5 h-2.5 rounded-full shrink-0 mt-2 bg-brand"
-                    
-                  ></div>
+                  <div class="w-2.5 h-2.5 rounded-full shrink-0 mt-2 bg-brand"></div>
                 }
               </div>
             }
@@ -106,7 +98,7 @@ export class InstructorNotificacionesComponent implements OnInit, AfterViewInit 
   private gsap = inject(GsapAnimationsService);
   private notificationsFacade = inject(NotificationsFacade);
   private destroyRef = inject(DestroyRef);
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
+  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly heroActions: SectionHeroAction[] = [
     { id: 'mark-all-read', label: 'Marcar todas como leídas', icon: 'check-check', primary: true },
@@ -130,8 +122,8 @@ export class InstructorNotificacionesComponent implements OnInit, AfterViewInit 
   }
 
   ngAfterViewInit() {
-    const hero = this.heroRef();
-    if (hero) this.gsap.animateHero(hero.nativeElement);
+    const grid = this.bentoGrid();
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   onHeroAction(id: string) {

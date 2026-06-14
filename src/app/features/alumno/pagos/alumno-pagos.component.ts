@@ -45,16 +45,15 @@ function toCompact(amount: number): { value: number; suffix: string } {
   template: `
     <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
-      <div class="bento-banner">
-        <app-section-hero
-          title="Pagos y Clases"
-          [subtitle]="heroSubtitle()"
-          [contextLine]="heroContextLine()"
-          icon="wallet"
-          [actions]="heroActions()"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Pagos y Clases"
+        [subtitle]="heroSubtitle()"
+        [contextLine]="heroContextLine()"
+        icon="wallet"
+        [actions]="heroActions()"
+        (actionClick)="onHeroAction($event)"
+      />
 
       @if (facade.error()) {
         <div class="flex items-start gap-3 p-4 rounded-lg bg-error-subtle" role="alert">

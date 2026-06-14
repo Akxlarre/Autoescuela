@@ -39,16 +39,15 @@ type TabId = 'practice' | 'theory';
   template: `
     <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mis clases">
       <!-- ── HERO ────────────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          icon="clipboard-list"
-          title="Mis Clases"
-          [contextLine]="heroContextLine()"
-          [chips]="heroChips()"
-          [actions]="[]"
-          [animateOnInit]="false"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        icon="clipboard-list"
+        title="Mis Clases"
+        [contextLine]="heroContextLine()"
+        [chips]="heroChips()"
+        [actions]="[]"
+        [animateOnInit]="false"
+      />
 
       <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
       @if (context.enrollments().length > 1) {

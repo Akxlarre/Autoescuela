@@ -136,6 +136,7 @@ export class KpiCardVariantComponent {
   readonly prefix = input<string>('');
   readonly trend = input<number | undefined>(undefined);
   readonly trendLabel = input<string>('');
+  readonly trendSuffix = input<string>('%');
   readonly subValue = input<string>('');
   readonly accent = input<boolean>(false);
   readonly icon = input<string | undefined>(undefined);
@@ -197,7 +198,7 @@ export class KpiCardVariantComponent {
     const t = this.trend() ?? 0;
     const sign = t >= 0 ? '+' : '';
     const abs = Math.abs(t);
-    return `${sign}${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}%`;
+    return `${sign}${abs % 1 === 0 ? abs.toFixed(0) : abs.toFixed(1)}${this.trendSuffix()}`;
   });
 
   private readonly valueEl = viewChild<ElementRef<HTMLElement>>('valueEl');

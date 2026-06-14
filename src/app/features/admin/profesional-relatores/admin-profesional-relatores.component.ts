@@ -43,15 +43,13 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Gestión de Relatores"
-          subtitle="Administración de instructores teóricos para cursos profesionales"
-          [actions]="heroActions()"
-          (actionClick)="handleHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Gestión de Relatores"
+        subtitle="Administración de instructores teóricos para cursos profesionales"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
+      />
 
       <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
       <div class="bento-square">
@@ -175,7 +173,6 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                 </p>
                 <button
                   class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-brand bg-brand/8"
-                  
                   (click)="limpiarFiltros()"
                   data-llm-action="limpiar-filtros-relatores"
                 >
@@ -370,7 +367,6 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild('heroRef', { read: ElementRef });
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   ngOnInit(): void {
@@ -383,10 +379,7 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

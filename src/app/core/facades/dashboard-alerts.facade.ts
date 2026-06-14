@@ -25,6 +25,8 @@ export class DashboardAlertsFacade {
   // ── SWR State ────────────────────────────────────────────────────────────
   private _initialized = false;
   private _lastBranchId: number | null | undefined = undefined;
+  private readonly SNOOZE_KEY = 'ds_snoozed_alerts';
+  private readonly SNOOZE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
   // ── 1. ESTADO PRIVADO ──────────────────────────────────────────────────────
   private _activeAlerts = signal<AlertModel[]>([]);
@@ -88,10 +90,51 @@ export class DashboardAlertsFacade {
         this.checkExpiredDocuments(branchId),
         this.checkPendingPayments(branchId),
       ]);
-      this._activeAlerts.set(alerts.flat());
+      const allAlerts = alerts.flat();
+      this._activeAlerts.set(this.filterSnoozedAlerts(allAlerts));
     } catch (err) {
       console.error('[DashboardAlertsFacade] fetchAlertsData error:', err);
       throw err;
+    }
+  }
+
+  dismissAlert(alertId: string): void {
+    const snoozedStr = localStorage.getItem(this.SNOOZE_KEY);
+    const snoozed = snoozedStr ? JSON.parse(snoozedStr) : {};
+    
+    // Add or update the snooze timestamp
+    snoozed[alertId] = Date.now();
+    localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozed));
+    
+    // Remove it immediately from the current signal
+    this._activeAlerts.update(alerts => alerts.filter(a => a.id !== alertId));
+  }
+
+  private filterSnoozedAlerts(alerts: AlertModel[]): AlertModel[] {
+    const snoozedStr = localStorage.getItem(this.SNOOZE_KEY);
+    if (!snoozedStr) return alerts;
+
+    try {
+      const snoozed = JSON.parse(snoozedStr) as Record<string, number>;
+      const now = Date.now();
+      let modified = false;
+
+      // Clean up expired snoozes to avoid localStorage bloat
+      for (const [id, timestamp] of Object.entries(snoozed)) {
+        if (now - timestamp > this.SNOOZE_DURATION_MS) {
+          delete snoozed[id];
+          modified = true;
+        }
+      }
+      
+      if (modified) {
+        localStorage.setItem(this.SNOOZE_KEY, JSON.stringify(snoozed));
+      }
+
+      // Filter out valid snoozed alerts
+      return alerts.filter(a => !snoozed[a.id]);
+    } catch {
+      return alerts;
     }
   }
 

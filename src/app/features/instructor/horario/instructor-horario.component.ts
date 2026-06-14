@@ -34,17 +34,15 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
-      <div class="bento-banner">
-        <app-section-hero
-          #heroRef
-          title="Mi Horario"
-          [subtitle]="weekLabel()"
-          backRoute="/app/instructor/dashboard"
-          backLabel="Dashboard"
-          [actions]="heroActions"
-          [chips]="heroChips()"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Mi Horario"
+        [subtitle]="weekLabel()"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="heroActions"
+        [chips]="heroChips()"
+      />
 
       <!-- KPIs -->
       <div class="bento-square">
@@ -118,7 +116,6 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
   private gsap = inject(GsapAnimationsService);
   private router = inject(Router);
 
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   private currentWeekDate: string = new Date().toISOString();
@@ -208,8 +205,6 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit() {
     requestAnimationFrame(() => {
-      const hero = this.heroRef();
-      if (hero) this.gsap.animateHero(hero.nativeElement);
       const grid = this.bentoGrid();
       if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
     });

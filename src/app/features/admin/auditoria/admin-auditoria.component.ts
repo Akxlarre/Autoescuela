@@ -46,14 +46,13 @@ const ACTION_OPTIONS = [
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Log de Auditoría"
-          subtitle="Registro inmutable de todas las acciones de las secretarias"
-          contextLine="Solo acciones de secretarias"
-          [actions]="[]"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Log de Auditoría"
+        subtitle="Registro inmutable de todas las acciones de las secretarias"
+        contextLine="Solo acciones de secretarias"
+        [actions]="[]"
+      />
 
       <!-- ── Filtros ──────────────────────────────────────────────────────── -->
       <div class="bento-banner card p-5">
@@ -483,7 +482,6 @@ export class AdminAuditoriaComponent implements AfterViewInit {
   private readonly branchFacade = inject(BranchFacade);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   constructor() {
@@ -542,10 +540,7 @@ export class AdminAuditoriaComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

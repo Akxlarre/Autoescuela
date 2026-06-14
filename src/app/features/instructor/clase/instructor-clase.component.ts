@@ -27,15 +27,14 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
-      <div class="bento-banner">
-        <app-section-hero
-          title="Iniciar Clase"
-          subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
-          backRoute="/app/instructor/dashboard"
-          backLabel="Dashboard"
-          [actions]="heroActions"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Iniciar Clase"
+        subtitle="Verifica la sesión y registra el kilometraje inicial del vehículo"
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="heroActions"
+      />
 
       <div class="bento-banner">
         <div class="max-w-3xl mx-auto flex flex-col gap-6">
@@ -212,9 +211,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
               <div
                 class="card p-10 flex flex-col justify-center items-center text-center border-dashed"
               >
-                <div
-                  class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center mb-4"
-                >
+                <div class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center mb-4">
                   <app-icon name="lock" [size]="28" class="text-text-muted opacity-60" />
                 </div>
                 <h3 class="text-xl font-display font-bold text-text-primary mb-2">

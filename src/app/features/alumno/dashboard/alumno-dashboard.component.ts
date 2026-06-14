@@ -42,17 +42,16 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
   template: `
     <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mi progreso">
       <!-- ── HERO ──────────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          icon="graduation-cap"
-          [title]="heroTitle()"
-          [contextLine]="heroContextLine()"
-          [chips]="heroChips()"
-          [actions]="heroActions()"
-          [animateOnInit]="false"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        icon="graduation-cap"
+        [title]="heroTitle()"
+        [contextLine]="heroContextLine()"
+        [chips]="heroChips()"
+        [actions]="heroActions()"
+        [animateOnInit]="false"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ── Selector de matrícula (solo con >1 enrollment) ───────────────── -->
       @if (context.enrollments().length > 1) {

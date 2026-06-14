@@ -40,13 +40,12 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Archivo · Clase Profesional"
-          subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
-          [actions]="[]"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Archivo · Clase Profesional"
+        subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
+        [actions]="[]"
+      />
 
       <!-- ═══ Selectores en cascada ═══ -->
       <section class="bento-banner grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -99,7 +98,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             <span class="text-sm font-semibold text-primary">{{ promo.name }}</span>
             <span
               class="ml-2 text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
-              
             >
               {{ promo.code }}
             </span>
@@ -218,17 +216,11 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             </div>
             <div class="flex items-center gap-3 text-xs text-secondary">
               <span class="flex items-center gap-1.5">
-                <span
-                  class="h-2.5 w-2.5 rounded-full bg-success"
-                  
-                ></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-success"></span>
                 Aprobado (≥75)
               </span>
               <span class="flex items-center gap-1.5">
-                <span
-                  class="h-2.5 w-2.5 rounded-full bg-error"
-                  
-                ></span>
+                <span class="h-2.5 w-2.5 rounded-full bg-error"></span>
                 Reprobado (&lt;75)
               </span>
             </div>
@@ -573,7 +565,6 @@ export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, 
   private readonly branchFacade = inject(BranchFacade);
   private readonly gsap = inject(GsapAnimationsService);
 
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   protected readonly skeletonRows = Array.from({ length: 5 });
@@ -594,10 +585,7 @@ export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, 
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

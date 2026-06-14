@@ -42,14 +42,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
-      <div class="bento-banner" #heroRef>
-        <app-section-hero
-          title="Libro de Clases"
-          subtitle="Libro de control de clases — Clase Profesional"
-          [actions]="heroActions()"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        title="Libro de Clases"
+        subtitle="Libro de control de clases — Clase Profesional"
+        [actions]="heroActions()"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ═══ Filtros ═══ -->
       <div class="bento-banner card p-4">
@@ -113,7 +112,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
       <!-- ═══ Error ═══ -->
       @if (facade.error(); as err) {
-        <div class="bento-banner card p-4 text-center text-error" >
+        <div class="bento-banner card p-4 text-center text-error">
           <p>{{ err }}</p>
         </div>
       }
@@ -748,10 +747,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     }
 
     .section-toggle:hover {
-      background: var(
-        --bg-subtle,
-        color-mix(in srgb, var(--bg-surface) 92%, var(--text-primary))
-      );
+      background: var(--bg-subtle, color-mix(in srgb, var(--bg-surface) 92%, var(--text-primary)));
     }
 
     /* Metadato de conteo junto al título colapsado */
@@ -769,7 +765,6 @@ export class AdminLibroDeClasesComponent implements OnInit, AfterViewInit, OnDes
   private readonly gsap = inject(GsapAnimationsService);
 
   @ViewChild('bentoGrid') private readonly bentoGrid!: ElementRef<HTMLElement>;
-  @ViewChild('heroRef') private readonly heroRef!: ElementRef<HTMLElement>;
 
   readonly MODULE_COUNT = MODULE_COUNT;
 
@@ -866,7 +861,6 @@ export class AdminLibroDeClasesComponent implements OnInit, AfterViewInit, OnDes
   }
 
   ngAfterViewInit(): void {
-    if (this.heroRef) this.gsap.animateHero(this.heroRef.nativeElement);
     this.gsap.animateBentoGrid(this.bentoGrid.nativeElement);
   }
 

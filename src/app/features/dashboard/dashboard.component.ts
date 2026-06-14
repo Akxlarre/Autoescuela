@@ -25,9 +25,10 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
+import { RecentActivityDrawerComponent } from './recent-activity-drawer/recent-activity-drawer.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -74,6 +75,7 @@ import { Router } from '@angular/router';
     KpiCardVariantComponent,
     AlertCardComponent,
     SectionHeroComponent,
+    RouterLink,
   ],
   template: `
     <!-- ═══════════════════════════════════════════════════════════════
@@ -121,6 +123,7 @@ import { Router } from '@angular/router';
               [prefix]="kpi.prefix ?? ''"
               [trend]="kpi.trend"
               [trendLabel]="kpi.trendLabel ?? ''"
+              [trendSuffix]="kpi.trendSuffix ?? '%'"
               [subValue]="kpi.subValue ?? ''"
               [accent]="kpi.accent ?? false"
               [icon]="kpi.icon"
@@ -150,7 +153,7 @@ import { Router } from '@angular/router';
           </div>
           <button
             class="text-xs font-medium cursor-pointer border-none bg-transparent p-0 text-brand"
-            
+            (click)="openRecentActivity()"
             data-llm-action="view-all-activity"
           >
             Ver todo
@@ -158,35 +161,52 @@ import { Router } from '@angular/router';
         </div>
 
         <!-- Lista de actividad con stagger -->
-        <ul #activityList class="m-0 p-0 list-none flex flex-col gap-1">
-          @for (item of activities(); track item.id) {
-            <li class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle">
-              <!-- Ícono del evento -->
-              <div
-                class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
-                [style.background]="item.iconBg"
-                [style.color]="item.iconColor"
+        @if (loading()) {
+          <ul class="m-0 p-0 list-none flex flex-col gap-1">
+            @for (i of [1, 2, 3, 4]; track i) {
+              <li class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse">
+                <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
+                <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
+                  <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
+                  <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <ul #activityList class="m-0 p-0 list-none flex flex-col gap-1">
+            @for (item of activities(); track item.id; let i = $index) {
+              <li 
+                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
+                [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
               >
-                <app-icon [name]="item.icon" [size]="14" />
-              </div>
-
-              <!-- Contenido del evento -->
-              <div class="flex-1 min-w-0">
-                <p
-                  class="m-0 text-sm font-medium text-text-primary truncate"
-                  [pTooltip]="item.title"
-                  tooltipPosition="top"
+                <!-- Ícono del evento -->
+                <div
+                  class="shrink-0 flex items-center justify-center w-8 h-8 rounded-full"
+                  [style.background]="item.iconBg"
+                  [style.color]="item.iconColor"
                 >
-                  {{ item.title }}
-                </p>
-                <p class="m-0 text-xs text-text-muted">{{ item.description }}</p>
-              </div>
+                  <app-icon [name]="item.icon" [size]="14" />
+                </div>
 
-              <!-- Timestamp -->
-              <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
-            </li>
-          }
-        </ul>
+                <!-- Contenido del evento -->
+                <div class="flex-1 min-w-0">
+                  <p
+                    class="m-0 text-sm font-medium text-text-primary truncate"
+                    [pTooltip]="item.title"
+                    tooltipPosition="top"
+                  >
+                    {{ item.title }}
+                  </p>
+                  <p class="m-0 text-xs text-text-muted">{{ item.description }}</p>
+                </div>
+
+                <!-- Timestamp -->
+                <span class="shrink-0 text-xs text-text-muted self-center">{{ item.time }}</span>
+              </li>
+            }
+          </ul>
+        }
       </div>
 
       <!-- ── Derecha: Alertas Importantes (misma altura que Actividad) ─────
@@ -205,17 +225,31 @@ import { Router } from '@angular/router';
           <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
         </div>
 
-        <div class="flex flex-col gap-3">
-          @for (alert of alerts(); track alert.id; let i = $index) {
-            <app-alert-card
-              [severity]="alert.severity"
-              [title]="alert.title"
-              [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
-            >
-              {{ alert.description }}
-            </app-alert-card>
-          }
-        </div>
+        @if (loading()) {
+          <ul class="m-0 p-0 list-none flex flex-col gap-3">
+            @for (i of [1, 2]; track i) {
+              <li class="animate-pulse">
+                <div class="h-16 bg-border-subtle rounded-xl border border-border-subtle w-full"></div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <ul class="m-0 p-0 list-none flex flex-col gap-3">
+            @for (alert of alerts(); track alert.id; let i = $index) {
+              <li>
+                <app-alert-card
+                  [severity]="alert.severity"
+                  [title]="alert.title"
+                  [dismissible]="true"
+                  (dismissed)="dashboardAlertsFacade.dismissAlert(alert.id)"
+                  [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
+                >
+                  {{ alert.description }}
+                </app-alert-card>
+              </li>
+            }
+          </ul>
+        }
       </div>
     </section>
   `,
@@ -223,7 +257,7 @@ import { Router } from '@angular/router';
 export class DashboardComponent {
   // ── Servicios ─────────────────────────────────────────────────────────────
   private readonly dashboardFacade = inject(DashboardFacade);
-  private readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
+  protected readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly auth = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -304,5 +338,9 @@ export class DashboardComponent {
       const route = role === 'secretaria' ? 'app/secretaria/pagos' : 'app/admin/pagos';
       void this.router.navigate([route]);
     }
+  }
+
+  openRecentActivity() {
+    this.layoutDrawer.open(RecentActivityDrawerComponent, 'Actividad Reciente', 'activity');
   }
 }

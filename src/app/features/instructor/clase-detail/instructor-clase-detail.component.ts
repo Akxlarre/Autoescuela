@@ -44,20 +44,19 @@ import {
   template: `
     <div class="bento-grid" appBentoGridLayout>
       <!-- Section Hero Premium -->
-      <div class="bento-banner">
-        <app-section-hero
-          [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
-          [subtitle]="
-            showFinalStep()
-              ? 'Registra el kilometraje final y firmas'
-              : 'Completa la evaluación mientras transcurre la clase'
-          "
-          backRoute="/app/instructor/dashboard"
-          backLabel="Dashboard"
-          [actions]="heroActions()"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        class="bento-hero"
+        [title]="showFinalStep() ? 'Finalizar Sesión' : 'Clase en Curso'"
+        [subtitle]="
+          showFinalStep()
+            ? 'Registra el kilometraje final y firmas'
+            : 'Completa la evaluación mientras transcurre la clase'
+        "
+        backRoute="/app/instructor/dashboard"
+        backLabel="Dashboard"
+        [actions]="heroActions()"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <div class="bento-banner">
         <div class="max-w-4xl mx-auto flex flex-col gap-6">
