@@ -388,10 +388,10 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
             <app-icon name="info" [size]="18" color="var(--ds-brand)" class="mt-0.5 shrink-0" />
             <div>
               <p class="text-sm font-bold" style="color: var(--text-primary);">
-                Menores de 18 años no pueden inscribirse online
+                Tienes 17 años — No puedes inscribirte online
               </p>
               <p class="text-xs mt-0.5" style="color: var(--text-secondary);">
-                Para inscribirte debes seguir estos pasos presenciales:
+                Por ley necesitas autorización notarial de tus padres o apoderado. Sigue estos pasos presenciales:
               </p>
             </div>
           </div>

@@ -207,6 +207,7 @@ const RATE_LIMITED_ACTIONS = new Set([
   'initiate-payment',
   'generate-contract-preview',
   'get-carnet-upload-url',
+  'get-carnet-preview-url',
 ]);
 // Acciones cuyo formulario público incluye el campo honeypot.
 const HONEYPOT_ACTIONS = new Set([
@@ -290,6 +291,8 @@ Deno.serve(async (req: Request) => {
           return await handleConfirmPayment(supabase, body);
         case 'get-carnet-upload-url':
           return await handleGetCarnetUploadUrl(supabase, body);
+        case 'get-carnet-preview-url':
+          return await handleGetCarnetPreviewUrl(supabase, body);
         case 'check-duplicate':
           return await handleCheckDuplicate(supabase, body);
         case 'generate-contract-preview':
@@ -645,9 +648,17 @@ async function handleSubmitClaseB(supabase: any, body: any) {
       await moveCarnetPhoto(supabase, body.carnetStoragePath, enrollment.id);
     }
 
-    // 10. Mover preview del contrato a ruta permanente y registrar en digital_contracts
-    if (sessionToken) {
-      await moveContractPreview(supabase, sessionToken, enrollment.id);
+    // 10. Generar y guardar contrato final en Storage (y DB)
+    if (body.contractSignatureBase64) {
+      await generateAndSaveFinalContract(
+        supabase,
+        enrollment.id,
+        body,
+        course,
+        branch,
+        new Date().toISOString(),
+        numData ?? null
+      );
     }
 
     // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
@@ -1155,8 +1166,28 @@ async function handleConfirmPayment(supabase: any, body: any) {
 
       // 12. Mover archivos (falla silenciosa — no bloquean la matrícula)
       if (carnetStoragePath) await moveCarnetPhoto(supabase, carnetStoragePath, enrollmentId);
-      await moveContractPreview(supabase, attempt.session_token, enrollmentId);
 
+      if (snapshot.contractSignatureBase64) {
+        const [{ data: course }, { data: branch }] = await Promise.all([
+          supabase
+            .from('courses')
+            .select('name, license_class, duration_weeks, practical_hours, theory_hours, base_price')
+            .eq('id', snapshot.courseId)
+            .single(),
+          supabase.from('branches').select('name, address').eq('id', snapshot.branchId).single(),
+        ]);
+        if (course && branch) {
+          await generateAndSaveFinalContract(
+            supabase,
+            enrollmentId,
+            snapshot, // body is equivalent to snapshot
+            course,
+            branch,
+            new Date().toISOString(),
+            enrollmentNumber
+          );
+        }
+      }
       // 13. Invitar al alumno a crear su cuenta (fire-and-forget)
       void inviteStudentToAuth(supabase, userId);
     } catch (commitErr) {
@@ -1243,6 +1274,38 @@ async function handleGetCarnetUploadUrl(supabase: any, body: any) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// Action: get-carnet-preview-url
+//
+// Emite una URL firmada (TTL 5 min) para previsualizar la foto de carnet temporal
+// asociada a la sesión de matrícula.
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function handleGetCarnetPreviewUrl(supabase: any, body: any) {
+  const { sessionToken, path } = body;
+
+  const TOKEN_RE = /^[0-9a-zA-Z\-]+$/;
+  if (!sessionToken || !TOKEN_RE.test(sessionToken)) {
+    return errorResponse('sessionToken inválido');
+  }
+
+  // Security: Prevent path traversal or accessing other users' files
+  if (!path || !path.startsWith(`public-uploads/carnet/${sessionToken}`)) {
+    return errorResponse('Path inválido o no pertenece a esta sesión');
+  }
+
+  const { data, error } = await supabase.storage
+    .from('documents')
+    .createSignedUrl(path, 300);
+
+  if (error) {
+    console.error('createSignedUrl error:', error);
+    return errorResponse('Error al generar URL de previsualización', 500);
+  }
+
+  return jsonResponse({ signedUrl: data.signedUrl });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // Shared helpers
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -1315,51 +1378,98 @@ async function moveCarnetPhoto(
   }
 }
 
+import { loadPngFromBytes } from '../_shared/pdf-utils.ts';
+import { decodeBase64 } from "jsr:@std/encoding/base64";
+
 /**
- * Mueve el preview del contrato desde la ruta temporal de sesión al destino permanente
- * vinculado al enrollment y registra la fila en digital_contracts.
- *
- * Flujo de 2 etapas del contrato:
- *   Etapa 1 (wizard público): EF genera contracts/previews/{sessionToken}/Contrato_Preview.pdf
- *   Etapa 2 (esta función):  move → contracts/{enrollmentId}/contrato.pdf
- *                            + INSERT en digital_contracts (file_url, file_name)
- *
- * Falla silenciosamente — si el usuario no generó el preview, no hay archivo que mover
- * y el admin podrá generarlo desde la ficha usando generate-contract-pdf.
+ * Genera el contrato final en PDF (sellado con la firma digital en Base64),
+ * lo sube a Storage y registra la fila en digital_contracts.
  */
-async function moveContractPreview(
+async function generateAndSaveFinalContract(
   supabase: any,
-  sessionToken: string,
   enrollmentId: number,
+  body: any,
+  course: any,
+  branch: any,
+  enrollmentDate: string,
+  enrollmentNumber: string | null,
 ): Promise<void> {
-  const TOKEN_RE = /^[0-9a-zA-Z\-]+$/;
-  if (!sessionToken || !TOKEN_RE.test(sessionToken)) {
-    console.error(`moveContractPreview: rejected invalid sessionToken: "${sessionToken}"`);
-    return;
-  }
+  try {
+    const { personalData, contractSignatureBase64 } = body;
+    if (!contractSignatureBase64) {
+      console.warn('generateAndSaveFinalContract: No signature provided.');
+      return;
+    }
 
-  const sourcePath = `contracts/previews/${sessionToken}/Contrato_Preview.pdf`;
-  const destPath = `contracts/${enrollmentId}/contract.pdf`;
+    // Build EnrollmentData
+    const data: EnrollmentData = {
+      id: enrollmentId,
+      number: enrollmentNumber,
+      base_price: course.base_price ?? null,
+      discount: 0,
+      created_at: enrollmentDate,
+      student: {
+        birth_date: personalData.birthDate ?? null,
+        address: personalData.address ?? null,
+        user: {
+          rut: personalData.rut ?? '',
+          first_names: personalData.firstNames ?? '',
+          paternal_last_name: personalData.paternalLastName ?? '',
+          maternal_last_name: personalData.maternalLastName ?? null,
+          email: personalData.email ?? '',
+          phone: personalData.phone ?? null,
+        },
+      },
+      course: {
+        name: course.name,
+        license_class: course.license_class,
+        duration_weeks: course.duration_weeks ?? null,
+        practical_hours: course.practical_hours ?? null,
+        theory_hours: course.theory_hours ?? null,
+      },
+      branch: {
+        name: branch.name,
+        address: branch.address ?? null,
+      },
+      convalidation: null,
+    };
 
-  const { error: moveError } = await supabase.storage.from('documents').move(sourcePath, destPath);
+    // Parse base64 signature
+    let signatureImage = null;
+    try {
+      const b64Data = contractSignatureBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      const sigBytes = decodeBase64(b64Data);
+      signatureImage = await loadPngFromBytes(sigBytes, 140, 50);
+    } catch (e) {
+      console.error('generateAndSaveFinalContract: Failed to parse signature base64', e);
+    }
 
-  if (moveError) {
-    // Falla silenciosa — el preview puede no existir si el usuario omitió ese paso
-    console.warn('moveContractPreview: move failed (preview may not exist):', moveError.message);
-    return;
-  }
+    const pdfBytes = buildStructuredPdf(data, signatureImage);
+    const destPath = `contracts/${enrollmentId}/contract.pdf`;
 
-  const { error: dbError } = await supabase.from('digital_contracts').upsert(
-    {
-      enrollment_id: enrollmentId,
-      file_url: destPath,
-      file_name: 'Contrato_Matricula.pdf',
-    },
-    { onConflict: 'enrollment_id' },
-  );
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(destPath, pdfBytes, { contentType: 'application/pdf', upsert: true });
 
-  if (dbError) {
-    console.error('moveContractPreview: digital_contracts upsert error:', dbError.message);
+    if (uploadError) {
+      console.error('generateAndSaveFinalContract: upload error:', uploadError.message);
+      return;
+    }
+
+    const { error: dbError } = await supabase.from('digital_contracts').upsert(
+      {
+        enrollment_id: enrollmentId,
+        file_url: destPath,
+        file_name: 'Contrato_Matricula.pdf',
+      },
+      { onConflict: 'enrollment_id' },
+    );
+
+    if (dbError) {
+      console.error('generateAndSaveFinalContract: digital_contracts upsert error:', dbError.message);
+    }
+  } catch (err) {
+    console.error('generateAndSaveFinalContract: unexpected error:', err);
   }
 }
 

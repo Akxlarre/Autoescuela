@@ -13,6 +13,7 @@ import { ActivatedRoute } from '@angular/router';
 import { PublicEnrollmentFacade } from '@core/facades/public-enrollment.facade';
 import { branchIdToTheme, type SedeTheme } from '@core/utils/sede-theme.utils';
 import { formatCLP } from '@core/utils/date.utils';
+import { calcAge } from '@core/utils/age.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 // Public step components (dumb)
@@ -44,11 +45,7 @@ import type {
   PaymentMode,
 } from '@core/models/ui/enrollment-assignment.model';
 import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.model';
-import type {
-  EnrollmentContractData,
-  ContractStatus,
-  SignedContractUpload,
-} from '@core/models/ui/enrollment-contract.model';
+import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract.model';
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
 import type { PublicFlowType } from '@core/facades/public-enrollment.facade';
 
@@ -248,6 +245,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
               [data]="step3Data()"
               [isUploading]="facade.isLoading()"
               (fileSelected)="onFileSelected($event)"
+              (clearPhoto)="facade.clearCarnetPhoto()"
               (next)="facade.confirmDocuments()"
               (back)="facade.goBack()"
             />
@@ -256,11 +254,8 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
           @case ('contract') {
             <app-public-contract
               [data]="step5Data()"
-              [loading]="facade.isLoading()"
-              (dataChange)="onContractDataChange($event)"
-              (generateContract)="onGenerateContract()"
-              (next)="onContractNext()"
-              (back)="facade.goBack()"
+              (contractSigned)="onContractSigned($event)"
+              (goBack)="facade.goBack()"
             />
           }
 
@@ -406,9 +401,6 @@ export class PublicEnrollmentComponent {
 
   // ── Local form state (pre-save) ──
   private readonly _step1Form = signal<EnrollmentPersonalData>(DEFAULT_PERSONAL_DATA);
-  private readonly _contractStatus = signal<ContractStatus>('pending');
-  private readonly _contractPdfUrl = signal<string | null>(null);
-  private readonly _signedContractUpload = signal<SignedContractUpload | null>(null);
 
   /** Tema de sede para `[data-public-theme]` — desde la sede resuelta o el branchId de la URL. */
   readonly theme = computed<SedeTheme>(() =>
@@ -419,6 +411,7 @@ export class PublicEnrollmentComponent {
     // Capturar params de la URL de forma síncrona
     const branchIdParam = this.route.snapshot.queryParamMap.get('branchId');
     const courseIdParam = this.route.snapshot.queryParamMap.get('courseId');
+    const resumeParam = this.route.snapshot.queryParamMap.get('resume');
     const parsedBranch = branchIdParam ? parseInt(branchIdParam, 10) : null;
     const parsedCourse = courseIdParam ? parseInt(courseIdParam, 10) : null;
     this._urlBranchId.set(Number.isFinite(parsedBranch) ? parsedBranch : null);
@@ -427,7 +420,11 @@ export class PublicEnrollmentComponent {
     afterNextRender(() => {
       void this.facade.loadBranches().then(async () => {
         // Si hay borrador, ofrecer retomarlo antes de resolver la entrada por URL.
-        if (!this.facade.hasDraftToRestore()) {
+        if (this.facade.hasDraftToRestore()) {
+          if (resumeParam === 'true') {
+            await this.facade.restoreDraft();
+          }
+        } else {
           await this.facade.resolveEntry(this._urlBranchId(), this._urlCourseId);
         }
         this.resolving.set(false);
@@ -446,6 +443,15 @@ export class PublicEnrollmentComponent {
         }
       }
     });
+
+    // Sincronizar el borrador restaurado (o datos guardados) hacia el formulario local.
+    // Esto asegura que al presionar "Volver" hacia el paso 1, los datos se mantengan.
+    effect(() => {
+      const draftData = this.facade.personalData();
+      if (draftData) {
+        untracked(() => this._step1Form.set(draftData));
+      }
+    });
   }
 
   // ══════════════════════════════════════════════════════════════════════════════
@@ -454,8 +460,13 @@ export class PublicEnrollmentComponent {
 
   readonly brandName = computed<string>(() => this.facade.selectedBranch()?.name ?? 'Autoescuela');
 
-  /** WhatsApp de la sede — pendiente de fuente de datos (branches no lo expone aún). */
-  readonly whatsappUrl = computed<string | null>(() => null);
+  /** WhatsApp de la sede — usando el teléfono de la sede si existe, o uno por defecto */
+  readonly whatsappUrl = computed<string | null>(() => {
+    const branch = this.facade.selectedBranch();
+    if (!branch?.phone) return 'https://wa.me/';
+    const cleanPhone = branch.phone.replace(/[^0-9]/g, '');
+    return `https://wa.me/${cleanPhone}`;
+  });
 
   /** Enlaces a las webs de cada escuela para la pantalla de orientación (AC-E1). */
   readonly siteLinks = computed<PublicOrientationLink[]>(() =>
@@ -611,17 +622,18 @@ export class PublicEnrollmentComponent {
     };
   });
 
-  readonly step5Data = computed<EnrollmentContractData>(() => ({
-    studentSummary: this.facade.studentSummary() ?? EMPTY_SUMMARY,
-    contractGeneration: {
-      status: this._contractStatus(),
-      pdfUrl: this._contractPdfUrl(),
-      generatedAt: null,
-      errorMessage: this.facade.error() ?? null,
-    },
-    signedContract: this._signedContractUpload(),
-    canAdvance: !!this._signedContractUpload()?.file,
-  }));
+  readonly step5Data = computed<EnrollmentContractData>(() => {
+    const pd = this.facade.personalData() ?? this._step1Form();
+    const birthDateStr = pd?.birthDate;
+    const minor = birthDateStr ? (calcAge(birthDateStr) ?? 99) < 18 : false;
+    return {
+      studentSummary: this.facade.studentSummary() ?? EMPTY_SUMMARY,
+      contractGeneration: { status: 'pending', pdfUrl: null, generatedAt: null, errorMessage: null },
+      signedContract: null,
+      isMinor: minor,
+      canAdvance: minor || !!this.facade.contractSignatureBase64(),
+    };
+  });
 
   readonly paymentModeOptions = computed<PublicPaymentModeOption[]>(() => {
     const total = this.facade.basePracticalSlotCount() || 12;
@@ -720,23 +732,8 @@ export class PublicEnrollmentComponent {
     }
   }
 
-  onContractDataChange(data: EnrollmentContractData): void {
-    if (data.signedContract) {
-      this._signedContractUpload.set(data.signedContract);
-      if (data.signedContract.file) {
-        this.facade.setSignedContract(data.signedContract.file);
-      }
-    }
-  }
-
-  async onGenerateContract(): Promise<void> {
-    this._contractStatus.set('generating');
-    const url = await this.facade.generateContractPreview();
-    this._contractPdfUrl.set(url);
-    this._contractStatus.set(url ? 'generated' : 'error');
-  }
-
-  onContractNext(): void {
+  onContractSigned(base64: string): void {
+    this.facade.setSignedContract(base64);
     this.facade.confirmContract();
   }
 

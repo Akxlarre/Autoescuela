@@ -27,7 +27,8 @@ const FLOW_CARDS: Record<PublicFlowType, FlowCard> = {
       'Licencia para conducción profesional: camiones, buses, maquinaria agrícola y más.',
     icon: 'truck',
     badge: null,
-    infoNote: 'Pre-inscripción — La escuela te contactará para completar la matrícula.',
+    infoNote:
+      'Solo Pre-inscripción online — Debido a los requisitos legales, el trámite finaliza de forma presencial. Aquí iniciarás el proceso sin ningún cobro previo.',
   },
 };
 
