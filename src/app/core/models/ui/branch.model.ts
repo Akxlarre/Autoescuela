@@ -5,6 +5,7 @@ export interface BranchOption {
   name: string;
   slug: string;
   address?: string | null;
+  phone?: string | null;
   /** true si la sede ofrece Clase Profesional. Mapeado desde branches.has_professional. */
   hasProfessional?: boolean;
 }

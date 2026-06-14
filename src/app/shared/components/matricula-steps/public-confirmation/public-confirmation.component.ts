@@ -121,6 +121,18 @@ export type PublicConfirmationType = 'class_b' | 'pre-inscription';
       @if (message()) {
         <p class="text-xs" style="color: var(--text-muted);">{{ message() }}</p>
       }
+
+      <!-- CTA Volver al inicio -->
+      <div class="pt-6 flex justify-center">
+        <a
+          href="javascript:void(0)"
+          (click)="onRestart()"
+          class="btn-secondary rounded-xl px-6 py-2.5 text-sm font-semibold inline-flex items-center gap-2 transition-transform hover:scale-105"
+        >
+          <app-icon name="rotate-ccw" [size]="16" color="var(--text-primary)" />
+          Volver al inicio
+        </a>
+      </div>
     </div>
   `,
 })
@@ -128,6 +140,10 @@ export class PublicConfirmationComponent {
   readonly type = input.required<PublicConfirmationType>();
   readonly enrollmentNumber = input<string | null>(null);
   readonly message = input<string | null>(null);
+
+  onRestart(): void {
+    window.location.reload();
+  }
 
   protected readonly classBSteps = [
     { n: 1, text: 'Revisa tu correo para confirmar la matrícula y ver tu folio.' },

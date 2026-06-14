@@ -55,10 +55,12 @@ export function formatCurrency(amount: number | null): string {
   return new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(amount);
 }
 
+import type { AnyPdfImage } from './pdf-utils.ts';
+
 /**
  * Builds a structured, well-formatted contract PDF directly from enrollment data.
  */
-export function buildStructuredPdf(data: EnrollmentData): Uint8Array {
+export function buildStructuredPdf(data: EnrollmentData, signature?: AnyPdfImage | null): Uint8Array {
   const u = data.student.user;
   const fullName =
     `${u.first_names} ${u.paternal_last_name}${u.maternal_last_name ? ' ' + u.maternal_last_name : ''}`.trim();
@@ -224,10 +226,22 @@ export function buildStructuredPdf(data: EnrollmentData): Uint8Array {
   y -= 13;
   T(ML, y, 'Representante de la Escuela', 'F1', 9);
   T(col2X, y, fullName, 'F1', 9);
+  
+  if (signature) {
+    // Stamp the signature image above the student's line
+    // The signature area is at `col2X` with a width of 180.
+    // Let's place the image bounded in a 140x50 box
+    const sigW = 140;
+    const sigH = 50;
+    const sigX = col2X + 20;
+    const sigY = y + 5;
+    ops += `q ${sigW} 0 0 ${sigH} ${sigX} ${Math.round(sigY)} cm /Im2 Do Q\n`;
+  }
+  
   y -= 12;
   T(ML, y, data.branch.name, 'F1', 9);
   T(col2X, y, `RUT: ${u.rut}`, 'F1', 9);
 
   pages.push(ops);
-  return assemblePdf(pages, W, H);
+  return assemblePdf(pages, W, H, null, signature);
 }

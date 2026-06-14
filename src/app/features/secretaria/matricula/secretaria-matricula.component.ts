@@ -297,18 +297,24 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     };
   });
 
-  readonly step5Data = computed<EnrollmentContractData>(() => ({
-    studentSummary: this.enrollment.studentSummary() ?? EMPTY_SUMMARY,
-    contractGeneration: {
-      status: this._contractStatus(),
-      pdfUrl: this._contractPdfUrl(),
-      generatedAt: null,
-      errorMessage: this.enrollment.error() ?? null,
-    },
-    signedContract: this._signedContractUpload(),
-    // Habilita "Continuar" cuando hay archivo listo para subir o la BD ya confirmó
-    canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
-  }));
+  readonly step5Data = computed<EnrollmentContractData>(() => {
+    const pd = this.enrollment.personalData();
+    const birthDateStr = pd?.birthDate;
+    const isMinor = birthDateStr ? (calcAge(birthDateStr) ?? 99) < 18 : false;
+    return {
+      studentSummary: this.enrollment.studentSummary() ?? EMPTY_SUMMARY,
+      contractGeneration: {
+        status: this._contractStatus(),
+        pdfUrl: this._contractPdfUrl(),
+        generatedAt: null,
+        errorMessage: this.enrollment.error() ?? null,
+      },
+      signedContract: this._signedContractUpload(),
+      isMinor,
+      // Habilita "Continuar" cuando hay archivo listo para subir o la BD ya confirmó
+      canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
+    };
+  });
 
   readonly step6Data = computed<EnrollmentConfirmationData>(() => {
     const pd = this.enrollment.personalData();

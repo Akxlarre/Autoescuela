@@ -370,7 +370,8 @@ function readPendingBranchId(): number | null {
 
               <div class="flex flex-col gap-3 w-full">
                 <a
-                  routerLink="/inscripcion"
+                  [routerLink]="['/inscripcion']"
+                  [queryParams]="{ resume: true }"
                   class="btn-primary flex items-center justify-center gap-2 w-full rounded-xl py-3 font-semibold"
                   data-llm-nav="public-enrollment-retry"
                   data-llm-action="retry-enrollment"

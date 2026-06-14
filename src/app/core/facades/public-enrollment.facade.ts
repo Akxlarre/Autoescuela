@@ -208,7 +208,7 @@ export class PublicEnrollmentFacade {
 
   // ── Contract ──
   private readonly _contractPdfUrl = signal<string | null>(null);
-  private readonly _signedContractFile = signal<File | null>(null);
+  private readonly _contractSignatureBase64 = signal<string | null>(null);
 
   // ── Result ──
   private readonly _result = signal<PublicEnrollmentResult | null>(null);
@@ -251,7 +251,7 @@ export class PublicEnrollmentFacade {
     return this._carnetPreviewUrl();
   });
   readonly contractPdfUrl = this._contractPdfUrl.asReadonly();
-  readonly signedContractFile = this._signedContractFile.asReadonly();
+  readonly contractSignatureBase64 = this._contractSignatureBase64.asReadonly();
   readonly result = this._result.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
@@ -349,7 +349,7 @@ export class PublicEnrollmentFacade {
       case 'documents':
         return this._carnetStoragePath() !== null;
       case 'contract':
-        return this._signedContractFile() !== null;
+        return this._contractSignatureBase64() !== null;
       case 'payment':
         return true; // Webpay gestionará la validación
       case 'psych-test':
@@ -369,7 +369,7 @@ export class PublicEnrollmentFacade {
     this._isLoading.set(true);
     try {
       const [branchRes, courseRes] = await Promise.all([
-        this.supabase.client.from('branches').select('id, name, slug, address').order('id'),
+        this.supabase.client.from('branches').select('id, name, slug, address, phone, has_professional').order('id'),
         this.supabase.client
           .from('courses')
           .select('id, code, name, base_price, license_class, branch_id')
@@ -382,7 +382,14 @@ export class PublicEnrollmentFacade {
         this._error.set('Error al cargar sedes: ' + branchRes.error.message);
         return;
       }
-      this._branches.set(branchRes.data ?? []);
+      this._branches.set((branchRes.data ?? []).map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        slug: b.slug,
+        address: b.address,
+        phone: b.phone,
+        hasProfessional: b.has_professional
+      })));
 
       if (!courseRes.error && courseRes.data) {
         const pricingMap = new Map<number, BranchCoursePrice[]>();
@@ -537,6 +544,16 @@ export class PublicEnrollmentFacade {
   }
 
   confirmPaymentMode(): void {
+    // Si se cambia de pago total a abono, la cantidad permitida disminuye.
+    // Debemos truncar las clases previamente seleccionadas para que no excedan el nuevo límite.
+    const required = this.requiredSlotCount();
+    const selected = this._selectedSlotIds();
+    if (selected.length > required) {
+      // Mantenemos solo las primeras clases cronológicamente
+      const sorted = [...selected].sort();
+      this._selectedSlotIds.set(sorted.slice(0, required));
+    }
+
     this.updateStepStatus('payment-mode', 'completed');
     this._currentStep.set('schedule');
     this.updateStepStatus('schedule', 'active');
@@ -740,6 +757,15 @@ export class PublicEnrollmentFacade {
     }
   }
 
+  /** Descarta la foto de carnet subida o capturada. */
+  clearCarnetPhoto(): void {
+    const prev = this._carnetPreviewUrl();
+    if (prev) URL.revokeObjectURL(prev);
+    this._carnetPreviewUrl.set(null);
+    this._carnetStoragePath.set(null);
+    this.saveDraft();
+  }
+
   /**
    * Genera una vista previa del contrato en PDF usando la Edge Function `public-enrollment`
    * con acción `generate-contract-preview`. No requiere enrollment_id.
@@ -800,8 +826,8 @@ export class PublicEnrollmentFacade {
   // 3. MÉTODOS DE ACCIÓN — Contract
   // ══════════════════════════════════════════════════════════════════════════════
 
-  setSignedContract(file: File): void {
-    this._signedContractFile.set(file);
+  setSignedContract(signatureBase64: string): void {
+    this._contractSignatureBase64.set(signatureBase64);
   }
 
   /** Confirma contrato y avanza al paso de pago (Webpay). */
@@ -864,6 +890,7 @@ export class PublicEnrollmentFacade {
           sessionToken: this._sessionToken(),
           amount: this.calculatePaymentAmount(),
           carnetStoragePath: this._carnetStoragePath(),
+          contractSignatureBase64: this._contractSignatureBase64(),
         },
       });
 
@@ -1020,6 +1047,7 @@ export class PublicEnrollmentFacade {
           selectedSlotIds: this._selectedSlotIds(),
           sessionToken: this._sessionToken(),
           carnetStoragePath: this._carnetStoragePath(),
+          contractSignatureBase64: this._contractSignatureBase64(),
         },
       });
 
@@ -1132,7 +1160,7 @@ export class PublicEnrollmentFacade {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     this._carnetPreviewUrl.set(null);
     this._contractPdfUrl.set(null);
-    this._signedContractFile.set(null);
+    this._contractSignatureBase64.set(null);
     this._result.set(null);
     this._error.set(null);
 
@@ -1354,7 +1382,7 @@ export class PublicEnrollmentFacade {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     this._carnetPreviewUrl.set(null);
     this._contractPdfUrl.set(null);
-    this._signedContractFile.set(null);
+    this._contractSignatureBase64.set(null);
     this._result.set(null);
     this._isLoading.set(false);
     this._error.set(null);
