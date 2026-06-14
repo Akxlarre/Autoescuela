@@ -60,19 +60,13 @@ describe('MenuConfigService', () => {
     expect(allRoutes.every((r) => r.startsWith('/app/alumno/'))).toBe(true);
   });
 
-  it('should return relator nav when role is relator', () => {
-    setup('relator');
-    const allRoutes = service.menuItems().flatMap((g) => g.items.map((i) => i.routerLink));
-    expect(allRoutes.every((r) => r.startsWith('/app/relator/'))).toBe(true);
-  });
-
   it('should return empty array when no user is logged in', () => {
     setup(null);
     expect(service.menuItems()).toEqual([]);
   });
 
   it('every group should have at least one item', () => {
-    const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno', 'relator'];
+    const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno'];
     for (const role of roles) {
       TestBed.resetTestingModule();
       setup(role);
@@ -101,7 +95,7 @@ describe('MenuConfigService', () => {
   });
 
   it('every routerLink should start with /', () => {
-    const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno', 'relator'];
+    const roles: UserRole[] = ['admin', 'secretaria', 'instructor', 'alumno'];
     for (const role of roles) {
       TestBed.resetTestingModule();
       setup(role);
