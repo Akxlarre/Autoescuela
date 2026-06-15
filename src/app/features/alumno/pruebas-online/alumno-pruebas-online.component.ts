@@ -42,6 +42,7 @@ interface SimulatorLink {
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Pruebas Online"
         [subtitle]="
           isProfessional()

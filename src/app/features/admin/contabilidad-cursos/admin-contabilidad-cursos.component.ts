@@ -104,6 +104,7 @@ const BILLING_LABEL: Record<string, string> = {
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Cursos Singulares"
         contextLine="Contabilidad"
         subtitle="Cobro simplificado de cursos SENCE, Grúa, Retroexcavadora"

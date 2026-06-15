@@ -1,4 +1,12 @@
-import { Directive, ElementRef, inject, InjectionToken } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  inject,
+  InjectionToken,
+  PLATFORM_ID,
+  afterNextRender,
+} from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
@@ -6,12 +14,12 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
  * Inyectar opcionalmente en componentes que cambien su tamaño.
  */
 export interface BentoGridLayoutContext {
-    /** Ejecuta el callback dentro de una animación FLIP (posición + tamaño). */
-    runLayoutChange(onChange: () => void, onComplete?: () => void): void;
+  /** Ejecuta el callback dentro de una animación FLIP (posición + tamaño). */
+  runLayoutChange(onChange: () => void, onComplete?: () => void): void;
 }
 
 export const BENTO_GRID_LAYOUT_CONTEXT = new InjectionToken<BentoGridLayoutContext>(
-    'BentoGridLayoutContext'
+  'BentoGridLayoutContext',
 );
 
 /**
@@ -23,25 +31,45 @@ export const BENTO_GRID_LAYOUT_CONTEXT = new InjectionToken<BentoGridLayoutConte
  * runLayoutChange(() => aplicarCambio()) cuando el hijo cambie su tamaño.
  */
 @Directive({
-    selector: '[appBentoGridLayout]',
-    standalone: true,
-    providers: [
-        {
-            provide: BENTO_GRID_LAYOUT_CONTEXT,
-            useFactory: (dir: BentoGridLayoutDirective) => ({
-                runLayoutChange: (onChange: () => void, onComplete?: () => void) => {
-                    dir.runLayoutChange(onChange, onComplete);
-                },
-            }),
-            deps: [BentoGridLayoutDirective],
+  selector: '[appBentoGridLayout]',
+  standalone: true,
+  providers: [
+    {
+      provide: BENTO_GRID_LAYOUT_CONTEXT,
+      useFactory: (dir: BentoGridLayoutDirective) => ({
+        runLayoutChange: (onChange: () => void, onComplete?: () => void) => {
+          dir.runLayoutChange(onChange, onComplete);
         },
-    ],
+      }),
+      deps: [BentoGridLayoutDirective],
+    },
+  ],
 })
 export class BentoGridLayoutDirective {
-    private el = inject(ElementRef<HTMLElement>);
-    private gsap = inject(GsapAnimationsService);
+  private el = inject(ElementRef<HTMLElement>);
+  private gsap = inject(GsapAnimationsService);
+  private platformId = inject(PLATFORM_ID);
 
-    runLayoutChange(onChange: () => void, onComplete?: () => void): void {
-        this.gsap.animateBentoLayoutChange(this.el.nativeElement, onChange, onComplete);
+  constructor() {
+    // ── Flash-fix universal (fix-018) ──────────────────────────────────────
+    // Como [appBentoGridLayout] está en TODOS los bento-grid, aquí centralizamos
+    // el pre-hide anti-flash: ocultar las celdas ANTES del primer paint. Quien
+    // anime el grid (animateBentoGrid manual o [appBentoReveal]) retira la clase
+    // al fijar el estado inicial inline → la entrada arranca seamless.
+    //
+    // Safety net: si NADIE anima este grid (grids estáticos sin reveal), retiramos
+    // la clase tras el primer render para no dejar contenido oculto jamás.
+    // Quitarla dos veces es inocuo.
+    if (isPlatformBrowser(this.platformId)) {
+      const host = this.el.nativeElement;
+      host.classList.add('is-reveal-pending');
+      afterNextRender(() => {
+        requestAnimationFrame(() => host.classList.remove('is-reveal-pending'));
+      });
     }
+  }
+
+  runLayoutChange(onChange: () => void, onComplete?: () => void): void {
+    this.gsap.animateBentoLayoutChange(this.el.nativeElement, onChange, onComplete);
+  }
 }

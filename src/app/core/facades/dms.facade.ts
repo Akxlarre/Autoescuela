@@ -146,13 +146,27 @@ export class DmsFacade {
    */
   async openDocument(path: string, fileName?: string): Promise<void> {
     try {
+      const url = await this.getSignedDocumentUrl(path);
+      if (!url) throw new Error('No signed URL');
+      this.dmsViewer.openByUrl(url, fileName || 'Documento');
+    } catch {
+      this.toast.error('No se pudo abrir el documento');
+    }
+  }
+
+  /**
+   * Obtiene la signed URL de un documento (TTL 1h) sin abrir el visor modal.
+   * Utilizado para previsualización en línea (Split View).
+   */
+  async getSignedDocumentUrl(path: string): Promise<string | null> {
+    try {
       const { data, error } = await this.supabase.client.storage
         .from('documents')
         .createSignedUrl(path, 3600);
-      if (error || !data) throw error ?? new Error('No signed URL');
-      this.dmsViewer.openByUrl(data.signedUrl, fileName || 'Documento');
+      if (error || !data) return null;
+      return data.signedUrl;
     } catch {
-      this.toast.error('No se pudo abrir el documento');
+      return null;
     }
   }
 

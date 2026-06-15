@@ -84,6 +84,29 @@ $bp-lg: 1024px;
   }
 }
 
+/* ── PRE-HIDE PREMIUM (anti-flash) ─────────────────────────────
+   El directivo [appBentoReveal] añade `.is-reveal-pending` ANTES del
+   paint (en su constructor). Esto oculta las celdas hasta que GSAP
+   inicia el reveal y retira la clase → cero parpadeo en la 1ª carga.
+
+   Gated por clase: solo afecta a grids que usan el directivo. Las
+   páginas que aún disparan animateBentoGrid manualmente NO se ven
+   afectadas (sus celdas siguen visibles desde el paint).
+
+   `> *` apunta solo a hijos directos = celdas bento.
+   ──────────────────────────────────────────────────────────── */
+.bento-grid.is-reveal-pending > * {
+  opacity: 0;
+}
+
+/* Safety net: si el usuario reduce el movimiento o el JS tarda en
+   correr, nunca dejamos contenido oculto. */
+@media (prefers-reduced-motion: reduce) {
+  .bento-grid.is-reveal-pending > * {
+    opacity: 1;
+  }
+}
+
 /* ── 3. PROPORTION MIXIN ──────────────────────────────────────
    
    Genera las 4 media queries para una celda bento.
@@ -138,7 +161,6 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.proportions {
-
   /* Square: celda cuadrada estándar */
   .bento-square,
   .bento-1x1 {
@@ -201,7 +223,6 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @layer bento.placement {
-
   /* Modificador: 4 celdas iguales en una fila (ej. KPIs Alumnos). Debe ir después de proportions para sobrescribir span de .bento-square. */
   .bento-grid.bento-grid--four-equal {
     --bento-cols-mobile: 2;
@@ -214,24 +235,24 @@ $bp-lg: 1024px;
     --bento-pad-md: 0;
     --bento-pad-lg: 0;
 
-    &>.bento-square {
+    & > .bento-square {
       grid-column: span 1;
     }
 
     @container layoutmain (min-width: #{$bp-sm}) {
-      &>.bento-square {
+      & > .bento-square {
         grid-column: span 1;
       }
     }
 
     @container layoutmain (min-width: #{$bp-md}) {
-      &>.bento-square {
+      & > .bento-square {
         grid-column: span 1;
       }
     }
 
     @container layoutmain (min-width: #{$bp-lg}) {
-      &>.bento-square {
+      & > .bento-square {
         grid-column: span 1;
       }
     }
@@ -278,12 +299,12 @@ $bp-lg: 1024px;
 
     /* Dashboard: Actividad (izq) + Alertas (der) — forzar 50/50 y misma altura en desktop.
        Selector directo para que no sea pisado por auto-placement ni por otras reglas. */
-    .bento-grid>.bento-activity-lg {
+    .bento-grid > .bento-activity-lg {
       grid-column: 1 / span 6;
       grid-row: span 2;
     }
 
-    .bento-grid>.bento-alerts-lg {
+    .bento-grid > .bento-alerts-lg {
       grid-column: 7 / span 6;
       grid-row: span 2;
     }
@@ -320,7 +341,7 @@ $bp-lg: 1024px;
     padding: 0;
   }
 
-  .bento-card--flush>.bento-card__body {
+  .bento-card--flush > .bento-card__body {
     padding: var(--space-5);
   }
 
@@ -402,7 +423,6 @@ $bp-lg: 1024px;
    ─────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-
   .bento-grid,
   .bento-grid * {
     transition: none !important;
@@ -423,7 +443,7 @@ $bp-lg: 1024px;
     grid-auto-rows: 1fr;
 
     @container layoutmain (min-width: #{$bp-md}) {
-      >* {
+      > * {
         grid-row: 1;
       }
     }

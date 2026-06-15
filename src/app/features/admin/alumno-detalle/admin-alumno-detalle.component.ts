@@ -3,10 +3,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   OnInit,
   signal,
-  AfterViewInit,
   ElementRef,
   viewChild,
 } from '@angular/core';
@@ -102,6 +102,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
           backLabel="Listado de Alumnos"
           [actions]="heroActions()"
           [chips]="heroChips()"
+          [animateOnInit]="false"
           (actionClick)="handleHeroAction($event)"
         />
 
@@ -193,9 +194,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   <span class="kpi-value text-brand text-3xl"
                     >{{ facade.porcentajePracticas() }}%</span
                   >
-                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                    >Completado</span
-                  >
+                  <span class="kpi-label">Completado</span>
                 </div>
               </div>
               <div class="w-full mt-4">
@@ -218,9 +217,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                     }
                   </div>
                 </div>
-                <div
-                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
-                >
+                <div class="flex items-center justify-between mt-2 kpi-label">
                   <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
                   <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
                 </div>
@@ -243,9 +240,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   <span class="kpi-value text-success text-3xl"
                     >{{ facade.porcentajeTeoricas() }}%</span
                   >
-                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                    >Asistencia</span
-                  >
+                  <span class="kpi-label">Asistencia</span>
                 </div>
               </div>
               <div class="w-full mt-4">
@@ -268,9 +263,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                     }
                   </div>
                 </div>
-                <div
-                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
-                >
+                <div class="flex items-center justify-between mt-2 kpi-label">
                   <span class="text-success">{{ facade.progresoTeorico().completadas }} OK</span>
                   <span class="text-text-muted">{{ restantesTeoricas() }} Pendientes</span>
                 </div>
@@ -307,9 +300,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                         : '—'
                     }}
                   </span>
-                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                    >Mín. 75%</span
-                  >
+                  <span class="kpi-label">Mín. 75%</span>
                 </div>
               </div>
               <div class="w-full mt-4">
@@ -334,9 +325,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                     }
                   </div>
                 </div>
-                <div
-                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
-                >
+                <div class="flex items-center justify-between mt-2 kpi-label">
                   <span
                     [class.text-success]="facade.elegibilidadProf().teoria"
                     [class.text-error]="
@@ -384,9 +373,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                         : '—'
                     }}
                   </span>
-                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                    >Req. 100%</span
-                  >
+                  <span class="kpi-label">Req. 100%</span>
                 </div>
               </div>
               <div class="w-full mt-4">
@@ -411,9 +398,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                     }
                   </div>
                 </div>
-                <div
-                  class="flex items-center justify-between mt-2 text-[11px] font-bold uppercase tracking-wider"
-                >
+                <div class="flex items-center justify-between mt-2 kpi-label">
                   <span
                     [class.text-success]="facade.elegibilidadProf().practica"
                     [class.text-warning]="
@@ -455,9 +440,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   >
                     {{ facade.notaPromedioProf() !== null ? facade.notaPromedioProf() : '—' }}
                   </span>
-                  <span class="text-[10px] font-bold text-text-muted uppercase tracking-tighter"
-                    >Mín. 75 de 100</span
-                  >
+                  <span class="kpi-label">Mín. 75 de 100</span>
                 </div>
               </div>
 
@@ -747,7 +730,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     }
   `,
 })
-export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
+export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   protected readonly alumnosFacade = inject(AdminAlumnosFacade);
   private readonly certFacade = inject(CertificacionClaseBFacade);
@@ -760,6 +743,20 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   private readonly signedContractInputRef = viewChild<ElementRef>('signedContractInput');
+
+  constructor() {
+    // Reveal SWR-aware: el grid de detalle carga async (fetch por :id). Las celdas
+    // skeleton se reemplazan por las reales al resolver la data, así que disparamos
+    // el reveal cuando el CONTENIDO está presente (!isLoading), no sobre el skeleton.
+    // Mismo patrón que DashboardComponent.
+    effect(() => {
+      const ready = !this.facade.isLoading();
+      const grid = this.bentoGrid()?.nativeElement;
+      if (ready && grid) {
+        Promise.resolve().then(() => this.gsap.animateBentoGrid(grid));
+      }
+    });
+  }
 
   // ── Estado del modal de borrado ──────────────────────────────────────────────
   protected readonly deleteModalVisible = signal(false);
@@ -1000,11 +997,6 @@ export class AdminAlumnoDetalleComponent implements OnInit, AfterViewInit {
     if (id && !isNaN(Number(id))) {
       void this.facade.initialize(Number(id));
     }
-  }
-
-  ngAfterViewInit(): void {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────

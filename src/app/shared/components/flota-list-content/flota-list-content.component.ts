@@ -79,8 +79,9 @@ import type {
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de flota">
       <!-- HERO -->
-      <div class="bento-banner" #heroRef>
+      <div class="bento-banner">
         <app-section-hero
+          [animateOnInit]="false"
           title="Gestión de Flota"
           subtitle="Control de vehículos, disponibilidad y mantenimientos."
           [chips]="heroChips()"
@@ -546,8 +547,6 @@ export class FlotaListContentComponent {
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
-
   searchTerm = '';
   selectedType: VehicleType | null = null;
   selectedStatus: VehicleStatus | null = null;
@@ -574,10 +573,7 @@ export class FlotaListContentComponent {
   ]);
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

@@ -25,6 +25,7 @@ import type { CierrePayload, IngresoRow, EgresoRow } from '@core/models/ui/cuadr
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving()"
       [isExporting]="facade.isExporting()"
+      [isDrawerOpen]="layoutDrawer.isOpen()"
       (guardarCierre)="onGuardarCierre($event)"
       (abrirIngreso)="abrirDrawerIngreso()"
       (abrirEgreso)="abrirDrawerEgreso()"
@@ -38,7 +39,7 @@ export class AdminContabilidadCuadraturaComponent {
   protected readonly facade = inject(CuadraturaFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly pagosFacade = inject(PagosFacade);
-  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
 
   constructor() {

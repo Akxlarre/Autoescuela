@@ -42,6 +42,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       <!-- ═══ Hero ═══ -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Archivo · Clase Profesional"
         subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
         [actions]="[]"

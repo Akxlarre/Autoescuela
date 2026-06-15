@@ -8,7 +8,8 @@
 |-----------|----------|-----------|--------|--------|
 | `AnimateInDirective` | `[appAnimateIn]` | Fade+slide de entrada para elementos bajo `@if` | `appAnimateIn: { useBlur?, delay? } \| ''` | ✅ Estable |
 | `CardHoverDirective` | `[appCardHover]` | Efecto hover GSAP sobre `.card` (sombra + y:-2px) | — | ✅ Estable |
-| `BentoGridLayoutDirective` | `[appBentoGridLayout]` | FLIP animado para reflows del bento-grid | — | ✅ Estable |
+| `BentoGridLayoutDirective` | `[appBentoGridLayout]` | FLIP animado para reflows del bento-grid + **flash-fix universal** (pre-hide pre-paint `.is-reveal-pending` con safety-net en `afterNextRender`, guard SSR). Toda página con bento queda libre de parpadeo de entrada sin migración. | — | ✅ Estable |
+| `BentoRevealDirective` | `[appBentoReveal]` | **Patrón canónico** de entrada premium del bento-grid (sin flash). Acopla pre-hide pre-paint (`.is-reveal-pending`) + reveal en `afterNextRender` vía `animateBentoGrid`. Reemplaza el patrón manual `#bentoGrid viewChild + ngAfterViewInit`. Para grids con contenido presente en el 1er paint. SWR con swap `@if/@else` siguen usando `effect()`. | `skipOpacity: boolean` (true si una View Transition ya hace el fade) | ✅ Estable |
 | `ScrollRevealDirective` | `[appScrollReveal]` | ScrollTrigger reveal (fade+slide) al entrar al viewport. Acepta `{ y, delay, threshold }`. Auto-cleanup vía `DestroyRef`. Respeta `prefers-reduced-motion`. | `appScrollReveal: { y?, delay?, threshold? } \| ''` | ✅ Estable |
 
 ## Directivas de Auth / RBAC

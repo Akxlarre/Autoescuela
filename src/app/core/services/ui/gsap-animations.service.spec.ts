@@ -86,4 +86,47 @@ describe('GsapAnimationsService (server context)', () => {
   it('killAll() should not throw in server context', () => {
     expect(() => service.killAll()).not.toThrow();
   });
+
+  // ── fix-018: reveal premium de bento grid ──────────────────────────────────
+  describe('animateBentoGrid (fix-018)', () => {
+    it('should return a no-op cleanup function when container is null', () => {
+      const cleanup = service.animateBentoGrid(null);
+      expect(typeof cleanup).toBe('function');
+      expect(() => cleanup()).not.toThrow();
+    });
+
+    it('should not throw and return a cleanup function for a real grid', () => {
+      const grid = document.createElement('div');
+      grid.className = 'bento-grid';
+      grid.appendChild(document.createElement('div'));
+      grid.appendChild(document.createElement('div'));
+
+      let cleanup!: () => void;
+      expect(() => (cleanup = service.animateBentoGrid(grid))).not.toThrow();
+      expect(typeof cleanup).toBe('function');
+      expect(() => cleanup()).not.toThrow();
+    });
+
+    it('should remove the .is-reveal-pending pre-hide class (anti-flash contract)', () => {
+      const grid = document.createElement('div');
+      grid.className = 'bento-grid is-reveal-pending';
+      grid.appendChild(document.createElement('div'));
+
+      service.animateBentoGrid(grid);
+
+      expect(grid.classList.contains('is-reveal-pending')).toBe(false);
+    });
+
+    it('should reveal cells (opacity 1) when reduced/no-animate', () => {
+      const grid = document.createElement('div');
+      grid.className = 'bento-grid is-reveal-pending';
+      const cell = document.createElement('div');
+      grid.appendChild(cell);
+
+      service.animateBentoGrid(grid);
+
+      // En contexto server shouldAnimate()=false → estado final visible inmediato.
+      expect(cell.style.opacity).toBe('1');
+    });
+  });
 });

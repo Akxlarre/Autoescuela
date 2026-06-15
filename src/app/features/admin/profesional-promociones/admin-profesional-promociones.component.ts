@@ -49,6 +49,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Promociones Profesionales"
         subtitle="Programación y gestión de ciclos de cursos Clase Profesional"
         [actions]="heroActions()"

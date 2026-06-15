@@ -17,6 +17,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { AnticipoCuentaCorriente, AnticipoHistorial } from '@core/models/ui/anticipos.model';
 import { RegistrarAnticipoDrawerComponent } from './registrar-anticipo-drawer.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 // ─── Formatter ───────────────────────────────────────────────────────────────
 
@@ -28,31 +29,35 @@ function clp(n: number): string {
 @Component({
   selector: 'app-admin-contabilidad-anticipos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, AlertCardComponent],
+  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, AlertCardComponent, BentoGridLayoutDirective],
   template: `
-    <div class="page-wide flex flex-col gap-6 pb-8" #pageRef>
+    <div class="bento-grid" appBentoGridLayout #pageRef>
       <!-- ── Hero ─────────────────────────────────────────────────────────── -->
-      <app-section-hero
-        title="Anticipos a Instructores"
-        contextLine="Contabilidad"
-        subtitle="RF-038 · Cuenta corriente interna y gestión de anticipos"
-        icon="banknote"
-        [actions]="heroActions"
-        (actionClick)="onHeroAction($event)"
-      />
+      <div class="bento-hero relative overflow-visible">
+        <app-section-hero
+          title="Anticipos a Instructores"
+          contextLine="Contabilidad"
+          subtitle="RF-038 · Cuenta corriente interna y gestión de anticipos"
+          icon="banknote"
+          [actions]="heroActions"
+          (actionClick)="onHeroAction($event)"
+        />
+      </div>
 
       <!-- ── Error ─────────────────────────────────────────────────────────── -->
       @if (facade.error()) {
-        <app-alert-card severity="error" title="Error al cargar anticipos">
-          {{ facade.error() }}
-        </app-alert-card>
+        <div class="bento-banner">
+          <app-alert-card severity="error" title="Error al cargar anticipos">
+            {{ facade.error() }}
+          </app-alert-card>
+        </div>
       }
 
       <!-- ── KPIs ───────────────────────────────────────────────────────────── -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" #kpiGrid>
-        <!-- Anticipos Pendientes -->
+      <!-- Anticipos Pendientes -->
+      <div class="bento-square">
         <div
-          class="card p-5 flex flex-col gap-2"
+          class="card p-5 flex flex-col gap-2 h-full"
           style="border-left: 3px solid var(--state-warning)"
         >
           @if (facade.isLoading()) {
@@ -71,9 +76,11 @@ function clp(n: number): string {
             </span>
           }
         </div>
+      </div>
 
-        <!-- Total Histórico -->
-        <div class="card p-5 flex flex-col gap-2">
+      <!-- Total Histórico -->
+      <div class="bento-square">
+        <div class="card p-5 flex flex-col gap-2 h-full">
           @if (facade.isLoading()) {
             <app-skeleton-block variant="text" width="60%" height="14px" />
             <app-skeleton-block variant="rect" width="70%" height="36px" />
@@ -86,9 +93,11 @@ function clp(n: number): string {
             <span class="text-xs text-text-muted">desde inicio de operaciones</span>
           }
         </div>
+      </div>
 
-        <!-- Ya Descontados -->
-        <div class="card p-5 flex flex-col gap-2 border-2 border-success" >
+      <!-- Ya Descontados -->
+      <div class="bento-square">
+        <div class="card p-5 flex flex-col gap-2 border-2 border-success h-full" >
           @if (facade.isLoading()) {
             <app-skeleton-block variant="text" width="60%" height="14px" />
             <app-skeleton-block variant="rect" width="70%" height="36px" />
@@ -104,7 +113,7 @@ function clp(n: number): string {
       </div>
 
       <!-- ── Cuenta Corriente por Instructor ───────────────────────────────── -->
-      <div class="card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden">
         <div
           class="flex items-center gap-2 px-5 py-4"
           style="border-bottom: 1px solid var(--border-subtle)"
@@ -263,7 +272,7 @@ function clp(n: number): string {
       </div>
 
       <!-- ── Historial de Anticipos ─────────────────────────────────────────── -->
-      <div class="card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden">
         <div
           class="flex items-center justify-between px-5 py-4"
           style="border-bottom: 1px solid var(--border-subtle)"

@@ -66,6 +66,7 @@ const PAGE_SIZE = 9;
       <!-- ══ HERO ══ -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Mis Alumnos"
         subtitle="Gestiona y haz seguimiento a tus alumnos asignados"
         [actions]="heroActions"

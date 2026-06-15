@@ -46,6 +46,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Gestión de Secretarias"
         subtitle="Control de acceso y gestión de personal de secretaría"
         [actions]="heroActions()"

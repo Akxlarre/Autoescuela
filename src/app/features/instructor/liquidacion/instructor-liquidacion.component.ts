@@ -1,9 +1,9 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   ElementRef,
   OnInit,
+  effect,
   inject,
   viewChild,
 } from '@angular/core';
@@ -41,6 +41,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Mis Horas"
         subtitle="Registro de horas trabajadas del mes actual"
         backRoute="/app/instructor/dashboard"
@@ -182,7 +183,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     </div>
   `,
 })
-export class InstructorLiquidacionComponent implements OnInit, AfterViewInit {
+export class InstructorLiquidacionComponent implements OnInit {
   public facade = inject(InstructorHorasFacade);
   private gsap = inject(GsapAnimationsService);
 
@@ -190,13 +191,20 @@ export class InstructorLiquidacionComponent implements OnInit, AfterViewInit {
 
   readonly heroActions: SectionHeroAction[] = [];
 
-  async ngOnInit() {
-    await this.facade.initialize();
+  constructor() {
+    // Reveal SWR-aware: dispara el reveal sobre el contenido real (!isLoading),
+    // no sobre el skeleton que se reemplaza al cargar.
+    effect(() => {
+      const ready = !this.facade.isLoading();
+      const grid = this.bentoGrid()?.nativeElement;
+      if (ready && grid) {
+        Promise.resolve().then(() => this.gsap.animateBentoGrid(grid));
+      }
+    });
   }
 
-  ngAfterViewInit() {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+  async ngOnInit() {
+    await this.facade.initialize();
   }
 
   getCategoryColor(category: string): string {

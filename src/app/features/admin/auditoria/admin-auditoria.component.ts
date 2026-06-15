@@ -5,9 +5,6 @@ import {
   effect,
   inject,
   signal,
-  AfterViewInit,
-  ElementRef,
-  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -18,7 +15,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
@@ -41,10 +38,11 @@ const ACTION_OPTIONS = [
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     DateInputComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
@@ -52,6 +50,7 @@ const ACTION_OPTIONS = [
         subtitle="Registro inmutable de todas las acciones de las secretarias"
         contextLine="Solo acciones de secretarias"
         [actions]="[]"
+        [animateOnInit]="false"
       />
 
       <!-- ── Filtros ──────────────────────────────────────────────────────── -->
@@ -477,12 +476,9 @@ const ACTION_OPTIONS = [
     }
   `,
 })
-export class AdminAuditoriaComponent implements AfterViewInit {
+export class AdminAuditoriaComponent {
   protected readonly facade = inject(AuditoriaFacade);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly gsap = inject(GsapAnimationsService);
-
-  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   constructor() {
     effect(() => {
@@ -537,11 +533,6 @@ export class AdminAuditoriaComponent implements AfterViewInit {
   protected set moduloModel(v: string | null) {
     this.filtroModulo.set(v);
     this.applyFilters();
-  }
-
-  ngAfterViewInit(): void {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   protected applyFilters(): void {

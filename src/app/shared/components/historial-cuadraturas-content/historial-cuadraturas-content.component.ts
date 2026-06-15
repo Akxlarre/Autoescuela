@@ -1,9 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, AfterViewInit, ElementRef, viewChild, inject } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ function formatCLP(value: number): string {
 @Component({
   selector: 'app-historial-cuadraturas-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent],
+  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, BentoGridLayoutDirective],
   styles: `
     .cal-cell {
       min-height: 120px;
@@ -130,8 +132,9 @@ function formatCLP(value: number): string {
     }
   `,
   template: `
-    <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
-    <div class="bento-banner relative overflow-visible">
+    <div class="bento-grid" appBentoGridLayout #pageRef>
+      <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
+      <div class="bento-hero relative overflow-visible">
       <app-section-hero
         title="Historial de Cuadraturas"
         subtitle="Registro y visualización del calendario financiero mensual para arqueo de caja."
@@ -202,7 +205,7 @@ function formatCLP(value: number): string {
 
     <!-- ── Calendario ─────────────────────────────────────────────────────────── -->
     <div
-      class="overflow-hidden"
+      class="bento-banner overflow-hidden"
       style="border: 1px solid var(--border-color); border-radius: var(--radius-lg, 10px)"
     >
       <!-- Cabecera de días (LUN–DOM) | DESKTOP SOLO -->
@@ -418,7 +421,7 @@ function formatCLP(value: number): string {
     </div>
   `,
 })
-export class HistorialCuadraturasContentComponent {
+export class HistorialCuadraturasContentComponent implements AfterViewInit {
   // ── Inputs ────────────────────────────────────────────────────────────────
   cierres = input<HistorialCierre[]>([]);
   isLoading = input(false);
@@ -437,9 +440,17 @@ export class HistorialCuadraturasContentComponent {
   // ── Estado interno ────────────────────────────────────────────────────────
   protected readonly exportMenuOpen = signal(false);
 
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly pageRef = viewChild<ElementRef<HTMLElement>>('pageRef');
+
   // ── Constantes y Configuración de Hero ─────────────────────────────────────
   protected readonly diasSemana = DIAS_SEMANA;
   protected readonly skeletonCells = Array.from({ length: 35 });
+
+  ngAfterViewInit(): void {
+    const el = this.pageRef()?.nativeElement;
+    if (el) this.gsap.animateBentoGrid(el);
+  }
 
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {

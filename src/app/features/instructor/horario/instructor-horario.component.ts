@@ -36,6 +36,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Mi Horario"
         [subtitle]="weekLabel()"
         backRoute="/app/instructor/dashboard"

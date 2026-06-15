@@ -55,17 +55,11 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     AnimateInDirective,
     LayoutDrawerComponent,
     IconComponent,
-    DmsViewerModalComponent,
   ],
   template: `
     <!-- Panel de búsqueda — fuera del grid para evitar que overflow:hidden lo recorte -->
     @if (search.isOpen()) {
       <app-search-panel appAnimateIn class="search-panel-overlay" (closed)="search.close()" />
-    }
-
-    <!-- Visor de documentos DMS -->
-    @if (dmsViewer.isOpen()) {
-      <app-dms-viewer-modal [doc]="dmsViewer.currentDoc()!" (closed)="dmsViewer.close()" />
     }
 
     <!-- Modal de confirmación global (usado por guards y servicios imperativos) -->

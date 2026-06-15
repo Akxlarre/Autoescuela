@@ -1,20 +1,16 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  ElementRef,
   OnInit,
   computed,
   inject,
-  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { InstructorProfileFacade } from '@core/facades/instructor-profile.facade';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -22,6 +18,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -38,6 +35,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     ScrollRevealDirective,
     AnimateInDirective,
     CardHoverDirective,
@@ -46,13 +44,14 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     IconComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
         title="Mi Día"
         subtitle="Resumen de tus clases programadas para hoy"
         [actions]="heroActions"
+        [animateOnInit]="false"
       />
       <div class="bento-square">
         <app-kpi-card-variant
@@ -280,14 +279,11 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     </div>
   `,
 })
-export class InstructorDashboardComponent implements OnInit, AfterViewInit {
+export class InstructorDashboardComponent implements OnInit {
   public clasesFacade = inject(InstructorClasesFacade);
   public profile = inject(InstructorProfileFacade);
   public horasFacade = inject(InstructorHorasFacade);
-  private gsap = inject(GsapAnimationsService);
   private destroyRef = inject(DestroyRef);
-
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   readonly proximaHora = computed(() => {
     const t = this.clasesFacade.nextClass()?.timeLabel;
@@ -330,12 +326,5 @@ export class InstructorDashboardComponent implements OnInit, AfterViewInit {
       this.clasesFacade.fetchUpcomingDays(),
     ]);
     this.destroyRef.onDestroy(() => this.clasesFacade.dispose());
-  }
-
-  ngAfterViewInit() {
-    requestAnimationFrame(() => {
-      const grid = this.bentoGrid();
-      if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-    });
   }
 }
