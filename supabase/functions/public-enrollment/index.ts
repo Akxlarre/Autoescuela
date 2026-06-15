@@ -195,6 +195,41 @@ async function webpayCommit(token: string): Promise<WebpayCommitResponse> {
   return res.json();
 }
 
+// ─── Brand theming for invite emails ───────────────────────────────────────
+// Colors sourced from webs/src/styles/themes/{azul,roja}.css — single source of truth.
+
+const THEME_COLORS = {
+  azul: {
+    brandColor: '#0ea5e9',
+    brandColorDark: '#0369a1',
+    brandColorLight: '#f0f9ff',
+    brandColorMuted: '#e0f2fe',
+    gradientHero: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%)',
+    gradientCta: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+    gradientFooter: 'linear-gradient(to right, #0ea5e9, #6366f1)',
+    shadowColor: 'rgba(14, 165, 233, 0.35)',
+  },
+  roja: {
+    brandColor: '#fd2018',
+    brandColorDark: '#bc0b05',
+    brandColorLight: '#fff1f0',
+    brandColorMuted: '#ffe2e0',
+    gradientHero: 'linear-gradient(160deg, #bc0b05 0%, #fd2018 55%, #f97316 100%)',
+    gradientCta: 'linear-gradient(135deg, #fd2018 0%, #f97316 100%)',
+    gradientFooter: 'linear-gradient(to right, #fd2018, #f97316)',
+    shadowColor: 'rgba(253, 32, 24, 0.35)',
+  },
+} as const;
+
+function getSchoolInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter((w) => w.length > 2)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+}
+
 // ─── Main handler ───
 
 // ── Anti-abuso (S1) ──────────────────────────────────────────────────────────
@@ -651,7 +686,7 @@ async function handleSubmitClaseB(supabase: any, body: any) {
     }
 
     // 11. Crear cuenta Auth + enviar correo de invitación al alumno (fire-and-forget)
-    void inviteStudentToAuth(supabase, userId);
+    void inviteStudentToAuth(supabase, userId, branchId);
 
     return jsonResponse({
       success: true,
@@ -1158,7 +1193,7 @@ async function handleConfirmPayment(supabase: any, body: any) {
       await moveContractPreview(supabase, attempt.session_token, enrollmentId);
 
       // 13. Invitar al alumno a crear su cuenta (fire-and-forget)
-      void inviteStudentToAuth(supabase, userId);
+      void inviteStudentToAuth(supabase, userId, snapshot.branchId);
     } catch (commitErr) {
       const msg = commitErr instanceof Error ? commitErr.message : String(commitErr);
       // ALERTA CRÍTICA: el pago fue cobrado pero la matrícula no pudo crearse.
@@ -1370,7 +1405,7 @@ async function moveContractPreview(
  * si aún no activó (first_login=true) reenvía la invitación.
  * Falla silenciosamente para no bloquear la matrícula ya confirmada.
  */
-async function inviteStudentToAuth(supabase: any, userId: number): Promise<void> {
+async function inviteStudentToAuth(supabase: any, userId: number, branchId: number): Promise<void> {
   try {
     const { data: userRow } = await supabase
       .from('users')
@@ -1392,11 +1427,26 @@ async function inviteStudentToAuth(supabase: any, userId: number): Promise<void>
       return;
     }
 
+    // Leer configuración de marca de la sede para personalizar el correo
+    const { data: websiteConfig } = await supabase
+      .from('website_config')
+      .select('config')
+      .eq('branch_id', branchId)
+      .maybeSingle();
+
+    const theme = (websiteConfig?.config?.brand?.theme ?? 'azul') as keyof typeof THEME_COLORS;
+    const colors = THEME_COLORS[theme] ?? THEME_COLORS.azul;
+    const schoolName = (websiteConfig?.config?.brand?.name ?? 'Autoescuela').normalize('NFC');
+    const schoolInitials = getSchoolInitials(schoolName);
+
     const siteUrl = Deno.env.get('SITE_URL') ?? '';
 
     const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
       inviteEmail,
-      { redirectTo: siteUrl, data: { role: 'student' } },
+      {
+        redirectTo: siteUrl,
+        data: { role: 'student', schoolName, schoolInitials, ...colors },
+      },
     );
 
     if (inviteError) {

@@ -1,0 +1,2 @@
+# Go/Supabase email templates — Prettier no puede formatear sintaxis {{ .Data "key" }}
+supabase/email-templates/

@@ -29,6 +29,39 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
+// Colors sourced from webs/src/styles/themes/{azul,roja}.css — single source of truth.
+const THEME_COLORS = {
+  azul: {
+    brandColor: '#0ea5e9',
+    brandColorDark: '#0369a1',
+    brandColorLight: '#f0f9ff',
+    brandColorMuted: '#e0f2fe',
+    gradientHero: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 60%, #8b5cf6 100%)',
+    gradientCta: 'linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)',
+    gradientFooter: 'linear-gradient(to right, #0ea5e9, #6366f1)',
+    shadowColor: 'rgba(14, 165, 233, 0.35)',
+  },
+  roja: {
+    brandColor: '#fd2018',
+    brandColorDark: '#bc0b05',
+    brandColorLight: '#fff1f0',
+    brandColorMuted: '#ffe2e0',
+    gradientHero: 'linear-gradient(160deg, #bc0b05 0%, #fd2018 55%, #f97316 100%)',
+    gradientCta: 'linear-gradient(135deg, #fd2018 0%, #f97316 100%)',
+    gradientFooter: 'linear-gradient(to right, #fd2018, #f97316)',
+    shadowColor: 'rgba(253, 32, 24, 0.35)',
+  },
+} as const;
+
+function getSchoolInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter((w) => w.length > 2)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -93,7 +126,7 @@ Deno.serve(async (req: Request) => {
     // ── Buscar el usuario en la tabla users ───────────────────────────────────
     const { data: targetUser, error: findError } = await supabaseAdmin
       .from('users')
-      .select('id, email, supabase_uid, first_login, roles(name)')
+      .select('id, email, supabase_uid, first_login, branch_id, roles(name)')
       .eq('id', userId)
       .maybeSingle();
 
@@ -119,6 +152,18 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // ── Leer configuración de marca de la sede para personalizar el correo ────
+    const { data: websiteConfig } = await supabaseAdmin
+      .from('website_config')
+      .select('config')
+      .eq('branch_id', targetUser.branch_id)
+      .maybeSingle();
+
+    const theme = (websiteConfig?.config?.brand?.theme ?? 'azul') as keyof typeof THEME_COLORS;
+    const colors = THEME_COLORS[theme] ?? THEME_COLORS.azul;
+    const schoolName = (websiteConfig?.config?.brand?.name ?? 'Autoescuela').normalize('NFC');
+    const schoolInitials = getSchoolInitials(schoolName);
+
     // ── Enviar invitación (primera vez o reenvío) ─────────────────────────────
     const siteUrl =
       Deno.env.get('SITE_URL') ?? Deno.env.get('SUPABASE_URL')!.replace('.supabase.co', '');
@@ -126,7 +171,7 @@ Deno.serve(async (req: Request) => {
     const { data: inviteData, error: inviteError } =
       await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         redirectTo: siteUrl,
-        data: { role: 'student' },
+        data: { role: 'student', schoolName, schoolInitials, ...colors },
       });
 
     if (inviteError) {
