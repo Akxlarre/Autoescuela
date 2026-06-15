@@ -1,9 +1,11 @@
 import { TooltipModule } from 'primeng/tooltip';
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal, AfterViewInit, ElementRef, viewChild, inject } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
 
@@ -46,6 +48,7 @@ function formatCLP(value: number): string {
     SkeletonBlockComponent,
     SectionHeroComponent,
     KpiCardVariantComponent,
+    BentoGridLayoutDirective,
   ],
   styles: [
     `
@@ -249,8 +252,9 @@ function formatCLP(value: number): string {
     `,
   ],
   template: `
-    <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
-    <div class="bento-banner relative overflow-visible">
+    <div class="bento-grid" appBentoGridLayout #pageRef>
+      <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
+      <div class="bento-hero relative overflow-visible">
       <app-section-hero
         title="Liquidaciones de Instructores"
         subtitle="Nómina mensual y registro de pagos"
@@ -286,10 +290,9 @@ function formatCLP(value: number): string {
     </div>
 
     <!-- ── Contenido (padding consistente con reportes-contables-content) ── -->
-    <div class="px-4 sm:px-6 pb-6 flex flex-col gap-5">
-      <!-- ── KPIs: grid plano (3 tarjetas no dividen las columnas bento 4/8/12) ── -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- KPI 1: Total Nómina -->
+      <!-- ── KPIs ── -->
+      <!-- KPI 1: Total Nómina -->
+      <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis().totalNomina"
           label="Total Nómina"
@@ -299,8 +302,10 @@ function formatCLP(value: number): string {
           subValue="Suma bruta del periodo"
           [loading]="isLoading()"
         />
+      </div>
 
-        <!-- KPI 2: Anticipos -->
+      <!-- KPI 2: Anticipos -->
+      <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis().totalAnticipos"
           label="Anticipos a Descontar"
@@ -310,8 +315,10 @@ function formatCLP(value: number): string {
           subValue="Total de adelantos entregados"
           [loading]="isLoading()"
         />
+      </div>
 
-        <!-- KPI 3: Estado Pagos — usa progressPercent integrado en kpi-card-variant -->
+      <!-- KPI 3: Estado Pagos — usa progressPercent integrado en kpi-card-variant -->
+      <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis().totalPagados"
           label="Progreso de Pagos"
@@ -326,7 +333,7 @@ function formatCLP(value: number): string {
 
       <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
       <div
-        class="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 py-3 shadow-sm bg-surface"
+        class="bento-banner flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 py-3 shadow-sm bg-surface"
         style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
       >
         <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
@@ -402,7 +409,7 @@ function formatCLP(value: number): string {
 
       <div
         style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px); container-type:inline-size; container-name:liq-container"
-        class="shadow-sm bg-surface overflow-hidden"
+        class="bento-banner shadow-sm bg-surface overflow-hidden"
       >
         <!-- VISTA TABLA (Solo escritorio y drawer cerrado) -->
         @if (!isDrawerOpen()) {
@@ -768,7 +775,7 @@ function formatCLP(value: number): string {
     </div>
   `,
 })
-export class LiquidacionesContentComponent {
+export class LiquidacionesContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────────
   liquidaciones = input.required<LiquidacionRow[]>();
   kpis = input.required<LiquidacionesKpis>();
@@ -791,8 +798,16 @@ export class LiquidacionesContentComponent {
   protected readonly query = signal('');
   protected readonly exportMenuOpen = signal(false);
 
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly pageRef = viewChild<ElementRef<HTMLElement>>('pageRef');
+
   // ── Constantes ───────────────────────────────────────────────────────────────
   protected readonly skeletonRows = Array.from({ length: 5 });
+
+  ngAfterViewInit(): void {
+    const el = this.pageRef()?.nativeElement;
+    if (el) this.gsap.animateBentoGrid(el);
+  }
 
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
     {

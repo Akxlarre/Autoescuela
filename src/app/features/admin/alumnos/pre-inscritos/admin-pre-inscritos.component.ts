@@ -7,6 +7,9 @@ import {
   signal,
   computed,
   effect,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -22,6 +25,8 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AdminPreInscritoDrawerComponent } from './admin-pre-inscrito-drawer.component';
 import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.model';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 @Component({
   selector: 'app-admin-pre-inscritos',
@@ -37,26 +42,31 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
     SkeletonBlockComponent,
     KpiCardVariantComponent,
     SectionHeroComponent,
+    BentoGridLayoutDirective,
   ],
   template: `
-    <div class="space-y-6 p-4 md:p-6">
-      <app-section-hero
-        title="Pre-inscritos Clase Profesional"
-        subtitle="Gestión de pre-inscripciones online pendientes de revisión"
-        icon="users"
-        backRoute="/app/admin/alumnos"
-        backLabel="Alumnos"
-        [actions]="[]"
-      />
+    <div class="bento-grid" appBentoGridLayout #pageRef>
+      <div class="bento-hero relative overflow-visible">
+        <app-section-hero
+          title="Pre-inscritos Clase Profesional"
+          subtitle="Gestión de pre-inscripciones online pendientes de revisión"
+          icon="users"
+          backRoute="/app/admin/alumnos"
+          backLabel="Alumnos"
+          [actions]="[]"
+        />
+      </div>
 
       <!-- KPIs -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bento-square">
         <app-kpi-card-variant
           label="TOTAL PRE-INSCRITOS"
           [value]="facade.total()"
           icon="users"
           [loading]="facade.isLoading()"
         />
+      </div>
+      <div class="bento-square">
         <app-kpi-card-variant
           label="SIN EVALUAR TEST"
           [value]="facade.pendientesTest()"
@@ -64,6 +74,8 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
           color="warning"
           [loading]="facade.isLoading()"
         />
+      </div>
+      <div class="bento-square">
         <app-kpi-card-variant
           label="APTOS (PENDIENTE MATRÍCULA)"
           [value]="facade.aprobados()"
@@ -74,7 +86,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
       </div>
 
       <!-- Filtros -->
-      <div class="card flex flex-wrap items-center gap-3">
+      <div class="bento-banner card flex flex-wrap items-center gap-3">
         <input
           type="text"
           class="border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface w-full sm:w-64 focus:outline-none focus:ring-2"
@@ -121,7 +133,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
       </div>
 
       <!-- Tabla -->
-      <div class="card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden">
         @if (facade.isLoading()) {
           <div class="p-6 space-y-3">
             @for (i of skeletonRows; track i) {
@@ -233,10 +245,13 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
     </div>
   `,
 })
-export class AdminPreInscritosComponent implements OnInit, OnDestroy {
+export class AdminPreInscritosComponent implements OnInit, OnDestroy, AfterViewInit {
   protected readonly facade = inject(AdminPreInscritosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
+
+  private readonly pageRef = viewChild<ElementRef<HTMLElement>>('pageRef');
 
   protected readonly searchQuery = signal('');
   protected readonly filterStatus = signal('');
@@ -287,9 +302,15 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
     void this.facade.initialize();
   }
 
+  ngAfterViewInit(): void {
+    const el = this.pageRef()?.nativeElement;
+    if (el) this.gsap.animateBentoGrid(el);
+  }
+
   ngOnDestroy(): void {
-    this.facade.select(null);
-    this.facade.resetPromocionesCache();
+    // Ya no limpiamos el facade aquí, porque el drawer puede seguir abierto
+    // mientras navegamos. El componente del drawer (AdminPreInscritoDrawerComponent)
+    // se encarga de limpiarlo en su propio ngOnDestroy().
   }
 
   protected openDrawer(row: PreInscritoTableRow): void {

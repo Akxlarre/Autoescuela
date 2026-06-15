@@ -65,6 +65,7 @@ const POR_PAGINA = 5;
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Gestión de Pagos"
         subtitle="Registro y seguimiento financiero"
         icon="wallet"

@@ -2,6 +2,7 @@ import { Injectable, inject, PLATFORM_ID, NgZone } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { CustomEase } from 'gsap/CustomEase';
 
 /**
  * GsapAnimationsService - Centralized GSAP animation patterns
@@ -21,11 +22,18 @@ export class GsapAnimationsService {
   private platformId = inject(PLATFORM_ID);
   private ngZone = inject(NgZone);
   private prefersReducedMotion = false;
+  /** CustomEase registrado → permite convertir tokens cubic-bezier en eases reales de GSAP. */
+  private customEaseReady = false;
+  /** Cache token → nombre de ease GSAP resuelto (evita recrear CustomEase en cada llamada). */
+  private readonly easeCache = new Map<string, string>();
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
       this.ngZone.runOutsideAngular(() => {
-        gsap.registerPlugin(ScrollTrigger);
+        // CustomEase hace que los tokens cubic-bezier(...) del design system
+        // se traduzcan a eases nativos de GSAP (antes caían al ease default).
+        gsap.registerPlugin(ScrollTrigger, CustomEase);
+        this.customEaseReady = true;
         // Asegura que el ticker de GSAP corra fuera de Angular Zone
         gsap.ticker.wake();
       });
@@ -51,14 +59,44 @@ export class GsapAnimationsService {
   }
 
   /**
-   * Lee un token de easing CSS y lo devuelve como CustomEase string para GSAP.
-   * Fallback al easing GSAP si el token no existe.
-   * @example getCssEase('--ease-standard', 'power3.out') → 'cubic-bezier(0.4,0,0.2,1)'
+   * Lee un token de easing CSS y lo convierte en un ease REAL de GSAP.
+   *
+   * GSAP core NO entiende strings `cubic-bezier(...)`; sin esta conversión los
+   * tokens del design system caían silenciosamente al ease default. Aquí los
+   * traducimos a un CustomEase equivalente (registrado y cacheado por token).
+   *
+   * - `cubic-bezier(x1,y1,x2,y2)` → CustomEase `M0,0 C x1,y1 x2,y2 1,1`
+   * - token vacío o sin CustomEase → `fallback` (ease nativo de GSAP)
+   *
+   * @example getCssEase('--ease-out-expo', 'expo.out') → 'cssease--ease-out-expo'
    */
   private getCssEase(token: string, fallback: string): string {
     if (!isPlatformBrowser(this.platformId)) return fallback;
+
+    const cached = this.easeCache.get(token);
+    if (cached) return cached;
+
     const val = getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-    return val || fallback;
+    let result = fallback;
+
+    const m = val.match(
+      /cubic-bezier\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/,
+    );
+    if (m && this.customEaseReady) {
+      const name = `cssease-${token}`;
+      try {
+        CustomEase.create(name, `M0,0 C${m[1]},${m[2]} ${m[3]},${m[4]} 1,1`);
+        result = name;
+      } catch {
+        result = fallback;
+      }
+    } else if (val && /^[a-z]/i.test(val)) {
+      // El token ya contiene un nombre de ease nativo de GSAP (caso raro).
+      result = val;
+    }
+
+    this.easeCache.set(token, result);
+    return result;
   }
 
   /**
@@ -77,81 +115,102 @@ export class GsapAnimationsService {
   animateBentoGrid(
     containerEl: HTMLElement | null | undefined,
     options: { skipOpacity?: boolean } = {},
-  ): void {
-    if (!containerEl) return;
+  ): () => void {
+    if (!containerEl) return () => {};
 
-    this.ngZone.runOutsideAngular(() => {
+    // El pre-hide (`.is-reveal-pending`, puesto por [appBentoReveal]) mantiene las
+    // celdas en opacity:0 hasta este punto → sin parpadeo. Lo retiramos en cuanto
+    // GSAP fija el estado inicial inline (immediateRender), o de inmediato si no animamos.
+    const clearPending = () => containerEl.classList.remove('is-reveal-pending');
+
+    return this.ngZone.runOutsideAngular<() => void>(() => {
       const cells = Array.from(containerEl.children) as HTMLElement[];
 
       if (!this.shouldAnimate()) {
         gsap.set(cells, { opacity: 1, y: 0, scale: 1, filter: 'none' });
-        return;
+        clearPending();
+        return () => {};
       }
 
       const { skipOpacity = false } = options;
 
-      // Separar en hero vs grid regular usando clases semánticas existentes
+      // Tempo desde tokens del design system (no hardcodear motion).
+      const heroDuration = this.getCssDuration('--duration-reveal-hero', 0.6);
+      const cellDuration = this.getCssDuration('--duration-reveal-cell', 0.52);
+      const staggerEach = this.getTokenMs('--stagger-reveal') / 1000 || 0.06;
+      const gridDelay = this.getTokenMs('--delay-reveal-grid') / 1000 || 0.1;
+      const ease = this.getCssEase('--ease-out-expo', 'expo.out');
+
+      // Separar en hero vs grid regular usando clases semánticas existentes.
       const heroCells = cells.filter(
         (el) =>
           el.classList.contains('card-accent') ||
           el.classList.contains('bento-banner') ||
+          el.classList.contains('bento-hero') ||
           el.getAttribute('data-animate-hero') === 'true',
       );
       const gridCells = cells.filter((el) => !heroCells.includes(el));
 
-      // Promover layers antes de animar
-      heroCells.forEach((el) => (el.style.willChange = 'transform, filter, opacity'));
-      gridCells.forEach((el) => (el.style.willChange = 'transform, opacity'));
+      // Promover solo transform/opacity al compositor (sin filter → sin jank).
+      cells.forEach((el) => (el.style.willChange = 'transform, opacity'));
 
-      const tl = gsap.timeline({
-        onComplete: () => {
-          heroCells.forEach((el) => (el.style.willChange = ''));
-          gridCells.forEach((el) => (el.style.willChange = ''));
-        },
-      });
+      // gsap.context aísla los tweens y permite revert() determinista al destruir.
+      const ctx = gsap.context(() => {
+        const tl = gsap.timeline({
+          onComplete: () => cells.forEach((el) => (el.style.willChange = '')),
+        });
 
-      // ── Hero cells: blur+scale premium ──
-      if (heroCells.length > 0) {
-        const fromVars: gsap.TweenVars = { scale: 0.96, filter: 'blur(6px)', y: 12 };
-        if (!skipOpacity) fromVars.opacity = 0;
+        // ── Hero cells: scale + lift (sin blur — compositor puro) ──
+        if (heroCells.length > 0) {
+          const fromVars: gsap.TweenVars = { scale: 0.97, y: 14 };
+          if (!skipOpacity) fromVars.opacity = 0;
 
-        tl.fromTo(
-          heroCells,
-          fromVars,
-          {
-            scale: 1,
-            filter: 'blur(0px)',
-            y: 0,
-            opacity: 1,
-            duration: 0.65,
-            ease: 'expo.out',
-            stagger: heroCells.length > 1 ? 0.08 : 0,
-            clearProps: 'filter,transform' + (skipOpacity ? '' : ',opacity'),
-          },
-          0,
-        );
-      }
+          tl.fromTo(
+            heroCells,
+            fromVars,
+            {
+              scale: 1,
+              y: 0,
+              opacity: 1,
+              duration: heroDuration,
+              ease,
+              stagger: heroCells.length > 1 ? staggerEach : 0,
+              overwrite: 'auto',
+              clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
+            },
+            0,
+          );
+        }
 
-      // ── Grid cells: y+scale + fade ──
-      if (gridCells.length > 0) {
-        const fromVars: gsap.TweenVars = { y: 24, scale: 0.97 };
-        if (!skipOpacity) fromVars.opacity = 0;
+        // ── Grid cells: lift sutil + fade, escalonado. Entra DESPUÉS del hero
+        //    (--delay-reveal-grid) → cascada en capas, no un bloque plano. ──
+        if (gridCells.length > 0) {
+          const fromVars: gsap.TweenVars = { y: 18, scale: 0.985 };
+          if (!skipOpacity) fromVars.opacity = 0;
 
-        tl.fromTo(
-          gridCells,
-          fromVars,
-          {
-            y: 0,
-            scale: 1,
-            opacity: 1,
-            duration: 0.55,
-            ease: 'power3.out',
-            stagger: { amount: 0.25, from: 'start' },
-            clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
-          },
-          heroCells.length > 0 ? 0.08 : 0,
-        );
-      }
+          tl.fromTo(
+            gridCells,
+            fromVars,
+            {
+              y: 0,
+              scale: 1,
+              opacity: 1,
+              duration: cellDuration,
+              ease,
+              stagger: { each: staggerEach, from: 'start' },
+              overwrite: 'auto',
+              clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
+            },
+            heroCells.length > 0 ? gridDelay : 0,
+          );
+        }
+      }, containerEl);
+
+      // immediateRender ya fijó el estado inicial inline → retirar el pre-hide
+      // ahora es seamless (sin reflasheo).
+      clearPending();
+
+      return () => ctx.revert();
     });
   }
 
@@ -166,16 +225,18 @@ export class GsapAnimationsService {
       return;
     }
 
-    el.style.willChange = 'transform, filter';
+    el.style.willChange = 'transform, opacity';
     gsap.fromTo(
       el,
-      { scale: 0.95, filter: 'blur(8px)' },
+      { scale: 0.97, y: 12, opacity: 0 },
       {
         scale: 1,
-        filter: 'blur(0px)',
-        duration: 0.7,
-        ease: 'expo.out',
-        clearProps: 'filter,transform',
+        y: 0,
+        opacity: 1,
+        duration: this.getCssDuration('--duration-reveal-hero', 0.6),
+        ease: this.getCssEase('--ease-out-expo', 'expo.out'),
+        overwrite: 'auto',
+        clearProps: 'transform,opacity',
         onComplete: () => {
           el.style.willChange = '';
         },

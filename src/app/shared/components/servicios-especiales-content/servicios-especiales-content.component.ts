@@ -52,8 +52,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
+      <div class="bento-banner">
         <app-section-hero
+          [animateOnInit]="false"
           title="Servicios Especiales"
           subtitle="Punto de venta de servicios complementarios — alumnos y clientes externos"
           icon="receipt"
@@ -81,7 +82,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               <app-icon name="loader-2" [size]="24" class="animate-spin text-brand" />
             </div>
           } @else {
-            <span class="kpi-label text-success" >Total recaudado</span>
+            <span class="kpi-label text-success">Total recaudado</span>
             <p class="kpi-value m-0">{{ kpis().totalCobrado | shortCurrency }}</p>
             <p class="text-xs m-0 mt-auto text-text-muted">
               {{ kpis().ventasCobradas }} ventas cobradas
@@ -96,8 +97,8 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               <app-icon name="loader-2" [size]="24" class="animate-spin text-brand" />
             </div>
           } @else {
-            <span class="kpi-label text-warning" >Pendiente de cobro</span>
-            <p class="kpi-value m-0 text-warning" >
+            <span class="kpi-label text-warning">Pendiente de cobro</span>
+            <p class="kpi-value m-0 text-warning">
               {{ kpis().pendientesCobro | shortCurrency }}
             </p>
             <p class="text-xs m-0 mt-auto text-text-muted">
@@ -184,7 +185,6 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <button
               type="button"
               class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-subtle/50 border-2 border-dashed border-border-default"
-              
               data-llm-action="open-nuevo-servicio-drawer-card"
               (click)="requestNuevoServicio.emit()"
             >
@@ -330,7 +330,6 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       @if (venta.cobrado) {
                         <span
                           class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border bg-success-subtle text-success border-success"
-                          
                         >
                           Cobrado
                         </span>
@@ -485,7 +484,6 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly backRoute = input<string>('/app/dashboard');
 
   private readonly gsap = inject(GsapAnimationsService);
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
@@ -542,10 +540,7 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

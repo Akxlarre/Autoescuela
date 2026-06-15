@@ -75,7 +75,6 @@ import { Router, RouterLink } from '@angular/router';
     KpiCardVariantComponent,
     AlertCardComponent,
     SectionHeroComponent,
-    RouterLink,
   ],
   template: `
     <!-- ═══════════════════════════════════════════════════════════════

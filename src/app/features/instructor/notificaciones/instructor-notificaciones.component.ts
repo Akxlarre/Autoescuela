@@ -26,6 +26,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Notificaciones"
         subtitle="Centro de alertas y mensajes importantes"
         backRoute="/app/instructor/dashboard"

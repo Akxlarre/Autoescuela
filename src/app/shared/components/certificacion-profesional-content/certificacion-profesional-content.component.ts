@@ -63,8 +63,9 @@ const PAGE_SIZE = 10;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ──────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
+      <div class="bento-banner">
         <app-section-hero
+          [animateOnInit]="false"
           title="Certificados Clase Profesional"
           subtitle="Certificación de finalización — Escuela de Conductores Profesionales"
           icon="shield-check"
@@ -193,7 +194,6 @@ const PAGE_SIZE = 10;
                 type="text"
                 placeholder="Buscar por nombre o RUT..."
                 class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
-                
                 data-llm-description="Search professional certificate students by name or RUT"
                 [value]="searchQuery()"
                 (input)="setSearchQuery($any($event.target).value)"
@@ -271,7 +271,8 @@ const PAGE_SIZE = 10;
                 <app-icon
                   name="file-check"
                   [size]="20"
-                  class="text-brand shrink-0" style="margin-top: 2px"
+                  class="text-brand shrink-0"
+                  style="margin-top: 2px"
                 />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-semibold text-text-primary">
@@ -299,18 +300,14 @@ const PAGE_SIZE = 10;
                 <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
                   @for (alumno of pendientesElegibles(); track alumno.enrollmentId) {
                     <div class="flex items-center gap-3 px-4 py-2.5">
-                      <app-icon
-                        name="file-check"
-                        [size]="14"
-                        class="text-success shrink-0"
-                      />
+                      <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
                       <span class="text-sm font-medium flex-1 truncate text-text-primary">
                         {{ alumno.nombre }}
                       </span>
                       @if (
                         alumno.pctAsistenciaPractica !== null && alumno.pctAsistenciaPractica < 100
                       ) {
-                        <span class="text-xs text-warning" >
+                        <span class="text-xs text-warning">
                           <app-icon name="alert-triangle" [size]="11" />
                           {{ alumno.pctAsistenciaPractica }}% práctica
                         </span>
@@ -329,11 +326,7 @@ const PAGE_SIZE = 10;
                   <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
                     @for (alumno of pendientesNoElegibles(); track alumno.enrollmentId) {
                       <div class="flex items-center gap-3 px-4 py-2.5">
-                        <app-icon
-                          name="x-circle"
-                          [size]="14"
-                          class="text-warning shrink-0"
-                        />
+                        <app-icon name="x-circle" [size]="14" class="text-warning shrink-0" />
                         <span class="text-sm flex-1 truncate text-text-muted">
                           {{ alumno.nombre }}
                         </span>
@@ -387,7 +380,8 @@ const PAGE_SIZE = 10;
                 <app-icon
                   name="send"
                   [size]="20"
-                  class="text-brand shrink-0" style="margin-top: 2px"
+                  class="text-brand shrink-0"
+                  style="margin-top: 2px"
                 />
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-semibold text-text-primary">
@@ -412,7 +406,7 @@ const PAGE_SIZE = 10;
                     <span class="text-sm font-medium flex-1 truncate text-text-primary">
                       {{ alumno.nombre }}
                     </span>
-                    <span class="text-xs truncate text-brand" >
+                    <span class="text-xs truncate text-brand">
                       {{ alumno.email }}
                     </span>
                   </div>
@@ -531,7 +525,7 @@ const PAGE_SIZE = 10;
                       <td class="px-4 py-3 font-medium text-primary">
                         {{ alumno.nombre }}
                       </td>
-                      <td class="px-4 py-3 text-brand" >
+                      <td class="px-4 py-3 text-brand">
                         {{ alumno.rut }}
                       </td>
                       <td class="px-4 py-3 text-xs text-muted max-w-40 truncate">
@@ -696,13 +690,8 @@ const PAGE_SIZE = 10;
                         <td colspan="9" class="px-4 py-3">
                           <div
                             class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
-                            
                           >
-                            <app-icon
-                              name="send"
-                              [size]="18"
-                              class="text-brand shrink-0"
-                            />
+                            <app-icon name="send" [size]="18" class="text-brand shrink-0" />
                             <p class="text-sm flex-1 text-text-secondary">
                               Se enviará el certificado de
                               <strong class="text-text-primary">{{ alumno.nombre }}</strong>
@@ -751,7 +740,7 @@ const PAGE_SIZE = 10;
                               class="text-warning shrink-0"
                             />
                             <p class="text-sm flex-1 text-text-secondary">
-                              <span class="font-semibold text-warning" >
+                              <span class="font-semibold text-warning">
                                 Asistencia práctica incompleta:
                               </span>
                               {{ alumno.nombre }} registra
@@ -946,8 +935,6 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   // ── Internal ────────────────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
-
   // ── Inputs ──
   readonly promociones = input<PromocionCertOption[]>([]);
   readonly cursos = input<CursoCertOption[]>([]);
@@ -1148,10 +1135,7 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

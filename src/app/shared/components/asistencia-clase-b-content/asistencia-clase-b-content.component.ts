@@ -65,8 +65,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ────────────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
+      <div class="bento-banner">
         <app-section-hero
+          [animateOnInit]="false"
           title="Control de Asistencia"
           icon="clipboard-check"
           [subtitle]="todayLabel"
@@ -646,7 +647,6 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   // ── Internal ────────────────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
   // ── Inputs ──────────────────────────────────────────────────────────────────
   readonly kpis = input<AsistenciaClaseBKpis | null>(null);
   readonly clasesTeorias = input<ClaseTeoricoRow[]>([]);
@@ -882,10 +882,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

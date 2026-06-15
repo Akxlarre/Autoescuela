@@ -38,6 +38,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Ensayos Teóricos"
         subtitle="Consulta los puntajes de preparación para el examen municipal"
         backRoute="/app/instructor/dashboard"

@@ -44,6 +44,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       <!-- ═══ Hero ═══ -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Libro de Clases"
         subtitle="Libro de control de clases — Clase Profesional"
         [actions]="heroActions()"

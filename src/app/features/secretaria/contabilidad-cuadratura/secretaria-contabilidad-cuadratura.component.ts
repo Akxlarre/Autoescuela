@@ -29,6 +29,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving()"
       [isExporting]="facade.isExporting()"
+      [isDrawerOpen]="layoutDrawer.isOpen()"
       (guardarCierre)="onGuardarCierre($event)"
       (abrirIngreso)="openIngresoDrawer()"
       (abrirEgreso)="egresoModalOpen.set(true)"
@@ -48,7 +49,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 })
 export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   protected readonly facade = inject(CuadraturaFacade);
-  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
 
   protected readonly egresoModalOpen = signal(false);

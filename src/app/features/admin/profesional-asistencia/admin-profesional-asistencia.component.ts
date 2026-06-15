@@ -45,6 +45,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
       <!-- ═══ Hero ═══ -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Clases y Asistencia"
         subtitle="Gestión de sesiones teóricas y prácticas de Clase Profesional"
         [actions]="[]"

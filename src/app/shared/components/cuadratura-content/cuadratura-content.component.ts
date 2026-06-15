@@ -14,7 +14,6 @@ import { formatCLP } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
@@ -45,12 +44,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
       class="bento-grid p-6 pb-12"
       appBentoGridLayout
       #bentoGrid
-      [class.items-start]="!layoutDrawer.isOpen()"
-      [class.force-compact]="layoutDrawer.isOpen()"
+      [class.items-start]="!isDrawerOpen()"
+      [class.force-compact]="isDrawerOpen()"
     >
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
-      <div class="bento-banner relative overflow-visible" #heroRef>
+      <div class="bento-banner relative overflow-visible">
         <app-section-hero
+          [animateOnInit]="false"
           title="Cuadratura Diaria"
           icon="calculator"
           [contextLine]="fechaHoy()"
@@ -120,7 +120,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <!-- Tabla (Desktop) / Cards (Mobile) -->
           <div class="flex-1 overflow-x-auto" style="container-type: inline-size;">
             <!-- Vista Desktop (Table) -->
-            <div class="hidden sm:block" [class.!hidden]="layoutDrawer.isOpen()">
+            <div class="hidden sm:block" [class.!hidden]="isDrawerOpen()">
               <!-- Header Columnas -->
               <div
                 class="px-6 py-3 grid items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
@@ -237,7 +237,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             </div>
 
             <!-- Vista Mobile (Cards) se activa por Container Query o Drawer abierto -->
-            <div class="sm:hidden flex flex-col gap-3 p-4" [class.!flex]="layoutDrawer.isOpen()">
+            <div class="sm:hidden flex flex-col gap-3 p-4" [class.!flex]="isDrawerOpen()">
               @if (isLoading()) {
                 @for (i of [1, 2]; track i) {
                   <div class="p-4 rounded-xl border border-border-muted/50 flex flex-col gap-3">
@@ -716,8 +716,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
-  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  readonly isDrawerOpen = input<boolean>(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly guardarCierre = output<CierrePayload>();
@@ -877,10 +876,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

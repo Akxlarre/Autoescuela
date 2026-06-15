@@ -45,6 +45,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Gestión de Relatores"
         subtitle="Administración de instructores teóricos para cursos profesionales"
         [actions]="heroActions()"

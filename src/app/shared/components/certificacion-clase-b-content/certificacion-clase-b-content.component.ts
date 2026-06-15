@@ -58,8 +58,9 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ──────────────────────────────────────────────── -->
-      <div class="bento-banner" #heroRef>
+      <div class="bento-banner">
         <app-section-hero
+          [animateOnInit]="false"
           title="Gestión de Certificados"
           subtitle="Certificación de finalización de curso Clase B"
           icon="award"
@@ -121,7 +122,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               type="text"
               placeholder="Buscar por nombre o RUT..."
               class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border outline-none transition-colors border-border-default bg-surface text-text-primary"
-              
               data-llm-description="Search students by name or RUT"
               [value]="searchQuery()"
               (input)="setSearchQuery($any($event.target).value)"
@@ -199,7 +199,8 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               <app-icon
                 name="file-check"
                 [size]="20"
-                class="text-brand shrink-0" style="margin-top: 2px"
+                class="text-brand shrink-0"
+                style="margin-top: 2px"
               />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-text-primary">
@@ -217,23 +218,15 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               @for (alumno of alumnosPendientes(); track alumno.enrollmentId) {
                 <div class="flex items-center gap-3 px-4 py-2.5">
                   @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
-                    <app-icon
-                      name="alert-triangle"
-                      [size]="14"
-                      class="text-warning shrink-0"
-                    />
+                    <app-icon name="alert-triangle" [size]="14" class="text-warning shrink-0" />
                   } @else {
-                    <app-icon
-                      name="file-check"
-                      [size]="14"
-                      class="text-success shrink-0"
-                    />
+                    <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
                   }
                   <span class="text-sm font-medium flex-1 truncate text-text-primary">
                     {{ alumno.nombre }}
                   </span>
                   @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
-                    <span class="text-xs text-warning" >
+                    <span class="text-xs text-warning">
                       {{ alumno.pctAsistenciaTeoria }}% teoría
                     </span>
                   }
@@ -273,7 +266,8 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               <app-icon
                 name="send"
                 [size]="20"
-                class="text-brand shrink-0" style="margin-top: 2px"
+                class="text-brand shrink-0"
+                style="margin-top: 2px"
               />
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-semibold text-text-primary">
@@ -298,7 +292,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                   <span class="text-sm font-medium flex-1 truncate text-text-primary">
                     {{ alumno.nombre }}
                   </span>
-                  <span class="text-xs truncate text-brand" >
+                  <span class="text-xs truncate text-brand">
                     {{ alumno.email }}
                   </span>
                 </div>
@@ -413,20 +407,19 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     <td class="px-4 py-3 font-medium text-primary">
                       {{ alumno.nombre }}
                     </td>
-                    <td class="px-4 py-3 text-brand" >
+                    <td class="px-4 py-3 text-brand">
                       {{ alumno.rut }}
                     </td>
                     <td class="px-4 py-3">
                       <span
                         class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-muted text-brand"
-                        
                       >
                         {{ alumno.curso }}
                       </span>
                     </td>
                     <!-- Prácticas: siempre 12/12 si aparece en esta lista -->
                     <td class="px-4 py-3 text-center">
-                      <span class="font-semibold text-success" >
+                      <span class="font-semibold text-success">
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
@@ -450,7 +443,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     <td class="px-4 py-3 text-muted">
                       {{ alumno.fechaTermino ?? '—' }}
                     </td>
-                    <td class="px-4 py-3 text-brand" >
+                    <td class="px-4 py-3 text-brand">
                       {{ alumno.certificadoFolio ?? '—' }}
                     </td>
                     <td class="px-4 py-3 text-center">
@@ -536,13 +529,8 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                       <td colspan="9" class="px-4 py-3">
                         <div
                           class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-brand/8 border border-brand/30"
-                          
                         >
-                          <app-icon
-                            name="send"
-                            [size]="18"
-                            class="text-brand shrink-0"
-                          />
+                          <app-icon name="send" [size]="18" class="text-brand shrink-0" />
                           <p class="text-sm flex-1 text-text-secondary">
                             Se enviará el certificado de
                             <strong class="text-text-primary">{{ alumno.nombre }}</strong>
@@ -591,7 +579,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                             class="text-warning shrink-0"
                           />
                           <p class="text-sm flex-1 text-text-secondary">
-                            <span class="font-semibold text-warning" >
+                            <span class="font-semibold text-warning">
                               Asistencia teórica incompleta:
                             </span>
                             {{ alumno.nombre }} registra
@@ -784,8 +772,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   // ── Internal ────────────────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
-
   // ── Inputs ──
   readonly alumnos = input<CertificacionAlumnoRow[]>([]);
   readonly kpis = input<CertificacionKpis | null>(null);
@@ -1010,10 +996,7 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

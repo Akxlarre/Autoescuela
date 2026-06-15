@@ -8,6 +8,7 @@ import {
   effect,
   ElementRef,
   viewChild,
+  OnDestroy,
 } from '@angular/core';
 import { SlicePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -1000,7 +1001,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
     }
   `,
 })
-export class AdminPreInscritoDrawerComponent {
+export class AdminPreInscritoDrawerComponent implements OnDestroy {
   protected readonly facade = inject(AdminPreInscritosFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -1041,6 +1042,11 @@ export class AdminPreInscritoDrawerComponent {
         this.activeTab.set('matricula');
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.facade.select(null);
+    this.facade.resetPromocionesCache();
   }
 
   // ── Tab state ────────────────────────────────────────────────────────────

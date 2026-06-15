@@ -5,7 +5,7 @@ import {
   OnDestroy,
   inject,
   computed,
-  AfterViewInit,
+  effect,
   ElementRef,
   viewChild,
 } from '@angular/core';
@@ -38,6 +38,7 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
       <!-- ── Hero ═══ -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Evaluaciones"
         subtitle="Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75"
         icon="graduation-cap"
@@ -287,13 +288,25 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
     </div>
   `,
 })
-export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy, AfterViewInit {
+export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(EvaluacionesProfesionalFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly confirmModalService = inject(ConfirmModalService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+
+  constructor() {
+    // Reveal SWR-aware: la grilla carga async y swapea celdas skeleton→contenido.
+    // Disparar el reveal sobre el contenido real (!isLoading), no sobre el skeleton.
+    effect(() => {
+      const ready = !this.facade.isLoading();
+      const grid = this.bentoGrid()?.nativeElement;
+      if (ready && grid) {
+        Promise.resolve().then(() => this.gsap.animateBentoGrid(grid));
+      }
+    });
+  }
 
   protected readonly gradePass = GRADE_PASS;
   protected readonly skeletonRows = Array.from({ length: 6 });
@@ -415,10 +428,5 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy,
     if (confirmed) {
       this.facade.confirmarNotas();
     }
-  }
-
-  ngAfterViewInit(): void {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }

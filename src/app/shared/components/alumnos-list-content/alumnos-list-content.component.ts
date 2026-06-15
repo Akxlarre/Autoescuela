@@ -109,6 +109,7 @@ interface AlumnoKpiItem {
       [class.force-compact]="layoutDrawer.isOpen()"
     >
       <app-section-hero
+        [animateOnInit]="false"
         title="Alumnos"
         [subtitle]="heroSubtitle()"
         [chips]="heroChips()"
@@ -762,8 +763,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef<HTMLElement>>('heroRef');
-
   readonly heroSubtitle = computed(() =>
     this.trashView() ? 'Papelera — Alumnos archivados' : 'Listado de alumnos de la escuela',
   );
@@ -862,10 +861,7 @@ export class AlumnosListContentComponent implements AfterViewInit {
   constructor() {}
 
   ngAfterViewInit(): void {
-    const hero = this.heroRef();
     const grid = this.bentoGrid();
-
-    if (hero) this.gsap.animateHero(hero.nativeElement);
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 

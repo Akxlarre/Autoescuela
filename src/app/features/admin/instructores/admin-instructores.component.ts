@@ -45,6 +45,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
+        [animateOnInit]="false"
         title="Instructores"
         subtitle="Gestión de instructores Clase B con licencias y vehículos"
         [actions]="heroActions()"

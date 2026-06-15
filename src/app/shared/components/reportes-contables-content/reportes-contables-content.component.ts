@@ -1,11 +1,15 @@
 import {
+  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
   computed,
+  ElementRef,
+  inject,
   input,
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -13,6 +17,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import {
   RANGOS_REPORTE,
@@ -37,6 +43,7 @@ import {
     FormsModule,
     SelectModule,
     DateInputComponent,
+    BentoGridLayoutDirective,
   ],
   styles: [
     `
@@ -223,115 +230,115 @@ import {
     `,
   ],
   template: `
-    <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
-    <div class="bento-banner relative overflow-visible">
-      <app-section-hero
-        title="Reportes Contables"
-        subtitle="Resumen financiero y total neto por rango de fechas"
-        icon="bar-chart-2"
-        [actions]="heroActions()"
-        [chips]="heroChips()"
-        (actionClick)="onHeroAction($event)"
-        class="block mb-5"
-      />
-      @if (exportMenuOpen()) {
-        <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-        <div class="export-menu absolute top-14 right-4 z-20">
-          <button
-            type="button"
-            class="export-menu-item"
-            (click)="requestExport('excel')"
-            data-llm-action="export-reportes-contables-excel"
-          >
-            <app-icon name="table-2" [size]="16" />
-            Exportar como Excel
-          </button>
-          <button
-            type="button"
-            class="export-menu-item"
-            (click)="requestExport('pdf')"
-            data-llm-action="export-reportes-contables-pdf"
-          >
-            <app-icon name="file-text" [size]="16" />
-            Exportar como PDF
-          </button>
-        </div>
-      }
-    </div>
-
-    <!-- ── Contenido ─────────────────────────────────────────────────────── -->
-    <div class="px-4 sm:px-6 pb-6 flex flex-col gap-5">
-      <!-- ── Barra de filtros ─────────────────────────────────────────────── -->
-      <div
-        class="flex flex-col sm:flex-row sm:items-end gap-4 px-4 py-3 shadow-sm flex-wrap bg-surface"
-        style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
-      >
-        <!-- Rango -->
-        <div>
-          <label class="filter-label">Rango</label>
-          <p-select
-            [ngModel]="localRango()"
-            (ngModelChange)="onRangoChange($event)"
-            [options]="rangos"
-            optionLabel="label"
-            optionValue="value"
-            styleClass="w-full"
-            data-llm-description="selector de rango de fechas para el reporte contable"
-          />
-        </div>
-
-        <!-- Desde -->
-        <div>
-          <app-date-input
-            label="Desde"
-            [value]="localDesde()"
-            [disabled]="localRango() !== 'personalizado'"
-            (valueChange)="localDesde.set($event)"
-            data-llm-description="fecha de inicio del rango del reporte"
-          />
-        </div>
-
-        <!-- Hasta -->
-        <div>
-          <app-date-input
-            label="Hasta"
-            [value]="localHasta()"
-            [disabled]="localRango() !== 'personalizado'"
-            (valueChange)="localHasta.set($event)"
-            data-llm-description="fecha de fin del rango del reporte"
-          />
-        </div>
-
-        <!-- Aplicar -->
-        <button
-          class="btn-primary flex items-center gap-2"
-          style="height: 36px; padding: 0 var(--space-4)"
-          (click)="onAplicar()"
-          data-llm-action="apply-report-filters"
-        >
-          <app-icon name="search" [size]="14" />
-          Aplicar
-        </button>
-
-        <!-- Período activo (info contextual) -->
-        @if (!isLoading() && kpis()) {
-          <div class="flex items-center gap-2 ml-auto">
-            <app-icon name="calendar" [size]="13" color="var(--text-muted)" />
-            <span class="text-xs text-text-muted font-medium">
-              {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
-            </span>
-            <span
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-subtle text-success"
-              style="border:1px solid var(--state-success-border)"
+    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+      <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
+      <div class="bento-hero relative overflow-visible">
+        <app-section-hero
+          title="Reportes Contables"
+          subtitle="Resumen financiero y total neto por rango de fechas"
+          icon="bar-chart-2"
+          [actions]="heroActions()"
+          [chips]="heroChips()"
+          (actionClick)="onHeroAction($event)"
+        />
+        @if (exportMenuOpen()) {
+          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+          <div class="export-menu absolute top-14 right-4 z-20">
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('excel')"
+              data-llm-action="export-reportes-contables-excel"
             >
-              {{ pct(kpis()!.margenGanancia) }} margen
-            </span>
+              <app-icon name="table-2" [size]="16" />
+              Exportar como Excel
+            </button>
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('pdf')"
+              data-llm-action="export-reportes-contables-pdf"
+            >
+              <app-icon name="file-text" [size]="16" />
+              Exportar como PDF
+            </button>
           </div>
         }
       </div>
 
+      <!-- ── Barra de filtros ─────────────────────────────────────────────── -->
+      <div class="bento-banner">
+        <div
+          class="flex flex-col sm:flex-row sm:items-end gap-4 px-4 py-3 shadow-sm flex-wrap bg-surface"
+          style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
+        >
+          <!-- Rango -->
+          <div>
+            <label class="filter-label">Rango</label>
+            <p-select
+              [ngModel]="localRango()"
+              (ngModelChange)="onRangoChange($event)"
+              [options]="rangos"
+              optionLabel="label"
+              optionValue="value"
+              styleClass="w-full"
+              data-llm-description="selector de rango de fechas para el reporte contable"
+            />
+          </div>
+
+          <!-- Desde -->
+          <div>
+            <app-date-input
+              label="Desde"
+              [value]="localDesde()"
+              [disabled]="localRango() !== 'personalizado'"
+              (valueChange)="localDesde.set($event)"
+              data-llm-description="fecha de inicio del rango del reporte"
+            />
+          </div>
+
+          <!-- Hasta -->
+          <div>
+            <app-date-input
+              label="Hasta"
+              [value]="localHasta()"
+              [disabled]="localRango() !== 'personalizado'"
+              (valueChange)="localHasta.set($event)"
+              data-llm-description="fecha de fin del rango del reporte"
+            />
+          </div>
+
+          <!-- Aplicar -->
+          <button
+            class="btn-primary flex items-center gap-2"
+            style="height: 36px; padding: 0 var(--space-4)"
+            (click)="onAplicar()"
+            data-llm-action="apply-report-filters"
+          >
+            <app-icon name="search" [size]="14" />
+            Aplicar
+          </button>
+
+          <!-- Período activo (info contextual) -->
+          @if (!isLoading() && kpis()) {
+            <div class="flex items-center gap-2 ml-auto">
+              <app-icon name="calendar" [size]="13" color="var(--text-muted)" />
+              <span class="text-xs text-text-muted font-medium">
+                {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
+              </span>
+              <span
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-subtle text-success"
+                style="border:1px solid var(--state-success-border)"
+              >
+                {{ pct(kpis()!.margenGanancia) }} margen
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+
       <!-- ── KPI Cards (tarjetas blancas, estilo Liquidaciones) ──────────── -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis()?.totalIngresos ?? 0"
           label="Total Ingresos"
@@ -341,6 +348,8 @@ import {
           [subValue]="(kpis()?.operacionesIngresos ?? 0) + ' operaciones en período'"
           [loading]="isLoading()"
         />
+      </div>
+      <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis()?.totalGastos ?? 0"
           label="Total Gastos"
@@ -350,6 +359,8 @@ import {
           [subValue]="(kpis()?.operacionesGastos ?? 0) + ' egresos en período'"
           [loading]="isLoading()"
         />
+      </div>
+      <div class="bento-square">
         <app-kpi-card-variant
           [value]="kpis()?.totalNeto ?? 0"
           label="Total Neto"
@@ -363,96 +374,98 @@ import {
 
       <!-- ── Categorías (Ingresos + Gastos) ────────────────────────────────── -->
       @if (!isLoading()) {
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <!-- Ingresos por Categoría -->
-          <div class="card p-5 flex flex-col gap-4">
-            <div class="flex items-center gap-2">
-              <span class="cat-section-dot dot--success"></span>
-              <h2 class="font-semibold text-text-primary">Ingresos por Categoría</h2>
+        <div class="bento-banner">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Ingresos por Categoría -->
+            <div class="card p-5 flex flex-col gap-4">
+              <div class="flex items-center gap-2">
+                <span class="cat-section-dot dot--success"></span>
+                <h2 class="font-semibold text-text-primary">Ingresos por Categoría</h2>
+              </div>
+
+              <div class="flex flex-col gap-4">
+                @for (cat of ingresosCategoria(); track cat.nombre) {
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-sm font-medium text-text-primary">
+                        {{ cat.nombre }}
+                      </span>
+                      <span class="text-sm font-semibold text-success whitespace-nowrap">
+                        {{ clp(cat.monto) }}
+                      </span>
+                    </div>
+                    <div class="cat-bar-track">
+                      <div
+                        class="cat-bar-fill"
+                        [style.width.%]="cat.porcentaje"
+                        [style.background]="cat.barColor"
+                      ></div>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-xs text-text-muted"> {{ cat.operaciones }} operaciones </span>
+                      <span class="text-xs text-text-muted">
+                        {{ pct(cat.porcentaje) }}
+                      </span>
+                    </div>
+                  </div>
+                }
+
+                @if (ingresosCategoria().length) {
+                  <div
+                    class="flex justify-between pt-3"
+                    style="border-top: 1px solid var(--border-subtle)"
+                  >
+                    <span class="text-sm font-semibold text-text-primary"> Total Ingresos </span>
+                    <span class="text-sm font-bold text-success">
+                      {{ clp(totalIngresos()) }}
+                    </span>
+                  </div>
+                }
+              </div>
             </div>
 
-            <div class="flex flex-col gap-4">
-              @for (cat of ingresosCategoria(); track cat.nombre) {
-                <div class="flex flex-col gap-1">
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="text-sm font-medium text-text-primary">
-                      {{ cat.nombre }}
-                    </span>
-                    <span class="text-sm font-semibold text-success whitespace-nowrap">
-                      {{ clp(cat.monto) }}
-                    </span>
-                  </div>
-                  <div class="cat-bar-track">
-                    <div
-                      class="cat-bar-fill"
-                      [style.width.%]="cat.porcentaje"
-                      [style.background]="cat.barColor"
-                    ></div>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-xs text-text-muted"> {{ cat.operaciones }} operaciones </span>
-                    <span class="text-xs text-text-muted">
-                      {{ pct(cat.porcentaje) }}
-                    </span>
-                  </div>
-                </div>
-              }
+            <!-- Gastos por Categoría -->
+            <div class="card p-5 flex flex-col gap-4">
+              <div class="flex items-center gap-2">
+                <span class="cat-section-dot dot--error"></span>
+                <h2 class="font-semibold text-text-primary">Gastos por Categoría</h2>
+              </div>
 
-              @if (ingresosCategoria().length) {
-                <div
-                  class="flex justify-between pt-3"
-                  style="border-top: 1px solid var(--border-subtle)"
-                >
-                  <span class="text-sm font-semibold text-text-primary"> Total Ingresos </span>
-                  <span class="text-sm font-bold text-success">
-                    {{ clp(totalIngresos()) }}
-                  </span>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Gastos por Categoría -->
-          <div class="card p-5 flex flex-col gap-4">
-            <div class="flex items-center gap-2">
-              <span class="cat-section-dot dot--error"></span>
-              <h2 class="font-semibold text-text-primary">Gastos por Categoría</h2>
-            </div>
-
-            <div class="flex flex-col gap-4">
-              @for (cat of gastosCategoria(); track cat.nombre) {
-                <div class="flex flex-col gap-1">
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="text-sm font-medium text-text-primary">
-                      {{ cat.nombre }}
-                    </span>
-                    <span class="text-sm font-semibold text-error whitespace-nowrap">
-                      {{ clp(cat.monto) }}
-                    </span>
+              <div class="flex flex-col gap-4">
+                @for (cat of gastosCategoria(); track cat.nombre) {
+                  <div class="flex flex-col gap-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-sm font-medium text-text-primary">
+                        {{ cat.nombre }}
+                      </span>
+                      <span class="text-sm font-semibold text-error whitespace-nowrap">
+                        {{ clp(cat.monto) }}
+                      </span>
+                    </div>
+                    <div class="cat-bar-track">
+                      <div class="cat-bar-fill bg-error" [style.width.%]="cat.porcentaje"></div>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-xs text-text-muted"> {{ cat.registros }} registros </span>
+                      <span class="text-xs text-text-muted">
+                        {{ pct(cat.porcentaje) }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="cat-bar-track">
-                    <div class="cat-bar-fill bg-error" [style.width.%]="cat.porcentaje"></div>
-                  </div>
-                  <div class="flex justify-between">
-                    <span class="text-xs text-text-muted"> {{ cat.registros }} registros </span>
-                    <span class="text-xs text-text-muted">
-                      {{ pct(cat.porcentaje) }}
+                }
+
+                @if (gastosCategoria().length) {
+                  <div
+                    class="flex justify-between pt-3"
+                    style="border-top: 1px solid var(--border-subtle)"
+                  >
+                    <span class="text-sm font-semibold text-text-primary"> Total Gastos </span>
+                    <span class="text-sm font-bold text-error">
+                      {{ clp(totalGastos()) }}
                     </span>
                   </div>
-                </div>
-              }
-
-              @if (gastosCategoria().length) {
-                <div
-                  class="flex justify-between pt-3"
-                  style="border-top: 1px solid var(--border-subtle)"
-                >
-                  <span class="text-sm font-semibold text-text-primary"> Total Gastos </span>
-                  <span class="text-sm font-bold text-error">
-                    {{ clp(totalGastos()) }}
-                  </span>
-                </div>
-              }
+                }
+              </div>
             </div>
           </div>
         </div>
@@ -460,210 +473,216 @@ import {
 
       <!-- ── Gastos Fijos del Período ─────────────────────────────────────────── -->
       @if (!isLoading()) {
-        <div class="card p-0 flex flex-col overflow-hidden shadow-sm">
-          <div
-            class="flex items-center justify-between px-6 py-4 border-b"
-            style="border-color: var(--border-muted)"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                style="background: color-mix(in srgb, var(--state-error) 10%, transparent)"
-              >
-                <app-icon name="lock" [size]="16" color="var(--state-error)" />
+        <div class="bento-banner">
+          <div class="card p-0 flex flex-col overflow-hidden shadow-sm">
+            <div
+              class="flex items-center justify-between px-6 py-4 border-b"
+              style="border-color: var(--border-muted)"
+            >
+              <div class="flex items-center gap-3">
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                  style="background: color-mix(in srgb, var(--state-error) 10%, transparent)"
+                >
+                  <app-icon name="lock" [size]="16" color="var(--state-error)" />
+                </div>
+                <div>
+                  <h2 class="text-sm font-bold" style="color: var(--text-primary)">
+                    Gastos Fijos del Período
+                  </h2>
+                  <p class="text-xs" style="color: var(--text-muted)">
+                    Arriendo, sueldos, servicios y otros — solo visible para admin
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 class="text-sm font-bold" style="color: var(--text-primary)">
-                  Gastos Fijos del Período
-                </h2>
+              <button
+                class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
+                data-llm-action="abrir-registrar-gasto-fijo"
+                (click)="registrarGastoClick.emit()"
+              >
+                <app-icon name="plus" [size]="14" />
+                Registrar Gasto Fijo
+              </button>
+            </div>
+
+            @if (gastosFijos().length === 0) {
+              <div class="px-6 py-10 flex flex-col items-center justify-center text-center gap-2">
+                <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
+                <p class="text-sm font-medium" style="color: var(--text-primary)">
+                  Sin gastos fijos en este período
+                </p>
                 <p class="text-xs" style="color: var(--text-muted)">
-                  Arriendo, sueldos, servicios y otros — solo visible para admin
+                  Registra arriendo, sueldos u otros gastos estructurales para calcular el neto real.
                 </p>
               </div>
-            </div>
-            <button
-              class="btn-primary flex items-center gap-2 text-xs px-4 py-2 rounded-xl shrink-0 active:scale-[0.98] transition-transform"
-              data-llm-action="abrir-registrar-gasto-fijo"
-              (click)="registrarGastoClick.emit()"
-            >
-              <app-icon name="plus" [size]="14" />
-              Registrar Gasto Fijo
-            </button>
-          </div>
-
-          @if (gastosFijos().length === 0) {
-            <div class="px-6 py-10 flex flex-col items-center justify-center text-center gap-2">
-              <app-icon name="receipt" [size]="28" color="var(--text-muted)" />
-              <p class="text-sm font-medium" style="color: var(--text-primary)">
-                Sin gastos fijos en este período
-              </p>
-              <p class="text-xs" style="color: var(--text-muted)">
-                Registra arriendo, sueldos u otros gastos estructurales para calcular el neto real.
-              </p>
-            </div>
-          } @else {
-            <div class="overflow-x-auto">
-              <table class="report-table">
-                <thead>
-                  <tr>
-                    <th class="report-th">Fecha</th>
-                    <th class="report-th">Categoría</th>
-                    <th class="report-th">Descripción</th>
-                    <th class="report-th align-right">Monto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (gasto of gastosFijos(); track gasto.id) {
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="report-table">
+                  <thead>
                     <tr>
-                      <td class="report-td text-xs" style="color: var(--text-muted)">
-                        {{ formatDate(gasto.date) }}
-                      </td>
-                      <td class="report-td">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                          style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
+                      <th class="report-th">Fecha</th>
+                      <th class="report-th">Categoría</th>
+                      <th class="report-th">Descripción</th>
+                      <th class="report-th align-right">Monto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (gasto of gastosFijos(); track gasto.id) {
+                      <tr>
+                        <td class="report-td text-xs" style="color: var(--text-muted)">
+                          {{ formatDate(gasto.date) }}
+                        </td>
+                        <td class="report-td">
+                          <span
+                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                            style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
+                          >
+                            {{ gasto.categoryLabel }}
+                          </span>
+                        </td>
+                        <td class="report-td text-sm" style="color: var(--text-secondary)">
+                          {{ gasto.description }}
+                        </td>
+                        <td
+                          class="report-td align-right text-sm font-semibold"
+                          style="color: var(--state-error)"
                         >
-                          {{ gasto.categoryLabel }}
-                        </span>
+                          {{ clp(gasto.amount) }}
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                  <tfoot class="report-tfoot">
+                    <tr>
+                      <td class="report-td font-bold" colspan="3" style="color: var(--text-primary)">
+                        Total Gastos Fijos
                       </td>
-                      <td class="report-td text-sm" style="color: var(--text-secondary)">
-                        {{ gasto.description }}
-                      </td>
-                      <td
-                        class="report-td align-right text-sm font-semibold"
-                        style="color: var(--state-error)"
-                      >
-                        {{ clp(gasto.amount) }}
+                      <td class="report-td align-right font-black" style="color: var(--state-error)">
+                        {{ clp(totalGastosFijos()) }}
                       </td>
                     </tr>
-                  }
-                </tbody>
-                <tfoot class="report-tfoot">
-                  <tr>
-                    <td class="report-td font-bold" colspan="3" style="color: var(--text-primary)">
-                      Total Gastos Fijos
-                    </td>
-                    <td class="report-td align-right font-black" style="color: var(--state-error)">
-                      {{ clp(totalGastosFijos()) }}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          }
+                  </tfoot>
+                </table>
+              </div>
+            }
+          </div>
         </div>
       }
 
       <!-- ── Evolución Mensual ───────────────────────────────────────────────── -->
       @if (!isLoading() && evolucionMensual().length) {
-        <div class="card p-5">
-          <h2 class="font-semibold text-text-primary" style="margin-bottom: var(--space-4)">
-            Evolución Mensual
-          </h2>
-          <div class="overflow-x-auto w-full">
-            <table class="report-table">
-              <thead>
-                <tr>
-                  <th class="report-th">Mes</th>
-                  <th class="report-th align-right">Ingresos</th>
-                  <th class="report-th align-right">Gastos</th>
-                  <th class="report-th align-right">Neto</th>
-                  <th class="report-th align-right">Margen</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of evolucionMensual(); track row.mes) {
+        <div class="bento-banner">
+          <div class="card p-5">
+            <h2 class="font-semibold text-text-primary" style="margin-bottom: var(--space-4)">
+              Evolución Mensual
+            </h2>
+            <div class="overflow-x-auto w-full">
+              <table class="report-table">
+                <thead>
                   <tr>
-                    <td class="report-td font-medium">
-                      {{ row.mes }}
-                    </td>
-                    <td class="report-td align-right text-success">
-                      {{ clp(row.ingresos) }}
-                    </td>
-                    <td class="report-td align-right text-error">
-                      {{ clp(row.gastos) }}
-                    </td>
-                    <td class="report-td align-right text-brand font-semibold">
-                      {{ clp(row.neto) }}
-                    </td>
-                    <td class="report-td align-right">
-                      <span class="margen-badge">{{ pct(row.margen) }}</span>
-                    </td>
+                    <th class="report-th">Mes</th>
+                    <th class="report-th align-right">Ingresos</th>
+                    <th class="report-th align-right">Gastos</th>
+                    <th class="report-th align-right">Neto</th>
+                    <th class="report-th align-right">Margen</th>
                   </tr>
-                }
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  @for (row of evolucionMensual(); track row.mes) {
+                    <tr>
+                      <td class="report-td font-medium">
+                        {{ row.mes }}
+                      </td>
+                      <td class="report-td align-right text-success">
+                        {{ clp(row.ingresos) }}
+                      </td>
+                      <td class="report-td align-right text-error">
+                        {{ clp(row.gastos) }}
+                      </td>
+                      <td class="report-td align-right text-brand font-semibold">
+                        {{ clp(row.neto) }}
+                      </td>
+                      <td class="report-td align-right">
+                        <span class="margen-badge">{{ pct(row.margen) }}</span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       }
 
       <!-- ── Detalle Diario ─────────────────────────────────────────────────── -->
       @if (!isLoading() && detalleDiario().length) {
-        <div class="card p-5">
-          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 class="font-semibold text-text-primary">Detalle Diario</h2>
-            <span class="text-sm text-brand font-medium">
-              {{ diasConMovimientos() }} días con movimientos
-            </span>
-          </div>
+        <div class="bento-banner">
+          <div class="card p-5">
+            <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <h2 class="font-semibold text-text-primary">Detalle Diario</h2>
+              <span class="text-sm text-brand font-medium">
+                {{ diasConMovimientos() }} días con movimientos
+              </span>
+            </div>
 
-          <div class="overflow-x-auto w-full">
-            <table class="report-table">
-              <thead>
-                <tr>
-                  <th class="report-th">Fecha</th>
-                  <th class="report-th align-right">Operaciones</th>
-                  <th class="report-th align-right">Ingresos</th>
-                  <th class="report-th align-right">Gastos</th>
-                  <th class="report-th align-right">Neto</th>
-                  <th class="report-th align-right">Acción</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of detalleDiario(); track row.fecha) {
+            <div class="overflow-x-auto w-full">
+              <table class="report-table">
+                <thead>
                   <tr>
-                    <td class="report-td text-sm">
-                      {{ row.fecha }}
-                    </td>
-                    <td class="report-td align-right text-error">
-                      {{ row.operaciones }}
-                    </td>
-                    <td class="report-td align-right text-success">+{{ clp(row.ingresos) }}</td>
-                    <td class="report-td align-right text-error">-{{ clp(row.gastos) }}</td>
-                    <td class="report-td align-right text-brand font-semibold">
-                      {{ clp(row.neto) }}
-                    </td>
-                    <td class="report-td align-right">
-                      <button
-                        class="btn-ver-detalle"
-                        (click)="verDetalle.emit(row.fecha)"
-                        data-llm-action="view-daily-detail"
-                      >
-                        Ver detalle
-                      </button>
-                    </td>
+                    <th class="report-th">Fecha</th>
+                    <th class="report-th align-right">Operaciones</th>
+                    <th class="report-th align-right">Ingresos</th>
+                    <th class="report-th align-right">Gastos</th>
+                    <th class="report-th align-right">Neto</th>
+                    <th class="report-th align-right">Acción</th>
                   </tr>
-                }
-              </tbody>
-              <tfoot class="report-tfoot">
-                <tr>
-                  <td class="report-td font-bold">TOTAL</td>
-                  <td class="report-td align-right text-error font-bold">
-                    {{ totalesDiario().operaciones }}
-                  </td>
-                  <td class="report-td align-right text-success font-bold">
-                    +{{ clp(totalesDiario().ingresos) }}
-                  </td>
-                  <td class="report-td align-right text-error font-bold">
-                    -{{ clp(totalesDiario().gastos) }}
-                  </td>
-                  <td class="report-td align-right text-brand font-bold">
-                    {{ clp(totalesDiario().neto) }}
-                  </td>
-                  <td class="report-td"></td>
-                </tr>
-              </tfoot>
-            </table>
+                </thead>
+                <tbody>
+                  @for (row of detalleDiario(); track row.fecha) {
+                    <tr>
+                      <td class="report-td text-sm">
+                        {{ row.fecha }}
+                      </td>
+                      <td class="report-td align-right text-error">
+                        {{ row.operaciones }}
+                      </td>
+                      <td class="report-td align-right text-success">+{{ clp(row.ingresos) }}</td>
+                      <td class="report-td align-right text-error">-{{ clp(row.gastos) }}</td>
+                      <td class="report-td align-right text-brand font-semibold">
+                        {{ clp(row.neto) }}
+                      </td>
+                      <td class="report-td align-right">
+                        <button
+                          class="btn-ver-detalle"
+                          (click)="verDetalle.emit(row.fecha)"
+                          data-llm-action="view-daily-detail"
+                        >
+                          Ver detalle
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot class="report-tfoot">
+                  <tr>
+                    <td class="report-td font-bold">TOTAL</td>
+                    <td class="report-td align-right text-error font-bold">
+                      {{ totalesDiario().operaciones }}
+                    </td>
+                    <td class="report-td align-right text-success font-bold">
+                      +{{ clp(totalesDiario().ingresos) }}
+                    </td>
+                    <td class="report-td align-right text-error font-bold">
+                      -{{ clp(totalesDiario().gastos) }}
+                    </td>
+                    <td class="report-td align-right text-brand font-bold">
+                      {{ clp(totalesDiario().neto) }}
+                    </td>
+                    <td class="report-td"></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </div>
         </div>
       }
@@ -788,5 +807,14 @@ export class ReportesContablesContentComponent {
       desde: this.localDesde(),
       hasta: this.localHasta(),
     });
+  }
+
+  // ── Animación Gsap ──────────────────────────────────────────────────────────
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
+
+  ngAfterViewInit(): void {
+    const grid = this.bentoGrid();
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 }
