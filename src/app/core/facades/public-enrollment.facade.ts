@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+﻿import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -11,6 +11,7 @@ import type {
   CourseType,
   CourseOption,
 } from '@core/models/ui/enrollment-personal-data.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorOption,

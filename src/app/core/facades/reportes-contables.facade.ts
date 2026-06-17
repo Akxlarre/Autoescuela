@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type { FixedExpense } from '@core/models/dto/fixed-expense.model';
@@ -12,6 +12,7 @@ import { GASTO_FIJO_CATEGORIES, computeDateRange } from '@core/models/ui/reporte
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   buildReporte,
