@@ -1,22 +1,21 @@
-// Panel host — fixed; right se aplica dinámicamente vía HostBinding (alineado con botón)
+// ── Host: fixed, alineado bajo el topbar ────────────────────────────────────
 :host {
   display: block;
   position: fixed;
-  top: calc(56px + 8px);
-  /* topbar h-[56px] + gap */
+  top: calc(56px + 8px); // topbar h + gap
   width: min(480px, calc(100vw - 32px));
   z-index: 50;
 }
 
-// En pantallas pequeñas, el panel se centra y ocupa casi todo el ancho
 @media (max-width: 768px) {
   :host {
     left: 16px;
-    right: 16px !important; // ignora el right dinámico del anchor
+    right: 16px !important;
     width: auto;
   }
 }
 
+// ── Shell del panel ──────────────────────────────────────────────────────────
 .search-panel {
   display: flex;
   flex-direction: column;
@@ -26,6 +25,8 @@
   border: 1px solid var(--card-border);
   border-radius: var(--card-radius);
   box-shadow: var(--card-shadow);
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
 }
 
 // ── Fila del input ────────────────────────────────────────────────────────────
@@ -35,6 +36,10 @@
   gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 1;
 }
 
 .search-panel__search-icon {
@@ -55,7 +60,6 @@
     color: var(--text-muted);
   }
 
-  // Ocultar el botón nativo de limpiar en Chrome/Safari
   &::-webkit-search-cancel-button {
     display: none;
   }
@@ -77,24 +81,71 @@
 
 // ── Cuerpo ────────────────────────────────────────────────────────────────────
 .search-panel__body {
-  padding: 12px 16px;
+  padding: 8px 0;
   min-height: 72px;
-  display: flex;
-  align-items: center;
 }
 
+// ── Sugerencias rápidas (estado vacío) ───────────────────────────────────────
+.search-panel__empty-hint {
+  padding: 8px 16px 12px;
+}
+
+.search-panel__hint-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.search-panel__quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.search-panel__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle, var(--bg-surface));
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+
+  &:hover {
+    background: var(--color-primary-muted, var(--bg-surface-elevated));
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  app-icon {
+    flex-shrink: 0;
+  }
+}
+
+// ── Hint genérico ─────────────────────────────────────────────────────────────
 .search-panel__hint {
   font-size: 0.8125rem;
   margin: 0;
+  padding: 16px;
 }
 
-.search-panel__empty {
+// ── Sin resultados ────────────────────────────────────────────────────────────
+.search-panel__no-results {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 100%;
-  padding: 12px 0;
+  padding: 20px 16px;
   color: var(--text-muted);
   font-size: 0.875rem;
   text-align: center;
@@ -102,5 +153,188 @@
   strong {
     color: var(--text-primary);
     font-weight: 600;
+  }
+}
+
+.search-panel__no-results-icon {
+  opacity: 0.4;
+}
+
+// ── Grupo de resultados ───────────────────────────────────────────────────────
+.search-panel__group {
+  & + & {
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+}
+
+.search-panel__group-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 16px 4px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+
+  app-icon {
+    opacity: 0.7;
+  }
+}
+
+// ── Lista de resultados ───────────────────────────────────────────────────────
+.search-panel__result-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 6px;
+}
+
+// ── Fila de resultado individual ─────────────────────────────────────────────
+.search-panel__result-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: background 100ms ease;
+  outline: none;
+
+  &:hover,
+  &:focus {
+    background: var(--color-primary-muted, var(--bg-surface-elevated));
+
+    .search-panel__result-arrow {
+      opacity: 1;
+      transform: translateX(2px);
+    }
+  }
+}
+
+// ── Icono del resultado ───────────────────────────────────────────────────────
+.search-panel__result-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md, 8px);
+
+  &--action {
+    background: var(--color-primary-muted, rgba(var(--color-primary-rgb, 99 102 241) / 0.12));
+    color: var(--color-primary);
+  }
+
+  &--alumno {
+    background: var(--bg-subtle, var(--bg-surface-elevated));
+    color: var(--text-secondary);
+  }
+}
+
+// ── Textos del resultado ──────────────────────────────────────────────────────
+.search-panel__result-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.search-panel__result-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-panel__result-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-panel__result-arrow {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0;
+  transition:
+    opacity 100ms ease,
+    transform 100ms ease;
+}
+
+// ── Badge de estado del alumno ────────────────────────────────────────────────
+.search-panel__status {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.6875rem;
+  font-weight: 500;
+
+  &[data-status='success'] {
+    background: var(--state-success-bg, rgba(16 185 129 / 0.12));
+    color: var(--state-success);
+  }
+
+  &[data-status='warning'] {
+    background: var(--state-warning-bg, rgba(245 158 11 / 0.12));
+    color: var(--state-warning);
+  }
+
+  &[data-status='info'] {
+    background: var(--state-info-bg, rgba(59 130 246 / 0.12));
+    color: var(--state-info);
+  }
+
+  &[data-status='danger'] {
+    background: var(--state-error-bg, rgba(239 68 68 / 0.12));
+    color: var(--state-error);
+  }
+
+  &[data-status='muted'] {
+    background: var(--bg-subtle, var(--bg-surface-elevated));
+    color: var(--text-muted);
+  }
+}
+
+// ── Footer con atajos de teclado ─────────────────────────────────────────────
+.search-panel__footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-subtle, var(--bg-surface));
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+  }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+    background: var(--card-bg);
+    font-size: 0.625rem;
+    font-family: var(--font-mono, monospace);
+    color: var(--text-secondary);
+    line-height: 1.5;
   }
 }

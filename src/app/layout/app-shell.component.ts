@@ -26,6 +26,8 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { DmsViewerModalComponent } from '@shared/components/dms-viewer-modal/dms-viewer-modal.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { GlobalSearchFacade } from '@core/facades/global-search.facade';
+import type { SearchResult } from '@core/models/ui/global-search.model';
 
 /**
  * AppShellComponent — layout principal de rutas protegidas.
@@ -57,9 +59,17 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     IconComponent,
   ],
   template: `
-    <!-- Panel de búsqueda — fuera del grid para evitar que overflow:hidden lo recorte -->
+    <!-- Command Palette — fuera del grid para evitar que overflow:hidden lo recorte -->
     @if (search.isOpen()) {
-      <app-search-panel appAnimateIn class="search-panel-overlay" (closed)="search.close()" />
+      <app-search-panel
+        appAnimateIn
+        class="search-panel-overlay"
+        [groups]="globalSearch.groups()"
+        [rightPx]="search.anchor()?.rightPx ?? 24"
+        (queryChange)="onSearchQuery($event)"
+        (resultSelected)="onSearchResult($event)"
+        (closed)="onSearchClose()"
+      />
     }
 
     <!-- Modal de confirmación global (usado por guards y servicios imperativos) -->
@@ -180,6 +190,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 export class AppShellComponent {
   protected readonly layout = inject(LayoutService);
   protected readonly search = inject(SearchPanelFacadeService);
+  protected readonly globalSearch = inject(GlobalSearchFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly confirmModal = inject(ConfirmModalService);
   protected readonly dmsViewer = inject(DmsViewerService);
@@ -190,6 +201,21 @@ export class AppShellComponent {
   private readonly injector = inject(Injector);
 
   private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
+
+  onSearchQuery(query: string): void {
+    this.globalSearch.setQuery(query);
+  }
+
+  onSearchResult(result: SearchResult): void {
+    this.globalSearch.navigate(result);
+    this.globalSearch.reset();
+    this.search.close();
+  }
+
+  onSearchClose(): void {
+    this.globalSearch.reset();
+    this.search.close();
+  }
 
   onRouteActivate(): void {
     // 1. Programmatic Focus Management: Move focus to the main container.
