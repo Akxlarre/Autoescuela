@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+﻿import { Injectable, inject, signal, computed } from '@angular/core';
 import { normalizePhoto } from '@core/utils/image.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -9,8 +9,8 @@ import type { PromotionCourse } from '@core/models/dto/promotion-course.model';
 import type { User } from '@core/models/dto/user.model';
 import type { Branch } from '@core/models/dto/branch.model';
 import type { Course } from '@core/models/dto/course.model';
-import type {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import type {
   PreInscritoTableRow,
   EvaluarTestPayload,
   CompletarMatriculaPayload,

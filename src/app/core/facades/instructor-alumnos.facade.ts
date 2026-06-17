@@ -1,11 +1,11 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+﻿import { Injectable, signal, computed, inject } from '@angular/core';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import type { Type } from '@angular/core';
-import type {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import type {
   InstructorStudentCard,
   InstructorStudentDetail,
   ExamScoreRow,

@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+﻿import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
@@ -13,8 +13,8 @@ import type {
   ProgresoUI,
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
-import type {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import type {
   InstructorOption,
   ScheduleGrid,
   SlotStatus,

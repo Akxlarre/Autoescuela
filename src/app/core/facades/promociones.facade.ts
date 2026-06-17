@@ -1,8 +1,8 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
-import type {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import type {
   PromocionTableRow,
   PromocionCursoRow,
   PromocionCursoRelator,

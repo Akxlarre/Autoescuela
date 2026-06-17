@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -17,8 +17,8 @@ import {
   MODULE_COUNT,
   roundGrade,
 } from '@core/utils/professional-modules';
-import {
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import {
   buildLanding,
   type CourseLite,
   type EnrollmentLite,
