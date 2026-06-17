@@ -22,10 +22,17 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
-        <div class="flex flex-col gap-3">
-          <app-skeleton-block variant="rect" width="100%" height="56px" />
-          <app-skeleton-block variant="rect" width="100%" height="56px" />
-          <app-skeleton-block variant="rect" width="100%" height="56px" />
+        <div class="flex flex-col gap-3 p-1">
+          @for (_ of [1, 2, 3]; track $index) {
+            <div class="card p-3 flex items-center justify-between border-l-4 border-l-error/30">
+              <div class="flex flex-col gap-1.5 flex-1 pr-4">
+                <app-skeleton-block variant="text" width="70%" height="14px" />
+                <app-skeleton-block variant="text" width="50%" height="12px" />
+                <app-skeleton-block variant="text" width="40%" height="12px" />
+              </div>
+              <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+            </div>
+          }
         </div>
       </ng-template>
       <ng-template #content>

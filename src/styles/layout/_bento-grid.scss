@@ -448,4 +448,17 @@ $bp-lg: 1024px;
       }
     }
   }
+
+  /* ── VARIANTE FORMS (grids anidados para inputs/formularios) ────────
+   Sobrescribe los defaults del page-level grid para permitir que un
+   grid anidado se comporte correctamente dentro de tarjetas o tabs.
+   ─────────────────────────────────────────────────────────────────── */
+  .bento-grid--forms {
+    align-self: stretch;
+    --bento-row-min: auto;
+    --bento-pad-mobile: 0;
+    --bento-pad-sm: 0;
+    --bento-pad-md: 0;
+    --bento-pad-lg: 0;
+  }
 }

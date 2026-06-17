@@ -5,6 +5,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   SesionProfesional,
   SesionAlumnoAsistencia,
   ResumenAlumnoAsistencia,

@@ -6,6 +6,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import type { Type } from '@angular/core';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorStudentCard,
   InstructorStudentDetail,
   ExamScoreRow,

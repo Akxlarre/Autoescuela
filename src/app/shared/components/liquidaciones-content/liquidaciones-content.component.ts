@@ -5,6 +5,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
@@ -49,6 +50,7 @@ function formatCLP(value: number): string {
     SectionHeroComponent,
     KpiCardVariantComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   styles: [
     `
@@ -252,7 +254,7 @@ function formatCLP(value: number): string {
     `,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #pageRef>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout #pageRef>
       <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
       <div class="bento-hero relative overflow-visible">
       <app-section-hero

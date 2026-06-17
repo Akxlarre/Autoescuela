@@ -31,6 +31,38 @@ export interface FilaEvaluacion {
   promedioAprobado: boolean | null;
 }
 
+/** Estado de avance de un curso en el aterrizaje (tarjeta de curso). */
+export type CursoEstado = 'sin_iniciar' | 'en_edicion' | 'confirmada';
+
+/** Resumen vivo de un curso para la tarjeta del aterrizaje. */
+export interface CursoResumen {
+  /** PK de `promotion_courses` — se pasa a `selectCurso()`. */
+  promotionCourseId: number;
+  /** Clase de licencia (A2, A3…) — etiqueta corta de la tarjeta. */
+  courseCode: string;
+  courseName: string;
+  totalAlumnos: number;
+  /** Alumnos con al menos una nota registrada. */
+  alumnosConNotas: number;
+  /** Alumnos con las 7 notas registradas. */
+  alumnosCompletos: number;
+  /** Promedio del curso (media de promedios individuales), null si ninguno. */
+  promedio: number | null;
+  estado: CursoEstado;
+}
+
+/** Una promoción (objeto padre) con sus cursos resumidos, para el aterrizaje. */
+export interface PromocionConCursos {
+  id: number;
+  name: string;
+  code: string;
+  status: string;
+  cursos: CursoResumen[];
+  /** Totales agregados de la promoción (cabecera del grupo). */
+  totalAlumnos: number;
+  cursosConfirmados: number;
+}
+
 /** Estado global de la grilla para un curso de promoción */
 export interface GrillaEvaluacion {
   promotionCourseId: number;

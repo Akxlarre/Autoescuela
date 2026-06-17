@@ -177,7 +177,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         style="min-height: 500px; display: flex; flex-direction: column;"
       >
         <!-- Header with branch selection for Admin and Tabs Switcher -->
-        <div class="flex flex-col border-b border-border-default bg-surface">
+        <div class="flex flex-col border-b border-border-default bg-base z-10">
           <!-- Sede activa (solo secretaria — admin usa el selector global del topbar) -->
           @if (!isAdmin()) {
             <div class="flex items-center gap-2 px-4 py-2.5 border-b border-border-default">
@@ -193,14 +193,10 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               @for (tab of tabs; track tab.id) {
                 <button
                   role="tab"
-                  class="flex-1 min-w-[120px] px-4 py-3.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-2 cursor-pointer"
+                  class="flex-1 min-w-[120px] px-4 py-3.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-[3px] cursor-pointer"
                   [style.border-color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-                  [style.color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'var(--text-muted)'"
-                  [style.background]="
-                    activeTab() === tab.id
-                      ? 'color-mix(in srgb, var(--ds-brand) 4%, transparent)'
-                      : 'transparent'
-                  "
+                  [style.color]="activeTab() === tab.id ? 'var(--text-primary)' : 'var(--text-muted)'"
+                  [style.background]="'transparent'"
                   [attr.aria-selected]="activeTab() === tab.id"
                   (click)="activeTab.set(tab.id)"
                 >
@@ -218,7 +214,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         <form
           [formGroup]="form"
           (ngSubmit)="onSubmit()"
-          class="flex-1 p-5 md:p-6 overflow-y-auto bg-surface"
+          class="flex-1 p-6 md:p-8 overflow-y-auto bg-surface"
         >
           @if (noBranchSelected()) {
             <!-- Empty state: admin sin sede seleccionada en topbar -->
@@ -234,12 +230,12 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
           } @else if (facade.isLoading()) {
             <!-- Skeletons loader -->
             <div class="flex flex-col gap-6">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="flex flex-col gap-2">
+              <div class="bento-grid bento-grid--forms mt-4">
+                <div class="flex flex-col gap-2 bento-wide">
                   <app-skeleton-block variant="text" width="96px" height="16px" />
                   <app-skeleton-block variant="rect" width="100%" height="40px" />
                 </div>
-                <div class="flex flex-col gap-2">
+                <div class="flex flex-col gap-2 bento-wide">
                   <app-skeleton-block variant="text" width="96px" height="16px" />
                   <app-skeleton-block variant="rect" width="100%" height="40px" />
                 </div>
@@ -285,7 +281,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             }
 
             <!-- Persistent Form Save Area inside the Card body if invalid (highly accessible) -->
-            <div class="flex items-center justify-between mt-8 pt-5 border-t border-border-subtle">
+            <div class="flex items-center justify-between mt-10 pt-6 pb-2 border-t border-border-subtle">
               <span class="text-xs">
                 @if (form.invalid) {
                   <span class="font-medium text-error"
@@ -299,7 +295,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               </span>
               <button
                 type="submit"
-                class="btn-primary py-2.5 px-6 flex items-center gap-2 shadow-md cursor-pointer"
+                class="btn-primary py-2.5 px-6 flex items-center gap-2 shadow-md cursor-pointer hover:-translate-y-0.5 transition-transform"
                 [disabled]="facade.isSaving() || facade.isLoading() || form.invalid"
                 data-llm-action="save-changes-footer"
               >

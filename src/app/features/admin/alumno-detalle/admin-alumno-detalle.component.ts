@@ -49,26 +49,123 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     EliminarAlumnoModalComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+      <!-- ── Hero Principal (Siempre visible) ── -->
+      <app-section-hero
+        class="bento-hero"
+        [title]="facade.alumno()?.nombre ?? 'Cargando...'"
+        [contextLine]="facade.alumno() ? (facade.alumno()!.curso + ' · Matrícula ' + facade.alumno()!.matricula) : 'Obteniendo información...'"
+        icon="user"
+        backRoute="/app/admin/alumnos"
+        backLabel="Listado de Alumnos"
+        [actions]="heroActions()"
+        [chips]="heroChips()"
+        [animateOnInit]="false"
+        (actionClick)="handleHeroAction($event)"
+      />
+
       <!-- ── Estado de Carga ── -->
       @if (facade.isLoading()) {
-        <div class="bento-hero">
-          <app-skeleton-block variant="rect" width="100%" height="180px" />
+        <!-- 1. Skeleton: Selector de Matrícula -->
+        <div class="col-span-full flex w-full">
+          <div class="flex items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-2 w-full md:w-auto overflow-hidden">
+            <app-skeleton-block variant="rect" width="120px" height="40px" borderRadius="12px" />
+            <app-skeleton-block variant="rect" width="140px" height="40px" borderRadius="12px" />
+          </div>
         </div>
-        <div class="bento-tall">
-          <app-skeleton-block variant="rect" width="100%" height="260px" />
+
+        <!-- 2. Info Personal -->
+        <div class="bento-card bento-tall flex flex-col h-full w-full">
+          <div class="flex flex-col gap-5 p-5 md:p-6 h-full">
+            <div class="flex items-center gap-4">
+              <app-skeleton-block variant="circle" width="56px" height="56px" />
+              <div class="flex flex-col gap-2 flex-1 min-w-0">
+                <app-skeleton-block variant="text" width="70%" height="16px" />
+                <app-skeleton-block variant="text" width="40%" height="12px" />
+                <app-skeleton-block variant="text" width="30%" height="10px" />
+              </div>
+            </div>
+            <div class="h-px bg-border-subtle w-full"></div>
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="40px" height="10px" />
+                <app-skeleton-block variant="text" width="80%" height="14px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="60px" height="10px" />
+                <app-skeleton-block variant="text" width="50%" height="14px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="100px" height="10px" />
+                <app-skeleton-block variant="text" width="60%" height="14px" />
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="bento-wide">
-          <app-skeleton-block variant="rect" width="100%" height="120px" />
+
+        <!-- 3. Tarjetas de Progreso (x2) -->
+        @for (_ of [1, 2]; track $index) {
+          <div class="bento-card bento-wide">
+            <div class="bento-card__body bento-card__body--spread">
+              <div class="flex items-start justify-between w-full">
+                <div class="flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="140px" height="20px" />
+                  <app-skeleton-block variant="text" width="90px" height="12px" />
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                  <app-skeleton-block variant="text" width="60px" height="32px" />
+                  <app-skeleton-block variant="text" width="50px" height="10px" />
+                </div>
+              </div>
+              <div class="w-full mt-4">
+                <app-skeleton-block variant="rect" width="100%" height="16px" borderRadius="9999px" />
+                <div class="flex items-center justify-between mt-2">
+                  <app-skeleton-block variant="text" width="40px" height="12px" />
+                  <app-skeleton-block variant="text" width="80px" height="12px" />
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- 4. Ficha Técnica (bento-hero) -->
+        <div class="bento-card bento-hero !p-0 flex flex-col h-full w-full overflow-hidden">
+          <div class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30">
+            <div class="flex items-center gap-3">
+              <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="8px" />
+              <div class="flex flex-col gap-1">
+                <app-skeleton-block variant="text" width="120px" height="16px" />
+                <app-skeleton-block variant="text" width="180px" height="12px" />
+              </div>
+            </div>
+          </div>
+          <div class="p-5 flex flex-col gap-4">
+            <app-skeleton-block variant="rect" width="100%" height="40px" />
+            <app-skeleton-block variant="rect" width="100%" height="40px" />
+            <app-skeleton-block variant="rect" width="100%" height="40px" />
+          </div>
         </div>
-        <div class="bento-wide">
-          <app-skeleton-block variant="rect" width="100%" height="120px" />
-        </div>
-        <div class="bento-banner">
-          <app-skeleton-block variant="rect" width="100%" height="80px" />
-        </div>
-        <div class="bento-hero">
-          <app-skeleton-block variant="rect" width="100%" height="320px" />
+
+        <!-- 5. Estado Financiero (bento-tall) -->
+        <div class="bento-card bento-tall !p-0 flex flex-col h-full w-full overflow-hidden">
+          <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30">
+            <div class="flex flex-col gap-1">
+              <app-skeleton-block variant="text" width="130px" height="16px" />
+              <app-skeleton-block variant="text" width="100px" height="10px" />
+            </div>
+            <app-skeleton-block variant="circle" width="32px" height="32px" />
+          </div>
+          <div class="flex flex-col gap-5 p-5 flex-1 min-h-0">
+            <div class="grid grid-cols-1 gap-4">
+              <app-skeleton-block variant="rect" width="100%" height="70px" borderRadius="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="70px" borderRadius="12px" />
+            </div>
+            <div class="h-px bg-border-subtle w-full my-1"></div>
+            <div class="flex flex-col gap-3">
+              <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="12px" />
+            </div>
+          </div>
         </div>
 
         <!-- ── Estado de Error ── -->
@@ -93,39 +190,29 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- ── Vista Principal ── -->
       } @else if (facade.alumno(); as alumno) {
-        <app-section-hero
-          class="bento-hero"
-          [title]="alumno.nombre"
-          [contextLine]="alumno.curso + ' · Matrícula ' + alumno.matricula"
-          icon="user"
-          backRoute="/app/admin/alumnos"
-          backLabel="Listado de Alumnos"
-          [actions]="heroActions()"
-          [chips]="heroChips()"
-          [animateOnInit]="false"
-          (actionClick)="handleHeroAction($event)"
-        />
-
+        
         <!-- Selector de matrícula (solo visible cuando hay más de una) -->
         @if (facade.enrollmentSummaries().length > 1) {
-          <div class="bento-banner">
-            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Selector de matrícula">
+          <div class="col-span-full flex w-full">
+            <div class="flex flex-nowrap md:flex-wrap items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-1 w-full md:w-auto overflow-x-auto custom-scrollbar-hidden">
               @for (enr of facade.enrollmentSummaries(); track enr.id) {
                 <button
                   type="button"
                   role="tab"
-                  class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
-                  [class.bg-brand-muted]="alumno.enrollmentId === enr.id"
-                  [class.border-brand]="alumno.enrollmentId === enr.id"
-                  [class.text-primary]="alumno.enrollmentId === enr.id"
-                  [class.bg-surface]="alumno.enrollmentId !== enr.id"
-                  [class.border-border-subtle]="alumno.enrollmentId !== enr.id"
-                  [class.text-text-secondary]="alumno.enrollmentId !== enr.id"
+                  class="relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none whitespace-nowrap shrink-0"
+                  [class.text-brand]="alumno.enrollmentId === enr.id"
+                  [class.text-text-muted]="alumno.enrollmentId !== enr.id"
+                  [class.hover:text-text-primary]="alumno.enrollmentId !== enr.id"
                   [attr.aria-selected]="alumno.enrollmentId === enr.id"
-                  [attr.data-llm-action]="'select-enrollment-' + enr.id"
                   (click)="facade.selectEnrollment(enr.id)"
                 >
-                  {{ enr.courseName }}{{ enr.number ? ' · #' + enr.number : '' }}
+                  @if (alumno.enrollmentId === enr.id) {
+                    <div class="absolute inset-0 bg-brand-muted border border-brand/20 rounded-xl shadow-sm z-0"></div>
+                  }
+                  <span class="relative z-10 flex items-center gap-2">
+                    <app-icon name="car" [size]="16" [class.text-brand]="alumno.enrollmentId === enr.id" />
+                    {{ enr.courseName }}{{ enr.number ? ' · #' + enr.number : '' }}
+                  </span>
                 </button>
               }
             </div>

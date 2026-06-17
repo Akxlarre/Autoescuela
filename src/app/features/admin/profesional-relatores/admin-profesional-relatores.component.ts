@@ -148,9 +148,9 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
 
           <div class="p-6">
             @if (facade.isLoading()) {
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div class="bento-grid">
                 @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
-                  <div class="p-4 rounded-xl border border-[var(--border-subtle)]">
+                  <div class="p-4 rounded-xl border border-[var(--border-subtle)] bento-wide" data-col-span="4">
                     <div class="flex items-center gap-3 mb-4">
                       <app-skeleton-block variant="circle" width="40px" height="40px" />
                       <div class="flex-1 flex flex-col gap-2">
@@ -182,11 +182,9 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                 </button>
               </div>
             } @else {
-              <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div class="bento-grid">
                 @for (rel of paginatedRelatores(); track rel.id) {
-                  <div
-                    class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative"
-                  >
+                  <div class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative bento-wide" data-col-span="4">
                     <!-- Status Badge -->
                     <div class="absolute top-4 right-4">
                       @if (rel.estado === 'activo') {

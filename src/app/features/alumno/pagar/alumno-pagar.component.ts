@@ -15,6 +15,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 
 /** Agrupa un array de días por semana (lunes como inicio). */
 function groupByWeek(days: WeekDay[]): WeekDay[][] {
@@ -52,9 +53,10 @@ function groupByWeek(days: WeekDay[]): WeekDay[][] {
     AsyncBtnComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
+    <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
       <app-section-hero
         class="bento-hero"

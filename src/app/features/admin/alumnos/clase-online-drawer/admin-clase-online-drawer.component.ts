@@ -24,18 +24,31 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="rect" width="100%" height="60px" />
-          <app-skeleton-block variant="rect" width="100%" height="48px" />
-          <app-skeleton-block variant="rect" width="100%" height="48px" />
-          <app-skeleton-block variant="rect" width="100%" height="48px" />
+        <div class="flex flex-col gap-4 p-5">
+          <div class="flex items-start gap-3 rounded-xl p-3 bg-elevated">
+            <app-skeleton-block variant="circle" width="16px" height="16px" class="mt-0.5 shrink-0" />
+            <div class="flex flex-col gap-1.5 flex-1">
+              <app-skeleton-block variant="text" width="60%" height="14px" />
+              <app-skeleton-block variant="text" width="40%" height="12px" />
+            </div>
+          </div>
+          <div class="flex flex-col gap-2 mt-4">
+            <app-skeleton-block variant="text" width="30%" height="12px" />
+            <app-skeleton-block variant="rect" width="100%" height="48px" borderRadius="0.5rem" />
+          </div>
         </div>
       </ng-template>
       <ng-template #content>
         <div class="flex-1 overflow-y-auto p-5">
           <!-- Sesión info -->
           @if (facade.isLoading()) {
-            <app-skeleton-block variant="rect" width="100%" height="60px" />
+            <div class="flex items-start gap-3 rounded-xl p-3 bg-elevated border border-border-default">
+              <app-skeleton-block variant="circle" width="16px" height="16px" class="mt-0.5 shrink-0" />
+              <div class="flex flex-col gap-1.5 flex-1">
+                <app-skeleton-block variant="text" width="60%" height="14px" />
+                <app-skeleton-block variant="text" width="40%" height="12px" />
+              </div>
+            </div>
           } @else if (facade.sesionHoy()) {
             <div class="flex items-start gap-3 rounded-xl p-3 bg-elevated">
               <app-icon name="calendar" [size]="15" class="text-text-muted mt-0.5 shrink-0" />

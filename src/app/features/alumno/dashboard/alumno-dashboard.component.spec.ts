@@ -4,7 +4,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { AlumnoDashboardComponent } from './alumno-dashboard.component';
 import { StudentHomeFacade } from '@core/facades/student-home.facade';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { StudentHomeSnapshot } from '@core/models/ui/student-home.model';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -105,7 +104,6 @@ function setup(snapshot: StudentHomeSnapshot | null = makeClassBSnapshot()) {
       {
         provide: GsapAnimationsService,
         useValue: {
-          animateBentoGrid: vi.fn(),
           animateHero: vi.fn(),
           animateCounter: vi.fn(),
           addCardHover: vi.fn(),

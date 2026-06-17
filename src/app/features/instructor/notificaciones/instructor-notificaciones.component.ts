@@ -9,11 +9,11 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -22,7 +22,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SectionHeroComponent, IconComponent, BentoGridLayoutDirective],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
@@ -95,12 +95,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     </div>
   `,
 })
-export class InstructorNotificacionesComponent implements OnInit, AfterViewInit {
-  private gsap = inject(GsapAnimationsService);
-  private notificationsFacade = inject(NotificationsFacade);
+export class InstructorNotificacionesComponent implements OnInit, AfterViewInit {  private notificationsFacade = inject(NotificationsFacade);
   private destroyRef = inject(DestroyRef);
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
   readonly heroActions: SectionHeroAction[] = [
     { id: 'mark-all-read', label: 'Marcar todas como leídas', icon: 'check-check', primary: true },
   ];
@@ -122,10 +118,7 @@ export class InstructorNotificacionesComponent implements OnInit, AfterViewInit 
     this.destroyRef.onDestroy(() => this.notificationsFacade.dispose());
   }
 
-  ngAfterViewInit() {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-  }
+  ngAfterViewInit() {  }
 
   onHeroAction(id: string) {
     if (id === 'mark-all-read') this.markAllRead();

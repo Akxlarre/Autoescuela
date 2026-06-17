@@ -6,13 +6,12 @@ import {
   computed,
   ElementRef,
   inject,
-  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -29,6 +28,7 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
   imports: [
     TooltipModule,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     CardHoverDirective,
     IconComponent,
     KpiCardVariantComponent,
@@ -40,7 +40,7 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
     AnimateInDirective,
   ],
   template: `
-    <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mi progreso">
+    <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi progreso">
       <!-- ── HERO ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
@@ -581,9 +581,7 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
 export class AlumnoDashboardComponent {
   private readonly facade = inject(StudentHomeFacade);
   readonly context = inject(StudentEnrollmentContextFacade);
-  private readonly gsap = inject(GsapAnimationsService);
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
+    
   // ── Estado ────────────────────────────────────────────────────────────────
 
   readonly loading = computed(() => this.facade.isLoading());
@@ -744,17 +742,6 @@ export class AlumnoDashboardComponent {
 
   constructor() {
     void this.facade.initialize();
-
-    effect(() => {
-      const isReady = !this.loading();
-      const el = this.bentoGrid()?.nativeElement;
-
-      if (isReady && el) {
-        Promise.resolve().then(() => {
-          this.gsap.animateBentoGrid(el);
-        });
-      }
-    });
   }
 
   // ── Acciones ───────────────────────────────────────────────────────────────

@@ -25,8 +25,8 @@ const CDN_URL =
         <h3 class="text-base font-bold text-text-primary border-b pb-2 mb-2 border-border-subtle">
           Identidad y Metadatos SEO
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="flex flex-col gap-1.5">
+        <div class="bento-grid bento-grid--forms bento-grid--forms">
+          <div class="flex flex-col gap-1.5 bento-wide">
             <label class="field-label">Nombre Comercial *</label>
             <input
               type="text"
@@ -35,7 +35,7 @@ const CDN_URL =
               placeholder="Ej: Autoescuela Chillán"
             />
           </div>
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5 bento-wide">
             <label class="field-label">Nombre Corto *</label>
             <input
               type="text"
@@ -56,8 +56,8 @@ const CDN_URL =
           />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="flex flex-col gap-1.5">
+        <div class="bento-grid bento-grid--forms bento-grid--forms">
+          <div class="flex flex-col gap-1.5 bento-wide">
             <label class="field-label">Dominio Web *</label>
             <input
               type="text"
@@ -66,7 +66,7 @@ const CDN_URL =
               placeholder="Ej: autoescuelachillan.cl"
             />
           </div>
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5 bento-wide">
             <label class="field-label">Tema Visual</label>
             <p-select
               formControlName="theme"
@@ -88,9 +88,9 @@ const CDN_URL =
         >
           Recursos Gráficos del Sitio (Logo y SEO)
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bento-grid bento-grid--forms bento-grid--forms">
           <!-- Logo -->
-          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated">
+          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide">
             <div class="flex flex-col gap-1">
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Logo de la Escuela</span
@@ -109,7 +109,7 @@ const CDN_URL =
           </div>
 
           <!-- OG Image -->
-          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated">
+          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide">
             <div class="flex flex-col gap-1">
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Imagen Open Graph (SEO / Redes)</span
@@ -128,7 +128,7 @@ const CDN_URL =
           </div>
 
           <!-- Favicon -->
-          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated">
+          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide">
             <div class="flex flex-col gap-1">
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Favicon (Pestaña del Navegador)</span
@@ -155,8 +155,8 @@ const CDN_URL =
         >
           Redes Sociales
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div class="flex flex-col gap-1.5">
+        <div class="bento-grid bento-grid--forms bento-grid--forms">
+          <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
             <label class="field-label">Enlace Facebook</label>
             <input
               type="url"
@@ -165,7 +165,7 @@ const CDN_URL =
               placeholder="https://facebook.com/..."
             />
           </div>
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
             <label class="field-label">Enlace Instagram</label>
             <input
               type="url"
@@ -174,7 +174,7 @@ const CDN_URL =
               placeholder="https://instagram.com/..."
             />
           </div>
-          <div class="flex flex-col gap-1.5">
+          <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
             <label class="field-label">Enlace TikTok</label>
             <input
               type="url"

@@ -5,10 +5,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { TagModule } from 'primeng/tag';
 import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -23,10 +25,12 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     EmptyStateComponent,
     AlertCardComponent,
     SectionHeroComponent,
+    SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <app-section-hero
         class="bento-hero"
         title="Iniciar Clase"
@@ -39,8 +43,56 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       <div class="bento-banner">
         <div class="max-w-3xl mx-auto flex flex-col gap-6">
           @if (clasesFacade.isLoading()) {
-            <div class="flex justify-center p-12">
-              <app-icon name="loader-2" [size]="32" class="text-brand animate-spin" />
+            <!-- Skeleton: Resumen de Clase Estilo "Ticket" -->
+            <div class="bento-card relative overflow-hidden">
+              <div class="flex items-start sm:items-center gap-4 mb-5 relative z-10">
+                <app-skeleton-block variant="rect" width="56px" height="56px" borderRadius="1rem" class="shrink-0" />
+                <div class="flex-1 min-w-0 flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="50%" height="20px" />
+                  <app-skeleton-block variant="text" width="30%" height="14px" />
+                </div>
+                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" class="hidden sm:inline-flex shrink-0" />
+              </div>
+
+              <!-- P-tag para mobile -->
+              <div class="mb-4 sm:hidden">
+                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" />
+              </div>
+
+              <div class="grid grid-cols-2 gap-4 pt-4 border-t border-border-default/50 relative z-10">
+                <div class="flex items-center gap-3">
+                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                  <div class="flex flex-col gap-1 w-full">
+                    <app-skeleton-block variant="text" width="50px" height="10px" />
+                    <app-skeleton-block variant="text" width="70px" height="14px" />
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                  <div class="flex flex-col gap-1 w-full min-w-0">
+                    <app-skeleton-block variant="text" width="60px" height="10px" />
+                    <app-skeleton-block variant="text" width="100px" height="14px" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skeleton: Formulario de Odómetro -->
+            <div class="flex flex-col gap-6 mt-6">
+              <div class="bento-card p-8 sm:p-12 relative overflow-hidden border-2 border-border-default">
+                <div class="flex flex-col items-center justify-center relative z-10">
+                  <!-- Ícono Gauge -->
+                  <app-skeleton-block variant="circle" width="64px" height="64px" class="mb-6" />
+                  <!-- Label -->
+                  <app-skeleton-block variant="text" width="160px" height="14px" class="mb-2" />
+                  <!-- Input -->
+                  <app-skeleton-block variant="rect" width="180px" height="80px" borderRadius="0.5rem" class="mt-2" />
+                </div>
+              </div>
+
+              <div class="flex justify-center mt-2">
+                <app-skeleton-block variant="rect" width="320px" height="56px" borderRadius="1rem" class="w-full sm:w-80" />
+              </div>
             </div>
           } @else if (clasesFacade.error()) {
             <app-alert-card title="Atención" severity="error">

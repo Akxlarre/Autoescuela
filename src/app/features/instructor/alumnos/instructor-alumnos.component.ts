@@ -13,7 +13,6 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
@@ -21,6 +20,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { SelectModule } from 'primeng/select';
 import { StudentDrawerDetailComponent } from './components/student-drawer-detail.component';
 import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.model';
@@ -60,9 +60,10 @@ const PAGE_SIZE = 9;
     SkeletonBlockComponent,
     CardHoverDirective,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ══ HERO ══ -->
       <app-section-hero
         class="bento-hero"
@@ -179,11 +180,11 @@ const PAGE_SIZE = 9;
           />
         } @else {
           <!-- Grid único — skeleton inline dentro del mismo contenedor -->
-          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="bento-grid">
             @if (facade.isLoading()) {
               @for (i of skeletonItems; track i) {
                 <!-- Skeleton fiel a la student-card: mismos gaps, padding y estructura -->
-                <div class="student-card" aria-hidden="true">
+                <div class="student-card bento-wide" aria-hidden="true" data-col-span="4">
                   <!-- Accent bar -->
                   <div class="student-card__accent bg-subtle"></div>
 
@@ -225,7 +226,7 @@ const PAGE_SIZE = 9;
               }
             } @else {
               @for (s of pagedStudents(); track s.studentId) {
-                <div class="student-card group" appCardHover (click)="openDetail(s)">
+                <div class="student-card group bento-wide" appCardHover (click)="openDetail(s)" data-col-span="4">
                   <!-- Accent gradient top bar -->
                   <div
                     class="student-card__accent"
@@ -536,10 +537,6 @@ const PAGE_SIZE = 9;
 })
 export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   public facade = inject(InstructorAlumnosFacade);
-  private gsap = inject(GsapAnimationsService);
-
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
   public searchTerm = signal('');
   public filterStatus = signal<'all' | 'active' | 'completed'>('all');
   public sortBy = signal<'name' | 'progress' | 'nextClass'>('name');
@@ -633,9 +630,6 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    requestAnimationFrame(() => {
-      const grid = this.bentoGrid();
-      if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-    });
+    requestAnimationFrame(() => {    });
   }
 }
