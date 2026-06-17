@@ -15,7 +15,6 @@ import type {
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorOption,
   ScheduleGrid,
   SlotStatus,

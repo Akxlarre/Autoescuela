@@ -3,7 +3,6 @@ import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   MonthlyHoursRow,
   LiquidacionKpis,
   SessionDetailRow,

@@ -11,7 +11,6 @@ import type { Branch } from '@core/models/dto/branch.model';
 import type { Course } from '@core/models/dto/course.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   PreInscritoTableRow,
   EvaluarTestPayload,
   CompletarMatriculaPayload,

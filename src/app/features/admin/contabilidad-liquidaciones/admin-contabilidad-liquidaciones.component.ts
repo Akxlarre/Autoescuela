@@ -10,7 +10,7 @@ import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 @Component({
   selector: 'app-admin-contabilidad-liquidaciones',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [LiquidacionesContentComponent, BentoGridLayoutDirective],
+  imports: [LiquidacionesContentComponent],
   template: `
     <app-liquidaciones-content
       [liquidaciones]="facade.liquidaciones()"

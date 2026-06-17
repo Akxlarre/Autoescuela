@@ -5,7 +5,6 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import type { Discount } from '@core/models/dto/discount.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   PaymentMethod,
   PricingBreakdown,
   DiscountData,

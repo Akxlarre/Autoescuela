@@ -3,7 +3,6 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   PromocionTableRow,
   PromocionCursoRow,
   PromocionCursoRelator,
