@@ -393,7 +393,7 @@ export class PublicEnrollmentComponent {
   private readonly route = inject(ActivatedRoute);
 
   // ── URL context (sede tenant) ──
-  private readonly _urlBranchId = signal<number | null>(null);
+  private readonly _urlBranchIdentifier = signal<number | string | null>(null);
   private _urlCourseId: number | null = null;
 
   /** true mientras se resuelve la entrada (loadBranches + resolveEntry) en init. */
@@ -403,29 +403,52 @@ export class PublicEnrollmentComponent {
   private readonly _step1Form = signal<EnrollmentPersonalData>(DEFAULT_PERSONAL_DATA);
 
   /** Tema de sede para `[data-public-theme]` — desde la sede resuelta o el branchId de la URL. */
-  readonly theme = computed<SedeTheme>(() =>
-    branchIdToTheme(this.facade.selectedBranch()?.id ?? this._urlBranchId()),
-  );
+  readonly theme = computed<SedeTheme>(() => {
+    const resolvedBranchId = this.facade.selectedBranch()?.id;
+    if (resolvedBranchId) return branchIdToTheme(resolvedBranchId);
+
+    const urlId = this._urlBranchIdentifier();
+    return typeof urlId === 'number' ? branchIdToTheme(urlId) : branchIdToTheme(null);
+  });
 
   constructor() {
     // Capturar params de la URL de forma síncrona
     const branchIdParam = this.route.snapshot.queryParamMap.get('branchId');
+    const sedeParam = this.route.snapshot.queryParamMap.get('sede');
     const courseIdParam = this.route.snapshot.queryParamMap.get('courseId');
     const resumeParam = this.route.snapshot.queryParamMap.get('resume');
+    
     const parsedBranch = branchIdParam ? parseInt(branchIdParam, 10) : null;
+    const identifier = sedeParam ?? (Number.isFinite(parsedBranch) ? parsedBranch : null);
+    
     const parsedCourse = courseIdParam ? parseInt(courseIdParam, 10) : null;
-    this._urlBranchId.set(Number.isFinite(parsedBranch) ? parsedBranch : null);
+    this._urlBranchIdentifier.set(identifier);
     this._urlCourseId = Number.isFinite(parsedCourse) ? parsedCourse : null;
 
     afterNextRender(() => {
       void this.facade.loadBranches().then(async () => {
-        // Si hay borrador, ofrecer retomarlo antes de resolver la entrada por URL.
+        // Si hay borrador, verificar si choca con la sede de la URL. Si es distinta, se descarta.
+        const draftMeta = this.facade.draftMeta();
+        if (draftMeta && identifier !== null) {
+          const branches = this.facade.branches();
+          const draftBranchId = branches.find(b => b.slug === draftMeta.branchSlug)?.id;
+          const targetBranchId = typeof identifier === 'number' 
+            ? identifier 
+            : branches.find(b => b.slug === identifier)?.id;
+
+          if (draftBranchId && targetBranchId && draftBranchId !== targetBranchId) {
+            this.facade.discardDraft();
+            this.facade.reset();
+          }
+        }
+
+        // Si hay borrador válido para esta sede, ofrecer retomarlo antes de resolver la entrada por URL.
         if (this.facade.hasDraftToRestore()) {
           if (resumeParam === 'true') {
             await this.facade.restoreDraft();
           }
         } else {
-          await this.facade.resolveEntry(this._urlBranchId(), this._urlCourseId);
+          await this.facade.resolveEntry(this._urlBranchIdentifier(), this._urlCourseId);
         }
         this.resolving.set(false);
       });
@@ -759,6 +782,6 @@ export class PublicEnrollmentComponent {
   onDiscardDraft(): void {
     this.facade.discardDraft();
     this.facade.reset();
-    void this.facade.resolveEntry(this._urlBranchId(), this._urlCourseId);
+    void this.facade.resolveEntry(this._urlBranchIdentifier(), this._urlCourseId);
   }
 }

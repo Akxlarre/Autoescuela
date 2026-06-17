@@ -1,4 +1,4 @@
-﻿import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -49,6 +49,8 @@ export interface PublicStepConfig {
 export interface DraftMeta {
   stepLabel: string;
   savedAtHuman: string;
+  branchSlug: string;
+  branchName: string;
 }
 
 const STEP_LABEL_MAP: Readonly<Record<PublicWizardStep, string>> = {
@@ -423,9 +425,11 @@ private readonly supabase = inject(SupabaseService);
    *
    * Asume que `loadBranches()` ya pobló `branches` (lo hace el Smart component en init).
    */
-  async resolveEntry(branchId: number | null, courseId: number | null): Promise<void> {
+  async resolveEntry(branchIdentifier: number | string | null, courseId: number | null): Promise<void> {
     const branch =
-      branchId !== null ? (this._branches().find((b) => b.id === branchId) ?? null) : null;
+      branchIdentifier !== null
+        ? this._branches().find((b) => b.id === branchIdentifier || b.slug === branchIdentifier) ?? null
+        : null;
 
     if (!branch) {
       this._entryState.set('orientation');
@@ -1581,6 +1585,8 @@ private readonly supabase = inject(SupabaseService);
     return {
       stepLabel: STEP_LABEL_MAP[draft.currentStep] ?? 'Inicio',
       savedAtHuman: formatRelativeTime(draft.savedAt),
+      branchSlug: draft.branchSlug,
+      branchName: draft.branchName,
     };
   }
 
