@@ -27,6 +27,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /** Validador a nivel de FormGroup: suma de canales debe igualar total_amount. */
 function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | null {
@@ -512,7 +513,8 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
   `,
 })
 export class RegistrarPagoDrawerComponent {
-  readonly tipoConceptoOptions = [
+    private readonly sanitizer = inject(ErrorSanitizerService);
+readonly tipoConceptoOptions = [
     { label: 'Matrícula', value: 'Matrícula' },
     { label: 'Mensualidad 1/4', value: 'Mensualidad 1/4' },
     { label: 'Mensualidad 2/4', value: 'Mensualidad 2/4' },
@@ -669,7 +671,7 @@ export class RegistrarPagoDrawerComponent {
       this.layoutDrawer.back();
     } catch (err) {
       this.saveError.set(
-        err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.',
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar. Intenta de nuevo.',
       );
     } finally {
       this.isSaving.set(false);

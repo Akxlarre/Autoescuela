@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 export interface AlumnoClaseBUI {
   studentId: number;
@@ -26,7 +27,8 @@ interface TheorySessionRow {
 
 @Injectable({ providedIn: 'root' })
 export class ClaseOnlineFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
 
   // ─── Estado privado ───────────────────────────────────────────────────────
   private readonly _sesionHoy = signal<SesionTeoriaUI | null>(null);
@@ -155,7 +157,7 @@ export class ClaseOnlineFacade {
       .eq('id', sessionId);
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
     } else {
       this._savedOk.set(true);
       const current = this._sesionHoy();
@@ -179,7 +181,7 @@ export class ClaseOnlineFacade {
       .eq('theory_session_b_id', sessionId);
 
     if (delError) {
-      this._error.set(delError.message);
+      this._error.set(this.sanitizer.sanitize(delError).message);
       this._isLoading.set(false);
       return;
     }
@@ -196,7 +198,7 @@ export class ClaseOnlineFacade {
         );
 
       if (insError) {
-        this._error.set(insError.message);
+        this._error.set(this.sanitizer.sanitize(insError).message);
         this._isLoading.set(false);
         return;
       }

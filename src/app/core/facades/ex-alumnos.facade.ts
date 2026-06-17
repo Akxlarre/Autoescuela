@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ── Tipos internos (DTO de Supabase) ──────────────────────────────────────────
 
@@ -39,7 +40,8 @@ interface EgresadoRow {
 
 @Injectable({ providedIn: 'root' })
 export class ExAlumnosFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -149,7 +151,7 @@ export class ExAlumnosFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
       return;
     }
 

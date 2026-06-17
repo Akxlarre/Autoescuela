@@ -7,6 +7,7 @@ import type {
   CeldaNota,
   FilaEvaluacion,
   GrillaEvaluacion,
+  PromocionConCursos,
 } from '@core/models/ui/evaluaciones-profesional.model';
 import type { PromocionOption, CursoOption } from '@core/models/ui/sesion-profesional.model';
 import {
@@ -16,6 +17,14 @@ import {
   MODULE_COUNT,
   roundGrade,
 } from '@core/utils/professional-modules';
+import {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+  buildLanding,
+  type CourseLite,
+  type EnrollmentLite,
+  type GradeLite,
+  type PromotionLite,
+} from '@core/utils/evaluaciones-landing';
 
 /** Fila cruda de Supabase: enrollment + datos del alumno */
 interface EnrollmentRow {
@@ -32,13 +41,16 @@ interface EnrollmentRow {
 
 @Injectable({ providedIn: 'root' })
 export class EvaluacionesProfesionalFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthFacade);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _promociones = signal<PromocionOption[]>([]);
   private readonly _cursos = signal<CursoOption[]>([]);
+  private readonly _landing = signal<PromocionConCursos[]>([]);
+  private readonly _landingLoaded = signal(false);
   private readonly _selectedPromocionId = signal<number | null>(null);
   private readonly _selectedCursoId = signal<number | null>(null);
   private readonly _grilla = signal<GrillaEvaluacion | null>(null);
@@ -49,6 +61,10 @@ export class EvaluacionesProfesionalFacade {
   // ── Estado público ──────────────────────────────────────────────────────────
   readonly promociones = this._promociones.asReadonly();
   readonly cursos = this._cursos.asReadonly();
+  /** Aterrizaje: promociones activas (padre) con sus cursos resumidos. */
+  readonly landing = this._landing.asReadonly();
+  /** true tras la primera carga del aterrizaje (para distinguir vacío real de "cargando"). */
+  readonly landingLoaded = this._landingLoaded.asReadonly();
   readonly selectedPromocionId = this._selectedPromocionId.asReadonly();
   readonly selectedCursoId = this._selectedCursoId.asReadonly();
   readonly grilla = this._grilla.asReadonly();
@@ -86,6 +102,112 @@ export class EvaluacionesProfesionalFacade {
         status: p.status ?? '',
       })),
     );
+  }
+
+  /**
+   * Carga el aterrizaje: promociones activas (padre) con sus cursos resumidos.
+   * Solo consulta promociones `planned`/`in_progress` y arma el resumen por curso
+   * con una función pura. No carga históricas (escala a miles sin renderizarlas).
+   */
+  async loadLanding(): Promise<void> {
+    this._isLoading.set(true);
+    this._error.set(null);
+    try {
+      // 1. Promociones activas (padre)
+      const { data: promoData, error: promoErr } = await this.supabase.client
+        .from('professional_promotions')
+        .select('id, name, code, status')
+        .in('status', ['planned', 'in_progress'])
+        .order('start_date', { ascending: false });
+      if (promoErr) throw new Error('Error cargando promociones');
+
+      const promotions: PromotionLite[] = (promoData ?? []).map((p) => ({
+        id: p.id,
+        name: p.name ?? p.code ?? `Promoción #${p.id}`,
+        code: p.code ?? '',
+        status: p.status ?? '',
+      }));
+
+      // Espejo para los selectores legacy (compatibilidad con flujo de grilla).
+      this._promociones.set(
+        promotions.map((p) => ({ id: p.id, name: p.name, code: p.code, status: p.status })),
+      );
+
+      if (promotions.length === 0) {
+        this._landing.set([]);
+        return;
+      }
+
+      const promoIds = promotions.map((p) => p.id);
+
+      // 2. Cursos de esas promociones
+      const { data: pcData, error: pcErr } = await this.supabase.client
+        .from('promotion_courses')
+        .select('id, promotion_id, courses!inner(name, license_class)')
+        .in('promotion_id', promoIds);
+      if (pcErr) throw new Error('Error cargando cursos');
+
+      const courses: CourseLite[] = (pcData ?? []).map((pc) => {
+        const course = pc.courses as unknown as { name: string; license_class: string };
+        return {
+          promotionCourseId: pc.id,
+          promotionId: pc.promotion_id,
+          courseCode: course.license_class,
+          courseName: course.name,
+        };
+      });
+
+      const promotionCourseIds = courses.map((c) => c.promotionCourseId);
+
+      // 3. Matrículas activas de esos cursos
+      const enrollments: EnrollmentLite[] = [];
+      if (promotionCourseIds.length > 0) {
+        const { data: enrData, error: enrErr } = await this.supabase.client
+          .from('enrollments')
+          .select('id, promotion_course_id')
+          .in('promotion_course_id', promotionCourseIds)
+          .in('status', ['active', 'completed']);
+        if (enrErr) throw new Error('Error cargando matrículas');
+        for (const e of enrData ?? []) {
+          enrollments.push({ id: e.id, promotionCourseId: e.promotion_course_id });
+        }
+      }
+
+      // 4. Notas de esas matrículas (para estado y promedio por curso)
+      const grades: GradeLite[] = [];
+      const enrollmentIds = enrollments.map((e) => e.id);
+      if (enrollmentIds.length > 0) {
+        const { data: gradeData, error: gradeErr } = await this.supabase.client
+          .from('professional_module_grades')
+          .select('enrollment_id, grade, status')
+          .in('enrollment_id', enrollmentIds);
+        if (gradeErr) throw new Error('Error cargando notas');
+        for (const g of gradeData ?? []) {
+          if (g.grade !== null) {
+            grades.push({
+              enrollmentId: g.enrollment_id,
+              grade: g.grade,
+              status: g.status === 'confirmed' ? 'confirmed' : 'draft',
+            });
+          }
+        }
+      }
+
+      // 5. Ensamblaje puro (testeable)
+      this._landing.set(buildLanding(promotions, courses, enrollments, grades));
+    } catch (err) {
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error cargando el panorama');
+      this._landing.set([]);
+    } finally {
+      this._landingLoaded.set(true);
+      this._isLoading.set(false);
+    }
+  }
+
+  /** Vuelve del gradebook al aterrizaje (limpia curso y grilla seleccionados). */
+  cerrarGrilla(): void {
+    this._selectedCursoId.set(null);
+    this._grilla.set(null);
   }
 
   async selectPromocion(id: number): Promise<void> {
@@ -237,7 +359,7 @@ export class EvaluacionesProfesionalFacade {
         confirmed: hasConfirmed,
       });
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error desconocido');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error desconocido');
     } finally {
       this._isLoading.set(false);
     }
@@ -280,6 +402,23 @@ export class EvaluacionesProfesionalFacade {
     });
 
     this._grilla.set({ ...g, filas });
+  }
+
+  /**
+   * Corrige al mínimo (10) una nota que quedó por debajo del rango y avisa al
+   * usuario. Se invoca desde la UI en el blur del input — el clamp del mínimo no
+   * se aplica durante el tipeo para no romper valores intermedios (ej: "5" → "56").
+   * No-op si la nota es válida, null o la grilla está confirmada.
+   */
+  corregirNotaMinima(enrollmentId: number, moduleIndex: number): void {
+    const g = this._grilla();
+    if (!g || g.confirmed) return;
+    const fila = g.filas.find((f) => f.enrollmentId === enrollmentId);
+    const grade = fila?.notas[moduleIndex]?.grade ?? null;
+    if (grade !== null && grade < 10) {
+      this.setNota(enrollmentId, moduleIndex, 10);
+      this.toast.info('La nota mínima es 10 — el valor se ajustó automáticamente.');
+    }
   }
 
   // ── Persistencia ────────────────────────────────────────────────────────────

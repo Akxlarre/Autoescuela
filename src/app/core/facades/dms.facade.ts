@@ -17,6 +17,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
 
@@ -114,7 +115,8 @@ interface RawTemplate {
  */
 @Injectable({ providedIn: 'root' })
 export class DmsFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerService);
@@ -363,7 +365,7 @@ export class DmsFacade {
         this._studentDocs.set([]);
       }
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al cargar documentos del alumno');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos del alumno');
     } finally {
       this._studentDocsLoading.set(false);
     }
@@ -649,7 +651,7 @@ export class DmsFacade {
       this._schoolDocs.set(schoolDocs);
       this._templates.set(templates);
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al cargar documentos');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos');
     }
   }
 

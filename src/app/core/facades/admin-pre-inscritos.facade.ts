@@ -10,6 +10,7 @@ import type { User } from '@core/models/dto/user.model';
 import type { Branch } from '@core/models/dto/branch.model';
 import type { Course } from '@core/models/dto/course.model';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   PreInscritoTableRow,
   EvaluarTestPayload,
   CompletarMatriculaPayload,
@@ -56,7 +57,8 @@ type RawPromocion = Pick<ProfessionalPromotion, 'id' | 'start_date'> & {
 
 @Injectable({ providedIn: 'root' })
 export class AdminPreInscritosFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly authFacade = inject(AuthFacade);
 
@@ -154,7 +156,7 @@ export class AdminPreInscritosFacade {
 
       return true;
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al guardar evaluación');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar evaluación');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -285,7 +287,7 @@ export class AdminPreInscritosFacade {
 
       return { enrollmentId: enrollment.id, enrollmentNumber };
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al completar matrícula');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al completar matrícula');
       return null;
     } finally {
       this._isSaving.set(false);
@@ -305,12 +307,12 @@ export class AdminPreInscritosFacade {
         body: { enrollment_id: enrollmentId },
       });
       if (error) {
-        this._error.set('Error al generar contrato: ' + error.message);
+        this._error.set('Error al generar contrato: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
       return (data as { pdfUrl: string }).pdfUrl ?? null;
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al generar contrato');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al generar contrato');
       return null;
     } finally {
       this._isSaving.set(false);
@@ -340,7 +342,7 @@ export class AdminPreInscritosFacade {
 
       return true;
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al subir contrato');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir contrato');
       return false;
     } finally {
       this._isSaving.set(false);
@@ -481,7 +483,7 @@ export class AdminPreInscritosFacade {
       p_course_id: courseId,
     });
 
-    if (error) throw new Error('Error al generar número de matrícula: ' + error.message);
+    if (error) throw new Error('Error al generar número de matrícula: ' + this.sanitizer.sanitize(error).message);
     return data as string;
   }
 

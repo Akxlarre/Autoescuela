@@ -14,6 +14,7 @@ import type {
 } from '@core/models/ui/enrollment-documents.model';
 import { PROFESSIONAL_DOCUMENTS, HVC_MAX_DAYS } from '@core/models/ui/enrollment-documents.model';
 import type { CourseCategory } from '@core/models/ui/enrollment-personal-data.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Constantes internas ───
 
@@ -42,7 +43,8 @@ const STORAGE_BUCKET = 'documents';
  */
 @Injectable({ providedIn: 'root' })
 export class EnrollmentDocumentsFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)
@@ -134,7 +136,7 @@ export class EnrollmentDocumentsFacade {
         .upload(filePath, blob, { upsert: true });
 
       if (uploadError) {
-        this._error.set('Error al subir foto carnet: ' + uploadError.message);
+        this._error.set('Error al subir foto carnet: ' + this.sanitizer.sanitize(uploadError).message);
         return false;
       }
 
@@ -153,7 +155,7 @@ export class EnrollmentDocumentsFacade {
       );
 
       if (dbError) {
-        this._error.set('Error al registrar foto carnet: ' + dbError.message);
+        this._error.set('Error al registrar foto carnet: ' + this.sanitizer.sanitize(dbError).message);
         return false;
       }
 
@@ -202,7 +204,7 @@ export class EnrollmentDocumentsFacade {
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        this._error.set('Error al subir documento: ' + uploadError.message);
+        this._error.set('Error al subir documento: ' + this.sanitizer.sanitize(uploadError).message);
         return false;
       }
 
@@ -221,7 +223,7 @@ export class EnrollmentDocumentsFacade {
       );
 
       if (dbError) {
-        this._error.set('Error al registrar documento: ' + dbError.message);
+        this._error.set('Error al registrar documento: ' + this.sanitizer.sanitize(dbError).message);
         return false;
       }
 
@@ -271,7 +273,7 @@ export class EnrollmentDocumentsFacade {
           .eq('type', type);
 
         if (error) {
-          this._error.set('Error al eliminar documento: ' + error.message);
+          this._error.set('Error al eliminar documento: ' + this.sanitizer.sanitize(error).message);
           return false;
         }
       }
@@ -328,7 +330,7 @@ export class EnrollmentDocumentsFacade {
       .order('uploaded_at');
 
     if (error) {
-      this._error.set('Error al cargar documentos: ' + error.message);
+      this._error.set('Error al cargar documentos: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -380,7 +382,7 @@ export class EnrollmentDocumentsFacade {
       .eq('id', enrollmentId);
 
     if (error) {
-      this._error.set('Error al actualizar estado de documentos: ' + error.message);
+      this._error.set('Error al actualizar estado de documentos: ' + this.sanitizer.sanitize(error).message);
       return false;
     }
     return true;

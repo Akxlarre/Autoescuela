@@ -2,6 +2,7 @@ import { Injectable, signal, computed, inject } from '@angular/core';
 import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   MonthlyHoursRow,
   LiquidacionKpis,
   SessionDetailRow,
@@ -13,7 +14,8 @@ import type {
   providedIn: 'root',
 })
 export class InstructorHorasFacade {
-  private profileFacade = inject(InstructorProfileFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ export class InstructorHorasFacade {
       });
     } catch (err: any) {
       console.error('Error fetching monthly target:', err);
-      this._error.set(err.message || 'Error al cargar meta mensual');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar meta mensual');
     }
   }
 
@@ -181,7 +183,7 @@ export class InstructorHorasFacade {
       this._sessionsLog.set(log);
     } catch (err: any) {
       console.error('Error fetching sessions log:', err);
-      this._error.set(err.message || 'Error al cargar registro de sesiones');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar registro de sesiones');
     }
   }
 
@@ -214,7 +216,7 @@ export class InstructorHorasFacade {
       this._monthlyHours.set(mapped);
     } catch (err: any) {
       console.error('Error fetching monthly hours:', err);
-      this._error.set(err.message || 'Error al cargar horas mensuales');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar horas mensuales');
     }
   }
 
@@ -265,7 +267,7 @@ export class InstructorHorasFacade {
       this._sessionDetails.set(mapped);
     } catch (err: any) {
       console.error('Error fetching session details:', err);
-      this._error.set(err.message || 'Error al cargar detalle de sesiones');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar detalle de sesiones');
     } finally {
       this._isLoading.set(false);
     }
@@ -385,7 +387,7 @@ export class InstructorHorasFacade {
       });
     } catch (err: any) {
       console.error('Error fetching weekly schedule:', err);
-      this._error.set(err.message || 'Error al cargar el horario');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar el horario');
     } finally {
       this._isLoading.set(false);
     }

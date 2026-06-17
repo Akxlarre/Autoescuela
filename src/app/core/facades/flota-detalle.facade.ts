@@ -6,6 +6,7 @@ import type {
   ScheduledMaintenance,
 } from '@core/models/ui/vehicle-detail.model';
 import type { VehicleTableRow } from '@core/models/ui/vehicle-table.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Raw Supabase types ───────────────────────────────────────────────────────
 
@@ -59,7 +60,8 @@ const SOON_DAYS = 14;
  */
 @Injectable({ providedIn: 'root' })
 export class FlotaDetalleFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
 
   // ── Estado Privado ───────────────────────────────────────────────────────────
   private readonly _vehicle = signal<VehicleTableRow | null>(null);
@@ -192,7 +194,7 @@ export class FlotaDetalleFacade {
       this._scheduledMaintenances.set(scheduled);
     } catch (err) {
       this._error.set(
-        err instanceof Error ? err.message : 'Error al cargar el detalle del vehículo',
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el detalle del vehículo',
       );
     } finally {
       this._isLoading.set(false);

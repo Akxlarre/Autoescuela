@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   LiquidacionRow,
   LiquidacionesKpis,
   PagoInstructorPayload,
@@ -43,7 +44,8 @@ function getAvatarColor(name: string): string {
 
 @Injectable({ providedIn: 'root' })
 export class LiquidacionesFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -320,7 +322,7 @@ export class LiquidacionesFacade {
 
       this._liquidaciones.set(rows);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar liquidaciones.';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar liquidaciones.';
       this._error.set(msg);
       this.toast.error(msg);
       throw err;
@@ -373,7 +375,7 @@ export class LiquidacionesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar el pago.';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar el pago.';
       this._error.set(msg);
       this.toast.error(msg);
       return false;
@@ -452,7 +454,7 @@ export class LiquidacionesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al revertir el pago.';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al revertir el pago.';
       this._error.set(msg);
       this.toast.error(msg);
       return false;

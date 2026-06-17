@@ -43,6 +43,7 @@ import type {
   DraftSummary,
 } from '@core/models/ui/enrollment-wizard.model';
 import { ENROLLMENT_STEPS } from '@core/models/ui/enrollment-wizard.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Tipos internos ───
 
@@ -64,7 +65,8 @@ interface EnrollmentDraft {
  */
 @Injectable({ providedIn: 'root' })
 export class EnrollmentFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly docsFacade = inject(EnrollmentDocumentsFacade);
   private readonly paymentFacade = inject(EnrollmentPaymentFacade);
@@ -327,7 +329,7 @@ export class EnrollmentFacade {
       .order('id');
 
     if (error) {
-      this._error.set('Error al cargar sedes: ' + error.message);
+      this._error.set('Error al cargar sedes: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -356,7 +358,7 @@ export class EnrollmentFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set('Error al cargar cursos: ' + error.message);
+      this._error.set('Error al cargar cursos: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -376,7 +378,7 @@ export class EnrollmentFacade {
       .order('code');
 
     if (error) {
-      this._error.set('Error al cargar códigos SENCE: ' + error.message);
+      this._error.set('Error al cargar códigos SENCE: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -573,7 +575,7 @@ export class EnrollmentFacade {
           .eq('id', enrollmentId);
 
         if (error) {
-          this._error.set('Error al actualizar matrícula: ' + error.message);
+          this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(error).message);
           return false;
         }
       } else {
@@ -627,7 +629,7 @@ export class EnrollmentFacade {
           );
           if (lvError) {
             this._error.set(
-              `Error al registrar convalidación ${convalidatedLicense}: ${lvError.message}`,
+              `Error al registrar convalidación ${convalidatedLicense}: ${this.sanitizer.sanitize(lvError).message}`,
             );
             return false;
           }
@@ -674,7 +676,7 @@ export class EnrollmentFacade {
       .is('vehicle_assignments.end_date', null);
 
     if (error) {
-      this._error.set('Error al cargar instructores: ' + error.message);
+      this._error.set('Error al cargar instructores: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -710,7 +712,7 @@ export class EnrollmentFacade {
         .order('slot_start', { ascending: true });
 
       if (error) {
-        this._error.set('Error al cargar disponibilidad: ' + error.message);
+        this._error.set('Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message);
         return;
       }
 
@@ -776,7 +778,7 @@ export class EnrollmentFacade {
       .in('status', ['planned', 'in_progress']);
 
     if (error) {
-      this._error.set('Error al cargar promociones: ' + error.message);
+      this._error.set('Error al cargar promociones: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -911,7 +913,7 @@ export class EnrollmentFacade {
           .insert(sessions);
 
         if (sessionsError) {
-          this._error.set('Error al reservar horarios: ' + sessionsError.message);
+          this._error.set('Error al reservar horarios: ' + this.sanitizer.sanitize(sessionsError).message);
           return false;
         }
 
@@ -940,7 +942,7 @@ export class EnrollmentFacade {
           .eq('id', draft.enrollmentId);
 
         if (error) {
-          this._error.set('Error al asignar promoción: ' + error.message);
+          this._error.set('Error al asignar promoción: ' + this.sanitizer.sanitize(error).message);
           return false;
         }
       }
@@ -978,7 +980,7 @@ export class EnrollmentFacade {
       });
 
       if (error) {
-        this._error.set('Error al generar contrato: ' + error.message);
+        this._error.set('Error al generar contrato: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
 
@@ -1015,7 +1017,7 @@ export class EnrollmentFacade {
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        this._error.set('Error al subir contrato: ' + uploadError.message);
+        this._error.set('Error al subir contrato: ' + this.sanitizer.sanitize(uploadError).message);
         return false;
       }
 
@@ -1034,7 +1036,7 @@ export class EnrollmentFacade {
       );
 
       if (contractError) {
-        this._error.set('Error al registrar contrato: ' + contractError.message);
+        this._error.set('Error al registrar contrato: ' + this.sanitizer.sanitize(contractError).message);
         return false;
       }
 
@@ -1048,7 +1050,7 @@ export class EnrollmentFacade {
         .eq('id', draft.enrollmentId);
 
       if (updateError) {
-        this._error.set('Error al actualizar matrícula: ' + updateError.message);
+        this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message);
         return false;
       }
 
@@ -1089,7 +1091,7 @@ export class EnrollmentFacade {
       );
 
       if (contractError) {
-        this._error.set('Error al registrar firma: ' + contractError.message);
+        this._error.set('Error al registrar firma: ' + this.sanitizer.sanitize(contractError).message);
         return false;
       }
 
@@ -1099,7 +1101,7 @@ export class EnrollmentFacade {
         .eq('id', draft.enrollmentId);
 
       if (updateError) {
-        this._error.set('Error al actualizar matrícula: ' + updateError.message);
+        this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message);
         return false;
       }
 
@@ -1149,7 +1151,7 @@ export class EnrollmentFacade {
         .eq('id', draft.enrollmentId);
 
       if (error) {
-        this._error.set('Error al confirmar matrícula: ' + error.message);
+        this._error.set('Error al confirmar matrícula: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
 
@@ -1247,7 +1249,7 @@ export class EnrollmentFacade {
     const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
-      this._error.set('Error al cargar borradores: ' + error.message);
+      this._error.set('Error al cargar borradores: ' + this.sanitizer.sanitize(error).message);
       this._activeDrafts.set([]);
       return [];
     }
@@ -1504,7 +1506,7 @@ export class EnrollmentFacade {
         .eq('id', enrollmentId);
 
       if (error) {
-        this._error.set('Error al descartar borrador: ' + error.message);
+        this._error.set('Error al descartar borrador: ' + this.sanitizer.sanitize(error).message);
         return false;
       }
 
@@ -1696,7 +1698,7 @@ export class EnrollmentFacade {
         .eq('id', knownUserId);
 
       if (error) {
-        this._error.set('Error al actualizar usuario: ' + error.message);
+        this._error.set('Error al actualizar usuario: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
       return knownUserId;
@@ -1717,7 +1719,7 @@ export class EnrollmentFacade {
         .eq('id', existing.id);
 
       if (error) {
-        this._error.set('Error al actualizar usuario: ' + error.message);
+        this._error.set('Error al actualizar usuario: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
       return existing.id;
@@ -1778,7 +1780,7 @@ export class EnrollmentFacade {
         .eq('id', knownStudentId);
 
       if (error) {
-        this._error.set('Error al actualizar alumno: ' + error.message);
+        this._error.set('Error al actualizar alumno: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
       return knownStudentId;
@@ -1797,7 +1799,7 @@ export class EnrollmentFacade {
         .eq('id', existing.id);
 
       if (error) {
-        this._error.set('Error al actualizar alumno: ' + error.message);
+        this._error.set('Error al actualizar alumno: ' + this.sanitizer.sanitize(error).message);
         return null;
       }
       return existing.id;
@@ -1885,7 +1887,7 @@ export class EnrollmentFacade {
     });
 
     if (error) {
-      this._error.set('Error al generar número de matrícula: ' + error.message);
+      this._error.set('Error al generar número de matrícula: ' + this.sanitizer.sanitize(error).message);
       return null;
     }
 

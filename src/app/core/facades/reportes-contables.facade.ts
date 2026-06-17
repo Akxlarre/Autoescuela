@@ -13,6 +13,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   buildReporte,
   filterPaymentsByBranch,
   mapSingularSaleToPaymentRow,
@@ -22,7 +23,8 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ReportesContablesFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -238,7 +240,7 @@ export class ReportesContablesFacade {
       this._reporte.set(buildReporte(payments, allExpenses, this._escuelaLabel(), branchId));
       this._error.set(null);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar el reporte contable.';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el reporte contable.';
       this._error.set(msg);
       this.toast.error('Error en reportes', msg);
     }

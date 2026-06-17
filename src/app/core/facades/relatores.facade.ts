@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import type { Lecturer } from '@core/models/dto/lecturer.model';
 import type { RelatorCursoAsignado, RelatorTableRow } from '@core/models/ui/relator-table.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 export interface CrearRelatorPayload {
   rut: string;
@@ -26,7 +27,8 @@ export interface EditarRelatorPayload {
 
 @Injectable({ providedIn: 'root' })
 export class RelatoresFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -177,7 +179,7 @@ export class RelatoresFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar relator';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar relator';
       this.toast.error(msg);
       return false;
     } finally {
@@ -207,7 +209,7 @@ export class RelatoresFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar relator';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar relator';
       this.toast.error(msg);
       return false;
     } finally {

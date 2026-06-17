@@ -14,6 +14,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { DmsFacade } from '@core/facades/dms.facade';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 type UploadMode = 'student' | 'school';
 
@@ -173,7 +174,8 @@ type UploadMode = 'student' | 'school';
   `,
 })
 export class DmsUploadDrawerComponent {
-  readonly facade = inject(DmsFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+readonly facade = inject(DmsFacade);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly selectedStudentId = signal<number | null>(null);
@@ -280,7 +282,7 @@ export class DmsUploadDrawerComponent {
         this.onClose();
       }, 1200);
     } catch (err) {
-      this.validationError.set(err instanceof Error ? err.message : 'Error al subir el archivo');
+      this.validationError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir el archivo');
     } finally {
       this.isSubmitting.set(false);
     }

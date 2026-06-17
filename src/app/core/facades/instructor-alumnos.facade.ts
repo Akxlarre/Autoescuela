@@ -5,6 +5,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import type { Type } from '@angular/core';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorStudentCard,
   InstructorStudentDetail,
   ExamScoreRow,
@@ -15,7 +16,8 @@ import type {
   providedIn: 'root',
 })
 export class InstructorAlumnosFacade {
-  private profileFacade = inject(InstructorProfileFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
   private layoutDrawer = inject(LayoutDrawerService);
@@ -188,7 +190,7 @@ export class InstructorAlumnosFacade {
       this._students.set(mappedStudents);
     } catch (err: any) {
       console.error('Error fetching students:', err);
-      this._error.set(err.message || 'Error cargando alumnos');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando alumnos');
     }
   }
 
@@ -281,7 +283,7 @@ export class InstructorAlumnosFacade {
       }
     } catch (err: any) {
       console.error(err);
-      this._error.set(err.message || 'Error cargando detalle');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando detalle');
     } finally {
       this._detailLoading.set(false);
     }
@@ -330,7 +332,7 @@ export class InstructorAlumnosFacade {
       this._examScores.set(mapped);
     } catch (err: any) {
       console.error(err);
-      this._error.set(err.message || 'Error cargando ensayos');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error cargando ensayos');
     } finally {
       this._examLoading.set(false);
     }

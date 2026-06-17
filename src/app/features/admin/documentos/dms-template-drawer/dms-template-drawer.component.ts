@@ -8,6 +8,7 @@ import { DmsFacade } from '@core/facades/dms.facade';
 import type { TemplateCategory } from '@core/models/ui/dms.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
  * DmsTemplateDrawerComponent — Contenido para el drawer de nuevas plantillas.
@@ -156,7 +157,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   `,
 })
 export class DmsTemplateDrawerComponent {
-  private readonly facade = inject(DmsFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly facade = inject(DmsFacade);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly name = signal('');
@@ -246,7 +248,7 @@ export class DmsTemplateDrawerComponent {
         this.onClose();
       }, 1200);
     } catch (err) {
-      this.validationError.set(err instanceof Error ? err.message : 'Error al subir la plantilla');
+      this.validationError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir la plantilla');
     } finally {
       this.isSubmitting.set(false);
     }

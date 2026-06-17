@@ -14,6 +14,7 @@ import { SelectModule } from 'primeng/select';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
  * RegistrarEgresoDrawerComponent — Panel lateral para registrar un egreso/retiro.
@@ -232,7 +233,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   `,
 })
 export class RegistrarEgresoDrawerComponent {
-  readonly tipoOptions = [
+    private readonly sanitizer = inject(ErrorSanitizerService);
+readonly tipoOptions = [
     { label: 'Gasto Varios', value: 'gasto' },
     { label: 'Anticipo a Instructor', value: 'anticipo' },
   ];
@@ -308,7 +310,7 @@ export class RegistrarEgresoDrawerComponent {
       }
     } catch (err) {
       this.saveError.set(
-        err instanceof Error ? err.message : 'Error al guardar. Intenta de nuevo.',
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar. Intenta de nuevo.',
       );
     } finally {
       this.isSaving.set(false);

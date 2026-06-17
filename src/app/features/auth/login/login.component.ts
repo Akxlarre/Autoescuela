@@ -16,6 +16,7 @@ import {
   LoginFormData,
 } from '@shared/components/login-card/login-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
  * LoginComponent — Smart container de autenticación.
@@ -95,7 +96,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   host: { style: 'display: contents;' },
 })
 export class LoginComponent {
-  private readonly auth = inject(AuthFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly gsap = inject(GsapAnimationsService);
 
@@ -151,9 +153,11 @@ export class LoginComponent {
     try {
       switch (this.mode()) {
         case 'login': {
-          const { error } = await this.auth.login(data.email, data.password);
+          // data.password es opcional en la interfaz porque no se usa en 'reset', 
+          // pero siempre estará presente al hacer login.
+          const { error } = await this.auth.login(data.email, data.password ?? '');
           if (error) {
-            this.errorMsg.set(error.message);
+            this.errorMsg.set(this.sanitizer.sanitize(error).message);
           } else {
             this.router.navigate(['/app']);
           }
@@ -163,7 +167,7 @@ export class LoginComponent {
         case 'reset': {
           const { error } = await this.auth.resetPasswordForEmail(data.email);
           if (error) {
-            this.errorMsg.set(error.message);
+            this.errorMsg.set(this.sanitizer.sanitize(error).message);
           } else {
             this.successMsg.set('Se envió un enlace de recuperación a tu correo.');
           }

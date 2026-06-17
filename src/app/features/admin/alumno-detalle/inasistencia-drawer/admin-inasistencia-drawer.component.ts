@@ -7,6 +7,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { SelectModule } from 'primeng/select';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Component({
   selector: 'app-admin-inasistencia-drawer',
@@ -234,7 +235,8 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
   `,
 })
 export class AdminInasistenciaDrawerComponent {
-  readonly tipoJustificacionOptions = [
+    private readonly sanitizer = inject(ErrorSanitizerService);
+readonly tipoJustificacionOptions = [
     { label: 'Justificación Médica', value: 'Justificación Médica' },
     { label: 'Permiso Personal', value: 'Permiso Personal' },
     { label: 'Emergencia Familiar', value: 'Emergencia Familiar' },
@@ -301,7 +303,7 @@ export class AdminInasistenciaDrawerComponent {
       this.saved.emit();
       this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(err instanceof Error ? err.message : 'Error al guardar.');
+      this.saveError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.');
     } finally {
       this.isSaving.set(false);
     }

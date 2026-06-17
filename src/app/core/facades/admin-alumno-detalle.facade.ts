@@ -14,6 +14,7 @@ import type {
 } from '@core/models/ui/alumno-detalle.model';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorOption,
   ScheduleGrid,
   SlotStatus,
@@ -43,7 +44,8 @@ const NOTA_MIN_PROF = 75;
 
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnoDetalleFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
 
@@ -428,7 +430,7 @@ export class AdminAlumnoDetalleFacade {
       // ── Clase B: delegar al método reutilizable ──
       await this.fetchClassBProgress(enrollmentId, studentId);
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al cargar la ficha del alumno');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar la ficha del alumno');
       throw err;
     }
   }

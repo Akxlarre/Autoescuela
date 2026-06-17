@@ -11,6 +11,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Component({
   selector: 'app-admin-reprogramar-clase-drawer',
@@ -50,7 +51,13 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
           @if (facade.isLoadingSchedule() && facade.instructores().length === 0) {
             <div class="flex flex-col gap-2">
               @for (i of skeletonRows; track i) {
-                <app-skeleton-block variant="rect" width="100%" height="60px" />
+                <div class="flex items-center gap-3 p-3 border-2 border-border-default rounded-xl w-full">
+                  <app-skeleton-block variant="circle" width="36px" height="36px" class="shrink-0" />
+                  <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="40%" height="12px" />
+                  </div>
+                </div>
               }
             </div>
           } @else if (facade.instructores().length === 0) {
@@ -282,7 +289,8 @@ import type { WeekDay } from '@core/models/ui/enrollment-assignment.model';
   `,
 })
 export class AdminReprogramarClaseDrawerComponent implements OnInit {
-  protected readonly facade = inject(AdminAlumnoDetalleFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected readonly selectedInstructorId = signal<number | null>(null);
@@ -378,7 +386,7 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
       });
       this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(err instanceof Error ? err.message : 'Error al guardar.');
+      this.saveError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.');
     } finally {
       this.isSaving.set(false);
     }

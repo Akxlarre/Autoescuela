@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type { BranchOption } from '@core/models/ui/branch.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
  * BranchFacade — Fuente única de verdad para la sede activa en el panel admin.
@@ -20,7 +21,8 @@ import type { BranchOption } from '@core/models/ui/branch.model';
  */
 @Injectable({ providedIn: 'root' })
 export class BranchFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
 
   // ── 1. ESTADO REACTIVO (Privado) ──────────────────────────────────────────
   private readonly _branches = signal<BranchOption[]>([]);
@@ -94,7 +96,7 @@ export class BranchFacade {
         })),
       );
     } catch (err: any) {
-      this._error.set(err.message ?? 'Error al cargar sedes');
+      this._error.set(this.sanitizer.sanitize(err).message ?? 'Error al cargar sedes');
     } finally {
       this._isLoading.set(false);
     }
