@@ -4,8 +4,8 @@
  * Cada landing Astro (`webs/`) es una empresa distinta con su propia paleta. El wizard
  * Angular hereda esa identidad tematizándose por `branchId` — el tenant que llega en la URL.
  * El mapping es determinista y hardcodeado, espejo del de las webs:
- *   - sede 1 → `azul`
- *   - sede 2 → `roja`
+ *   - sede 1 → `roja`  (Autoescuela Chillán)
+ *   - sede 2 → `azul`  (Conductores Chillán)
  *
  * Las ramps de color de cada tema viven en `styles/themes/_public-enrollment.scss`
  * (`[data-public-theme="azul"|"roja"]`).
@@ -20,12 +20,12 @@ export type SedeTheme = 'azul' | 'roja';
  * un `branchId` ausente/inválido vive en el Facade (`entryState`), que valida contra las
  * sedes reales cargadas de BD — no contra este mapping de presentación.
  */
-export const DEFAULT_SEDE_THEME: SedeTheme = 'azul';
+export const DEFAULT_SEDE_THEME: SedeTheme = 'roja';
 
 /** Mapping determinista `branchId → SedeTheme`, idéntico al de las landing pages. */
 const BRANCH_THEME_MAP: Readonly<Record<number, SedeTheme>> = {
-  1: 'azul',
-  2: 'roja',
+  1: 'roja',
+  2: 'azul',
 };
 
 /**

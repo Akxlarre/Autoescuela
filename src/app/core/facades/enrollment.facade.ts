@@ -1896,7 +1896,7 @@ private readonly supabase = inject(SupabaseService);
 
   private getDraftExpiry(): string {
     const expiry = new Date();
-    expiry.setHours(expiry.getHours() + 24);
+    expiry.setHours(expiry.getHours() + 14);
     return expiry.toISOString();
   }
 

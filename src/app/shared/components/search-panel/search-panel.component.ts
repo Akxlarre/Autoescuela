@@ -1,23 +1,21 @@
 import {
-  Component,
   ChangeDetectionStrategy,
+  Component,
   HostBinding,
-  inject,
+  input,
   output,
   signal,
 } from '@angular/core';
 
-import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import type { SearchResult, SearchResultGroup } from '@core/models/ui/global-search.model';
 
 /**
- * SearchPanelComponent — panel de búsqueda global.
+ * SearchPanelComponent — Command Palette global (Dumb).
  *
- * - `query` es estado local de UI (signal interno).
- * - La apertura/cierre y la animación de entrada se gestionan en TopbarComponent.
- * - Ctrl+K se maneja via [appSearchShortcut]. El posicionamiento usa SearchPanelFacadeService.anchor.
- *
- * Emite `queryChange` al escribir y `closed` al pulsar Escape.
+ * Recibe datos vía `input()` y emite eventos vía `output()`.
+ * Sin inyección de facades: toda la lógica de búsqueda vive en
+ * GlobalSearchFacade, coordinada desde AppShellComponent.
  */
 @Component({
   selector: 'app-search-panel',
@@ -26,13 +24,13 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   imports: [IconComponent],
   template: `
     <div class="search-panel card" role="search" aria-label="Búsqueda global">
-      <!-- Input row -->
+      <!-- ── Fila del input ── -->
       <div class="search-panel__input-row">
         <app-icon name="search" [size]="16" class="search-panel__search-icon" aria-hidden="true" />
         <input
           type="search"
           class="search-panel__input"
-          placeholder="Buscar alumnos, clases, vehículos..."
+          placeholder="Busca 'caja', 'agendar', un alumno o RUT..."
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
@@ -40,48 +38,204 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           [value]="query()"
           (input)="onInput($event)"
           (keydown.escape)="closed.emit()"
-          data-llm-description="Global search input — alumnos, clases, vehículos, instructores"
+          (keydown.arrowDown)="focusFirstResult($event)"
+          data-llm-description="Global command palette — alumnos, acciones, vistas"
           aria-label="Buscar en la aplicación"
           aria-autocomplete="list"
+          aria-haspopup="listbox"
         />
         <kbd class="search-panel__esc">Esc</kbd>
       </div>
 
-      <!-- Cuerpo — resultados / estado vacío -->
-      <div class="search-panel__body">
+      <!-- ── Cuerpo ── -->
+      <div class="search-panel__body" role="listbox" aria-label="Resultados de búsqueda">
         @if (query().length === 0) {
-          <p class="search-panel__hint text-muted">Escribe para buscar en toda la aplicación</p>
-        } @else {
-          <div class="search-panel__empty">
-            <app-icon name="search" [size]="22" />
+          <!-- Sugerencias rápidas -->
+          <div class="search-panel__empty-hint">
+            <p class="search-panel__hint-title">Accesos rápidos</p>
+            <div class="search-panel__quick-chips">
+              @for (chip of quickChips; track chip.label) {
+                <button
+                  type="button"
+                  class="search-panel__chip"
+                  (click)="onChipClick(chip.query)"
+                  data-llm-action="search-quick-chip"
+                >
+                  <app-icon [name]="chip.icon" [size]="13" aria-hidden="true" />
+                  {{ chip.label }}
+                </button>
+              }
+            </div>
+          </div>
+        } @else if (query().length === 1) {
+          <p class="search-panel__hint text-muted">Escribe al menos 2 caracteres para buscar</p>
+        } @else if (groups().length === 0) {
+          <!-- Sin resultados -->
+          <div class="search-panel__no-results">
+            <app-icon name="search" [size]="22" class="search-panel__no-results-icon" />
             <span
               >Sin resultados para <strong>"{{ query() }}"</strong></span
             >
           </div>
+        } @else {
+          <!-- Grupos de resultados -->
+          @for (group of groups(); track group.label) {
+            <div class="search-panel__group">
+              <div class="search-panel__group-header">
+                <app-icon [name]="group.icon" [size]="12" aria-hidden="true" />
+                <span>{{ group.label }}</span>
+              </div>
+
+              <ul class="search-panel__result-list" role="group" [attr.aria-label]="group.label">
+                @for (result of group.results; track result.type + result.label) {
+                  <li
+                    class="search-panel__result-item"
+                    role="option"
+                    tabindex="0"
+                    [attr.aria-label]="result.label"
+                    (click)="selectResult(result)"
+                    (keydown.enter)="selectResult(result)"
+                    (keydown.arrowDown)="focusNext($event)"
+                    (keydown.arrowUp)="focusPrev($event)"
+                    data-llm-action="search-navigate-result"
+                  >
+                    @if (result.type === 'action') {
+                      <span class="search-panel__result-icon search-panel__result-icon--action">
+                        <app-icon [name]="result.icon" [size]="15" aria-hidden="true" />
+                      </span>
+                      <span class="search-panel__result-body">
+                        <span class="search-panel__result-label">{{ result.label }}</span>
+                        <span class="search-panel__result-desc">{{ result.description }}</span>
+                      </span>
+                      <app-icon
+                        name="arrow-right"
+                        [size]="14"
+                        class="search-panel__result-arrow"
+                        aria-hidden="true"
+                      />
+                    } @else {
+                      <span class="search-panel__result-icon search-panel__result-icon--alumno">
+                        <app-icon name="user" [size]="15" aria-hidden="true" />
+                      </span>
+                      <span class="search-panel__result-body">
+                        <span class="search-panel__result-label">{{ result.label }}</span>
+                        <span class="search-panel__result-desc">
+                          {{ result.rut }}&nbsp;·&nbsp;<span
+                            class="search-panel__status"
+                            [attr.data-status]="statusClass(result.status)"
+                            >{{ result.status }}</span
+                          >
+                        </span>
+                      </span>
+                      <app-icon
+                        name="arrow-right"
+                        [size]="14"
+                        class="search-panel__result-arrow"
+                        aria-hidden="true"
+                      />
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
         }
       </div>
+
+      <!-- ── Footer con atajos de teclado ── -->
+      @if (query().length > 0 && groups().length > 0) {
+        <div class="search-panel__footer">
+          <span><kbd>↑↓</kbd> navegar</span>
+          <span><kbd>↵</kbd> abrir</span>
+          <span><kbd>Esc</kbd> cerrar</span>
+        </div>
+      }
     </div>
   `,
   styleUrl: './search-panel.component.scss',
 })
 export class SearchPanelComponent {
-  private readonly search = inject(SearchPanelFacadeService);
+  // ── Inputs ────────────────────────────────────────────────────────────────
+  readonly groups = input.required<SearchResultGroup[]>();
+  /** Distancia en px desde el borde derecho del viewport (alineación con botón topbar) */
+  readonly rightPx = input<number>(24);
 
-  /** Estado local del query — pura UI, sin Facade */
-  protected readonly query = signal('');
-
+  // ── Outputs ───────────────────────────────────────────────────────────────
   readonly queryChange = output<string>();
   readonly closed = output<void>();
+  readonly resultSelected = output<SearchResult>();
 
-  /** Borde derecho alineado con el botón de búsqueda; por defecto 24px si no hay ancla. */
+  /** Estado local del input — pura UI */
+  protected readonly query = signal('');
+
   @HostBinding('style.right') get rightStyle(): string {
-    const a = this.search.anchor();
-    return a ? `${a.rightPx}px` : '24px';
+    return `${this.rightPx()}px`;
   }
+
+  protected readonly quickChips = [
+    { label: 'Agenda', icon: 'calendar', query: 'agenda' },
+    { label: 'Cuadratura', icon: 'landmark', query: 'caja' },
+    { label: 'Matricular', icon: 'user-plus', query: 'matricular' },
+    { label: 'Flota', icon: 'car', query: 'flota' },
+    { label: 'Pagos', icon: 'credit-card', query: 'pagos' },
+  ];
 
   onInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.query.set(value);
     this.queryChange.emit(value);
+  }
+
+  protected selectResult(result: SearchResult): void {
+    this.resultSelected.emit(result);
+  }
+
+  protected onChipClick(q: string): void {
+    this.query.set(q);
+    this.queryChange.emit(q);
+  }
+
+  protected statusClass(status: string): string {
+    const map: Record<string, string> = {
+      Activo: 'success',
+      'Pendiente Pago': 'warning',
+      'Docs Pendientes': 'warning',
+      'Pre-inscrito': 'info',
+      Finalizado: 'muted',
+      Retirado: 'danger',
+      Inactivo: 'muted',
+    };
+    return map[status] ?? 'muted';
+  }
+
+  protected focusFirstResult(event: Event): void {
+    event.preventDefault();
+    const first = (event.target as HTMLElement)
+      .closest('.search-panel')
+      ?.querySelector<HTMLElement>('.search-panel__result-item');
+    first?.focus();
+  }
+
+  protected focusNext(event: Event): void {
+    event.preventDefault();
+    const el = event.target as HTMLElement;
+    const next = el.nextElementSibling as HTMLElement | null;
+    if (next?.classList.contains('search-panel__result-item')) {
+      next.focus();
+    } else {
+      const nextGroup = el.closest('.search-panel__group')?.nextElementSibling;
+      nextGroup?.querySelector<HTMLElement>('.search-panel__result-item')?.focus();
+    }
+  }
+
+  protected focusPrev(event: Event): void {
+    event.preventDefault();
+    const el = event.target as HTMLElement;
+    const prev = el.previousElementSibling as HTMLElement | null;
+    if (prev?.classList.contains('search-panel__result-item')) {
+      prev.focus();
+    } else {
+      el.closest('.search-panel')?.querySelector<HTMLElement>('.search-panel__input')?.focus();
+    }
   }
 }
