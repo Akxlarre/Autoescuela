@@ -9,9 +9,9 @@ import {
   viewChild,
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { StudentClasesFacade } from '@core/facades/student-clases.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -28,6 +28,7 @@ type TabId = 'practice' | 'theory';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     ScrollRevealDirective,
     AnimateInDirective,
     SectionHeroComponent,
@@ -37,7 +38,7 @@ type TabId = 'practice' | 'theory';
     AlertCardComponent,
   ],
   template: `
-    <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mis clases">
+    <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mis clases">
       <!-- ── HERO ────────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
@@ -359,9 +360,7 @@ type TabId = 'practice' | 'theory';
 export class AlumnoClasesComponent {
   readonly facade = inject(StudentClasesFacade);
   readonly context = inject(StudentEnrollmentContextFacade);
-  private readonly gsap = inject(GsapAnimationsService);
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
+    
   readonly activeTab = signal<TabId>('practice');
   readonly skeletonRows = [1, 2, 3, 4, 5];
 
@@ -412,14 +411,6 @@ export class AlumnoClasesComponent {
 
   constructor() {
     void this.facade.initialize();
-
-    effect(() => {
-      const isReady = !this.loading();
-      const el = this.bentoGrid()?.nativeElement;
-      if (isReady && el) {
-        Promise.resolve().then(() => this.gsap.animateBentoGrid(el));
-      }
-    });
   }
 
   selectEnrollment(id: number): void {

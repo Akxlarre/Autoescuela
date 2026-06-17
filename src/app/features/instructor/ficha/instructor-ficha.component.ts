@@ -17,6 +17,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
@@ -34,10 +35,29 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     SkeletonBlockComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     ScrollRevealDirective,
   ],
+  styles: [
+    `
+      .ficha-table-desktop {
+        display: none;
+      }
+      .ficha-table-mobile {
+        display: block;
+      }
+      @container layoutmain (min-width: 768px) {
+        .ficha-table-desktop {
+          display: block;
+        }
+        .ficha-table-mobile {
+          display: none;
+        }
+      }
+    `
+  ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ── Error ── -->
       @if (facade.error()) {
         <div class="bento-banner">
@@ -84,14 +104,14 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         <div class="bento-banner">
           <div class="flex flex-col gap-6">
             <!-- 3-Card Grid — skeleton inline -->
-            <div class="grid md:grid-cols-3 gap-4" appScrollReveal>
+            <div class="bento-grid" appScrollReveal>
               @if (facade.detailLoading()) {
-                <app-skeleton-block variant="rect" width="100%" height="160px" />
-                <app-skeleton-block variant="rect" width="100%" height="160px" />
-                <app-skeleton-block variant="rect" width="100%" height="160px" />
+                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
+                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
+                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
               } @else if (facade.studentDetail(); as detail) {
                 <!-- Info Personal -->
-                <div class="card">
+                <div class="card bento-wide" data-col-span="4">
                   <h3 class="kpi-label mb-4">Información del Alumno</h3>
                   <div class="space-y-3">
                     <div>
@@ -134,7 +154,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Clases Prácticas -->
-                <div class="card">
+                <div class="card bento-wide" data-col-span="4">
                   <div class="flex items-start justify-between mb-4">
                     <div class="min-w-0 flex-1 mr-3">
                       <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
@@ -178,7 +198,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Clases Teóricas -->
-                <div class="card">
+                <div class="card bento-wide" data-col-span="4">
                   <div class="flex items-start justify-between mb-4">
                     <div class="min-w-0 flex-1 mr-3">
                       <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
@@ -238,7 +258,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Desktop: tabla -->
-                <div class="hidden md:block overflow-x-auto">
+                <div class="ficha-table-desktop overflow-x-auto">
                   <table class="w-full text-left border-collapse">
                     <thead>
                       <tr
@@ -361,7 +381,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Mobile: lista de tarjetas -->
-                <div class="md:hidden divide-y border-border-subtle">
+                <div class="ficha-table-mobile divide-y border-border-subtle">
                   @for (row of detail.fichaTecnica; track row.classNumber) {
                     <div class="p-4 space-y-3">
                       <!-- Fila 1: número + fecha + badge -->

@@ -120,8 +120,8 @@ import { SelectModule } from 'primeng/select';
               </div>
 
               <!-- Fila 1: Dropdown de curso + datos heredados + displayOrder -->
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div class="md:col-span-6 flex flex-col gap-1.5">
+              <div class="bento-grid bento-grid--forms bento-grid--forms">
+                <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="6">
                   <label class="field-label">Curso del Catálogo Operacional *</label>
                   <p-select
                     formControlName="course_id"
@@ -134,7 +134,7 @@ import { SelectModule } from 'primeng/select';
                     data-llm-description="dropdown to link a course card to an operational course from the catalog"
                   />
                 </div>
-                <div class="md:col-span-3 flex flex-col gap-1.5">
+                <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="3">
                   <label class="field-label">Precio Base (heredado)</label>
                   <div
                     class="field-input flex items-center text-text-muted text-xs bg-base cursor-default"
@@ -142,7 +142,7 @@ import { SelectModule } from 'primeng/select';
                     {{ catalogItem ? formatCLP(catalogItem.base_price) : '—' }}
                   </div>
                 </div>
-                <div class="md:col-span-3 flex flex-col gap-1.5">
+                <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="3">
                   <label class="field-label">Orden de visualización</label>
                   <input
                     type="number"
@@ -156,7 +156,7 @@ import { SelectModule } from 'primeng/select';
 
               <!-- Fila 2: Override de precio -->
               <div
-                class="flex flex-col gap-2 p-3 rounded-lg border border-dashed border-border-subtle"
+                class="flex flex-col gap-2 p-4 rounded-xl border border-solid border-border-default bg-surface"
               >
                 <label class="flex items-center gap-2 cursor-pointer">
                   <input
@@ -210,8 +210,8 @@ import { SelectModule } from 'primeng/select';
               </div>
 
               <!-- Fila 3: Campos editoriales -->
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="flex flex-col gap-1.5">
+              <div class="bento-grid bento-grid--forms bento-grid--forms">
+                <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="6">
                   <label class="field-label">Duración del Curso *</label>
                   <input
                     type="text"
@@ -221,7 +221,7 @@ import { SelectModule } from 'primeng/select';
                     data-llm-description="human-readable course duration displayed on the landing card"
                   />
                 </div>
-                <div class="flex flex-col gap-1.5">
+                <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="6">
                   <label class="field-label">Nota de Pago</label>
                   <input
                     type="text"
@@ -244,8 +244,8 @@ import { SelectModule } from 'primeng/select';
                 ></textarea>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                <div class="md:col-span-4 flex flex-col gap-3 justify-center">
+              <div class="bento-grid bento-grid--forms bento-grid--forms">
+                <div class="flex flex-col gap-3 justify-center" data-col-span-md="4" data-col-span="4">
                   <label class="flex items-center gap-2 cursor-pointer py-1">
                     <input
                       type="checkbox"
@@ -257,7 +257,7 @@ import { SelectModule } from 'primeng/select';
                     >
                   </label>
                 </div>
-                <div class="md:col-span-8 flex flex-col gap-1.5">
+                <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="8">
                   <label class="field-label">Badge Destacado (ej: '¡Más Popular!')</label>
                   <input
                     type="text"
@@ -297,11 +297,13 @@ import { SelectModule } from 'primeng/select';
         >
           Términos de Pago y Garantía (Precios)
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bento-grid bento-grid--forms bento-grid--forms">
           <!-- Pago Directo -->
           <div
             formGroupName="payment"
             class="flex flex-col gap-4 p-4 rounded-xl border border-border-default bg-elevated"
+            data-col-span-md="4"
+            data-col-span="6"
           >
             <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
               >Facilidades de Pago</span
@@ -355,6 +357,8 @@ import { SelectModule } from 'primeng/select';
           <div
             formGroupName="guarantee"
             class="flex flex-col gap-4 p-4 rounded-xl border border-border-default bg-elevated"
+            data-col-span-md="4"
+            data-col-span="6"
           >
             <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
               >Garantía de Aprendizaje</span

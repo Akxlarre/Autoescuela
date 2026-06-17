@@ -20,95 +20,99 @@ import { IconComponent } from '@shared/components/icon/icon.component';
         Datos de Sucursal y Geolocalización SEO
       </h3>
 
-      <div [formGroup]="contactGroup()" class="flex flex-col gap-5">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div class="md:col-span-2 flex flex-col gap-1.5">
-            <label class="field-label">Dirección Física de la Escuela *</label>
-            <input
-              type="text"
-              formControlName="address"
-              class="field-input"
-              placeholder="Ej: Calle Arturo Prat 123"
-            />
+      <div [formGroup]="contactGroup()" class="flex flex-col gap-6">
+        <div class="p-5 rounded-xl border border-solid border-border-default bg-elevated">
+          <div class="bento-grid bento-grid--forms bento-grid--forms">
+            <div class="flex flex-col gap-1.5" data-col-span-md="6" data-col-span="8">
+              <label class="field-label">Dirección Física de la Escuela *</label>
+              <input
+                type="text"
+                formControlName="address"
+                class="field-input"
+                placeholder="Ej: Calle Arturo Prat 123"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="4">
+              <label class="field-label">Ciudad *</label>
+              <input type="text" formControlName="city" class="field-input" placeholder="Chillán" />
+            </div>
           </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Ciudad *</label>
-            <input type="text" formControlName="city" class="field-input" placeholder="Chillán" />
+
+          <div class="bento-grid bento-grid--forms bento-grid--forms mt-5">
+            <div class="flex flex-col gap-1.5 bento-wide">
+              <label class="field-label"
+                >WhatsApp de Soporte/Matrículas (Código país + número) *</label
+              >
+              <input
+                type="text"
+                formControlName="whatsapp"
+                class="field-input"
+                placeholder="Ej: 56912345678"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5 bento-wide">
+              <label class="field-label">Teléfono de Llamadas Fijo/Móvil *</label>
+              <input
+                type="text"
+                formControlName="phone"
+                class="field-input"
+                placeholder="Ej: +56 42 222 3344"
+              />
+            </div>
+          </div>
+
+          <div class="bento-grid bento-grid--forms bento-grid--forms mt-5">
+            <div class="flex flex-col gap-1.5 bento-wide">
+              <label class="field-label">Correo Electrónico de Contacto *</label>
+              <input
+                type="email"
+                formControlName="email"
+                class="field-input"
+                placeholder="ejemplo@autoescuela.cl"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5 bento-wide">
+              <label class="field-label">Región *</label>
+              <input type="text" formControlName="region" class="field-input" placeholder="Ñuble" />
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div class="p-5 rounded-xl border border-solid border-border-default bg-elevated">
           <div class="flex flex-col gap-1.5">
-            <label class="field-label"
-              >WhatsApp de Soporte/Matrículas (Código país + número) *</label
-            >
-            <input
-              type="text"
-              formControlName="whatsapp"
+            <label class="field-label">URL de Embed Google Maps *</label>
+            <textarea
+              formControlName="mapEmbedUrl"
+              rows="2"
               class="field-input"
-              placeholder="Ej: 56912345678"
-            />
+              placeholder="Pegue la URL provista en el iframe src de Google Maps Compartir"
+            ></textarea>
           </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Teléfono de Llamadas Fijo/Móvil *</label>
-            <input
-              type="text"
-              formControlName="phone"
-              class="field-input"
-              placeholder="Ej: +56 42 222 3344"
-            />
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Correo Electrónico de Contacto *</label>
-            <input
-              type="email"
-              formControlName="email"
-              class="field-input"
-              placeholder="ejemplo@autoescuela.cl"
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Región *</label>
-            <input type="text" formControlName="region" class="field-input" placeholder="Ñuble" />
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-1.5">
-          <label class="field-label">URL de Embed Google Maps *</label>
-          <textarea
-            formControlName="mapEmbedUrl"
-            rows="2"
-            class="field-input"
-            placeholder="Pegue la URL provista en el iframe src de Google Maps Compartir"
-          ></textarea>
-        </div>
-
-        <h4 class="text-xs font-bold uppercase tracking-wider text-text-secondary mt-2">
-          Coordenadas de Ubicación (Google Schema.org SEO)
-        </h4>
-        <div formGroupName="geo" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Latitud *</label>
-            <input
-              type="number"
-              step="any"
-              formControlName="lat"
-              class="field-input"
-              placeholder="-36.606709"
-            />
-          </div>
-          <div class="flex flex-col gap-1.5">
-            <label class="field-label">Longitud *</label>
-            <input
-              type="number"
-              step="any"
-              formControlName="lng"
-              class="field-input"
-              placeholder="-72.105436"
-            />
+          <h4 class="text-xs font-bold uppercase tracking-wider text-text-secondary mt-5 mb-3">
+            Coordenadas de Ubicación (Google Schema.org SEO)
+          </h4>
+          <div formGroupName="geo" class="bento-grid bento-grid--forms bento-grid--forms">
+            <div class="flex flex-col gap-1.5 bento-wide">
+              <label class="field-label">Latitud *</label>
+              <input
+                type="number"
+                step="any"
+                formControlName="lat"
+                class="field-input"
+                placeholder="-36.606709"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5 bento-wide">
+              <label class="field-label">Longitud *</label>
+              <input
+                type="number"
+                step="any"
+                formControlName="lng"
+                class="field-input"
+                placeholder="-72.105436"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -155,8 +159,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
               </button>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div class="flex flex-col gap-1.5">
+            <div class="bento-grid bento-grid--forms bento-grid--forms">
+              <div class="flex flex-col gap-1.5 bento-wide">
                 <label class="field-label">Días de Atención *</label>
                 <input
                   type="text"
@@ -171,7 +175,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                   <span class="text-xs mt-1 text-error">Los días de atención son requeridos.</span>
                 }
               </div>
-              <div class="flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1.5 bento-wide">
                 <label class="field-label">Rango de Horas *</label>
                 <input
                   type="text"
@@ -199,8 +203,9 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+      margin-bottom: 6px;
+      line-height: 1.3;
     }
     .field-input {
       width: 100%;

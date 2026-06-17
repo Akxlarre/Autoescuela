@@ -16,10 +16,13 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { SelectModule } from 'primeng/select';
-import { GRADE_PASS } from '@core/utils/professional-modules';
+import { GRADE_PASS, MODULE_COUNT } from '@core/utils/professional-modules';
+import { computeGradebookStats, countModulosCompletos } from '@core/utils/gradebook-stats';
+import type { CursoEstado, FilaEvaluacion } from '@core/models/ui/evaluaciones-profesional.model';
+import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-admin-profesional-evaluaciones',
@@ -27,81 +30,273 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
-    SelectModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    StatBoxComponent,
     BentoGridLayoutDirective,
+  ],
+  styles: [
+    `
+      /* ── Gradebook ────────────────────────────────────────────────
+         Patrón reutilizable (candidato a Asistencia / Libro de Clases):
+         scroll bidireccional con header + columna de alumno sticky y
+         crosshair de columna en hover (puro CSS vía ::after extendido). */
+      .gradebook-scroll {
+        max-height: 62vh;
+        overflow: auto;
+      }
+
+      .gradebook-table {
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      /* Header sticky (scroll vertical) */
+      .gradebook-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--bg-elevated);
+      }
+
+      /* Columna de alumno sticky (scroll horizontal) */
+      .col-alumno {
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background: var(--bg-surface);
+      }
+      .gradebook-table tbody tr:hover .col-alumno {
+        background: var(--bg-subtle);
+      }
+      /* Esquina: alumno + header → debe ganar a ambos */
+      .gradebook-table thead .col-alumno {
+        z-index: 30;
+        background: var(--bg-elevated);
+      }
+
+      /* Crosshair: resalta la columna del módulo en hover de su celda */
+      .grade-cell {
+        position: relative;
+      }
+      .grade-cell > * {
+        position: relative;
+        z-index: 1;
+      }
+      .grade-cell:hover::after {
+        content: '';
+        position: absolute;
+        top: -1000px;
+        bottom: -1000px;
+        left: 0;
+        right: 0;
+        background: var(--bg-subtle);
+        pointer-events: none;
+        z-index: 0;
+      }
+    `,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
-      <!-- ── Hero ═══ -->
+      <!-- ── Hero adaptativo ───────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
         [animateOnInit]="false"
-        title="Evaluaciones"
-        subtitle="Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75"
+        [title]="heroTitle()"
+        [subtitle]="heroSubtitle()"
+        [contextLine]="heroContextLine()"
+        [chips]="heroChips()"
         icon="graduation-cap"
         [actions]="[]"
       />
 
-      <!-- ═══ Filtros / Selectores ═══ -->
-      <div
-        class="bento-banner rounded-xl border border-border bg-surface p-4 shadow-sm flex flex-col sm:flex-row gap-4 items-end"
-      >
-        <div class="flex-1">
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-secondary"
-            >Promoción</label
-          >
-          <p-select
-            [options]="promoSelectOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Seleccionar promoción"
-            [ngModel]="facade.selectedPromocionId()"
-            (ngModelChange)="onPromoChange($event)"
-            styleClass="w-full"
-            data-llm-description="select promotion to view grades"
-          />
-        </div>
-        <div class="flex-1">
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-secondary"
-            >Curso</label
-          >
-          <p-select
-            [options]="cursoOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Seleccionar curso"
-            [ngModel]="facade.selectedCursoId()"
-            (ngModelChange)="onCursoChange($event)"
-            [disabled]="!facade.selectedPromocionId() || facade.cursos().length === 0"
-            styleClass="w-full"
-            data-llm-description="select course to view grades"
-          />
-        </div>
-      </div>
-
-      <!-- ═══ Estado vacío ═══ -->
-      @if (!facade.selectedCursoId() && !facade.isLoading()) {
-        <div
-          class="bento-banner py-12 flex flex-col items-center gap-3 text-center text-secondary border border-dashed border-border rounded-xl"
-        >
-          <div class="bg-surface p-4 rounded-full shadow-sm mb-2">
-            <app-icon name="file-spreadsheet" [size]="48" color="var(--text-muted)" />
+      <!-- ═══ ATERRIZAJE — sin grilla activa ═══ -->
+      @if (!facade.grilla()) {
+        <!-- 0 promociones activas → estado vacío real -->
+        @if (!facade.isLoading() && facade.landingLoaded() && facade.landing().length === 0) {
+          <div class="bento-banner py-14 flex flex-col items-center gap-4 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-subtle flex items-center justify-center">
+              <app-icon name="graduation-cap" [size]="28" color="var(--text-muted)" />
+            </div>
+            <div class="space-y-1">
+              <p class="font-semibold text-primary">Sin promociones activas</p>
+              <p class="text-sm text-muted max-w-xs">
+                No hay promociones en curso o planificadas. Crea una para comenzar el registro de
+                notas.
+              </p>
+            </div>
+            <button class="btn-primary" data-llm-action="create-promotion">
+              <app-icon name="plus" [size]="14" />
+              Crear promoción
+            </button>
           </div>
-          <p class="text-sm font-medium">
-            Selecciona una promoción y un curso para ver la grilla de notas.
-          </p>
+        }
+
+        <!-- Grupos de promoción con tarjetas de curso -->
+        @for (promo of facade.landing(); track promo.id) {
+          <div class="bento-banner rounded-xl border border-border bg-surface overflow-hidden">
+            <!-- Cabecera del grupo -->
+            <div
+              class="flex items-center justify-between gap-4 px-5 py-4 border-b border-border bg-elevated"
+            >
+              <div class="flex items-center gap-3 min-w-0">
+                <app-icon name="graduation-cap" [size]="18" color="var(--ds-brand)" />
+                <div class="min-w-0">
+                  <h2 class="font-bold text-primary text-sm truncate">{{ promo.name }}</h2>
+                  <p class="text-xs text-muted">{{ promo.code }}</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <span
+                  class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px]"
+                  [class]="promoStatusClass(promo.status)"
+                >
+                  {{ promoStatusLabel(promo.status) }}
+                </span>
+                <span class="hidden sm:flex items-center gap-1 text-xs text-secondary">
+                  <app-icon name="users" [size]="12" />
+                  {{ promo.totalAlumnos }}
+                </span>
+                @if (promo.cursosConfirmados > 0) {
+                  <span class="flex items-center gap-1 text-xs text-success font-medium">
+                    <app-icon name="check-circle" [size]="12" />
+                    {{ promo.cursosConfirmados }}/{{ promo.cursos.length }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Grid de tarjetas de curso -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
+              @for (curso of promo.cursos; track curso.promotionCourseId) {
+                @let pct =
+                  curso.totalAlumnos > 0 ? (curso.alumnosConNotas / curso.totalAlumnos) * 100 : 0;
+                <button
+                  type="button"
+                  class="group flex flex-col gap-3 p-5 bg-surface text-left transition-colors hover:bg-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
+                  (click)="onCursoSelect(curso.promotionCourseId)"
+                  [attr.data-llm-action]="'open-gradebook-' + curso.promotionCourseId"
+                  [attr.aria-label]="'Abrir gradebook ' + curso.courseName"
+                >
+                  <!-- Código + estado -->
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="kpi-value leading-none">{{ curso.courseCode }}</span>
+                    <span
+                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0 border"
+                      [class]="estadoBadgeClass(curso.estado)"
+                    >
+                      <app-icon [name]="estadoBadgeIcon(curso.estado)" [size]="11" />
+                      {{ estadoBadgeLabel(curso.estado) }}
+                    </span>
+                  </div>
+
+                  <!-- Nombre del curso -->
+                  <p class="text-xs text-secondary line-clamp-2 leading-relaxed">
+                    {{ curso.courseName }}
+                  </p>
+
+                  <!-- Barra de progreso -->
+                  <div class="space-y-1 w-full">
+                    <div class="h-1.5 w-full rounded-full bg-border overflow-hidden">
+                      <div
+                        class="h-full rounded-full transition-all duration-500"
+                        [class.bg-brand]="curso.estado !== 'confirmada'"
+                        [class.bg-success]="curso.estado === 'confirmada'"
+                        [style.width.%]="pct"
+                      ></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-muted">
+                      <span>{{ curso.alumnosConNotas }}/{{ curso.totalAlumnos }} alumnos</span>
+                      @if (curso.promedio !== null) {
+                        <span
+                          class="font-semibold"
+                          [class.text-success]="curso.promedio >= gradePass"
+                          [class.text-error]="curso.promedio < gradePass"
+                        >
+                          {{ curso.promedio }}
+                        </span>
+                      } @else {
+                        <span>Sin notas</span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Chevron de acción -->
+                  <div
+                    class="flex items-center justify-end text-muted group-hover:text-brand transition-colors"
+                  >
+                    <app-icon name="chevron-right" [size]="14" />
+                  </div>
+                </button>
+              }
+
+              @if (promo.cursos.length === 0) {
+                <div
+                  class="col-span-full p-8 flex flex-col items-center gap-2 text-center text-muted"
+                >
+                  <app-icon name="book-open" [size]="24" color="var(--text-muted)" />
+                  <p class="text-sm">Esta promoción no tiene cursos asignados.</p>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+
+      <!-- ═══ Botón volver (cuando hay grilla) ═══ -->
+      @if (facade.grilla() && !facade.isLoading()) {
+        <div class="bento-banner flex items-center py-2">
+          <button
+            class="btn-secondary"
+            (click)="voltearAterrizaje()"
+            data-llm-action="back-to-landing"
+          >
+            <app-icon name="chevron-left" [size]="14" />
+            Volver al panorama
+          </button>
         </div>
       }
 
       <!-- ═══ Skeleton ═══ -->
       @if (facade.isLoading()) {
-        <div class="bento-banner space-y-2 mt-4">
+        <div class="bento-banner space-y-2">
           @for (i of skeletonRows; track $index) {
             <app-skeleton-block variant="text" width="100%" height="48px" />
           }
+        </div>
+      }
+
+      <!-- ═══ KPI strip ═══ -->
+      @if (facade.grilla() && !facade.isLoading()) {
+        @let s = stats();
+        <div class="bento-banner grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <app-stat-box
+            label="Alumnos completos"
+            [value]="s.alumnosCompletos + ' / ' + s.totalAlumnos"
+            icon="users"
+            [variant]="
+              s.alumnosCompletos === s.totalAlumnos && s.totalAlumnos > 0 ? 'success' : 'default'
+            "
+          />
+          <app-stat-box
+            label="Promedio del curso"
+            [value]="s.promedioCurso ?? '—'"
+            icon="trending-up"
+            [variant]="promedioVariant()"
+          />
+          <app-stat-box
+            label="En riesgo"
+            [value]="s.enRiesgo"
+            icon="alert-triangle"
+            [variant]="s.enRiesgo > 0 ? 'error' : 'default'"
+          />
+          <app-stat-box
+            label="Módulos cargados"
+            [value]="s.modulosCargados + ' / ' + moduleCount"
+            icon="list-checks"
+            variant="default"
+          />
         </div>
       }
 
@@ -111,65 +306,41 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
         <div
           class="bento-banner rounded-xl border border-border bg-surface flex flex-col overflow-hidden"
         >
-          <!-- Header info -->
-          <div class="p-4 border-b border-border flex items-center justify-between flex-wrap gap-4">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-lg flex items-center justify-center bg-brand/10 text-brand"
-              >
-                <app-icon name="list-checks" [size]="20" />
-              </div>
-              <div>
-                <p class="text-sm font-bold text-primary">
-                  {{ g.courseName }}
-                </p>
-                <p class="text-xs text-secondary mt-0.5">
-                  {{ g.promotionName }} ·
-                  <span class="font-semibold">{{ g.totalAlumnos }} alumnos</span>
-                </p>
-              </div>
-            </div>
-
-            @if (g.confirmed) {
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-success/15 text-success border border-success/30"
-              >
-                <app-icon name="lock" [size]="12" /> Confirmadas
-              </span>
-            } @else {
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider bg-warning-subtle text-warning border border-warning-border"
-              >
-                <app-icon name="edit-3" [size]="12" /> En edición
-              </span>
-            }
-          </div>
-
-          <!-- Tabla responsive -->
-          <div class="overflow-x-auto w-full max-w-[100vw]">
-            <table class="w-full border-collapse text-sm">
-              <!-- Encabezados -->
+          <!-- ── Desktop: tabla gradebook ── -->
+          <div class="gradebook-scroll hidden md:block">
+            <table class="gradebook-table w-full text-sm">
               <thead>
-                <tr class="border-b border-border bg-elevated">
+                <tr>
                   <th
-                    class="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-secondary"
+                    class="col-alumno px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border"
                     style="min-width:220px"
                   >
                     Alumno
                   </th>
                   @for (name of g.moduleNames; track $index) {
                     <th
-                      class="px-2 py-3 justify-center items-center text-[11px] font-bold uppercase tracking-wider text-secondary"
-                      style="min-width:90px"
+                      class="px-2 py-2 text-center border-b border-border align-bottom"
+                      style="min-width:96px"
                       [title]="name"
                     >
-                      <span class="truncate block text-center max-w-22.5 mx-auto"
+                      <span
+                        class="block text-[11px] font-bold uppercase tracking-wider text-secondary"
                         >Mod {{ $index + 1 }}</span
+                      >
+                      <span
+                        class="block text-[10px] font-medium text-muted truncate max-w-24 mx-auto mt-0.5 normal-case"
+                        >{{ name }}</span
                       >
                     </th>
                   }
                   <th
-                    class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-secondary"
+                    class="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border"
+                    style="min-width:80px"
+                  >
+                    Progreso
+                  </th>
+                  <th
+                    class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border"
                     style="min-width:90px"
                   >
                     Promedio
@@ -177,30 +348,26 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
                 </tr>
               </thead>
 
-              <!-- Filas de alumnos -->
               <tbody>
-                @for (fila of g.filas; track fila.enrollmentId) {
+                @for (fila of g.filas; track fila.enrollmentId; let r = $index) {
                   <tr class="border-b border-border/50 transition-colors hover:bg-subtle">
-                    <!-- Alumno -->
-                    <td class="px-4 py-3">
+                    <td class="col-alumno px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div
                           class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
                         >
                           {{ fila.initials }}
                         </div>
-                        <div>
-                          <p class="font-bold text-primary text-xs">{{ fila.nombre }}</p>
+                        <div class="min-w-0">
+                          <p class="font-bold text-primary text-xs truncate">{{ fila.nombre }}</p>
                           <p class="text-[11px] text-muted">{{ fila.rut }}</p>
                         </div>
                       </div>
                     </td>
 
-                    <!-- Celdas de módulos -->
-                    @for (nota of fila.notas; track $index) {
-                      <td class="px-2 py-2 text-center">
+                    @for (nota of fila.notas; track $index; let m = $index) {
+                      <td class="grade-cell px-2 py-2 text-center">
                         @if (g.confirmed) {
-                          <!-- Vista solo lectura -->
                           <span
                             class="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-bold min-w-14 border"
                             [class]="getReadonlyClasses(nota.passed)"
@@ -208,29 +375,47 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
                             {{ nota.grade !== null ? nota.grade : '—' }}
                           </span>
                         } @else {
-                          <!-- Input editable (HTML Nativo) -->
                           <input
+                            [id]="'eval-d-' + r + '-' + m"
                             type="number"
                             [ngModel]="nota.grade"
-                            (ngModelChange)="onGradeChange(fila.enrollmentId, $index, $event)"
+                            (ngModelChange)="onGradeChange(fila.enrollmentId, m, $event)"
                             max="100"
                             min="10"
-                            (keydown)="onGradeKeyDown($event)"
-                            (blur)="onGradeBlur(fila.enrollmentId, $index, nota.grade)"
+                            (keydown)="onGradeKeyDown($event, r, m, 'd')"
+                            (blur)="onGradeBlur(fila.enrollmentId, m)"
                             placeholder="—"
-                            class="w-[64px] text-center font-bold text-xs px-2 py-1.5 rounded-md border appearance-none outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
+                            class="w-16 text-center font-bold text-xs px-2 py-1.5 rounded-md border appearance-none outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors"
                             [class]="getInputClasses(nota.grade)"
+                            [attr.aria-label]="
+                              'Nota módulo ' +
+                              (m + 1) +
+                              ' (' +
+                              g.moduleNames[m] +
+                              ') de ' +
+                              fila.nombre
+                            "
                             data-llm-description="module grade input scale 10 to 100"
                           />
                         }
                       </td>
                     }
 
+                    <!-- Progreso -->
+                    <td class="px-3 py-2 text-center">
+                      <span
+                        class="text-[11px] font-semibold"
+                        [class.text-success]="modulosCompletos(fila) === moduleCount"
+                        [class.text-muted]="modulosCompletos(fila) !== moduleCount"
+                        >{{ modulosCompletos(fila) }}/{{ moduleCount }}</span
+                      >
+                    </td>
+
                     <!-- Promedio -->
                     <td class="px-4 py-2 text-right">
                       @if (fila.promedio !== null) {
                         <span
-                          class="inline-flex items-center justify-center rounded-full px-3 py-1 mt-0.5 text-xs font-bold border"
+                          class="inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold border"
                           [class]="getPromedioClasses(fila.promedioAprobado)"
                         >
                           {{ fila.promedio }}
@@ -245,44 +430,141 @@ import { GRADE_PASS } from '@core/utils/professional-modules';
             </table>
           </div>
 
-          <!-- Footer: leyenda + acciones -->
-          <div
-            class="p-4 bg-elevated border-t border-border flex items-center justify-between flex-wrap gap-4"
-          >
-            <!-- Leyenda -->
-            <div class="flex items-center gap-4 text-xs font-medium text-secondary">
-              <span class="flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-success"></span> Aprobado (≥{{ gradePass }})
-              </span>
-              <span class="flex items-center gap-1.5">
-                <span class="h-2 w-2 rounded-full bg-error"></span> Reprobado (&lt;{{ gradePass }})
-              </span>
-            </div>
+          <!-- ── Móvil: tarjetas por alumno ── -->
+          <div class="md:hidden divide-y divide-border">
+            @for (fila of g.filas; track fila.enrollmentId; let r = $index) {
+              <div class="p-4 space-y-3">
+                <!-- Cabecera alumno -->
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <div
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
+                    >
+                      {{ fila.initials }}
+                    </div>
+                    <div class="min-w-0">
+                      <p class="font-bold text-primary text-sm truncate">{{ fila.nombre }}</p>
+                      <p class="text-[11px] text-muted">{{ fila.rut }}</p>
+                    </div>
+                  </div>
+                  @if (fila.promedio !== null) {
+                    <span
+                      class="inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold border shrink-0"
+                      [class]="getPromedioClasses(fila.promedioAprobado)"
+                    >
+                      {{ fila.promedio }}
+                    </span>
+                  } @else {
+                    <span class="text-muted text-xs shrink-0">Sin promedio</span>
+                  }
+                </div>
 
-            <!-- Botones de acción -->
-            @if (!g.confirmed) {
-              <div class="flex items-center gap-3">
-                <button
-                  class="btn-secondary"
-                  [disabled]="facade.isSaving() || !facade.hayDirty()"
-                  (click)="guardarBorrador()"
-                  data-llm-action="save-draft-grades"
-                >
-                  <app-icon name="save" [size]="14" />
-                  Guardar
-                </button>
-                <button
-                  class="btn-primary"
-                  [disabled]="facade.isSaving() || !todasConNota()"
-                  (click)="confirmarNotas()"
-                  data-llm-action="confirm-grades"
-                >
-                  <app-icon name="check-circle" [size]="14" />
-                  Confirmar Final
-                </button>
+                <!-- Progreso -->
+                <div class="flex items-center gap-2 text-[11px] text-muted">
+                  <app-icon name="list-checks" [size]="13" />
+                  <span
+                    [class.text-success]="modulosCompletos(fila) === moduleCount"
+                    [class.font-semibold]="modulosCompletos(fila) === moduleCount"
+                    >{{ modulosCompletos(fila) }} de {{ moduleCount }} módulos</span
+                  >
+                </div>
+
+                <!-- Notas por módulo -->
+                <div class="grid grid-cols-2 gap-2">
+                  @for (nota of fila.notas; track $index; let m = $index) {
+                    <div
+                      class="flex items-center justify-between gap-2 rounded-lg border border-border bg-elevated px-3 py-2"
+                    >
+                      <div class="min-w-0">
+                        <p class="text-[11px] font-bold text-secondary">Mod {{ m + 1 }}</p>
+                        <p class="text-[10px] text-muted truncate">{{ g.moduleNames[m] }}</p>
+                      </div>
+                      @if (g.confirmed) {
+                        <span
+                          class="inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-bold min-w-12 border shrink-0"
+                          [class]="getReadonlyClasses(nota.passed)"
+                        >
+                          {{ nota.grade !== null ? nota.grade : '—' }}
+                        </span>
+                      } @else {
+                        <input
+                          [id]="'eval-m-' + r + '-' + m"
+                          type="number"
+                          [ngModel]="nota.grade"
+                          (ngModelChange)="onGradeChange(fila.enrollmentId, m, $event)"
+                          max="100"
+                          min="10"
+                          (keydown)="onGradeKeyDown($event, r, m, 'm')"
+                          (blur)="onGradeBlur(fila.enrollmentId, m)"
+                          placeholder="—"
+                          class="w-14 text-center font-bold text-xs px-2 py-1.5 rounded-md border appearance-none outline-none focus:ring-2 focus:ring-brand focus:border-brand transition-colors shrink-0"
+                          [class]="getInputClasses(nota.grade)"
+                          [attr.aria-label]="
+                            'Nota módulo ' +
+                            (m + 1) +
+                            ' (' +
+                            g.moduleNames[m] +
+                            ') de ' +
+                            fila.nombre
+                          "
+                          data-llm-description="module grade input scale 10 to 100"
+                        />
+                      }
+                    </div>
+                  }
+                </div>
               </div>
             }
           </div>
+
+          <!-- ── Leyenda (separada de acciones) ── -->
+          <div
+            class="px-4 py-3 bg-elevated border-t border-border flex items-center gap-4 text-xs font-medium text-secondary flex-wrap"
+          >
+            <span class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-success"></span> Aprobado (≥{{ gradePass }})
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="h-2 w-2 rounded-full bg-error"></span> Reprobado (&lt;{{ gradePass }})
+            </span>
+            @if (!g.confirmed) {
+              <span class="flex items-center gap-1.5 text-muted">
+                <app-icon name="keyboard" [size]="14" /> Enter baja · Tab avanza
+              </span>
+            }
+          </div>
+
+          <!-- ── Barra de acciones ── -->
+          @if (!g.confirmed) {
+            <div
+              class="px-4 py-3 border-t border-border flex items-center justify-end gap-3 flex-wrap"
+            >
+              <button
+                class="btn-secondary"
+                [disabled]="facade.isSaving() || !facade.hayDirty()"
+                [title]="!facade.hayDirty() ? 'No hay cambios para guardar' : 'Guardar borrador'"
+                (click)="guardarBorrador()"
+                data-llm-action="save-draft-grades"
+              >
+                <app-icon name="save" [size]="14" />
+                Guardar
+              </button>
+              <button
+                class="btn-primary"
+                [disabled]="facade.isSaving() || !todasConNota()"
+                [title]="
+                  !todasConNota()
+                    ? 'Completa todas las notas antes de confirmar'
+                    : 'Confirmar notas (irreversible)'
+                "
+                (click)="confirmarNotas()"
+                data-llm-action="confirm-grades"
+              >
+                <app-icon name="lock" [size]="14" />
+                Confirmar Final
+              </button>
+            </div>
+          }
         </div>
       }
     </div>
@@ -309,24 +591,55 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
   }
 
   protected readonly gradePass = GRADE_PASS;
+  protected readonly moduleCount = MODULE_COUNT;
   protected readonly skeletonRows = Array.from({ length: 6 });
 
-  // ── Computed ────────────────────────────────────────────────────────────────
-  protected readonly promoSelectOptions = computed(() =>
-    this.facade.promociones().map((p) => ({ label: p.name, value: p.id })),
-  );
+  // ── Computed: KPIs (Functional Core) ──────────────────────────────────────
+  protected readonly stats = computed(() => computeGradebookStats(this.facade.grilla()));
 
-  protected readonly cursoOptions = computed(() =>
-    this.facade.cursos().map((c) => ({
-      label: `${c.courseCode} — ${c.courseName}`,
-      value: c.id,
-    })),
-  );
+  protected readonly promedioVariant = computed<'success' | 'error' | 'default'>(() => {
+    const prom = this.stats().promedioCurso;
+    if (prom === null) return 'default';
+    return prom >= GRADE_PASS ? 'success' : 'error';
+  });
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────────
+  // ── Computed: hero adaptativo ─────────────────────────────────────────────
+  protected readonly heroTitle = computed(() => {
+    const g = this.facade.grilla();
+    return g ? g.courseName : 'Evaluaciones';
+  });
+
+  protected readonly heroSubtitle = computed(() => {
+    const g = this.facade.grilla();
+    if (!g) return 'Registro de notas por módulo · Escala 10–100 · Mínimo aprobación: 75';
+    const plural = g.totalAlumnos === 1 ? 'alumno' : 'alumnos';
+    return `Escala 10–100 · aprobación ${GRADE_PASS} · ${g.totalAlumnos} ${plural}`;
+  });
+
+  protected readonly heroContextLine = computed(() => {
+    const g = this.facade.grilla();
+    return g ? g.promotionName : '';
+  });
+
+  protected readonly heroChips = computed<SectionHeroChip[]>(() => {
+    const g = this.facade.grilla();
+    if (!g) return [];
+    const chips: SectionHeroChip[] = [];
+    if (g.confirmed) {
+      chips.push({ label: 'Confirmadas', icon: 'lock', style: 'success' });
+    } else {
+      chips.push({ label: 'En edición', icon: 'edit-3', style: 'warning' });
+      if (this.facade.hayDirty()) {
+        chips.push({ label: 'Cambios sin guardar', icon: 'circle', style: 'warning' });
+      }
+    }
+    return chips;
+  });
+
+  // ── Lifecycle ──────────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.branchFacade.setProfessionalOnly(true);
-    this.facade.loadPromociones();
+    this.facade.loadLanding();
   }
 
   ngOnDestroy(): void {
@@ -334,22 +647,81 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
   }
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  protected onPromoChange(id: string): void {
-    const numId = Number(id);
-    if (!isNaN(numId)) this.facade.selectPromocion(numId);
+  protected onCursoSelect(promotionCourseId: number): void {
+    this.facade.selectCurso(promotionCourseId);
   }
 
-  protected onCursoChange(id: string): void {
-    const numId = Number(id);
-    if (!isNaN(numId)) this.facade.selectCurso(numId);
+  protected voltearAterrizaje(): void {
+    this.facade.cerrarGrilla();
+    this.facade.loadLanding();
   }
 
-  protected onGradeChange(enrollmentId: number, moduleIndex: number, value: string | null): void {
-    const numValue = value && value.trim() ? Number(value) : null;
+  protected onGradeChange(
+    enrollmentId: number,
+    moduleIndex: number,
+    value: number | string | null,
+  ): void {
+    // `<input type="number">` con ngModel usa NumberValueAccessor → emite number|null,
+    // NO string. Normalizar ambos casos (number directo o string desde otros paths).
+    let numValue: number | null;
+    if (value === null || value === '') {
+      numValue = null;
+    } else {
+      const n = typeof value === 'number' ? value : Number(value);
+      numValue = Number.isNaN(n) ? null : n;
+    }
     this.facade.setNota(enrollmentId, moduleIndex, numValue);
   }
 
-  // ── Helpers de estilo dinámico ───────────────────────────────────────────────
+  protected modulosCompletos(fila: FilaEvaluacion): number {
+    return countModulosCompletos(fila);
+  }
+
+  // ── Helpers de estilo — landing ───────────────────────────────────────────
+  protected estadoBadgeClass(estado: CursoEstado): string {
+    switch (estado) {
+      case 'confirmada':
+        return 'bg-success/10 text-success border-success/30';
+      case 'en_edicion':
+        return 'bg-warning/10 text-warning-dark border-warning/30';
+      default:
+        return 'bg-subtle text-muted border-border';
+    }
+  }
+
+  protected estadoBadgeIcon(estado: CursoEstado): string {
+    switch (estado) {
+      case 'confirmada':
+        return 'check-circle';
+      case 'en_edicion':
+        return 'edit-3';
+      default:
+        return 'clock';
+    }
+  }
+
+  protected estadoBadgeLabel(estado: CursoEstado): string {
+    switch (estado) {
+      case 'confirmada':
+        return 'Confirmada';
+      case 'en_edicion':
+        return 'En edición';
+      default:
+        return 'Sin iniciar';
+    }
+  }
+
+  protected promoStatusClass(status: string): string {
+    return status === 'in_progress'
+      ? 'bg-brand/10 text-brand border border-brand/20 font-medium'
+      : 'bg-subtle text-muted border border-border';
+  }
+
+  protected promoStatusLabel(status: string): string {
+    return status === 'in_progress' ? 'En curso' : 'Planificada';
+  }
+
+  // ── Helpers de estilo — gradebook ─────────────────────────────────────────
   protected getInputClasses(grade: number | null): string {
     if (grade === null) return 'bg-surface border-border text-primary';
     return grade >= this.gradePass
@@ -375,20 +747,30 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
     return g.filas.every((f) => f.notas.every((n) => n.grade !== null));
   }
 
-  protected onGradeBlur(enrollmentId: number, moduleIndex: number, grade: number | null): void {
-    if (grade !== null && grade < 10) {
-      this.facade.setNota(enrollmentId, moduleIndex, 10);
-    }
+  protected onGradeBlur(enrollmentId: number, moduleIndex: number): void {
+    this.facade.corregirNotaMinima(enrollmentId, moduleIndex);
   }
 
-  protected onGradeKeyDown(event: KeyboardEvent): void {
+  protected onGradeKeyDown(
+    event: KeyboardEvent,
+    rowIndex: number,
+    moduleIndex: number,
+    surface: 'd' | 'm',
+  ): void {
     const input = event.target as HTMLInputElement;
+
+    // Enter → baja a la misma columna en la fila siguiente (flujo de entrada masiva).
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.focusCell(rowIndex + 1, moduleIndex, surface);
+      return;
+    }
+
     const allowed = [
       'Backspace',
       'Delete',
       'Tab',
       'Escape',
-      'Enter',
       'ArrowLeft',
       'ArrowRight',
       'ArrowUp',
@@ -409,6 +791,15 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
     const preview = input.value.slice(0, start) + event.key + input.value.slice(end);
 
     if (preview.length > 3) event.preventDefault(); // Max 100
+  }
+
+  /** Mueve el foco a la celda (fila, módulo) de la superficie dada, si existe. */
+  private focusCell(rowIndex: number, moduleIndex: number, surface: 'd' | 'm'): void {
+    const next = document.getElementById(`eval-${surface}-${rowIndex}-${moduleIndex}`);
+    if (next instanceof HTMLInputElement) {
+      next.focus();
+      next.select();
+    }
   }
 
   protected guardarBorrador(): void {

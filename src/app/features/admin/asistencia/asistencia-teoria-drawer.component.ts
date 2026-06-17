@@ -80,11 +80,26 @@ type LocalStatus = TeoriaAsistenciaStatus;
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="rect" width="100%" height="52px" />
-          <app-skeleton-block variant="rect" width="100%" height="52px" />
-          <app-skeleton-block variant="rect" width="100%" height="52px" />
+        <div class="flex flex-col gap-4 p-5">
+          <div class="flex flex-col gap-2 mb-2">
+            <app-skeleton-block variant="text" width="60%" height="14px" />
+            <app-skeleton-block variant="text" width="40%" height="12px" />
+          </div>
+          <div class="flex flex-col gap-2">
+            @for (_ of [1, 2, 3]; track $index) {
+              <div class="rounded-xl border p-3 flex flex-col gap-2 border-border-default bg-base">
+                <div class="flex-1 min-w-0">
+                  <app-skeleton-block variant="text" width="60%" height="14px" />
+                  <app-skeleton-block variant="text" width="40%" height="12px" class="mt-1" />
+                </div>
+                <div class="flex items-center gap-2 mt-1">
+                  <app-skeleton-block variant="rect" width="33%" height="24px" borderRadius="0.25rem" />
+                  <app-skeleton-block variant="rect" width="33%" height="24px" borderRadius="0.25rem" />
+                  <app-skeleton-block variant="rect" width="33%" height="24px" borderRadius="0.25rem" />
+                </div>
+              </div>
+            }
+          </div>
         </div>
       </ng-template>
       <ng-template #content>
@@ -263,7 +278,17 @@ type LocalStatus = TeoriaAsistenciaStatus;
           @if (facade.isLoadingTeoriaAlumnos()) {
             <div class="flex flex-col gap-2">
               @for (_ of [1, 2, 3, 4, 5]; track $index) {
-                <app-skeleton-block variant="rect" width="100%" height="52px" />
+                <div class="rounded-xl border p-3 flex flex-col gap-2 border-border-default bg-base">
+                  <div class="flex-1 min-w-0">
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="40%" height="12px" class="mt-1" />
+                  </div>
+                  <div class="flex items-center gap-2 mt-1">
+                    <app-skeleton-block variant="rect" width="33%" height="24px" borderRadius="0.25rem" />
+                    <app-skeleton-block variant="rect" width="33%" height="24px" borderRadius="0.25rem" />
+                    <app-skeleton-block variant="rect" width="33%" height="24px" borderRadius="0.25rem" />
+                  </div>
+                </div>
               }
             </div>
           } @else if (localAlumnos().length === 0) {

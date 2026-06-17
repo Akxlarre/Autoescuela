@@ -1,15 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   OnInit,
-  effect,
   inject,
-  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -185,23 +181,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 })
 export class InstructorLiquidacionComponent implements OnInit {
   public facade = inject(InstructorHorasFacade);
-  private gsap = inject(GsapAnimationsService);
-
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
   readonly heroActions: SectionHeroAction[] = [];
 
-  constructor() {
-    // Reveal SWR-aware: dispara el reveal sobre el contenido real (!isLoading),
-    // no sobre el skeleton que se reemplaza al cargar.
-    effect(() => {
-      const ready = !this.facade.isLoading();
-      const grid = this.bentoGrid()?.nativeElement;
-      if (ready && grid) {
-        Promise.resolve().then(() => this.gsap.animateBentoGrid(grid));
-      }
-    });
-  }
 
   async ngOnInit() {
     await this.facade.initialize();

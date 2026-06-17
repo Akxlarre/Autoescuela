@@ -8,8 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { StudentHorarioFacade } from '@core/facades/student-horario.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -26,13 +26,14 @@ import type {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     ScrollRevealDirective,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
   ],
   template: `
-    <section class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mi horario">
+    <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi horario">
       <!-- ── HERO ─────────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"
@@ -287,9 +288,7 @@ import type {
 export class AlumnoHorarioComponent {
   readonly facade = inject(StudentHorarioFacade);
   readonly context = inject(StudentEnrollmentContextFacade);
-  private readonly gsap = inject(GsapAnimationsService);
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
+    
   readonly skeletonDays = [1, 2, 3, 4, 5, 6, 7];
 
   readonly legend = [
@@ -324,14 +323,6 @@ export class AlumnoHorarioComponent {
 
   constructor() {
     void this.facade.initialize();
-
-    effect(() => {
-      const isReady = !this.loading();
-      const el = this.bentoGrid()?.nativeElement;
-      if (isReady && el) {
-        Promise.resolve().then(() => this.gsap.animateBentoGrid(el));
-      }
-    });
   }
 
   selectEnrollment(id: number): void {

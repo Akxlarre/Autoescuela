@@ -12,7 +12,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
         <h3 class="text-base font-bold text-text-primary">Campaña y Banner Promocional Global</h3>
         <label
-          class="flex items-center gap-2 cursor-pointer bg-base py-1.5 px-3 rounded-lg border border-border-subtle"
+          class="flex items-center gap-2.5 cursor-pointer bg-surface py-2 px-4 rounded-xl border border-solid border-border-default shadow-sm hover:border-brand/50 transition-colors"
         >
           <input
             type="checkbox"
@@ -26,35 +26,35 @@ import { IconComponent } from '@shared/components/icon/icon.component';
       </div>
 
       @if (promoGroup().get('active')?.value) {
-        <div
-          class="grid grid-cols-1 md:grid-cols-3 gap-5 p-4 rounded-xl border border-solid border-success bg-success/4"
-        >
-          <div class="md:col-span-2 flex flex-col gap-1.5">
-            <label class="field-label">Título de la Oferta / Promoción *</label>
-            <input
-              type="text"
-              formControlName="title"
-              class="field-input"
-              placeholder="Ej: 15% Descuento Matriculándote en Parejas"
-            />
-          </div>
-          <div class="md:col-span-1 flex flex-col gap-1.5">
-            <label class="field-label">Etiqueta Oferta (Badge) *</label>
-            <input
-              type="text"
-              formControlName="badge"
-              class="field-input"
-              placeholder="Ej: 🔥 Oferta Otoño"
-            />
-          </div>
-          <div class="md:col-span-3 flex flex-col gap-1.5">
-            <label class="field-label">Detalle / Subtexto de la Oferta *</label>
-            <textarea
-              formControlName="description"
-              rows="3"
-              class="field-input resize-none"
-              placeholder="Detalla los términos o limitaciones de la oferta."
-            ></textarea>
+        <div class="p-5 rounded-xl border border-solid border-success bg-success/4">
+          <div class="bento-grid bento-grid--forms">
+            <div class="flex flex-col gap-1.5" data-col-span-md="6" data-col-span="8">
+              <label class="field-label">Título de la Oferta / Promoción *</label>
+              <input
+                type="text"
+                formControlName="title"
+                class="field-input"
+                placeholder="Ej: 15% Descuento Matriculándote en Parejas"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5" data-col-span-md="2" data-col-span="4">
+              <label class="field-label">Etiqueta Oferta (Badge) *</label>
+              <input
+                type="text"
+                formControlName="badge"
+                class="field-input"
+                placeholder="Ej: 🔥 Oferta Otoño"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5" data-col-span-md="8" data-col-span="12">
+              <label class="field-label">Detalle / Subtexto de la Oferta *</label>
+              <textarea
+                formControlName="description"
+                rows="3"
+                class="field-input resize-none"
+                placeholder="Detalla los términos o limitaciones de la oferta."
+              ></textarea>
+            </div>
           </div>
         </div>
       } @else {

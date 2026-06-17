@@ -10,6 +10,7 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -41,9 +42,10 @@ function toCompact(amount: number): { value: number; suffix: string } {
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout style="padding-bottom: 5rem;">
+    <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
       <!-- ── Cabecera ── -->
       <app-section-hero
         class="bento-hero"

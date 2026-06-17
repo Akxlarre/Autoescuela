@@ -191,7 +191,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     >
       <!-- TOP BAR: navegación atrás (izq) + acciones (der) -->
       <div class="flex flex-wrap items-start justify-between gap-4 relative z-10">
-        <div class="flex-1 min-w-0 flex items-center gap-4">
+        <div class="flex-1 min-w-0 flex flex-wrap items-center gap-4">
           @if (backRoute()) {
             <a
               [routerLink]="backRoute()"

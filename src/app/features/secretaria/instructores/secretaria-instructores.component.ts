@@ -17,6 +17,7 @@ import { AdminInstructorVerDrawerComponent } from '../../admin/instructores/admi
 import { AdminInstructorEditarDrawerComponent } from '../../admin/instructores/admin-instructor-editar-drawer.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 
 type FilterTab = 'all' | 'active' | 'expiring';
 
@@ -25,7 +26,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         class="bento-hero"

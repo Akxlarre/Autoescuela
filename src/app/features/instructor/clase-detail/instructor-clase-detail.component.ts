@@ -18,6 +18,7 @@ import { EvaluationChecklistComponent } from '@shared/components/evaluation-chec
 import { SignaturePadComponent } from '@shared/components/signature-pad/signature-pad.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import {
   EVALUATION_CHECKLIST_ITEMS,
@@ -39,6 +40,7 @@ import {
     SignaturePadComponent,
     SectionHeroComponent,
     AlertCardComponent,
+    SkeletonBlockComponent,
     BentoGridLayoutDirective,
   ],
   template: `
@@ -61,8 +63,67 @@ import {
       <div class="bento-banner">
         <div class="max-w-4xl mx-auto flex flex-col gap-6">
           @if (clasesFacade.isLoading()) {
-            <div class="flex justify-center p-12">
-              <app-icon name="loader-2" [size]="32" class="text-brand animate-spin" />
+            <!-- Skeleton: Resumen de Clase Estilo "Ticket" -->
+            <div class="bento-card relative overflow-hidden">
+              <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5 relative z-10">
+                <app-skeleton-block variant="rect" width="56px" height="56px" borderRadius="1rem" class="shrink-0" />
+                <div class="flex-1 min-w-0 flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="60%" height="20px" />
+                  <app-skeleton-block variant="text" width="30%" height="14px" />
+                </div>
+                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" class="hidden sm:block shrink-0" />
+              </div>
+
+              <div class="mb-5 sm:hidden mt-2">
+                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 pt-4 sm:pt-5 border-t border-border-default/50 relative z-10">
+                <div class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none">
+                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                  <div class="flex flex-col gap-1 w-full">
+                    <app-skeleton-block variant="text" width="60px" height="10px" />
+                    <app-skeleton-block variant="text" width="80px" height="14px" />
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none">
+                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                  <div class="flex flex-col gap-1 w-full">
+                    <app-skeleton-block variant="text" width="60px" height="10px" />
+                    <app-skeleton-block variant="text" width="80px" height="14px" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skeleton: Checklist Premium -->
+            <div class="grid grid-cols-1 gap-6 mt-2">
+              <div class="bento-card p-6 sm:p-10 space-y-10 relative overflow-hidden">
+                <!-- Lista de ítems -->
+                <div class="space-y-6 w-full max-w-2xl mx-auto">
+                  @for (_ of [1, 2, 3, 4]; track $index) {
+                    <div class="flex flex-col gap-2">
+                      <app-skeleton-block variant="text" width="40%" height="16px" />
+                      <div class="flex items-center justify-between">
+                        <app-skeleton-block variant="text" width="80%" height="12px" />
+                        <app-skeleton-block variant="rect" width="100px" height="32px" borderRadius="999px" />
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <div class="w-full h-px bg-border-subtle/60 max-w-2xl mx-auto"></div>
+
+                <!-- Observaciones y Botón -->
+                <div class="space-y-4 w-full max-w-2xl mx-auto">
+                  <app-skeleton-block variant="text" width="180px" height="14px" />
+                  <app-skeleton-block variant="rect" width="100%" height="120px" borderRadius="1rem" />
+                </div>
+
+                <div class="pt-4 flex justify-center">
+                  <app-skeleton-block variant="rect" width="320px" height="56px" borderRadius="1rem" class="w-full sm:w-80" />
+                </div>
+              </div>
             </div>
           } @else if (clasesFacade.error()) {
             <app-alert-card title="Error al cargar clase" severity="error">

@@ -19,8 +19,8 @@ import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.c
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
@@ -34,9 +34,10 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
     TaskCardComponent,
     EmptyStateComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   template: `
-    <div #bentoGrid class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- Hero -->
       <app-section-hero
         class="bento-hero"
@@ -131,12 +132,7 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
 export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
   private readonly authFacade = inject(AuthFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);
-  private readonly gsap = inject(GsapAnimationsService);
-  private readonly destroyRef = inject(DestroyRef);
-
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
+  private readonly drawer = inject(LayoutDrawerFacadeService);  private readonly destroyRef = inject(DestroyRef);
   protected readonly activeTab = signal<ObsTab>('mis-obs');
 
   private readonly currentDbId = computed(() => this.authFacade.currentUser()?.dbId);
@@ -229,10 +225,7 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
-  ngAfterViewInit(): void {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-  }
+  ngAfterViewInit(): void {  }
 
   protected onHeroAction(id: string): void {
     if (id === 'nueva-comunicacion') {

@@ -4,7 +4,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InstructorTareasComponent } from './instructor-tareas.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { TaskRow } from '@core/models/ui/task.model';
 
 // ─── helper ───────────────────────────────────────────────────────────────────
@@ -55,7 +54,6 @@ describe('InstructorTareasComponent — computed filter signals', () => {
   };
 
   const mockDrawer = { push: vi.fn() };
-  const mockGsap = { animateBentoGrid: vi.fn() };
 
   let component: InstructorTareasComponent;
 
@@ -68,7 +66,6 @@ describe('InstructorTareasComponent — computed filter signals', () => {
       providers: [
         { provide: TasksFacade, useValue: mockFacade },
         { provide: LayoutDrawerFacadeService, useValue: mockDrawer },
-        { provide: GsapAnimationsService, useValue: mockGsap },
       ],
     }).compileComponents();
 

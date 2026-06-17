@@ -11,13 +11,13 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { WeeklyScheduleGridComponent } from '@shared/components/weekly-schedule-grid/weekly-schedule-grid.component';
 import { DailyScheduleTimelineComponent } from '@shared/components/daily-schedule-timeline/daily-schedule-timeline.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { ScheduleBlock, DaySchedule } from '@core/models/ui/instructor-portal.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
@@ -31,9 +31,10 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     DailyScheduleTimelineComponent,
     KpiCardVariantComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <app-section-hero
         class="bento-hero"
         [animateOnInit]="false"
@@ -51,7 +52,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           label="Clases Hoy"
           [value]="facade.weeklySchedule()?.kpis?.clasesHoy || 0"
           icon="calendar-check"
-          [loading]="facade.isLoading()"
+          [loading]="isDataLoading()"
         />
       </div>
       <div class="bento-square">
@@ -59,7 +60,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           label="Agendadas"
           [value]="facade.weeklySchedule()?.kpis?.clasesAgendadas || 0"
           icon="calendar-days"
-          [loading]="facade.isLoading()"
+          [loading]="isDataLoading()"
         />
       </div>
       <div class="bento-square">
@@ -68,7 +69,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           [value]="facade.weeklySchedule()?.kpis?.clasesCompletadas || 0"
           icon="check-circle"
           color="success"
-          [loading]="facade.isLoading()"
+          [loading]="isDataLoading()"
         />
       </div>
       <div class="bento-square">
@@ -77,7 +78,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
           [value]="facade.weeklySchedule()?.kpis?.horasSemana || 0"
           suffix="h"
           icon="clock"
-          [loading]="facade.isLoading()"
+          [loading]="isDataLoading()"
         />
       </div>
 
@@ -87,7 +88,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         <div class="hidden md:block">
           <app-weekly-schedule-grid
             [schedule]="facade.weeklySchedule()"
-            [isLoading]="facade.isLoading()"
+            [isLoading]="isDataLoading()"
             [selectedDate]="selectedDayDate()"
             (prevWeek)="changeWeek(-1)"
             (nextWeek)="changeWeek(1)"
@@ -103,7 +104,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             [daySchedule]="todaySchedule()"
             [weekDays]="facade.weeklySchedule()?.days"
             [selectedDateString]="selectedDate()"
-            [isLoading]="facade.isLoading()"
+            [isLoading]="isDataLoading()"
             (daySelect)="onMobileDaySelect($event)"
             (blockClick)="onBlockClick($event)"
           />
@@ -112,13 +113,14 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     </div>
   `,
 })
-export class InstructorHorarioComponent implements OnInit, AfterViewInit {
+export class InstructorHorarioComponent implements OnInit {
   public facade = inject(InstructorHorasFacade);
-  private gsap = inject(GsapAnimationsService);
-  private router = inject(Router);
 
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
+  private readonly _localLoading = signal(true);
+  readonly isDataLoading = computed(() => {
+    if (this.facade.weeklySchedule()) return false;
+    return this._localLoading() || this.facade.isLoading();
+  });  private router = inject(Router);
   private currentWeekDate: string = new Date().toISOString();
 
   // Mobile day selection
@@ -200,15 +202,12 @@ export class InstructorHorarioComponent implements OnInit, AfterViewInit {
   readonly heroActions: SectionHeroAction[] = [];
 
   async ngOnInit() {
-    await this.facade.initialize();
-    await this.facade.fetchWeeklySchedule(this.currentWeekDate);
-  }
-
-  ngAfterViewInit() {
-    requestAnimationFrame(() => {
-      const grid = this.bentoGrid();
-      if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-    });
+    try {
+      await this.facade.initialize();
+      await this.facade.fetchWeeklySchedule(this.currentWeekDate);
+    } finally {
+      this._localLoading.set(false);
+    }
   }
 
   changeWeek(offset: number) {

@@ -7,6 +7,7 @@ import {
   ElementRef,
   afterNextRender,
   effect,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -14,7 +15,8 @@ import gsap from 'gsap';
 
 export interface LoginFormData {
   email: string;
-  password: string;
+  password?: string;
+  rememberMe?: boolean;
 }
 
 /**
@@ -103,23 +105,27 @@ export interface LoginFormData {
         Así el campo contraseña (#passwordWrapRef) puede colapsar a height:0
         sin dejar huecos de gap residuales en el flex container.
       -->
-      <form class="flex flex-col" (ngSubmit)="handleSubmit()" data-llm-form="auth-form">
+      <form #loginForm="ngForm" class="flex flex-col" (ngSubmit)="handleSubmit()" data-llm-form="auth-form">
         <!-- Email -->
         <div class="flex flex-col gap-2 pb-4">
           <label for="lc-email" class="text-sm font-medium text-text-secondary">
             Correo electrónico
           </label>
-          <input
-            id="lc-email"
-            type="email"
-            data-llm-description="User email address for authentication"
-            class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
-            placeholder="tu@correo.com"
-            [(ngModel)]="email"
-            name="email"
-            required
-            autocomplete="email"
-          />
+          <div class="relative">
+            <app-icon name="mail" [size]="18" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+            <input
+              id="lc-email"
+              type="email"
+              data-llm-description="User email address for authentication"
+              class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) py-(--input-padding-y) pl-10 pr-(--input-padding-x) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
+              placeholder="tu@correo.com"
+              [(ngModel)]="email"
+              name="email"
+              required
+              email
+              autocomplete="email"
+            />
+          </div>
         </div>
 
         <!--
@@ -131,18 +137,47 @@ export interface LoginFormData {
             <label for="lc-password" class="text-sm font-medium text-text-secondary">
               Contraseña
             </label>
-            <input
-              id="lc-password"
-              type="password"
-              data-llm-description="User password for authentication"
-              class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) px-(--input-padding-x) py-(--input-padding-y) font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
-              placeholder="••••••••"
-              [(ngModel)]="password"
-              name="password"
-              [attr.required]="mode() !== 'reset' ? '' : null"
-              autocomplete="current-password"
-            />
+            <div class="relative">
+              <app-icon name="lock" [size]="18" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+              <input
+                id="lc-password"
+                [type]="showPassword() ? 'text' : 'password'"
+                data-llm-description="User password for authentication"
+                class="w-full box-border rounded-(--input-radius) border border-(--input-border-default) bg-(--input-bg) py-(--input-padding-y) pl-10 pr-10 font-body text-(--input-text) outline-none transition-(--transition-input) placeholder:text-(--input-placeholder) focus:border-(--input-border-focus) focus:shadow-(--input-shadow-focus-neutral)"
+                placeholder="••••••••"
+                [(ngModel)]="password"
+                name="password"
+                [attr.required]="mode() !== 'reset' ? '' : null"
+                autocomplete="current-password"
+              />
+              @if (mode() !== 'reset') {
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-text-muted transition-(--transition-color) hover:text-text-primary"
+                  (click)="togglePasswordVisibility()"
+                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                >
+                  <app-icon [name]="showPassword() ? 'eye-off' : 'eye'" [size]="18" />
+                </button>
+              }
+            </div>
           </div>
+          
+          <!-- Recordarme Checkbox -->
+          @if (mode() !== 'reset') {
+            <div class="flex items-center gap-2 pb-5 ml-0.5">
+              <input 
+                id="lc-remember" 
+                type="checkbox" 
+                [(ngModel)]="rememberMe" 
+                name="rememberMe"
+                class="h-4 w-4 cursor-pointer appearance-auto accent-brand focus:ring-brand"
+              />
+              <label for="lc-remember" class="cursor-pointer text-sm font-medium text-text-secondary select-none">
+                Mantener sesión iniciada
+              </label>
+            </div>
+          }
         </div>
 
         <!-- Submit -->
@@ -150,7 +185,7 @@ export interface LoginFormData {
           type="submit"
           data-llm-action="submit-auth-form"
           class="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-(--btn-primary-radius) border-none bg-(--btn-primary-bg) px-(--btn-primary-padding-x) py-(--btn-primary-padding-y) font-body font-semibold text-(--btn-primary-text) shadow-(--btn-primary-shadow) transition-(--transition-btn) hover:enabled:bg-(--btn-primary-bg-hover) hover:enabled:shadow-(--btn-primary-shadow-hover) active:enabled:scale-(--btn-press-scale-value) disabled:cursor-not-allowed disabled:opacity-70"
-          [disabled]="loading()"
+          [disabled]="loading() || !loginForm.valid"
         >
           @if (loading()) {
             <span
@@ -216,6 +251,9 @@ export class LoginCardComponent {
 
   email = '';
   password = '';
+  rememberMe = true; // Por defecto marcado
+
+  readonly showPassword = signal(false);
 
   constructor() {
     // Estado inicial sin animación — elementos colapsados antes del primer paint
@@ -286,7 +324,15 @@ export class LoginCardComponent {
     });
   }
 
+  togglePasswordVisibility(): void {
+    this.showPassword.update((val) => !val);
+  }
+
   handleSubmit(): void {
-    this.formSubmit.emit({ email: this.email, password: this.password });
+    this.formSubmit.emit({ 
+      email: this.email, 
+      password: this.password,
+      rememberMe: this.rememberMe 
+    });
   }
 }

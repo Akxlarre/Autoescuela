@@ -1,18 +1,16 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   OnInit,
   computed,
   inject,
-  viewChild,
+  signal,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -27,6 +25,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
     DatePipe,
     TagModule,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     SectionHeroComponent,
     KpiCardVariantComponent,
     SkeletonBlockComponent,
@@ -34,7 +33,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
     EmptyStateComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
         class="bento-hero"
@@ -178,16 +177,20 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
     </div>
   `,
 })
-export class InstructorEnsayosTeoricosComponent implements OnInit, AfterViewInit {
+export class InstructorEnsayosTeoricosComponent implements OnInit {
   readonly facade = inject(InstructorAlumnosFacade);
-  private readonly gsap = inject(GsapAnimationsService);
-
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
-
   readonly skeletonRows = Array(5);
 
-  /** Verdadero mientras estudiantes O puntajes estén en tránsito. */
-  readonly isDataLoading = computed(() => this.facade.isLoading() || this.facade.examLoading());
+  private readonly _localLoading = signal(true);
+
+  /** Verdadero si estamos cargando sin tener datos previos (SWR pattern) */
+  readonly isDataLoading = computed(() => {
+    // Si ya tenemos datos cacheados, no mostramos skeletons, dejamos que se actualice en background
+    if (this.facade.examScores().length > 0) {
+      return false;
+    }
+    return this._localLoading() || this.facade.isLoading() || this.facade.examLoading();
+  });
 
   readonly kpis = computed(() => {
     const scores = this.facade.examScores();
@@ -198,13 +201,12 @@ export class InstructorEnsayosTeoricosComponent implements OnInit, AfterViewInit
   });
 
   async ngOnInit(): Promise<void> {
-    await this.facade.initialize(); // carga enrollmentIds requeridos por loadExamScores
-    await this.facade.loadExamScores();
-  }
-
-  ngAfterViewInit(): void {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+    try {
+      await this.facade.initialize(); // carga enrollmentIds requeridos por loadExamScores
+      await this.facade.loadExamScores();
+    } finally {
+      this._localLoading.set(false);
+    }
   }
 
   scoreStatus(score: number): { label: string; severity: 'success' | 'warn' | 'danger' } {

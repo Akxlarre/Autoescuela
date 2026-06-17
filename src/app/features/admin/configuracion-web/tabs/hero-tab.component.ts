@@ -568,13 +568,13 @@ const INTERFACE_ICONS = [
             </div>
 
             <div
-              class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 transition-all duration-300"
+              class="bento-grid bento-grid--forms mt-3 transition-all duration-300"
               [style.opacity]="heroGroup().get('trustBadge.enabled')?.value ? '1' : '0.3'"
               [style.pointer-events]="
                 heroGroup().get('trustBadge.enabled')?.value ? 'auto' : 'none'
               "
             >
-              <div class="flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1.5 bento-wide">
                 <label class="field-label">Texto del Badge</label>
                 <input
                   type="text"
@@ -583,7 +583,7 @@ const INTERFACE_ICONS = [
                   placeholder="Ej: 4.9/5 en Google Reviews"
                 />
               </div>
-              <div class="flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1.5 bento-wide">
                 <label class="field-label">Rating (Estrellas)</label>
                 <input
                   type="number"
@@ -600,8 +600,8 @@ const INTERFACE_ICONS = [
           <!-- 5. CTA -->
           <div formGroupName="cta" class="studio-card">
             <span class="studio-card-title">5. Llamado a la Acción (CTA de Ventas)</span>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-              <div class="flex flex-col gap-1.5">
+            <div class="bento-grid bento-grid--forms mt-2">
+              <div class="flex flex-col gap-1.5 bento-wide">
                 <label class="field-label">Texto del Botón CTA *</label>
                 <input
                   type="text"
@@ -610,7 +610,7 @@ const INTERFACE_ICONS = [
                   placeholder="Ej: Consultar Cursos por WhatsApp"
                 />
               </div>
-              <div class="flex flex-col gap-1.5">
+              <div class="flex flex-col gap-1.5 bento-wide">
                 <label class="field-label">WhatsApp (Nº con código país) *</label>
                 <input
                   type="text"
@@ -626,17 +626,13 @@ const INTERFACE_ICONS = [
           <div class="studio-card span-full">
             <span class="studio-card-title">6. Pilares Destacados (Máximo 3)</span>
 
-            <div formArrayName="features" class="flex flex-col gap-3.5 mt-2">
+            <div formArrayName="features" class="flex flex-col gap-3 mt-3">
               @for (featCtrl of heroFeaturesArray.controls; track $index) {
                 <div
                   [formGroupName]="$index"
-                  class="grid grid-cols-1 md:grid-cols-12 gap-3 p-3 rounded-xl border border-solid border-border-subtle bg-subtle"
+                  class="flex items-center gap-3 p-2 rounded-xl border border-solid border-border-default bg-elevated transition-colors hover:border-border-strong"
                 >
-                  <div class="md:col-span-3 flex flex-col gap-1 icon-dropdown-container">
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted"
-                      >Icono</label
-                    >
-                    <div class="relative">
+                  <div class="relative w-40 shrink-0 icon-dropdown-container">
                       <button
                         type="button"
                         class="field-input py-1.5 px-2.5 w-full flex items-center justify-between bg-surface cursor-pointer h-[34px]"
@@ -743,17 +739,13 @@ const INTERFACE_ICONS = [
                           </div>
                         </div>
                       }
-                    </div>
                   </div>
 
-                  <div class="md:col-span-9 flex flex-col gap-1">
-                    <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted"
-                      >Texto Descriptivo Pilar {{ $index + 1 }}</label
-                    >
+                  <div class="flex-1 relative">
                     <input
                       type="text"
                       formControlName="text"
-                      class="field-input py-1.5 text-xs h-[34px]"
+                      class="w-full bg-transparent border border-transparent rounded-lg py-2 px-3 text-sm text-text-primary outline-none transition-colors hover:bg-base focus:bg-base focus:border-ds-brand"
                       placeholder="Ej: Flota Moderna de Vehículos"
                     />
                   </div>
@@ -950,9 +942,9 @@ const INTERFACE_ICONS = [
       opacity: 0.8;
     }
     .layout-label {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
-      color: var(--text-secondary);
+      color: var(--text-primary);
       text-align: center;
     }
     .media-type-pills {

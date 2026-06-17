@@ -303,11 +303,9 @@ interface AlumnoKpiItem {
 
             <!-- VISTA 2: TARJETAS SKELETON (Visible cuando se comprime o móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="bento-grid">
                 @for (card of [1, 2, 3, 4, 5, 6]; track card) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm"
-                  >
+                  <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide" data-col-span="4">
                     <!-- Header -->
                     <div
                       class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
@@ -538,11 +536,9 @@ interface AlumnoKpiItem {
 
             <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div class="bento-grid">
                 @for (alumno of filteredAlumnos(); track alumno.id) {
-                  <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300"
-                  >
+                  <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 bento-wide" data-col-span="4">
                     <!-- Header -->
                     <div
                       class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"

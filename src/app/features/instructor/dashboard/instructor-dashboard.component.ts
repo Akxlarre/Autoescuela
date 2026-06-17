@@ -5,6 +5,7 @@ import {
   OnInit,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TagModule } from 'primeng/tag';
@@ -133,9 +134,30 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 }
               </div>
 
-              @if (clasesFacade.isLoading()) {
-                <div class="p-8 flex justify-center">
-                  <app-icon name="loader-2" [size]="32" class="text-brand animate-spin" />
+              @if (isDataLoading()) {
+                <div class="divide-y divide-border-default">
+                  @for (_ of [1, 2, 3]; track $index) {
+                    <div class="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4">
+                      <!-- Hora + Info -->
+                      <div class="flex items-start gap-4 flex-1">
+                        <!-- Hora Box -->
+                        <app-skeleton-block variant="rect" width="56px" height="56px" borderRadius="0.5rem" class="shrink-0" />
+                        <!-- Detalle -->
+                        <div class="flex-1 min-w-0 flex flex-col gap-2">
+                          <div class="flex gap-2 mb-1">
+                            <app-skeleton-block variant="rect" width="60px" height="20px" borderRadius="999px" />
+                            <app-skeleton-block variant="rect" width="80px" height="20px" borderRadius="999px" />
+                          </div>
+                          <app-skeleton-block variant="text" width="60%" height="20px" />
+                          <app-skeleton-block variant="text" width="40%" height="14px" />
+                        </div>
+                      </div>
+                      <!-- Acciones -->
+                      <div class="w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
+                        <app-skeleton-block variant="rect" width="100px" height="40px" borderRadius="0.5rem" class="w-full sm:w-[100px]" />
+                      </div>
+                    </div>
+                  }
                 </div>
               } @else if (clasesFacade.error()) {
                 <div class="p-6">
@@ -253,7 +275,16 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
               <h3 class="text-sm font-bold uppercase tracking-wider text-text-muted mb-4">
                 Próximas Clases
               </h3>
-              @if (clasesFacade.upcomingDays().length === 0) {
+              @if (isDataLoading()) {
+                <div class="space-y-3">
+                  @for (_ of [1, 2, 3]; track $index) {
+                    <div class="flex items-center justify-between p-3 bg-surface rounded border border-border-default">
+                      <app-skeleton-block variant="text" width="60%" height="14px" />
+                      <app-skeleton-block variant="rect" width="20px" height="24px" borderRadius="0.25rem" />
+                    </div>
+                  }
+                </div>
+              } @else if (clasesFacade.upcomingDays().length === 0) {
                 <p class="text-sm text-text-muted">Sin clases programadas los próximos días</p>
               } @else {
                 <div class="space-y-3">
@@ -281,6 +312,12 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 })
 export class InstructorDashboardComponent implements OnInit {
   public clasesFacade = inject(InstructorClasesFacade);
+  private readonly _localLoading = signal(true);
+  readonly isDataLoading = computed(() => {
+    // Si ya hay clases cacheadas hoy o proximas, evitamos el flash de carga inicial (SWR)
+    if (this.clasesFacade.todayClasses().length > 0 || this.clasesFacade.upcomingDays().length > 0) return false;
+    return this._localLoading() || this.clasesFacade.isLoading() || this.horasFacade.isLoading();
+  });
   public profile = inject(InstructorProfileFacade);
   public horasFacade = inject(InstructorHorasFacade);
   private destroyRef = inject(DestroyRef);
@@ -319,12 +356,16 @@ export class InstructorDashboardComponent implements OnInit {
   ];
 
   async ngOnInit() {
-    await this.profile.initialize();
-    await this.clasesFacade.initialize();
-    await Promise.all([
-      this.horasFacade.fetchMonthlyHours(),
-      this.clasesFacade.fetchUpcomingDays(),
-    ]);
+    try {
+      await this.profile.initialize();
+      await this.clasesFacade.initialize();
+      await Promise.all([
+        this.horasFacade.fetchMonthlyHours(),
+        this.clasesFacade.fetchUpcomingDays(),
+      ]);
+    } finally {
+      this._localLoading.set(false);
+    }
     this.destroyRef.onDestroy(() => this.clasesFacade.dispose());
   }
 }

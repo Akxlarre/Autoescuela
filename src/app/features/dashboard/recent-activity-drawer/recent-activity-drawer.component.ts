@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -9,7 +10,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 @Component({
   selector: 'app-recent-activity-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [CommonModule, IconComponent, SkeletonBlockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="p-6 h-full flex flex-col gap-6">
@@ -23,8 +24,21 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       </p>
 
       @if (loading()) {
-        <div class="flex justify-center items-center py-10">
-          <app-icon name="loader-2" [size]="24" class="text-brand animate-spin" />
+        <div class="flex-1 pr-2">
+          <ul class="m-0 p-0 list-none flex flex-col gap-1">
+            @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
+              <li class="flex items-start gap-3 py-3 border-b last:border-b-0 border-border-subtle">
+                <app-skeleton-block variant="circle" width="32px" height="32px" class="mt-1 shrink-0" />
+                <div class="flex-1 min-w-0 flex flex-col gap-1.5 mt-1">
+                  <div class="flex items-center justify-between gap-2">
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="40px" height="12px" class="shrink-0" />
+                  </div>
+                  <app-skeleton-block variant="text" width="90%" height="12px" />
+                </div>
+              </li>
+            }
+          </ul>
         </div>
       } @else {
         <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar">

@@ -162,9 +162,9 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
           <!-- ÁREA DE MAPA SEMANAL -->
           <div class="p-6 bg-surface">
             @if (facade.isLoading()) {
-              <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              <div class="bento-grid">
                 @for (i of skeletonDays; track i) {
-                  <div class="rounded-xl border border-border bg-base p-3">
+                  <div class="rounded-xl border border-border bg-base p-3 bento-square" data-col-span="2" data-col-span-md="2">
                     <app-skeleton-block variant="text" width="60%" height="14px" />
                     <div class="mt-3 space-y-2">
                       <app-skeleton-block variant="rect" width="100%" height="56px" />
@@ -174,9 +174,9 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 }
               </div>
             } @else if (facade.selectedCursoId()) {
-              <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              <div class="bento-grid">
                 @for (day of facade.weekDays(); track day.date) {
-                  <app-session-day-card [day]="day" (selectSession)="openSesion($event)" />
+                  <app-session-day-card class="bento-square block" data-col-span="2" data-col-span-md="2" [day]="day" (selectSession)="openSesion($event)" />
                 }
               </div>
             } @else {
