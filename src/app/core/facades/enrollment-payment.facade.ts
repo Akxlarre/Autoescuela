@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 
 import type { Discount } from '@core/models/dto/discount.model';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   PaymentMethod,
   PricingBreakdown,
   DiscountData,
@@ -38,7 +39,8 @@ interface AvailableDiscount {
  */
 @Injectable({ providedIn: 'root' })
 export class EnrollmentPaymentFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)
@@ -163,7 +165,7 @@ export class EnrollmentPaymentFacade {
       .order('name');
 
     if (error) {
-      this._error.set('Error al cargar descuentos: ' + error.message);
+      this._error.set('Error al cargar descuentos: ' + this.sanitizer.sanitize(error).message);
       return;
     }
 
@@ -233,7 +235,7 @@ export class EnrollmentPaymentFacade {
         .insert(paymentRecord);
 
       if (paymentError) {
-        this._error.set('Error al registrar pago: ' + paymentError.message);
+        this._error.set('Error al registrar pago: ' + this.sanitizer.sanitize(paymentError).message);
         return false;
       }
 
@@ -251,7 +253,7 @@ export class EnrollmentPaymentFacade {
           });
 
         if (discountError) {
-          this._error.set('Error al aplicar descuento: ' + discountError.message);
+          this._error.set('Error al aplicar descuento: ' + this.sanitizer.sanitize(discountError).message);
           return false;
         }
       }
@@ -280,7 +282,7 @@ export class EnrollmentPaymentFacade {
         .eq('id', enrollmentId);
 
       if (updateError) {
-        this._error.set('Error al actualizar matrícula: ' + updateError.message);
+        this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message);
         return false;
       }
 

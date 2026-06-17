@@ -15,10 +15,12 @@ import type {
 } from '@core/models/ui/libro-de-clases.model';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
 import { getModuleNames, calcAverage, MODULE_COUNT } from '@core/utils/professional-modules';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Injectable({ providedIn: 'root' })
 export class LibroDeClasesFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -168,7 +170,7 @@ export class LibroDeClasesFacade {
     try {
       await this.loadAllSections(promotionCourseId);
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error cargando libro de clases');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error cargando libro de clases');
     } finally {
       this._isLoadingSections.set(false);
     }
@@ -607,7 +609,7 @@ export class LibroDeClasesFacade {
       this.toast.success('Datos del libro guardados');
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar';
       this.toast.error(msg);
       return false;
     } finally {
@@ -631,7 +633,7 @@ export class LibroDeClasesFacade {
       );
 
       if (error) {
-        const msg = error instanceof Error ? error.message : JSON.stringify(error);
+        const msg = error instanceof Error ? this.sanitizer.sanitize(error).message : JSON.stringify(error);
         this.toast.error(`Error al generar PDF: ${msg}`);
         return null;
       }
@@ -666,7 +668,7 @@ export class LibroDeClasesFacade {
       this.toast.error(
         isAbort
           ? 'La generación del PDF tardó demasiado. Intenta nuevamente.'
-          : `Error inesperado: ${err instanceof Error ? err.message : 'desconocido'}`,
+          : `Error inesperado: ${err instanceof Error ? this.sanitizer.sanitize(err).message : 'desconocido'}`,
       );
       return null;
     } finally {

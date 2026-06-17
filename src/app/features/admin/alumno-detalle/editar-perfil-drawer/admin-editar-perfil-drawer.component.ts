@@ -5,6 +5,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Component({
   selector: 'app-admin-editar-perfil-drawer',
@@ -197,7 +198,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   `,
 })
 export class AdminEditarPerfilDrawerComponent implements OnInit {
-  protected readonly facade = inject(AdminAlumnoDetalleFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
 
@@ -278,7 +280,7 @@ export class AdminEditarPerfilDrawerComponent implements OnInit {
         this.layoutDrawer.close();
       }, 1200);
     } catch (err) {
-      this.saveError.set(err instanceof Error ? err.message : 'Error al guardar.');
+      this.saveError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.');
     } finally {
       this.isSaving.set(false);
     }

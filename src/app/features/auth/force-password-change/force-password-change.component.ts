@@ -13,6 +13,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AuthFacade } from '@core/facades/auth.facade';
 import gsap from 'gsap';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Component({
   selector: 'app-force-password-change',
@@ -107,7 +108,8 @@ import gsap from 'gsap';
   host: { style: 'display: contents;' },
 })
 export class ForcePasswordChangeComponent {
-  private readonly fb = inject(FormBuilder);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthFacade);
   private readonly router = inject(Router);
   private readonly gsap = inject(GsapAnimationsService);
@@ -167,7 +169,7 @@ export class ForcePasswordChangeComponent {
       const { error } = await this.auth.updatePassword(newPassword);
 
       if (error) {
-        this.showError(error.message);
+        this.showError(this.sanitizer.sanitize(error).message);
         return;
       }
 

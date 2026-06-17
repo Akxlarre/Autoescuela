@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   SesionProfesional,
   SesionAlumnoAsistencia,
   ResumenAlumnoAsistencia,
@@ -18,7 +19,8 @@ import type {
 
 @Injectable({ providedIn: 'root' })
 export class AsistenciaProfesionalFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthFacade);
   private readonly confirmModal = inject(ConfirmModalService);
@@ -534,7 +536,7 @@ export class AsistenciaProfesionalFacade {
       await this.selectSesion(sesion);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al guardar asistencia';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar asistencia';
       this.toast.error(msg);
       return false;
     } finally {
@@ -582,7 +584,7 @@ export class AsistenciaProfesionalFacade {
       if (cursoId) await this.fetchResumenAlumnos(cursoId);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al editar sesión';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al editar sesión';
       this.toast.error(msg);
       return false;
     } finally {
@@ -874,7 +876,7 @@ export class AsistenciaProfesionalFacade {
       await this.fetchFirmasSemana();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar firmas';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar firmas';
       this.toast.error(msg);
       return false;
     } finally {

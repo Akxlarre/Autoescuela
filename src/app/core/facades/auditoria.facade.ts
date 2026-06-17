@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   ACTION_LABEL_MAP,
   ENTITY_MODULE_MAP,
   KNOWN_ENTITIES,
@@ -29,7 +30,8 @@ const PAGE_SIZE = 25;
 
 @Injectable({ providedIn: 'root' })
 export class AuditoriaFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -198,7 +200,7 @@ export class AuditoriaFacade {
       this._totalCount.set(count ?? 0);
       this._logs.set((data ?? []).map((row: any) => this.mapToRow(row)));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar el log de auditoría';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el log de auditoría';
       this._error.set(msg);
       this.toast.error(msg);
     } finally {

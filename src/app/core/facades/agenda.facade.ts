@@ -14,6 +14,7 @@ import type {
 } from '@core/models/ui/agenda.model';
 
 import { toISODate, to24hTime, buildDayLabel } from '@core/utils/date.utils';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -83,7 +84,8 @@ interface RawVehicle {
 
 @Injectable({ providedIn: 'root' })
 export class AgendaFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -355,7 +357,7 @@ export class AgendaFacade {
       });
 
       if (error) {
-        this._error.set('Error al agendar la clase: ' + error.message);
+        this._error.set('Error al agendar la clase: ' + this.sanitizer.sanitize(error).message);
         return false;
       }
 

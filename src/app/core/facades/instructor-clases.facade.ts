@@ -3,6 +3,7 @@ import { InstructorProfileFacade } from './instructor-profile.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorClassRow,
   EvaluationFormData,
   UpcomingDay,
@@ -12,7 +13,8 @@ import type {
   providedIn: 'root',
 })
 export class InstructorClasesFacade {
-  private profileFacade = inject(InstructorProfileFacade);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
 
@@ -142,7 +144,7 @@ export class InstructorClasesFacade {
       }
     } catch (err: any) {
       console.error('Error fetching today classes:', err);
-      this._error.set(err.message || 'Error al cargar clases');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar clases');
     }
   }
 
@@ -181,7 +183,7 @@ export class InstructorClasesFacade {
       }
     } catch (err: any) {
       console.error('Error fetching class detail:', err);
-      this._error.set(err.message || 'Error al cargar la clase');
+      this._error.set(this.sanitizer.sanitize(err).message || 'Error al cargar la clase');
     } finally {
       this._isLoading.set(false);
     }

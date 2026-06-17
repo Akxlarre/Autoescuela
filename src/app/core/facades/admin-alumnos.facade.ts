@@ -4,6 +4,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   AlumnoTableRow,
   AlumnoExpediente,
   AlumnoStatus,
@@ -63,7 +64,8 @@ const VENCER_THRESHOLD_DAYS = 7;
 
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnosFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
@@ -366,7 +368,7 @@ export class AdminAlumnosFacade {
       const rows = validStudents.map((s) => this.mapToAlumnoTableRow(s));
       this._alumnos.set(rows);
     } catch (err) {
-      this._error.set(err instanceof Error ? err.message : 'Error al cargar alumnos');
+      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar alumnos');
       throw err;
     }
   }

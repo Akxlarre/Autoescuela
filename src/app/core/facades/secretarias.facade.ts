@@ -4,6 +4,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 export interface CrearSecretariaPayload {
   firstNames: string;
@@ -60,7 +61,8 @@ interface SecretariaRow {
 
 @Injectable({ providedIn: 'root' })
 export class SecretariasFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -162,7 +164,7 @@ export class SecretariasFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
       throw error;
     }
 
@@ -188,12 +190,12 @@ export class SecretariasFacade {
       const { error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
-      if (error) throw new Error(error.message ?? 'Error al crear secretaria');
+      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
       this.toast.success('Secretaria creada', 'La cuenta ha sido creada correctamente.');
       await this.refreshSilently();
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear secretaria';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear secretaria';
       this.toast.error('Error', msg);
       return false;
     } finally {
@@ -218,7 +220,7 @@ export class SecretariasFacade {
         },
       });
 
-      if (error) throw new Error(error.message ?? 'Error al actualizar secretaria');
+      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar secretaria');
 
       this._initialized = false;
       await this.refreshSilently();
@@ -228,7 +230,7 @@ export class SecretariasFacade {
       );
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar secretaria';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar secretaria';
       this.toast.error('Error', msg);
       return false;
     } finally {

@@ -12,6 +12,7 @@ import type {
   CourseOption,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   InstructorOption,
   ScheduleGrid,
   PaymentMode,
@@ -149,7 +150,8 @@ interface PublicEnrollmentDraft {
  */
 @Injectable({ providedIn: 'root' })
 export class PublicEnrollmentFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
 
   // ── Storage keys ──
   private readonly DRAFT_KEY = 'pec_draft' as const;
@@ -379,7 +381,7 @@ export class PublicEnrollmentFacade {
       ]);
 
       if (branchRes.error) {
-        this._error.set('Error al cargar sedes: ' + branchRes.error.message);
+        this._error.set('Error al cargar sedes: ' + this.sanitizer.sanitize(branchRes.error).message);
         return;
       }
       this._branches.set((branchRes.data ?? []).map((b: any) => ({
@@ -570,7 +572,7 @@ export class PublicEnrollmentFacade {
       });
 
       if (error) {
-        this._error.set('Error al cargar instructores: ' + error.message);
+        this._error.set('Error al cargar instructores: ' + this.sanitizer.sanitize(error).message);
         return;
       }
       this._instructors.set(data?.instructors ?? []);
@@ -598,7 +600,7 @@ export class PublicEnrollmentFacade {
       });
 
       if (error) {
-        this._error.set('Error al cargar disponibilidad: ' + error.message);
+        this._error.set('Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message);
         return;
       }
 
@@ -735,7 +737,7 @@ export class PublicEnrollmentFacade {
         });
 
       if (error) {
-        this._error.set('Error al subir la foto: ' + error.message);
+        this._error.set('Error al subir la foto: ' + this.sanitizer.sanitize(error).message);
         return false;
       }
 
@@ -947,8 +949,8 @@ export class PublicEnrollmentFacade {
       });
 
       if (error) {
-        this._error.set('Error al confirmar el pago: ' + error.message);
-        return { success: false, message: error.message };
+        this._error.set('Error al confirmar el pago: ' + this.sanitizer.sanitize(error).message);
+        return { success: false, message: this.sanitizer.sanitize(error).message };
       }
 
       if (!data?.success) {
@@ -1447,7 +1449,7 @@ export class PublicEnrollmentFacade {
       .order('name');
 
     if (error) {
-      this._error.set('Error al cargar cursos: ' + error.message);
+      this._error.set('Error al cargar cursos: ' + this.sanitizer.sanitize(error).message);
       return;
     }
     this._courses.set(data ?? []);

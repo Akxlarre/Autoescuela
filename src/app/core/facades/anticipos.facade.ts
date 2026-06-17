@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   AnticipoCuentaCorriente,
   AnticipoHistorial,
   AnticiposKpis,
@@ -33,7 +34,8 @@ export function mapStatus(raw: string | null): AdvanceStatus {
 
 @Injectable({ providedIn: 'root' })
 export class AnticiosFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly toast = inject(ToastService);
 
@@ -229,7 +231,7 @@ export class AnticiosFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al registrar el anticipo.';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar el anticipo.';
       this._error.set(msg);
       this.toast.error(msg);
       return false;

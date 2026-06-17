@@ -12,6 +12,7 @@ import type {
   VehicleAssignmentHistory,
 } from '@core/models/ui/instructor-table.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ── Payloads ──────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,8 @@ const LICENSE_STATUS_LABELS: Record<string, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class InstructoresFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -247,7 +249,7 @@ export class InstructoresFacade {
     const { data, error } = await query;
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
       throw error;
     }
 
@@ -496,7 +498,7 @@ export class InstructoresFacade {
         body: payload,
       });
 
-      if (error) throw new Error(error.message ?? 'Error al crear instructor');
+      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear instructor');
 
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
@@ -506,7 +508,7 @@ export class InstructoresFacade {
       await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al crear instructor';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear instructor';
       this.toast.error('Error', msg);
       return false;
     } finally {
@@ -542,7 +544,7 @@ export class InstructoresFacade {
         },
       });
 
-      if (error) throw new Error(error.message ?? 'Error al actualizar instructor');
+      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar instructor');
       if (data?.error) throw new Error(data.error);
 
       this._vehiclesLoaded = false;
@@ -553,7 +555,7 @@ export class InstructoresFacade {
       );
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar instructor';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar instructor';
       this.toast.error('Error', msg);
       return false;
     } finally {

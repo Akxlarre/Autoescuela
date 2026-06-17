@@ -1,4 +1,4 @@
-import { ApplicationConfig, LOCALE_ID, importProvidersFrom } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, importProvidersFrom, ErrorHandler } from '@angular/core';
 import { provideRouter, withComponentInputBinding, withViewTransitions } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
@@ -189,6 +189,7 @@ import {
 
 import { routes } from './app.routes';
 import { provideCoreAuth } from '@core/auth/provide-core-auth';
+import { GlobalErrorHandler } from './core/errors/global-error-handler';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -267,6 +268,7 @@ export const appConfig: ApplicationConfig = {
       },
     }),
     provideCoreAuth(),
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     { provide: LOCALE_ID, useValue: 'es' },
     MessageService,
     ConfirmationService,

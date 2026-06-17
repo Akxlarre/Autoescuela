@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
   PromocionTableRow,
   PromocionCursoRow,
   PromocionCursoRelator,
@@ -14,7 +15,8 @@ import type {
 
 @Injectable({ providedIn: 'root' })
 export class PromocionesFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -304,7 +306,7 @@ export class PromocionesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al crear promoción';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción';
       this.toast.error(msg);
       return false;
     } finally {
@@ -373,7 +375,7 @@ export class PromocionesFacade {
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al actualizar promoción';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar promoción';
       this.toast.error(msg);
       return false;
     } finally {

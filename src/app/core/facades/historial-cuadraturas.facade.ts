@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 import type { CashClosing } from '@core/models/dto/cash-closing.model';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
@@ -85,7 +86,8 @@ function buildMonthlyExcelRows(cierres: HistorialCierre[]): (string | number)[][
 
 @Injectable({ providedIn: 'root' })
 export class HistorialCuadraturasFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -243,7 +245,7 @@ export class HistorialCuadraturasFacade {
 
       this._historialCierres.set((data ?? []).map(mapCierreToHistorial as any));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Error al cargar el historial.';
+      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el historial.';
       this._error.set(msg);
       this.toast.error(msg);
     } finally {

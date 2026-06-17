@@ -29,6 +29,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 // Facades & Models
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
  * VehicleFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -218,7 +219,8 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   `,
 })
 export class VehicleFormDrawerComponent {
-  private readonly fb = inject(NonNullableFormBuilder);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly fb = inject(NonNullableFormBuilder);
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
@@ -292,7 +294,7 @@ export class VehicleFormDrawerComponent {
       }
       this.layoutDrawer.close();
     } catch (error) {
-      this.errorMsg.set(error instanceof Error ? error.message : 'Error al guardar el vehículo');
+      this.errorMsg.set(error instanceof Error ? this.sanitizer.sanitize(error).message : 'Error al guardar el vehículo');
     } finally {
       this.isSaving.set(false);
     }

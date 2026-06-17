@@ -18,6 +18,7 @@ import type {
 } from '@core/models/ui/servicios-especiales.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /** Mapea el nombre del servicio a ícono y color de UI. */
 function getServiceUiMeta(name: string): {
@@ -76,7 +77,8 @@ function mapVentaDto(
 
 @Injectable({ providedIn: 'root' })
 export class ServiciosEspecialesFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -230,7 +232,7 @@ export class ServiciosEspecialesFacade {
     });
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
       return false;
     }
 
@@ -247,7 +249,7 @@ export class ServiciosEspecialesFacade {
     });
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
       return false;
     }
 
@@ -262,7 +264,7 @@ export class ServiciosEspecialesFacade {
       .eq('id', id);
 
     if (error) {
-      this._error.set(error.message);
+      this._error.set(this.sanitizer.sanitize(error).message);
       return;
     }
 

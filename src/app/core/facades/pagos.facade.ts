@@ -11,6 +11,7 @@ import type {
   PagoReciente,
 } from '@core/models/ui/pagos.model';
 import { toISODate } from '@core/utils/date.utils';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
@@ -51,7 +52,8 @@ const METODOS_CONFIG: { key: string; metodo: string; color: string; icono: strin
 
 @Injectable({ providedIn: 'root' })
 export class PagosFacade {
-  private readonly supabase = inject(SupabaseService);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -472,7 +474,7 @@ export class PagosFacade {
     } catch (err) {
       this.toast.error(
         'Error al generar reporte',
-        err instanceof Error ? err.message : 'Inténtalo de nuevo.',
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Inténtalo de nuevo.',
       );
     } finally {
       this._isGeneratingReport.set(false);

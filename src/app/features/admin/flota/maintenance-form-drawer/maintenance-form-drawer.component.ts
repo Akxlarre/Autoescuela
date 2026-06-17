@@ -32,6 +32,7 @@ import { FlotaDetalleFacade } from '@core/facades/flota-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
  * MaintenanceFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -209,7 +210,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   `,
 })
 export class MaintenanceFormDrawerComponent {
-  private readonly fb = inject(NonNullableFormBuilder);
+    private readonly sanitizer = inject(ErrorSanitizerService);
+private readonly fb = inject(NonNullableFormBuilder);
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly detalleFacade = inject(FlotaDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -288,7 +290,7 @@ export class MaintenanceFormDrawerComponent {
       this.layoutDrawer.close();
     } catch (error) {
       this.errorMsg.set(
-        error instanceof Error ? error.message : 'Error al guardar el mantenimiento',
+        error instanceof Error ? this.sanitizer.sanitize(error).message : 'Error al guardar el mantenimiento',
       );
     } finally {
       this.isSaving.set(false);
