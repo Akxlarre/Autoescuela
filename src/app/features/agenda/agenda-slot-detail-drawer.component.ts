@@ -58,7 +58,7 @@ type StatusConfig = {
 
               <!-- ── Horario (prominente) ───────────────────────────── -->
               <app-stat-box
-                label="Horario de clase"
+                [label]="s.status === 'available' ? 'Horario disponible' : 'Horario de clase'"
                 [value]="s.startTime + ' – ' + s.endTime"
                 variant="brand"
                 [useMono]="true"
@@ -147,6 +147,12 @@ export class AgendaSlotDetailDrawerComponent {
 
   readonly statusCfg = computed<StatusConfig>(() => {
     switch (this.slot()?.status) {
+      case 'available':
+        return {
+          label: 'Disponible',
+          icon: 'calendar-check',
+          variant: 'success',
+        };
       case 'scheduled':
         return {
           label: 'Agendada',

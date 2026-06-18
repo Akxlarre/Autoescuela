@@ -65,8 +65,8 @@ interface EnrollmentDraft {
  */
 @Injectable({ providedIn: 'root' })
 export class EnrollmentFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly docsFacade = inject(EnrollmentDocumentsFacade);
   private readonly paymentFacade = inject(EnrollmentPaymentFacade);
@@ -124,15 +124,14 @@ private readonly supabase = inject(SupabaseService);
   private readonly _promotionGroups = signal<PromotionGroup[]>([]);
   private readonly _selectedPromotionCourseId = signal<number | null>(null);
 
-  // Número de sesiones requeridas según modalidad de pago y horas del curso
+  // Clases a agendar: SIEMPRE el total del curso (12), independiente de la
+  // modalidad de pago. El abono 50% solo afecta el monto cobrado, no el agendamiento.
   private readonly _requiredSlotCount = computed<number>(() => {
     const pd = this._personalData();
-    const mode = this._paymentMode();
     if (!pd || pd.courseCategory !== 'non-professional') return 0;
     const licenseClass = this.courseTypeToLicenseClass(pd.courseType);
     const course = this._courses().find((c) => c.license_class === licenseClass);
-    const total = course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
-    return mode === 'partial' ? Math.ceil(total / 2) : total;
+    return course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
   });
 
   // ── Enrollment record ──
@@ -444,6 +443,16 @@ private readonly supabase = inject(SupabaseService);
     };
   }
 
+  /** Devuelve el RUT del dueño del email, o null si no está en la BD. */
+  private async findUserByEmail(email: string): Promise<string | null> {
+    const { data } = await this.supabase.client
+      .from('users')
+      .select('rut')
+      .ilike('email', email.trim())
+      .maybeSingle();
+    return data?.rut ?? null;
+  }
+
   private async checkDuplicateEnrollment(
     studentId: number,
     licenseClass: string,
@@ -520,6 +529,19 @@ private readonly supabase = inject(SupabaseService);
             return false;
           }
         }
+
+        // Verificar que el email no pertenezca a otra persona distinta al RUT ingresado.
+        const emailOwnerRut = await this.findUserByEmail(data.email);
+        if (
+          emailOwnerRut &&
+          normalizeRutForStorage(emailOwnerRut) !== normalizeRutForStorage(data.rut)
+        ) {
+          this._error.set(
+            'Este correo ya está registrado por otra persona. Por favor usa un correo diferente.',
+          );
+          this._isLoading.set(false);
+          return false;
+        }
       }
 
       // 1. Upsert user
@@ -575,7 +597,9 @@ private readonly supabase = inject(SupabaseService);
           .eq('id', enrollmentId);
 
         if (error) {
-          this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(error).message);
+          this._error.set(
+            'Error al actualizar matrícula: ' + this.sanitizer.sanitize(error).message,
+          );
           return false;
         }
       } else {
@@ -712,7 +736,9 @@ private readonly supabase = inject(SupabaseService);
         .order('slot_start', { ascending: true });
 
       if (error) {
-        this._error.set('Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message);
+        this._error.set(
+          'Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message,
+        );
         return;
       }
 
@@ -913,7 +939,9 @@ private readonly supabase = inject(SupabaseService);
           .insert(sessions);
 
         if (sessionsError) {
-          this._error.set('Error al reservar horarios: ' + this.sanitizer.sanitize(sessionsError).message);
+          this._error.set(
+            'Error al reservar horarios: ' + this.sanitizer.sanitize(sessionsError).message,
+          );
           return false;
         }
 
@@ -1036,7 +1064,9 @@ private readonly supabase = inject(SupabaseService);
       );
 
       if (contractError) {
-        this._error.set('Error al registrar contrato: ' + this.sanitizer.sanitize(contractError).message);
+        this._error.set(
+          'Error al registrar contrato: ' + this.sanitizer.sanitize(contractError).message,
+        );
         return false;
       }
 
@@ -1050,7 +1080,9 @@ private readonly supabase = inject(SupabaseService);
         .eq('id', draft.enrollmentId);
 
       if (updateError) {
-        this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message);
+        this._error.set(
+          'Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message,
+        );
         return false;
       }
 
@@ -1091,7 +1123,9 @@ private readonly supabase = inject(SupabaseService);
       );
 
       if (contractError) {
-        this._error.set('Error al registrar firma: ' + this.sanitizer.sanitize(contractError).message);
+        this._error.set(
+          'Error al registrar firma: ' + this.sanitizer.sanitize(contractError).message,
+        );
         return false;
       }
 
@@ -1101,7 +1135,9 @@ private readonly supabase = inject(SupabaseService);
         .eq('id', draft.enrollmentId);
 
       if (updateError) {
-        this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message);
+        this._error.set(
+          'Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message,
+        );
         return false;
       }
 
@@ -1887,7 +1923,9 @@ private readonly supabase = inject(SupabaseService);
     });
 
     if (error) {
-      this._error.set('Error al generar número de matrícula: ' + this.sanitizer.sanitize(error).message);
+      this._error.set(
+        'Error al generar número de matrícula: ' + this.sanitizer.sanitize(error).message,
+      );
       return null;
     }
 

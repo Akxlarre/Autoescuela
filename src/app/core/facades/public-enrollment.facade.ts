@@ -152,8 +152,8 @@ interface PublicEnrollmentDraft {
  */
 @Injectable({ providedIn: 'root' })
 export class PublicEnrollmentFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
 
   // ── Storage keys ──
   private readonly DRAFT_KEY = 'pec_draft' as const;
@@ -322,11 +322,12 @@ private readonly supabase = inject(SupabaseService);
     return course?.practical_hours ? Math.round((course.practical_hours * 60) / 45) : 12;
   });
 
-  readonly requiredSlotCount = computed<number>(() => {
-    const total = this.basePracticalSlotCount();
-    if (total === 0) return 0;
-    return this._paymentMode() === 'partial' ? Math.ceil(total / 2) : total;
-  });
+  /**
+   * Clases a agendar: SIEMPRE el total del curso (12), independiente de la
+   * modalidad de pago. El abono 50% solo afecta el monto cobrado
+   * (ver `paymentAmount`), nunca la cantidad de clases agendadas.
+   */
+  readonly requiredSlotCount = computed<number>(() => this.basePracticalSlotCount());
 
   readonly maxClassesPerDay = computed<number>(() => {
     const pd = this._personalData();
@@ -373,7 +374,10 @@ private readonly supabase = inject(SupabaseService);
     this._isLoading.set(true);
     try {
       const [branchRes, courseRes] = await Promise.all([
-        this.supabase.client.from('branches').select('id, name, slug, address, phone, has_professional').order('id'),
+        this.supabase.client
+          .from('branches')
+          .select('id, name, slug, address, phone, has_professional')
+          .order('id'),
         this.supabase.client
           .from('courses')
           .select('id, code, name, base_price, license_class, branch_id')
@@ -383,17 +387,21 @@ private readonly supabase = inject(SupabaseService);
       ]);
 
       if (branchRes.error) {
-        this._error.set('Error al cargar sedes: ' + this.sanitizer.sanitize(branchRes.error).message);
+        this._error.set(
+          'Error al cargar sedes: ' + this.sanitizer.sanitize(branchRes.error).message,
+        );
         return;
       }
-      this._branches.set((branchRes.data ?? []).map((b: any) => ({
-        id: b.id,
-        name: b.name,
-        slug: b.slug,
-        address: b.address,
-        phone: b.phone,
-        hasProfessional: b.has_professional
-      })));
+      this._branches.set(
+        (branchRes.data ?? []).map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          slug: b.slug,
+          address: b.address,
+          phone: b.phone,
+          hasProfessional: b.has_professional,
+        })),
+      );
 
       if (!courseRes.error && courseRes.data) {
         const pricingMap = new Map<number, BranchCoursePrice[]>();
@@ -425,10 +433,14 @@ private readonly supabase = inject(SupabaseService);
    *
    * Asume que `loadBranches()` ya pobló `branches` (lo hace el Smart component en init).
    */
-  async resolveEntry(branchIdentifier: number | string | null, courseId: number | null): Promise<void> {
+  async resolveEntry(
+    branchIdentifier: number | string | null,
+    courseId: number | null,
+  ): Promise<void> {
     const branch =
       branchIdentifier !== null
-        ? this._branches().find((b) => b.id === branchIdentifier || b.slug === branchIdentifier) ?? null
+        ? (this._branches().find((b) => b.id === branchIdentifier || b.slug === branchIdentifier) ??
+          null)
         : null;
 
     if (!branch) {
@@ -500,10 +512,27 @@ private readonly supabase = inject(SupabaseService);
     const courseType = flow === 'class_b' ? 'class_b' : (data.courseType ?? '');
     const licenseClass = this.courseTypeToLicenseClass(courseType);
 
-    // Check anticipado de matrícula/pre-inscripción duplicada
+    // Check anticipado de duplicados y validaciones de email
     this._isLoading.set(true);
     this._error.set(null);
     try {
+      // 0a. Email: verificar que no pertenezca a otra persona con distinto RUT.
+      const { data: emailOwner } = await this.supabase.client
+        .from('users')
+        .select('rut')
+        .ilike('email', data.email.trim())
+        .maybeSingle();
+      if (
+        emailOwner?.rut &&
+        normalizeRutForStorage(emailOwner.rut) !== normalizeRutForStorage(data.rut)
+      ) {
+        this._error.set(
+          'Este correo ya está registrado por otra persona. Por favor usa un correo diferente.',
+        );
+        return;
+      }
+
+      // 0b. Matrícula/pre-inscripción duplicada en este mismo curso.
       const { data: check } = await this.supabase.client.functions.invoke('public-enrollment', {
         body: {
           action: 'check-duplicate',
@@ -604,7 +633,9 @@ private readonly supabase = inject(SupabaseService);
       });
 
       if (error) {
-        this._error.set('Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message);
+        this._error.set(
+          'Error al cargar disponibilidad: ' + this.sanitizer.sanitize(error).message,
+        );
         return;
       }
 
@@ -1313,7 +1344,7 @@ private readonly supabase = inject(SupabaseService);
 
     // Cargar cursos para que funcionen los computed signals
     void this.loadCourses(draft.branchId);
-    
+
     // Cargar horario si hay slots seleccionados para que el resumen de pago los muestre
     if (draft.selectedSlotIds && draft.selectedSlotIds.length > 0 && draft.instructorId) {
       void this.loadScheduleGrid(draft.instructorId, true);

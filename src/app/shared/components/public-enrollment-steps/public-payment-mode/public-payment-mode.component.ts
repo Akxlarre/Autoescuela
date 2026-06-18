@@ -28,7 +28,7 @@ export interface PublicPaymentModeOption {
           ¿Cómo quieres pagar?
         </h2>
         <p class="text-sm" style="color: var(--text-secondary);">
-          Elige la modalidad de pago. Define cuántas clases prácticas agendas ahora.
+          Siempre agendas tus 12 clases prácticas. La modalidad solo define cuánto pagas ahora.
         </p>
       </div>
 
@@ -99,11 +99,8 @@ export interface PublicPaymentModeOption {
               {{ option.description }}
             </p>
 
-            <!-- Price + sessions footer -->
-            <div
-              class="flex items-baseline justify-between pt-3"
-              style="border-top: 1px solid var(--border-subtle);"
-            >
+            <!-- Price footer -->
+            <div class="pt-3" style="border-top: 1px solid var(--border-subtle);">
               <span
                 class="font-bold leading-none"
                 style="
@@ -119,9 +116,6 @@ export interface PublicPaymentModeOption {
               >
                 {{ option.priceLabel }}
               </span>
-              <span class="text-xs font-medium" style="color: var(--text-secondary);">
-                {{ option.sessions }} clases
-              </span>
             </div>
           </button>
         }
@@ -135,8 +129,8 @@ export interface PublicPaymentModeOption {
         >
           <app-icon name="info" [size]="16" color="var(--ds-brand)" class="mt-0.5 shrink-0" />
           <p style="color: var(--text-secondary);">
-            Con el abono tu cupo y tus primeras {{ halfSessions() }} clases quedan reservadas. El
-            saldo lo pagas desde tu portal de alumno cuando quieras.
+            Con el abono reservas tu cupo y agendas igualmente tus {{ reservedSessions() }} clases.
+            El saldo lo pagas desde tu portal de alumno cuando quieras.
           </p>
         </div>
       }
@@ -173,7 +167,7 @@ export class PublicPaymentModeComponent {
 
   protected readonly selected = signal<PaymentMode | null>(null);
 
-  protected readonly halfSessions = computed(
+  protected readonly reservedSessions = computed(
     () => this.options().find((o) => o.value === 'partial')?.sessions ?? 0,
   );
 

@@ -54,7 +54,11 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       <app-section-hero
         class="bento-hero"
         [title]="facade.alumno()?.nombre ?? 'Cargando...'"
-        [contextLine]="facade.alumno() ? (facade.alumno()!.curso + ' · Matrícula ' + facade.alumno()!.matricula) : 'Obteniendo información...'"
+        [contextLine]="
+          facade.alumno()
+            ? facade.alumno()!.curso + ' · Matrícula ' + facade.alumno()!.matricula
+            : 'Obteniendo información...'
+        "
         icon="user"
         backRoute="/app/admin/alumnos"
         backLabel="Listado de Alumnos"
@@ -68,7 +72,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       @if (facade.isLoading()) {
         <!-- 1. Skeleton: Selector de Matrícula -->
         <div class="col-span-full flex w-full">
-          <div class="flex items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-2 w-full md:w-auto overflow-hidden">
+          <div
+            class="flex items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-2 w-full md:w-auto overflow-hidden"
+          >
             <app-skeleton-block variant="rect" width="120px" height="40px" borderRadius="12px" />
             <app-skeleton-block variant="rect" width="140px" height="40px" borderRadius="12px" />
           </div>
@@ -118,7 +124,12 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 </div>
               </div>
               <div class="w-full mt-4">
-                <app-skeleton-block variant="rect" width="100%" height="16px" borderRadius="9999px" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="100%"
+                  height="16px"
+                  borderRadius="9999px"
+                />
                 <div class="flex items-center justify-between mt-2">
                   <app-skeleton-block variant="text" width="40px" height="12px" />
                   <app-skeleton-block variant="text" width="80px" height="12px" />
@@ -129,8 +140,10 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         }
 
         <!-- 4. Ficha Técnica (bento-hero) -->
-        <div class="bento-card bento-hero !p-0 flex flex-col h-full w-full overflow-hidden">
-          <div class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30">
+        <div class="bento-card bento-hero p-0! flex flex-col h-full w-full overflow-hidden">
+          <div
+            class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30"
+          >
             <div class="flex items-center gap-3">
               <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="8px" />
               <div class="flex flex-col gap-1">
@@ -147,8 +160,10 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         </div>
 
         <!-- 5. Estado Financiero (bento-tall) -->
-        <div class="bento-card bento-tall !p-0 flex flex-col h-full w-full overflow-hidden">
-          <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30">
+        <div class="bento-card bento-tall p-0! flex flex-col h-full w-full overflow-hidden">
+          <div
+            class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
+          >
             <div class="flex flex-col gap-1">
               <app-skeleton-block variant="text" width="130px" height="16px" />
               <app-skeleton-block variant="text" width="100px" height="10px" />
@@ -190,11 +205,12 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- ── Vista Principal ── -->
       } @else if (facade.alumno(); as alumno) {
-        
         <!-- Selector de matrícula (solo visible cuando hay más de una) -->
         @if (facade.enrollmentSummaries().length > 1) {
           <div class="col-span-full flex w-full">
-            <div class="flex flex-nowrap md:flex-wrap items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-1 w-full md:w-auto overflow-x-auto custom-scrollbar-hidden">
+            <div
+              class="flex flex-nowrap md:flex-wrap items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-1 w-full md:w-auto overflow-x-auto custom-scrollbar-hidden"
+            >
               @for (enr of facade.enrollmentSummaries(); track enr.id) {
                 <button
                   type="button"
@@ -207,10 +223,16 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   (click)="facade.selectEnrollment(enr.id)"
                 >
                   @if (alumno.enrollmentId === enr.id) {
-                    <div class="absolute inset-0 bg-brand-muted border border-brand/20 rounded-xl shadow-sm z-0"></div>
+                    <div
+                      class="absolute inset-0 bg-brand-muted border border-brand/20 rounded-xl shadow-sm z-0"
+                    ></div>
                   }
                   <span class="relative z-10 flex items-center gap-2">
-                    <app-icon name="car" [size]="16" [class.text-brand]="alumno.enrollmentId === enr.id" />
+                    <app-icon
+                      name="car"
+                      [size]="16"
+                      [class.text-brand]="alumno.enrollmentId === enr.id"
+                    />
                     {{ enr.courseName }}{{ enr.number ? ' · #' + enr.number : '' }}
                   </span>
                 </button>
@@ -858,23 +880,27 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     () => this.facade.progresoTeorico().requeridas - this.facade.progresoTeorico().completadas,
   );
 
-  /** True cuando las 6 clases de la segunda etapa (7-12) están todas agendadas. */
+  /**
+   * True cuando las 6 clases de la segunda etapa (7-12) están todas COMPLETADAS.
+   * Desde fix-017 las 12 clases se agendan en la matrícula, así que el hito relevante
+   * de la segunda etapa es completarlas (firmadas), no agendarlas.
+   */
   private readonly puedeActualizarCarnet = computed(
     () =>
       !!this.facade.licensePdfPath() &&
-      this.facade.clasesPracticas().filter((c) => c.numero > 6 && c.sessionId !== null).length >= 6,
+      this.facade.clasesPracticas().filter((c) => c.numero > 6 && c.completada).length >= 6,
   );
 
   /**
    * True cuando el carnet ya fue emitido pero la segunda etapa (clases 7-12) aún no
-   * está completa. Se activa en cuanto al menos 1 sesión 7-12 está agendada (segunda
+   * está completa. Se activa en cuanto al menos 1 clase 7-12 está completada (segunda
    * etapa en curso) O el alumno ya completó las 6 primeras (listo para la segunda).
    */
   protected readonly necesitaAgendarSegundaEtapa = computed(() => {
     if (!this.facade.licensePdfPath()) return false;
     if (this.puedeActualizarCarnet()) return false;
     const clases = this.facade.clasesPracticas();
-    const segundaEnCurso = clases.filter((c) => c.numero > 6 && c.sessionId !== null).length > 0;
+    const segundaEnCurso = clases.filter((c) => c.numero > 6 && c.completada).length > 0;
     const primeraCompletada = this.facade.progresoPractico().completadas >= 6;
     return segundaEnCurso || primeraCompletada;
   });
@@ -882,12 +908,12 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   /** Mensaje contextual del banner según el estado real de la segunda etapa. */
   protected readonly mensajeSegundaEtapa = computed(() => {
     const clases = this.facade.clasesPracticas();
-    const agendadas = clases.filter((c) => c.numero > 6 && c.sessionId !== null).length;
-    const faltantes = 6 - agendadas;
-    if (agendadas > 0) {
-      return `Faltan ${faltantes} de las 6 clases restantes por agendar para poder actualizar el carnet con el ciclo completo.`;
+    const completadas = clases.filter((c) => c.numero > 6 && c.completada).length;
+    const faltantes = 6 - completadas;
+    if (completadas > 0) {
+      return `Faltan ${faltantes} de las 6 clases finales por completar para poder actualizar el carnet con el ciclo completo.`;
     }
-    return 'El alumno completó las primeras 6 clases. Agenda las 6 restantes para poder actualizar el carnet.';
+    return 'El alumno completó las primeras 6 clases. Faltan las 6 clases finales por completar para poder actualizar el carnet.';
   });
 
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────

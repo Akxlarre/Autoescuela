@@ -217,8 +217,6 @@ export class AssignmentComponent {
     return d.toISOString().split('T')[0];
   }
 
-  readonly ceilHalf = (n: number): number => Math.ceil(n / 2);
-
   onNext(): void {
     this.next.emit();
   }

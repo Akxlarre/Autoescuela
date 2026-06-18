@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
@@ -27,17 +28,22 @@ const NOTA_MIN = 75;
  *   selectPromocion(id) → carga cursos de esa promoción.
  *   selectCurso(id) → carga alumnos del curso y evalúa elegibilidad.
  *
- * Criterios de elegibilidad (2 condiciones bloqueantes para habilitar "Generar"):
- *   1. Asistencia teórica >= 75 %
- *   2. Pago completo (pending_balance <= 0)
- *   [Nota promedio] → informativo: se muestra en UI pero NO bloquea el certificado.
- *   [Asistencia práctica = 100 %] → flexible: confirmation prompt si < 100
+ * Criterios de elegibilidad según rol:
+ *   Admin: elegible=true siempre — sin chequeo de asistencia ni pago.
+ *   Secretaria:
+ *     1. Asistencia teórica >= 75 % (bloqueante)
+ *     2. Pago completo, pending_balance <= 0 (bloqueante)
+ *     [Nota promedio] → informativo: se muestra pero NO bloquea.
+ *     [Asistencia práctica = 100 %] → flexible: confirmation prompt si < 100.
+ *
+ * Promociones visibles: status='finished' O end_date=hoy (ambos roles).
  *
  * Filtra alumnos por BranchFacade.selectedBranchId().
  */
 @Injectable({ providedIn: 'root' })
 export class CertificacionProfesionalFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
@@ -329,12 +335,16 @@ export class CertificacionProfesionalFacade {
 
   // ── Fetch privados ──
 
-  /** Carga promociones finalizadas ordenadas por start_date DESC (más reciente primero). */
+  /**
+   * Carga promociones disponibles para certificación ordenadas por start_date DESC.
+   * Incluye: status='finished' O end_date=hoy (el cron de fin de día aún no ha corrido).
+   */
   private async fetchPromociones(): Promise<void> {
+    const today = new Date().toISOString().split('T')[0];
     const { data, error } = await this.supabase.client
       .from('professional_promotions')
-      .select('id, name, code, status, start_date')
-      .eq('status', 'finished')
+      .select('id, name, code, status, start_date, end_date')
+      .or(`status.eq.finished,and(status.eq.in_progress,end_date.eq.${today})`)
       .order('start_date', { ascending: false });
 
     if (error) {
@@ -383,10 +393,13 @@ export class CertificacionProfesionalFacade {
   /**
    * Carga alumnos de un promotion_course específico y computa elegibilidad.
    * Aplica filtro de sede de BranchFacade.
+   * Admin: elegible=true siempre (sin chequeo de asistencia ni pago).
+   * Secretaria: elegible = teoria >= 75% && pago correcto.
    */
   private async fetchAlumnos(promotionCourseId: number): Promise<void> {
     const token = ++this._alumnosFetchToken;
     const branchId = this.branchFacade.selectedBranchId();
+    const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
     // Promotion info from already-loaded _promociones (no extra query)
     const promoId = this._selectedPromocionId();
@@ -545,7 +558,7 @@ export class CertificacionProfesionalFacade {
         pagoCorrecto,
         notaPromedio,
         elegibilidad,
-        elegible: elegibilidad.teoria && elegibilidad.pago,
+        elegible: isAdmin ? true : elegibilidad.teoria && elegibilidad.pago,
         certificadoId: cert?.id ?? null,
         certificadoFolio:
           cert && hasPdf && certYear

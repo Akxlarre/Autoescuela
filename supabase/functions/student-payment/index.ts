@@ -2,16 +2,17 @@
 //
 // Edge Function: student-payment
 //
-// Maneja el pago de la segunda mitad de la matrícula Clase B para alumnos
-// autenticados. A diferencia de public-enrollment, valida el JWT del alumno
-// y opera sobre su enrollment existente (no crea uno nuevo).
+// Maneja el pago del saldo pendiente de la matrícula Clase B para alumnos
+// autenticados (segunda mitad del abono). A diferencia de public-enrollment,
+// valida el JWT del alumno y opera sobre su enrollment existente (no crea uno
+// nuevo). Desde fix-017 NO agenda clases: las 12 ya se agendaron en la matrícula.
 //
 // Acciones:
 //   - load-enrollment-status   : Estado del enrollment (saldo pendiente + instructor asignado)
-//   - load-instructor-schedule : Disponibilidad del instructor asignado
-//   - reserve-slots            : Reserva temporal de 6 slots (TTL 20 min)
-//   - release-slots            : Libera los holds al retroceder en el wizard
-//   - initiate-payment         : Crea 6 class_b_sessions 'reserved' + inicia Webpay
+//   - load-instructor-schedule : Disponibilidad del instructor asignado (legacy, sin uso desde fix-017)
+//   - reserve-slots            : Reserva temporal de slots (legacy, sin uso desde fix-017)
+//   - release-slots            : Libera los holds al retroceder en el wizard (legacy)
+//   - initiate-payment         : Registra payment_attempt + inicia Webpay (sin crear sesiones)
 //   - confirm-payment          : Confirma el pago tras retorno de Webpay (commit)
 //
 // Tarjetas de prueba Transbank (entorno integración):
@@ -178,13 +179,10 @@ Deno.serve(async (req: Request) => {
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Action: load-enrollment-status
-// Soporta tres escenarios de pago pendiente:
-//   A) payment_mode='total',   payment_status='pending'  → 12 sesiones ya agendadas,
-//      solo falta pagar.  needsSlotSelection=false.
-//   B) payment_mode='partial', payment_status='partial'  → pagó depósito, necesita
-//      seleccionar 6 horarios y pagar el resto.  needsSlotSelection=true.
-//   C) payment_mode='partial', payment_status='pending'  → nada pagado, necesita
-//      seleccionar 6 horarios y pagar el total.  needsSlotSelection=true.
+// Desde fix-017, la matrícula de Clase B agenda SIEMPRE las 12 clases, por lo que
+// el pago del saldo nunca requiere seleccionar horarios (needsSlotSelection=false).
+// Escenario único: el alumno que abonó la primera mitad paga el saldo pendiente,
+// sin agendar nada (sus 12 clases ya están agendadas desde la matrícula).
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleLoadEnrollmentStatus(supabase: any, supabaseUid: string) {
@@ -281,7 +279,9 @@ async function handleLoadEnrollmentStatus(supabase: any, supabaseUid: string) {
     .neq('status', 'cancelled');
 
   const existingSessionCount = Number(sessionCount ?? 0);
-  const needsSlotSelection = existingSessionCount < 12;
+  // Desde fix-017, la matrícula de Clase B agenda SIEMPRE las 12 clases. El pago
+  // del saldo nunca requiere seleccionar horarios — el alumno solo paga.
+  const needsSlotSelection = false;
 
   // 6. Instructor desde las sesiones existentes (service role bypasa RLS)
   let instructor: { id: number; name: string } | null = null;
@@ -627,28 +627,10 @@ async function handleConfirmPayment(supabase: any, body: any) {
     const snapshot = (attempt.draft_snapshot ?? {}) as any;
     const amountPaid = Number(snapshot.amount ?? 0);
 
-    // 3. Crear class_b_sessions como 'scheduled' directamente (pago ya confirmado)
-    // Se crean aquí y no en initiate-payment para evitar sesiones huérfanas si el
-    // alumno abandona Transbank sin completar el pago.
-    // Segunda mitad del pago parcial → siempre clases 7-12.
-    const sortedSlotIds = [...(snapshot.selectedSlotIds ?? [])].sort();
-    const sessions = sortedSlotIds.map((slotId: string, i: number) => ({
-      enrollment_id: attempt.enrollment_id,
-      instructor_id: snapshot.instructorId,
-      vehicle_id: snapshot.vehicleId ?? null,
-      scheduled_at: slotId,
-      duration_min: 45,
-      status: 'scheduled',
-      class_number: i + 7,
-    }));
-
-    if (sessions.length > 0) {
-      const { error: sessionsError } = await supabase.from('class_b_sessions').insert(sessions);
-      if (sessionsError) {
-        console.error('sessions insert error on confirm:', sessionsError);
-        return errorResponse('Error al crear sesiones: ' + sessionsError.message, 500);
-      }
-    }
+    // 3. NO se crean class_b_sessions aquí. Desde fix-017, la matrícula de Clase B
+    // agenda SIEMPRE las 12 clases (aunque el alumno abone solo la primera mitad),
+    // por lo que las sesiones ya existen. El pago del saldo solo registra el pago;
+    // crear sesiones aquí duplicaría las clases ya agendadas.
 
     // 4. Registrar pago — el trigger trg_update_balance recalcula totales del enrollment
     await supabase.from('payments').insert({

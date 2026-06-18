@@ -692,7 +692,7 @@ async function handleSubmitClaseB(supabase: any, body: any) {
         course,
         branch,
         new Date().toISOString(),
-        numData ?? null
+        numData ?? null,
       );
     }
 
@@ -705,6 +705,14 @@ async function handleSubmitClaseB(supabase: any, body: any) {
       enrollmentNumber: numData ?? null,
     });
   } catch (err) {
+    if (err instanceof Error && err.message === 'EMAIL_TAKEN') {
+      return jsonResponse({
+        success: false,
+        error: 'EMAIL_TAKEN',
+        message:
+          'Este correo ya está registrado por otra persona. Por favor usa un correo diferente.',
+      });
+    }
     console.error('submit-clase-b error:', err);
     if (sessionToken) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -825,6 +833,14 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
         'Tu pre-inscripción y test psicológico han sido recibidos. Un ejecutivo se pondrá en contacto contigo.',
     });
   } catch (err) {
+    if (err instanceof Error && err.message === 'EMAIL_TAKEN') {
+      return jsonResponse({
+        success: false,
+        error: 'EMAIL_TAKEN',
+        message:
+          'Este correo ya está registrado por otra persona. Por favor usa un correo diferente.',
+      });
+    }
     console.error('submit-pre-inscription error:', err);
     return errorResponse('Error interno al procesar pre-inscripción', 500);
   }
@@ -1206,7 +1222,9 @@ async function handleConfirmPayment(supabase: any, body: any) {
         const [{ data: course }, { data: branch }] = await Promise.all([
           supabase
             .from('courses')
-            .select('name, license_class, duration_weeks, practical_hours, theory_hours, base_price')
+            .select(
+              'name, license_class, duration_weeks, practical_hours, theory_hours, base_price',
+            )
             .eq('id', snapshot.courseId)
             .single(),
           supabase.from('branches').select('name, address').eq('id', snapshot.branchId).single(),
@@ -1219,7 +1237,7 @@ async function handleConfirmPayment(supabase: any, body: any) {
             course,
             branch,
             new Date().toISOString(),
-            enrollmentNumber
+            enrollmentNumber,
           );
         }
       }
@@ -1227,6 +1245,21 @@ async function handleConfirmPayment(supabase: any, body: any) {
       void inviteStudentToAuth(supabase, userId, snapshot.branchId);
     } catch (commitErr) {
       const msg = commitErr instanceof Error ? commitErr.message : String(commitErr);
+      // Email conflict post-payment: another user registered the same email between
+      // the personal-data step and payment confirmation (race condition).
+      if (msg === 'EMAIL_TAKEN') {
+        console.error('[confirm-payment] EMAIL_TAKEN post-payment — requires manual review', {
+          attemptId: attempt.id,
+          sessionToken: attempt.session_token,
+        });
+        return jsonResponse({
+          success: false,
+          error: 'EMAIL_TAKEN',
+          requiresSupport: true,
+          message:
+            'El correo ingresado ya fue registrado por otra persona mientras procesabas tu pago. El equipo ha sido notificado para resolver esto. Contacta con la autoescuela.',
+        });
+      }
       // ALERTA CRÍTICA: el pago fue cobrado pero la matrícula no pudo crearse.
       // El snapshot contiene todos los datos para recuperación manual.
       console.error('[confirm-payment] POST-COMMIT FAILURE — PAGO COBRADO SIN MATRÍCULA', {
@@ -1328,9 +1361,7 @@ async function handleGetCarnetPreviewUrl(supabase: any, body: any) {
     return errorResponse('Path inválido o no pertenece a esta sesión');
   }
 
-  const { data, error } = await supabase.storage
-    .from('documents')
-    .createSignedUrl(path, 300);
+  const { data, error } = await supabase.storage.from('documents').createSignedUrl(path, 300);
 
   if (error) {
     console.error('createSignedUrl error:', error);
@@ -1414,7 +1445,7 @@ async function moveCarnetPhoto(
 }
 
 import { loadPngFromBytes } from '../_shared/pdf-utils.ts';
-import { decodeBase64 } from "jsr:@std/encoding/base64";
+import { decodeBase64 } from 'jsr:@std/encoding/base64';
 
 /**
  * Genera el contrato final en PDF (sellado con la firma digital en Base64),
@@ -1501,7 +1532,10 @@ async function generateAndSaveFinalContract(
     );
 
     if (dbError) {
-      console.error('generateAndSaveFinalContract: digital_contracts upsert error:', dbError.message);
+      console.error(
+        'generateAndSaveFinalContract: digital_contracts upsert error:',
+        dbError.message,
+      );
     }
   } catch (err) {
     console.error('generateAndSaveFinalContract: unexpected error:', err);
@@ -1735,12 +1769,51 @@ async function findOrCreateUser(supabase: any, personalData: any, branchId: numb
 
   const { data: existingUser } = await supabase
     .from('users')
-    .select('id')
+    .select('id, email, supabase_uid')
     .eq('rut', rut)
     .limit(1)
     .maybeSingle();
 
-  if (existingUser) return existingUser.id;
+  if (existingUser) {
+    // Update personal data — the student may re-enroll with updated contact info.
+    const emailChanged = existingUser.email?.toLowerCase().trim() !== email.toLowerCase().trim();
+
+    await supabase
+      .from('users')
+      .update({
+        first_names: firstNames,
+        paternal_last_name: paternalLastName,
+        maternal_last_name: maternalLastName ?? '',
+        email,
+        phone: phone ?? null,
+      })
+      .eq('id', existingUser.id);
+
+    // Sync email to auth.users only if it changed and the user has an auth account.
+    if (emailChanged && existingUser.supabase_uid) {
+      const { error: authErr } = await supabase.auth.admin.updateUserById(
+        existingUser.supabase_uid,
+        { email },
+      );
+      if (authErr) {
+        if (authErr.message?.toLowerCase().includes('already registered')) {
+          throw new Error('EMAIL_TAKEN');
+        }
+        // Non-fatal: auth sync failed but enrollment can still proceed with old auth email.
+        console.warn('[findOrCreateUser] auth email sync failed:', authErr.message);
+      }
+    }
+
+    return existingUser.id;
+  }
+
+  // Pre-check: email must not belong to a different user before attempting INSERT.
+  const { data: emailOwner } = await supabase
+    .from('users')
+    .select('id')
+    .eq('email', email)
+    .maybeSingle();
+  if (emailOwner) throw new Error('EMAIL_TAKEN');
 
   const { data: studentRole } = await supabase
     .from('roles')
@@ -1765,6 +1838,10 @@ async function findOrCreateUser(supabase: any, personalData: any, branchId: numb
     .single();
 
   if (error) {
+    // Race condition: another request inserted the same email between pre-check and INSERT.
+    if (error.code === '23505' && error.message.includes('email')) {
+      throw new Error('EMAIL_TAKEN');
+    }
     console.error('user creation error:', error);
     throw new Error('Failed to create user: ' + error.message);
   }

@@ -58,19 +58,6 @@ export interface AgendaWeekData {
   kpis: AgendaWeekKpis;
 }
 
-// ─── Alumno agendable (tiene clases restantes sin asignar) ─────────────────
-
-export interface AgendableStudent {
-  enrollmentId: number;
-  studentName: string;
-  courseName: string;
-  totalSessions: number;
-  scheduledSessions: number;
-  remainingSessions: number;
-  /** Número de clase a asignar (scheduledSessions + 1). Solo para Clase B depósito. */
-  nextClassNumber: number;
-}
-
 // ─── Filtro de instructor ──────────────────────────────────────────────────
 
 export interface AgendaInstructorFilter {
