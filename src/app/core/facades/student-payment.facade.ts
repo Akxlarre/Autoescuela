@@ -1,28 +1,25 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
-import type { ScheduleGrid, TimeSlot } from '@core/models/ui/enrollment-assignment.model';
 import type {
   StudentPaymentEnrollmentInfo,
   StudentPaymentHistoryItem,
-  StudentPaymentInstructor,
   StudentPaymentResult,
   StudentPaymentStatus,
   StudentPaymentStep,
 } from '@core/models/ui/student-payment.model';
 
 /**
- * StudentPaymentFacade — Orquesta el wizard de pago de segunda mitad (Clase B).
+ * StudentPaymentFacade — Orquesta el pago del saldo pendiente de matrícula (Clase B).
+ *
+ * Desde fix-017, la matrícula de Clase B agenda SIEMPRE las 12 clases (aunque el
+ * alumno abone solo la primera mitad), por lo que este flujo es exclusivamente de
+ * pago: el alumno NO selecciona horarios. Sus clases ya quedaron agendadas durante
+ * la matrícula.
  *
  * Responsabilidades:
  * - Cargar el estado del enrollment con saldo pendiente del alumno autenticado
- * - Gestionar la selección de 6 horarios con el instructor asignado
- * - Coordinar la reserva de slots y el inicio del pago Webpay
- * - Confirmar el pago tras el retorno de Transbank
- *
- * El alumno NO puede cambiar de instructor en este flujo: el instructor es el
- * mismo que tuvo en las primeras 6 clases. Si quiere cambiarlo debe hacerlo
- * con la secretaria/admin.
+ * - Iniciar el pago Webpay del saldo y confirmarlo tras el retorno de Transbank
  */
 @Injectable({ providedIn: 'root' })
 export class StudentPaymentFacade {
@@ -36,17 +33,14 @@ export class StudentPaymentFacade {
   private readonly _step = signal<StudentPaymentStep>(1);
   private readonly _status = signal<StudentPaymentStatus | null>(null);
   private readonly _payments = signal<StudentPaymentHistoryItem[]>([]);
-  private readonly _scheduleGrid = signal<ScheduleGrid | null>(null);
-  private readonly _selectedSlotIds = signal<string[]>([]);
   private readonly _isLoading = signal<boolean>(false);
   private readonly _isSubmitting = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
 
   /**
-   * Token UUID de sesión para idempotencia de pagos.
+   * Token UUID de sesión para idempotencia de pagos (payment_attempts).
    * Persistido en localStorage para que, si el usuario recarga o vuelve a la
-   * página tras un intento abandonado, sus slot_holds previos sean reconocidos
-   * como propios y los slots pre-seleccionados se restauren automáticamente.
+   * página tras un intento abandonado, el intento previo sea reconocido como propio.
    */
   private static readonly TOKEN_KEY = 'spt_session_token';
 
@@ -71,31 +65,15 @@ export class StudentPaymentFacade {
   readonly step = this._step.asReadonly();
   readonly status = this._status.asReadonly();
   readonly payments = this._payments.asReadonly();
-  readonly scheduleGrid = this._scheduleGrid.asReadonly();
-  readonly selectedSlotIds = this._selectedSlotIds.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isSubmitting = this._isSubmitting.asReadonly();
   readonly error = this._error.asReadonly();
 
   // ─── Computed ───
 
-  readonly selectedCount = computed(() => this._selectedSlotIds().length);
-  readonly requiredCount = 6;
-
   readonly enrollment = computed<StudentPaymentEnrollmentInfo | null>(
     () => this._status()?.enrollment ?? null,
   );
-
-  readonly instructor = computed<StudentPaymentInstructor | null>(
-    () => this._status()?.instructor ?? null,
-  );
-
-  readonly selectionComplete = computed(
-    () => this._selectedSlotIds().length === this.requiredCount,
-  );
-
-  /** false → alumno ya tiene 12 clases agendadas, solo debe pagar (escenario A). */
-  readonly needsSlotSelection = computed(() => this._status()?.needsSlotSelection ?? true);
 
   /** true → alumno Clase B (flujo Webpay habilitado); false → Profesional (pago presencial). */
   readonly isClassB = computed(() => this._status()?.enrollment?.licenseGroup === 'class_b');
@@ -142,170 +120,24 @@ export class StudentPaymentFacade {
     }
   }
 
-  /** Avanza directamente al step 3 sin pasar por selección de horarios.
-   *  Usado cuando el alumno ya tiene las 12 clases agendadas (escenario A). */
+  /** Avanza al step de pago (las 12 clases ya están agendadas, solo falta pagar). */
   goDirectToConfirm(): void {
     this._step.set(3);
   }
 
-  /** Avanza al step 2 y carga la grilla de horarios del instructor asignado. */
-  async goToSchedule(): Promise<void> {
-    const instructorId = this._status()?.instructor?.id;
-    if (!instructorId) return;
-
-    this._step.set(2);
-    this._isLoading.set(true);
-    this._error.set(null);
-
-    try {
-      const { data, error } = await this.supabase.client.functions.invoke('student-payment', {
-        body: {
-          action: 'load-instructor-schedule',
-          instructorId,
-          sessionToken: this._sessionToken(),
-        },
-      });
-
-      if (error) throw error;
-      const response = data as { grid: ScheduleGrid; myHeldSlotIds?: string[] };
-      this._scheduleGrid.set(response.grid);
-      // Restaurar selección previa si el usuario tenía holds activos de este token
-      if (response.myHeldSlotIds?.length) {
-        this._selectedSlotIds.set(response.myHeldSlotIds);
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error al cargar los horarios';
-      this._error.set(msg);
-    } finally {
-      this._isLoading.set(false);
-    }
-  }
-
-  /** Selecciona o deselecciona un slot. Máximo 1 por día, máximo 6 en total. */
-  toggleSlot(slotId: string): void {
-    const grid = this._scheduleGrid();
-    const current = this._selectedSlotIds();
-    if (!grid) return;
-
-    const idx = current.indexOf(slotId);
-    if (idx > -1) {
-      // Deseleccionar
-      this._selectedSlotIds.set(current.filter((_, i) => i !== idx));
-      return;
-    }
-
-    if (current.length >= this.requiredCount) return;
-
-    // Máximo 1 clase por día
-    const slotDate = grid.slots.find((s: TimeSlot) => s.id === slotId)?.date;
-    if (slotDate) {
-      const hasSameDay = current.some(
-        (id) => grid.slots.find((s: TimeSlot) => s.id === id)?.date === slotDate,
-      );
-      if (hasSameDay) return;
-    }
-
-    this._selectedSlotIds.set([...current, slotId]);
-  }
-
-  /** Determina si un slot puede ser seleccionado (disponible, sin mismo día ya elegido). */
-  isSlotSelectable(slotId: string): boolean {
-    const selected = this._selectedSlotIds();
-    const grid = this._scheduleGrid();
-    if (!grid) return false;
-    if (selected.includes(slotId)) return true;
-    if (selected.length >= this.requiredCount) return false;
-
-    const slotDate = grid.slots.find((s: TimeSlot) => s.id === slotId)?.date;
-    if (slotDate) {
-      const hasSameDay = selected.some(
-        (id) => grid.slots.find((s: TimeSlot) => s.id === id)?.date === slotDate,
-      );
-      if (hasSameDay) return false;
-    }
-    return true;
-  }
-
-  /**
-   * Reserva los slots seleccionados y avanza al step 3.
-   * Si hay conflictos, recarga la grilla y muestra mensaje de error.
-   */
-  async reserveSlotsAndAdvance(): Promise<void> {
-    const instructorId = this._status()?.instructor?.id;
-    const slotIds = this._selectedSlotIds();
-
-    if (!instructorId || slotIds.length !== this.requiredCount) return;
-
-    this._isSubmitting.set(true);
-    this._error.set(null);
-
-    try {
-      const { data, error } = await this.supabase.client.functions.invoke('student-payment', {
-        body: {
-          action: 'reserve-slots',
-          sessionToken: this._sessionToken(),
-          instructorId,
-          slotIds,
-        },
-      });
-
-      if (error) throw error;
-
-      const result = data as { success: boolean; conflictingSlots?: string[] };
-
-      if (!result.success) {
-        this._error.set('Algunos horarios ya no están disponibles. Por favor, selecciona otros.');
-        this._selectedSlotIds.set([]);
-        // Recargar grilla silenciosamente para reflejar slots ocupados
-        void this.reloadScheduleSilently();
-        return;
-      }
-
-      this._step.set(3);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error al reservar los horarios';
-      this._error.set(msg);
-    } finally {
-      this._isSubmitting.set(false);
-    }
-  }
-
-  /** Vuelve al step 2 liberando los holds actuales. */
-  async backToSchedule(): Promise<void> {
-    // Fire-and-forget — no bloquear la navegación si falla
-    void this.supabase.client.functions
-      .invoke('student-payment', {
-        body: { action: 'release-slots', sessionToken: this._sessionToken() },
-      })
-      .catch(() => {});
-
-    this._step.set(2);
-  }
-
-  /** Vuelve al step 1 desde el step 2, liberando los holds. */
-  async backToSummary(): Promise<void> {
-    void this.supabase.client.functions
-      .invoke('student-payment', {
-        body: { action: 'release-slots', sessionToken: this._sessionToken() },
-      })
-      .catch(() => {});
-
-    this._selectedSlotIds.set([]);
+  /** Vuelve al step 1 (resumen) desde el step de pago. */
+  backToSummary(): void {
     this._step.set(1);
   }
 
   /**
-   * Inicia el pago Webpay Plus. Crea las class_b_sessions 'reserved',
-   * registra el payment_attempt e inicia la transacción Transbank.
-   * Si Webpay retorna una URL, redirige al navegador.
+   * Inicia el pago Webpay Plus del saldo pendiente. Registra el payment_attempt
+   * e inicia la transacción Transbank. NO crea ni agenda clases (ya existen).
+   * Si Webpay retorna una URL, redirige al navegador vía POST.
    */
   async initiatePayment(): Promise<void> {
     const enrollment = this._status()?.enrollment;
-    const instructor = this._status()?.instructor;
-
     if (!enrollment) return;
-    // instructor solo es requerido cuando hay slots que seleccionar (escenarios B y C)
-    if (this.needsSlotSelection() && !instructor) return;
 
     this._isSubmitting.set(true);
     this._error.set(null);
@@ -315,8 +147,6 @@ export class StudentPaymentFacade {
         body: {
           action: 'initiate-payment',
           enrollmentId: enrollment.id,
-          instructorId: instructor?.id ?? null,
-          selectedSlotIds: this._selectedSlotIds(),
           sessionToken: this._sessionToken(),
         },
       });
@@ -377,25 +207,5 @@ export class StudentPaymentFacade {
 
   resetError(): void {
     this._error.set(null);
-  }
-
-  // ─── Helpers privados ───
-
-  private async reloadScheduleSilently(): Promise<void> {
-    const instructorId = this._status()?.instructor?.id;
-    if (!instructorId) return;
-
-    try {
-      const { data } = await this.supabase.client.functions.invoke('student-payment', {
-        body: {
-          action: 'load-instructor-schedule',
-          instructorId,
-          sessionToken: this._sessionToken(),
-        },
-      });
-      if (data?.grid) this._scheduleGrid.set(data.grid as ScheduleGrid);
-    } catch {
-      // Fail silencioso — la grilla anterior sigue visible
-    }
   }
 }

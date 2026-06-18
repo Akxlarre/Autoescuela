@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
@@ -13,9 +14,9 @@ import type {
 /**
  * CertificacionClaseBFacade — Gestión de certificados para alumnos Clase B.
  *
- * Query: enrollments (license_group='class_b', status='active'|'completed',
- * certificate_enabled=true). El trigger trg_enable_certificate_b activa el flag
- * al completar la clase práctica #12.
+ * Query: enrollments (license_group='class_b', status='active'|'completed').
+ * Admin: sin filtro certificate_enabled — puede certificar cualquier alumno activo/completado.
+ * Secretaria: solo alumnos con certificate_enabled=true (trigger al completar clase #12).
  * JOIN v_student_progress_b para pct_theory_attendance.
  * JOIN certificates + certificate_issuance_log para estado y log.
  *
@@ -24,6 +25,7 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class CertificacionClaseBFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
@@ -341,8 +343,11 @@ export class CertificacionClaseBFacade {
 
   private async fetchAlumnos(): Promise<void> {
     const branchId = this.branchFacade.selectedBranchId();
+    const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
-    // Step 1: Enrollments habilitados para certificado (trigger ya validó 12 prácticas).
+    // Step 1: Enrollments para certificado.
+    // Admin: todos los activos/completados (sin restricción de certificate_enabled).
+    // Secretaria: solo los habilitados por el trigger (12 prácticas completadas).
     let enrollmentQuery = this.supabase.client
       .from('enrollments')
       .select(
@@ -358,9 +363,12 @@ export class CertificacionClaseBFacade {
         certificates(id, folio, status, created_at)
       `,
       )
-      .eq('certificate_enabled', true)
       .eq('license_group', 'class_b')
       .in('status', ['active', 'completed']);
+
+    if (!isAdmin) {
+      enrollmentQuery = enrollmentQuery.eq('certificate_enabled', true);
+    }
 
     if (branchId !== null) {
       enrollmentQuery = enrollmentQuery.eq('branch_id', branchId);

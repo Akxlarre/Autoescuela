@@ -217,7 +217,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     const totalSessions = selectedCourse?.practicalHours
       ? Math.round((selectedCourse.practicalHours * 60) / SESSION_MIN)
       : 12; // fallback hasta que el curso esté en BD
-    const requiredCount = paymentMode === 'partial' ? Math.ceil(totalSessions / 2) : totalSessions;
+    // Se agendan SIEMPRE las 12 clases, aunque el alumno abone solo la primera mitad.
+    const requiredCount = totalSessions;
 
     return {
       view:
@@ -499,9 +500,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     });
     if (!confirmed) return;
 
+    this._viewMode.set('loading');
     await this.enrollment.discardDraft(enrollmentId);
     if (this.enrollment.activeDrafts().length === 0) {
       await this.startFreshWizard();
+    } else {
+      this._viewMode.set('draft-list');
     }
   }
 

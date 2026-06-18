@@ -3,7 +3,6 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '
 import { AgendaSemanalComponent } from '@shared/components/agenda-semanal/agenda-semanal.component';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { AgendaScheduleDrawerComponent } from '@features/agenda/agenda-schedule-drawer.component';
 import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
 import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
@@ -43,11 +42,14 @@ export class SecretariaAgendaComponent implements OnInit {
   onSlotClick(slot: AgendaSlot): void {
     if (!slot) return;
     this.facade.setSelectedSlot(slot);
-    if (slot.status === 'available') {
-      this.drawer.push(AgendaScheduleDrawerComponent, 'Agendar clase', 'calendar-days');
-    } else {
-      const title = slot.studentName ? `Clase: ${slot.studentName}` : 'Detalle de clase';
-      this.drawer.push(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
-    }
+    // Desde fix-017 ya no se agendan clases desde la Agenda. Todo click abre el
+    // detalle de solo lectura: horario ocupado (alumno) o disponible (instructor/vehículo).
+    const title =
+      slot.status === 'available'
+        ? 'Horario disponible'
+        : slot.studentName
+          ? `Clase: ${slot.studentName}`
+          : 'Detalle de clase';
+    this.drawer.push(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
   }
 }

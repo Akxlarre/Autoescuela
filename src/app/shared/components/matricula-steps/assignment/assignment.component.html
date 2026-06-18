@@ -52,7 +52,7 @@
                   >
                 </div>
                 <p class="text-xs text-text-secondary leading-relaxed">
-                  Pago completo — reservas las
+                  Se reservan las
                   <strong class="text-text-primary">{{ data().totalSessions }} clases</strong>
                   prácticas desde hoy.
                 </p>
@@ -80,11 +80,11 @@
                   >
                 </div>
                 <p class="text-xs text-text-secondary leading-relaxed">
-                  Abono inicial — reservas las primeras
-                  <strong class="text-text-primary"
-                    >{{ ceilHalf(data().totalSessions) }} clases</strong
-                  >
-                  (50% del curso).
+                  Se paga el
+                  <strong class="text-text-primary">50%</strong>
+                  ahora y se agendan igualmente las
+                  <strong class="text-text-primary">{{ data().totalSessions }} clases</strong>. El
+                  saldo se paga desde el portal del alumno o presencialmente.
                 </p>
               </label>
             </div>
@@ -390,9 +390,7 @@
                 [ariaHidden]="true"
               />
               <div>
-                <p class="text-sm font-bold text-warning">
-                  Matrícula con Convalidación Simultánea
-                </p>
+                <p class="text-sm font-bold text-warning">Matrícula con Convalidación Simultánea</p>
                 <p class="text-xs text-text-secondary leading-relaxed mt-0.5">
                   Este alumno se matricula convalidando
                   <strong class="text-text-primary"
@@ -494,9 +492,7 @@
     </div>
 
     <!-- Acciones Inferiores -->
-    <div
-      class="p-4 sm:p-6 bg-base border-t border-border-subtle flex items-center justify-between"
-    >
+    <div class="p-4 sm:p-6 bg-base border-t border-border-subtle flex items-center justify-between">
       <button
         type="button"
         (click)="onBack()"

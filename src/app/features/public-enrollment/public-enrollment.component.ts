@@ -417,10 +417,10 @@ export class PublicEnrollmentComponent {
     const sedeParam = this.route.snapshot.queryParamMap.get('sede');
     const courseIdParam = this.route.snapshot.queryParamMap.get('courseId');
     const resumeParam = this.route.snapshot.queryParamMap.get('resume');
-    
+
     const parsedBranch = branchIdParam ? parseInt(branchIdParam, 10) : null;
     const identifier = sedeParam ?? (Number.isFinite(parsedBranch) ? parsedBranch : null);
-    
+
     const parsedCourse = courseIdParam ? parseInt(courseIdParam, 10) : null;
     this._urlBranchIdentifier.set(identifier);
     this._urlCourseId = Number.isFinite(parsedCourse) ? parsedCourse : null;
@@ -431,10 +431,11 @@ export class PublicEnrollmentComponent {
         const draftMeta = this.facade.draftMeta();
         if (draftMeta && identifier !== null) {
           const branches = this.facade.branches();
-          const draftBranchId = branches.find(b => b.slug === draftMeta.branchSlug)?.id;
-          const targetBranchId = typeof identifier === 'number' 
-            ? identifier 
-            : branches.find(b => b.slug === identifier)?.id;
+          const draftBranchId = branches.find((b) => b.slug === draftMeta.branchSlug)?.id;
+          const targetBranchId =
+            typeof identifier === 'number'
+              ? identifier
+              : branches.find((b) => b.slug === identifier)?.id;
 
           if (draftBranchId && targetBranchId && draftBranchId !== targetBranchId) {
             this.facade.discardDraft();
@@ -651,7 +652,12 @@ export class PublicEnrollmentComponent {
     const minor = birthDateStr ? (calcAge(birthDateStr) ?? 99) < 18 : false;
     return {
       studentSummary: this.facade.studentSummary() ?? EMPTY_SUMMARY,
-      contractGeneration: { status: 'pending', pdfUrl: null, generatedAt: null, errorMessage: null },
+      contractGeneration: {
+        status: 'pending',
+        pdfUrl: null,
+        generatedAt: null,
+        errorMessage: null,
+      },
       signedContract: null,
       isMinor: minor,
       canAdvance: minor || !!this.facade.contractSignatureBase64(),
@@ -665,8 +671,8 @@ export class PublicEnrollmentComponent {
     return [
       {
         value: 'total',
-        label: 'Pago total',
-        description: 'Paga el valor completo y agenda todas tus clases prácticas.',
+        label: 'Pago completo',
+        description: `Pagas el valor completo hoy y agendas tus ${total} clases prácticas.`,
         icon: 'credit-card',
         price: fullPrice,
         priceLabel: formatCLP(fullPrice),
@@ -675,12 +681,12 @@ export class PublicEnrollmentComponent {
       },
       {
         value: 'partial',
-        label: 'Abono 50%',
-        description: 'Paga la mitad y agenda la primera mitad de tus clases. El saldo después.',
+        label: 'Abono inicial',
+        description: `Pagas el 50% ahora y agendas igualmente tus ${total} clases. El saldo lo completas cuando quieras desde tu portal o presencialmente.`,
         icon: 'wallet',
         price: halfPrice,
         priceLabel: formatCLP(halfPrice),
-        sessions: Math.ceil(total / 2),
+        sessions: total,
         badge: null,
       },
     ];

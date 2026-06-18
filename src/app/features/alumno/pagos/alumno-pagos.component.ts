@@ -49,7 +49,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
       <!-- ── Cabecera ── -->
       <app-section-hero
         class="bento-hero"
-        title="Pagos y Clases"
+        title="Pagos"
         [subtitle]="heroSubtitle()"
         [contextLine]="heroContextLine()"
         icon="wallet"
@@ -214,9 +214,7 @@ export class AlumnoPagosComponent implements OnInit {
         ? 'Regulariza tu pago directamente en la secretaría'
         : 'Resumen de pagos de tu matrícula profesional';
     }
-    return this.facade.needsSlotSelection()
-      ? 'Paga tu saldo pendiente y agenda tus clases restantes'
-      : 'Paga tu saldo pendiente para completar tu matrícula';
+    return 'Paga tu saldo pendiente para completar tu matrícula';
   });
 
   protected readonly heroContextLine = computed(() => {
@@ -233,9 +231,7 @@ export class AlumnoPagosComponent implements OnInit {
       this.facade.status()?.hasPaymentPending &&
       this.facade.isClassB()
     ) {
-      const label = this.facade.needsSlotSelection()
-        ? `Pagar ${this.clp(enroll.pendingBalance)} y agendar clases`
-        : `Pagar ${this.clp(enroll.pendingBalance)}`;
+      const label = `Pagar ${this.clp(enroll.pendingBalance)}`;
       return [{ id: 'pay', label, icon: 'credit-card', primary: true }];
     }
     return [];

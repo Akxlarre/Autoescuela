@@ -9,12 +9,10 @@ import type {
   AgendaSlot,
   AgendaSlotStatus,
   AgendaDayColumn,
-  AgendableStudent,
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 
 import { toISODate, to24hTime, buildDayLabel } from '@core/utils/date.utils';
-import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -84,8 +82,7 @@ interface RawVehicle {
 
 @Injectable({ providedIn: 'root' })
 export class AgendaFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -99,12 +96,7 @@ private readonly supabase = inject(SupabaseService);
   private readonly _instructors = signal<AgendaInstructorFilter[]>([]);
   private readonly _selectedInstructorId = signal<number | null>(null);
 
-  private readonly _agendableStudents = signal<AgendableStudent[]>([]);
-  private readonly _studentsLoading = signal<boolean>(false);
-
   private readonly _selectedSlot = signal<AgendaSlot | null>(null);
-  private readonly _availableSlotsAtTime = signal<AgendaSlot[]>([]);
-  private readonly _isScheduling = signal<boolean>(false);
 
   /** Mapas de lookup para enriquecer slots con nombres (cargados en initialize) */
   private instructorMap = new Map<number, string>();
@@ -125,11 +117,7 @@ private readonly supabase = inject(SupabaseService);
   readonly error = this._error.asReadonly();
   readonly instructors = this._instructors.asReadonly();
   readonly selectedInstructorId = this._selectedInstructorId.asReadonly();
-  readonly agendableStudents = this._agendableStudents.asReadonly();
-  readonly studentsLoading = this._studentsLoading.asReadonly();
   readonly selectedSlot = this._selectedSlot.asReadonly();
-  readonly availableSlotsAtTime = this._availableSlotsAtTime.asReadonly();
-  readonly isScheduling = this._isScheduling.asReadonly();
 
   readonly kpis = computed(() => this._weekData()?.kpis ?? null);
   readonly timeRows = computed(() => this._weekData()?.timeRows ?? []);
@@ -264,121 +252,8 @@ private readonly supabase = inject(SupabaseService);
     this._selectedSlot.set(null);
   }
 
-  setSelectedSlot(slot: AgendaSlot | null, slotsAtTime: AgendaSlot[] = []): void {
+  setSelectedSlot(slot: AgendaSlot | null): void {
     this._selectedSlot.set(slot);
-    this._availableSlotsAtTime.set(slotsAtTime);
-  }
-
-  async loadAgendableStudents(): Promise<void> {
-    const branchId = this.getActiveBranchId();
-
-    this._studentsLoading.set(true);
-    try {
-      let query = this.supabase.client
-        .from('enrollments')
-        .select(
-          `
-          id,
-          payment_mode,
-          license_group,
-          courses!inner ( name, practical_hours ),
-          students!inner (
-            users!inner ( first_names, paternal_last_name )
-          ),
-          class_b_sessions ( id, status )
-        `,
-        )
-        .eq('status', 'active')
-        .eq('license_group', 'class_b')
-        .eq('payment_mode', 'partial');
-
-      if (branchId !== null) query = query.eq('branch_id', branchId);
-
-      const { data, error } = await query;
-
-      if (error || !data) return;
-
-      const students: AgendableStudent[] = [];
-
-      for (const enrollment of data as any[]) {
-        const practicalHours = enrollment.courses?.practical_hours ?? 0;
-        if (!practicalHours) continue;
-
-        const totalSessions = Math.round((practicalHours * 60) / 45);
-        const activeSessions: any[] = enrollment.class_b_sessions ?? [];
-        const scheduledSessions = activeSessions.filter(
-          (s) => s.status !== 'cancelled' && s.status !== 'no_show',
-        ).length;
-        const remainingSessions = Math.max(0, totalSessions - scheduledSessions);
-
-        // Solo mostrar alumnos con al menos su primera mitad asignada y clases finales pendientes
-        const halfSessions = Math.ceil(totalSessions / 2);
-        if (scheduledSessions < halfSessions || remainingSessions <= 0) continue;
-
-        const user = enrollment.students?.users;
-        const studentName = user ? `${user.first_names} ${user.paternal_last_name}` : 'Sin nombre';
-
-        students.push({
-          enrollmentId: enrollment.id,
-          studentName,
-          courseName: enrollment.courses?.name ?? '',
-          totalSessions,
-          scheduledSessions,
-          remainingSessions,
-          nextClassNumber: scheduledSessions + 1,
-        });
-      }
-
-      this._agendableStudents.set(
-        students.sort((a, b) => a.studentName.localeCompare(b.studentName)),
-      );
-    } finally {
-      this._studentsLoading.set(false);
-    }
-  }
-
-  async scheduleClass(
-    enrollmentId: number,
-    slotId: string,
-    instructorId: number,
-    vehicleId: number,
-    classNumber: number,
-  ): Promise<boolean> {
-    this._isScheduling.set(true);
-    try {
-      const { error } = await this.supabase.client.from('class_b_sessions').insert({
-        enrollment_id: enrollmentId,
-        instructor_id: instructorId,
-        vehicle_id: vehicleId,
-        scheduled_at: slotId,
-        class_number: classNumber,
-        status: 'scheduled',
-        registered_by: this.auth.currentUser()?.dbId ?? null,
-      });
-
-      if (error) {
-        this._error.set('Error al agendar la clase: ' + this.sanitizer.sanitize(error).message);
-        return false;
-      }
-
-      this._selectedSlot.set(null);
-      await this.refreshSilently();
-      await this.loadAgendableStudents();
-      return true;
-    } finally {
-      this._isScheduling.set(false);
-    }
-  }
-
-  async cancelClass(sessionId: number): Promise<void> {
-    const { error } = await this.supabase.client
-      .from('class_b_sessions')
-      .update({ status: 'cancelled' })
-      .eq('id', sessionId);
-
-    if (!error) {
-      await this.refreshSilently();
-    }
   }
 
   // ── Realtime ─────────────────────────────────────────────────────────────

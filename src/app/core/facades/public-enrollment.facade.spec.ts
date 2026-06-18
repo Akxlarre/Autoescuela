@@ -586,6 +586,29 @@ describe('PublicEnrollmentFacade', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // requiredSlotCount — desacople agendamiento/pago (fix-017)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('requiredSlotCount (fix-017)', () => {
+    it('agenda SIEMPRE el total de clases, independiente de la modalidad de pago', async () => {
+      facade.selectFlowType('class_b');
+      facade.confirmLicenseType();
+      await facade.savePersonalData(samplePersonalData);
+
+      facade.setPaymentMode('total');
+      const totalMode = facade.requiredSlotCount();
+
+      facade.setPaymentMode('partial');
+      const partialMode = facade.requiredSlotCount();
+
+      // El abono 50% ya NO reduce a la mitad las clases a agendar.
+      expect(partialMode).toBe(totalMode);
+      expect(partialMode).toBe(facade.basePracticalSlotCount());
+      expect(partialMode).toBeGreaterThan(0);
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // clearError
   // ══════════════════════════════════════════════════════════════════════════════
 
