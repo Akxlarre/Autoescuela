@@ -733,20 +733,32 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 async function handleSubmitPreInscription(supabase: any, body: any) {
-  const { branchId, personalData, courseType, convalidatesSimultaneously, psychTestAnswers } = body;
+  const {
+    branchId,
+    personalData,
+    courseType,
+    convalidatesSimultaneously,
+    psychTestAnswers,
+    skipPsychTest,
+  } = body;
 
   if (!branchId || !personalData || !courseType) {
     return errorResponse('Missing required fields for pre-inscription');
   }
 
-  // Validar respuestas del test psicológico (81 booleanos obligatorios, ninguno null)
-  if (!Array.isArray(psychTestAnswers) || psychTestAnswers.length !== 81) {
-    return errorResponse('Se requieren las 81 respuestas del test psicológico');
-  }
-  if (!psychTestAnswers.every((a: unknown) => a === true || a === false)) {
-    return errorResponse(
-      'Todas las respuestas del test deben ser Sí o No (sin preguntas sin responder)',
-    );
+  // El alumno puede omitir el test online y rendirlo presencialmente en la sede.
+  const omitsPsychTest = skipPsychTest === true;
+
+  // Si NO lo omite, validar las 81 respuestas (booleanos obligatorios, ninguno null).
+  if (!omitsPsychTest) {
+    if (!Array.isArray(psychTestAnswers) || psychTestAnswers.length !== 81) {
+      return errorResponse('Se requieren las 81 respuestas del test psicológico');
+    }
+    if (!psychTestAnswers.every((a: unknown) => a === true || a === false)) {
+      return errorResponse(
+        'Todas las respuestas del test deben ser Sí o No (sin preguntas sin responder)',
+      );
+    }
   }
 
   try {
@@ -809,10 +821,10 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
         registration_channel: 'online',
         status: 'pending_review',
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        notes: `Pre-inscripción online — ${courseType}${convalidatesSimultaneously ? ' (con convalidación simultánea)' : ''}`,
-        psych_test_answers: psychTestAnswers,
-        psych_test_status: 'completed',
-        psych_test_completed_at: new Date().toISOString(),
+        notes: `Pre-inscripción online — Clase ${courseTypeToLicenseClass(courseType)}${convalidatesSimultaneously ? ' · con convalidación simultánea' : ''}${omitsPsychTest ? ' · test psicológico pendiente (rendir en la sede)' : ''}`,
+        psych_test_answers: omitsPsychTest ? null : psychTestAnswers,
+        psych_test_status: omitsPsychTest ? 'not_started' : 'completed',
+        psych_test_completed_at: omitsPsychTest ? null : new Date().toISOString(),
         birth_date: personalData.birthDate ?? null,
         gender: personalData.gender ?? null,
         address: personalData.address ?? null,
@@ -829,8 +841,9 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
     return jsonResponse({
       success: true,
       preRegistrationId: preReg.id,
-      message:
-        'Tu pre-inscripción y test psicológico han sido recibidos. Un ejecutivo se pondrá en contacto contigo.',
+      message: omitsPsychTest
+        ? 'Tu pre-inscripción fue recibida. Recuerda que deberás rendir el test psicológico de forma presencial en la sede para completar tu matrícula. Un ejecutivo se pondrá en contacto contigo.'
+        : 'Tu pre-inscripción y test psicológico han sido recibidos. Un ejecutivo se pondrá en contacto contigo.',
     });
   } catch (err) {
     if (err instanceof Error && err.message === 'EMAIL_TAKEN') {

@@ -151,8 +151,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Paso 4: recalcula pricing (reactivo a cambio de paymentMode)
-      if (step === 4 && pd) {
+      // Paso 5: recalcula pricing (reactivo a cambio de paymentMode)
+      if (step === 5 && pd) {
         const course = this.enrollment.courseOptions().find((c) => c.type === pd.courseType);
         const paymentMode = this.enrollment.paymentMode();
         // Fallback al base_price del enrollment en BD por si courseOptions aún no cargó
@@ -274,7 +274,25 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     };
   });
 
-  readonly step4Data = computed<EnrollmentPaymentData>(() => {
+  readonly step4Data = computed<EnrollmentContractData>(() => {
+    const pd = this.enrollment.personalData();
+    const birthDateStr = pd?.birthDate;
+    const isMinor = birthDateStr ? (calcAge(birthDateStr) ?? 99) < 18 : false;
+    return {
+      studentSummary: this.enrollment.studentSummary() ?? EMPTY_SUMMARY,
+      contractGeneration: {
+        status: this._contractStatus(),
+        pdfUrl: this._contractPdfUrl(),
+        generatedAt: null,
+        errorMessage: this.enrollment.error() ?? null,
+      },
+      signedContract: this._signedContractUpload(),
+      isMinor,
+      canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
+    };
+  });
+
+  readonly step5Data = computed<EnrollmentPaymentData>(() => {
     const summary = this.enrollment.studentSummary() ?? EMPTY_SUMMARY;
     const pd = this.enrollment.personalData();
     const pricing = this.payment.pricing();
@@ -295,25 +313,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       isSingularCourse: pd?.courseType === 'singular',
       singularAlert: { visible: false, message: '' },
       canAdvance: this.payment.canConfirmPayment(),
-    };
-  });
-
-  readonly step5Data = computed<EnrollmentContractData>(() => {
-    const pd = this.enrollment.personalData();
-    const birthDateStr = pd?.birthDate;
-    const isMinor = birthDateStr ? (calcAge(birthDateStr) ?? 99) < 18 : false;
-    return {
-      studentSummary: this.enrollment.studentSummary() ?? EMPTY_SUMMARY,
-      contractGeneration: {
-        status: this._contractStatus(),
-        pdfUrl: this._contractPdfUrl(),
-        generatedAt: null,
-        errorMessage: this.enrollment.error() ?? null,
-      },
-      signedContract: this._signedContractUpload(),
-      isMinor,
-      // Habilita "Continuar" cuando hay archivo listo para subir o la BD ya confirmó
-      canAdvance: !!this._signedContractUpload()?.file || this.enrollment.contractAccepted(),
     };
   });
 
@@ -405,8 +404,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       'Datos Personales',
       'Asignación',
       'Documentos',
-      'Pago',
       'Contrato',
+      'Pago',
       'Confirmación',
     ];
     return labels[this.activeStep()] ?? '';
@@ -606,9 +605,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     try {
       const { enrollmentId } = this.enrollment.draft();
       if (enrollmentId) await this.docs.markDocsComplete(enrollmentId, true);
-      // Carga descuentos disponibles para el paso 4 (fire-and-forget)
-      const pd = this.enrollment.personalData();
-      if (pd) void this.payment.loadAvailableDiscounts(pd.courseType);
       this.enrollment.goToStep(4);
     } finally {
       this._isSaving.set(false);
@@ -624,11 +620,43 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     });
   }
 
-  // ── Paso 4: Pago ──────────────────────────────────────────────────────────
-  onStep4DataChange(data: EnrollmentPaymentData): void {
+  // ── Paso 4: Contrato ─────────────────────────────────────────────────────
+  async onGenerateContract(): Promise<void> {
+    this._contractStatus.set('generating');
+    const url = await this.enrollment.generateContract();
+    this._contractPdfUrl.set(url);
+    this._contractStatus.set(url ? 'generated' : 'error');
+  }
+
+  onStep4DataChange(data: EnrollmentContractData): void {
+    if (data.signedContract) this._signedContractUpload.set(data.signedContract);
+  }
+
+  async onStep4Next(): Promise<void> {
+    const upload = this._signedContractUpload();
+    this._isSaving.set(true);
+    try {
+      if (upload?.file) {
+        // uploadSignedContract persiste el contrato y hace goToStep(5) internamente
+        await this.enrollment.uploadSignedContract(upload.file);
+        // Pre-cargar descuentos para el siguiente paso de pago (fire-and-forget)
+        const pd = this.enrollment.personalData();
+        if (pd) void this.payment.loadAvailableDiscounts(pd.courseType);
+      } else if (this.enrollment.contractAccepted()) {
+        // Re-entrada: contrato ya aceptado en sesión anterior → avanzar a pago
+        const pd = this.enrollment.personalData();
+        if (pd) void this.payment.loadAvailableDiscounts(pd.courseType);
+        this.enrollment.goToStep(5);
+      }
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  // ── Paso 5: Pago ──────────────────────────────────────────────────────────
+  onStep5DataChange(data: EnrollmentPaymentData): void {
     if (data.paymentMethod) this.payment.setPaymentMethod(data.paymentMethod);
 
-    // Descuento predefinido: rutar al facade (calcula monto automáticamente)
     const newId = data.selectedDiscountId;
     const currentId = this.payment.selectedDiscountId();
     if (newId !== currentId) {
@@ -638,49 +666,16 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         this.payment.applyPredefinedDiscount(newId);
       }
     } else if (!newId) {
-      // Descuento manual: el dumb component ya calculó el monto
       this.payment.setDiscount(data.discount);
     }
   }
 
-  async onStep4Next(): Promise<void> {
-    if (!this.step4Data().canAdvance) return;
-    this._isSaving.set(true);
-    try {
-      const { enrollmentId, userId } = this.enrollment.draft();
-      const ok = await this.payment.recordPayment(enrollmentId, userId);
-      if (ok) this.enrollment.goToStep(5);
-    } finally {
-      this._isSaving.set(false);
-    }
-  }
-
-  // ── Paso 5: Contrato ──────────────────────────────────────────────────────
-  async onGenerateContract(): Promise<void> {
-    this._contractStatus.set('generating');
-    const url = await this.enrollment.generateContract();
-    this._contractPdfUrl.set(url);
-    this._contractStatus.set(url ? 'generated' : 'error');
-  }
-
-  onStep5DataChange(data: EnrollmentContractData): void {
-    if (data.signedContract) this._signedContractUpload.set(data.signedContract);
-  }
-
   async onStep5Next(): Promise<void> {
-    const upload = this._signedContractUpload();
+    if (!this.step5Data().canAdvance) return;
     this._isSaving.set(true);
     try {
-      if (upload?.file) {
-        const uploaded = await this.enrollment.uploadSignedContract(upload.file);
-        if (uploaded) {
-          await this.enrollment.confirmEnrollment();
-        }
-      } else if (this.enrollment.contractAccepted()) {
-        // Re-entry: contract already accepted in a prior session — skip upload
-        const number = await this.enrollment.confirmEnrollment();
-        if (number) this.enrollment.goToStep(6);
-      }
+      const number = await this.enrollment.confirmWithPayment();
+      if (number) this.enrollment.goToStep(6);
     } finally {
       this._isSaving.set(false);
     }

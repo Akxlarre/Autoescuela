@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  OnInit,
+} from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { PublicFlowType } from '@core/facades/public-enrollment.facade';
 
@@ -28,7 +36,7 @@ const FLOW_CARDS: Record<PublicFlowType, FlowCard> = {
     icon: 'truck',
     badge: null,
     infoNote:
-      'Solo Pre-inscripción online — Debido a los requisitos legales, el trámite finaliza de forma presencial. Aquí iniciarás el proceso sin ningún cobro previo.',
+      'Pre-inscripción online. El trámite finaliza en la sede. Incluye <strong>test psicológico</strong> de 81 preguntas de alternativa (10–15 min) — obligatorio, pero puedes responderlo <strong>ahora o presencialmente en la sede</strong>.',
   },
 };
 
@@ -137,7 +145,7 @@ const FLOW_CARDS: Record<PublicFlowType, FlowCard> = {
                   color="var(--state-info)"
                   class="mt-0.5 shrink-0"
                 />
-                {{ card.infoNote }}
+                <span [innerHTML]="card.infoNote"></span>
               </div>
             }
           </button>

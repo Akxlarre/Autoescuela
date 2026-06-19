@@ -65,7 +65,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `AdminAlumnoDetalleFacade` | `SupabaseService`, `ToastService`, `DmsViewerService` | — | `src/app/core/facades/admin-alumno-detalle.facade.ts` |
 | `AdminAlumnosFacade` | `SupabaseService`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/admin-alumnos.facade.ts` |
 | `AdminPreInscritosFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade` | — | `src/app/core/facades/admin-pre-inscritos.facade.ts` |
-| `AgendaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/agenda.facade.ts` |
+| `AgendaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/agenda.facade.ts` | **Fix 20260618:** `fetchSessions()` usa `.in('status', ['scheduled','in_progress','completed','no_show'])` (whitelist) en vez de `.neq('status','cancelled')` — evita que sesiones `reserved` de drafts expirados aparezcan en la Agenda. |
 | `AnticiosFacade` | `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/anticipos.facade.ts` |
 | `ArchivoFacade` | `SupabaseService`, `BranchFacade`, `ToastService` | `promociones`, `cursos`, `selectedPromocionId`, `selectedCursoId`, `alumnos`, `isLoading`, `isLoadingAlumnos`, `error`, `kpis`, `moduleNames` | `src/app/core/facades/archivo-profesional.facade.ts` |
 | `AsistenciaClaseBFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/asistencia-clase-b.facade.ts` |
@@ -84,7 +84,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `DmsFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerService`, `ConfirmModalService`, `ToastService`, `DmsViewerService` | — | `src/app/core/facades/dms.facade.ts` |
 | `EnrollmentDocumentsFacade` | `SupabaseService` | — | `src/app/core/facades/enrollment-documents.facade.ts` |
 | `EnrollmentPaymentFacade` | `SupabaseService` | — | `src/app/core/facades/enrollment-payment.facade.ts` |
-| `EnrollmentFacade` | `SupabaseService`, `AuthFacade`, `EnrollmentDocumentsFacade`, `EnrollmentPaymentFacade`, `ConfirmModalService`, `DmsViewerService` | — | `src/app/core/facades/enrollment.facade.ts` |
+| `EnrollmentFacade` | `SupabaseService`, `AuthFacade`, `EnrollmentDocumentsFacade`, `EnrollmentPaymentFacade`, `ConfirmModalService`, `DmsViewerService` | `draft`, `currentStep`, `steps`, `personalData`, `contractAccepted`, `isSubmitting`, `error`. **`confirmWithPayment()`**: RPC atómica que lee los signals de `EnrollmentPaymentFacade` (pricing, method, discount) y llama `confirm_enrollment_with_payment` — pago + activación + sesiones en una sola transacción. Reemplaza la secuencia `recordPayment()+confirmEnrollment()`. **Orden de pasos wizard admin/secretaria:** 1-Datos → 2-Asignación → 3-Documentos → 4-Contrato → 5-Pago → 6-Confirmación (fix 20260618: antes contrato y pago estaban invertidos). | `src/app/core/facades/enrollment.facade.ts` |
 | `EvaluacionesProfesionalFacade` | `SupabaseService`, `ToastService`, `AuthFacade` | — | `src/app/core/facades/evaluaciones-profesional.facade.ts` |
 | `ExAlumnosFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/ex-alumnos.facade.ts` |
 | `FlotaDetalleFacade` | `SupabaseService` | — | `src/app/core/facades/flota-detalle.facade.ts` |

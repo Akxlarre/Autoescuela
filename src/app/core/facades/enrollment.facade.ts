@@ -282,13 +282,13 @@ export class EnrollmentFacade {
         fulfilled: enrollment?.docs_complete ?? false,
       },
       {
+        label: 'Contrato',
+        fulfilled: enrollment?.contract_accepted ?? false,
+      },
+      {
         label: 'Pago',
         fulfilled:
           enrollment?.payment_status === 'paid_full' || enrollment?.payment_status === 'partial',
-      },
-      {
-        label: 'Contrato',
-        fulfilled: enrollment?.contract_accepted ?? false,
       },
     ];
 
@@ -306,9 +306,9 @@ export class EnrollmentFacade {
       case 3:
         return true; // Documents facade controls this
       case 4:
-        return true; // Payment facade controls this
-      case 5:
         return this._enrollment()?.contract_accepted ?? false;
+      case 5:
+        return true; // Payment facade controls this
       case 6:
         return false; // Final step
       default:
@@ -503,23 +503,23 @@ export class EnrollmentFacade {
             }
           }
 
-          // RUT existe pero sin matrícula en este curso → pedir confirmación explícita
-          const camposActualizados = [
-            'Nombre completo',
-            'Email',
-            'Teléfono',
-            'Dirección',
-            'Fecha de nacimiento',
-            'Género',
-            'Licencia actual',
-          ].join(', ');
-          const confirmed = await this.confirm({
-            title: 'RUT ya registrado en el sistema',
-            message:
-              `El RUT ingresado pertenece a ${fullName} (${existing.email}), quien ya tiene matrículas anteriores.\n\n` +
+          // RUT existe pero sin matrícula en este curso → pedir confirmación explícita.
+          // El mensaje varía según si la persona tiene historial como alumno o solo como personal.
+          const isStaffOnly = !existing.studentId;
+          const confirmTitle = isStaffOnly
+            ? 'Personal de la autoescuela'
+            : 'RUT ya registrado en el sistema';
+          const confirmMessage = isStaffOnly
+            ? `${fullName} (${existing.email}) está registrado en el sistema como personal de la autoescuela.\n\n` +
+              `Estás a punto de matricularlo/a como alumno en: ${courseName}.\n\n` +
+              `Se creará un perfil de alumno vinculado a su cuenta existente. Sus datos de acceso no se verán afectados.`
+            : `El RUT ingresado pertenece a ${fullName} (${existing.email}), quien ya tiene matrículas anteriores.\n\n` +
               `Estás a punto de matricularlo/a en un nuevo curso: ${courseName}.\n\n` +
-              `Sus datos personales se actualizarán con los valores del formulario: ${camposActualizados}.\n\n` +
-              `Ambas matrículas quedarán visibles en su perfil.`,
+              `Sus datos personales se actualizarán con los valores del formulario: Nombre completo, Email, Teléfono, Dirección, Fecha de nacimiento, Género, Licencia actual.\n\n` +
+              `Ambas matrículas quedarán visibles en su perfil.`;
+          const confirmed = await this.confirm({
+            title: confirmTitle,
+            message: confirmMessage,
             severity: 'warn',
             confirmLabel: `Sí, matricular en ${courseName}`,
             cancelLabel: 'Cancelar',
@@ -1087,8 +1087,8 @@ export class EnrollmentFacade {
       }
 
       await this.refreshEnrollment();
-      this.updateStepStatus(5, 'completed');
-      this.goToStep(6);
+      this.updateStepStatus(4, 'completed');
+      this.goToStep(5);
       return true;
     } catch (e) {
       this._error.set('Error inesperado al subir contrato firmado');
@@ -1142,8 +1142,8 @@ export class EnrollmentFacade {
       }
 
       await this.refreshEnrollment();
-      this.updateStepStatus(5, 'completed');
-      this.goToStep(6);
+      this.updateStepStatus(4, 'completed');
+      this.goToStep(5);
       return true;
     } catch {
       this._error.set('Error inesperado al registrar firma');
@@ -1214,6 +1214,67 @@ export class EnrollmentFacade {
 
       return enrollmentNumber;
     } catch (e) {
+      this._error.set('Error inesperado al confirmar matrícula');
+      return null;
+    } finally {
+      this._isSubmitting.set(false);
+    }
+  }
+
+  /**
+   * Confirma la matrícula y registra el pago en una sola transacción atómica.
+   * Reemplaza la secuencia recordPayment() + confirmEnrollment() que dejaba
+   * una ventana de fallo entre ambas operaciones.
+   *
+   * Retorna el número de matrícula generado, o null si falló.
+   */
+  async confirmWithPayment(): Promise<string | null> {
+    const draft = this._draft();
+    if (!draft.enrollmentId) return null;
+
+    const pricing = this.paymentFacade.pricing();
+    const method = this.paymentFacade.paymentMethod();
+    if (!pricing || !method) {
+      this._error.set('Faltan datos de pago para confirmar la matrícula.');
+      return null;
+    }
+
+    this._isSubmitting.set(true);
+    this._error.set(null);
+
+    try {
+      const { data, error } = await this.supabase.client.rpc('confirm_enrollment_with_payment', {
+        p_enrollment_id: draft.enrollmentId,
+        p_payment_method: method,
+        p_total_amount: this.paymentFacade.totalToPay(),
+        p_discount_id: this.paymentFacade.selectedDiscountId() ?? null,
+        p_discount_amount: this.paymentFacade.discount().amount ?? 0,
+        p_registered_by: this.auth.currentUser()?.dbId ?? null,
+        p_is_deposit: pricing.isDeposit,
+      });
+
+      if (error) {
+        this._error.set('Error al confirmar matrícula: ' + this.sanitizer.sanitize(error).message);
+        return null;
+      }
+
+      const enrollmentNumber = data as string;
+
+      // Crear cuenta Auth del alumno y enviarle correo de invitación (fire-and-forget).
+      const pd = this._personalData();
+      if (draft.userId && pd?.email) {
+        this.supabase.client.functions
+          .invoke('activate-student-account', {
+            body: { userId: draft.userId, email: pd.email },
+          })
+          .catch((err) => console.error('activate-student-account error:', err));
+      }
+
+      await this.refreshEnrollment();
+      this.updateStepStatus(6, 'completed');
+
+      return enrollmentNumber;
+    } catch {
       this._error.set('Error inesperado al confirmar matrícula');
       return null;
     } finally {
@@ -1294,8 +1355,8 @@ export class EnrollmentFacade {
       1: 'Datos personales',
       2: 'Asignación',
       3: 'Documentos',
-      4: 'Pago',
-      5: 'Contrato',
+      4: 'Contrato',
+      5: 'Pago',
       6: 'Confirmación',
     };
 
@@ -1454,8 +1515,8 @@ export class EnrollmentFacade {
         await this.docsFacade.loadDocuments(enrollmentId);
       }
 
-      // 7. Rehidratar step 4 (pago) si el paso es >= 4
-      if (currentStep >= 4) {
+      // 7. Rehidratar step 5 (pago) si el paso es >= 5
+      if (currentStep >= 5) {
         await this.paymentFacade.rehydrateFromEnrollment(enrollmentId);
       }
 

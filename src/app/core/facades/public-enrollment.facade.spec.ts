@@ -821,6 +821,62 @@ describe('PublicEnrollmentFacade', () => {
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // submitPreInscription — test psicológico opcional (responder ahora / en la sede)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('submitPreInscription (test opcional)', () => {
+    const setupProfessional = () => {
+      facade.selectFlowType('professional');
+      facade.confirmLicenseType();
+      facade['_selectedBranch'].set(sampleBranches[0] as never);
+      facade['_personalData'].set(samplePersonalData as never);
+      facade['_selectedCourseType'].set('professional_a2');
+    };
+
+    it('envía skipPsychTest=true y sin respuestas cuando el alumno omite el test', async () => {
+      setupProfessional();
+      mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { success: true, message: 'ok' }, error: null });
+
+      const result = await facade.submitPreInscription({ skipTest: true });
+
+      expect(result.success).toBe(true);
+      expect(mockSupabaseClient.functions.invoke).toHaveBeenCalledWith(
+        'public-enrollment',
+        expect.objectContaining({
+          body: expect.objectContaining({
+            action: 'submit-pre-inscription',
+            skipPsychTest: true,
+            psychTestAnswers: null,
+          }),
+        }),
+      );
+    });
+
+    it('envía las 81 respuestas cuando el alumno responde el test online', async () => {
+      setupProfessional();
+      facade.savePsychTestAnswers(Array(81).fill(true));
+      mockSupabaseClient.functions.invoke = vi
+        .fn()
+        .mockResolvedValue({ data: { success: true }, error: null });
+
+      await facade.submitPreInscription();
+
+      const body = mockSupabaseClient.functions.invoke.mock.calls[0][1].body;
+      expect(body.skipPsychTest).toBe(false);
+      expect(Array.isArray(body.psychTestAnswers)).toBe(true);
+      expect(body.psychTestAnswers.length).toBe(81);
+    });
+
+    it('confirmPsychTest avanza a pre-confirmation (ambos caminos)', () => {
+      setupProfessional();
+      facade.confirmPsychTest();
+      expect(facade.currentStep()).toBe('pre-confirmation');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // Schedule Polling
   // ══════════════════════════════════════════════════════════════════════════════
 
