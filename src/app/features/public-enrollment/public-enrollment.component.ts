@@ -284,8 +284,9 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                     Test Psicológico EPQ
                   </h2>
                   <p class="text-sm" style="color: var(--text-secondary);">
-                    Como parte del proceso para Clase Profesional, debes completar un cuestionario
-                    psicológico obligatorio.
+                    Como parte del proceso para Clase Profesional debes rendir un cuestionario
+                    psicológico. Puedes responderlo ahora o, si prefieres, hacerlo de forma
+                    presencial en la sede.
                   </p>
                 </div>
               </div>
@@ -332,24 +333,62 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                 </div>
               </div>
 
-              <div class="flex justify-between pt-2">
+              <!-- Advertencia: si omite el test ahora, es obligatorio en la sede -->
+              <div
+                class="flex items-start gap-3 rounded-xl p-3 text-sm"
+                style="
+                  background: var(--state-warning-bg);
+                  border: 1px solid var(--state-warning-border);
+                  color: var(--state-warning);
+                "
+                role="note"
+              >
+                <app-icon
+                  name="triangle-alert"
+                  [size]="18"
+                  color="var(--state-warning)"
+                  class="mt-0.5 shrink-0"
+                />
+                <span class="flex-1">
+                  Si decides no responderlo ahora, deberás rendir el test
+                  <strong>obligatoriamente de forma presencial</strong> en la sede para poder
+                  completar tu matrícula.
+                </span>
+              </div>
+
+              <div class="flex flex-col gap-3 pt-1">
                 <button
                   type="button"
-                  class="flex items-center gap-1.5 text-sm font-medium cursor-pointer"
+                  class="btn-primary flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm"
+                  data-llm-action="start-psych-test"
+                  (click)="facade.startPsychTest()"
+                >
+                  <app-icon name="brain" [size]="16" color="white" />
+                  Responder ahora
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  [disabled]="facade.isSubmitting()"
+                  data-llm-action="skip-psych-test"
+                  (click)="onSkipPsychTest()"
+                >
+                  @if (facade.isSubmitting()) {
+                    <app-icon name="loader-circle" [size]="16" class="animate-spin" />
+                    Guardando…
+                  } @else {
+                    <app-icon name="building-2" [size]="16" />
+                    Prefiero rendirlo en la sede
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="flex items-center justify-center gap-1.5 text-sm font-medium cursor-pointer pt-1"
                   style="color: var(--text-secondary);"
                   (click)="facade.goBack()"
                 >
                   <app-icon name="arrow-left" [size]="16" />
                   Volver
-                </button>
-                <button
-                  type="button"
-                  class="btn-primary flex items-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm"
-                  data-llm-action="start-psych-test"
-                  (click)="facade.startPsychTest()"
-                >
-                  <app-icon name="brain" [size]="16" color="white" />
-                  Comenzar test
                 </button>
               </div>
             </div>
@@ -776,6 +815,14 @@ export class PublicEnrollmentComponent {
 
   async onPsychTestNext(): Promise<void> {
     const result = await this.facade.submitPreInscription();
+    if (result.success) {
+      this.facade.confirmPsychTest();
+    }
+  }
+
+  /** El alumno opta por rendir el test presencialmente: guarda la pre-inscripción sin respuestas. */
+  async onSkipPsychTest(): Promise<void> {
+    const result = await this.facade.submitPreInscription({ skipTest: true });
     if (result.success) {
       this.facade.confirmPsychTest();
     }

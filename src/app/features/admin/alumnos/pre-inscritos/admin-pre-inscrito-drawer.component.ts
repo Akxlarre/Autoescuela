@@ -28,6 +28,7 @@ import type {
   EvaluarTestPayload,
   CompletarMatriculaPayload,
   PromocionOption,
+  PreInscritoTableRow,
 } from '@core/models/ui/pre-inscrito-table.model';
 
 type DrawerTab = 'datos' | 'test' | 'matricula';
@@ -233,6 +234,37 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
             <!-- ─── TAB: TEST PSICOLÓGICO ──────────────────────────────────── -->
             @if (activeTab() === 'test') {
               <div class="space-y-4" #tabContent>
+                <!-- Test no rendido online → ofrecer descarga del test en papel -->
+                @if (!p.psychAnswers || p.psychAnswers.length === 0) {
+                  <div class="card card-accent space-y-3">
+                    <div class="flex items-start gap-3">
+                      <app-icon
+                        name="printer"
+                        [size]="18"
+                        color="var(--ds-brand)"
+                        class="mt-0.5 shrink-0"
+                      />
+                      <div>
+                        <h3 class="text-sm font-semibold text-primary">Test pendiente</h3>
+                        <p class="text-xs text-secondary mt-0.5">
+                          El alumno no respondió el test psicológico online. Debe rendirlo de forma
+                          presencial: descarga e imprime el test, el alumno lo contesta en papel y
+                          luego registras el resultado abajo.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="btn-secondary w-full flex items-center justify-center gap-2"
+                      data-llm-action="download-blank-psych-test"
+                      (click)="printBlankTest(p)"
+                    >
+                      <app-icon name="download" [size]="15" />
+                      Descargar / imprimir test
+                    </button>
+                  </div>
+                }
+
                 <!-- Resultado actual -->
                 @if (p.psychResult !== null && !showReEvaluate()) {
                   <div
@@ -1205,6 +1237,11 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
     this.selectedPromoId.set(value);
     this.selectedPromoCourseId.set(null);
     this.selectedCourseId.set(null);
+  }
+
+  /** Abre la ventana de impresión con el test EPQ en blanco para rendir en la sede. */
+  printBlankTest(p: PreInscritoTableRow): void {
+    this.facade.printBlankTest(p);
   }
 
   async submitEvaluation(preInscritoId: number): Promise<void> {

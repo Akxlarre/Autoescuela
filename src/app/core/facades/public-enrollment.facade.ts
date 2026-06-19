@@ -1109,10 +1109,18 @@ export class PublicEnrollmentFacade {
     }
   }
 
-  /** Envía la pre-inscripción profesional via Edge Function. */
-  async submitPreInscription(): Promise<PublicEnrollmentResult> {
+  /**
+   * Envía la pre-inscripción profesional via Edge Function.
+   *
+   * @param options.skipTest — true cuando el alumno decide NO responder el test
+   *   psicológico online y rendirlo presencialmente en la sede. En ese caso no
+   *   se envían respuestas y la Edge Function guarda el test como 'not_started'.
+   */
+  async submitPreInscription(options?: { skipTest?: boolean }): Promise<PublicEnrollmentResult> {
     this._isSubmitting.set(true);
     this._error.set(null);
+
+    const skipTest = options?.skipTest ?? false;
 
     try {
       const pd = this._personalData();
@@ -1140,7 +1148,8 @@ export class PublicEnrollmentFacade {
           },
           courseType,
           convalidatesSimultaneously: this._convalidatesSimultaneously(),
-          psychTestAnswers: this._psychTestAnswers(),
+          skipPsychTest: skipTest,
+          psychTestAnswers: skipTest ? null : this._psychTestAnswers(),
         },
       });
 

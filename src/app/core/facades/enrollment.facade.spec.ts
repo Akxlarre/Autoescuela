@@ -52,12 +52,10 @@ function createMockSupabaseService() {
       storage: {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
-          createSignedUrl: vi
-            .fn()
-            .mockResolvedValue({
-              data: { signedUrl: 'https://example.com/signed/file.pdf' },
-              error: null,
-            }),
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: { signedUrl: 'https://example.com/signed/file.pdf' },
+            error: null,
+          }),
         }),
       },
       functions: {
@@ -300,6 +298,17 @@ describe('EnrollmentFacade', () => {
   describe('canAdvance', () => {
     it('should not allow advance from step 1 without personal data', () => {
       expect(facade.canAdvance()).toBe(false);
+    });
+
+    it('step 4 (contrato) requires contract_accepted = true', () => {
+      facade.goToStep(4);
+      // Sin enrollment en BD → contract_accepted es undefined → false
+      expect(facade.canAdvance()).toBe(false);
+    });
+
+    it('step 5 (pago) always returns true — payment facade controls canAdvance externally', () => {
+      facade.goToStep(5);
+      expect(facade.canAdvance()).toBe(true);
     });
   });
 

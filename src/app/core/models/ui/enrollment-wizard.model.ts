@@ -52,7 +52,7 @@ export const ENROLLMENT_STEPS: StepConfig[] = [
   { step: 1, label: 'Personal data', status: 'active' },
   { step: 2, label: 'Assignment', status: 'pending' },
   { step: 3, label: 'Documents', status: 'pending' },
-  { step: 4, label: 'Payment', status: 'pending' },
-  { step: 5, label: 'Contract', status: 'pending' },
+  { step: 4, label: 'Contract', status: 'pending' },
+  { step: 5, label: 'Payment', status: 'pending' },
   { step: 6, label: 'Confirmation', status: 'pending' },
 ];

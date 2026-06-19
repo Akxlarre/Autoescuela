@@ -321,7 +321,7 @@ export class AgendaFacade {
       )
       .gte('scheduled_at', rangeStart)
       .lt('scheduled_at', rangeEnd)
-      .neq('status', 'cancelled');
+      .in('status', ['scheduled', 'in_progress', 'completed', 'no_show']);
 
     if (branchId !== null) query = query.eq('enrollments.branch_id', branchId);
 
