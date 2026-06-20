@@ -1,0 +1,61 @@
+// Selector de instructor premium — alineado al flujo público (PublicScheduleComponent).
+// El trigger vive dentro del componente → reglas scoped con :host.
+:host ::ng-deep .instructor-select.p-select {
+  height: 48px;
+  border-radius: 0.75rem;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-default);
+  align-items: center;
+  transition: all 0.2s ease;
+}
+:host ::ng-deep .instructor-select.p-select:hover {
+  border-color: var(--border-strong);
+}
+:host ::ng-deep .instructor-select.p-select.p-focus,
+:host ::ng-deep .instructor-select.p-select.p-select-open {
+  border-color: var(--ds-brand);
+  box-shadow: 0 0 0 3px rgba(var(--ds-brand-rgb, 59, 130, 246), 0.15);
+}
+:host ::ng-deep .instructor-select .p-select-label {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+}
+:host ::ng-deep .instructor-select .p-select-dropdown {
+  color: var(--text-muted);
+  width: 2.5rem;
+}
+
+// El panel se monta en <body> (appendTo) para escapar del scroll container del
+// wizard → sus reglas DEBEN ser globales (sin :host), si no, no aplicarían.
+::ng-deep .instructor-select-panel {
+  background: var(--bg-surface) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 0.75rem !important;
+  box-shadow:
+    0 12px 32px -4px rgba(0, 0, 0, 0.08),
+    0 4px 12px -4px rgba(0, 0, 0, 0.04) !important;
+  margin-top: 6px !important;
+  padding: 4px !important;
+  transform: none !important;
+}
+::ng-deep .instructor-select-panel .p-select-option {
+  border-radius: 0.5rem !important;
+  margin-bottom: 2px;
+  padding: 0.6rem 0.75rem !important;
+  transition: all 0.2s ease;
+}
+::ng-deep .instructor-select-panel .p-select-option:last-child {
+  margin-bottom: 0;
+}
+::ng-deep
+  .instructor-select-panel
+  .p-select-option:not(.p-select-option-selected):not(.p-disabled):hover {
+  background: var(--bg-subtle) !important;
+}
+::ng-deep .instructor-select-panel .p-select-option-selected {
+  background: var(--color-primary-muted) !important;
+}

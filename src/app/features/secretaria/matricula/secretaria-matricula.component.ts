@@ -48,6 +48,7 @@ import { ContractComponent } from '@shared/components/matricula-steps/contract/c
 import { ConfirmationComponent } from '@shared/components/matricula-steps/confirmation/confirmation.component';
 import { DraftListComponent } from '@shared/components/matricula-steps/draft-list/draft-list.component';
 import { BranchGateComponent } from '@shared/components/branch-gate/branch-gate.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 
@@ -92,6 +93,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     ConfirmationComponent,
     DraftListComponent,
     BranchGateComponent,
+    SkeletonBlockComponent,
     ScrollRevealDirective,
     AnimateInDirective,
   ],
@@ -238,7 +240,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         selectedSlotIds: slotIds,
         requiredCount,
         currentCount: slotIds.length,
-        maxClassesPerDay: selectedCourse?.maxClassesPerDay ?? 1,
+        // Admin/secretaria puede agendar hasta 3 clases por día (vs 1 en flujo público).
+        maxClassesPerDay: 3,
         isComplete: slotIds.length >= requiredCount,
       },
       promotionId: this.enrollment.selectedPromotionCourseId(),
@@ -399,17 +402,27 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     () => `stepper-premium stepper-premium--step-${this.activeStep() + 1}`,
   );
 
-  readonly progressLabel = computed(() => {
-    const labels = [
-      'Datos Personales',
-      'Asignación',
-      'Documentos',
-      'Contrato',
-      'Pago',
-      'Confirmación',
-    ];
-    return labels[this.activeStep()] ?? '';
-  });
+  private readonly stepLabels = [
+    'Datos Personales',
+    'Asignación',
+    'Documentos',
+    'Contrato',
+    'Pago',
+    'Confirmación',
+  ];
+
+  readonly progressLabel = computed(() => this.stepLabels[this.activeStep()] ?? '');
+
+  /** Pasos del tracker con estado (completed / active / pending) para el header. */
+  readonly wizardSteps = computed<{ label: string; status: 'completed' | 'active' | 'pending' }[]>(
+    () => {
+      const active = this.activeStep();
+      return this.stepLabels.map((label, i) => ({
+        label,
+        status: i < active ? 'completed' : i === active ? 'active' : 'pending',
+      }));
+    },
+  );
 
   ngOnInit(): void {
     this.setupDrawerActions();
