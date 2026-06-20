@@ -173,7 +173,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
           <main
             #mainContent
             class="shell-content flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 w-full max-w-full"
-            style="container-type: inline-size; container-name: layoutmain;"
+            style="container-type: inline-size; container-name: layoutmain; scrollbar-gutter: stable;"
             role="main"
             tabindex="-1"
           >

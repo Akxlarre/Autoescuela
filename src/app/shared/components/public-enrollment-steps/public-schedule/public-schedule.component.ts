@@ -1,18 +1,15 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import type {
-  EnrollmentAssignmentData,
-  TimeSlot,
-  WeekDay,
-} from '@core/models/ui/enrollment-assignment.model';
+import { ScheduleGridComponent } from '@shared/components/schedule-grid/schedule-grid.component';
+import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assignment.model';
 
 @Component({
   selector: 'app-public-schedule',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, FormsModule, SelectModule],
+  imports: [IconComponent, FormsModule, SelectModule, ScheduleGridComponent],
   styles: [
     `
       /* Estilos para el p-select para igualar los inputs premium de la UI */
@@ -143,29 +140,6 @@ import type {
         />
       </div>
 
-      <!-- Aviso: el instructor no tiene cupo suficiente para el total requerido -->
-      @if (insufficientAvailability()) {
-        <div
-          class="flex items-start gap-2.5 rounded-xl p-3 text-sm"
-          style="background: var(--state-warning-bg); border: 1px solid var(--state-warning-border); color: var(--state-warning);"
-          role="alert"
-        >
-          <app-icon
-            name="alert-triangle"
-            [size]="16"
-            color="var(--state-warning)"
-            class="mt-0.5 shrink-0"
-          />
-          <span>
-            Este instructor tiene cupo en solo {{ maxSelectableSlots() }}
-            {{ maxSelectableSlots() === 1 ? 'día' : 'días' }} y necesitas
-            {{ data().slotSelection.requiredCount }} clases (máximo
-            {{ data().slotSelection.maxClassesPerDay }} por día). Elige otro instructor para
-            completar tu horario.
-          </span>
-        </div>
-      }
-
       <!-- Schedule grid -->
       @if (!data().instructorId) {
         <div
@@ -207,123 +181,12 @@ import type {
           </p>
         </div>
       } @else if (data().scheduleGrid) {
-        <!-- Grilla real con Retención de Estado (Overlay) si recarga -->
-        <div
-          class="relative transition-opacity duration-300"
-          [class.opacity-50]="data().scheduleLoading"
-          [class.pointer-events-none]="data().scheduleLoading"
-        >
-          @if (data().scheduleLoading) {
-            <!-- Spinner superpuesto -->
-            <div
-              class="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl"
-              style="background: rgba(255,255,255,0.4); backdrop-filter: blur(1px);"
-            >
-              <app-icon name="loader" class="animate-spin" [size]="32" color="var(--ds-brand)" />
-            </div>
-          }
-          <!-- Week navigation (solo si hay más de una semana) -->
-          @if (weeks().length > 1) {
-            <div class="flex items-center justify-between">
-              <button
-                type="button"
-                class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer"
-                style="background: var(--bg-surface); border: 1px solid var(--border-default); color: var(--text-secondary);"
-                [style.opacity]="hasPrevWeek() ? '1' : '0.35'"
-                [style.cursor]="hasPrevWeek() ? 'pointer' : 'not-allowed'"
-                [disabled]="!hasPrevWeek()"
-                data-llm-action="schedule-prev-week"
-                (click)="prevWeek()"
-              >
-                <app-icon name="chevron-left" [size]="14" />
-                Anterior
-              </button>
-              <span class="text-xs font-semibold" style="color: var(--text-secondary);">
-                {{ weekIndicator() }}
-              </span>
-              <button
-                type="button"
-                class="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer"
-                style="background: var(--bg-surface); border: 1px solid var(--border-default); color: var(--text-secondary);"
-                [style.opacity]="hasNextWeek() ? '1' : '0.35'"
-                [style.cursor]="hasNextWeek() ? 'pointer' : 'not-allowed'"
-                [disabled]="!hasNextWeek()"
-                data-llm-action="schedule-next-week"
-                (click)="nextWeek()"
-              >
-                Siguiente
-                <app-icon name="chevron-right" [size]="14" />
-              </button>
-            </div>
-          }
-
-          <!-- Grid semanal -->
-          <div class="rounded-xl overflow-hidden" style="border: 1px solid var(--border-default);">
-            <!-- Day headers -->
-            <div
-              class="grid text-xs font-semibold text-center"
-              style="background: var(--bg-surface); border-bottom: 1px solid var(--border-default); padding: 8px 4px;"
-              [style.grid-template-columns]="gridColumns()"
-            >
-              <span style="color: var(--text-muted);">Hora</span>
-              @for (day of currentWeekDays(); track day.date) {
-                <span style="color: var(--text-secondary);">{{ day.label }}</span>
-              }
-            </div>
-
-            <!-- Slot rows filtrados a la semana actual -->
-            @for (timeRow of currentWeekTimeRows(); track timeRow) {
-              <div
-                class="grid text-xs"
-                style="border-bottom: 1px solid var(--border-subtle);"
-                [style.grid-template-columns]="gridColumns()"
-              >
-                <span
-                  class="flex items-center justify-center text-xs"
-                  style="color: var(--text-muted); padding: 8px 4px;"
-                >
-                  {{ timeRow }}
-                </span>
-                @for (day of currentWeekDays(); track day.date) {
-                  @let slot = slotAt(day.date, timeRow);
-                  @if (slot) {
-                    <button
-                      type="button"
-                      class="m-1 rounded-lg py-2 text-xs font-semibold transition-all"
-                      [style.background]="slotBg(slot)"
-                      [style.color]="slotColor(slot)"
-                      [style.cursor]="slot.status === 'occupied' ? 'not-allowed' : 'pointer'"
-                      [disabled]="slot.status === 'occupied'"
-                      [attr.aria-label]="slot.startTime + ' – ' + slot.endTime + ': ' + slot.status"
-                      [attr.data-llm-action]="
-                        slot.status !== 'occupied' ? 'toggle-schedule-slot' : null
-                      "
-                      (click)="onSlotToggle(slot)"
-                    >
-                      {{ slot.startTime }}
-                    </button>
-                  } @else {
-                    <div></div>
-                  }
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Selection progress -->
-          <div
-            class="flex items-center justify-between rounded-xl p-4 text-sm"
-            style="background: var(--bg-surface); border: 1px solid var(--border-subtle);"
-          >
-            <span style="color: var(--text-secondary);">Clases seleccionadas</span>
-            <span
-              class="font-bold"
-              [style.color]="selectionComplete() ? 'var(--state-success)' : 'var(--text-primary)'"
-            >
-              {{ data().slotSelection.currentCount }} / {{ data().slotSelection.requiredCount }}
-            </span>
-          </div>
-        </div>
+        <app-schedule-grid
+          [scheduleGrid]="data().scheduleGrid"
+          [slotSelection]="data().slotSelection"
+          [scheduleLoading]="data().scheduleLoading"
+          (slotsChange)="onSlotsChange($event)"
+        />
       } @else if (!data().scheduleLoading) {
         <div
           class="flex items-center gap-3 rounded-xl p-4 text-sm"
@@ -372,142 +235,13 @@ export class PublicScheduleComponent {
   readonly next = output<void>();
   readonly back = output<void>();
 
-  // ── Navegación semanal ──────────────────────────────────────────────────────
-  protected readonly currentWeekIndex = signal(0);
-
-  protected readonly weeks = computed<WeekDay[][]>(() => {
-    const days = this.data().scheduleGrid?.week.days ?? [];
-    if (days.length === 0) return [];
-    const map = new Map<string, WeekDay[]>();
-    for (const day of days) {
-      const key = this.getMondayKey(day.date);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(day);
-    }
-    return [...map.values()];
-  });
-
-  protected readonly currentWeekDays = computed(() => this.weeks()[this.currentWeekIndex()] ?? []);
-
-  protected readonly hasPrevWeek = computed(() => this.currentWeekIndex() > 0);
-  protected readonly hasNextWeek = computed(
-    () => this.currentWeekIndex() < this.weeks().length - 1,
-  );
-  protected readonly weekIndicator = computed(
-    () => `Semana ${this.currentWeekIndex() + 1} de ${this.weeks().length}`,
-  );
-
-  /**
-   * Solo las filas de hora que tienen al menos un slot en la semana visible.
-   * timeRows tienen formato "HH:MM-HH:MM"; slot.startTime es solo "HH:MM",
-   * por lo que se extrae la parte inicial para comparar.
-   */
-  protected readonly currentWeekTimeRows = computed(() => {
-    const grid = this.data().scheduleGrid;
-    if (!grid) return [];
-    const weekDates = new Set(this.currentWeekDays().map((d) => d.date));
-    return grid.timeRows.filter((time) => {
-      const start = time.split('-')[0];
-      return grid.slots.some((s) => weekDates.has(s.date) && s.startTime === start);
-    });
-  });
-
-  // ── Estado derivado ─────────────────────────────────────────────────────────
+  /** Habilita el botón "Confirmar horario" cuando se completó la selección. */
   protected readonly selectionComplete = computed(
     () => this.data().slotSelection.currentCount >= this.data().slotSelection.requiredCount,
   );
 
-  /**
-   * Máximo de slots seleccionables = días distintos con cupo (regla "máx 1 por día").
-   * Cuenta días con algún slot disponible + los días ya seleccionados.
-   */
-  protected readonly maxSelectableSlots = computed<number>(() => {
-    const grid = this.data().scheduleGrid;
-    if (!grid) return 0;
-    const dates = new Set<string>();
-    for (const s of grid.slots) {
-      if (s.status === 'available') dates.add(s.date);
-    }
-    for (const id of this.data().slotSelection.selectedSlotIds) {
-      const s = grid.slots.find((x) => x.id === id);
-      if (s) dates.add(s.date);
-    }
-    return dates.size;
-  });
-
-  /** true si, aun tomando toda la disponibilidad, no se alcanza el total requerido. */
-  protected readonly insufficientAvailability = computed<boolean>(
-    () =>
-      !!this.data().scheduleGrid &&
-      this.maxSelectableSlots() < this.data().slotSelection.requiredCount,
-  );
-
-  /** `grid-template-columns`: columna hora fija + una columna por día de la semana actual. */
-  protected readonly gridColumns = computed(() => {
-    const dayCount = this.currentWeekDays().length;
-    // minmax(0, 200px): la columna llena el espacio pero con un máximo, para que con
-    // pocos días (ej. uno solo) los slots no se estiren a todo el ancho del card.
-    return `60px repeat(${dayCount}, minmax(0, 200px))`;
-  });
-
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-  protected slotAt(date: string, time: string): TimeSlot | null {
-    const start = time.split('-')[0];
-    return (
-      this.data().scheduleGrid?.slots.find((s) => s.date === date && s.startTime === start) ?? null
-    );
-  }
-
-  protected slotBg(slot: TimeSlot): string {
-    if (this.data().slotSelection.selectedSlotIds.includes(slot.id)) return 'var(--ds-brand)';
-    if (slot.status === 'occupied') return 'var(--bg-subtle)';
-    return 'var(--color-primary-muted)';
-  }
-
-  protected slotColor(slot: TimeSlot): string {
-    if (this.data().slotSelection.selectedSlotIds.includes(slot.id)) return 'white';
-    if (slot.status === 'occupied') return 'var(--text-muted)';
-    return 'var(--color-primary)';
-  }
-
-  private getMondayKey(dateStr: string): string {
-    const d = new Date(dateStr + 'T12:00:00');
-    const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day;
-    d.setDate(d.getDate() + diff);
-    return d.toISOString().split('T')[0];
-  }
-
-  // ── Acciones ────────────────────────────────────────────────────────────────
-  protected prevWeek(): void {
-    if (this.hasPrevWeek()) this.currentWeekIndex.update((i) => i - 1);
-  }
-
-  protected nextWeek(): void {
-    if (this.hasNextWeek()) this.currentWeekIndex.update((i) => i + 1);
-  }
-
-  protected onSlotToggle(slot: TimeSlot): void {
-    if (slot.status === 'occupied') return;
-    const current = this.data().slotSelection.selectedSlotIds;
-
-    let selectedSlotIds: string[];
-    if (current.includes(slot.id)) {
-      // Deseleccionar siempre permitido.
-      selectedSlotIds = current.filter((id) => id !== slot.id);
-    } else {
-      // Máximo total de clases: bloquear si ya agendó todas las necesarias.
-      if (current.length >= this.data().slotSelection.requiredCount) return;
-
-      // Máximo dinámico de clases por día: bloquear si ya se alcanzó el límite.
-      const slots = this.data().scheduleGrid?.slots ?? [];
-      const sameDaySelectedCount = current.filter(
-        (id) => slots.find((s) => s.id === id)?.date === slot.date,
-      ).length;
-      if (sameDaySelectedCount >= this.data().slotSelection.maxClassesPerDay) return;
-      selectedSlotIds = [...current, slot.id];
-    }
-
+  /** Propaga la nueva selección emitida por la grilla compartida. */
+  protected onSlotsChange(selectedSlotIds: string[]): void {
     this.dataChange.emit({
       ...this.data(),
       slotSelection: { ...this.data().slotSelection, selectedSlotIds },
@@ -516,7 +250,6 @@ export class PublicScheduleComponent {
 
   protected onInstructorChangeNgModel(id: number | null): void {
     if (id) {
-      this.currentWeekIndex.set(0);
       this.dataChange.emit({ ...this.data(), instructorId: id });
     }
   }

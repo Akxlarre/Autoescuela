@@ -1,7 +1,10 @@
 <div class="space-y-6">
-  <div class="bg-surface rounded-2xl border border-border-default shadow-sm overflow-hidden">
+  <div class="bg-surface rounded-2xl border border-border-default shadow-sm">
     <div class="p-4 sm:p-6 border-b border-border-subtle">
-      <h2 class="text-xl font-semibold text-text-primary flex items-center gap-2">
+      <h2
+        class="font-bold flex items-center gap-2"
+        style="font-family: var(--font-display); font-size: 1.3rem; color: var(--text-primary)"
+      >
         @if (data().view === 'professional') {
           <app-icon name="users" [size]="20" class="text-brand" />
           Paso {{ stepNumber() }}: Selección de Promoción
@@ -14,7 +17,7 @@
         @if (data().view === 'professional') {
           Asigna al alumno a una promoción grupal abierta para este curso.
         } @else if (hidePaymentMode()) {
-          Elige tu instructor y selecciona los horarios de tus clases prácticas.
+          Elige el instructor y selecciona los horarios de las clases prácticas.
         } @else {
           Configura la modalidad de pago y el horario de clases prácticas.
         }
@@ -26,56 +29,82 @@
       @if (data().view === 'class-b') {
         <!-- 1. Modalidad de Pago (oculta si ya fue seleccionada en paso previo) -->
         @if (!hidePaymentMode()) {
-          <div class="space-y-4">
+          <div class="space-y-3">
             <label class="text-xs font-bold text-text-muted uppercase tracking-widest"
               >1. Modalidad de Pago</label
             >
             <div class="grid sm:grid-cols-2 gap-4">
-              <label
-                class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
-                [class.border-brand]="data().paymentMode === 'total'"
-                [class.bg-brand-muted]="data().paymentMode === 'total'"
-                [class.border-border-default]="data().paymentMode !== 'total'"
+              <button
+                type="button"
+                class="relative flex flex-col gap-2 rounded-xl p-5 text-left transition-all cursor-pointer"
+                [style.border]="
+                  data().paymentMode === 'total'
+                    ? '2px solid var(--ds-brand)'
+                    : '2px solid var(--border-default)'
+                "
+                [style.background]="
+                  data().paymentMode === 'total'
+                    ? 'linear-gradient(180deg, var(--color-primary-muted) 0%, var(--bg-surface) 100%)'
+                    : 'var(--bg-surface)'
+                "
+                [attr.aria-pressed]="data().paymentMode === 'total'"
+                data-llm-action="select-payment-mode-total"
+                (click)="emitField('paymentMode', 'total')"
               >
-                <input
-                  type="radio"
-                  name="paymentMode"
-                  value="total"
-                  [ngModel]="data().paymentMode"
-                  (ngModelChange)="emitField('paymentMode', $event)"
-                  class="hidden"
-                />
-                <div class="flex justify-between items-start mb-2">
+                @if (data().paymentMode === 'total') {
+                  <div
+                    class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full"
+                    style="background: var(--ds-brand)"
+                    aria-hidden="true"
+                  >
+                    <app-icon name="check" [size]="12" color="white" />
+                  </div>
+                }
+                <div class="flex items-center gap-2 flex-wrap pr-8">
                   <span class="text-sm font-bold text-text-primary">Total Adelantado</span>
-                  <span class="px-2 py-0.5 bg-brand/10 text-brand text-xs font-bold rounded-full"
+                  <span
+                    class="rounded-full px-2 py-0.5 text-xs font-bold text-white"
+                    style="background: var(--gradient-primary)"
                     >RECOMENDADO</span
                   >
                 </div>
                 <p class="text-xs text-text-secondary leading-relaxed">
-                  Se reservan las
+                  Se paga el total y se reservan las
                   <strong class="text-text-primary">{{ data().totalSessions }} clases</strong>
-                  prácticas desde hoy.
+                  prácticas.
                 </p>
-              </label>
+              </button>
 
-              <label
-                class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
-                [class.border-brand]="data().paymentMode === 'partial'"
-                [class.bg-brand-muted]="data().paymentMode === 'partial'"
-                [class.border-border-default]="data().paymentMode !== 'partial'"
+              <button
+                type="button"
+                class="relative flex flex-col gap-2 rounded-xl p-5 text-left transition-all cursor-pointer"
+                [style.border]="
+                  data().paymentMode === 'partial'
+                    ? '2px solid var(--ds-brand)'
+                    : '2px solid var(--border-default)'
+                "
+                [style.background]="
+                  data().paymentMode === 'partial'
+                    ? 'linear-gradient(180deg, var(--color-primary-muted) 0%, var(--bg-surface) 100%)'
+                    : 'var(--bg-surface)'
+                "
+                [attr.aria-pressed]="data().paymentMode === 'partial'"
+                data-llm-action="select-payment-mode-partial"
+                (click)="emitField('paymentMode', 'partial')"
               >
-                <input
-                  type="radio"
-                  name="paymentMode"
-                  value="partial"
-                  [ngModel]="data().paymentMode"
-                  (ngModelChange)="emitField('paymentMode', $event)"
-                  class="hidden"
-                />
-                <div class="flex justify-between items-start mb-2">
+                @if (data().paymentMode === 'partial') {
+                  <div
+                    class="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full"
+                    style="background: var(--ds-brand)"
+                    aria-hidden="true"
+                  >
+                    <app-icon name="check" [size]="12" color="white" />
+                  </div>
+                }
+                <div class="flex items-center gap-2 flex-wrap pr-8">
                   <span class="text-sm font-bold text-text-primary">Pago Parcial</span>
                   <span
-                    class="px-2 py-0.5 bg-subtle text-text-secondary text-xs font-bold rounded-full"
+                    class="rounded-full px-2 py-0.5 text-xs font-bold text-text-secondary bg-subtle"
                     >FLEXIBLE</span
                   >
                 </div>
@@ -86,23 +115,20 @@
                   <strong class="text-text-primary">{{ data().totalSessions }} clases</strong>. El
                   saldo se paga desde el portal del alumno o presencialmente.
                 </p>
-              </label>
+              </button>
             </div>
           </div>
         }
         <!-- end @if (!hidePaymentMode()) -->
 
         <!-- 2. Instructor -->
-        <div class="space-y-4">
+        <div class="space-y-3">
           <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
             {{ hidePaymentMode() ? 'Instructor' : '2. Instructor' }}
           </label>
 
           @if (loading() && data().instructors.length === 0) {
-            <div class="grid sm:grid-cols-2 gap-3">
-              <app-skeleton-block variant="rect" width="100%" height="72px" />
-              <app-skeleton-block variant="rect" width="100%" height="72px" />
-            </div>
+            <app-skeleton-block variant="rect" width="100%" height="48px" />
           } @else if (data().instructors.length === 0) {
             <div
               class="p-6 bg-base border border-border-default rounded-xl flex flex-col items-center gap-2 text-center"
@@ -113,88 +139,75 @@
               </p>
             </div>
           } @else {
-            <div class="grid sm:grid-cols-2 gap-3">
-              @for (instructor of data().instructors; track instructor.id) {
-                <button
-                  type="button"
-                  (click)="emitField('instructorId', instructor.id)"
-                  class="flex items-center gap-3 p-4 border-2 rounded-xl transition-all text-left hover:border-brand/40 cursor-pointer"
-                  [class.border-brand]="data().instructorId === instructor.id"
-                  [class.bg-brand-muted]="data().instructorId === instructor.id"
-                  [class.border-border-default]="data().instructorId !== instructor.id"
-                >
+            <p-select
+              inputId="adm-instructor"
+              [options]="data().instructors"
+              optionLabel="name"
+              optionValue="id"
+              placeholder="— Selecciona un instructor —"
+              [ngModel]="data().instructorId"
+              (ngModelChange)="onInstructorChange($event)"
+              appendTo="body"
+              styleClass="w-full instructor-select"
+              panelStyleClass="instructor-select-panel"
+            >
+              <ng-template let-instructor #item>
+                <div class="flex items-center gap-3">
                   <div
-                    class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors"
-                    [class.bg-brand]="data().instructorId === instructor.id"
-                    [class.text-surface]="data().instructorId === instructor.id"
-                    [class.bg-subtle]="data().instructorId !== instructor.id"
-                    [class.text-text-muted]="data().instructorId !== instructor.id"
+                    class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-subtle text-text-muted"
                   >
-                    <app-icon name="user" [size]="18" />
+                    <app-icon name="user" [size]="16" />
                   </div>
                   <div class="flex-1 min-w-0">
-                    <p
-                      class="text-sm font-bold truncate"
-                      [class.text-brand]="data().instructorId === instructor.id"
-                      [class.text-text-primary]="data().instructorId !== instructor.id"
-                    >
+                    <p class="text-sm font-semibold text-text-primary truncate">
                       {{ instructor.name }}
                     </p>
                     <p class="text-xs text-text-muted truncate">
                       {{ instructor.vehicleDescription }} · {{ instructor.plate }}
                     </p>
                   </div>
-                  @if (data().instructorId === instructor.id) {
-                    <app-icon name="check-circle" [size]="16" class="text-brand shrink-0" />
-                  }
-                </button>
-              }
-            </div>
+                </div>
+              </ng-template>
+            </p-select>
           }
         </div>
 
         <!-- 3. Horarios — visible solo cuando instructor + modalidad seleccionados -->
         @if (data().instructorId && data().paymentMode) {
-          <div class="space-y-4">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
-                  {{ hidePaymentMode() ? '2' : '3' }}. Elige tus
-                  {{ data().slotSelection.requiredCount }} Clases Prácticas
-                </label>
-                <p class="text-xs text-text-muted mt-0.5">
-                  Selecciona los horarios de tus sesiones en las próximas semanas
-                </p>
-                <p class="text-xs text-text-secondary mt-1 flex items-center gap-1">
-                  <app-icon name="info" [size]="12" class="text-text-muted shrink-0" />
-                  @if (maxPerDay() > 1) {
-                    Puedes seleccionar hasta {{ maxPerDay() }} clases por día.
-                  } @else {
-                    Solo puedes seleccionar una clase por día.
-                  }
-                </p>
-              </div>
-              <span
-                class="shrink-0 text-sm font-black px-3 py-1.5 rounded-lg transition-colors"
-                [class.bg-brand]="data().slotSelection.isComplete"
-                [class.text-surface]="data().slotSelection.isComplete"
-                [class.bg-warning-subtle]="!data().slotSelection.isComplete"
-                [class.text-warning]="!data().slotSelection.isComplete"
-              >
-                {{ data().slotSelection.currentCount }} / {{ data().slotSelection.requiredCount }}
-              </span>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs font-bold text-text-muted uppercase tracking-widest">
+                {{ hidePaymentMode() ? '2' : '3' }}. Elige las
+                {{ data().slotSelection.requiredCount }} clases prácticas
+              </label>
+              <p class="text-xs text-text-secondary mt-1 flex items-center gap-1">
+                <app-icon name="info" [size]="12" class="text-text-muted shrink-0" />
+                @if (data().slotSelection.maxClassesPerDay > 1) {
+                  Puedes seleccionar hasta
+                  {{ data().slotSelection.maxClassesPerDay }} clases por día.
+                } @else {
+                  Solo una clase por día.
+                }
+              </p>
             </div>
 
-            @if (data().scheduleLoading) {
+            @if (data().scheduleLoading && !data().scheduleGrid) {
               <div
-                class="h-48 bg-base border border-border-default rounded-2xl flex items-center justify-center gap-2 text-text-muted"
+                class="h-48 bg-base border border-border-default rounded-xl flex items-center justify-center gap-2 text-text-muted"
               >
                 <app-icon name="loader" [size]="16" class="animate-spin" />
                 <span class="text-sm">Cargando disponibilidad...</span>
               </div>
-            } @else if (!data().scheduleGrid || daysFromGrid().length === 0) {
+            } @else if (data().scheduleGrid) {
+              <app-schedule-grid
+                [scheduleGrid]="data().scheduleGrid"
+                [slotSelection]="data().slotSelection"
+                [scheduleLoading]="data().scheduleLoading"
+                (slotsChange)="onSlotsChange($event)"
+              />
+            } @else {
               <div
-                class="p-8 bg-base border border-border-default rounded-2xl flex flex-col items-center gap-2 text-center"
+                class="p-8 bg-base border border-border-default rounded-xl flex flex-col items-center gap-2 text-center"
               >
                 <app-icon name="calendar-x" [size]="28" class="text-text-muted" />
                 <p class="text-sm font-bold text-text-primary">Sin disponibilidad</p>
@@ -202,173 +215,6 @@
                   Este instructor no tiene horarios disponibles en las próximas semanas.
                 </p>
               </div>
-            } @else {
-              <div class="bg-base rounded-2xl border border-border-default overflow-hidden">
-                <!-- Navegación de Semanas -->
-                <div
-                  class="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle bg-elevated"
-                >
-                  <button
-                    type="button"
-                    (click)="prevWeek()"
-                    [disabled]="!hasPrevWeek()"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <app-icon name="chevron-left" [size]="16" class="text-text-secondary" />
-                  </button>
-                  <span class="text-xs font-bold text-text-secondary">{{ weekIndicator() }}</span>
-                  <button
-                    type="button"
-                    (click)="nextWeek()"
-                    [disabled]="!hasNextWeek()"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                  >
-                    <app-icon name="chevron-right" [size]="16" class="text-text-secondary" />
-                  </button>
-                </div>
-
-                <!-- Tabs de Días (semana actual) -->
-                <div class="flex overflow-x-auto border-b border-border-subtle bg-elevated">
-                  @for (day of currentWeekDays(); track day.date; let i = $index) {
-                    <button
-                      type="button"
-                      (click)="selectDay(i)"
-                      class="flex-1 min-w-20 py-3 px-2 border-b-2 text-center transition-all hover:bg-subtle cursor-pointer"
-                      [class.border-brand]="selectedDayIndex() === i"
-                      [class.bg-surface]="selectedDayIndex() === i"
-                      [class.text-brand]="selectedDayIndex() === i"
-                      [class.border-transparent]="selectedDayIndex() !== i"
-                      [class.text-text-secondary]="selectedDayIndex() !== i"
-                    >
-                      <p class="text-xs font-bold uppercase">{{ day.dayOfWeek }}</p>
-                      <p class="text-lg font-black font-display">{{ day.label }}</p>
-                      @if (maxPerDay() > 1) {
-                        <div class="flex items-center justify-center gap-1 mt-1">
-                          @for (dot of maxPerDayDots(); track dot) {
-                            <span
-                              class="w-1.5 h-1.5 rounded-full transition-colors"
-                              [class.bg-brand]="dot < (slotsPerDay().get(day.date) ?? 0)"
-                              [class.bg-border-default]="dot >= (slotsPerDay().get(day.date) ?? 0)"
-                            ></span>
-                          }
-                        </div>
-                      }
-                    </button>
-                  }
-                </div>
-
-                <!-- Grid de Slots -->
-                <div class="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                  @for (slot of slotsForDay(); track slot.id) {
-                    @if (slot.status === 'occupied') {
-                      <div
-                        class="p-3 border border-border-default rounded-lg bg-subtle opacity-50 flex items-center justify-center gap-1.5 cursor-not-allowed"
-                      >
-                        <app-icon name="x" [size]="11" class="text-text-muted" />
-                        <span class="text-xs text-text-muted font-medium"
-                          >{{ slot.startTime }} – {{ slot.endTime }}</span
-                        >
-                      </div>
-                    } @else {
-                      <button
-                        type="button"
-                        (click)="selectSlot(slot.id)"
-                        [disabled]="!isSlotSelectable(slot.id)"
-                        class="p-3 border rounded-lg text-xs font-medium transition-all text-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        [class.bg-brand]="data().slotSelection.selectedSlotIds.includes(slot.id)"
-                        [class.text-surface]="
-                          data().slotSelection.selectedSlotIds.includes(slot.id)
-                        "
-                        [class.border-brand]="
-                          data().slotSelection.selectedSlotIds.includes(slot.id)
-                        "
-                        [class.bg-surface]="!data().slotSelection.selectedSlotIds.includes(slot.id)"
-                        [class.text-text-primary]="
-                          !data().slotSelection.selectedSlotIds.includes(slot.id)
-                        "
-                        [class.border-border-default]="
-                          !data().slotSelection.selectedSlotIds.includes(slot.id)
-                        "
-                      >
-                        {{ slot.startTime }} – {{ slot.endTime }}
-                      </button>
-                    }
-                  } @empty {
-                    <p class="col-span-full text-center text-xs text-text-muted py-6 italic">
-                      Sin horarios disponibles para este día
-                    </p>
-                  }
-                </div>
-
-                <!-- Leyenda -->
-                <div class="px-4 pb-4 flex items-center gap-4 text-xs text-text-muted flex-wrap">
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-3 h-3 rounded bg-brand inline-block"></span>
-                    Seleccionado
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <span
-                      class="w-3 h-3 rounded border border-border-default bg-surface inline-block"
-                    ></span>
-                    Disponible
-                  </span>
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-3 h-3 rounded bg-subtle opacity-50 inline-block"></span>
-                    Ocupado
-                  </span>
-                </div>
-              </div>
-
-              <!-- Resumen de clases seleccionadas -->
-              @if (selectedSlotsDisplay().length > 0) {
-                <div
-                  class="mt-3 rounded-2xl border border-border-default overflow-hidden"
-                  class="bg-surface"
-                >
-                  <div
-                    class="flex items-center justify-between px-4 py-2.5 border-b border-border-subtle"
-                    class="bg-elevated"
-                  >
-                    <span class="text-xs font-bold text-text-secondary uppercase tracking-widest">
-                      Clases seleccionadas
-                    </span>
-                    <span
-                      class="text-xs font-black px-2 py-0.5 rounded-full"
-                      [style.background]="
-                        data().slotSelection.isComplete
-                          ? 'var(--color-success-muted)'
-                          : 'var(--color-warning-muted)'
-                      "
-                      [style.color]="
-                        data().slotSelection.isComplete
-                          ? 'var(--color-success)'
-                          : 'var(--color-warning)'
-                      "
-                    >
-                      {{ data().slotSelection.currentCount }} /
-                      {{ data().slotSelection.requiredCount }}
-                    </span>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 p-3">
-                    @for (slot of selectedSlotsDisplay(); track slot.id) {
-                      <div
-                        class="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-                        style="background: var(--color-success-muted)"
-                      >
-                        <app-icon
-                          name="calendar-check"
-                          [size]="12"
-                          style="color: var(--color-success)"
-                          class="shrink-0"
-                        />
-                        <span class="text-xs font-medium" style="color: var(--color-success)">{{
-                          slot.label
-                        }}</span>
-                      </div>
-                    }
-                  </div>
-                </div>
-              }
             }
           </div>
         }
@@ -434,22 +280,25 @@
                   </label>
                   <div class="space-y-2">
                     @for (option of group.options; track option.id) {
-                      <label
-                        class="flex items-center justify-between p-4 border-2 rounded-xl cursor-pointer transition-all hover:border-brand/40"
-                        [class.border-brand]="data().promotionId === option.id"
-                        [class.bg-brand-muted]="data().promotionId === option.id"
-                        [class.border-border-default]="data().promotionId !== option.id"
+                      <button
+                        type="button"
+                        class="w-full flex items-center justify-between rounded-xl p-4 text-left transition-all cursor-pointer"
+                        [style.border]="
+                          data().promotionId === option.id
+                            ? '2px solid var(--ds-brand)'
+                            : '2px solid var(--border-default)'
+                        "
+                        [style.background]="
+                          data().promotionId === option.id
+                            ? 'var(--color-primary-muted)'
+                            : 'var(--bg-surface)'
+                        "
+                        [disabled]="option.status === 'finished'"
                         [class.opacity-50]="option.status === 'finished'"
-                        [class.pointer-events-none]="option.status === 'finished'"
+                        [attr.aria-pressed]="data().promotionId === option.id"
+                        [attr.data-llm-action]="'select-promotion-' + option.id"
+                        (click)="emitField('promotionId', option.id)"
                       >
-                        <input
-                          type="radio"
-                          name="promotion"
-                          [value]="option.id"
-                          [ngModel]="data().promotionId"
-                          (ngModelChange)="emitField('promotionId', $event)"
-                          class="hidden"
-                        />
                         <div>
                           <p class="text-sm font-bold text-text-primary">{{ option.label }}</p>
                           <p class="text-xs text-text-muted font-mono">
@@ -464,7 +313,7 @@
                             {{ option.status === 'open' ? 'DISPONIBLE' : 'CERRADA' }}
                           </p>
                         </div>
-                      </label>
+                      </button>
                     }
                   </div>
                 </div>
@@ -492,7 +341,9 @@
     </div>
 
     <!-- Acciones Inferiores -->
-    <div class="p-4 sm:p-6 bg-base border-t border-border-subtle flex items-center justify-between">
+    <div
+      class="p-4 sm:p-6 bg-base border-t border-border-subtle rounded-b-2xl flex items-center justify-between"
+    >
       <button
         type="button"
         (click)="onBack()"
@@ -505,11 +356,7 @@
         label="Continuar a Documentos"
         icon="arrow-right"
         [loading]="loading()"
-        [disabled]="
-          (data().view === 'class-b' &&
-            (!data().slotSelection.isComplete || data().paymentMode === null)) ||
-          (data().view === 'professional' && !data().promotionId)
-        "
+        [disabled]="!canContinue()"
         (click)="onNext()"
         data-llm-action="submit-assignment"
       />
