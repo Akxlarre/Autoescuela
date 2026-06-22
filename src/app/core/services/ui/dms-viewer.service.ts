@@ -18,28 +18,13 @@ export class DmsViewerService {
    */
   open(doc: DmsViewerDocument): void {
     this._currentDoc.set(doc);
-    
+
     // Importación diferida para evitar ciclos de inyección
     import('@shared/components/dms-viewer-modal/dms-viewer-modal.component').then((m) => {
       this.layoutDrawer.open(
-        m.DmsViewerModalComponent, 
-        doc.name, 
+        m.DmsViewerModalComponent,
+        doc.name,
         doc.type === 'pdf' ? 'file-text' : doc.type === 'image' ? 'image' : 'file',
-        [
-          {
-            label: 'Descargar',
-            icon: 'download',
-            callback: () => {
-              const link = document.createElement('a');
-              link.href = doc.url;
-              link.download = doc.name;
-              link.target = '_blank';
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-            }
-          }
-        ]
       );
     });
   }

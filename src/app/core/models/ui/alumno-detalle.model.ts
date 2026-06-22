@@ -11,7 +11,10 @@ export interface EnrollmentSummary {
   promotionCourseId: number | null;
   createdAt: string;
   certPdfUrl: string | null;
-  licensePdfUrl: string | null;
+  /** Carnet Clase B de 6 clases (fondo amarillo). null si aún no se generó. */
+  licenseInitialUrl: string | null;
+  /** Carnet Clase B de 12 clases (fondo verde). null si aún no se generó. */
+  licenseFullUrl: string | null;
   contractFileUrl: string | null;
   contractSignedUrl: string | null;
   registrationChannel: 'presential' | 'online' | null;
@@ -103,6 +106,8 @@ export interface ClasePracticaUI {
   fecha: string | null;
   /** Fecha ISO "YYYY-MM-DD" para comparaciones lógicas — null si la clase no tiene sesión */
   scheduledDate: string | null;
+  /** Timestamp ISO completo (scheduled_at de la BD) para validaciones de orden cronológico */
+  scheduledAt: string | null;
   /** Hora "HH:MM-HH:MM" (ej: "15:50-16:35") o null si pendiente */
   hora: string | null;
   /** Nombre completo del instructor o null si pendiente */

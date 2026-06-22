@@ -25,11 +25,9 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         <!-- Clase target banner -->
         <div
           class="flex items-center gap-3 p-3 rounded-xl border bg-elevated border-border-default"
-          
         >
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-brand bg-brand/10"
-            
           >
             <app-icon name="calendar-clock" [size]="18" />
           </div>
@@ -44,15 +42,20 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
         <!-- ── 1. Instructor ── -->
         <div class="space-y-3">
-          <span class="text-xs font-bold uppercase tracking-widest text-brand" 
-            >1. Instructor</span
-          >
+          <span class="text-xs font-bold uppercase tracking-widest text-brand">1. Instructor</span>
 
           @if (facade.isLoadingSchedule() && facade.instructores().length === 0) {
             <div class="flex flex-col gap-2">
               @for (i of skeletonRows; track i) {
-                <div class="flex items-center gap-3 p-3 border-2 border-border-default rounded-xl w-full">
-                  <app-skeleton-block variant="circle" width="36px" height="36px" class="shrink-0" />
+                <div
+                  class="flex items-center gap-3 p-3 border-2 border-border-default rounded-xl w-full"
+                >
+                  <app-skeleton-block
+                    variant="circle"
+                    width="36px"
+                    height="36px"
+                    class="shrink-0"
+                  />
                   <div class="flex-1 min-w-0 flex flex-col gap-1.5">
                     <app-skeleton-block variant="text" width="60%" height="14px" />
                     <app-skeleton-block variant="text" width="40%" height="12px" />
@@ -63,7 +66,6 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
           } @else if (facade.instructores().length === 0) {
             <div
               class="p-6 rounded-xl border flex flex-col items-center gap-2 text-center bg-base border-border-default"
-              
             >
               <app-icon name="user-x" [size]="24" class="text-text-muted" />
               <p class="text-sm text-text-muted">No hay instructores disponibles.</p>
@@ -74,7 +76,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 <button
                   type="button"
                   (click)="selectInstructor(instructor.id)"
-                  class="flex items-center gap-3 p-3 border-2 rounded-xl transition-all text-left w-full"
+                  class="flex items-center gap-3 p-3 border-2 rounded-xl transition-all text-left w-full cursor-pointer"
                   [class.border-brand]="selectedInstructorId() === instructor.id"
                   [class.bg-brand-muted]="selectedInstructorId() === instructor.id"
                   [class.border-border-default]="selectedInstructorId() !== instructor.id"
@@ -113,14 +115,13 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         <!-- ── 2. Horario — visible solo al seleccionar instructor ── -->
         @if (selectedInstructorId()) {
           <div class="space-y-3">
-            <span class="text-xs font-bold uppercase tracking-widest text-brand" 
+            <span class="text-xs font-bold uppercase tracking-widest text-brand"
               >2. Selecciona el nuevo horario</span
             >
 
             @if (facade.isLoadingSchedule()) {
               <div
                 class="h-40 rounded-2xl flex items-center justify-center gap-2 bg-base border border-border-default"
-                
               >
                 <app-icon name="loader" [size]="16" class="animate-spin text-text-muted" />
                 <span class="text-sm text-text-muted">Cargando disponibilidad...</span>
@@ -128,7 +129,6 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             } @else if (!facade.scheduleGrid() || daysFromGrid().length === 0) {
               <div
                 class="p-8 rounded-2xl flex flex-col items-center gap-2 text-center bg-base border border-border-default"
-                
               >
                 <app-icon name="calendar-x" [size]="28" class="text-text-muted" />
                 <p class="text-sm font-bold text-text-primary">Sin disponibilidad</p>
@@ -137,21 +137,16 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 </p>
               </div>
             } @else {
-              <div
-                class="rounded-2xl overflow-hidden bg-base border border-border-default"
-                
-              >
+              <div class="rounded-2xl overflow-hidden bg-base border border-border-default">
                 <!-- Navegación semanas -->
                 <div
                   class="flex items-center justify-between px-4 py-2.5 border-b bg-elevated border-border-subtle"
-                  
                 >
                   <button
                     type="button"
                     (click)="prevWeek()"
                     [disabled]="!hasPrevWeek()"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    style="hover:background: var(--bg-subtle)"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all cursor-pointer hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <app-icon name="chevron-left" [size]="16" class="text-text-secondary" />
                   </button>
@@ -160,22 +155,19 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                     type="button"
                     (click)="nextWeek()"
                     [disabled]="!hasNextWeek()"
-                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg transition-all cursor-pointer hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <app-icon name="chevron-right" [size]="16" class="text-text-secondary" />
                   </button>
                 </div>
 
                 <!-- Tabs días -->
-                <div
-                  class="flex overflow-x-auto border-b bg-elevated border-border-subtle"
-                  
-                >
+                <div class="flex overflow-x-auto border-b bg-elevated border-border-subtle">
                   @for (day of currentWeekDays(); track day.date; let i = $index) {
                     <button
                       type="button"
                       (click)="selectedDayIndex.set(i)"
-                      class="flex-1 min-w-14 py-3 px-1 border-b-2 text-center transition-all"
+                      class="flex-1 min-w-14 py-3 px-1 border-b-2 text-center transition-all cursor-pointer"
                       [class.border-brand]="selectedDayIndex() === i"
                       [class.bg-surface]="selectedDayIndex() === i"
                       [class.text-brand]="selectedDayIndex() === i"
@@ -188,13 +180,24 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                   }
                 </div>
 
+                <!-- Aviso de restricción cronológica -->
+                @if (minAllowedTimestamp()) {
+                  <div class="px-3 pt-2 pb-0">
+                    <p class="text-[11px] text-warning font-medium flex items-center gap-1.5">
+                      <app-icon name="clock-alert" [size]="12" />
+                      Clase anterior #{{ prevClaseNumero() }} está agendada el {{ prevClaseFecha()
+                      }}{{ prevClaseHora() ? ' a las ' + prevClaseHora() : '' }}. Solo se muestran
+                      disponibles horarios posteriores.
+                    </p>
+                  </div>
+                }
+
                 <!-- Grid de slots -->
                 <div class="p-3 grid grid-cols-2 gap-2">
                   @for (slot of slotsForDay(); track slot.id) {
-                    @if (slot.status === 'occupied') {
+                    @if (slot.status === 'occupied' || isBeforePrevClass(slot.id)) {
                       <div
                         class="p-2.5 border rounded-lg flex items-center justify-center gap-1 cursor-not-allowed opacity-50 bg-subtle border-border-default"
-                        
                       >
                         <app-icon name="x" [size]="10" class="text-text-muted" />
                         <span class="text-xs text-text-muted"
@@ -205,7 +208,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                       <button
                         type="button"
                         (click)="selectSlot(slot.id)"
-                        class="p-2.5 border rounded-lg text-xs font-medium transition-all text-center"
+                        class="p-2.5 border rounded-lg text-xs font-medium transition-all text-center cursor-pointer"
                         [class.bg-brand]="selectedSlotId() === slot.id"
                         [class.text-surface]="selectedSlotId() === slot.id"
                         [class.border-brand]="selectedSlotId() === slot.id"
@@ -227,16 +230,12 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 <!-- Leyenda -->
                 <div class="px-4 pb-3 flex items-center gap-4 text-xs text-text-muted flex-wrap">
                   <span class="flex items-center gap-1.5">
-                    <span
-                      class="w-3 h-3 rounded inline-block bg-brand"
-                      
-                    ></span>
+                    <span class="w-3 h-3 rounded inline-block bg-brand"></span>
                     Seleccionado
                   </span>
                   <span class="flex items-center gap-1.5">
                     <span
                       class="w-3 h-3 rounded border inline-block bg-surface border-border-default"
-                      
                     ></span>
                     Disponible
                   </span>
@@ -252,15 +251,12 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
         <!-- Error -->
         @if (saveError()) {
-          <p class="text-sm text-error" >{{ saveError() }}</p>
+          <p class="text-sm text-error">{{ saveError() }}</p>
         }
       </div>
 
       <!-- ── Footer ── -->
-      <div
-        class="p-4 border-t flex gap-3 bg-subtle border-border-subtle"
-        
-      >
+      <div class="p-4 border-t flex gap-3 bg-subtle border-border-subtle">
         <button
           type="button"
           class="btn-secondary flex-1"
@@ -289,8 +285,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
   `,
 })
 export class AdminReprogramarClaseDrawerComponent implements OnInit {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-protected readonly facade = inject(AdminAlumnoDetalleFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected readonly selectedInstructorId = signal<number | null>(null);
@@ -333,9 +329,31 @@ protected readonly facade = inject(AdminAlumnoDetalleFacade);
     return grid.slots.filter((s) => s.date === day.date);
   });
 
-  protected readonly canConfirm = computed(
-    () => !!this.selectedInstructorId() && !!this.selectedSlotId() && !this.isSaving(),
-  );
+  /** Clase anterior a la que se está reprogramando (N-1), si existe y tiene horario. */
+  private readonly prevClase = computed(() => {
+    const target = this.facade.reprogramarTarget();
+    if (!target || target.claseNumero <= 1) return null;
+    const prevNum = target.claseNumero - 1;
+    return this.facade.clasesPracticas().find((c) => c.numero === prevNum) ?? null;
+  });
+
+  /** Timestamp ISO de la clase anterior — los slots ≤ este valor quedan bloqueados. */
+  protected readonly minAllowedTimestamp = computed(() => {
+    const prev = this.prevClase();
+    return prev?.scheduledAt ?? null;
+  });
+
+  /** Número de la clase anterior (para el aviso en UI). */
+  protected readonly prevClaseNumero = computed(() => this.prevClase()?.numero ?? null);
+
+  /** Fecha formateada de la clase anterior (para el aviso en UI). */
+  protected readonly prevClaseFecha = computed(() => this.prevClase()?.fecha ?? null);
+  protected readonly prevClaseHora = computed(() => this.prevClase()?.hora ?? null);
+
+  protected readonly canConfirm = computed(() => {
+    if (!this.selectedInstructorId() || !this.selectedSlotId() || this.isSaving()) return false;
+    return !this.isBeforePrevClass(this.selectedSlotId()!);
+  });
 
   ngOnInit(): void {
     void this.facade.loadInstructores();
@@ -350,7 +368,15 @@ protected readonly facade = inject(AdminAlumnoDetalleFacade);
     void this.facade.loadScheduleGrid(id);
   }
 
+  /** Devuelve true si el slot está antes o en el mismo momento que la clase anterior. */
+  protected isBeforePrevClass(slotId: string): boolean {
+    const min = this.minAllowedTimestamp();
+    if (!min) return false;
+    return new Date(slotId).getTime() <= new Date(min).getTime();
+  }
+
   protected selectSlot(slotId: string): void {
+    if (this.isBeforePrevClass(slotId)) return;
     this.selectedSlotId.set(this.selectedSlotId() === slotId ? null : slotId);
   }
 
@@ -386,7 +412,9 @@ protected readonly facade = inject(AdminAlumnoDetalleFacade);
       });
       this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.');
+      this.saveError.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.',
+      );
     } finally {
       this.isSaving.set(false);
     }

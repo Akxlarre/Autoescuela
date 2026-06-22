@@ -31,6 +31,7 @@ import { AdminHistorialPagosComponent } from './components/historial-pagos/admin
 import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
+import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
 
 @Component({
   selector: 'app-admin-alumno-detalle',
@@ -288,95 +289,117 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
         <!-- ── PROGRESO: CLASE B ── -->
         @if (alumno.licenseGroup === 'class_b') {
-          <!-- Clases Prácticas -->
-          <div class="bento-card bento-wide">
-            <div class="bento-card__body bento-card__body--spread">
-              <div class="flex items-start justify-between w-full">
-                <div class="flex flex-col">
-                  <span class="text-lg font-bold text-text-primary">Clases Prácticas</span>
-                  <span class="text-xs text-brand font-medium">
-                    {{ facade.progresoPractico().completadas }} de
-                    {{ facade.progresoPractico().requeridas }} clases
-                  </span>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span class="kpi-value text-brand text-3xl"
-                    >{{ facade.porcentajePracticas() }}%</span
-                  >
-                  <span class="kpi-label">Completado</span>
-                </div>
+          <!-- Clases Prácticas (ocupa 2 filas: progreso + grilla completa de las 12 clases) -->
+          <div
+            class="bento-card bento-wide flex flex-col gap-4"
+            data-row-span-md="2"
+            data-row-span="2"
+          >
+            <!-- Cabecera + KPI -->
+            <div class="flex items-start justify-between w-full">
+              <div class="flex flex-col">
+                <span class="text-lg font-bold text-text-primary">Clases Prácticas</span>
+                <span class="text-xs text-brand font-medium">
+                  {{ facade.progresoPractico().completadas }} de
+                  {{ facade.progresoPractico().requeridas }} clases
+                </span>
               </div>
-              <div class="w-full mt-4">
-                <div
-                  class="progress-track"
-                  role="progressbar"
-                  [attr.aria-valuenow]="facade.porcentajePracticas()"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
+              <div class="flex flex-col items-end">
+                <span class="kpi-value text-brand text-3xl"
+                  >{{ facade.porcentajePracticas() }}%</span
                 >
-                  <div
-                    class="progress-fill-brand transition-all duration-700"
-                    [style.width.%]="facade.porcentajePracticas()"
-                  >
-                    @if (facade.porcentajePracticas() > 15) {
-                      <span class="progress-label-inline">
-                        {{ facade.progresoPractico().completadas }} /
-                        {{ facade.progresoPractico().requeridas }}
-                      </span>
-                    }
-                  </div>
-                </div>
-                <div class="flex items-center justify-between mt-2 kpi-label">
-                  <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
-                  <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
-                </div>
+                <span class="kpi-label">Completado</span>
               </div>
             </div>
-          </div>
 
-          <!-- Asistencia Teórica -->
-          <div class="bento-card bento-wide">
-            <div class="bento-card__body bento-card__body--spread">
-              <div class="flex items-start justify-between w-full">
-                <div class="flex flex-col">
-                  <span class="text-lg font-bold text-text-primary">Asistencia Teórica</span>
-                  <span class="text-xs text-success font-medium">
-                    {{ facade.progresoTeorico().completadas }} de
-                    {{ facade.progresoTeorico().requeridas }} asistidas
-                  </span>
-                </div>
-                <div class="flex flex-col items-end">
-                  <span class="kpi-value text-success text-3xl"
-                    >{{ facade.porcentajeTeoricas() }}%</span
-                  >
-                  <span class="kpi-label">Asistencia</span>
+            <!-- Barra de progreso -->
+            <div class="w-full">
+              <div
+                class="progress-track"
+                role="progressbar"
+                [attr.aria-valuenow]="facade.porcentajePracticas()"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              >
+                <div
+                  class="progress-fill-brand transition-all duration-700"
+                  [style.width.%]="facade.porcentajePracticas()"
+                >
+                  @if (facade.porcentajePracticas() > 15) {
+                    <span class="progress-label-inline">
+                      {{ facade.progresoPractico().completadas }} /
+                      {{ facade.progresoPractico().requeridas }}
+                    </span>
+                  }
                 </div>
               </div>
-              <div class="w-full mt-4">
+              <div class="flex items-center justify-between mt-2 kpi-label">
+                <span class="text-brand">{{ facade.progresoPractico().completadas }} OK</span>
+                <span class="text-text-muted">{{ restantesPracticas() }} Pendientes</span>
+              </div>
+            </div>
+
+            <!-- Grilla completa: las 12 clases en 2 columnas -->
+            <div class="h-px bg-border-subtle w-full"></div>
+            <span class="kpi-label">Detalle de clases</span>
+            <div class="grid grid-cols-2 gap-3 flex-1 content-start">
+              @for (clase of facade.clasesPracticas(); track clase.numero) {
                 <div
-                  class="progress-track"
-                  role="progressbar"
-                  [attr.aria-valuenow]="facade.porcentajeTeoricas()"
-                  aria-valuemin="0"
-                  aria-valuemax="100"
+                  class="flex items-center gap-3 px-3 py-3 rounded-xl border min-w-0"
+                  [class.bg-success/5]="clase.completada"
+                  [class.border-success/20]="clase.completada"
+                  [class.bg-brand/5]="!clase.completada && !!clase.fecha"
+                  [class.border-brand/20]="!clase.completada && !!clase.fecha"
+                  [class.bg-subtle]="!clase.completada && !clase.fecha"
+                  [class.border-border-subtle]="!clase.completada && !clase.fecha"
                 >
-                  <div
-                    class="progress-fill-success transition-all duration-700"
-                    [style.width.%]="facade.porcentajeTeoricas()"
-                  >
-                    @if (facade.porcentajeTeoricas() > 15) {
-                      <span class="progress-label-inline">
-                        {{ facade.progresoTeorico().completadas }} /
-                        {{ facade.progresoTeorico().requeridas }}
-                      </span>
+                  @if (clase.completada) {
+                    <span
+                      class="w-7 h-7 rounded-full bg-success/15 flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="check" [size]="13" class="text-success" />
+                    </span>
+                  } @else if (clase.fecha) {
+                    <span
+                      class="w-7 h-7 rounded-full bg-brand/15 flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="calendar-clock" [size]="13" class="text-brand" />
+                    </span>
+                  } @else {
+                    <span
+                      class="w-7 h-7 rounded-full bg-border-subtle flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="clock" [size]="13" class="text-text-muted" />
+                    </span>
+                  }
+                  <div class="flex flex-col min-w-0">
+                    <div class="flex items-center gap-1.5">
+                      <span
+                        class="text-xs font-bold shrink-0"
+                        [class.text-success]="clase.completada"
+                        [class.text-brand]="!clase.completada && !!clase.fecha"
+                        [class.text-text-muted]="!clase.completada && !clase.fecha"
+                        >Clase #{{ clase.numero }}</span
+                      >
+                      @if (clase.fecha) {
+                        <span class="text-xs text-text-secondary shrink-0">{{ clase.fecha }}</span>
+                        @if (clase.hora) {
+                          <span class="text-xs text-text-muted shrink-0">{{
+                            clase.hora.split('-')[0]
+                          }}</span>
+                        }
+                      }
+                    </div>
+                    @if (clase.instructor) {
+                      <span class="text-[11px] text-text-muted truncate">{{
+                        clase.instructor
+                      }}</span>
+                    } @else {
+                      <span class="text-[11px] text-text-muted italic">Sin agendar</span>
                     }
                   </div>
                 </div>
-                <div class="flex items-center justify-between mt-2 kpi-label">
-                  <span class="text-success">{{ facade.progresoTeorico().completadas }} OK</span>
-                  <span class="text-text-muted">{{ restantesTeoricas() }} Pendientes</span>
-                </div>
-              </div>
+              }
             </div>
           </div>
         }
@@ -603,33 +626,6 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   Práctica 100%
                 </span>
               </div>
-            </div>
-          </div>
-        }
-
-        <!-- Banner: Segunda etapa sin agendar (solo Clase B) -->
-        @if (alumno.licenseGroup === 'class_b' && necesitaAgendarSegundaEtapa()) {
-          <div class="bento-card bento-banner bg-info-subtle border-info">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-10 h-10 rounded-xl bg-surface border border-info-border flex items-center justify-center text-info shadow-sm"
-                >
-                  <app-icon name="calendar-plus" [size]="20" />
-                </div>
-                <div class="flex flex-col">
-                  <span class="font-bold text-text-primary">Clases 7-12 sin agendar</span>
-                  <span class="text-xs text-text-secondary">{{ mensajeSegundaEtapa() }}</span>
-                </div>
-              </div>
-              <p-button
-                label="Ir a Agenda"
-                icon="pi pi-calendar"
-                size="small"
-                severity="info"
-                (onClick)="navigateToAgenda()"
-                data-llm-action="navigate-to-agenda-for-second-stage"
-              />
             </div>
           </div>
         }
@@ -876,45 +872,10 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     () => this.facade.progresoPractico().requeridas - this.facade.progresoPractico().completadas,
   );
 
-  protected readonly restantesTeoricas = computed(
-    () => this.facade.progresoTeorico().requeridas - this.facade.progresoTeorico().completadas,
+  /** Cuántas de las primeras 6 clases prácticas están completadas (firmadas). */
+  private readonly primeras6Completadas = computed(
+    () => this.facade.clasesPracticas().filter((c) => c.numero <= 6 && c.completada).length,
   );
-
-  /**
-   * True cuando las 6 clases de la segunda etapa (7-12) están todas COMPLETADAS.
-   * Desde fix-017 las 12 clases se agendan en la matrícula, así que el hito relevante
-   * de la segunda etapa es completarlas (firmadas), no agendarlas.
-   */
-  private readonly puedeActualizarCarnet = computed(
-    () =>
-      !!this.facade.licensePdfPath() &&
-      this.facade.clasesPracticas().filter((c) => c.numero > 6 && c.completada).length >= 6,
-  );
-
-  /**
-   * True cuando el carnet ya fue emitido pero la segunda etapa (clases 7-12) aún no
-   * está completa. Se activa en cuanto al menos 1 clase 7-12 está completada (segunda
-   * etapa en curso) O el alumno ya completó las 6 primeras (listo para la segunda).
-   */
-  protected readonly necesitaAgendarSegundaEtapa = computed(() => {
-    if (!this.facade.licensePdfPath()) return false;
-    if (this.puedeActualizarCarnet()) return false;
-    const clases = this.facade.clasesPracticas();
-    const segundaEnCurso = clases.filter((c) => c.numero > 6 && c.completada).length > 0;
-    const primeraCompletada = this.facade.progresoPractico().completadas >= 6;
-    return segundaEnCurso || primeraCompletada;
-  });
-
-  /** Mensaje contextual del banner según el estado real de la segunda etapa. */
-  protected readonly mensajeSegundaEtapa = computed(() => {
-    const clases = this.facade.clasesPracticas();
-    const completadas = clases.filter((c) => c.numero > 6 && c.completada).length;
-    const faltantes = 6 - completadas;
-    if (completadas > 0) {
-      return `Faltan ${faltantes} de las 6 clases finales por completar para poder actualizar el carnet con el ciclo completo.`;
-    }
-    return 'El alumno completó las primeras 6 clases. Faltan las 6 clases finales por completar para poder actualizar el carnet.';
-  });
 
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {
@@ -980,49 +941,25 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       }
     }
 
-    const licensePath = this.facade.licensePdfPath();
     const isGenerating = this.facade.isGeneratingLicense();
+    const isViewingCarnet = this.facade.isViewingCarnet();
+    const isCarnetBusy = isGenerating || isViewingCarnet;
     const carnetActions: SectionHeroAction[] = [];
 
     if (alumno.licenseGroup === 'class_b') {
-      if (isGenerating) {
-        carnetActions.push({
-          id: 'generar-carnet',
-          label: 'Generando...',
-          icon: 'loader-2',
-          primary: false,
-          disabled: true,
-          loading: true,
-        });
-      } else if (this.puedeActualizarCarnet()) {
-        // Carnet de 6 clases ya emitido + clases 7-12 agendadas → ofrecer actualizar
-        carnetActions.push({
-          id: 'ver-carnet',
-          label: 'Ver Carnet',
-          icon: 'eye',
-          primary: false,
-        });
-        carnetActions.push({
-          id: 'actualizar-carnet',
-          label: 'Actualizar Carnet',
-          icon: 'refresh-cw',
-          primary: false,
-        });
-      } else if (licensePath) {
-        carnetActions.push({
-          id: 'ver-carnet',
-          label: 'Ver Carnet',
-          icon: 'id-card',
-          primary: false,
-        });
-      } else {
-        carnetActions.push({
-          id: 'generar-carnet',
-          label: 'Generar Carnet',
-          icon: 'id-card',
-          primary: false,
-        });
-      }
+      carnetActions.push({
+        id: 'carnet-menu',
+        label: isGenerating ? 'Generando...' : isViewingCarnet ? 'Cargando...' : 'Carnet',
+        icon: isCarnetBusy ? 'loader-2' : 'id-card',
+        primary: false,
+        disabled: isCarnetBusy,
+        loading: isCarnetBusy,
+        menu: buildCarnetMenu({
+          initialPath: this.facade.licenseInitialPath(),
+          fullPath: this.facade.licenseFullPath(),
+          primeras6Completadas: this.primeras6Completadas(),
+        }),
+      });
     } else {
       carnetActions.push({
         id: 'generar-carnet',
@@ -1057,22 +994,29 @@ export class AdminAlumnoDetalleComponent implements OnInit {
           primary: false,
         });
       } else if (contractGenerated) {
-        // Contrato generado pero no firmado → Descargar + Subir Firmado
+        // Contrato generado pero no firmado → dropdown con Descargar + Subir Firmado
+        const isBusy = this.facade.isDownloadingContract() || this.facade.isUploadingContract();
         contractActions.push({
-          id: 'descargar-contrato',
-          label: 'Descargar Contrato',
-          icon: 'download',
+          id: 'contrato-menu',
+          label: isBusy ? 'Procesando...' : 'Contrato',
+          icon: isBusy ? 'loader-2' : 'file-signature',
           primary: false,
-          loading: this.facade.isDownloadingContract(),
-          disabled: this.facade.isDownloadingContract(),
-        });
-        contractActions.push({
-          id: 'subir-contrato-firmado',
-          label: 'Subir Firmado',
-          icon: 'upload',
-          primary: false,
-          loading: this.facade.isUploadingContract(),
-          disabled: this.facade.isUploadingContract(),
+          disabled: isBusy,
+          loading: isBusy,
+          menu: [
+            {
+              id: 'descargar-contrato',
+              label: 'Descargar Contrato',
+              icon: 'download',
+              hint: 'Descarga el PDF para imprimir y firmar',
+            },
+            {
+              id: 'subir-contrato-firmado',
+              label: 'Subir Firmado',
+              icon: 'upload',
+              hint: 'Sube el PDF con la firma del alumno',
+            },
+          ],
         });
       }
     }
@@ -1118,12 +1062,17 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       case 'editar-alumno':
         this.openEditDrawer();
         break;
-      case 'generar-carnet':
-      case 'ver-carnet':
-        void this.handleCarnet();
+      case 'generar-carnet-6':
+        void this.facade.generarCarnet(this.facade.alumno()!.enrollmentId!, 'initial');
         break;
-      case 'actualizar-carnet':
-        void this.handleActualizarCarnet();
+      case 'ver-carnet-6':
+        void this.handleVerCarnet('initial');
+        break;
+      case 'generar-carnet-12':
+        void this.facade.generarCarnet(this.facade.alumno()!.enrollmentId!, 'full');
+        break;
+      case 'ver-carnet-12':
+        void this.handleVerCarnet('full');
         break;
       case 'generar-certificado':
         void this.handleCertificado();
@@ -1213,27 +1162,14 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     }
   }
 
-  private async handleCarnet(): Promise<void> {
+  /** Abre el carnet ya generado de la variante indicada. */
+  private async handleVerCarnet(variant: 'initial' | 'full'): Promise<void> {
     const alumno = this.facade.alumno();
-    if (!alumno?.enrollmentId || alumno.licenseGroup !== 'class_b') return;
-
-    const licensePath = this.facade.licensePdfPath();
-    if (licensePath) {
-      await this.facade.verCarnet(licensePath);
-    } else {
-      await this.facade.generarCarnet(alumno.enrollmentId);
-    }
-  }
-
-  /** Regenera el carnet incluyendo las 12 clases (sobreescribe el de 6 clases). */
-  private async handleActualizarCarnet(): Promise<void> {
-    const alumno = this.facade.alumno();
-    if (!alumno?.enrollmentId || alumno.licenseGroup !== 'class_b') return;
-    await this.facade.generarCarnet(alumno.enrollmentId);
-  }
-
-  protected navigateToAgenda(): void {
-    void this.router.navigate(['/app/admin/agenda']);
+    if (!alumno || alumno.licenseGroup !== 'class_b') return;
+    const path =
+      variant === 'full' ? this.facade.licenseFullPath() : this.facade.licenseInitialPath();
+    if (!path) return;
+    await this.facade.verCarnet(path);
   }
 
   // ── Helpers de template ─────────────────────────────────────────────────────
