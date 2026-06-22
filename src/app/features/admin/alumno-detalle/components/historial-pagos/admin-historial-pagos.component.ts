@@ -1,7 +1,6 @@
 import { TooltipModule } from 'primeng/tooltip';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Button } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
@@ -11,7 +10,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
   selector: 'app-admin-historial-pagos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TooltipModule, CommonModule, Button, RouterLink, IconComponent, StatBoxComponent],
+  imports: [TooltipModule, CommonModule, RouterLink, IconComponent, StatBoxComponent],
   template: `
     <div class="bento-card !p-0 flex flex-col h-full w-full overflow-hidden">
       <!-- Header -->
@@ -99,14 +98,13 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
         </div>
 
         <!-- Footer -->
-        <p-button
-          label="Ver todo el historial"
-          icon="pi pi-external-link"
-          size="small"
-          [text]="true"
-          class="mt-auto w-full pt-2"
+        <a
           routerLink="/app/admin/pagos"
-        />
+          class="btn-secondary w-full mt-auto flex items-center justify-center gap-2 no-underline"
+        >
+          <app-icon name="external-link" [size]="14" />
+          Ver todo el historial
+        </a>
       </div>
     </div>
   `,

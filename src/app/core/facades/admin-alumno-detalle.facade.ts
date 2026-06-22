@@ -44,8 +44,8 @@ const NOTA_MIN_PROF = 75;
 
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnoDetalleFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
 
@@ -63,8 +63,12 @@ private readonly supabase = inject(SupabaseService);
     requeridas: TEORICAS_REQUERIDAS_B,
   });
   private readonly _certPdfPath = signal<string | null>(null);
-  private readonly _licensePdfPath = signal<string | null>(null);
+  /** Carnet de 6 clases (amarillo). */
+  private readonly _licenseInitialPath = signal<string | null>(null);
+  /** Carnet de 12 clases (verde). */
+  private readonly _licenseFullPath = signal<string | null>(null);
   private readonly _isGeneratingLicense = signal(false);
+  private readonly _isViewingCarnet = signal(false);
   private readonly _contractGeneratedPath = signal<string | null>(null);
   private readonly _contractSignedPath = signal<string | null>(null);
   private readonly _registrationChannel = signal<'presential' | 'online' | null>(null);
@@ -120,8 +124,10 @@ private readonly supabase = inject(SupabaseService);
   readonly progresoPractico = this._progresoPractico.asReadonly();
   readonly progresoTeorico = this._progresoTeorico.asReadonly();
   readonly certPdfPath = this._certPdfPath.asReadonly();
-  readonly licensePdfPath = this._licensePdfPath.asReadonly();
+  readonly licenseInitialPath = this._licenseInitialPath.asReadonly();
+  readonly licenseFullPath = this._licenseFullPath.asReadonly();
   readonly isGeneratingLicense = this._isGeneratingLicense.asReadonly();
+  readonly isViewingCarnet = this._isViewingCarnet.asReadonly();
   readonly contractGeneratedPath = this._contractGeneratedPath.asReadonly();
   readonly contractSignedPath = this._contractSignedPath.asReadonly();
   readonly registrationChannel = this._registrationChannel.asReadonly();
@@ -229,7 +235,8 @@ private readonly supabase = inject(SupabaseService);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
     this._progresoTeorico.set({ completadas: 0, requeridas: TEORICAS_REQUERIDAS_B });
     this._certPdfPath.set(null);
-    this._licensePdfPath.set(null);
+    this._licenseInitialPath.set(null);
+    this._licenseFullPath.set(null);
     this._contractGeneratedPath.set(null);
     this._contractSignedPath.set(null);
     this._registrationChannel.set(null);
@@ -279,7 +286,8 @@ private readonly supabase = inject(SupabaseService);
 
     // Actualizar signals de paths/contrato del enrollment seleccionado
     this._certPdfPath.set(summary.certPdfUrl);
-    this._licensePdfPath.set(summary.licensePdfUrl);
+    this._licenseInitialPath.set(summary.licenseInitialUrl);
+    this._licenseFullPath.set(summary.licenseFullUrl);
     this._contractGeneratedPath.set(summary.contractFileUrl);
     this._contractSignedPath.set(summary.contractSignedUrl);
     this._registrationChannel.set(summary.registrationChannel);
@@ -317,7 +325,7 @@ private readonly supabase = inject(SupabaseService);
             id, number, created_at, total_paid, pending_balance,
             license_group, promotion_course_id, registration_channel,
             certificate_b_pdf_url, certificate_professional_pdf_url,
-            license_pdf_url,
+            license_initial_url, license_full_url,
             courses!inner(name),
             digital_contracts(file_url, signed_contract_url)
           )
@@ -368,7 +376,8 @@ private readonly supabase = inject(SupabaseService);
               lg === 'professional'
                 ? (e.certificate_professional_pdf_url ?? null)
                 : (e.certificate_b_pdf_url ?? null),
-            licensePdfUrl: e.license_pdf_url ?? null,
+            licenseInitialUrl: e.license_initial_url ?? null,
+            licenseFullUrl: e.license_full_url ?? null,
             contractFileUrl: (dc?.file_url as string) ?? null,
             contractSignedUrl: (dc?.signed_contract_url as string) ?? null,
             registrationChannel: ch,
@@ -383,7 +392,8 @@ private readonly supabase = inject(SupabaseService);
           ? (lastEnrollment?.certificate_professional_pdf_url ?? null)
           : (lastEnrollment?.certificate_b_pdf_url ?? null),
       );
-      this._licensePdfPath.set(lastEnrollment?.license_pdf_url ?? null);
+      this._licenseInitialPath.set(lastEnrollment?.license_initial_url ?? null);
+      this._licenseFullPath.set(lastEnrollment?.license_full_url ?? null);
 
       const dcRaw = lastEnrollment?.digital_contracts;
       const dc = Array.isArray(dcRaw) ? dcRaw[0] : dcRaw;
@@ -430,7 +440,11 @@ private readonly supabase = inject(SupabaseService);
       // ── Clase B: delegar al método reutilizable ──
       await this.fetchClassBProgress(enrollmentId, studentId);
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar la ficha del alumno');
+      this._error.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar la ficha del alumno',
+      );
       throw err;
     }
   }
@@ -507,6 +521,7 @@ private readonly supabase = inject(SupabaseService);
             sessionId: null,
             fecha: null,
             scheduledDate: null,
+            scheduledAt: null,
             hora: null,
             instructor: null,
             kmInicio: null,
@@ -528,7 +543,10 @@ private readonly supabase = inject(SupabaseService);
           sessionId: ses.id ?? null,
           fecha: this.formatClassDate(ses.scheduled_at),
           scheduledDate: this.slotDateFromStart(ses.scheduled_at) || null,
-          hora: this.formatHour(ses.start_time, ses.end_time),
+          scheduledAt: (ses.scheduled_at as string) ?? null,
+          hora:
+            this.formatHour(ses.start_time, ses.end_time) ??
+            this.formatTimeFromScheduledAt(ses.scheduled_at),
           instructor,
           kmInicio: ses.km_start,
           kmFin: ses.km_end,
@@ -544,7 +562,7 @@ private readonly supabase = inject(SupabaseService);
       (paymentsResult.data ?? []).map((p: any, idx: number) => ({
         id: p.id,
         fecha: this.formatDate(p.payment_date),
-        concepto: p.type?.trim() || `Pago #${idx + 1}`,
+        concepto: this.formatPaymentType(p.type, `Pago #${idx + 1}`),
         monto: p.total_amount ?? 0,
         metodo: this.derivePaymentMethod(p),
         estado: this.formatPaymentStatus(p.status),
@@ -673,7 +691,7 @@ private readonly supabase = inject(SupabaseService);
       (paymentsRes.data ?? []).map((p: any, idx: number) => ({
         id: p.id,
         fecha: this.formatDate(p.payment_date),
-        concepto: p.type?.trim() || `Pago #${idx + 1}`,
+        concepto: this.formatPaymentType(p.type, `Pago #${idx + 1}`),
         monto: p.total_amount ?? 0,
         metodo: this.derivePaymentMethod(p),
         estado: this.formatPaymentStatus(p.status),
@@ -686,20 +704,32 @@ private readonly supabase = inject(SupabaseService);
     this._progresoTeorico.set({ completadas: 0, requeridas: 0 });
   }
 
-  /** Genera el carnet PDF via Edge Function y lo muestra en el DmsViewer. */
-  async generarCarnet(enrollmentId: number): Promise<void> {
+  /**
+   * Genera el carnet PDF via Edge Function y lo muestra en el DmsViewer.
+   * @param variant 'initial' → carnet de 6 clases (amarillo); 'full' → 12 clases (verde).
+   */
+  async generarCarnet(
+    enrollmentId: number,
+    variant: 'initial' | 'full' = 'initial',
+  ): Promise<void> {
     this._isGeneratingLicense.set(true);
     try {
       const { data, error } = await this.supabase.client.functions.invoke(
         'generate-student-license-pdf',
-        { body: { enrollment_id: enrollmentId } },
+        { body: { enrollment_id: enrollmentId, variant } },
       );
       if (error || !data?.pdfUrl) {
         this.toast.error('Error al generar el carnet. Intenta de nuevo.');
         return;
       }
-      this._licensePdfPath.set(data.pdfPath ?? null);
-      this.dmsViewer.openByUrl(data.pdfUrl, 'Carnet del Alumno');
+      if (variant === 'full') {
+        this._licenseFullPath.set(data.pdfPath ?? null);
+      } else {
+        this._licenseInitialPath.set(data.pdfPath ?? null);
+      }
+      const titulo =
+        variant === 'full' ? 'Carnet del Alumno (12 clases)' : 'Carnet del Alumno (6 clases)';
+      this.dmsViewer.openByUrl(data.pdfUrl, titulo);
     } catch {
       this.toast.error('Error inesperado al generar el carnet.');
     } finally {
@@ -709,14 +739,19 @@ private readonly supabase = inject(SupabaseService);
 
   /** Abre el carnet ya generado usando una signed URL de corta vida. */
   async verCarnet(storagePath: string): Promise<void> {
-    const { data, error } = await this.supabase.client.storage
-      .from('documents')
-      .createSignedUrl(storagePath, 3600);
-    if (error || !data?.signedUrl) {
-      this.toast.error('No se pudo abrir el carnet. Intenta de nuevo.');
-      return;
+    this._isViewingCarnet.set(true);
+    try {
+      const { data, error } = await this.supabase.client.storage
+        .from('documents')
+        .createSignedUrl(storagePath, 3600);
+      if (error || !data?.signedUrl) {
+        this.toast.error('No se pudo abrir el carnet. Intenta de nuevo.');
+        return;
+      }
+      this.dmsViewer.openByUrl(data.signedUrl, 'Carnet del Alumno');
+    } finally {
+      this._isViewingCarnet.set(false);
     }
-    this.dmsViewer.openByUrl(data.signedUrl, 'Carnet del Alumno');
   }
 
   /** Abre el contrato (firmado o presencial) usando una signed URL de corta vida. */
@@ -829,6 +864,30 @@ private readonly supabase = inject(SupabaseService);
   ): string | null {
     if (!start || !end) return null;
     return `${start.slice(0, 5)}-${end.slice(0, 5)}`;
+  }
+
+  private formatTimeFromScheduledAt(ts: string | null | undefined): string | null {
+    if (!ts) return null;
+    return new Intl.DateTimeFormat('es-CL', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date(ts));
+  }
+
+  private formatPaymentType(type: string | null | undefined, fallback: string): string {
+    const map: Record<string, string> = {
+      enrollment: 'Matrícula',
+      online: 'Pago Online',
+      presential: 'Pago Presencial',
+      installment: 'Cuota',
+      partial: 'Pago Parcial',
+      cash: 'Pago en Efectivo',
+      transfer: 'Transferencia',
+      card: 'Pago con Tarjeta',
+    };
+    return map[type?.toLowerCase().trim() ?? ''] ?? fallback;
   }
 
   private formatPaymentStatus(status: string | null | undefined): string {

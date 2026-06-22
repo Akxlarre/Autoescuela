@@ -37,10 +37,12 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { enrollment_id } = await req.json();
+    const { enrollment_id, variant: rawVariant } = await req.json();
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonRes({ error: 'enrollment_id (number) is required' }, 400);
     }
+    // 'initial' → carnet de 6 clases (amarillo); 'full' → carnet de 12 clases (verde).
+    const variant: 'initial' | 'full' = rawVariant === 'full' ? 'full' : 'initial';
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -86,17 +88,36 @@ Deno.serve(async (req: Request) => {
 
     const sesiones = sessions ?? [];
 
+    // Instructor mayoritario: el que tiene más clases en la sesión.
+    // En caso de empate, gana el que tiene la clase de menor número (sesiones ya ordenadas asc).
     let instructorName = '';
     if (sesiones.length > 0) {
-      const instRaw = sesiones[0].instructors as any;
-      const inst = Array.isArray(instRaw) ? instRaw[0] : instRaw;
-      const uInst = Array.isArray(inst?.users) ? inst.users[0] : inst?.users;
-      if (uInst) {
-        instructorName = `${uInst.first_names} ${uInst.paternal_last_name}`.trim().toUpperCase();
-      }
+      // Contar clases por instructor manteniendo el índice de primera aparición
+      const countMap = new Map<string, { name: string; count: number; firstIndex: number }>();
+      sesiones.forEach((s: any, idx: number) => {
+        const instRaw = s.instructors as any;
+        const inst = Array.isArray(instRaw) ? instRaw[0] : instRaw;
+        const uInst = Array.isArray(inst?.users) ? inst.users[0] : inst?.users;
+        if (!uInst) return;
+        const name = `${uInst.first_names} ${uInst.paternal_last_name}`.trim().toUpperCase();
+        const entry = countMap.get(name);
+        if (entry) {
+          entry.count++;
+        } else {
+          countMap.set(name, { name, count: 1, firstIndex: idx });
+        }
+      });
+
+      // Ordenar: mayor cantidad primero; en empate, menor firstIndex primero
+      const sorted = [...countMap.values()].sort(
+        (a, b) => b.count - a.count || a.firstIndex - b.firstIndex,
+      );
+      instructorName = sorted[0]?.name ?? '';
     }
 
-    const totalClases = sesiones.length <= 6 ? 6 : 12;
+    // El agendamiento siempre crea 12 sesiones (fix-017); la cantidad de filas
+    // del carnet la define la variante solicitada, no cuántas sesiones existen.
+    const totalClases = variant === 'full' ? 12 : 6;
 
     let photoImage: AnyPdfImage | null = null;
     const { data: photoDoc } = await supabase
@@ -125,12 +146,14 @@ Deno.serve(async (req: Request) => {
       instructorName,
       sesiones,
       totalClases,
+      variant,
       logo,
       photo: photoImage,
     });
 
     const safeName = sanitize(`${lastNames}_${firstName}`);
-    const fileName = `Carnet_${safeName}.pdf`;
+    const suffix = variant === 'full' ? '12' : '6';
+    const fileName = `Carnet_${safeName}_${suffix}.pdf`;
     const storagePath = `student-licenses/${enrollment_id}/${fileName}`;
 
     const { error: uploadErr } = await supabase.storage
@@ -139,9 +162,12 @@ Deno.serve(async (req: Request) => {
 
     if (uploadErr) return jsonRes({ error: `Upload failed: ${uploadErr.message}` }, 500);
 
+    // Persistir en la columna de la variante correspondiente. Ambos carnets
+    // coexisten: generar uno nunca pisa al otro (fix-019).
+    const urlColumn = variant === 'full' ? 'license_full_url' : 'license_initial_url';
     await supabase
       .from('enrollments')
-      .update({ license_pdf_url: storagePath })
+      .update({ [urlColumn]: storagePath })
       .eq('id', enrollment_id);
 
     const { data: signedData, error: signErr } = await supabase.storage
@@ -220,6 +246,7 @@ interface CarnetData {
   instructorName: string;
   sesiones: any[];
   totalClases: number;
+  variant: 'initial' | 'full';
   logo: PngPdfImage | null;
   photo: AnyPdfImage | null;
 }
@@ -275,6 +302,15 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
   }
 
   // ════════════════════════════════════════════════
+  // FONDO PASTEL (según variante) — se pinta primero para quedar detrás de
+  // bordes, textos, logo y foto. Tonos claros para no afectar legibilidad.
+  //   initial (6 clases)  → amarillo pastel
+  //   full    (12 clases) → verde pastel
+  // ════════════════════════════════════════════════
+  const bgColor = d.variant === 'full' ? '0.85 0.94 0.82' : '1 0.97 0.78';
+  ops += `${bgColor} rg 0 0 ${W} ${H} re f\n0 g\n`;
+
+  // ════════════════════════════════════════════════
   // COLUMNA IZQUIERDA
   // ════════════════════════════════════════════════
 
@@ -328,6 +364,13 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
       TC((COL_NRO + COL_DIA) / 2, textY, fmtDaySantiago(ses.scheduled_at), 'F1', 6);
       TC((COL_DIA + COL_HI) / 2, textY, fmtTimeSantiago(ses.scheduled_at), 'F1', 6);
       TC((COL_HI + COL_HT) / 2, textY, addMinutes(ses.scheduled_at, 45), 'F1', 6);
+    }
+
+    // Carnet completo (12 clases): las clases 1-6 ya fueron cursadas en el carnet
+    // inicial, así que no requieren firma del instructor. En su lugar se marca
+    // "Completada" en la columna de firma.
+    if (d.variant === 'full' && i < 6) {
+      TC((COL_HT + TBL_R) / 2, textY, 'Completada', 'F1', 5.5);
     }
   }
 

@@ -3,15 +3,23 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  OnDestroy,
+  computed,
   inject,
   input,
   output,
+  signal,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroMenuItem,
+} from '@core/models/ui/section-hero.model';
 
 /**
  * Section Hero — Cabecera de sección reutilizable.
@@ -168,6 +176,138 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           display: none !important;
         }
       }
+
+      /* ════════════════════════════════════════════════════════════
+         MENÚ DESPLEGABLE DE ACCIÓN (panel flotante del DS)
+         Mismo lenguaje visual que branch-selector / user-panel.
+         OJO: el panel vive dentro de .surface-hero, que reescribe
+         --text-* y --border-* a blanco. Hay que restaurar esos tokens
+         dentro del panel para que el texto sea legible sobre el glass.
+      ════════════════════════════════════════════════════════════ */
+      /* Eleva el stacking context del host (creado por view-transition-name)
+         por encima de las cards hermanas mientras el menú está abierto, para
+         que el panel position:fixed no quede tapado por ellas. */
+      :host(.hero-menu-open) {
+        position: relative;
+        z-index: 1000;
+      }
+
+      .hero-menu__chevron {
+        opacity: 0.7;
+        transition: transform var(--duration-fast) var(--ease-standard);
+      }
+      .hero-menu__chevron--open {
+        transform: rotate(180deg);
+      }
+
+      .hero-menu-panel {
+        position: fixed;
+        z-index: 1000;
+        min-width: 248px;
+        padding: 6px;
+        background: var(--bg-glass-surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+
+        /* Restaurar tokens que .surface-hero pinta de blanco (modo claro). */
+        --text-primary: #09090b;
+        --text-secondary: #52525b;
+        --text-muted: #a1a1aa;
+        --border-subtle: rgba(9, 9, 11, 0.06);
+        --border-default: rgba(9, 9, 11, 0.12);
+      }
+
+      :host-context([data-mode='dark']) .hero-menu-panel {
+        --text-primary: #f4f4f5;
+        --text-secondary: #a1a1aa;
+        --text-muted: #71717a;
+        --border-subtle: rgba(255, 255, 255, 0.04);
+        --border-default: rgba(255, 255, 255, 0.12);
+      }
+
+      .hero-menu-panel__header {
+        padding: 8px 10px 4px;
+        font-size: var(--text-xs);
+        font-weight: var(--font-semibold);
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+      /* Separación entre el segundo grupo y el primero */
+      .hero-menu-panel__header:not(:first-child) {
+        margin-top: 4px;
+        border-top: 1px solid var(--border-subtle);
+        padding-top: 10px;
+      }
+
+      .hero-menu-panel__item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 8px 10px;
+        border: none;
+        border-radius: var(--radius-md);
+        background: transparent;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        font-weight: var(--font-medium);
+        font-family: var(--font-body);
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition-color);
+      }
+      .hero-menu-panel__item:not(:disabled):hover {
+        background: var(--bg-elevated);
+        color: var(--text-primary);
+      }
+
+      .hero-menu-panel__item-icon {
+        flex-shrink: 0;
+        color: var(--text-muted);
+      }
+      .hero-menu-panel__item:hover .hero-menu-panel__item-icon {
+        color: var(--color-primary);
+      }
+
+      .hero-menu-panel__item-body {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        flex: 1;
+        min-width: 0;
+      }
+      .hero-menu-panel__item-label {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .hero-menu-panel__item-hint {
+        font-size: 11px;
+        font-weight: var(--font-normal);
+        color: var(--text-muted);
+        white-space: normal;
+        line-height: 1.3;
+      }
+
+      .hero-menu-panel__item-lock {
+        flex-shrink: 0;
+        color: var(--text-muted);
+      }
+
+      .hero-menu-panel__item--disabled,
+      .hero-menu-panel__item--disabled:hover {
+        background: transparent;
+        color: var(--text-muted);
+        cursor: not-allowed;
+      }
+      .hero-menu-panel__item--disabled:hover .hero-menu-panel__item-icon {
+        color: var(--text-muted);
+      }
     `,
   ],
   host: {
@@ -175,8 +315,13 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     class: 'block min-h-0 bento-hero',
     style: 'view-transition-name: section-hero',
     '[attr.title]': 'null',
+    // view-transition-name convierte al host en un stacking context atómico:
+    // las cards hermanas posteriores pintarían sobre el panel position:fixed.
+    // Al abrir el menú elevamos el z-index del host para que su subárbol
+    // (incluido el panel) quede por encima de las cards siguientes.
+    '[class.hero-menu-open]': 'openMenuId() !== null',
   },
-  imports: [IconComponent, RouterLink],
+  imports: [IconComponent, RouterLink, AnimateInDirective],
   template: `
     <!-- ═══════════════════════════════════════════════════════════
          TOAST-STYLE HERO — Fondo state-info + borde + bar.
@@ -231,7 +376,33 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             aria-label="Acciones principales"
           >
             @for (action of actions(); track action.id) {
-              @if (action.route) {
+              @if (action.menu) {
+                <button
+                  type="button"
+                  [class]="action.primary ? 'btn-primary' : 'btn-secondary'"
+                  class="whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
+                  [disabled]="action.disabled ?? false"
+                  [attr.data-llm-action]="action.id"
+                  aria-haspopup="menu"
+                  [attr.aria-expanded]="openMenuId() === action.id"
+                  (click)="toggleMenu(action.id, $event)"
+                >
+                  @if (action.icon) {
+                    <app-icon
+                      [name]="action.icon"
+                      [size]="16"
+                      [class.animate-spin]="action.loading"
+                    />
+                  }
+                  {{ action.label }}
+                  <app-icon
+                    name="chevron-down"
+                    [size]="14"
+                    class="hero-menu__chevron"
+                    [class.hero-menu__chevron--open]="openMenuId() === action.id"
+                  />
+                </button>
+              } @else if (action.route) {
                 <a
                   [routerLink]="action.route"
                   [class]="
@@ -325,10 +496,66 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
         }
       </div>
     </div>
+
+    <!-- ── Panel del menú de acción ──────────────────────────────────────
+         Renderizado FUERA de .hero-card a propósito: el lift de hover de la
+         card (transform) la convierte en containing block del position:fixed
+         y lo recortaría con su overflow. Como hermano del card (hijo del host
+         bento-hero, sin transform/overflow), el fixed siempre resuelve contra
+         el viewport. ──────────────────────────────────────────────────── -->
+    @if (openMenuId()) {
+      <div
+        appAnimateIn
+        role="menu"
+        class="hero-menu-panel"
+        [style.top.px]="menuPos()?.top"
+        [style.right.px]="menuPos()?.right"
+      >
+        @for (item of openMenuItems(); track item.id) {
+          @if (item.header) {
+            <div class="hero-menu-panel__header">{{ item.label }}</div>
+          } @else {
+            <button
+              type="button"
+              role="menuitem"
+              class="hero-menu-panel__item"
+              [class.hero-menu-panel__item--disabled]="item.disabled"
+              [disabled]="item.disabled ?? false"
+              [attr.data-llm-action]="item.id"
+              (click)="onMenuItemClick(item)"
+            >
+              @if (item.icon) {
+                <app-icon [name]="item.icon" [size]="15" class="hero-menu-panel__item-icon" />
+              }
+              <span class="hero-menu-panel__item-body">
+                <span class="hero-menu-panel__item-label">{{ item.label }}</span>
+                @if (item.hint) {
+                  <span class="hero-menu-panel__item-hint">{{ item.hint }}</span>
+                }
+              </span>
+              @if (item.disabled) {
+                <app-icon name="lock" [size]="12" class="hero-menu-panel__item-lock" />
+              }
+            </button>
+          }
+        }
+      </div>
+    }
   `,
 })
-export class SectionHeroComponent implements AfterViewInit {
+export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly hostEl = inject(ElementRef<HTMLElement>);
+
+  /** Id de la acción cuyo menú desplegable está abierto (null = ninguno). */
+  protected readonly openMenuId = signal<string | null>(null);
+
+  /** Ítems del menú de la acción actualmente abierta (para el panel raíz único). */
+  protected readonly openMenuItems = computed<SectionHeroMenuItem[]>(() => {
+    const id = this.openMenuId();
+    if (!id) return [];
+    return this.actions().find((a) => a.id === id)?.menu ?? [];
+  });
 
   readonly title = input.required<string>();
   readonly contextLine = input<string>('');
@@ -386,5 +613,76 @@ export class SectionHeroComponent implements AfterViewInit {
 
   onActionClick(id: string): void {
     this.actionClick.emit(id);
+  }
+
+  // ── Menú desplegable de acción (panel flotante del DS) ──────────────────────
+
+  /**
+   * Posición fija del panel (top/right en px). Se usa `position: fixed` porque el
+   * panel vive dentro de `.surface-hero`, que tiene `overflow: hidden` (recorta
+   * cualquier panel `absolute`). Con `fixed` escapa de ese clipping; las
+   * coordenadas se calculan desde el rect del botón disparador.
+   */
+  protected readonly menuPos = signal<{ top: number; right: number } | null>(null);
+  private triggerEl: HTMLElement | null = null;
+
+  /**
+   * Listener en BUBBLE PHASE (no capture) para cerrar el menú al click fuera.
+   * El trigger usa stopPropagation para que este listener no reciba el mismo
+   * click que abrió el panel. Mismo patrón que `BranchSelectorComponent`.
+   */
+  private readonly outsideListener = (event: MouseEvent): void => {
+    if (this.openMenuId() === null) return;
+    if (this.hostEl.nativeElement.contains(event.target as Node)) return;
+    this.closeMenu();
+  };
+
+  /** Reposiciona el panel al hacer scroll/resize mientras está abierto. */
+  private readonly repositionListener = (): void => this.updateMenuPos();
+
+  constructor() {
+    document.addEventListener('click', this.outsideListener);
+  }
+
+  ngOnDestroy(): void {
+    document.removeEventListener('click', this.outsideListener);
+    this.detachReposition();
+  }
+
+  protected toggleMenu(id: string, event: MouseEvent): void {
+    event.stopPropagation();
+    if (this.openMenuId() === id) {
+      this.closeMenu();
+      return;
+    }
+    this.triggerEl = event.currentTarget as HTMLElement;
+    this.openMenuId.set(id);
+    this.updateMenuPos();
+    window.addEventListener('scroll', this.repositionListener, true);
+    window.addEventListener('resize', this.repositionListener);
+  }
+
+  private closeMenu(): void {
+    this.openMenuId.set(null);
+    this.menuPos.set(null);
+    this.triggerEl = null;
+    this.detachReposition();
+  }
+
+  private detachReposition(): void {
+    window.removeEventListener('scroll', this.repositionListener, true);
+    window.removeEventListener('resize', this.repositionListener);
+  }
+
+  private updateMenuPos(): void {
+    if (!this.triggerEl) return;
+    const r = this.triggerEl.getBoundingClientRect();
+    this.menuPos.set({ top: r.bottom + 6, right: window.innerWidth - r.right });
+  }
+
+  protected onMenuItemClick(item: SectionHeroMenuItem): void {
+    if (item.disabled || item.header) return;
+    this.closeMenu();
+    this.actionClick.emit(item.id);
   }
 }
