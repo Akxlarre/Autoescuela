@@ -510,13 +510,10 @@ import type {
 
           @if (kpis().length) {
             <!-- Fila 2: KPIs + sparklines -->
-            <div
-              class="border-t border-border-subtle grid"
-              style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr))"
-            >
+            <div class="border-t border-border-subtle flex flex-wrap">
               @for (kpi of kpis(); track kpi.id) {
                 <div
-                  class="px-4 py-2.5 flex items-center gap-3 border-r border-border-subtle last:border-r-0"
+                  class="px-4 py-2.5 flex items-center gap-3 border-r border-b sm:border-b-0 border-border-subtle flex-1 min-w-[45%] sm:min-w-[auto]"
                 >
                   <div class="min-w-0 flex-1">
                     <p

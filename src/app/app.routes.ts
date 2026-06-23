@@ -98,7 +98,14 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'alumnos/pre-inscritos',
+            path: 'clase-profesional/alumnos',
+            loadComponent: () =>
+              import('./features/admin/alumnos-profesional/admin-alumnos-profesional.component').then(
+                (m) => m.AdminAlumnosProfesionalComponent,
+              ),
+          },
+          {
+            path: 'clase-profesional/pre-inscritos',
             loadComponent: () =>
               import('./features/admin/alumnos/pre-inscritos/admin-pre-inscritos.component').then(
                 (m) => m.AdminPreInscritosComponent,
@@ -116,6 +123,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/admin/alumnos/ex-alumnos/admin-ex-alumnos.component').then(
                 (m) => m.AdminExAlumnosComponent,
+              ),
+          },
+          {
+            path: 'ex-alumnos-profesional',
+            loadComponent: () =>
+              import('./features/admin/ex-alumnos-profesional/admin-ex-alumnos-profesional.component').then(
+                (m) => m.AdminExAlumnosProfesionalComponent,
               ),
           },
           {
@@ -371,7 +385,14 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'alumnos/pre-inscritos',
+            path: 'profesional/alumnos',
+            loadComponent: () =>
+              import('./features/secretaria/alumnos-profesional/secretaria-alumnos-profesional.component').then(
+                (m) => m.SecretariaAlumnosProfesionalComponent,
+              ),
+          },
+          {
+            path: 'profesional/pre-inscritos',
             loadComponent: () =>
               import('./features/secretaria/alumnos-pre-inscritos/secretaria-alumnos-pre-inscritos.component').then(
                 (m) => m.SecretariaAlumnosPreInscritosComponent,
@@ -550,6 +571,13 @@ export const routes: Routes = [
             loadComponent: () =>
               import('./features/secretaria/ex-alumnos/secretaria-ex-alumnos.component').then(
                 (m) => m.SecretariaExAlumnosComponent,
+              ),
+          },
+          {
+            path: 'ex-alumnos-profesional',
+            loadComponent: () =>
+              import('./features/secretaria/ex-alumnos-profesional/secretaria-ex-alumnos-profesional.component').then(
+                (m) => m.SecretariaExAlumnosProfesionalComponent,
               ),
           },
           {

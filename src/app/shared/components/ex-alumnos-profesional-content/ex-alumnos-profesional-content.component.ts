@@ -1,0 +1,212 @@
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  signal,
+  inject,
+  viewChild,
+  ElementRef,
+  AfterViewInit,
+} from '@angular/core';
+import { CurrencyPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SelectModule } from 'primeng/select';
+
+import { IconComponent } from '../icon/icon.component';
+import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
+import { SectionHeroComponent } from '../section-hero/section-hero.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
+
+/**
+ * Dumb presentacional para Ex-Alumnos Profesional (spec 0016).
+ * Recibe la lista ya filtrada a `license_group='professional'` desde el Smart.
+ */
+@Component({
+  selector: 'app-ex-alumnos-profesional-content',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CurrencyPipe,
+    FormsModule,
+    SelectModule,
+    IconComponent,
+    SkeletonBlockComponent,
+    SectionHeroComponent,
+    EmptyStateComponent,
+    BentoGridLayoutDirective,
+  ],
+  template: `
+    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Ex-Alumnos Profesional">
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
+        title="Ex-Alumnos Profesional"
+        subtitle="Archivo histórico de egresados de Clase Profesional"
+        icon="graduation-cap"
+        [backRoute]="backRoute()"
+        backLabel="Alumnos Profesional"
+        [kpis]="heroKpis()"
+        [actions]="[]"
+      />
+
+      <div class="bento-banner card p-0 overflow-hidden flex flex-col">
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
+          <div class="relative flex-1 min-w-52 max-w-xs">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
+            />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o RUT..."
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none"
+              data-llm-description="Search professional graduates by name or RUT"
+              [(ngModel)]="searchTerm"
+            />
+          </div>
+          <p-select
+            [options]="claseOptions()"
+            [(ngModel)]="selectedClase"
+            optionLabel="label"
+            optionValue="value"
+            class="h-9"
+            data-llm-description="Filter professional graduates by license class"
+          />
+          <span class="ml-auto text-sm text-text-muted">
+            {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
+          </span>
+        </div>
+
+        @if (isLoading()) {
+          <div class="p-4 space-y-3">
+            @for (i of skeletonRows; track i) {
+              <app-skeleton-block variant="rect" width="100%" height="44px" />
+            }
+          </div>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr class="bg-subtle text-text-muted uppercase text-xs tracking-wider text-left">
+                  <th class="py-3 px-5">Egresado</th>
+                  <th class="py-3 px-5">Licencia</th>
+                  <th class="py-3 px-5">Año / Sede</th>
+                  <th class="py-3 px-5">Estado cuenta</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border-subtle">
+                @for (egresado of filtered(); track egresado.id) {
+                  <tr class="hover:bg-elevated transition-colors">
+                    <td class="py-4 px-5">
+                      <div class="flex flex-col gap-0.5">
+                        <span class="font-bold text-text-primary">{{ egresado.nombre }}</span>
+                        <span class="text-xs text-text-muted">{{ egresado.rut }}</span>
+                      </div>
+                    </td>
+                    <td class="py-4 px-5">
+                      <span
+                        class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+                        >{{ egresado.licencia }}</span
+                      >
+                    </td>
+                    <td class="py-4 px-5">
+                      <div class="flex flex-col gap-0.5 text-xs">
+                        <span class="font-bold text-text-primary">{{ egresado.anio ?? '—' }}</span>
+                        <span class="text-text-muted italic">{{ egresado.sede }}</span>
+                      </div>
+                    </td>
+                    <td class="py-4 px-5">
+                      @if (egresado.saldoPendiente > 0) {
+                        <span class="text-xs font-bold text-warning">
+                          Debe {{ egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0' }}
+                        </span>
+                      } @else {
+                        <span class="text-xs font-bold text-success">Al día</span>
+                      }
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="4" class="p-0">
+                      <app-empty-state
+                        icon="graduation-cap"
+                        message="No hay ex-alumnos profesionales"
+                        subtitle="Ajusta la búsqueda o el filtro de clase."
+                        actionLabel="Limpiar filtros"
+                        actionIcon="refresh-cw"
+                        (action)="resetFilters()"
+                      />
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </div>
+  `,
+})
+export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
+  readonly egresados = input.required<EgresadoTableRow[]>();
+  readonly isLoading = input(false);
+  readonly backRoute = input<string>('/app/admin/clase-profesional/alumnos');
+
+  private readonly gsap = inject(GsapAnimationsService);
+  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
+
+  protected readonly skeletonRows = Array(6).fill(0);
+  searchTerm = '';
+  selectedClase = '';
+
+  readonly claseOptions = computed(() => [
+    { label: 'Todas las clases', value: '' },
+    ...[...new Set(this.egresados().map((e) => e.licencia))]
+      .sort()
+      .map((l) => ({ label: l, value: l })),
+  ]);
+
+  readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'total',
+      label: 'Egresados Profesional',
+      value: this.egresados().length,
+      icon: 'graduation-cap',
+    },
+    {
+      id: 'deuda',
+      label: 'Con deuda',
+      value: this.egresados().filter((e) => e.saldoPendiente > 0).length,
+      icon: 'circle-alert',
+      color: 'warning',
+    },
+  ]);
+
+  ngAfterViewInit(): void {
+    const grid = this.bentoGrid();
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+  }
+
+  filtered(): EgresadoTableRow[] {
+    const term = this.searchTerm.toLowerCase().trim();
+    return this.egresados().filter((e) => {
+      const matchSearch =
+        !term || e.nombre.toLowerCase().includes(term) || e.rut.toLowerCase().includes(term);
+      const matchClase = !this.selectedClase || e.licencia === this.selectedClase;
+      return matchSearch && matchClase;
+    });
+  }
+
+  resetFilters(): void {
+    this.searchTerm = '';
+    this.selectedClase = '';
+  }
+}

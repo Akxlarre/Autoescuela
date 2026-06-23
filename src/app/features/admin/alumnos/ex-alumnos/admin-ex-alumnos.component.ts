@@ -46,8 +46,8 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
         density="slim"
         [animateOnInit]="false"
         [loading]="facade.isLoading()"
-        title="Gestión de Ex-Alumnos"
-        subtitle="Archivo histórico, búsqueda avanzada y seguimiento financiero"
+        title="Ex-Alumnos B"
+        subtitle="Archivo histórico de egresados de Clase B"
         icon="graduation-cap"
         backRoute="/app/admin/alumnos"
         backLabel="Alumnos"
@@ -332,7 +332,7 @@ export class AdminExAlumnosComponent {
       icon: 'archive',
     },
     {
-      label: `${this.facade.totalEgresados()} Egresados`,
+      label: `${this.facade.egresadosClaseB()} Egresados`,
       style: 'success',
       icon: 'circle-check',
     },
@@ -346,7 +346,7 @@ export class AdminExAlumnosComponent {
 
   // ── Lista filtrada (cliente) ─────────────────────────────────────────────────
   protected readonly filteredEgresados = computed<EgresadoTableRow[]>(() => {
-    let results: EgresadoTableRow[] = this.facade.egresados();
+    let results: EgresadoTableRow[] = this.facade.egresadosClaseBList();
 
     const term = this.searchTerm().toLowerCase().trim();
     if (term) {
@@ -379,14 +379,14 @@ export class AdminExAlumnosComponent {
 
   protected readonly availableYears = computed<string[]>(() => {
     const years = this.facade
-      .egresados()
+      .egresadosClaseBList()
       .map((e: EgresadoTableRow) => e.anio)
       .filter((y): y is number => y !== null);
     return [...new Set(years)].sort((a: number, b: number) => Number(b) - Number(a)).map(String);
   });
 
   protected readonly availableLicencias = computed<string[]>(() =>
-    [...new Set(this.facade.egresados().map((e: EgresadoTableRow) => e.licencia))].sort(),
+    [...new Set(this.facade.egresadosClaseBList().map((e: EgresadoTableRow) => e.licencia))].sort(),
   );
 
   constructor() {
@@ -405,22 +405,14 @@ export class AdminExAlumnosComponent {
   protected readonly heroKpis = computed((): SectionHeroKpi[] => [
     {
       id: 'total',
-      label: 'Total Egresados',
-      value: this.facade.totalEgresados(),
+      label: 'Egresados Clase B',
+      value: this.facade.egresadosClaseB(),
       icon: 'graduation-cap',
-    },
-    { id: 'clase-b', label: 'Clase B', value: this.facade.egresadosClaseB(), icon: 'car' },
-    {
-      id: 'profesional',
-      label: 'Profesional',
-      value: this.facade.egresadosProfesional(),
-      icon: 'award',
-      color: 'success',
     },
     {
       id: 'deuda',
-      label: 'Deuda Pendiente',
-      value: this.facade.conAbonoPendiente(),
+      label: 'Con deuda',
+      value: this.facade.egresadosClaseBList().filter((e) => e.saldoPendiente > 0).length,
       icon: 'circle-alert',
       color: 'warning',
     },

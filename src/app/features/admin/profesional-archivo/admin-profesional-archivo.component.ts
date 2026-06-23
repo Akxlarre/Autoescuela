@@ -9,7 +9,6 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
@@ -27,7 +26,6 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     FormsModule,
     SelectModule,
     TooltipModule,
@@ -46,91 +44,73 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
         title="Archivo · Clase Profesional"
         subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
         [actions]="[]"
-        [kpis]="heroKpis()"
       />
 
-      <!-- ═══ Selectores en cascada ═══ -->
-      <section class="bento-banner grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted"
-            >Promoción finalizada</label
-          >
-          @if (facade.isLoading()) {
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-          } @else {
-            <p-select
-              [options]="facade.promociones()"
-              optionLabel="label"
-              optionValue="id"
-              placeholder="Seleccionar promoción archivada..."
-              [ngModel]="facade.selectedPromocionId()"
-              (ngModelChange)="onPromoChange($event)"
-              styleClass="w-full"
-              data-llm-description="select archived professional promotion"
-            />
+      <!-- ═══ Buscador / Selector Principal & Cursos ═══ -->
+      <section class="bento-banner bento-card p-5">
+        <div class="flex flex-col md:flex-row gap-6">
+          <!-- Selector -->
+          <div class="flex-1 max-w-xl">
+            <label class="mb-2 block text-sm font-semibold text-text-primary">
+              Promoción archivada
+            </label>
+            <p class="mb-4 text-xs text-muted">
+              Busca y selecciona una promoción archivada para revisar notas y asistencia.
+            </p>
+
+            @if (facade.isLoading()) {
+              <app-skeleton-block variant="rect" width="100%" height="44px" />
+            } @else {
+              <p-select
+                [options]="facade.promociones()"
+                optionLabel="label"
+                optionValue="id"
+                placeholder="Buscar promoción (ej. Clase 123...)"
+                [ngModel]="facade.selectedPromocionId()"
+                (ngModelChange)="onPromoChange($event)"
+                styleClass="w-full"
+                [style]="{ height: '44px' }"
+                appendTo="body"
+                [filter]="true"
+                filterPlaceholder="Buscar por nombre..."
+                data-llm-description="select archived professional promotion"
+              />
+            }
+          </div>
+
+          <!-- Pills de cursos (solo visible si hay promo seleccionada) -->
+          @if (facade.selectedPromocionId()) {
+            <div
+              class="flex-1 border-t md:border-t-0 md:border-l border-border-subtle pt-4 md:pt-0 md:pl-6"
+            >
+              <label class="mb-2 block text-sm font-semibold text-text-primary">
+                Cursos impartidos en esta promoción
+              </label>
+              <p class="mb-4 text-xs text-muted">
+                Selecciona el curso para ver los resultados de los alumnos.
+              </p>
+              <div class="flex flex-wrap items-center gap-2">
+                @for (curso of facade.cursos(); track curso.id) {
+                  <button
+                    class="curso-pill flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-all"
+                    [class.curso-pill--active]="facade.selectedCursoId() === curso.id"
+                    (click)="onCursoChange(curso.id)"
+                    [title]="curso.courseName"
+                    data-llm-action="select-archived-course"
+                  >
+                    <app-icon name="book" [size]="13" />
+                    {{ curso.licenseClass }}
+                  </button>
+                }
+              </div>
+            </div>
           }
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-semibold uppercase tracking-wider text-muted"
-            >Curso</label
-          >
-          <p-select
-            [options]="facade.cursos()"
-            optionLabel="label"
-            optionValue="id"
-            placeholder="Seleccionar curso..."
-            [ngModel]="facade.selectedCursoId()"
-            (ngModelChange)="onCursoChange($event)"
-            styleClass="w-full"
-            [style]="{ height: '40px' }"
-            [disabled]="facade.cursos().length === 0"
-            data-llm-description="select course within archived promotion"
-          />
         </div>
       </section>
 
-      <!-- ═══ Info de la promoción seleccionada ═══ -->
-      @if (selectedPromocion()) {
-        @let promo = selectedPromocion()!;
-        <div
-          class="bento-banner flex flex-wrap items-center gap-4 rounded-lg border border-border px-4 py-3 bg-surface"
-        >
-          <app-icon name="archive" [size]="16" color="var(--text-muted)" />
-          <div class="flex-1 min-w-0">
-            <span class="text-sm font-semibold text-primary">{{ promo.name }}</span>
-            <span
-              class="ml-2 text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
-            >
-              {{ promo.code }}
-            </span>
-          </div>
-          <div class="flex items-center gap-1.5 text-xs text-secondary">
-            <app-icon name="calendar" [size]="13" />
-            {{ promo.startDate | date: 'dd/MM/yyyy' }}
-            @if (promo.endDate) {
-              → {{ promo.endDate | date: 'dd/MM/yyyy' }}
-            }
-          </div>
-          <!-- Cursos disponibles como pills -->
-          <div class="flex items-center gap-1">
-            @for (curso of facade.cursos(); track curso.id) {
-              <button
-                class="curso-pill text-xs font-semibold px-2 py-0.5 rounded-full border transition-all"
-                [class.curso-pill--active]="facade.selectedCursoId() === curso.id"
-                (click)="onCursoChange(curso.id)"
-                [title]="curso.courseName"
-                data-llm-action="select-archived-course"
-              >
-                {{ curso.licenseClass }}
-              </button>
-            }
-          </div>
-        </div>
-      }
-
       <!-- ═══ Estado vacío (nada seleccionado) ═══ -->
       @if (!facade.isLoading() && !facade.selectedPromocionId()) {
-        <div class="bento-banner flex flex-col items-center gap-4 text-center py-16">
+        <div class="bento-banner bento-card flex flex-col items-center gap-4 text-center py-16">
           @if (facade.promociones().length === 0) {
             <app-icon name="folder-open" [size]="52" color="var(--text-muted)" />
             <div>
@@ -156,7 +136,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
       @if (
         facade.selectedPromocionId() && !facade.selectedCursoId() && !facade.isLoadingAlumnos()
       ) {
-        <div class="bento-banner flex flex-col items-center gap-3 text-center py-12">
+        <div class="bento-banner bento-card flex flex-col items-center gap-3 text-center py-12">
           <app-icon name="book-open" [size]="44" color="var(--text-muted)" />
           <p class="text-sm text-muted">Selecciona un curso para ver el historial de alumnos.</p>
         </div>
@@ -164,36 +144,65 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
       <!-- ═══ Tabla de alumnos ═══ -->
       @if (facade.selectedCursoId()) {
-        <section class="bento-banner">
-          <div class="mb-3 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
-              <h2 class="text-sm font-semibold text-primary">Resultados por alumno</h2>
-              <span class="text-xs text-muted ml-1">
+        <section class="bento-banner bento-card p-5">
+          <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <div class="flex items-center gap-2">
+                <app-icon name="list-checks" [size]="16" color="var(--ds-brand)" />
+                <h2 class="text-sm font-semibold text-text-primary m-0">Resultados por alumno</h2>
+              </div>
+              <span class="hidden sm:inline text-border-default">|</span>
+              <span class="text-xs font-medium text-secondary">
                 {{ cursoLabel() }}
               </span>
             </div>
-            <div class="flex items-center gap-3 text-xs text-secondary">
+            <div
+              class="flex items-center gap-4 text-xs text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit"
+            >
               <span class="flex items-center gap-1.5">
-                <span class="h-2.5 w-2.5 rounded-full bg-success"></span>
+                <span class="h-2 w-2 rounded-full bg-success"></span>
                 Aprobado (≥75)
               </span>
               <span class="flex items-center gap-1.5">
-                <span class="h-2.5 w-2.5 rounded-full bg-error"></span>
+                <span class="h-2 w-2 rounded-full bg-error"></span>
                 Reprobado (&lt;75)
               </span>
             </div>
           </div>
 
+          <!-- KPIs del Curso -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            @for (kpi of cursoKpis(); track kpi.id) {
+              <div
+                class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] uppercase font-bold text-muted tracking-wider">{{
+                    kpi.label
+                  }}</span>
+                  @if (kpi.icon) {
+                    <app-icon [name]="kpi.icon" [size]="14" class="text-muted opacity-50" />
+                  }
+                </div>
+                <span
+                  class="text-2xl font-bold"
+                  [class]="kpi.color ? 'text-' + kpi.color : 'text-text-primary'"
+                >
+                  {{ kpi.value }}{{ kpi.suffix || '' }}
+                </span>
+              </div>
+            }
+          </div>
+
           <!-- Skeleton de carga -->
           @if (facade.isLoadingAlumnos()) {
-            <div class="card p-4 flex flex-col gap-3">
+            <div class="flex flex-col gap-3 pt-2">
               @for (i of skeletonRows; track $index) {
                 <app-skeleton-block variant="text" width="100%" height="44px" />
               }
             </div>
           } @else if (facade.alumnos().length === 0) {
-            <div class="card p-10 text-center">
+            <div class="p-10 text-center">
               <app-icon name="users" [size]="40" color="var(--text-muted)" class="mb-3" />
               <p class="text-sm font-medium text-primary">Sin alumnos en este curso</p>
               <p class="mt-1 text-xs text-muted">
@@ -201,8 +210,8 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
               </p>
             </div>
           } @else {
-            <!-- Tabla con scroll horizontal para los 7 módulos -->
-            <div class="card overflow-hidden">
+            <!-- Desktop: Tabla con scroll horizontal -->
+            <div class="hidden md:block overflow-hidden border border-border-subtle rounded-lg">
               <div class="overflow-x-auto">
                 <table class="archivo-table w-full">
                   <thead>
@@ -350,18 +359,146 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                   </tbody>
                 </table>
               </div>
+            </div>
 
-              <!-- Footer: resumen de criterios -->
-              <div
-                class="px-4 py-3 flex flex-wrap items-center gap-4 text-xs text-muted bg-elevated"
-                style="border-top: 1px solid var(--border-subtle)"
-              >
+            <!-- Mobile: Tarjetas responsivas -->
+            <div class="flex flex-col gap-4 md:hidden">
+              @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
+                <div
+                  class="p-4 rounded-xl border border-border-subtle bg-surface flex flex-col gap-4 shadow-sm"
+                >
+                  <!-- Cabecera Alumno -->
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="initials-avatar shrink-0">{{ alumno.initials }}</div>
+                      <div class="min-w-0 flex flex-col">
+                        <p class="text-sm font-semibold text-text-primary truncate">
+                          {{ alumno.nombre }}
+                        </p>
+                        <p class="text-[11px] text-muted">{{ alumno.rut }}</p>
+                      </div>
+                    </div>
+                    <div class="shrink-0">
+                      @if (alumno.aprobado) {
+                        <span class="estado-badge estado-aprobado whitespace-nowrap">
+                          <app-icon name="check-circle" [size]="11" /> Aprobado
+                        </span>
+                      } @else {
+                        <span class="estado-badge estado-reprobado whitespace-nowrap">
+                          <app-icon name="x-circle" [size]="11" /> Reprobado
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Asistencia (Teoría y Práctica) -->
+                  <div
+                    class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle"
+                  >
+                    <div class="bg-surface flex flex-col items-center p-2.5">
+                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide"
+                        >Teoría</span
+                      >
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-text-primary"
+                          >{{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}</span
+                        >
+                        @if (alumno.pctTeoria !== null) {
+                          <span
+                            class="pct-badge"
+                            [class.pct-ok]="alumno.pctTeoria >= 75"
+                            [class.pct-warn]="alumno.pctTeoria >= 50 && alumno.pctTeoria < 75"
+                            [class.pct-danger]="alumno.pctTeoria < 50"
+                          >
+                            {{ alumno.pctTeoria }}%
+                          </span>
+                        } @else {
+                          <span class="text-xs text-muted">—</span>
+                        }
+                      </div>
+                    </div>
+                    <div class="bg-surface flex flex-col items-center p-2.5">
+                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide"
+                        >Práctica</span
+                      >
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-text-primary"
+                          >{{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}</span
+                        >
+                        @if (alumno.pctPractica !== null) {
+                          <span
+                            class="pct-badge"
+                            [class.pct-ok]="alumno.pctPractica >= 75"
+                            [class.pct-warn]="alumno.pctPractica >= 50 && alumno.pctPractica < 75"
+                            [class.pct-danger]="alumno.pctPractica < 50"
+                          >
+                            {{ alumno.pctPractica }}%
+                          </span>
+                        } @else {
+                          <span class="text-xs text-muted">—</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Notas Módulos -->
+                  <div>
+                    <span
+                      class="text-[10px] uppercase font-bold text-muted block mb-2 tracking-wide"
+                      >Evaluaciones</span
+                    >
+                    <div class="flex flex-wrap gap-1.5">
+                      @for (nota of alumno.notas; track nota.moduleNumber) {
+                        <div
+                          class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-[36px]"
+                        >
+                          <span class="text-[9px] text-muted mb-1 font-medium"
+                            >M{{ nota.moduleNumber }}</span
+                          >
+                          @if (nota.grade !== null) {
+                            <span
+                              class="text-xs font-bold"
+                              [class.text-success]="nota.passed === true"
+                              [class.text-error]="nota.passed === false"
+                            >
+                              {{ nota.grade }}
+                            </span>
+                          } @else {
+                            <span class="text-xs text-muted">—</span>
+                          }
+                        </div>
+                      }
+
+                      <!-- Promedio Final -->
+                      <div
+                        class="flex flex-col items-center justify-center border border-brand/20 bg-brand/5 rounded-md p-1.5 flex-1 min-w-[48px]"
+                      >
+                        <span class="text-[9px] text-brand font-bold mb-1 uppercase">Prom</span>
+                        @if (alumno.notaPromedio !== null) {
+                          <span class="text-sm font-bold text-brand">{{
+                            alumno.notaPromedio
+                          }}</span>
+                        } @else {
+                          <span class="text-xs text-muted">—</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Footer: resumen de criterios -->
+            <div
+              class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-muted bg-surface border border-border-subtle rounded-lg mt-4"
+            >
+              <div class="flex items-center gap-2">
                 <app-icon name="info" [size]="13" />
                 <span
                   >Aprobación requiere: asistencia teórica ≥ 75% y promedio de módulos ≥ 75</span
                 >
-                <span class="ml-auto">Escala MTT: 10–100 · Mínimo aprobación: 75</span>
               </div>
+              <span class="sm:ml-auto">Escala MTT: 10–100 · Mínimo aprobación: 75</span>
             </div>
           }
         </section>
@@ -369,6 +506,11 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     </div>
   `,
   styles: `
+    .bento-grid {
+      /* Permitimos que el Hero dicte su propia altura sin dejar espacio vacío */
+      --bento-row-min: auto;
+    }
+
     .archivo-table {
       border-collapse: collapse;
     }
@@ -538,7 +680,7 @@ export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, 
     return this.facade.cursos().find((c) => c.id === id)?.label ?? '';
   });
 
-  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+  protected readonly cursoKpis = computed((): SectionHeroKpi[] => {
     if (!this.facade.selectedCursoId()) return [];
     return [
       {
