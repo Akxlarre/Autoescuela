@@ -366,5 +366,7 @@
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |
 | `app-user-panel` | `user` | `action`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `daySelect`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
+| `app-live-classes-panel` | `classes` (LiveClassModel[], []) | `actionClick` (LiveClassModel) | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
+| `app-alerts-drawer` | — (inyecta DashboardAlertsFacade directamente) | — | `src/app/features/dashboard/alerts-drawer/alerts-drawer.component.ts` |
 
 <!-- AUTO-GENERATED:END -->

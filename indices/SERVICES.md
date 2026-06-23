@@ -142,4 +142,11 @@ Funciones server-side que requieren `SERVICE_ROLE_KEY` o lógica que no puede ej
 | `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
 | `ToastService` | `MessageService` | `src/app/core/services/ui/toast.service.ts` |
 
+## Utils (funciones puras en `core/utils/`)
+
+| Función / Export | Descripción | Path |
+|---|---|---|
+| `getSparklinePoints(data, w?, h?)` | Convierte array de valores 0-1 en string de puntos SVG para `<polyline>`. 6-8 puntos típicos, w=40 h=20 default. | `src/app/core/utils/sparkline.utils.ts` |
+| `buildCarnetMenu(state)` | Construye items `SectionHeroMenuItem[]` para el menú Carnet Clase B (fix-019). Reglas: carnet-6 siempre, carnet-12 requiere 6 clases completadas. | `src/app/core/utils/carnet-menu.util.ts` |
+
 <!-- AUTO-GENERATED:END -->
