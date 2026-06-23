@@ -17,9 +17,8 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { PromocionTableRow } from '@core/models/ui/promocion-table.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -39,7 +38,6 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     FormsModule,
     SelectModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
@@ -48,53 +46,15 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Promociones Profesionales"
         subtitle="Programación y gestión de ciclos de cursos Clase Profesional"
         [actions]="heroActions()"
+        [kpis]="heroKpis()"
         (actionClick)="handleHeroAction($event)"
       />
-
-      <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Total Promociones"
-          [value]="facade.totalPromociones()"
-          icon="calendar"
-          [loading]="facade.isLoading()"
-          data-llm-description="Total de promociones registradas"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="En curso"
-          [value]="facade.enCurso()"
-          icon="play-circle"
-          color="success"
-          [loading]="facade.isLoading()"
-          data-llm-description="Promociones actualmente activas"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Planificadas"
-          [value]="facade.planificadas()"
-          icon="clock"
-          [loading]="facade.isLoading()"
-          data-llm-description="Promociones próximas a iniciar"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Canceladas"
-          [value]="facade.canceladas()"
-          icon="ban"
-          color="warning"
-          [loading]="facade.isLoading()"
-          data-llm-description="Promociones canceladas"
-        />
-      </div>
 
       <!-- ── Content (Grillet) ─────────────────────────────────────────────── -->
       <div class="bento-banner flex flex-col gap-6">
@@ -380,6 +340,30 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new', label: 'Programar Promoción', icon: 'plus', primary: true },
+  ]);
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'total',
+      label: 'Total Promociones',
+      value: this.facade.totalPromociones(),
+      icon: 'calendar',
+    },
+    {
+      id: 'en-curso',
+      label: 'En curso',
+      value: this.facade.enCurso(),
+      icon: 'play-circle',
+      color: 'success',
+    },
+    { id: 'planificadas', label: 'Planificadas', value: this.facade.planificadas(), icon: 'clock' },
+    {
+      id: 'canceladas',
+      label: 'Canceladas',
+      value: this.facade.canceladas(),
+      icon: 'ban',
+      color: 'warning',
+    },
   ]);
 
   protected handleHeroAction(actionId: string): void {

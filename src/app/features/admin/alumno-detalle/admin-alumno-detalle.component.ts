@@ -53,7 +53,9 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ── Hero Principal (Siempre visible) ── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         [title]="facade.alumno()?.nombre ?? 'Cargando...'"
         [contextLine]="
           facade.alumno()
@@ -65,7 +67,6 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
         backLabel="Listado de Alumnos"
         [actions]="heroActions()"
         [chips]="heroChips()"
-        [animateOnInit]="false"
         (actionClick)="handleHeroAction($event)"
       />
 
@@ -141,7 +142,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
         }
 
         <!-- 4. Ficha Técnica (bento-hero) -->
-        <div class="bento-card bento-hero p-0! flex flex-col h-full w-full overflow-hidden">
+        <div class="bento-card bento-hero !p-0 flex flex-col h-full w-full overflow-hidden">
           <div
             class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30"
           >
@@ -161,7 +162,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
         </div>
 
         <!-- 5. Estado Financiero (bento-tall) -->
-        <div class="bento-card bento-tall p-0! flex flex-col h-full w-full overflow-hidden">
+        <div class="bento-card bento-tall !p-0 flex flex-col h-full w-full overflow-hidden">
           <div
             class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
           >

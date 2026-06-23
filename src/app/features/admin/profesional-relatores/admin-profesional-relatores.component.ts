@@ -15,9 +15,8 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { RelatorTableRow } from '@core/models/ui/relator-table.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -35,7 +34,6 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
     FormsModule,
     SelectModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
@@ -44,53 +42,15 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Gestión de Relatores"
         subtitle="Administración de instructores teóricos para cursos profesionales"
         [actions]="heroActions()"
+        [kpis]="heroKpis()"
         (actionClick)="handleHeroAction($event)"
       />
-
-      <!-- ── KPI Cards ──────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Total Relatores"
-          [value]="facade.totalRelatores()"
-          icon="users"
-          [loading]="facade.isLoading()"
-          data-llm-description="Total de relatores registrados"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Activos"
-          [value]="facade.activos()"
-          icon="check-circle"
-          color="success"
-          [loading]="facade.isLoading()"
-          data-llm-description="Relatores en estado activo"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Inactivos"
-          [value]="facade.inactivos()"
-          icon="user-x"
-          [loading]="facade.isLoading()"
-          data-llm-description="Relatores en estado inactivo"
-        />
-      </div>
-      <!-- TODO: conectar facade.cursosHoy() cuando esté disponible en RelatoresFacade -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Cursos hoy"
-          [value]="0"
-          icon="calendar"
-          [loading]="facade.isLoading()"
-          data-llm-description="Cursos dictados hoy por relatores"
-        />
-      </div>
 
       <!-- ── Main Content ───────────────────────────────────────────────────── -->
       <!-- ── Main Content ───────────────────────────────────────────────────── -->
@@ -150,7 +110,10 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
             @if (facade.isLoading()) {
               <div class="bento-grid">
                 @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
-                  <div class="p-4 rounded-xl border border-[var(--border-subtle)] bento-wide" data-col-span="4">
+                  <div
+                    class="p-4 rounded-xl border border-[var(--border-subtle)] bento-wide"
+                    data-col-span="4"
+                  >
                     <div class="flex items-center gap-3 mb-4">
                       <app-skeleton-block variant="circle" width="40px" height="40px" />
                       <div class="flex-1 flex flex-col gap-2">
@@ -184,7 +147,10 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
             } @else {
               <div class="bento-grid">
                 @for (rel of paginatedRelatores(); track rel.id) {
-                  <div class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative bento-wide" data-col-span="4">
+                  <div
+                    class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative bento-wide"
+                    data-col-span="4"
+                  >
                     <!-- Status Badge -->
                     <div class="absolute top-4 right-4">
                       @if (rel.estado === 'activo') {
@@ -385,6 +351,19 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new', label: 'Nuevo Relator', icon: 'plus', primary: true },
+  ]);
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    { id: 'total', label: 'Total Relatores', value: this.facade.totalRelatores(), icon: 'users' },
+    {
+      id: 'activos',
+      label: 'Activos',
+      value: this.facade.activos(),
+      icon: 'check-circle',
+      color: 'success',
+    },
+    { id: 'inactivos', label: 'Inactivos', value: this.facade.inactivos(), icon: 'user-x' },
+    { id: 'hoy', label: 'Cursos hoy', value: 0, icon: 'calendar' },
   ]);
 
   protected handleHeroAction(actionId: string): void {

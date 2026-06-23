@@ -15,7 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -33,7 +33,6 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
   imports: [
     FormsModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
@@ -44,54 +43,14 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Clases y Asistencia"
         subtitle="Gestión de sesiones teóricas y prácticas de Clase Profesional"
         [actions]="[]"
+        [kpis]="heroKpis()"
       />
-
-      <!-- ═══ KPIs ═══ -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Alumnos matriculados"
-          [value]="facade.alumnosMatriculados()"
-          icon="users"
-          [loading]="facade.isLoading()"
-          data-llm-description="Alumnos inscritos en el curso seleccionado"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Asistencia esta semana"
-          [value]="facade.pctAsistenciaSemanal()"
-          suffix="%"
-          icon="bar-chart-2"
-          color="success"
-          [loading]="facade.isLoading()"
-          data-llm-description="Porcentaje de asistencia de la semana visible"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Asistencia total"
-          [value]="facade.pctAsistenciaTotal()"
-          suffix="%"
-          icon="trending-up"
-          [loading]="facade.isLoading()"
-          data-llm-description="Porcentaje de asistencia acumulada del curso"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Sesiones canceladas"
-          [value]="facade.sesionesCanceladas()"
-          icon="ban"
-          color="warning"
-          [loading]="facade.isLoading()"
-          data-llm-description="Sesiones canceladas por feriados u otras razones"
-        />
-      </div>
 
       <!-- ═══ CONTENIDO PRINCIPAL: Integrado con Filtros y Grilla ═══ -->
       <div class="bento-banner flex flex-col gap-6">
@@ -164,7 +123,11 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
             @if (facade.isLoading()) {
               <div class="bento-grid">
                 @for (i of skeletonDays; track i) {
-                  <div class="rounded-xl border border-border bg-base p-3 bento-square" data-col-span="2" data-col-span-md="2">
+                  <div
+                    class="rounded-xl border border-border bg-base p-3 bento-square"
+                    data-col-span="2"
+                    data-col-span-md="2"
+                  >
                     <app-skeleton-block variant="text" width="60%" height="14px" />
                     <div class="mt-3 space-y-2">
                       <app-skeleton-block variant="rect" width="100%" height="56px" />
@@ -176,7 +139,13 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
             } @else if (facade.selectedCursoId()) {
               <div class="bento-grid">
                 @for (day of facade.weekDays(); track day.date) {
-                  <app-session-day-card class="bento-square block" data-col-span="2" data-col-span-md="2" [day]="day" (selectSession)="openSesion($event)" />
+                  <app-session-day-card
+                    class="bento-square block"
+                    data-col-span="2"
+                    data-col-span-md="2"
+                    [day]="day"
+                    (selectSession)="openSesion($event)"
+                  />
                 }
               </div>
             } @else {
@@ -574,6 +543,37 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
       courseCode: `${c.courseCode} — ${c.courseName}`,
     })),
   );
+
+  readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'matriculados',
+      label: 'Alumnos matriculados',
+      value: this.facade.alumnosMatriculados(),
+      icon: 'users',
+    },
+    {
+      id: 'semanal',
+      label: 'Asistencia semanal',
+      value: this.facade.pctAsistenciaSemanal(),
+      icon: 'bar-chart-2',
+      suffix: '%',
+      color: 'success',
+    },
+    {
+      id: 'total',
+      label: 'Asistencia total',
+      value: this.facade.pctAsistenciaTotal(),
+      icon: 'trending-up',
+      suffix: '%',
+    },
+    {
+      id: 'canceladas',
+      label: 'Sesiones canceladas',
+      value: this.facade.sesionesCanceladas(),
+      icon: 'ban',
+      color: 'warning',
+    },
+  ]);
 
   readonly drawerTitle = computed(() => {
     const sesion = this.facade.selectedSesion();

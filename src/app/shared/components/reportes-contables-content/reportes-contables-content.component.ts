@@ -232,8 +232,10 @@ import {
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
-      <div class="bento-hero relative overflow-visible">
+      <div class="bento-banner relative overflow-visible">
         <app-section-hero
+          density="slim"
+          [loading]="isLoading()"
           title="Reportes Contables"
           subtitle="Resumen financiero y total neto por rango de fechas"
           icon="bar-chart-2"
@@ -402,7 +404,9 @@ import {
                       ></div>
                     </div>
                     <div class="flex justify-between">
-                      <span class="text-xs text-text-muted"> {{ cat.operaciones }} operaciones </span>
+                      <span class="text-xs text-text-muted">
+                        {{ cat.operaciones }} operaciones
+                      </span>
                       <span class="text-xs text-text-muted">
                         {{ pct(cat.porcentaje) }}
                       </span>
@@ -512,7 +516,8 @@ import {
                   Sin gastos fijos en este período
                 </p>
                 <p class="text-xs" style="color: var(--text-muted)">
-                  Registra arriendo, sueldos u otros gastos estructurales para calcular el neto real.
+                  Registra arriendo, sueldos u otros gastos estructurales para calcular el neto
+                  real.
                 </p>
               </div>
             } @else {
@@ -554,10 +559,17 @@ import {
                   </tbody>
                   <tfoot class="report-tfoot">
                     <tr>
-                      <td class="report-td font-bold" colspan="3" style="color: var(--text-primary)">
+                      <td
+                        class="report-td font-bold"
+                        colspan="3"
+                        style="color: var(--text-primary)"
+                      >
                         Total Gastos Fijos
                       </td>
-                      <td class="report-td align-right font-black" style="color: var(--state-error)">
+                      <td
+                        class="report-td align-right font-black"
+                        style="color: var(--state-error)"
+                      >
                         {{ clp(totalGastosFijos()) }}
                       </td>
                     </tr>

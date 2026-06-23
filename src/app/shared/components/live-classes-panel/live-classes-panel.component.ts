@@ -1,0 +1,206 @@
+import { ChangeDetectionStrategy, Component, input, output, ElementRef, viewChild, effect } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { LiveClassModel } from '@core/models/ui/dashboard.model';
+import { IconComponent } from '../icon/icon.component';
+import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { TooltipModule } from 'primeng/tooltip';
+
+@Component({
+  selector: 'app-live-classes-panel',
+  standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    CommonModule,
+    IconComponent,
+    EmptyStateComponent,
+    PressFeedbackDirective,
+    AnimateInDirective,
+    TooltipModule,
+  ],
+  host: {
+    // max-h-[750px] approx limits it to 10 classes
+    class: 'flex flex-col gap-3 h-full max-h-[750px] overflow-hidden',
+  },
+  template: `
+    <!-- Header de sección estandarizado -->
+    <div class="flex items-center gap-2 mb-2 shrink-0">
+      <app-icon name="radio" [size]="16" class="text-error animate-pulse" />
+      <h2 class="m-0 font-semibold text-text-primary">Clases Actuales</h2>
+    </div>
+
+    @if (classes().length === 0) {
+      <div class="border border-border-subtle rounded-xl bg-surface-hover mb-6 flex-1 flex flex-col justify-center">
+        <app-empty-state
+          icon="clock"
+          message="Sin clases actuales"
+          subtitle="No hay clases programadas en este momento."
+        />
+      </div>
+    } @else {
+      <!-- Contenedor vertical scrollable -->
+      <ul #scrollContainer class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 relative">
+        @for (cls of classes(); track cls.id; let i = $index) {
+          <li
+            [attr.data-status]="cls.status"
+            class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300"
+            appPressFeedback="press"
+            (click)="actionClick.emit(cls)"
+            [appAnimateIn]="{ delay: 0.1 + i * 0.05 }"
+          >
+            <!-- Lado Izquierdo: Hora y Avatares -->
+            <div class="flex items-center gap-4 min-w-0">
+              <!-- Hora y Estado -->
+              <div class="flex flex-col shrink-0 w-14">
+                <span class="text-base font-bold text-text-primary leading-none">{{ formatTime(cls.scheduledAt) }}</span>
+                <span class="text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300" [ngClass]="{
+                  'text-warning group-hover:text-warning': cls.status === 'pending',
+                  'text-success group-hover:text-success': cls.status === 'in_progress',
+                  'text-text-muted': cls.status === 'completed'
+                }">
+                  {{ statusLabel(cls.status) }}
+                </span>
+              </div>
+
+              <!-- Participantes (Avatares solapados) -->
+              <div class="flex items-center gap-3 min-w-0">
+                <div class="flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1">
+                  <!-- Alumno Avatar -->
+                  <div class="w-8 h-8 rounded-full bg-brand-muted text-brand border-2 border-surface flex items-center justify-center text-xs font-bold z-10 transition-colors duration-300"
+                       [pTooltip]="'Alumno: ' + cls.studentName" tooltipPosition="top">
+                    {{ cls.studentName.charAt(0) }}
+                  </div>
+                  <!-- Instructor Avatar -->
+                  <div class="w-8 h-8 rounded-full bg-subtle text-text-secondary border-2 border-surface flex items-center justify-center z-0 transition-colors duration-300"
+                       [pTooltip]="'Instructor: ' + cls.instructorName" tooltipPosition="top">
+                    <app-icon name="user" [size]="14" />
+                  </div>
+                </div>
+                
+                <div class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1">
+                  <span class="text-sm font-semibold text-text-primary truncate">{{ cls.studentName.split(' ')[0] }}</span>
+                  <span class="text-[10px] text-text-muted truncate uppercase tracking-wider">
+                    {{ cls.type === 'practical' ? cls.vehicle || 'Sin auto' : 'Teórica' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Lado Derecho: Tiempo Relativo y Acción -->
+            <div class="flex items-center gap-4 shrink-0">
+               <div class="hidden sm:flex flex-col text-right">
+                 <span class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1" [ngClass]="{
+                  'text-warning': cls.status === 'pending',
+                  'text-success': cls.status === 'in_progress',
+                  'text-text-muted': cls.status === 'completed'
+                 }">
+                   {{ getRelativeTime(cls.scheduledAt, cls.status) }}
+                 </span>
+               </div>
+
+              <div class="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm hover-icon-container"
+                   [ngClass]="{
+                     'bg-brand text-brand-contrast': cls.status === 'in_progress',
+                     'bg-surface-hover text-brand': cls.status === 'pending',
+                     'bg-subtle text-text-muted': cls.status === 'completed'
+                   }">
+                <app-icon [name]="cls.status === 'completed' ? 'chevron-right' : 'play'" [size]="14"
+                          [class.animate-pulse]="cls.status === 'in_progress'" />
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  `,
+  styles: [`
+    .hover-icon-container {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    
+    /* Scrollbar minimalista para listas */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: var(--border-subtle);
+      border-radius: 4px;
+    }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+      background-color: var(--text-muted);
+    }
+    
+    /* Forzar color blanco en el icono cuando la fila (group) está en hover */
+    .group:hover .hover-icon-container {
+      color: #ffffff !important;
+    }
+  `]
+})
+export class LiveClassesPanelComponent {
+  readonly classes = input<LiveClassModel[]>([]);
+  readonly actionClick = output<LiveClassModel>();
+  private scrollContainer = viewChild<ElementRef<HTMLUListElement>>('scrollContainer');
+
+  constructor() {
+    effect(() => {
+      const classList = this.classes();
+      const container = this.scrollContainer()?.nativeElement;
+      if (classList.length > 0 && container) {
+        // Encontrar la primera clase en curso o pendiente para centrarla
+        const targetIndex = classList.findIndex(c => c.status === 'in_progress' || c.status === 'pending');
+        if (targetIndex !== -1) {
+          // Esperamos a que Angular renderice los items
+          setTimeout(() => {
+            const items = container.querySelectorAll('.live-class-item');
+            const targetEl = items[targetIndex] as HTMLElement;
+            if (targetEl) {
+              // Scroll para centrar el elemento
+              const containerHeight = container.clientHeight;
+              const elementOffset = targetEl.offsetTop;
+              const elementHeight = targetEl.clientHeight;
+              
+              const scrollTo = elementOffset - (containerHeight / 2) + (elementHeight / 2);
+              
+              container.scrollTo({
+                top: scrollTo,
+                behavior: 'smooth'
+              });
+            }
+          }, 100);
+        }
+      }
+    });
+  }
+
+  statusLabel(status: string): string {
+    if (status === 'pending') return 'Por Iniciar';
+    if (status === 'in_progress') return 'En Curso';
+    return 'Finalizada';
+  }
+
+  formatTime(isoString: string): string {
+    if (!isoString) return '00:00';
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  getRelativeTime(isoString: string, status: string): string {
+    if (!isoString) return '';
+    if (status === 'completed') return 'Concluida';
+    if (status === 'in_progress') return 'Transcurriendo';
+
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    if (diffMs <= 0) return 'Transcurriendo';
+
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `En ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    return `En ${diffHours} h`;
+  }
+}

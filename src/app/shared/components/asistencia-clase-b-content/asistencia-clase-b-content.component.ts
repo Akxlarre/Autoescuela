@@ -13,13 +13,12 @@ import {
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { todayIso } from '@core/utils/date.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
   AlertaFaltaConsecutiva,
@@ -56,7 +55,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     FormsModule,
     SelectModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
@@ -65,55 +63,17 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          [animateOnInit]="false"
-          title="Control de Asistencia"
-          icon="clipboard-check"
-          [subtitle]="todayLabel"
-          [actions]="heroActions"
-          variant="compact"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
-
-      <!-- ── KPIs ────────────────────────────────────────────────────────── -->
-      <div class="bento-banner grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <app-kpi-card-variant
-          label="Tasa de Asistencia"
-          [value]="kpis()?.tasaAsistencia ?? 0"
-          suffix="%"
-          [trend]="kpis()?.tasaAsistenciaTrend"
-          trendLabel="vs mes anterior"
-          icon="trending-up"
-          [color]="(kpis()?.tasaAsistencia ?? 100) >= 90 ? 'success' : 'warning'"
-          [loading]="isLoading()"
-        />
-        <app-kpi-card-variant
-          label="Inasistencias Hoy"
-          [value]="kpis()?.inasistenciasHoy ?? 0"
-          [suffix]="' de ' + (kpis()?.totalClasesHoy ?? 0) + ' clases'"
-          icon="calendar-x"
-          color="error"
-          [loading]="isLoading()"
-        />
-        <app-kpi-card-variant
-          label="Clases en Curso"
-          [value]="kpis()?.clasesEnCurso ?? 0"
-          suffix=" en curso"
-          icon="play-circle"
-          color="success"
-          [loading]="isLoading()"
-        />
-        <app-kpi-card-variant
-          label="Pendientes por Iniciar"
-          [value]="kpis()?.pendientesPorIniciar ?? 0"
-          suffix=" sin iniciar"
-          icon="clock-alert"
-          [color]="(kpis()?.pendientesPorIniciar ?? 0) > 0 ? 'warning' : 'default'"
-          [loading]="isLoading()"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
+        title="Control de Asistencia"
+        icon="clipboard-check"
+        [subtitle]="todayLabel"
+        [kpis]="heroKpis()"
+        [actions]="heroActions"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ── Alertas ────────────────────────────────────────────────────────── -->
       @if (!isLoading() && alertas().length > 0) {
@@ -704,6 +664,43 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly heroActions: SectionHeroAction[] = [
     { id: 'refresh', label: 'Actualizar', icon: 'refresh-cw', primary: false },
   ];
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    const k = this.kpis();
+    return [
+      {
+        id: 'tasa',
+        label: 'Tasa Asistencia',
+        value: k?.tasaAsistencia ?? 0,
+        suffix: '%',
+        icon: 'trending-up',
+        color: (k?.tasaAsistencia ?? 100) >= 90 ? 'success' : 'warning',
+        trend: k?.tasaAsistenciaTrend,
+        trendLabel: 'vs mes anterior',
+      },
+      {
+        id: 'inasistencias',
+        label: 'Inasistencias Hoy',
+        value: k?.inasistenciasHoy ?? 0,
+        icon: 'calendar-x',
+        color: 'error',
+      },
+      {
+        id: 'en-curso',
+        label: 'En Curso',
+        value: k?.clasesEnCurso ?? 0,
+        icon: 'play-circle',
+        color: 'success',
+      },
+      {
+        id: 'pendientes',
+        label: 'Pendientes',
+        value: k?.pendientesPorIniciar ?? 0,
+        icon: 'clock-alert',
+        color: (k?.pendientesPorIniciar ?? 0) > 0 ? 'warning' : 'default',
+      },
+    ];
+  });
 
   // ── Computed ─────────────────────────────────────────────────────────────────
 

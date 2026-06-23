@@ -15,7 +15,6 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -32,7 +31,7 @@ import type {
   AgendaSlot,
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 /** Opción para el dropdown de filtro de instructor. */
 interface InstructorOption {
@@ -65,7 +64,6 @@ interface CellSummary {
     FormsModule,
     SelectModule,
     IconComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     EmptyStateComponent,
     SectionHeroComponent,
@@ -77,34 +75,18 @@ interface CellSummary {
   host: { class: 'block' },
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Agenda semanal">
-      <!-- ── Hero ──────────────────────────────────────────────────────────── -->
+      <!-- ── Hero + KPIs inline ───────────────────────────────────────────── -->
       @if (showHero()) {
-        <div class="bento-banner">
-          <app-section-hero
-            contextLine="Gestión de horarios"
-            title="Agenda Semanal"
-            [subtitle]="weekSubtitle()"
-            [actions]="heroActions"
-            (actionClick)="onHeroAction($event)"
-          />
-        </div>
-      }
-
-      <!-- ── KPIs ──────────────────────────────────────────────────────────── -->
-      @if (showKpis()) {
-        <div #kpiGrid class="contents">
-          @for (kpi of kpiCards(); track kpi.id) {
-            <div class="bento-square">
-              <app-kpi-card-variant
-                [value]="kpi.value"
-                [label]="kpi.label"
-                [icon]="kpi.icon"
-                [color]="kpi.color"
-                [loading]="isLoading()"
-              />
-            </div>
-          }
-        </div>
+        <app-section-hero
+          density="slim"
+          contextLine="Gestión de horarios"
+          title="Agenda Semanal"
+          [subtitle]="weekSubtitle()"
+          [kpis]="heroKpis()"
+          [loading]="isLoading()"
+          [actions]="heroActions"
+          (actionClick)="onHeroAction($event)"
+        />
       }
 
       <!-- ── Calendario ─────────────────────────────────────────────────────── -->
@@ -755,7 +737,6 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── ViewChildren ─────────────────────────────────────────────────────────────
 
-  private readonly kpiGridRef = viewChild<ElementRef>('kpiGrid');
   private readonly calendarCardRef = viewChild<ElementRef>('calendarCard');
   private readonly calendarGridRef = viewChild<ElementRef>('calendarGrid');
 
@@ -841,6 +822,16 @@ export class AgendaSemanalComponent implements AfterViewInit {
     ];
   });
 
+  readonly heroKpis = computed((): SectionHeroKpi[] =>
+    this.kpiCards().map((k) => ({
+      id: k.id,
+      label: k.label,
+      value: k.value,
+      icon: k.icon,
+      color: k.color,
+    })),
+  );
+
   // ── Opciones del dropdown de instructor ──────────────────────────────────────
 
   readonly instructorOptions = computed<InstructorOption[]>(() =>
@@ -856,7 +847,7 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   // ── Filas de skeleton ────────────────────────────────────────────────────────
 
-  readonly skeletonRows = Array.from({ length: 7 }, (_, i) => i);
+  readonly skeletonRows = Array.from({ length: 14 }, (_, i) => i);
   readonly skeletonCols = Array.from({ length: 5 }, (_, i) => i);
 
   // ── GSAP: animar grilla al cargar ─────────────────────────────────────────────
@@ -883,9 +874,6 @@ export class AgendaSemanalComponent implements AfterViewInit {
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   ngAfterViewInit(): void {
-    const kpiEl = this.kpiGridRef()?.nativeElement as HTMLElement | undefined;
-    if (kpiEl) this.gsap.animateBentoGrid(kpiEl);
-
     const cardEl = this.calendarCardRef()?.nativeElement as HTMLElement | undefined;
     if (cardEl) this.gsap.animateHero(cardEl);
   }

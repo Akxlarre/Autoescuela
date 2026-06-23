@@ -101,8 +101,9 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero adaptativo ───────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         [title]="heroTitle()"
         [subtitle]="heroSubtitle()"
         [contextLine]="heroContextLine()"

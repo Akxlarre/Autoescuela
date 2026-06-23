@@ -24,7 +24,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
 // Shared
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -35,7 +34,11 @@ import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 
 // Models
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroKpi,
+} from '@core/models/ui/section-hero.model';
 
 // Drawer Content
 import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maintenance-form-drawer.component';
@@ -61,7 +64,6 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
     AnimateInDirective,
     // Shared
     IconComponent,
-    KpiCardVariantComponent,
     SectionHeroComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
@@ -70,30 +72,18 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Mantenimientos del Vehículo">
       <!-- Hero con breadcrumb + acciones -->
       <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         [title]="heroTitle()"
         [subtitle]="heroSubtitle()"
         [chips]="heroChips()"
         [actions]="heroActions()"
+        [kpis]="maintenanceKpis()"
         backRoute="/app/admin/flota"
         backLabel="Flota"
         (actionClick)="handleHeroAction($event)"
       />
-
-      <!-- KPIs Bento -->
-      @for (kpi of maintenanceKpis(); track kpi.id) {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            [label]="kpi.label"
-            [value]="kpi.value"
-            [icon]="kpi.icon"
-            [color]="kpi.color"
-            [prefix]="kpi.prefix ?? ''"
-            [suffix]="kpi.suffix ?? ''"
-            [accent]="kpi.accent ?? false"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-      }
 
       <!-- Tabla Historial (Bento Banner) -->
       <div class="bento-banner card p-0 overflow-hidden shadow-sm" appAnimateIn>
@@ -315,17 +305,10 @@ export class VehicleMaintenancesComponent implements OnInit {
   ];
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
-  readonly maintenanceKpis = computed(() => {
+  readonly maintenanceKpis = computed((): SectionHeroKpi[] => {
     const k = this.facade.maintenanceKpis();
     return [
-      {
-        id: 'total',
-        label: 'Total Mantenciones',
-        value: k.totalCount,
-        icon: 'clipboard-list',
-        color: 'default' as const,
-        accent: true,
-      },
+      { id: 'total', label: 'Total Mantenciones', value: k.totalCount, icon: 'clipboard-list' },
       {
         id: 'gasto',
         label: 'Inversión Total',
@@ -339,7 +322,6 @@ export class VehicleMaintenancesComponent implements OnInit {
         label: 'Costo p/Mes',
         value: k.avgMonthly,
         icon: 'trending-up',
-        color: 'default' as const,
         prefix: '$',
       },
       {

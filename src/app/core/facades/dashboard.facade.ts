@@ -2,7 +2,7 @@ import { Injectable, signal, inject } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
-import { DashboardModel } from '@core/models/ui/dashboard.model';
+import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
 import { toISODate } from '@core/utils/date.utils';
 
 @Injectable({ providedIn: 'root' })
@@ -19,11 +19,18 @@ export class DashboardFacade {
   private _initialized = false;
   private _lastBranchId: number | null = null;
   private _realtimeChannel: any | null = null;
+  private _liveClassesInterval: any | null = null;
 
   // ── 2. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
   setupRealtime(): void {
     if (this._realtimeChannel) return;
+    
+    // Intervalo local cada 1 minuto para recalcular el tiempo relativo y clases actuales
+    this._liveClassesInterval = setInterval(() => {
+      void this.refreshLiveClassesOnly();
+    }, 60000);
+
     this._realtimeChannel = this.supabase.client
       .channel('dashboard-realtime')
       .on(
@@ -48,6 +55,19 @@ export class DashboardFacade {
     if (this._realtimeChannel) {
       void this.supabase.client.removeChannel(this._realtimeChannel);
       this._realtimeChannel = null;
+    }
+    if (this._liveClassesInterval) {
+      clearInterval(this._liveClassesInterval);
+      this._liveClassesInterval = null;
+    }
+  }
+
+  private async refreshLiveClassesOnly(): Promise<void> {
+    try {
+      const liveClasses = await this.fetchLiveClasses(this.getActiveBranchId());
+      this.data.update(d => d ? { ...d, liveClasses } : null);
+    } catch {
+      // Swallowed
     }
   }
 
@@ -287,7 +307,112 @@ export class DashboardFacade {
         { name: 'Supabase', ok: true },
         { name: 'Realtime', ok: !!this._realtimeChannel },
       ],
+      liveClasses: await this.fetchLiveClasses(branchId),
     });
+  }
+
+  async fetchLiveClasses(branchId: number | null): Promise<LiveClassModel[]> {
+    const todayStr = toISODate(new Date());
+    let liveClasses: LiveClassModel[] = [];
+
+    // 1. Clases Prácticas
+    let practicasQuery: any = this.supabase.client
+      .from('class_b_sessions')
+      .select(`
+        id,
+        class_number,
+        scheduled_at,
+        status,
+        vehicles(brand, model, license_plate),
+        instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
+        enrollments!inner(branch_id, students(users(first_names, paternal_last_name)))
+      `)
+      .gte('scheduled_at', `${todayStr}T00:00:00`)
+      .lte('scheduled_at', `${todayStr}T23:59:59`);
+
+    if (branchId !== null) {
+      practicasQuery = practicasQuery.eq('enrollments.branch_id', branchId);
+    }
+
+    const { data: practicasData, error: practicasError } = await practicasQuery;
+    
+    if (!practicasError && practicasData) {
+      const mappedPracticas = practicasData.map((row: any) => {
+        const instRel = row['instructors'] ?? row['instructors!class_b_sessions_instructor_id_fkey'];
+        const instUser = instRel?.users;
+        const studentUser = row.enrollments?.students?.users;
+        const vehicle = row.vehicles;
+
+        let status = 'pending';
+        if (row.status === 'in_progress') status = 'in_progress';
+        if (row.status === 'completed' || row.status === 'cancelled' || row.status === 'no_show') status = 'completed';
+
+        return {
+          id: `prac-${row.id}`,
+          originalId: row.id,
+          classNumber: row.class_number,
+          studentName: studentUser ? `${studentUser.first_names ?? ''} ${studentUser.paternal_last_name ?? ''}`.trim() : 'Desconocido',
+          instructorName: instUser ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim() : 'Sin asignar',
+          timeLabel: '00:00 - 00:45',
+          status,
+          type: 'practical',
+          vehicle: vehicle ? `${vehicle.brand ?? ''} ${vehicle.model ?? ''} - ${vehicle.license_plate ?? ''}`.trim() : 'Sin vehículo',
+          vehicleBrand: vehicle?.brand,
+          vehicleModel: vehicle?.model,
+          vehiclePlate: vehicle?.license_plate,
+          scheduledAt: row.scheduled_at
+        } as LiveClassModel;
+      });
+      liveClasses = [...liveClasses, ...mappedPracticas];
+    }
+
+    // 2. Clases Teóricas
+    let teoricasQuery: any = this.supabase.client
+      .from('class_b_theory_sessions')
+      .select(`
+        id,
+        scheduled_at,
+        status,
+        topic,
+        instructors(users(first_names, paternal_last_name)),
+        branch_id
+      `)
+      .gte('scheduled_at', `${todayStr}T00:00:00`)
+      .lte('scheduled_at', `${todayStr}T23:59:59`);
+
+    if (branchId !== null) {
+      teoricasQuery = teoricasQuery.eq('branch_id', branchId);
+    }
+
+    const { data: teoricasData, error: teoricasError } = await teoricasQuery;
+
+    if (!teoricasError && teoricasData) {
+      const mappedTeoricas = teoricasData.map((row: any) => {
+        const instUser = row.instructors?.users;
+        
+        let status = 'pending';
+        if (row.status === 'in_progress') status = 'in_progress';
+        if (row.status === 'completed' || row.status === 'cancelled') status = 'completed';
+
+        return {
+          id: `theo-${row.id}`,
+          originalId: row.id,
+          studentName: row.topic ? `Teoría: ${row.topic}` : 'Clase Teórica Grupal',
+          instructorName: instUser ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim() : 'Sin asignar',
+          timeLabel: '00:00 - 00:45',
+          status,
+          type: 'theoretical',
+          vehicle: undefined,
+          scheduledAt: row.scheduled_at
+        } as LiveClassModel;
+      });
+      liveClasses = [...liveClasses, ...mappedTeoricas];
+    }
+
+    // Ordenar cronológicamente
+    liveClasses.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+
+    return liveClasses;
   }
 
   async fetchActivityHistory(limit: number = 50): Promise<any[]> {

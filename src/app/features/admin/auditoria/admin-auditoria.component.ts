@@ -45,12 +45,13 @@ const ACTION_OPTIONS = [
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Log de Auditoría"
         subtitle="Registro inmutable de todas las acciones de las secretarias"
         contextLine="Solo acciones de secretarias"
         [actions]="[]"
-        [animateOnInit]="false"
       />
 
       <!-- ── Filtros ──────────────────────────────────────────────────────── -->

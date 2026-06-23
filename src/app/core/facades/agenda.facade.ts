@@ -162,8 +162,19 @@ export class AgendaFacade {
 
     this._initialized = true;
     this._lastBranchId = branchId;
-    await Promise.all([this.loadLookupMaps(), this.loadInstructors()]);
-    await this.loadWeek();
+    
+    // Iniciar skeleton inmediatamente para respetar protocolo de animación
+    // y evitar salto visual: Empty State -> Skeleton -> Contenido
+    this._isLoading.set(true);
+    
+    try {
+      await Promise.all([this.loadLookupMaps(), this.loadInstructors()]);
+      await this.loadWeek(); // loadWeek se encarga de apagar isLoading() al finalizar
+    } catch {
+      this._error.set('Error al inicializar la agenda. Intenta de nuevo.');
+      this._isLoading.set(false);
+    }
+    
     this.subscribeRealtime();
   }
 

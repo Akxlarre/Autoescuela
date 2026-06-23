@@ -16,11 +16,11 @@ import { TooltipModule } from 'primeng/tooltip';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ArchivoFacade } from '@core/facades/archivo-profesional.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-admin-profesional-archivo',
@@ -32,7 +32,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     SelectModule,
     TooltipModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
@@ -41,11 +40,13 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ═══ Hero ═══ -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoadingAlumnos()"
         title="Archivo · Clase Profesional"
         subtitle="Historial completo de promociones finalizadas — asistencia y evaluaciones"
         [actions]="[]"
+        [kpis]="heroKpis()"
       />
 
       <!-- ═══ Selectores en cascada ═══ -->
@@ -158,49 +159,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <div class="bento-banner flex flex-col items-center gap-3 text-center py-12">
           <app-icon name="book-open" [size]="44" color="var(--text-muted)" />
           <p class="text-sm text-muted">Selecciona un curso para ver el historial de alumnos.</p>
-        </div>
-      }
-
-      <!-- ═══ KPIs (cuando hay curso seleccionado) ═══ -->
-      @if (facade.selectedCursoId()) {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Total alumnos"
-            [value]="facade.kpis().totalAlumnos"
-            icon="users"
-            [loading]="facade.isLoadingAlumnos()"
-            data-llm-description="Total de alumnos en el curso archivado"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Aprobados"
-            [value]="facade.kpis().aprobados"
-            icon="check-circle"
-            color="success"
-            [loading]="facade.isLoadingAlumnos()"
-            data-llm-description="Alumnos que aprobaron el curso"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Reprobados"
-            [value]="facade.kpis().reprobados"
-            icon="x-circle"
-            color="error"
-            [loading]="facade.isLoadingAlumnos()"
-            data-llm-description="Alumnos que reprobaron el curso"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="% Aprobación"
-            [value]="facade.kpis().pctAprobacion"
-            suffix="%"
-            icon="trending-up"
-            [loading]="facade.isLoadingAlumnos()"
-            data-llm-description="Porcentaje de aprobación del curso"
-          />
         </div>
       }
 
@@ -578,6 +536,39 @@ export class AdminProfesionalArchivoComponent implements OnInit, AfterViewInit, 
   protected readonly cursoLabel = computed(() => {
     const id = this.facade.selectedCursoId();
     return this.facade.cursos().find((c) => c.id === id)?.label ?? '';
+  });
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    if (!this.facade.selectedCursoId()) return [];
+    return [
+      {
+        id: 'total',
+        label: 'Total alumnos',
+        value: this.facade.kpis().totalAlumnos,
+        icon: 'users',
+      },
+      {
+        id: 'aprobados',
+        label: 'Aprobados',
+        value: this.facade.kpis().aprobados,
+        icon: 'check-circle',
+        color: 'success',
+      },
+      {
+        id: 'reprobados',
+        label: 'Reprobados',
+        value: this.facade.kpis().reprobados,
+        icon: 'x-circle',
+        color: 'error',
+      },
+      {
+        id: 'pct',
+        label: '% Aprobación',
+        value: this.facade.kpis().pctAprobacion,
+        icon: 'trending-up',
+        suffix: '%',
+      },
+    ];
   });
 
   ngOnInit(): void {

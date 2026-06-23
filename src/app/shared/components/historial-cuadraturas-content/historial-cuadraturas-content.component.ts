@@ -1,8 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal, AfterViewInit, ElementRef, viewChild, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+  inject,
+} from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -133,41 +143,40 @@ function formatCLP(value: number): string {
   `,
   template: `
     <div class="bento-grid" appBentoGridLayout #pageRef>
-      <!-- ── Cabecera ─────────────────────────────────────────────────────────── -->
-      <div class="bento-hero relative overflow-visible">
+      <!-- ── Hero (slim, hijo directo del grid) ──────────────────────────────── -->
       <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
         title="Historial de Cuadraturas"
         subtitle="Registro y visualización del calendario financiero mensual para arqueo de caja."
         icon="calendar"
         [backRoute]="backRoute()"
         [backLabel]="backLabel()"
-        [actions]="heroActions()"
-        (actionClick)="onHeroAction($event)"
-        class="mb-6"
+        [actions]="[]"
+      />
+
+      <!-- ── Barra: navegación de mes + exportación ─────────────────────────── -->
+      <div
+        class="bento-banner card px-4 py-2.5 flex items-center justify-between relative overflow-visible"
       >
-        <div
-          class="flex items-center bg-white/10 border border-white/20 backdrop-blur-md rounded-xl overflow-hidden"
-        >
+        <div class="flex items-center border border-border-subtle rounded-xl overflow-hidden">
           <button
-            class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
-            style="color: white; border-right: 1px solid rgba(255, 255, 255, 0.1)"
+            class="px-3 py-2 text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent"
             (click)="mesAnterior.emit()"
             aria-label="Mes anterior"
             data-llm-action="historial-mes-anterior"
           >
             <app-icon name="chevron-left" [size]="16" />
           </button>
-
           <span
-            class="text-sm font-bold px-4 text-white uppercase tracking-wide"
+            class="text-sm font-bold px-4 text-text-primary uppercase tracking-wide"
             style="min-width: 140px; text-align: center"
           >
             {{ mesLabel() }}
           </span>
-
           <button
-            class="px-3 py-2 transition-colors cursor-pointer hover:bg-white/10"
-            style="color: white; border-left: 1px solid rgba(255, 255, 255, 0.1)"
+            class="px-3 py-2 text-text-secondary transition-colors cursor-pointer hover:bg-subtle border-0 bg-transparent"
             (click)="mesSiguiente.emit()"
             aria-label="Mes siguiente"
             data-llm-action="historial-mes-siguiente"
@@ -175,248 +184,255 @@ function formatCLP(value: number): string {
             <app-icon name="chevron-right" [size]="16" />
           </button>
         </div>
-      </app-section-hero>
-
-      <!-- Dropdown de exportación mensual -->
-      @if (exportMenuOpen()) {
-        <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-        <div class="export-menu absolute top-14 right-4 z-20">
-          <button
-            type="button"
-            class="export-menu-item"
-            (click)="requestExport('excel')"
-            data-llm-action="export-historial-excel"
-          >
-            <app-icon name="table-2" [size]="16" />
-            Exportar como Excel
-          </button>
-          <button
-            type="button"
-            class="export-menu-item"
-            (click)="requestExport('pdf')"
-            data-llm-action="export-historial-pdf"
-          >
-            <app-icon name="file-text" [size]="16" />
-            Exportar como PDF
-          </button>
-        </div>
-      }
-    </div>
-
-    <!-- ── Calendario ─────────────────────────────────────────────────────────── -->
-    <div
-      class="bento-banner overflow-hidden"
-      style="border: 1px solid var(--border-color); border-radius: var(--radius-lg, 10px)"
-    >
-      <!-- Cabecera de días (LUN–DOM) | DESKTOP SOLO -->
-      <div
-        class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/50 border-b border-border-muted/50"
-      >
-        @for (dia of diasSemana; track dia) {
-          <div
-            class="px-2 py-3.5 text-center text-[10px] font-bold text-text-muted bg-subtle uppercase tracking-widest"
-          >
-            {{ dia }}
+        <button
+          type="button"
+          class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-subtle transition-colors cursor-pointer bg-transparent"
+          [disabled]="isExporting()"
+          (click)="exportMenuOpen.set(!exportMenuOpen())"
+          data-llm-action="toggle-export-menu"
+        >
+          <app-icon [name]="isExporting() ? 'loader-circle' : 'download'" [size]="15" />
+          {{ isExporting() ? 'Exportando...' : 'Exportar' }}
+        </button>
+        @if (exportMenuOpen()) {
+          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+          <div class="export-menu absolute top-12 right-0 z-20">
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('excel')"
+              data-llm-action="export-historial-excel"
+            >
+              <app-icon name="table-2" [size]="16" />
+              Exportar como Excel
+            </button>
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('pdf')"
+              data-llm-action="export-historial-pdf"
+            >
+              <app-icon name="file-text" [size]="16" />
+              Exportar como PDF
+            </button>
           </div>
         }
       </div>
 
-      <!-- Grid de celdas | DESKTOP SOLO -->
-      <div class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/30 flex-1">
-        @if (isLoading()) {
-          @for (i of skeletonCells; track i) {
-            <div class="cal-cell bg-elevated p-2 flex flex-col justify-between">
-              <app-skeleton-block variant="text" width="40%" height="13px" />
-            </div>
-          }
-        } @else {
-          @for (celda of calendarDays(); track $index) {
+      <!-- ── Calendario ─────────────────────────────────────────────────────────── -->
+      <div
+        class="bento-banner overflow-hidden"
+        style="border: 1px solid var(--border-color); border-radius: var(--radius-lg, 10px)"
+      >
+        <!-- Cabecera de días (LUN–DOM) | DESKTOP SOLO -->
+        <div
+          class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/50 border-b border-border-muted/50"
+        >
+          @for (dia of diasSemana; track dia) {
             <div
-              class="cal-cell"
-              [class.cal-cell--empty]="!celda.day"
-              [class.cal-cell--clickable]="!!celda.cierre"
-              [attr.role]="celda.cierre ? 'button' : null"
-              [attr.aria-label]="
-                celda.cierre ? 'Ver detalle del cierre del día ' + celda.day : null
-              "
-              [attr.tabindex]="celda.cierre ? 0 : null"
-              (click)="celda.cierre && cierreClicked.emit(celda.cierre)"
-              (keydown.enter)="celda.cierre && cierreClicked.emit(celda.cierre)"
+              class="px-2 py-3.5 text-center text-[10px] font-bold text-text-muted bg-subtle uppercase tracking-widest"
             >
-              @if (celda.day) {
-                <!-- Fila superior: número + candado -->
-                <div class="flex items-start justify-between">
-                  @if (celda.isToday) {
-                    <span class="day-circle" aria-label="Hoy">{{ celda.day }}</span>
-                  } @else {
-                    <span class="text-sm font-medium text-text-secondary">
-                      {{ celda.day }}
-                    </span>
-                  }
-                  @if (celda.cierre) {
-                    <app-icon name="lock" [size]="11" color="var(--text-muted)" />
-                  }
-                </div>
-
-                <!-- Centro: badge + diferencia -->
-                @if (celda.cierre; as cierre) {
-                  <div class="flex flex-col gap-1 my-1">
-                    @if (cierre.estadoDiferencia === 'balanced') {
-                      <span class="badge-cuadrado">Cuadrado</span>
-                    } @else {
-                      <span class="badge-descuadre">Descuadre</span>
-                    }
-                    <p
-                      class="text-xs font-semibold text-center"
-                      [style.color]="
-                        cierre.estadoDiferencia === 'shortage'
-                          ? 'var(--color-error)'
-                          : cierre.estadoDiferencia === 'surplus'
-                            ? 'var(--color-warning)'
-                            : 'var(--color-success)'
-                      "
-                    >
-                      {{ formatDiferencia(cierre.diferencia) }}
-                    </p>
-                  </div>
-
-                  <!-- Fila inferior: cajero -->
-                  <div class="flex items-center gap-1">
-                    <app-icon name="user" [size]="10" color="var(--text-muted)" />
-                    <span
-                      class="text-xs truncate text-text-muted"
-                      [style.max-width]="'calc(100% - 16px)'"
-                      >{{ cierre.cajero }}</span
-                    >
-                  </div>
-                } @else if (celda.isToday) {
-                  <p
-                    class="text-xs font-semibold text-center my-auto text-brand"
-                    
-                  >
-                    En curso
-                  </p>
-                  <span></span>
-                } @else {
-                  <span></span><span></span>
-                }
-              }
+              {{ dia }}
             </div>
           }
-        }
-      </div>
+        </div>
 
-      <!-- ── VISTA MÓVIL (Feed/List View) ── -->
-      <div class="flex lg:hidden flex-col divide-y divide-border-muted/30">
-        @if (isLoading()) {
-          @for (i of [1, 2, 3, 4]; track i) {
-            <div class="p-4 flex items-center justify-between bg-surface">
-              <div class="flex gap-3 items-center w-full">
-                <app-skeleton-block variant="circle" width="44px" height="44px" />
-                <div class="flex flex-col gap-2 flex-1">
-                  <app-skeleton-block variant="text" width="60%" height="14px" />
-                  <app-skeleton-block variant="text" width="40%" height="10px" />
-                </div>
+        <!-- Grid de celdas | DESKTOP SOLO -->
+        <div class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/30 flex-1">
+          @if (isLoading()) {
+            @for (i of skeletonCells; track i) {
+              <div class="cal-cell bg-elevated p-2 flex flex-col justify-between">
+                <app-skeleton-block variant="text" width="40%" height="13px" />
               </div>
-            </div>
-          }
-        } @else {
-          @for (celda of calendarDays(); track $index) {
-            @if (celda.day && (celda.cierre || celda.isToday)) {
-              <button
-                class="flex items-center justify-between p-4 bg-surface hover:bg-subtle active:bg-border-muted/30 transition-colors w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
+            }
+          } @else {
+            @for (celda of calendarDays(); track $index) {
+              <div
+                class="cal-cell"
+                [class.cal-cell--empty]="!celda.day"
+                [class.cal-cell--clickable]="!!celda.cierre"
+                [attr.role]="celda.cierre ? 'button' : null"
+                [attr.aria-label]="
+                  celda.cierre ? 'Ver detalle del cierre del día ' + celda.day : null
+                "
+                [attr.tabindex]="celda.cierre ? 0 : null"
                 (click)="celda.cierre && cierreClicked.emit(celda.cierre)"
-                [attr.aria-disabled]="!celda.cierre"
+                (keydown.enter)="celda.cierre && cierreClicked.emit(celda.cierre)"
               >
-                <div class="flex items-center gap-4">
-                  <div
-                    class="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl"
-                    [class.bg-brand]="celda.isToday"
-                    [class.text-white]="celda.isToday"
-                    [class.bg-subtle]="!celda.isToday"
-                    [class.border]="!celda.isToday"
-                    [class.border-border-muted]="!celda.isToday"
-                  >
-                    <span
-                      class="text-[10px] font-bold uppercase tracking-widest"
-                      [class.text-white]="celda.isToday"
-                      [class.text-text-muted]="!celda.isToday"
-                    >
-                      {{ getMesCorto(mesActual()) }}
-                    </span>
-                    <span
-                      class="text-lg font-black leading-none"
-                      [class.text-text-primary]="!celda.isToday"
-                    >
-                      {{ celda.day }}
-                    </span>
-                  </div>
-
-                  <div class="flex flex-col flex-1">
-                    @if (celda.cierre; as cierre) {
-                      <div class="flex items-center gap-1.5 mb-0.5">
-                        @if (cierre.estadoDiferencia === 'balanced') {
-                          <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
-                          <span class="text-[13px] font-bold text-text-primary">Cuadrado</span>
-                        } @else if (cierre.estadoDiferencia === 'surplus') {
-                          <div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
-                          <span class="text-[13px] font-bold text-text-primary">Sobrante</span>
-                        } @else {
-                          <div class="w-1.5 h-1.5 rounded-full bg-error"></div>
-                          <span class="text-[13px] font-bold text-text-primary">Descuadre</span>
-                        }
-                      </div>
-                      <div class="flex items-center gap-1 text-text-muted text-xs">
-                        <app-icon name="user" [size]="10" />
-                        <span class="truncate max-w-[120px] lg:max-w-none">{{
-                          cierre.cajero
-                        }}</span>
-                      </div>
-                    } @else if (celda.isToday) {
-                      <div class="flex items-center gap-1.5 mb-1 text-brand">
-                        <app-icon name="loader" [size]="14" class="animate-spin" />
-                        <span class="text-[13px] font-bold">Sesión en curso</span>
-                      </div>
-                      <span class="text-text-muted text-[11px] font-semibold"
-                        >Esperando cierre operativo</span
-                      >
+                @if (celda.day) {
+                  <!-- Fila superior: número + candado -->
+                  <div class="flex items-start justify-between">
+                    @if (celda.isToday) {
+                      <span class="day-circle" aria-label="Hoy">{{ celda.day }}</span>
+                    } @else {
+                      <span class="text-sm font-medium text-text-secondary">
+                        {{ celda.day }}
+                      </span>
+                    }
+                    @if (celda.cierre) {
+                      <app-icon name="lock" [size]="11" color="var(--text-muted)" />
                     }
                   </div>
-                </div>
 
-                <div class="flex flex-col items-end gap-1">
+                  <!-- Centro: badge + diferencia -->
                   @if (celda.cierre; as cierre) {
-                    <span
-                      class="text-[13px] font-black tabular-nums tracking-tight"
-                      [class.text-error]="cierre.estadoDiferencia === 'shortage'"
-                      [class.text-warning]="cierre.estadoDiferencia === 'surplus'"
-                      [class.text-success]="cierre.estadoDiferencia === 'balanced'"
-                    >
-                      {{ formatDiferencia(cierre.diferencia) }}
-                    </span>
-                    <app-icon name="chevron-right" [size]="16" class="text-text-muted opacity-50" />
+                    <div class="flex flex-col gap-1 my-1">
+                      @if (cierre.estadoDiferencia === 'balanced') {
+                        <span class="badge-cuadrado">Cuadrado</span>
+                      } @else {
+                        <span class="badge-descuadre">Descuadre</span>
+                      }
+                      <p
+                        class="text-xs font-semibold text-center"
+                        [style.color]="
+                          cierre.estadoDiferencia === 'shortage'
+                            ? 'var(--color-error)'
+                            : cierre.estadoDiferencia === 'surplus'
+                              ? 'var(--color-warning)'
+                              : 'var(--color-success)'
+                        "
+                      >
+                        {{ formatDiferencia(cierre.diferencia) }}
+                      </p>
+                    </div>
+
+                    <!-- Fila inferior: cajero -->
+                    <div class="flex items-center gap-1">
+                      <app-icon name="user" [size]="10" color="var(--text-muted)" />
+                      <span
+                        class="text-xs truncate text-text-muted"
+                        [style.max-width]="'calc(100% - 16px)'"
+                        >{{ cierre.cajero }}</span
+                      >
+                    </div>
+                  } @else if (celda.isToday) {
+                    <p class="text-xs font-semibold text-center my-auto text-brand">En curso</p>
+                    <span></span>
+                  } @else {
+                    <span></span><span></span>
                   }
-                </div>
-              </button>
+                }
+              </div>
             }
           }
+        </div>
 
-          @if (mesSinCierresMobile()) {
-            <div
-              class="flex flex-col items-center justify-center py-12 px-4 shadow-inner text-center bg-subtle text-text-muted"
-            >
-              <div
-                class="w-12 h-12 rounded-full bg-surface border border-border-muted flex items-center justify-center mb-3"
-              >
-                <app-icon name="calendar-x" [size]="20" class="opacity-50" />
+        <!-- ── VISTA MÓVIL (Feed/List View) ── -->
+        <div class="flex lg:hidden flex-col divide-y divide-border-muted/30">
+          @if (isLoading()) {
+            @for (i of [1, 2, 3, 4]; track i) {
+              <div class="p-4 flex items-center justify-between bg-surface">
+                <div class="flex gap-3 items-center w-full">
+                  <app-skeleton-block variant="circle" width="44px" height="44px" />
+                  <div class="flex flex-col gap-2 flex-1">
+                    <app-skeleton-block variant="text" width="60%" height="14px" />
+                    <app-skeleton-block variant="text" width="40%" height="10px" />
+                  </div>
+                </div>
               </div>
-              <h3 class="text-sm font-bold text-text-primary mb-1">Sin Actividad</h3>
-              <p class="text-xs max-w-[200px]">
-                No existen cierres ni registros arqueados en este mes.
-              </p>
-            </div>
+            }
+          } @else {
+            @for (celda of calendarDays(); track $index) {
+              @if (celda.day && (celda.cierre || celda.isToday)) {
+                <button
+                  class="flex items-center justify-between p-4 bg-surface hover:bg-subtle active:bg-border-muted/30 transition-colors w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand cursor-pointer"
+                  (click)="celda.cierre && cierreClicked.emit(celda.cierre)"
+                  [attr.aria-disabled]="!celda.cierre"
+                >
+                  <div class="flex items-center gap-4">
+                    <div
+                      class="shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl"
+                      [class.bg-brand]="celda.isToday"
+                      [class.text-white]="celda.isToday"
+                      [class.bg-subtle]="!celda.isToday"
+                      [class.border]="!celda.isToday"
+                      [class.border-border-muted]="!celda.isToday"
+                    >
+                      <span
+                        class="text-[10px] font-bold uppercase tracking-widest"
+                        [class.text-white]="celda.isToday"
+                        [class.text-text-muted]="!celda.isToday"
+                      >
+                        {{ getMesCorto(mesActual()) }}
+                      </span>
+                      <span
+                        class="text-lg font-black leading-none"
+                        [class.text-text-primary]="!celda.isToday"
+                      >
+                        {{ celda.day }}
+                      </span>
+                    </div>
+
+                    <div class="flex flex-col flex-1">
+                      @if (celda.cierre; as cierre) {
+                        <div class="flex items-center gap-1.5 mb-0.5">
+                          @if (cierre.estadoDiferencia === 'balanced') {
+                            <div class="w-1.5 h-1.5 rounded-full bg-success"></div>
+                            <span class="text-[13px] font-bold text-text-primary">Cuadrado</span>
+                          } @else if (cierre.estadoDiferencia === 'surplus') {
+                            <div class="w-1.5 h-1.5 rounded-full bg-warning"></div>
+                            <span class="text-[13px] font-bold text-text-primary">Sobrante</span>
+                          } @else {
+                            <div class="w-1.5 h-1.5 rounded-full bg-error"></div>
+                            <span class="text-[13px] font-bold text-text-primary">Descuadre</span>
+                          }
+                        </div>
+                        <div class="flex items-center gap-1 text-text-muted text-xs">
+                          <app-icon name="user" [size]="10" />
+                          <span class="truncate max-w-[120px] lg:max-w-none">{{
+                            cierre.cajero
+                          }}</span>
+                        </div>
+                      } @else if (celda.isToday) {
+                        <div class="flex items-center gap-1.5 mb-1 text-brand">
+                          <app-icon name="loader" [size]="14" class="animate-spin" />
+                          <span class="text-[13px] font-bold">Sesión en curso</span>
+                        </div>
+                        <span class="text-text-muted text-[11px] font-semibold"
+                          >Esperando cierre operativo</span
+                        >
+                      }
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col items-end gap-1">
+                    @if (celda.cierre; as cierre) {
+                      <span
+                        class="text-[13px] font-black tabular-nums tracking-tight"
+                        [class.text-error]="cierre.estadoDiferencia === 'shortage'"
+                        [class.text-warning]="cierre.estadoDiferencia === 'surplus'"
+                        [class.text-success]="cierre.estadoDiferencia === 'balanced'"
+                      >
+                        {{ formatDiferencia(cierre.diferencia) }}
+                      </span>
+                      <app-icon
+                        name="chevron-right"
+                        [size]="16"
+                        class="text-text-muted opacity-50"
+                      />
+                    }
+                  </div>
+                </button>
+              }
+            }
+
+            @if (mesSinCierresMobile()) {
+              <div
+                class="flex flex-col items-center justify-center py-12 px-4 shadow-inner text-center bg-subtle text-text-muted"
+              >
+                <div
+                  class="w-12 h-12 rounded-full bg-surface border border-border-muted flex items-center justify-center mb-3"
+                >
+                  <app-icon name="calendar-x" [size]="20" class="opacity-50" />
+                </div>
+                <h3 class="text-sm font-bold text-text-primary mb-1">Sin Actividad</h3>
+                <p class="text-xs max-w-[200px]">
+                  No existen cierres ni registros arqueados en este mes.
+                </p>
+              </div>
+            }
           }
-        }
+        </div>
       </div>
     </div>
   `,
@@ -451,17 +467,6 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
     const el = this.pageRef()?.nativeElement;
     if (el) this.gsap.animateBentoGrid(el);
   }
-
-  protected readonly heroActions = computed<SectionHeroAction[]>(() => [
-    {
-      id: 'exportar',
-      label: this.isExporting() ? 'Exportando...' : 'Exportar',
-      icon: this.isExporting() ? 'loader-circle' : 'download',
-      loading: this.isExporting(),
-      disabled: this.isExporting(),
-      primary: false,
-    },
-  ]);
 
   // ── Computed ──────────────────────────────────────────────────────────────
 
@@ -520,12 +525,6 @@ export class HistorialCuadraturasContentComponent implements AfterViewInit {
     if (diff > 0) return `+ ${formatted}`;
     if (diff < 0) return `- ${formatted}`;
     return formatted;
-  }
-
-  protected onHeroAction(actionId: string): void {
-    if (actionId === 'exportar') {
-      this.exportMenuOpen.set(!this.exportMenuOpen());
-    }
   }
 
   protected requestExport(format: 'excel' | 'pdf'): void {

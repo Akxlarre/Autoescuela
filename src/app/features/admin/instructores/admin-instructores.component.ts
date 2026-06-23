@@ -44,8 +44,9 @@ type FilterTab = 'all' | 'active' | 'expiring';
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Instructores"
         subtitle="Gestión de instructores Clase B con licencias y vehículos"
         [actions]="heroActions()"

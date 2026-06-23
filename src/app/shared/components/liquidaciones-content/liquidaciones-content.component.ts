@@ -1,13 +1,23 @@
 import { TooltipModule } from 'primeng/tooltip';
-import { ChangeDetectionStrategy, Component, computed, input, output, signal, AfterViewInit, ElementRef, viewChild, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  output,
+  signal,
+  AfterViewInit,
+  ElementRef,
+  viewChild,
+  inject,
+} from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type { LiquidacionRow, LiquidacionesKpis } from '@core/models/ui/liquidaciones.model';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
@@ -48,7 +58,6 @@ function formatCLP(value: number): string {
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
   ],
@@ -256,81 +265,40 @@ function formatCLP(value: number): string {
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout #pageRef>
       <!-- ── Cabecera de página ─────────────────────────────────────────────────── -->
-      <div class="bento-hero relative overflow-visible">
-      <app-section-hero
-        title="Liquidaciones de Instructores"
-        subtitle="Nómina mensual y registro de pagos"
-        icon="banknote"
-        [actions]="heroActions()"
-        class="block mb-5"
-        [class.force-compact]="isDrawerOpen()"
-        (actionClick)="onHeroAction($event)"
-      />
-      @if (exportMenuOpen()) {
-        <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
-        <div class="export-menu absolute top-14 right-4 z-20">
-          <button
-            type="button"
-            class="export-menu-item"
-            (click)="requestExport('excel')"
-            data-llm-action="export-nomina-excel"
-          >
-            <app-icon name="table-2" [size]="16" />
-            Exportar como Excel
-          </button>
-          <button
-            type="button"
-            class="export-menu-item"
-            (click)="requestExport('pdf')"
-            data-llm-action="export-nomina-pdf"
-          >
-            <app-icon name="file-text" [size]="16" />
-            Exportar como PDF
-          </button>
-        </div>
-      }
-    </div>
-
-    <!-- ── Contenido (padding consistente con reportes-contables-content) ── -->
-      <!-- ── KPIs ── -->
-      <!-- KPI 1: Total Nómina -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis().totalNomina"
-          label="Total Nómina"
+      <div class="bento-banner relative overflow-visible">
+        <app-section-hero
+          title="Liquidaciones de Instructores"
+          subtitle="Nómina mensual y registro de pagos"
           icon="banknote"
-          color="default"
-          prefix="$ "
-          subValue="Suma bruta del periodo"
+          density="slim"
+          [kpis]="heroKpis()"
           [loading]="isLoading()"
+          [actions]="heroActions()"
+          (actionClick)="onHeroAction($event)"
         />
-      </div>
-
-      <!-- KPI 2: Anticipos -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis().totalAnticipos"
-          label="Anticipos a Descontar"
-          icon="trending-down"
-          color="error"
-          [prefix]="kpis().totalAnticipos > 0 ? '-$ ' : '$ '"
-          subValue="Total de adelantos entregados"
-          [loading]="isLoading()"
-        />
-      </div>
-
-      <!-- KPI 3: Estado Pagos — usa progressPercent integrado en kpi-card-variant -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis().totalPagados"
-          label="Progreso de Pagos"
-          icon="check-circle"
-          color="success"
-          [suffix]="' / ' + kpis().totalInstructores"
-          [subValue]="progresoPagos().toFixed(1) + '% de la nómina pagada'"
-          [progressPercent]="progresoPagos()"
-          [loading]="isLoading()"
-        />
+        @if (exportMenuOpen()) {
+          <div class="fixed inset-0 z-10" (click)="exportMenuOpen.set(false)"></div>
+          <div class="export-menu absolute top-14 right-4 z-20">
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('excel')"
+              data-llm-action="export-nomina-excel"
+            >
+              <app-icon name="table-2" [size]="16" />
+              Exportar como Excel
+            </button>
+            <button
+              type="button"
+              class="export-menu-item"
+              (click)="requestExport('pdf')"
+              data-llm-action="export-nomina-pdf"
+            >
+              <app-icon name="file-text" [size]="16" />
+              Exportar como PDF
+            </button>
+          </div>
+        }
       </div>
 
       <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
@@ -823,6 +791,37 @@ export class LiquidacionesContentComponent implements AfterViewInit {
   ]);
 
   // ── Computed ─────────────────────────────────────────────────────────────────
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    const k = this.kpis();
+    const pct =
+      k.totalInstructores > 0 ? Math.round((k.totalPagados / k.totalInstructores) * 100) : 0;
+    return [
+      {
+        id: 'nomina',
+        label: 'Total Nómina',
+        value: formatCLP(k.totalNomina),
+        color: 'default',
+        icon: 'banknote',
+      },
+      {
+        id: 'anticipos',
+        label: 'Anticipos',
+        value: formatCLP(k.totalAnticipos),
+        color: k.totalAnticipos > 0 ? 'error' : 'default',
+        icon: 'trending-down',
+      },
+      {
+        id: 'pagados',
+        label: 'Pagados',
+        value: `${k.totalPagados} / ${k.totalInstructores}`,
+        color: 'success',
+        icon: 'check-circle',
+        trend: pct,
+        trendLabel: '%',
+      },
+    ];
+  });
 
   protected readonly mesLabel = computed(
     () => `${MESES[this.mesActual() - 1]} ${this.anioActual()}`,

@@ -25,7 +25,6 @@ import { InputTextModule } from 'primeng/inputtext';
 
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
-import { KpiCardVariantComponent } from '../kpi-card/kpi-card-variant.component';
 import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
@@ -39,7 +38,11 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 // Models
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroKpi,
+} from '@core/models/ui/section-hero.model';
 import type {
   VehicleTableRow,
   FlotaKpis,
@@ -68,7 +71,6 @@ import type {
     TooltipModule,
     InputTextModule,
     IconComponent,
-    KpiCardVariantComponent,
     ActionKpiCardComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
@@ -79,46 +81,17 @@ import type {
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de flota">
       <!-- HERO -->
-      <div class="bento-banner">
-        <app-section-hero
-          [animateOnInit]="false"
-          title="Gestión de Flota"
-          subtitle="Control de vehículos, disponibilidad y mantenimientos."
-          [chips]="heroChips()"
-          [actions]="heroActions()"
-          (actionClick)="handleHeroAction($event)"
-        />
-      </div>
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Total Vehículos"
-          [value]="kpis().total"
-          icon="car"
-          color="default"
-          [accent]="true"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Disponibles"
-          [value]="kpis().available"
-          icon="circle-check"
-          color="success"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="En Clase"
-          [value]="kpis().inClass"
-          icon="graduation-cap"
-          color="default"
-          [loading]="isLoading()"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
+        title="Gestión de Flota"
+        subtitle="Control de vehículos, disponibilidad y mantenimientos."
+        [chips]="heroChips()"
+        [kpis]="heroKpis()"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
+      />
 
       <!-- KPI Acción: Mantenimiento -->
       <div class="bento-square">
@@ -566,6 +539,18 @@ export class FlotaListContentComponent {
 
   readonly heroChips = computed((): SectionHeroChip[] => [
     { label: `${this.kpis().total} vehículos`, icon: 'car', style: 'default' },
+  ]);
+
+  readonly heroKpis = computed((): SectionHeroKpi[] => [
+    { id: 'total', label: 'Total', value: this.kpis().total, icon: 'car', color: 'default' },
+    {
+      id: 'disponibles',
+      label: 'Disponibles',
+      value: this.kpis().available,
+      icon: 'circle-check',
+      color: 'success',
+    },
+    { id: 'en-clase', label: 'En Clase', value: this.kpis().inClass, icon: 'graduation-cap' },
   ]);
 
   readonly heroActions = computed((): SectionHeroAction[] => [

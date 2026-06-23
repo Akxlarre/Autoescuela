@@ -54,6 +54,8 @@
   --color-text-disabled: var(--text-disabled);
 
   /* ── Bordes ── */
+  --color-border: var(--border-default); /* Fix: default color for 'border' class */
+  --color-border-border: var(--border-default); /* Fix: mapping for 'border-border' class */
   --color-border-subtle: var(--border-subtle);
   --color-border-muted: var(--border-muted);
   --color-border-default: var(--border-default);

@@ -20,9 +20,8 @@ import { AdminSecretariasCrearDrawerComponent } from './admin-secretarias-crear-
 import { AdminSecretariasVerDrawerComponent } from './admin-secretarias-ver-drawer.component';
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 import type { SecretariaTableRow } from '@core/models/ui/secretaria-table.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -36,7 +35,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     FormsModule,
     SelectModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
@@ -45,27 +43,17 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     <div class="bento-grid" appBentoGridLayout #bentoGrid style="--bento-row-min: 125px;">
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Gestión de Secretarias"
         subtitle="Control de acceso y gestión de personal de secretaría"
         [actions]="heroActions()"
+        [kpis]="heroKpis()"
         (actionClick)="handleHeroAction($event)"
       />
 
       @if (facade.isLoading()) {
-        <!-- ── Skeleton State ────────────────────────────────────────────────── -->
-        <!-- 4 KPIs Skeletons -->
-        @for (_ of [1, 2, 3, 4]; track $index) {
-          <div class="bento-square">
-            <div class="card p-6 h-full">
-              <app-skeleton-block variant="circle" width="40px" height="40px" class="mb-4" />
-              <app-skeleton-block variant="text" width="60%" height="12px" class="mb-2" />
-              <app-skeleton-block variant="text" width="40%" height="24px" />
-            </div>
-          </div>
-        }
-
         <!-- Content Skeleton -->
         <div class="bento-wide" data-col-span="9">
           <div class="card p-6 h-full">
@@ -120,43 +108,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         </div>
       } @else {
         <!-- ── Active View ──────────────────────────────────────────────────── -->
-
-        <!-- 4 KPIs -->
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Total Secretarias"
-            [value]="facade.totalSecretarias()"
-            icon="users"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Sedes con Personal"
-            [value]="facade.sedesConPersonal()"
-            icon="map-pin"
-            color="default"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Cuentas Activas"
-            [value]="facade.activas()"
-            icon="check-circle"
-            color="success"
-            [loading]="facade.isLoading()"
-          />
-        </div>
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Inactivas"
-            [value]="facade.inactivas()"
-            icon="user-x"
-            color="default"
-            [loading]="facade.isLoading()"
-          />
-        </div>
 
         <!-- Lista de Secretarias -->
         <div class="bento-wide" data-col-span="9">
@@ -486,6 +437,29 @@ export class AdminSecretariasComponent {
   // ── Hero ──────────────────────────────────────────────────────────────────
   protected readonly heroActions = computed((): SectionHeroAction[] => [
     { id: 'new', label: 'Nueva Secretaria', icon: 'plus', primary: true },
+  ]);
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'total',
+      label: 'Total Secretarias',
+      value: this.facade.totalSecretarias(),
+      icon: 'users',
+    },
+    {
+      id: 'sedes',
+      label: 'Sedes con Personal',
+      value: this.facade.sedesConPersonal(),
+      icon: 'map-pin',
+    },
+    {
+      id: 'activas',
+      label: 'Cuentas Activas',
+      value: this.facade.activas(),
+      icon: 'check-circle',
+      color: 'success',
+    },
+    { id: 'inactivas', label: 'Inactivas', value: this.facade.inactivas(), icon: 'user-x' },
   ]);
 
   protected handleHeroAction(actionId: string): void {

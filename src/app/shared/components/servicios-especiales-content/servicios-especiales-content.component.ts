@@ -15,12 +15,10 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { MenuModule } from 'primeng/menu';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type {
   ServicioEspecial,
   ServiciosEspecialesKpis,
@@ -41,10 +39,8 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
   imports: [
     CommonModule,
     IconComponent,
-    KpiCardVariantComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
-    ShortCurrencyPipe,
     FormsModule,
     SelectModule,
     MenuModule,
@@ -52,70 +48,19 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          [animateOnInit]="false"
-          title="Servicios Especiales"
-          subtitle="Punto de venta de servicios complementarios — alumnos y clientes externos"
-          icon="receipt"
-          [backRoute]="backRoute()"
-          backLabel="Inicio"
-          [actions]="heroActions"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
-
-      <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis().ventasMes"
-          label="Ventas del mes"
-          [trendLabel]="mesActualLabel()"
-          icon="receipt"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <div class="bento-card card-tinted h-full flex flex-col gap-2">
-          @if (isLoading()) {
-            <div class="h-full flex items-center justify-center">
-              <app-icon name="loader-2" [size]="24" class="animate-spin text-brand" />
-            </div>
-          } @else {
-            <span class="kpi-label text-success">Total recaudado</span>
-            <p class="kpi-value m-0">{{ kpis().totalCobrado | shortCurrency }}</p>
-            <p class="text-xs m-0 mt-auto text-text-muted">
-              {{ kpis().ventasCobradas }} ventas cobradas
-            </p>
-          }
-        </div>
-      </div>
-      <div class="bento-square">
-        <div class="bento-card h-full flex flex-col gap-2">
-          @if (isLoading()) {
-            <div class="h-full flex items-center justify-center">
-              <app-icon name="loader-2" [size]="24" class="animate-spin text-brand" />
-            </div>
-          } @else {
-            <span class="kpi-label text-warning">Pendiente de cobro</span>
-            <p class="kpi-value m-0 text-warning">
-              {{ kpis().pendientesCobro | shortCurrency }}
-            </p>
-            <p class="text-xs m-0 mt-auto text-text-muted">
-              {{ kpis().ventasSinCobrar }} ventas sin cobrar
-            </p>
-          }
-        </div>
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis().totalRegistros"
-          label="Total registros"
-          trendLabel="Todos los servicios"
-          icon="list-checks"
-          [loading]="isLoading()"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
+        title="Servicios Especiales"
+        subtitle="Punto de venta de servicios complementarios — alumnos y clientes externos"
+        icon="receipt"
+        [backRoute]="backRoute()"
+        backLabel="Inicio"
+        [kpis]="heroKpis()"
+        [actions]="heroActions"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ── Catálogo de Servicios ──────────────────────────────────────────────── -->
       <div class="bento-banner">
@@ -517,6 +462,38 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   protected readonly heroActions: SectionHeroAction[] = [
     { id: 'registrar-venta', label: 'Registrar Venta', icon: 'plus', primary: true },
   ];
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => {
+    const k = this.kpis();
+    return [
+      {
+        id: 'ventas-mes',
+        label: 'Ventas del mes',
+        value: k.ventasMes,
+        icon: 'receipt',
+        trendLabel: this.mesActualLabel(),
+      },
+      {
+        id: 'total-cobrado',
+        label: 'Total recaudado',
+        value: this.formatCLP(k.totalCobrado),
+        color: 'success',
+        trendLabel: `${k.ventasCobradas} cobradas`,
+      },
+      {
+        id: 'pend-cobro',
+        label: 'Pend. de cobro',
+        value: this.formatCLP(k.pendientesCobro),
+        color: 'warning',
+        trendLabel: `${k.ventasSinCobrar} sin cobrar`,
+      },
+      { id: 'total-reg', label: 'Total registros', value: k.totalRegistros, icon: 'list-checks' },
+    ];
+  });
+
+  private formatCLP(value: number): string {
+    return `$ ${value.toLocaleString('es-CL')}`;
+  }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   protected onHeroAction(actionId: string): void {

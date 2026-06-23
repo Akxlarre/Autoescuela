@@ -63,16 +63,15 @@ const PAGE_SIZE = 10;
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ──────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          [animateOnInit]="false"
-          title="Certificados Clase Profesional"
-          subtitle="Certificación de finalización — Escuela de Conductores Profesionales"
-          icon="shield-check"
-          [actions]="heroActions"
-          variant="compact"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
+        title="Certificados Clase Profesional"
+        subtitle="Certificación de finalización — Escuela de Conductores Profesionales"
+        icon="shield-check"
+        [actions]="heroActions"
+      />
 
       <!-- ── Selección en cascada ───────────────────────────────────── -->
       <div class="bento-banner card flex flex-wrap items-end gap-4">

@@ -5,6 +5,7 @@ export interface DashboardModel {
     alerts: AlertModel[];
     quickActions: QuickActionModel[];
     systemStatus: SystemStatusModel[];
+    liveClasses?: LiveClassModel[];
 }
 
 export interface HeroModel {
@@ -60,4 +61,20 @@ export interface QuickActionModel {
 export interface SystemStatusModel {
     name: string;
     ok: boolean;
+}
+
+export interface LiveClassModel {
+    id: string;
+    originalId: number;
+    classNumber?: number;
+    studentName: string;
+    instructorName: string;
+    timeLabel: string; // ej. "10:00 - 10:45"
+    status: 'pending' | 'in_progress' | 'completed';
+    type: 'practical' | 'theoretical';
+    vehicle?: string; // Opcional (concatenado para dashboard UI)
+    vehiclePlate?: string;
+    vehicleBrand?: string;
+    vehicleModel?: string;
+    scheduledAt: string; // ISO date string
 }

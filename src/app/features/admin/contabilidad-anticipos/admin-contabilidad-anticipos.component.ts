@@ -2,6 +2,7 @@ import {
   AfterViewInit,
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   inject,
   OnInit,
@@ -14,7 +15,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type { AnticipoCuentaCorriente, AnticipoHistorial } from '@core/models/ui/anticipos.model';
 import { RegistrarAnticipoDrawerComponent } from './registrar-anticipo-drawer.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
@@ -29,20 +30,28 @@ function clp(n: number): string {
 @Component({
   selector: 'app-admin-contabilidad-anticipos',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, AlertCardComponent, BentoGridLayoutDirective],
+  imports: [
+    SectionHeroComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    AlertCardComponent,
+    BentoGridLayoutDirective,
+  ],
   template: `
     <div class="bento-grid" appBentoGridLayout #pageRef>
       <!-- ── Hero ─────────────────────────────────────────────────────────── -->
-      <div class="bento-hero relative overflow-visible">
-        <app-section-hero
-          title="Anticipos a Instructores"
-          contextLine="Contabilidad"
-          subtitle="RF-038 · Cuenta corriente interna y gestión de anticipos"
-          icon="banknote"
-          [actions]="heroActions"
-          (actionClick)="onHeroAction($event)"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
+        title="Anticipos a Instructores"
+        contextLine="Contabilidad"
+        subtitle="RF-038 · Cuenta corriente interna y gestión de anticipos"
+        icon="banknote"
+        [actions]="heroActions"
+        [kpis]="heroKpis()"
+        (actionClick)="onHeroAction($event)"
+      />
 
       <!-- ── Error ─────────────────────────────────────────────────────────── -->
       @if (facade.error()) {
@@ -52,65 +61,6 @@ function clp(n: number): string {
           </app-alert-card>
         </div>
       }
-
-      <!-- ── KPIs ───────────────────────────────────────────────────────────── -->
-      <!-- Anticipos Pendientes -->
-      <div class="bento-square">
-        <div
-          class="card p-5 flex flex-col gap-2 h-full"
-          style="border-left: 3px solid var(--state-warning)"
-        >
-          @if (facade.isLoading()) {
-            <app-skeleton-block variant="text" width="60%" height="14px" />
-            <app-skeleton-block variant="rect" width="70%" height="36px" />
-            <app-skeleton-block variant="text" width="40%" height="12px" />
-          } @else {
-            <span class="kpi-label text-warning" >Anticipos Pendientes</span>
-            <span class="kpi-value text-warning" >
-              {{ clp(facade.kpis().totalPendiente) }}
-            </span>
-            <span class="text-xs text-text-muted">
-              {{ facade.kpis().instructoresConSaldo }}
-              {{ facade.kpis().instructoresConSaldo === 1 ? 'instructor' : 'instructores' }}
-              con saldo
-            </span>
-          }
-        </div>
-      </div>
-
-      <!-- Total Histórico -->
-      <div class="bento-square">
-        <div class="card p-5 flex flex-col gap-2 h-full">
-          @if (facade.isLoading()) {
-            <app-skeleton-block variant="text" width="60%" height="14px" />
-            <app-skeleton-block variant="rect" width="70%" height="36px" />
-            <app-skeleton-block variant="text" width="40%" height="12px" />
-          } @else {
-            <span class="kpi-label">Total Anticipado (histórico)</span>
-            <span class="kpi-value text-info" >
-              {{ clp(facade.kpis().totalHistorico) }}
-            </span>
-            <span class="text-xs text-text-muted">desde inicio de operaciones</span>
-          }
-        </div>
-      </div>
-
-      <!-- Ya Descontados -->
-      <div class="bento-square">
-        <div class="card p-5 flex flex-col gap-2 border-2 border-success h-full" >
-          @if (facade.isLoading()) {
-            <app-skeleton-block variant="text" width="60%" height="14px" />
-            <app-skeleton-block variant="rect" width="70%" height="36px" />
-            <app-skeleton-block variant="text" width="40%" height="12px" />
-          } @else {
-            <span class="kpi-label text-success" >Ya Descontados</span>
-            <span class="kpi-value text-success" >
-              {{ clp(facade.kpis().totalDescontado) }}
-            </span>
-            <span class="text-xs text-text-muted">en liquidaciones anteriores</span>
-          }
-        </div>
-      </div>
 
       <!-- ── Cuenta Corriente por Instructor ───────────────────────────────── -->
       <div class="bento-banner card p-0 overflow-hidden">
@@ -193,7 +143,6 @@ function clp(n: number): string {
                     <td class="px-4 py-3">
                       <span
                         class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-elevated text-text-secondary"
-                        
                       >
                         {{ row.tipoLabel }}
                       </span>
@@ -205,9 +154,7 @@ function clp(n: number): string {
                     <!-- Saldo Pendiente -->
                     <td class="px-4 py-3 text-right font-semibold">
                       @if (row.saldoPendiente > 0) {
-                        <span class="text-warning">{{
-                          clp(row.saldoPendiente)
-                        }}</span>
+                        <span class="text-warning">{{ clp(row.saldoPendiente) }}</span>
                       } @else {
                         <span class="text-success">{{ clp(0) }}</span>
                       }
@@ -279,7 +226,7 @@ function clp(n: number): string {
         >
           <span class="text-sm font-semibold text-text-primary"> Historial de Anticipos </span>
           @if (!facade.isLoading()) {
-            <span class="text-sm font-medium text-brand" >
+            <span class="text-sm font-medium text-brand">
               {{ facade.historial().length }} registros
             </span>
           }
@@ -345,10 +292,7 @@ function clp(n: number): string {
                     <td class="px-5 py-3 text-text-secondary">
                       {{ adv.motivo }}
                     </td>
-                    <td
-                      class="px-5 py-3 text-right font-semibold text-warning"
-                      
-                    >
+                    <td class="px-5 py-3 text-right font-semibold text-warning">
                       {{ clp(adv.monto) }}
                     </td>
                     <td class="px-5 py-3 text-center">
@@ -416,6 +360,29 @@ export class AdminContabilidadAnticiposComponent implements OnInit, AfterViewIni
       primary: true,
     },
   ];
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'pendiente',
+      label: 'Anticipos Pendientes',
+      value: clp(this.facade.kpis().totalPendiente),
+      icon: 'banknote',
+      color: 'warning',
+    },
+    {
+      id: 'historico',
+      label: 'Total Anticipado',
+      value: clp(this.facade.kpis().totalHistorico),
+      icon: 'history',
+    },
+    {
+      id: 'descontado',
+      label: 'Ya Descontados',
+      value: clp(this.facade.kpis().totalDescontado),
+      icon: 'check-circle',
+      color: 'success',
+    },
+  ]);
 
   ngOnInit(): void {
     this.facade.initialize();

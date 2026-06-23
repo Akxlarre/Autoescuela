@@ -14,13 +14,12 @@ import { PagosFacade } from '@core/facades/pagos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
@@ -54,7 +53,6 @@ const POR_PAGINA = 5;
     DatePickerModule,
     DialogModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     RentabilidadCursosComponent,
@@ -64,60 +62,17 @@ const POR_PAGINA = 5;
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Cabecera ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Gestión de Pagos"
         subtitle="Registro y seguimiento financiero"
         icon="wallet"
         [actions]="heroActions"
         [chips]="heroChips()"
+        [kpis]="heroKpis()"
         (actionClick)="onHeroAction($event)"
       />
-
-      <!-- ── KPIs ───────────────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Ingresos Hoy"
-          [value]="ingresosHoyDisplay().value"
-          [loading]="facade.isLoading()"
-          icon="dollar-sign"
-          prefix="$"
-          [suffix]="ingresosHoyDisplay().suffix"
-          [subValue]="clp(facade.ingresosHoy())"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Ingresos Mes"
-          [value]="ingresosMesDisplay().value"
-          [loading]="facade.isLoading()"
-          icon="trending-up"
-          prefix="$"
-          [suffix]="ingresosMesDisplay().suffix"
-          [subValue]="clp(facade.ingresosMes())"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Pagos Pendientes"
-          [value]="pagosPendientesDisplay().value"
-          [loading]="facade.isLoading()"
-          icon="alert-circle"
-          prefix="$"
-          [suffix]="pagosPendientesDisplay().suffix"
-          [subValue]="facade.totalDeudores() + ' alumnos'"
-          color="warning"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Boletas Emitidas"
-          [value]="facade.boletasMes()"
-          [loading]="facade.isLoading()"
-          icon="receipt"
-          subValue="Este mes"
-        />
-      </div>
 
       <!-- ── Contenido principal ─────────────────────────────────────────────── -->
       <div class="bento-banner">
@@ -761,6 +716,40 @@ export class AdminPagosComponent implements AfterViewInit {
   protected readonly pagosPendientesDisplay = computed(() =>
     toCompact(this.facade.pagosPendientesTotales()),
   );
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'ingresos-hoy',
+      label: 'Ingresos Hoy',
+      value: this.ingresosHoyDisplay().value,
+      prefix: '$',
+      suffix: this.ingresosHoyDisplay().suffix,
+      icon: 'dollar-sign',
+    },
+    {
+      id: 'ingresos-mes',
+      label: 'Ingresos Mes',
+      value: this.ingresosMesDisplay().value,
+      prefix: '$',
+      suffix: this.ingresosMesDisplay().suffix,
+      icon: 'trending-up',
+    },
+    {
+      id: 'pendientes',
+      label: 'Pagos Pendientes',
+      value: this.pagosPendientesDisplay().value,
+      prefix: '$',
+      suffix: this.pagosPendientesDisplay().suffix,
+      icon: 'alert-circle',
+      color: 'warning',
+    },
+    {
+      id: 'boletas',
+      label: 'Boletas Emitidas',
+      value: this.facade.boletasMes(),
+      icon: 'receipt',
+    },
+  ]);
 
   // ── Estado modal: reporte ────────────────────────────────────────────────────
   protected readonly showReportModal = signal(false);

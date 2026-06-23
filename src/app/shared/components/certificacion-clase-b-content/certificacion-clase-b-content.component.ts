@@ -14,13 +14,12 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -49,7 +48,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
     FormsModule,
     SelectModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     EmptyStateComponent,
@@ -58,52 +56,16 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ──────────────────────────────────────────────── -->
-      <div class="bento-banner">
-        <app-section-hero
-          [animateOnInit]="false"
-          title="Gestión de Certificados"
-          subtitle="Certificación de finalización de curso Clase B"
-          icon="award"
-          [actions]="heroActions"
-          variant="compact"
-        />
-      </div>
-
-      <!-- ── KPIs ────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Total Alumnos"
-          [value]="kpis()?.totalAlumnos ?? 0"
-          icon="graduation-cap"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Certificados Generados"
-          [value]="kpis()?.certificadosGenerados ?? 0"
-          icon="check-circle"
-          color="success"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Pendientes Generación"
-          [value]="kpis()?.pendientesGeneracion ?? 0"
-          icon="clock"
-          color="warning"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Pendientes Envío"
-          [value]="kpis()?.pendientesEnvio ?? 0"
-          icon="mail"
-          [loading]="isLoading()"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="isLoading()"
+        title="Gestión de Certificados"
+        subtitle="Certificación de finalización de curso Clase B"
+        icon="award"
+        [kpis]="heroKpis()"
+        [actions]="heroActions"
+      />
 
       <!-- ── Tabla + Toolbar (card unificado) ────────────────────────── -->
       <div class="bento-banner card overflow-hidden">
@@ -815,6 +777,28 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   // ── Hero config ──
   readonly heroActions: SectionHeroAction[] = [];
+
+  readonly heroKpis = computed((): SectionHeroKpi[] => {
+    const k = this.kpis();
+    return [
+      { id: 'total', label: 'Total Alumnos', value: k?.totalAlumnos ?? 0, icon: 'graduation-cap' },
+      {
+        id: 'generados',
+        label: 'Generados',
+        value: k?.certificadosGenerados ?? 0,
+        icon: 'check-circle',
+        color: 'success',
+      },
+      {
+        id: 'pend-gen',
+        label: 'Pend. Generación',
+        value: k?.pendientesGeneracion ?? 0,
+        icon: 'clock',
+        color: 'warning',
+      },
+      { id: 'pend-env', label: 'Pend. Envío', value: k?.pendientesEnvio ?? 0, icon: 'mail' },
+    ];
+  });
 
   // ── Filter options ──
   readonly estadoOptions = [

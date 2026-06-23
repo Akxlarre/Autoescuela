@@ -12,13 +12,16 @@ import { SelectModule } from 'primeng/select';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AdminStatsPanelComponent } from './components/stats/admin-ex-alumnos-stats.component';
 import { AdminExAlumnosCommentsComponent } from './components/comments/admin-ex-alumnos-comments.component';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroKpi,
+} from '@core/models/ui/section-hero.model';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 
 @Component({
@@ -29,7 +32,6 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
     CurrencyPipe,
     FormsModule,
     SelectModule,
-    KpiCardVariantComponent,
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
@@ -39,8 +41,11 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
-      <!-- ── Hero (bento-hero via host) ── -->
+      <!-- ── Hero ── -->
       <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Gestión de Ex-Alumnos"
         subtitle="Archivo histórico, búsqueda avanzada y seguimiento financiero"
         icon="graduation-cap"
@@ -48,45 +53,9 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
         backLabel="Alumnos"
         [actions]="heroActions"
         [chips]="heroChips()"
+        [kpis]="heroKpis()"
         (actionClick)="handleHeroAction($event)"
       />
-
-      <!-- KPIs Row -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="TOTAL EGRESADOS"
-          [value]="facade.totalEgresados()"
-          icon="graduation-cap"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="CLASE B"
-          [value]="facade.egresadosClaseB()"
-          icon="car"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="PROFESIONAL"
-          [value]="facade.egresadosProfesional()"
-          icon="award"
-          color="success"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="DEUDA PENDIENTE"
-          [value]="facade.conAbonoPendiente()"
-          icon="circle-alert"
-          color="warning"
-          [accent]="true"
-          [loading]="facade.isLoading()"
-        />
-      </div>
 
       <!-- Archivo Histórico — full width, 1 row -->
       <div class="bento-banner card p-0! overflow-hidden flex flex-col">
@@ -95,7 +64,6 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
           <div class="flex items-center gap-3">
             <div
               class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"
-              
             >
               <app-icon name="archive" [size]="18" />
             </div>
@@ -433,6 +401,30 @@ export class AdminExAlumnosComponent {
       console.log('[ExAlumnos] Exportando archivo histórico...');
     }
   }
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'total',
+      label: 'Total Egresados',
+      value: this.facade.totalEgresados(),
+      icon: 'graduation-cap',
+    },
+    { id: 'clase-b', label: 'Clase B', value: this.facade.egresadosClaseB(), icon: 'car' },
+    {
+      id: 'profesional',
+      label: 'Profesional',
+      value: this.facade.egresadosProfesional(),
+      icon: 'award',
+      color: 'success',
+    },
+    {
+      id: 'deuda',
+      label: 'Deuda Pendiente',
+      value: this.facade.conAbonoPendiente(),
+      icon: 'circle-alert',
+      color: 'warning',
+    },
+  ]);
 
   protected clearFilters(): void {
     this.searchTerm.set('');

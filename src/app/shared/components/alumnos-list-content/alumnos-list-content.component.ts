@@ -23,7 +23,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
-import { KpiCardVariantComponent } from '../kpi-card/kpi-card-variant.component';
 import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
@@ -31,7 +30,11 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroKpi,
+} from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 
 // Services
@@ -63,21 +66,6 @@ interface ExpedienteStatus {
   count: string;
 }
 
-/** Forma de KPI para app-kpi-card-variant (compatible con Dashboard). */
-interface AlumnoKpiItem {
-  id: string;
-  label: string;
-  value: number;
-  icon: 'users' | 'user-check' | 'circle-alert';
-  color: 'default' | 'success' | 'warning' | 'error';
-  accent?: boolean;
-  suffix?: string;
-  prefix?: string;
-  trend?: number;
-  trendLabel?: string;
-  subValue?: string;
-}
-
 @Component({
   selector: 'app-alumnos-list-content',
   standalone: true,
@@ -92,7 +80,6 @@ interface AlumnoKpiItem {
     TagModule,
     TooltipModule,
     IconComponent,
-    KpiCardVariantComponent,
     ActionKpiCardComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
@@ -109,35 +96,19 @@ interface AlumnoKpiItem {
       [class.force-compact]="layoutDrawer.isOpen()"
     >
       <app-section-hero
+        density="slim"
         [animateOnInit]="false"
+        [loading]="isLoading()"
         title="Alumnos"
         [subtitle]="heroSubtitle()"
         [chips]="heroChips()"
+        [kpis]="alumnosKpis()"
         [actions]="heroActions()"
         [backClickable]="trashView()"
         backLabel="Alumnos"
         (backClicked)="trashViewToggled.emit()"
         (actionClick)="handleHeroAction($event)"
       />
-
-      <!-- KPIs — usando el mismo patrón que el Dashboard -->
-      @for (kpi of alumnosKpis(); track kpi.id) {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            [label]="kpi.label"
-            [value]="kpi.value"
-            [suffix]="kpi.suffix ?? ''"
-            [prefix]="kpi.prefix ?? ''"
-            [trend]="kpi.trend"
-            [trendLabel]="kpi.trendLabel ?? ''"
-            [subValue]="kpi.subValue ?? ''"
-            [accent]="kpi.accent ?? false"
-            [icon]="kpi.icon"
-            [color]="kpi.color"
-            [loading]="isLoading()"
-          />
-        </div>
-      }
       <div class="bento-square">
         <app-action-kpi-card
           label="Por Vencer"
@@ -305,7 +276,10 @@ interface AlumnoKpiItem {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (card of [1, 2, 3, 4, 5, 6]; track card) {
-                  <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide" data-col-span="4">
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
+                    data-col-span="4"
+                  >
                     <!-- Header -->
                     <div
                       class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
@@ -538,7 +512,10 @@ interface AlumnoKpiItem {
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
                 @for (alumno of filteredAlumnos(); track alumno.id) {
-                  <div class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 bento-wide" data-col-span="4">
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 bento-wide"
+                    data-col-span="4"
+                  >
                     <!-- Header -->
                     <div
                       class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
@@ -795,15 +772,13 @@ export class AlumnosListContentComponent implements AfterViewInit {
     ];
   });
 
-  /** KPIs estáticos para la grilla (Total, Activos, Con deuda). Misma forma que Dashboard. */
-  readonly alumnosKpis = computed((): AlumnoKpiItem[] => [
+  readonly alumnosKpis = computed((): SectionHeroKpi[] => [
     {
       id: 'total',
       label: 'Total Alumnos',
       value: this.totalAlumnos(),
       icon: 'users',
       color: 'default',
-      accent: true,
     },
     {
       id: 'activos',

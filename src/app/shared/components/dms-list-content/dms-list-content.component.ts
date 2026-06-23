@@ -71,15 +71,15 @@ import type {
         </div>
       } @else {
         <!-- ── HERO ──────────────────────────────────────────────────────── -->
-        <div class="bento-banner" #heroRef>
-          <app-section-hero
-            title="Repositorio de Documentos"
-            subtitle="Documentos legales de alumnos y de la escuela, centralizados"
-            contextLine="DMS"
-            [actions]="heroActions()"
-            (actionClick)="onHeroAction($event)"
-          />
-        </div>
+        <app-section-hero
+          density="slim"
+          [animateOnInit]="false"
+          title="Repositorio de Documentos"
+          subtitle="Documentos legales de alumnos y de la escuela, centralizados"
+          contextLine="DMS"
+          [actions]="heroActions()"
+          (actionClick)="onHeroAction($event)"
+        />
 
         <!-- ── TABS ──────────────────────────────────────────────────────── -->
         <div class="px-2">
@@ -110,8 +110,12 @@ import type {
             <!-- ══ TAB: DOCUMENTOS DEL ALUMNO ══════════════════════════════ -->
             @case ('students') {
               <!-- Columna Principal: Tabla de Alumnos -->
-              <div class="bento-card p-0 overflow-hidden col-span-full lg:col-span-8 flex flex-col h-[500px]">
-                <div class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface">
+              <div
+                class="bento-card p-0 overflow-hidden col-span-full lg:col-span-8 flex flex-col h-[500px]"
+              >
+                <div
+                  class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
+                >
                   <div>
                     <h2 class="text-base font-semibold m-0 text-text-primary">
                       Alumnos con documentos
@@ -183,18 +187,34 @@ import type {
                     >
                       <ng-template pTemplate="header">
                         <tr>
-                          <th class="text-text-secondary font-semibold text-xs tracking-wider">Alumno</th>
-                          <th class="text-text-secondary font-semibold text-xs tracking-wider">RUT</th>
-                          <th class="text-center text-text-secondary font-semibold text-xs tracking-wider">Documentos</th>
-                          <th class="text-right text-text-secondary font-semibold text-xs tracking-wider">Acciones</th>
+                          <th class="text-text-secondary font-semibold text-xs tracking-wider">
+                            Alumno
+                          </th>
+                          <th class="text-text-secondary font-semibold text-xs tracking-wider">
+                            RUT
+                          </th>
+                          <th
+                            class="text-center text-text-secondary font-semibold text-xs tracking-wider"
+                          >
+                            Documentos
+                          </th>
+                          <th
+                            class="text-right text-text-secondary font-semibold text-xs tracking-wider"
+                          >
+                            Acciones
+                          </th>
                         </tr>
                       </ng-template>
                       <ng-template pTemplate="body" let-row>
                         <tr>
-                          <td><span class="font-medium text-text-primary">{{ row.name }}</span></td>
+                          <td>
+                            <span class="font-medium text-text-primary">{{ row.name }}</span>
+                          </td>
                           <td class="text-text-secondary text-sm">{{ row.rut }}</td>
                           <td class="text-center">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-tint text-brand">
+                            <span
+                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-tint text-brand"
+                            >
                               {{ row.docCount }} doc{{ row.docCount !== 1 ? 's' : '' }}
                             </span>
                           </td>
@@ -215,18 +235,20 @@ import type {
               </div>
 
               <!-- Columna Secundaria: Últimos documentos subidos -->
-              <div class="bento-card p-0 overflow-hidden col-span-full lg:col-span-4 flex flex-col h-[500px]">
+              <div
+                class="bento-card p-0 overflow-hidden col-span-full lg:col-span-4 flex flex-col h-[500px]"
+              >
                 <div class="px-5 py-4 border-b border-border-subtle shrink-0 bg-surface">
-                  <h2 class="text-base font-semibold m-0 text-text-primary">
-                    Últimos subidos
-                  </h2>
+                  <h2 class="text-base font-semibold m-0 text-text-primary">Últimos subidos</h2>
                 </div>
                 @if (recentDocs().length === 0) {
                   <div class="p-6 flex-1 flex items-center justify-center">
                     <app-empty-state message="Sin documentos recientes" icon="file-text" />
                   </div>
                 } @else {
-                  <ul class="divide-y m-0 p-0 list-none border-border-subtle overflow-y-auto flex-1">
+                  <ul
+                    class="divide-y m-0 p-0 list-none border-border-subtle overflow-y-auto flex-1"
+                  >
                     @for (doc of recentDocs(); track doc.id) {
                       <li class="flex items-center justify-between px-5 py-3 gap-3">
                         <div class="flex items-center gap-3 min-w-0">
@@ -281,7 +303,9 @@ import type {
             <!-- ══ TAB: DOCUMENTOS DE LA ESCUELA ═══════════════════════════ -->
             @case ('school') {
               <div class="bento-card p-0 overflow-hidden col-span-full flex flex-col">
-                <div class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface">
+                <div
+                  class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
+                >
                   <div>
                     <h2 class="text-base font-semibold m-0 text-text-primary">
                       Documentos institucionales
@@ -404,78 +428,78 @@ import type {
                 </div>
 
                 <!-- Grid de cards -->
-              @if (filteredTemplates().length === 0) {
-                <app-empty-state
-                  message="Sin plantillas"
-                  subtitle="No hay plantillas en esta categoría."
-                  icon="folder"
-                />
-              } @else {
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  @for (tpl of filteredTemplates(); track tpl.id) {
-                    <div
-                      class="bento-card flex flex-col gap-4 p-5 min-h-0 h-auto cursor-default"
-                      appCardHover
-                    >
-                      <!-- Header: badge formato + nombre + categoría -->
-                      <div class="flex items-start gap-3">
-                        <div
-                          class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
-                          [style]="tpl.formatColor"
-                        >
-                          {{ tpl.format.toUpperCase() }}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="font-semibold text-sm leading-snug m-0 text-text-primary">
-                            {{ tpl.name }}
-                          </p>
-                          <span
-                            class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-subtle text-text-secondary"
-                            >{{ tpl.categoryLabel }}</span
-                          >
-                        </div>
-                      </div>
-
-                      <!-- Descripción -->
-                      @if (tpl.description) {
-                        <p class="text-xs leading-relaxed flex-1 m-0 text-text-secondary">
-                          {{ tpl.description }}
-                        </p>
-                      }
-
-                      <!-- Footer: versión + descargas + acciones -->
+                @if (filteredTemplates().length === 0) {
+                  <app-empty-state
+                    message="Sin plantillas"
+                    subtitle="No hay plantillas en esta categoría."
+                    icon="folder"
+                  />
+                } @else {
+                  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @for (tpl of filteredTemplates(); track tpl.id) {
                       <div
-                        class="flex items-center justify-between pt-3 border-t border-border-subtle"
+                        class="bento-card flex flex-col gap-4 p-5 min-h-0 h-auto cursor-default"
+                        appCardHover
                       >
-                        <div class="text-xs text-text-muted">
-                          <span>{{ tpl.version }}</span>
-                          <span class="mx-1">·</span>
-                          <span>{{ tpl.downloadCount }} descargas</span>
+                        <!-- Header: badge formato + nombre + categoría -->
+                        <div class="flex items-start gap-3">
+                          <div
+                            class="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
+                            [style]="tpl.formatColor"
+                          >
+                            {{ tpl.format.toUpperCase() }}
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="font-semibold text-sm leading-snug m-0 text-text-primary">
+                              {{ tpl.name }}
+                            </p>
+                            <span
+                              class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-subtle text-text-secondary"
+                              >{{ tpl.categoryLabel }}</span
+                            >
+                          </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                          @if (isAdmin()) {
+
+                        <!-- Descripción -->
+                        @if (tpl.description) {
+                          <p class="text-xs leading-relaxed flex-1 m-0 text-text-secondary">
+                            {{ tpl.description }}
+                          </p>
+                        }
+
+                        <!-- Footer: versión + descargas + acciones -->
+                        <div
+                          class="flex items-center justify-between pt-3 border-t border-border-subtle"
+                        >
+                          <div class="text-xs text-text-muted">
+                            <span>{{ tpl.version }}</span>
+                            <span class="mx-1">·</span>
+                            <span>{{ tpl.downloadCount }} descargas</span>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            @if (isAdmin()) {
+                              <button
+                                type="button"
+                                class="text-xs font-medium cursor-pointer border-0 bg-transparent text-error"
+                                (click)="deleteTemplate.emit(tpl.id)"
+                              >
+                                Eliminar
+                              </button>
+                            }
                             <button
                               type="button"
-                              class="text-xs font-medium cursor-pointer border-0 bg-transparent text-error"
-                              (click)="deleteTemplate.emit(tpl.id)"
+                              class="inline-flex items-center gap-1 text-xs font-semibold cursor-pointer border-0 bg-transparent transition-colors duration-150 text-brand"
+                              (click)="downloadTemplate.emit(tpl)"
                             >
-                              Eliminar
+                              <app-icon name="download" [size]="13" />
+                              Descargar
                             </button>
-                          }
-                          <button
-                            type="button"
-                            class="inline-flex items-center gap-1 text-xs font-semibold cursor-pointer border-0 bg-transparent transition-colors duration-150 text-brand"
-                            (click)="downloadTemplate.emit(tpl)"
-                          >
-                            <app-icon name="download" [size]="13" />
-                            Descargar
-                          </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  }
-                </div>
-              }
+                    }
+                  </div>
+                }
 
                 <!-- Nota informativa -->
                 <app-alert-card title="Cómo usar las plantillas" severity="warning">
@@ -504,19 +528,14 @@ export class DmsListContentComponent {
   // ── Internal ────────────────────────────────────────────────────────────────
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
-  private readonly heroRef = viewChild<ElementRef>('heroRef');
 
   constructor() {
-    // Reveal SWR-aware: hero + grid viven en la rama @else y se swapean al cargar
-    // (isLoading es input). Disparar el reveal sobre el contenido real (!isLoading),
-    // no sobre el skeleton que lo reemplaza.
+    // SWR-aware: el grid vive en @else, se anima cuando loading → false.
     effect(() => {
       const ready = !this.isLoading();
       const grid = this.bentoGrid()?.nativeElement;
-      const hero = this.heroRef()?.nativeElement;
       if (ready && grid) {
         Promise.resolve().then(() => {
-          if (hero) this.gsap.animateHero(hero);
           this.gsap.animateBentoGrid(grid);
         });
       }

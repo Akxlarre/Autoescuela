@@ -15,9 +15,12 @@ import { RouterLink } from '@angular/router';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { getSparklinePoints } from '@core/utils/sparkline.utils';
 import type {
   SectionHeroAction,
   SectionHeroChip,
+  SectionHeroKpi,
   SectionHeroMenuItem,
 } from '@core/models/ui/section-hero.model';
 
@@ -311,8 +314,10 @@ import type {
     `,
   ],
   host: {
-    // HOST = único grid item. bento-hero va aquí, nunca en el div interno.
-    class: 'block min-h-0 bento-hero',
+    // HOST = único grid item. bento-hero en full, bento-banner en slim.
+    class: 'block min-h-0',
+    '[class.bento-hero]': 'density() === "full"',
+    '[class.bento-banner]': 'density() === "slim"',
     style: 'view-transition-name: section-hero',
     '[attr.title]': 'null',
     // view-transition-name convierte al host en un stacking context atómico:
@@ -321,225 +326,462 @@ import type {
     // (incluido el panel) quede por encima de las cards siguientes.
     '[class.hero-menu-open]': 'openMenuId() !== null',
   },
-  imports: [IconComponent, RouterLink, AnimateInDirective],
+  imports: [IconComponent, RouterLink, AnimateInDirective, SkeletonBlockComponent],
   template: `
-    <!-- ═══════════════════════════════════════════════════════════
-         TOAST-STYLE HERO — Fondo state-info + borde + bar.
-         Sin surface-hero cascade: tokens usan valores base del modo.
-         Misma paleta que el toast de PrimeNG escalada a bento-hero.
-    ═══════════════════════════════════════════════════════════ -->
-    <div
-      #cardRef
-      class="surface-hero hero-card rounded-lg min-h-full flex flex-col p-5 md:p-6 gap-3"
-      role="region"
-      [attr.aria-label]="title()"
-    >
-      <!-- TOP BAR: navegación atrás (izq) + acciones (der) -->
-      <div class="flex flex-wrap items-start justify-between gap-4 relative z-10">
-        <div class="flex-1 min-w-0 flex flex-wrap items-center gap-4">
-          @if (backRoute()) {
-            <a
-              [routerLink]="backRoute()"
-              class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm shrink-0 whitespace-nowrap"
-              [attr.aria-label]="'Volver a ' + backLabel()"
-              data-llm-nav="back"
+    @if (density() === 'slim') {
+      <!-- ── SLIM MODE ─────────────────────────────────────────────
+           Barra compacta: [back] [icon] [eyebrow/title] [chips] [actions]
+           + segunda fila opcional con KPIs + sparklines.
+      ──────────────────────────────────────────────────────────── -->
+      <div
+        #slimRef
+        class="rounded-lg border border-border-subtle bg-surface overflow-hidden"
+        role="region"
+        [attr.aria-label]="title()"
+      >
+        @if (loading()) {
+          <div class="flex items-center gap-3 px-4 py-1.5 min-h-[52px]">
+            <app-skeleton-block variant="circle" width="32px" height="32px" />
+            <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="100px" height="11px" />
+              <app-skeleton-block variant="text" width="180px" height="18px" />
+            </div>
+            <app-skeleton-block variant="rect" width="96px" height="32px" />
+          </div>
+          @if (kpis().length) {
+            <div
+              class="border-t border-border-subtle grid"
+              style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr))"
             >
-              <app-icon
-                name="arrow-left"
-                [size]="13"
-                class="transition-transform group-hover:-translate-x-1"
-              />
-              <span>{{ backLabel() }}</span>
-            </a>
-          } @else if (backClickable()) {
-            <button
-              type="button"
-              class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all shadow-sm shrink-0 whitespace-nowrap"
-              [attr.aria-label]="'Volver a ' + backLabel()"
-              data-llm-nav="back"
-              (click)="backClicked.emit()"
-            >
-              <app-icon
-                name="arrow-left"
-                [size]="13"
-                class="transition-transform group-hover:-translate-x-1"
-              />
-              <span>{{ backLabel() }}</span>
-            </button>
-          }
-          <ng-content />
-        </div>
-        @if (actions().length) {
-          <div
-            class="flex flex-wrap items-start justify-end gap-2"
-            role="group"
-            aria-label="Acciones principales"
-          >
-            @for (action of actions(); track action.id) {
-              @if (action.menu) {
-                <button
-                  type="button"
-                  [class]="action.primary ? 'btn-primary' : 'btn-secondary'"
-                  class="whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
-                  [disabled]="action.disabled ?? false"
-                  [attr.data-llm-action]="action.id"
-                  aria-haspopup="menu"
-                  [attr.aria-expanded]="openMenuId() === action.id"
-                  (click)="toggleMenu(action.id, $event)"
+              @for (k of kpis(); track k.id) {
+                <div
+                  class="px-4 py-2.5 border-r border-border-subtle last:border-r-0 flex flex-col gap-1.5"
                 >
-                  @if (action.icon) {
-                    <app-icon
-                      [name]="action.icon"
-                      [size]="16"
-                      [class.animate-spin]="action.loading"
-                    />
-                  }
-                  {{ action.label }}
-                  <app-icon
-                    name="chevron-down"
-                    [size]="14"
-                    class="hero-menu__chevron"
-                    [class.hero-menu__chevron--open]="openMenuId() === action.id"
-                  />
-                </button>
-              } @else if (action.route) {
-                <a
-                  [routerLink]="action.route"
-                  [class]="
-                    action.danger
-                      ? 'btn-danger-ghost'
-                      : action.primary
-                        ? 'btn-primary'
-                        : 'btn-secondary'
-                  "
-                  class="no-underline whitespace-nowrap shrink-0"
-                  [attr.data-llm-nav]="action.id"
-                >
-                  @if (action.icon) {
-                    <app-icon [name]="action.icon" [size]="16" />
-                  }
-                  {{ action.label }}
-                </a>
-              } @else {
-                <button
-                  type="button"
-                  [class]="
-                    action.danger
-                      ? 'btn-danger-ghost'
-                      : action.primary
-                        ? 'btn-primary'
-                        : 'btn-secondary'
-                  "
-                  class="whitespace-nowrap shrink-0"
-                  [disabled]="action.disabled ?? false"
-                  [attr.data-llm-action]="action.id"
-                  (click)="onActionClick(action.id)"
-                >
-                  @if (action.icon) {
-                    <app-icon
-                      [name]="action.icon"
-                      [size]="16"
-                      [class.animate-spin]="action.loading"
-                    />
-                  }
-                  {{ action.label }}
-                </button>
+                  <app-skeleton-block variant="text" width="70px" height="10px" />
+                  <app-skeleton-block variant="text" width="50px" height="18px" />
+                </div>
               }
-            }
+            </div>
+          }
+        } @else {
+          <!-- Fila 1: columna en <sm (LEFT luego RIGHT), fila en sm+ -->
+          <div
+            class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 sm:py-2.5 sm:min-h-[60px]"
+          >
+            <!-- LEFT: back | icon | title -->
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              @if (backRoute()) {
+                <a
+                  [routerLink]="backRoute()"
+                  class="group inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors shrink-0 no-underline whitespace-nowrap"
+                  [attr.aria-label]="'Volver a ' + backLabel()"
+                  data-llm-nav="back"
+                >
+                  <app-icon
+                    name="arrow-left"
+                    [size]="13"
+                    class="transition-transform group-hover:-translate-x-0.5"
+                  />
+                  <span>{{ backLabel() }}</span>
+                </a>
+                <div class="w-px h-5 bg-border-subtle shrink-0" aria-hidden="true"></div>
+              } @else if (backClickable()) {
+                <button
+                  type="button"
+                  class="group inline-flex items-center gap-1.5 text-xs font-medium text-text-secondary hover:text-text-primary transition-colors shrink-0 whitespace-nowrap border-0 bg-transparent p-0 cursor-pointer"
+                  [attr.aria-label]="'Volver a ' + backLabel()"
+                  data-llm-nav="back"
+                  (click)="backClicked.emit()"
+                >
+                  <app-icon
+                    name="arrow-left"
+                    [size]="13"
+                    class="transition-transform group-hover:-translate-x-0.5"
+                  />
+                  <span>{{ backLabel() }}</span>
+                </button>
+                <div class="w-px h-5 bg-border-subtle shrink-0" aria-hidden="true"></div>
+              }
+
+              @if (icon()) {
+                <div
+                  class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0"
+                >
+                  <app-icon [name]="icon()!" [size]="16" class="text-brand" />
+                </div>
+              }
+
+              <div class="min-w-0 flex-1">
+                @if (contextLine()) {
+                  <p
+                    class="text-[11px] uppercase tracking-[0.06em] text-text-muted m-0 leading-none mb-0.5 truncate"
+                  >
+                    {{ contextLine() }}
+                  </p>
+                }
+                <h1 class="text-sm font-semibold text-text-primary m-0 leading-tight line-clamp-2">
+                  {{ title() }}
+                </h1>
+                @if (subtitle() && !contextLine()) {
+                  <p class="text-[11px] text-text-muted m-0 leading-tight truncate">
+                    {{ subtitle() }}
+                  </p>
+                }
+              </div>
+            </div>
+
+            <!-- RIGHT: ng-content | chips | acciones (siempre visibles, flex-wrap en overflow) -->
+            <div class="flex items-center gap-2 flex-wrap shrink-0">
+              <ng-content />
+
+              @if (chips().length) {
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  @for (chip of chips(); track chip.label) {
+                    <span
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap"
+                      [attr.style]="getChipStyleSlim(chip)"
+                    >
+                      @if (chip.icon) {
+                        <app-icon [name]="chip.icon" [size]="11" />
+                      }
+                      {{ chip.label }}
+                    </span>
+                  }
+                </div>
+              }
+
+              @if (actions().length) {
+                <div
+                  class="flex items-center gap-2 flex-wrap"
+                  role="group"
+                  aria-label="Acciones principales"
+                >
+                  @for (action of actions(); track action.id) {
+                    @if (action.route) {
+                      <a
+                        [routerLink]="action.route"
+                        [class]="
+                          (action.hiddenOnMobile ? 'hidden sm:inline-flex ' : '') +
+                          (action.danger
+                            ? 'btn-danger-ghost'
+                            : action.primary
+                              ? 'btn-primary'
+                              : 'btn-secondary')
+                        "
+                        class="no-underline whitespace-nowrap shrink-0"
+                        [attr.data-llm-nav]="action.id"
+                      >
+                        @if (action.icon) {
+                          <app-icon [name]="action.icon" [size]="15" />
+                        }
+                        {{ action.label }}
+                      </a>
+                    } @else {
+                      <button
+                        type="button"
+                        [class]="
+                          (action.hiddenOnMobile ? 'hidden sm:inline-flex ' : '') +
+                          (action.danger
+                            ? 'btn-danger-ghost'
+                            : action.primary
+                              ? 'btn-primary'
+                              : 'btn-secondary')
+                        "
+                        class="whitespace-nowrap shrink-0"
+                        [disabled]="action.disabled ?? false"
+                        [attr.data-llm-action]="action.id"
+                        (click)="onActionClick(action.id)"
+                      >
+                        @if (action.icon) {
+                          <app-icon
+                            [name]="action.icon"
+                            [size]="15"
+                            [class.animate-spin]="action.loading"
+                          />
+                        }
+                        {{ action.label }}
+                      </button>
+                    }
+                  }
+                </div>
+              }
+            </div>
           </div>
+
+          @if (kpis().length) {
+            <!-- Fila 2: KPIs + sparklines -->
+            <div
+              class="border-t border-border-subtle grid"
+              style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr))"
+            >
+              @for (kpi of kpis(); track kpi.id) {
+                <div
+                  class="px-4 py-2.5 flex items-center gap-3 border-r border-border-subtle last:border-r-0"
+                >
+                  <div class="min-w-0 flex-1">
+                    <p
+                      class="text-[11px] uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
+                    >
+                      {{ kpi.label }}
+                    </p>
+                    <div class="flex items-baseline gap-1.5">
+                      <span class="text-lg font-semibold text-text-primary leading-none">
+                        {{ kpi.prefix ?? '' }}{{ kpi.value }}{{ kpi.suffix ?? '' }}
+                      </span>
+                      @if (kpi.trend !== undefined && kpi.trend !== 0) {
+                        <span
+                          class="text-[11px] font-medium leading-none"
+                          [style.color]="getTrendColor(kpi.trend)"
+                        >
+                          {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
+                          }}{{ kpi.trendLabel ?? '' }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                  @if (kpi.sparkline?.length) {
+                    <svg
+                      width="40"
+                      height="20"
+                      viewBox="0 0 40 20"
+                      aria-hidden="true"
+                      style="flex-shrink:0; opacity:0.65"
+                    >
+                      <polyline
+                        [attr.points]="getSparklinePoints(kpi.sparkline!)"
+                        fill="none"
+                        [attr.stroke]="getSparklineColor(kpi)"
+                        stroke-width="1.5"
+                        stroke-linejoin="round"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  }
+                </div>
+              }
+            </div>
+          }
         }
       </div>
-
-      <!-- SPACER: empuja el contenido tipográfico hacia el fondo -->
-      <div class="flex-1" aria-hidden="true"></div>
-
-      <!-- BOTTOM: icon badge → eyebrow → título → subtítulo → chips -->
-      <div class="flex flex-col gap-3 relative z-10">
-        @if (icon()) {
-          <div
-            class="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0"
-          >
-            <app-icon [name]="icon()!" [size]="22" class="text-brand" />
+    } @else {
+      <!-- ── FULL MODE ──────────────────────────────────────────────
+           TOAST-STYLE HERO — Fondo state-info + borde + bar.
+           Sin surface-hero cascade: tokens usan valores base del modo.
+           Misma paleta que el toast de PrimeNG escalada a bento-hero.
+      ──────────────────────────────────────────────────────────── -->
+      <div
+        #cardRef
+        class="surface-hero hero-card rounded-lg min-h-full flex flex-col px-5 py-7 md:px-6 md:py-8 gap-3"
+        role="region"
+        [attr.aria-label]="title()"
+      >
+        <!-- TOP BAR: navegación atrás (izq) + acciones (der) -->
+        <div class="flex flex-wrap items-start justify-between gap-4 relative z-10">
+          <div class="flex-1 min-w-0 flex flex-wrap items-center gap-4">
+            @if (backRoute()) {
+              <a
+                [routerLink]="backRoute()"
+                class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 no-underline transition-all shadow-sm shrink-0 whitespace-nowrap"
+                [attr.aria-label]="'Volver a ' + backLabel()"
+                data-llm-nav="back"
+              >
+                <app-icon
+                  name="arrow-left"
+                  [size]="13"
+                  class="transition-transform group-hover:-translate-x-1"
+                />
+                <span>{{ backLabel() }}</span>
+              </a>
+            } @else if (backClickable()) {
+              <button
+                type="button"
+                class="group inline-flex items-center gap-2 py-1.5 px-3 -ml-1 rounded-xl text-xs font-bold uppercase tracking-widest text-white bg-white/10 border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all shadow-sm shrink-0 whitespace-nowrap"
+                [attr.aria-label]="'Volver a ' + backLabel()"
+                data-llm-nav="back"
+                (click)="backClicked.emit()"
+              >
+                <app-icon
+                  name="arrow-left"
+                  [size]="13"
+                  class="transition-transform group-hover:-translate-x-1"
+                />
+                <span>{{ backLabel() }}</span>
+              </button>
+            }
+            <ng-content />
           </div>
-        }
-
-        <div class="flex flex-col gap-2">
-          @if (contextLine()) {
-            <p class="section-eyebrow m-0 wrap-break-word">{{ contextLine() }}</p>
-          }
-          <h1
-            class="font-display font-bold leading-tight tracking-tight m-0 text-2xl md:text-plus-4xl"
-          >
-            {{ title() }}
-          </h1>
-          @if (subtitle()) {
-            <p class="text-sm md:text-base leading-relaxed m-0 max-w-2xl opacity-85">
-              {{ subtitle() }}
-            </p>
+          @if (actions().length) {
+            <div
+              class="flex flex-wrap items-start justify-end gap-2"
+              role="group"
+              aria-label="Acciones principales"
+            >
+              @for (action of actions(); track action.id) {
+                @if (action.menu) {
+                  <button
+                    type="button"
+                    [class]="action.primary ? 'btn-primary' : 'btn-secondary'"
+                    class="whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
+                    [disabled]="action.disabled ?? false"
+                    [attr.data-llm-action]="action.id"
+                    aria-haspopup="menu"
+                    [attr.aria-expanded]="openMenuId() === action.id"
+                    (click)="toggleMenu(action.id, $event)"
+                  >
+                    @if (action.icon) {
+                      <app-icon
+                        [name]="action.icon"
+                        [size]="16"
+                        [class.animate-spin]="action.loading"
+                      />
+                    }
+                    {{ action.label }}
+                    <app-icon
+                      name="chevron-down"
+                      [size]="14"
+                      class="hero-menu__chevron"
+                      [class.hero-menu__chevron--open]="openMenuId() === action.id"
+                    />
+                  </button>
+                } @else if (action.route) {
+                  <a
+                    [routerLink]="action.route"
+                    [class]="
+                      action.danger
+                        ? 'btn-danger-ghost'
+                        : action.primary
+                          ? 'btn-primary'
+                          : 'btn-secondary'
+                    "
+                    class="no-underline whitespace-nowrap shrink-0"
+                    [attr.data-llm-nav]="action.id"
+                  >
+                    @if (action.icon) {
+                      <app-icon [name]="action.icon" [size]="16" />
+                    }
+                    {{ action.label }}
+                  </a>
+                } @else {
+                  <button
+                    type="button"
+                    [class]="
+                      action.danger
+                        ? 'btn-danger-ghost'
+                        : action.primary
+                          ? 'btn-primary'
+                          : 'btn-secondary'
+                    "
+                    class="whitespace-nowrap shrink-0"
+                    [disabled]="action.disabled ?? false"
+                    [attr.data-llm-action]="action.id"
+                    (click)="onActionClick(action.id)"
+                  >
+                    @if (action.icon) {
+                      <app-icon
+                        [name]="action.icon"
+                        [size]="16"
+                        [class.animate-spin]="action.loading"
+                      />
+                    }
+                    {{ action.label }}
+                  </button>
+                }
+              }
+            </div>
           }
         </div>
 
-        @if (chips().length) {
-          <div class="flex flex-wrap gap-2">
-            @for (chip of chips(); track chip.label) {
-              <span
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
-                [attr.style]="getChipStyle(chip)"
-              >
-                @if (chip.icon) {
-                  <app-icon [name]="chip.icon" [size]="12" [color]="getChipIconColor(chip)" />
-                }
-                {{ chip.label }}
-              </span>
+        <!-- SPACER: empuja el contenido tipográfico hacia el fondo -->
+        <div class="flex-1" aria-hidden="true"></div>
+
+        <!-- BOTTOM: icon badge → eyebrow → título → subtítulo → chips -->
+        <div class="flex flex-col gap-3 relative z-10">
+          @if (icon()) {
+            <div
+              class="w-12 h-12 rounded-xl bg-brand/10 border border-brand/20 flex items-center justify-center shrink-0"
+            >
+              <app-icon [name]="icon()!" [size]="22" class="text-brand" />
+            </div>
+          }
+
+          <div class="flex flex-col gap-2">
+            @if (contextLine()) {
+              <p class="section-eyebrow m-0 wrap-break-word">{{ contextLine() }}</p>
+            }
+            <h1
+              class="font-display font-bold leading-tight tracking-tight m-0 text-2xl md:text-plus-4xl"
+            >
+              {{ title() }}
+            </h1>
+            @if (subtitle()) {
+              <p class="text-sm md:text-base leading-relaxed m-0 max-w-2xl opacity-85">
+                {{ subtitle() }}
+              </p>
             }
           </div>
-        }
-      </div>
-    </div>
 
-    <!-- ── Panel del menú de acción ──────────────────────────────────────
+          @if (chips().length) {
+            <div class="flex flex-wrap gap-2">
+              @for (chip of chips(); track chip.label) {
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+                  [attr.style]="getChipStyle(chip)"
+                >
+                  @if (chip.icon) {
+                    <app-icon [name]="chip.icon" [size]="12" [color]="getChipIconColor(chip)" />
+                  }
+                  {{ chip.label }}
+                </span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- ── Panel del menú de acción ──────────────────────────────────────
          Renderizado FUERA de .hero-card a propósito: el lift de hover de la
          card (transform) la convierte en containing block del position:fixed
          y lo recortaría con su overflow. Como hermano del card (hijo del host
          bento-hero, sin transform/overflow), el fixed siempre resuelve contra
          el viewport. ──────────────────────────────────────────────────── -->
-    @if (openMenuId()) {
-      <div
-        appAnimateIn
-        role="menu"
-        class="hero-menu-panel"
-        [style.top.px]="menuPos()?.top"
-        [style.right.px]="menuPos()?.right"
-      >
-        @for (item of openMenuItems(); track item.id) {
-          @if (item.header) {
-            <div class="hero-menu-panel__header">{{ item.label }}</div>
-          } @else {
-            <button
-              type="button"
-              role="menuitem"
-              class="hero-menu-panel__item"
-              [class.hero-menu-panel__item--disabled]="item.disabled"
-              [disabled]="item.disabled ?? false"
-              [attr.data-llm-action]="item.id"
-              (click)="onMenuItemClick(item)"
-            >
-              @if (item.icon) {
-                <app-icon [name]="item.icon" [size]="15" class="hero-menu-panel__item-icon" />
-              }
-              <span class="hero-menu-panel__item-body">
-                <span class="hero-menu-panel__item-label">{{ item.label }}</span>
-                @if (item.hint) {
-                  <span class="hero-menu-panel__item-hint">{{ item.hint }}</span>
+      @if (openMenuId()) {
+        <div
+          appAnimateIn
+          role="menu"
+          class="hero-menu-panel"
+          [style.top.px]="menuPos()?.top"
+          [style.right.px]="menuPos()?.right"
+        >
+          @for (item of openMenuItems(); track item.id) {
+            @if (item.header) {
+              <div class="hero-menu-panel__header">{{ item.label }}</div>
+            } @else {
+              <button
+                type="button"
+                role="menuitem"
+                class="hero-menu-panel__item"
+                [class.hero-menu-panel__item--disabled]="item.disabled"
+                [disabled]="item.disabled ?? false"
+                [attr.data-llm-action]="item.id"
+                (click)="onMenuItemClick(item)"
+              >
+                @if (item.icon) {
+                  <app-icon [name]="item.icon" [size]="15" class="hero-menu-panel__item-icon" />
                 }
-              </span>
-              @if (item.disabled) {
-                <app-icon name="lock" [size]="12" class="hero-menu-panel__item-lock" />
-              }
-            </button>
+                <span class="hero-menu-panel__item-body">
+                  <span class="hero-menu-panel__item-label">{{ item.label }}</span>
+                  @if (item.hint) {
+                    <span class="hero-menu-panel__item-hint">{{ item.hint }}</span>
+                  }
+                </span>
+                @if (item.disabled) {
+                  <app-icon name="lock" [size]="12" class="hero-menu-panel__item-lock" />
+                }
+              </button>
+            }
           }
-        }
-      </div>
+        </div>
+      }
     }
   `,
 })
@@ -578,12 +820,22 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
 
   /** Muestra el botón "Volver" como <button> (sin ruta). Útil para vistas inline como Papelera. */
   readonly backClickable = input<boolean>(false);
+  readonly density = input<'full' | 'slim'>('full');
+  readonly kpis = input<SectionHeroKpi[]>([]);
+  readonly loading = input<boolean>(false);
 
   private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
+  private readonly slimRef = viewChild<ElementRef<HTMLElement>>('slimRef');
 
   ngAfterViewInit(): void {
-    if (this.animateOnInit()) {
-      this.gsap.animateHero(this.cardRef()?.nativeElement);
+    if (this.density() === 'full') {
+      // animateHero solo en modo full — slim entra por animateBentoGrid del shell.
+      if (this.animateOnInit()) {
+        this.gsap.animateHero(this.cardRef()?.nativeElement);
+      }
+      this.gsap.addCardHover(this.cardRef()?.nativeElement);
+    } else {
+      this.gsap.addCardHover(this.slimRef()?.nativeElement);
     }
   }
 
@@ -617,27 +869,15 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
 
   // ── Menú desplegable de acción (panel flotante del DS) ──────────────────────
 
-  /**
-   * Posición fija del panel (top/right en px). Se usa `position: fixed` porque el
-   * panel vive dentro de `.surface-hero`, que tiene `overflow: hidden` (recorta
-   * cualquier panel `absolute`). Con `fixed` escapa de ese clipping; las
-   * coordenadas se calculan desde el rect del botón disparador.
-   */
   protected readonly menuPos = signal<{ top: number; right: number } | null>(null);
   private triggerEl: HTMLElement | null = null;
 
-  /**
-   * Listener en BUBBLE PHASE (no capture) para cerrar el menú al click fuera.
-   * El trigger usa stopPropagation para que este listener no reciba el mismo
-   * click que abrió el panel. Mismo patrón que `BranchSelectorComponent`.
-   */
   private readonly outsideListener = (event: MouseEvent): void => {
     if (this.openMenuId() === null) return;
     if (this.hostEl.nativeElement.contains(event.target as Node)) return;
     this.closeMenu();
   };
 
-  /** Reposiciona el panel al hacer scroll/resize mientras está abierto. */
   private readonly repositionListener = (): void => this.updateMenuPos();
 
   constructor() {
@@ -684,5 +924,41 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
     if (item.disabled || item.header) return;
     this.closeMenu();
     this.actionClick.emit(item.id);
+  }
+
+  // ── Slim-mode helpers ──────────────────────────────────────────
+
+  getChipStyleSlim(chip: SectionHeroChip): string {
+    switch (chip.style) {
+      case 'error':
+        return 'background:var(--state-error-bg);color:var(--state-error);border-color:var(--state-error-border)';
+      case 'warning':
+        return 'background:var(--state-warning-bg);color:var(--state-warning);border-color:var(--state-warning-border)';
+      case 'success':
+        return 'background:var(--state-success-bg);color:var(--state-success);border-color:var(--state-success-border)';
+      default:
+        return 'background:var(--bg-subtle);color:var(--text-secondary);border-color:var(--border-subtle)';
+    }
+  }
+
+  getTrendColor(trend: number): string {
+    return trend > 0 ? 'var(--state-success)' : 'var(--state-error)';
+  }
+
+  getTrendDisplay(trend: number): string {
+    return String(Math.abs(trend));
+  }
+
+  getSparklineColor(kpi: SectionHeroKpi): string {
+    if (kpi.color === 'success' || (kpi.trend !== undefined && kpi.trend > 0))
+      return 'var(--state-success)';
+    if (kpi.color === 'error' || (kpi.trend !== undefined && kpi.trend < 0))
+      return 'var(--state-error)';
+    if (kpi.color === 'warning') return 'var(--state-warning)';
+    return 'var(--ds-brand)';
+  }
+
+  getSparklinePoints(data: number[], w = 40, h = 20): string {
+    return getSparklinePoints(data, w, h);
   }
 }

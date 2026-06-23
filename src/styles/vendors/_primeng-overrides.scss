@@ -732,6 +732,27 @@ app-main-layout p-toast.p-toast-top-center,
   [data-pc-section='day'],
   .p-datepicker-day {
     font-size: 0.8125rem !important;
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px;
+    
+    &:hover:not(.p-disabled):not(.p-highlight) {
+      background-color: var(--p-content-hover-background, var(--bg-elevated)) !important;
+      color: var(--ds-brand) !important;
+    }
+  }
+
+  /* Meses y años en la cuadrícula de selección */
+  [data-pc-section='month'],
+  [data-pc-section='year'],
+  .p-monthpicker-month,
+  .p-yearpicker-year {
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px;
+
+    &:hover:not(.p-disabled):not(.p-highlight) {
+      background-color: var(--p-content-hover-background, var(--bg-elevated)) !important;
+      color: var(--ds-brand) !important;
+    }
   }
 
   /* Botones mes y año en el header */
@@ -740,6 +761,15 @@ app-main-layout p-toast.p-toast-top-center,
   .p-datepicker-select-month,
   .p-datepicker-select-year {
     font-size: 0.875rem !important;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s, color 0.2s;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--p-content-hover-background, var(--bg-elevated));
+      color: var(--ds-brand);
+    }
   }
 
   /* Botones anterior y siguiente (chevrons) */

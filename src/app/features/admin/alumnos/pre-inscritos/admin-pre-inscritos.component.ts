@@ -19,8 +19,8 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AdminPreInscritoDrawerComponent } from './admin-pre-inscrito-drawer.component';
@@ -40,50 +40,23 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     TooltipModule,
     IconComponent,
     SkeletonBlockComponent,
-    KpiCardVariantComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #pageRef>
-      <div class="bento-hero relative overflow-visible">
-        <app-section-hero
-          title="Pre-inscritos Clase Profesional"
-          subtitle="Gestión de pre-inscripciones online pendientes de revisión"
-          icon="users"
-          backRoute="/app/admin/alumnos"
-          backLabel="Alumnos"
-          [actions]="[]"
-        />
-      </div>
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="TOTAL PRE-INSCRITOS"
-          [value]="facade.total()"
-          icon="users"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="SIN EVALUAR TEST"
-          [value]="facade.pendientesTest()"
-          icon="clock"
-          color="warning"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="APTOS (PENDIENTE MATRÍCULA)"
-          [value]="facade.aprobados()"
-          icon="check-circle"
-          color="success"
-          [loading]="facade.isLoading()"
-        />
-      </div>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
+        title="Pre-inscritos Clase Profesional"
+        subtitle="Gestión de pre-inscripciones online pendientes de revisión"
+        icon="users"
+        backRoute="/app/admin/alumnos"
+        backLabel="Alumnos"
+        [actions]="[]"
+        [kpis]="heroKpis()"
+      />
 
       <!-- Filtros -->
       <div class="bento-banner card flex flex-wrap items-center gap-3">
@@ -182,7 +155,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 <td>
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white bg-brand"
-                    
                   >
                     {{ row.licencia }}
                   </span>
@@ -289,6 +261,24 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy, AfterViewI
       return true;
     });
   });
+
+  readonly heroKpis = computed((): SectionHeroKpi[] => [
+    { id: 'total', label: 'Total Pre-inscritos', value: this.facade.total(), icon: 'users' },
+    {
+      id: 'pendientes',
+      label: 'Sin Evaluar Test',
+      value: this.facade.pendientesTest(),
+      icon: 'clock',
+      color: 'warning',
+    },
+    {
+      id: 'aprobados',
+      label: 'Aptos (Pendiente Matrícula)',
+      value: this.facade.aprobados(),
+      icon: 'check-circle',
+      color: 'success',
+    },
+  ]);
 
   constructor() {
     // Re-carga al cambiar sede

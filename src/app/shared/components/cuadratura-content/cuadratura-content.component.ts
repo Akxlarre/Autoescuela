@@ -50,7 +50,9 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
       <!-- ── Header ─────────────────────────────────────────────────────────── -->
       <div class="bento-banner relative overflow-visible">
         <app-section-hero
+          density="slim"
           [animateOnInit]="false"
+          [loading]="isLoading()"
           title="Cuadratura Diaria"
           icon="calculator"
           [contextLine]="fechaHoy()"

@@ -12,7 +12,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { TaskCardComponent } from '@shared/components/task-card/task-card.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
@@ -22,68 +21,28 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 type TaskTab = 'sent' | 'received' | 'observations';
 
 @Component({
   selector: 'app-admin-tareas',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    SectionHeroComponent,
-    KpiCardVariantComponent,
-    TaskCardComponent,
-    EmptyStateComponent,
-    BentoGridLayoutDirective,
-  ],
+  imports: [SectionHeroComponent, TaskCardComponent, EmptyStateComponent, BentoGridLayoutDirective],
   template: `
     <div #bentoGrid class="bento-grid" appBentoGridLayout>
       <!-- Hero -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Comunicación"
         contextLine="Coordinación operativa del equipo"
         icon="message-circle"
         [actions]="heroActions"
+        [kpis]="heroKpis()"
         (actionClick)="onHeroAction($event)"
       />
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Pendientes"
-          [value]="facade.pendingCount()"
-          [loading]="facade.isLoading()"
-          icon="clock"
-          color="warning"
-          [accent]="true"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Vencidas"
-          [value]="facade.overdueCount()"
-          [loading]="facade.isLoading()"
-          icon="alert-triangle"
-          color="error"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Asignadas"
-          [value]="facade.sentTasks().length"
-          [loading]="facade.isLoading()"
-          icon="send"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Recibidas"
-          [value]="facade.receivedTasks().length"
-          [loading]="facade.isLoading()"
-          icon="inbox"
-        />
-      </div>
 
       <!-- Lista de tareas con tabs -->
       <div class="bento-banner card p-0 overflow-hidden">
@@ -107,7 +66,6 @@ type TaskTab = 'sent' | 'received' | 'observations';
               @if (tab.count() > 0) {
                 <span
                   class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
-                  
                 >
                   {{ tab.count() }}
                 </span>
@@ -190,6 +148,30 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
       primary: true,
     },
   ];
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'pendientes',
+      label: 'Pendientes',
+      value: this.facade.pendingCount(),
+      icon: 'clock',
+      color: 'warning',
+    },
+    {
+      id: 'vencidas',
+      label: 'Vencidas',
+      value: this.facade.overdueCount(),
+      icon: 'alert-triangle',
+      color: 'error',
+    },
+    { id: 'asignadas', label: 'Asignadas', value: this.facade.sentTasks().length, icon: 'send' },
+    {
+      id: 'recibidas',
+      label: 'Recibidas',
+      value: this.facade.receivedTasks().length,
+      icon: 'inbox',
+    },
+  ]);
 
   protected readonly skeletons = [1, 2, 3];
 

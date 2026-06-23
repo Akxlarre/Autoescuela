@@ -13,12 +13,11 @@ import {
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import type { CursoSingularRow } from '@core/models/ui/cursos-singulares.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { AdminCursoSingularDetalleDrawerComponent } from './admin-curso-singular-detalle-drawer.component';
@@ -90,7 +89,6 @@ const BILLING_LABEL: Record<string, string> = {
     FormsModule,
     SelectModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     IconComponent,
     BentoGridLayoutDirective,
   ],
@@ -103,61 +101,17 @@ const BILLING_LABEL: Record<string, string> = {
     >
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Cursos Singulares"
         contextLine="Contabilidad"
         subtitle="Cobro simplificado de cursos SENCE, Grúa, Retroexcavadora"
         icon="graduation-cap"
         [actions]="heroActions"
+        [kpis]="heroKpis()"
         (actionClick)="onHeroAction($event)"
       />
-
-      <!-- ── KPIs Bento ─────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="facade.kpis().cursosActivos"
-          label="Cursos Activos"
-          icon="graduation-cap"
-          [trendLabel]="'de ' + facade.kpis().totalCursos + ' totales'"
-          [loading]="facade.isLoading()"
-          [accent]="true"
-        />
-      </div>
-
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="facade.kpis().totalInscritos"
-          label="Total Inscritos"
-          icon="users"
-          trendLabel="en todos los cursos"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="facade.kpis().ingresosCobrados"
-          label="Ingresos Cobrados"
-          icon="dollar-sign"
-          prefix="$"
-          subValue="dinero recibido real"
-          color="success"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="facade.kpis().porCobrar"
-          label="Por Cobrar"
-          icon="clock"
-          prefix="$"
-          subValue="saldos pendientes"
-          [color]="facade.kpis().porCobrar > 0 ? 'warning' : 'default'"
-          [loading]="facade.isLoading()"
-        />
-      </div>
 
       <!-- ── Contenido Principal (Listado) ─────────────────────────────────── -->
       <div class="bento-banner">
@@ -607,6 +561,38 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
       primary: true,
     },
   ];
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'activos',
+      label: 'Cursos Activos',
+      value: this.facade.kpis().cursosActivos,
+      icon: 'graduation-cap',
+      trendLabel: 'de ' + this.facade.kpis().totalCursos + ' totales',
+    },
+    {
+      id: 'inscritos',
+      label: 'Total Inscritos',
+      value: this.facade.kpis().totalInscritos,
+      icon: 'users',
+    },
+    {
+      id: 'cobrados',
+      label: 'Ingresos Cobrados',
+      value: this.facade.kpis().ingresosCobrados,
+      icon: 'dollar-sign',
+      prefix: '$',
+      color: 'success',
+    },
+    {
+      id: 'por-cobrar',
+      label: 'Por Cobrar',
+      value: this.facade.kpis().porCobrar,
+      icon: 'clock',
+      prefix: '$',
+      color: this.facade.kpis().porCobrar > 0 ? 'warning' : 'default',
+    },
+  ]);
 
   protected onHeroAction(actionId: string): void {
     if (actionId === 'nuevo-curso') {

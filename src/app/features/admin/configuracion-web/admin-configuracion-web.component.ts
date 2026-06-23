@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators, FormArray } from '@angular/forms';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { WebsiteConfigFacade } from '@core/facades/website-config.facade';
 import { CoursesFacade } from '@core/facades/courses.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
@@ -21,8 +20,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { SiteData } from '@core/models/dto/website-config.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
-import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { GeneralTabComponent } from './tabs/general-tab.component';
 import { HeroTabComponent } from './tabs/hero-tab.component';
@@ -40,10 +38,8 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
   imports: [
     ReactiveFormsModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     BentoGridLayoutDirective,
     IconComponent,
-    CardHoverDirective,
     SkeletonBlockComponent,
     GeneralTabComponent,
     HeroTabComponent,
@@ -56,120 +52,16 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     <div #bentoGrid class="bento-grid" appBentoGridLayout>
       <!-- Hero Section -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Configuración Web"
         contextLine="Administración de Contenido y Precios"
         icon="globe"
         [actions]="heroActions()"
+        [kpis]="heroKpis()"
         (actionClick)="onHeroAction($event)"
       />
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <div
-          appCardHover
-          class="bento-card flex flex-col gap-2 h-full"
-          [class.card-accent]="promoActive()"
-          [attr.data-color-variant]="promoActive() ? 'success' : 'default'"
-          [attr.aria-busy]="facade.isLoading()"
-        >
-          @if (facade.isLoading()) {
-            <div class="flex items-start justify-between gap-3">
-              <app-skeleton-block variant="text" width="55%" height="12px" />
-              <app-skeleton-block variant="rect" width="28px" height="28px" />
-            </div>
-            <app-skeleton-block variant="rect" width="70%" height="44px" />
-          } @else {
-            <div class="flex items-start justify-between gap-3 mb-1">
-              <span
-                class="text-[10px] uppercase font-bold tracking-wider"
-                [style.color]="promoActive() ? 'var(--state-success)' : 'var(--color-primary)'"
-                >Campaña Promo</span
-              >
-              <div
-                class="flex items-center justify-center rounded-md w-7 h-7"
-                [style.background]="
-                  promoActive()
-                    ? 'var(--state-success-bg, rgba(34, 197, 94, 0.1))'
-                    : 'var(--color-primary-muted, rgba(14, 165, 233, 0.1))'
-                "
-                [style.color]="promoActive() ? 'var(--state-success)' : 'var(--color-primary)'"
-              >
-                <app-icon [name]="promoActive() ? 'tag' : 'ban'" [size]="14" />
-              </div>
-            </div>
-            <div class="flex flex-col gap-2">
-              <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
-                <span
-                  class="font-display font-bold align-baseline truncate leading-none"
-                  class="text-text-primary"
-                  [style.font-size]="'clamp(var(--text-2xl), 8vw, var(--text-4xl))'"
-                  [title]="promoActive() ? 'Activa' : 'Inactiva'"
-                >
-                  {{ promoActive() ? 'Activa' : 'Inactiva' }}
-                </span>
-              </p>
-            </div>
-          }
-        </div>
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Cursos Activos"
-          [value]="coursesCount()"
-          [loading]="facade.isLoading()"
-          icon="book-open"
-          color="default"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Preguntas Frecuentes"
-          [value]="faqsCount()"
-          [loading]="facade.isLoading()"
-          icon="help-circle"
-          color="warning"
-        />
-      </div>
-      <div class="bento-square">
-        <div
-          appCardHover
-          class="bento-card flex flex-col gap-2 h-full"
-          [attr.aria-busy]="facade.isLoading()"
-        >
-          @if (facade.isLoading()) {
-            <div class="flex items-start justify-between gap-3">
-              <app-skeleton-block variant="text" width="55%" height="12px" />
-              <app-skeleton-block variant="rect" width="28px" height="28px" />
-            </div>
-            <app-skeleton-block variant="rect" width="70%" height="44px" />
-          } @else {
-            <div class="flex items-start justify-between gap-3 mb-1">
-              <span class="text-[10px] uppercase font-bold tracking-wider text-brand"
-                >Dominio Web</span
-              >
-              <div
-                class="flex items-center justify-center rounded-md w-7 h-7 text-brand"
-                class="bg-brand-muted"
-              >
-                <app-icon name="globe" [size]="14" />
-              </div>
-            </div>
-            <div class="flex flex-col gap-2">
-              <p class="flex items-baseline gap-1 m-0 min-w-0 w-full overflow-hidden">
-                <span
-                  class="font-display font-bold align-baseline truncate leading-none"
-                  class="text-text-primary"
-                  [style.font-size]="'clamp(var(--text-lg), 4vw, var(--text-xl))'"
-                  [title]="brandDomain()"
-                >
-                  {{ brandDomain() }}
-                </span>
-              </p>
-            </div>
-          }
-        </div>
-      </div>
 
       <!-- Main Editor Bento Card -->
       <div
@@ -195,7 +87,9 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
                   role="tab"
                   class="flex-1 min-w-[120px] px-4 py-3.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-[3px] cursor-pointer"
                   [style.border-color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-                  [style.color]="activeTab() === tab.id ? 'var(--text-primary)' : 'var(--text-muted)'"
+                  [style.color]="
+                    activeTab() === tab.id ? 'var(--text-primary)' : 'var(--text-muted)'
+                  "
                   [style.background]="'transparent'"
                   [attr.aria-selected]="activeTab() === tab.id"
                   (click)="activeTab.set(tab.id)"
@@ -256,10 +150,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               />
             }
             @if (activeTab() === 'hero') {
-              <app-hero-tab
-                [heroGroup]="form.controls.hero"
-                [branchId]="effectiveBranchId()!"
-              />
+              <app-hero-tab [heroGroup]="form.controls.hero" [branchId]="effectiveBranchId()!" />
             }
             @if (activeTab() === 'cursos') {
               <app-cursos-tab
@@ -271,17 +162,16 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               <app-promo-tab [promoGroup]="form.controls.promo" />
             }
             @if (activeTab() === 'contacto') {
-              <app-contacto-tab
-                [contactGroup]="form.controls.contact"
-                [hoursArray]="hoursArray"
-              />
+              <app-contacto-tab [contactGroup]="form.controls.contact" [hoursArray]="hoursArray" />
             }
             @if (activeTab() === 'faqs') {
               <app-faqs-tab [faqsArray]="faqsArray" />
             }
 
             <!-- Persistent Form Save Area inside the Card body if invalid (highly accessible) -->
-            <div class="flex items-center justify-between mt-10 pt-6 pb-2 border-t border-border-subtle">
+            <div
+              class="flex items-center justify-between mt-10 pt-6 pb-2 border-t border-border-subtle"
+            >
               <span class="text-xs">
                 @if (form.invalid) {
                   <span class="font-medium text-error"
@@ -375,8 +265,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
         mask-image: linear-gradient(to right, black 85%, transparent 100%);
         -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%);
       }
-
-    `
+    `,
   ],
 })
 export class AdminConfiguracionWebComponent implements AfterViewInit {
@@ -431,6 +320,35 @@ export class AdminConfiguracionWebComponent implements AfterViewInit {
   protected readonly coursesCount = computed(() => this.facade.config()?.courses?.length ?? 0);
   protected readonly faqsCount = computed(() => this.facade.config()?.faqs?.length ?? 0);
   protected readonly brandDomain = computed(() => this.facade.config()?.brand?.domain ?? '—');
+
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'promo',
+      label: 'Campaña Promo',
+      value: this.promoActive() ? 'Activa' : 'Inactiva',
+      icon: this.promoActive() ? 'tag' : 'ban',
+      color: this.promoActive() ? 'success' : 'default',
+    },
+    {
+      id: 'cursos',
+      label: 'Cursos Activos',
+      value: this.coursesCount(),
+      icon: 'book-open',
+    },
+    {
+      id: 'faqs',
+      label: 'Preguntas Frecuentes',
+      value: this.faqsCount(),
+      icon: 'help-circle',
+      color: 'warning',
+    },
+    {
+      id: 'dominio',
+      label: 'Dominio Web',
+      value: this.brandDomain(),
+      icon: 'globe',
+    },
+  ]);
 
   // Hero Actions
   protected readonly heroActions = computed<SectionHeroAction[]>(() => [
