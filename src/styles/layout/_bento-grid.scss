@@ -336,6 +336,13 @@ $bp-lg: 1024px;
     transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
+  /* Efecto hover global para dar feedback interactivo a las tarjetas */
+  .bento-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover, var(--shadow-lg, 0 10px 15px -3px rgb(0 0 0 / 0.1)));
+    border-color: var(--border-strong, var(--border-default));
+  }
+
   /* Variante sin padding — para imágenes full-bleed */
   .bento-card--flush {
     padding: 0;

@@ -155,7 +155,7 @@ import { to24hTime } from '@core/utils/date.utils';
             #activityList
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (item of activities().slice(0, 5); track item.id; let i = $index) {
+            @for (item of activities().slice(0, 4); track item.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
                 [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
