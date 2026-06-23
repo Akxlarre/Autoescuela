@@ -725,7 +725,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();
-  readonly preInscritosRequested = output<void>();
   readonly archivarRequested = output<string>();
   readonly restaurarRequested = output<string>();
   readonly trashViewToggled = output<void>();
@@ -750,12 +749,11 @@ export class AlumnosListContentComponent implements AfterViewInit {
     return [
       {
         id: 'historial',
-        label: 'Ex-Alumnos',
+        label: 'Ex-Alumnos B',
         icon: 'archive',
         primary: false,
         route: `${path}/ex-alumnos`,
       },
-      { id: 'preinscritos', label: 'Pre-inscritos', icon: 'users', primary: false },
       {
         id: 'papelera',
         label: 'Papelera',
@@ -806,11 +804,7 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly cursos = [
     { label: 'Todos los cursos', value: '' },
     { label: 'Clase B', value: 'Clase B' },
-    { label: 'Clase B + SENCE', value: 'Clase B + SENCE' },
-    { label: 'Profesional A2', value: 'Profesional A2' },
-    { label: 'Profesional A3', value: 'Profesional A3' },
-    { label: 'Profesional A4', value: 'Profesional A4' },
-    { label: 'Profesional A5', value: 'Profesional A5' },
+    { label: 'Clase B SENCE', value: 'Clase B SENCE' },
   ];
   readonly estados = [
     { label: 'Todos los estados', value: '' },
@@ -927,9 +921,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
 
   handleHeroAction(actionId: string): void {
     switch (actionId) {
-      case 'preinscritos':
-        this.preInscritosRequested.emit();
-        break;
       case 'papelera':
         this.trashViewToggled.emit();
         break;

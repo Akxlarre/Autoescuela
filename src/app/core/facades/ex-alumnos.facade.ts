@@ -31,6 +31,7 @@ interface EgresadoRow {
   id: number;
   pending_balance: number | null;
   updated_at: string | null;
+  license_group: string | null;
   courses: CourseRow | null;
   branches: BranchRow | null;
   students: StudentRow | null;
@@ -40,8 +41,8 @@ interface EgresadoRow {
 
 @Injectable({ providedIn: 'root' })
 export class ExAlumnosFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -60,16 +61,15 @@ private readonly supabase = inject(SupabaseService);
 
   // ── Estadísticas — Totales ──
   readonly totalEgresados = computed<number>(() => this._egresados().length);
-  readonly egresadosClaseB = computed<number>(
-    () =>
-      this._egresados().filter((e: EgresadoTableRow) => e.licencia.toUpperCase().includes('B'))
-        .length,
+  // Listas filtradas por grupo (spec 0016 — split Ex-Alumnos B / Profesional)
+  readonly egresadosClaseBList = computed<EgresadoTableRow[]>(() =>
+    this._egresados().filter((e) => e.licenseGroup === 'class_b'),
   );
-  readonly egresadosProfesional = computed<number>(
-    () =>
-      this._egresados().filter((e: EgresadoTableRow) => !e.licencia.toUpperCase().includes('B'))
-        .length,
+  readonly egresadosProfesionalList = computed<EgresadoTableRow[]>(() =>
+    this._egresados().filter((e) => e.licenseGroup === 'professional'),
   );
+  readonly egresadosClaseB = computed<number>(() => this.egresadosClaseBList().length);
+  readonly egresadosProfesional = computed<number>(() => this.egresadosProfesionalList().length);
   readonly conAbonoPendiente = computed<number>(
     () => this._egresados().filter((e: EgresadoTableRow) => e.saldoPendiente > 0).length,
   );
@@ -133,6 +133,7 @@ private readonly supabase = inject(SupabaseService);
         id,
         pending_balance,
         updated_at,
+        license_group,
         courses!inner ( name, code ),
         branches ( name ),
         students!inner (
@@ -179,6 +180,7 @@ private readonly supabase = inject(SupabaseService);
       nombre,
       rut,
       licencia,
+      licenseGroup: r.license_group === 'professional' ? 'professional' : 'class_b',
       anio,
       sede,
       nroCertificado: null,

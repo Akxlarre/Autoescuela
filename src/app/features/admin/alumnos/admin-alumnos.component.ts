@@ -7,7 +7,6 @@ import {
   signal,
   computed,
 } from '@angular/core';
-import { Router } from '@angular/router';
 import {
   AlumnosListContentComponent,
   type AlumnoExportRequest,
@@ -31,7 +30,6 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
       (refreshRequested)="facade.initialize()"
-      (preInscritosRequested)="navigateToPreInscritos()"
       (archivarRequested)="requestArchivar($event)"
       (trashViewToggled)="onTrashViewToggled()"
       (restaurarRequested)="onRestaurar($event)"
@@ -53,7 +51,6 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 export class AdminAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly router = inject(Router);
 
   // ── Estado del modal de borrado ──────────────────────────────────────────
   protected readonly deleteTarget = signal<AlumnoTableRow | null>(null);
@@ -104,10 +101,6 @@ export class AdminAlumnosComponent implements OnInit {
   }
 
   // ── Otros handlers ───────────────────────────────────────────────────────
-
-  protected navigateToPreInscritos(): void {
-    void this.router.navigate(['/app/admin/alumnos/pre-inscritos']);
-  }
 
   protected onTrashViewToggled(): void {
     void this.facade.setTrashView(!this.facade.trashView());

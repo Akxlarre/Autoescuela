@@ -52,8 +52,8 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         title="Pre-inscritos Clase Profesional"
         subtitle="Gestión de pre-inscripciones online pendientes de revisión"
         icon="users"
-        backRoute="/app/admin/alumnos"
-        backLabel="Alumnos"
+        backRoute="/app/admin/clase-profesional/alumnos"
+        backLabel="Alumnos Profesional"
         [actions]="[]"
         [kpis]="heroKpis()"
       />

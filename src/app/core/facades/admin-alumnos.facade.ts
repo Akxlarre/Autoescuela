@@ -62,10 +62,17 @@ interface RawStudent {
 
 const VENCER_THRESHOLD_DAYS = 7;
 
+/**
+ * Predicado de grupo de licencia para la Base B.
+ * Todo lo que no sea 'professional' (incluido `null` legacy) se considera Clase B,
+ * en línea con el mapeo histórico de `cursos[].licenseGroup`.
+ */
+const isClassBEnrollment = (e: RawEnrollment): boolean => e.license_group !== 'professional';
+
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnosFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
 
@@ -346,18 +353,25 @@ private readonly supabase = inject(SupabaseService);
 
       const rawData = (data ?? []) as unknown as RawStudent[];
 
-      // Filtrar alumnos que SOLO tienen inscripciones a cursos singulares (y cero matrículas regulares/drafts)
+      // Filtrar alumnos: la Base B solo muestra alumnos con matrícula Clase B.
+      // (profesional-only y singular-only quedan fuera — tienen sus propias vistas)
       const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment']);
       const validStudents = rawData.filter((s) => {
-        const hasRegular = s.enrollments && s.enrollments.length > 0;
+        const allEnrollments = s.enrollments ?? [];
+        const classBEnrollments = allEnrollments.filter(isClassBEnrollment);
+        const hasAnyEnrollment = allEnrollments.length > 0;
+        const hasRegular = classBEnrollments.length > 0;
         const hasSingular =
           s.standalone_course_enrollments && s.standalone_course_enrollments.length > 0;
-        // Si no tiene regular pero sí singular, es exclusivamente de Curso Singular -> Ocultar
+
+        // Tiene matrículas pero ninguna Clase B (profesional-only) -> Ocultar de la Base B
+        if (hasAnyEnrollment && !hasRegular) return false;
+        // Si no tiene regular B pero sí singular, es exclusivamente de Curso Singular -> Ocultar
         if (!hasRegular && hasSingular) return false;
-        // Ocultar alumnos cuyas únicas matrículas son canceladas o pago pendiente online
+        // Ocultar alumnos cuyas únicas matrículas B son canceladas o pago pendiente online
         // (transacciones Webpay abandonadas/fallidas que nunca completaron el proceso)
         if (hasRegular && !hasSingular) {
-          const hasValidEnrollment = s.enrollments.some(
+          const hasValidEnrollment = classBEnrollments.some(
             (e) => !INCOMPLETE_STATUSES.has(e.status ?? ''),
           );
           if (!hasValidEnrollment) return false;
@@ -368,19 +382,24 @@ private readonly supabase = inject(SupabaseService);
       const rows = validStudents.map((s) => this.mapToAlumnoTableRow(s));
       this._alumnos.set(rows);
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar alumnos');
+      this._error.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar alumnos',
+      );
       throw err;
     }
   }
 
   private mapToAlumnoTableRow(s: RawStudent): AlumnoTableRow {
     const u = s.users;
+    // La Base B solo considera las matrículas Clase B del alumno (AC-E1):
+    // un alumno con B + Profesional muestra aquí únicamente sus datos de B.
+    const classBEnrollments = s.enrollments.filter(isClassBEnrollment);
     // Excluir enrollments incompletos (Webpay abandonado/rechazado) del display.
-    // El enrollment principal es el más reciente con estado válido.
+    // El enrollment principal es el más reciente con estado válido DENTRO de B.
     const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment']);
     const sorted =
-      s.enrollments.length > 0
-        ? [...s.enrollments]
+      classBEnrollments.length > 0
+        ? [...classBEnrollments]
             .filter((e) => !INCOMPLETE_STATUSES.has(e.status ?? ''))
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         : [];

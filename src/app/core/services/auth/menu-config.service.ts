@@ -62,11 +62,18 @@ const ADMIN_NAV: NavGroup[] = [
       { label: 'Base Alumnos B', icon: 'users', routerLink: '/app/admin/alumnos' },
       { label: 'Asistencia B', icon: 'clipboard-check', routerLink: '/app/admin/asistencia' },
       { label: 'Certificaciones B', icon: 'award', routerLink: '/app/admin/certificacion' },
+      { label: 'Ex-Alumnos B', icon: 'user-minus', routerLink: '/app/admin/ex-alumnos' },
     ],
   },
   {
     group: 'Academia Profesional',
     items: [
+      {
+        label: 'Base Alumnos Prof.',
+        icon: 'graduation-cap',
+        routerLink: '/app/admin/clase-profesional/alumnos',
+        requiresProfessional: true,
+      },
       {
         label: 'Promociones',
         icon: 'tag',
@@ -109,6 +116,12 @@ const ADMIN_NAV: NavGroup[] = [
         routerLink: '/app/admin/clase-profesional/archivo',
         requiresProfessional: true,
       },
+      {
+        label: 'Ex-Alumnos Prof.',
+        icon: 'user-minus',
+        routerLink: '/app/admin/ex-alumnos-profesional',
+        requiresProfessional: true,
+      },
     ],
   },
   {
@@ -141,7 +154,6 @@ const ADMIN_NAV: NavGroup[] = [
         routerLink: '/app/admin/contabilidad/cursos',
       },
       { label: 'Anticipos', icon: 'receipt', routerLink: '/app/admin/contabilidad/anticipos' },
-      { label: 'Ex Alumnos', icon: 'user-minus', routerLink: '/app/admin/ex-alumnos' },
     ],
   },
   {
@@ -174,11 +186,18 @@ const SECRETARIA_NAV: NavGroup[] = [
       { label: 'Base Alumnos B', icon: 'users', routerLink: '/app/secretaria/alumnos' },
       { label: 'Asistencia B', icon: 'clipboard-check', routerLink: '/app/secretaria/asistencia' },
       { label: 'Certificaciones B', icon: 'award', routerLink: '/app/secretaria/certificados' },
+      { label: 'Ex-Alumnos B', icon: 'user-minus', routerLink: '/app/secretaria/ex-alumnos' },
     ],
   },
   {
     group: 'Academia Profesional',
     items: [
+      {
+        label: 'Base Alumnos Prof.',
+        icon: 'graduation-cap',
+        routerLink: '/app/secretaria/profesional/alumnos',
+        requiresProfessional: true,
+      },
       {
         label: 'Promociones',
         icon: 'tag',
@@ -221,6 +240,12 @@ const SECRETARIA_NAV: NavGroup[] = [
         routerLink: '/app/secretaria/profesional/archivo',
         requiresProfessional: true,
       },
+      {
+        label: 'Ex-Alumnos Prof.',
+        icon: 'user-minus',
+        routerLink: '/app/secretaria/ex-alumnos-profesional',
+        requiresProfessional: true,
+      },
     ],
   },
   {
@@ -247,7 +272,6 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'banknote',
         routerLink: '/app/secretaria/contabilidad/liquidaciones',
       },
-      { label: 'Ex Alumnos', icon: 'user-minus', routerLink: '/app/secretaria/ex-alumnos' },
       {
         label: 'Comunicaciones',
         icon: 'message-circle',

@@ -1,0 +1,158 @@
+import { TestBed } from '@angular/core/testing';
+import { AdminAlumnosProfesionalFacade } from './admin-alumnos-profesional.facade';
+import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { BranchFacade } from '@core/facades/branch.facade';
+import { ToastService } from '@core/services/ui/toast.service';
+import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+
+describe('AdminAlumnosProfesionalFacade', () => {
+  let facade: AdminAlumnosProfesionalFacade;
+  let supabaseSpy: any;
+  let branchFacadeSpy: any;
+  let builders: Record<string, any>;
+
+  /** Builder thenable: cualquier método encadena, `await` resuelve {data,error}. */
+  function makeBuilder(data: any[]): any {
+    const result = { data, error: null };
+    const builder: any = {
+      select: vi.fn(() => builder),
+      eq: vi.fn(() => builder),
+      in: vi.fn(() => builder),
+      neq: vi.fn(() => builder),
+      order: vi.fn(() => builder),
+      update: vi.fn(() => builder),
+      then: (resolve: (v: any) => void) => resolve(result),
+    };
+    return builder;
+  }
+
+  /** Mapea nombre de tabla → data. Reutiliza el builder por tabla para poder asertar. */
+  function mockTables(tables: Record<string, any[]>): void {
+    builders = {};
+    supabaseSpy.client.from = vi.fn((table: string) => {
+      if (!builders[table]) builders[table] = makeBuilder(tables[table] ?? []);
+      return builders[table];
+    });
+  }
+
+  function makeUser(over: Record<string, unknown> = {}): any {
+    return {
+      id: 9,
+      rut: '9-9',
+      first_names: 'Ana',
+      paternal_last_name: 'Pérez',
+      maternal_last_name: 'Soto',
+      email: 'ana@a.cl',
+      phone: '+569',
+      branch_id: 2,
+      ...over,
+    };
+  }
+
+  function makeProEnrollment(over: Record<string, unknown> = {}): any {
+    return {
+      id: 100,
+      number: 'P-0001',
+      status: 'active',
+      pending_balance: 120000,
+      branch_id: 2,
+      students: { id: 5, status: 'active', users: makeUser() },
+      promotion_courses: { id: 3, courses: { name: 'Profesional A4', license_class: 'A4' } },
+      ...over,
+    };
+  }
+
+  beforeEach(() => {
+    branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
+    supabaseSpy = {
+      client: {
+        from: vi.fn(),
+        channel: vi.fn().mockReturnValue({ on: vi.fn().mockReturnThis(), subscribe: vi.fn() }),
+        removeChannel: vi.fn(),
+      },
+    };
+    mockTables({});
+
+    TestBed.configureTestingModule({
+      providers: [
+        AdminAlumnosProfesionalFacade,
+        { provide: SupabaseService, useValue: supabaseSpy },
+        { provide: BranchFacade, useValue: branchFacadeSpy },
+        { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
+        {
+          provide: ErrorSanitizerService,
+          useValue: { sanitize: (e: Error) => ({ message: e.message }) },
+        },
+      ],
+    });
+
+    facade = TestBed.inject(AdminAlumnosProfesionalFacade);
+  });
+
+  it('should be created', () => {
+    expect(facade).toBeTruthy();
+  });
+
+  it('should have initial empty state', () => {
+    expect(facade.alumnos()).toEqual([]);
+    expect(facade.isLoading()).toBe(false);
+    expect(facade.error()).toBeNull();
+  });
+
+  it('filtra la query a license_group = professional (AC6)', async () => {
+    mockTables({ enrollments: [] });
+    await facade.initialize();
+    expect(builders['enrollments'].eq).toHaveBeenCalledWith('license_group', 'professional');
+  });
+
+  it('mapea un alumno profesional con promoción, semáforo, módulos y saldo (AC6)', async () => {
+    mockTables({
+      enrollments: [makeProEnrollment()],
+      v_professional_attendance: [{ enrollment_id: 100, attendance_flag: 'yellow' }],
+      professional_module_grades: [
+        { enrollment_id: 100, passed: true },
+        { enrollment_id: 100, passed: true },
+        { enrollment_id: 100, passed: false },
+      ],
+    });
+
+    await facade.initialize();
+
+    const row = facade.alumnos()[0];
+    expect(row.id).toBe('5');
+    expect(row.promocion).toBe('Profesional A4');
+    expect(row.licenseClass).toBe('A4');
+    expect(row.semaforo).toBe('yellow');
+    expect(row.modulosAprobados).toBe(2);
+    expect(row.modulosTotal).toBe(7);
+    expect(row.saldo).toBe(120000);
+    expect(row.nroMatricula).toBe('P-0001');
+    expect(row.estado).toBe('Activo');
+  });
+
+  it('edge: alumno sin promoción ni notas no rompe (AC-E3)', async () => {
+    mockTables({
+      enrollments: [
+        makeProEnrollment({ id: 200, number: null, promotion_courses: null, pending_balance: 0 }),
+      ],
+      v_professional_attendance: [],
+      professional_module_grades: [],
+    });
+
+    await facade.initialize();
+
+    const row = facade.alumnos()[0];
+    expect(row.promocion).toBe('—');
+    expect(row.licenseClass).toBe('');
+    expect(row.semaforo).toBeNull();
+    expect(row.modulosAprobados).toBe(0);
+    expect(row.nroMatricula).toBe('—');
+  });
+
+  it('aplica el filtro de sede cuando hay sede activa (facades.md §7)', async () => {
+    branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+    mockTables({ enrollments: [] });
+    await facade.initialize();
+    expect(builders['enrollments'].eq).toHaveBeenCalledWith('branch_id', 2);
+  });
+});

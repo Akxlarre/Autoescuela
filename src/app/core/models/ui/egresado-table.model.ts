@@ -12,6 +12,8 @@ export interface EgresadoTableRow {
   rut: string;
   /** Tipo de licencia derivado del código/nombre del curso */
   licencia: string;
+  /** Grupo de licencia (enrollments.license_group) — para el split B / Profesional */
+  licenseGroup: 'class_b' | 'professional';
   /** Año de egreso derivado de updated_at */
   anio: number | null;
   /** Nombre de la sede */

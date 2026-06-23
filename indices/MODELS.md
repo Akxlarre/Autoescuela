@@ -144,6 +144,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendableStudent`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
 | `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `SemaforoAsistencia`, `AlumnoProfesionalTableRow` | `ui` | `src/app/core/models/ui/alumno-profesional-table-row.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
 | `ClasePracticaStatus`, `ZoomLinkStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClaseTeoricoRow`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `TeoriaAsistenciaStatus`, `TeoriaAlumnoElegible`, `NuevaClaseTeoricaPayload`, `FinishClassPayload`, `TeoriaAlumnoAsistencia` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
