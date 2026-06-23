@@ -9,7 +9,6 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { TooltipModule } from 'primeng/tooltip';
@@ -27,7 +26,6 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     FormsModule,
     SelectModule,
     TooltipModule,
@@ -82,7 +80,9 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
           <!-- Pills de cursos (solo visible si hay promo seleccionada) -->
           @if (facade.selectedPromocionId()) {
-            <div class="flex-1 border-t md:border-t-0 md:border-l border-border-subtle pt-4 md:pt-0 md:pl-6">
+            <div
+              class="flex-1 border-t md:border-t-0 md:border-l border-border-subtle pt-4 md:pt-0 md:pl-6"
+            >
               <label class="mb-2 block text-sm font-semibold text-text-primary">
                 Cursos impartidos en esta promoción
               </label>
@@ -156,7 +156,9 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                 {{ cursoLabel() }}
               </span>
             </div>
-            <div class="flex items-center gap-4 text-xs text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit">
+            <div
+              class="flex items-center gap-4 text-xs text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit"
+            >
               <span class="flex items-center gap-1.5">
                 <span class="h-2 w-2 rounded-full bg-success"></span>
                 Aprobado (≥75)
@@ -171,14 +173,21 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
           <!-- KPIs del Curso -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             @for (kpi of cursoKpis(); track kpi.id) {
-              <div class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated">
+              <div
+                class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
+              >
                 <div class="flex items-center justify-between">
-                  <span class="text-[10px] uppercase font-bold text-muted tracking-wider">{{ kpi.label }}</span>
+                  <span class="text-[10px] uppercase font-bold text-muted tracking-wider">{{
+                    kpi.label
+                  }}</span>
                   @if (kpi.icon) {
                     <app-icon [name]="kpi.icon" [size]="14" class="text-muted opacity-50" />
                   }
                 </div>
-                <span class="text-2xl font-bold" [class]="kpi.color ? 'text-' + kpi.color : 'text-text-primary'">
+                <span
+                  class="text-2xl font-bold"
+                  [class]="kpi.color ? 'text-' + kpi.color : 'text-text-primary'"
+                >
                   {{ kpi.value }}{{ kpi.suffix || '' }}
                 </span>
               </div>
@@ -355,13 +364,17 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
             <!-- Mobile: Tarjetas responsivas -->
             <div class="flex flex-col gap-4 md:hidden">
               @for (alumno of facade.alumnos(); track alumno.enrollmentId) {
-                <div class="p-4 rounded-xl border border-border-subtle bg-surface flex flex-col gap-4 shadow-sm">
+                <div
+                  class="p-4 rounded-xl border border-border-subtle bg-surface flex flex-col gap-4 shadow-sm"
+                >
                   <!-- Cabecera Alumno -->
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                       <div class="initials-avatar shrink-0">{{ alumno.initials }}</div>
                       <div class="min-w-0 flex flex-col">
-                        <p class="text-sm font-semibold text-text-primary truncate">{{ alumno.nombre }}</p>
+                        <p class="text-sm font-semibold text-text-primary truncate">
+                          {{ alumno.nombre }}
+                        </p>
                         <p class="text-[11px] text-muted">{{ alumno.rut }}</p>
                       </div>
                     </div>
@@ -379,11 +392,17 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                   </div>
 
                   <!-- Asistencia (Teoría y Práctica) -->
-                  <div class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle">
+                  <div
+                    class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle"
+                  >
                     <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide">Teoría</span>
+                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide"
+                        >Teoría</span
+                      >
                       <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold text-text-primary">{{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}</span>
+                        <span class="text-xs font-semibold text-text-primary"
+                          >{{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}</span
+                        >
                         @if (alumno.pctTeoria !== null) {
                           <span
                             class="pct-badge"
@@ -399,9 +418,13 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                       </div>
                     </div>
                     <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide">Práctica</span>
+                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide"
+                        >Práctica</span
+                      >
                       <div class="flex items-center gap-2">
-                        <span class="text-xs font-semibold text-text-primary">{{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}</span>
+                        <span class="text-xs font-semibold text-text-primary"
+                          >{{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}</span
+                        >
                         @if (alumno.pctPractica !== null) {
                           <span
                             class="pct-badge"
@@ -420,11 +443,18 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
                   <!-- Notas Módulos -->
                   <div>
-                    <span class="text-[10px] uppercase font-bold text-muted block mb-2 tracking-wide">Evaluaciones</span>
+                    <span
+                      class="text-[10px] uppercase font-bold text-muted block mb-2 tracking-wide"
+                      >Evaluaciones</span
+                    >
                     <div class="flex flex-wrap gap-1.5">
                       @for (nota of alumno.notas; track nota.moduleNumber) {
-                        <div class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-[36px]">
-                          <span class="text-[9px] text-muted mb-1 font-medium">M{{ nota.moduleNumber }}</span>
+                        <div
+                          class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-[36px]"
+                        >
+                          <span class="text-[9px] text-muted mb-1 font-medium"
+                            >M{{ nota.moduleNumber }}</span
+                          >
                           @if (nota.grade !== null) {
                             <span
                               class="text-xs font-bold"
@@ -438,12 +468,16 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                           }
                         </div>
                       }
-                      
+
                       <!-- Promedio Final -->
-                      <div class="flex flex-col items-center justify-center border border-brand/20 bg-brand/5 rounded-md p-1.5 flex-1 min-w-[48px]">
+                      <div
+                        class="flex flex-col items-center justify-center border border-brand/20 bg-brand/5 rounded-md p-1.5 flex-1 min-w-[48px]"
+                      >
                         <span class="text-[9px] text-brand font-bold mb-1 uppercase">Prom</span>
                         @if (alumno.notaPromedio !== null) {
-                          <span class="text-sm font-bold text-brand">{{ alumno.notaPromedio }}</span>
+                          <span class="text-sm font-bold text-brand">{{
+                            alumno.notaPromedio
+                          }}</span>
                         } @else {
                           <span class="text-xs text-muted">—</span>
                         }
@@ -454,16 +488,18 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
               }
             </div>
 
-              <!-- Footer: resumen de criterios -->
-              <div
-                class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-muted bg-surface border border-border-subtle rounded-lg mt-4"
-              >
-                <div class="flex items-center gap-2">
-                  <app-icon name="info" [size]="13" />
-                  <span>Aprobación requiere: asistencia teórica ≥ 75% y promedio de módulos ≥ 75</span>
-                </div>
-                <span class="sm:ml-auto">Escala MTT: 10–100 · Mínimo aprobación: 75</span>
+            <!-- Footer: resumen de criterios -->
+            <div
+              class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-muted bg-surface border border-border-subtle rounded-lg mt-4"
+            >
+              <div class="flex items-center gap-2">
+                <app-icon name="info" [size]="13" />
+                <span
+                  >Aprobación requiere: asistencia teórica ≥ 75% y promedio de módulos ≥ 75</span
+                >
               </div>
+              <span class="sm:ml-auto">Escala MTT: 10–100 · Mínimo aprobación: 75</span>
+            </div>
           }
         </section>
       }
