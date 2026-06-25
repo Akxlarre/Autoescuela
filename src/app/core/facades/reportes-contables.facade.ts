@@ -1,6 +1,7 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { FixedExpense } from '@core/models/dto/fixed-expense.model';
 import type {
   FiltrosReporte,
@@ -67,9 +68,12 @@ private readonly supabase = inject(SupabaseService);
    */
   private readonly _effectiveBranchId = computed<number | null>(() => {
     const user = this.authFacade.currentUser();
-    if (!user) return null;
-    if (user.role === 'secretaria') return user.branchId ?? null;
-    return this.branchFacade.selectedBranchId();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
   });
 
   /** Etiqueta de escuela para el banner del reporte. */

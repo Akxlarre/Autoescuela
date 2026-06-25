@@ -4,6 +4,7 @@ import { AuthFacade } from './auth.facade';
 import { BranchFacade } from './branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import {
@@ -96,8 +97,12 @@ private readonly supabase = inject(SupabaseService);
 
   private getActiveBranchId(): number | null {
     const user = this.auth.currentUser();
-    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
-    return user?.branchId ?? null;
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
   }
 
   // ── Filtros ─────────────────────────────────────────────────────────────────

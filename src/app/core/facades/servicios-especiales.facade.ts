@@ -6,6 +6,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { ServiceCatalog } from '@core/models/dto/service-catalog.model';
 import type { SpecialServiceSale } from '@core/models/dto/special-service-sale.model';
@@ -137,14 +138,16 @@ private readonly supabase = inject(SupabaseService);
 
   private getActiveBranchId(forceSpecific = false): number | null {
     const user = this.auth.currentUser();
-    const selected = this.branchFacade.selectedBranchId();
-
-    if (user?.role === 'admin') {
-      // Si forceSpecific es true (para INSERTs), y no hay selección, usamos la sede del usuario admin
-      if (forceSpecific && selected === null) return user.branchId ?? null;
-      return selected;
-    }
-    return user?.branchId ?? null;
+    const scope = resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+    // Para INSERTs: si el scope es "todas las sedes" (null), anclar a la sede propia
+    // del usuario (no se puede insertar con branch_id null).
+    if (forceSpecific && scope === null) return user?.branchId ?? null;
+    return scope;
   }
 
   private async refreshSilently(): Promise<void> {

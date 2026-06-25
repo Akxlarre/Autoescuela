@@ -2,6 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   VehicleTableRow,
   VehicleDocSummary,
@@ -100,8 +101,12 @@ export class FlotaFacade {
 
   private getActiveBranchId(): number | null {
     const user = this.auth.currentUser();
-    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
-    return user?.branchId ?? null;
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
   }
 
   async initialize(): Promise<void> {

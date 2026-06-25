@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { Course } from '@core/models/dto/course.model';
 
 /**
@@ -103,9 +104,11 @@ export class CoursesFacade {
    */
   getActiveBranchId(): number | null {
     const user = this.authFacade.currentUser();
-    if (user?.role === 'admin') {
-      return this.branchFacade.selectedBranchId();
-    }
-    return user?.branchId ?? null;
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
   }
 }
