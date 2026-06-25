@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
 import { IconComponent } from '../icon/icon.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
+import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { TooltipModule } from 'primeng/tooltip';
@@ -15,6 +16,7 @@ import { TooltipModule } from 'primeng/tooltip';
     CommonModule,
     IconComponent,
     EmptyStateComponent,
+    SkeletonBlockComponent,
     PressFeedbackDirective,
     AnimateInDirective,
     TooltipModule,
@@ -30,7 +32,38 @@ import { TooltipModule } from 'primeng/tooltip';
       <h2 class="m-0 font-semibold text-text-primary">Clases Actuales</h2>
     </div>
 
-    @if (classes().length === 0) {
+    @if (loading()) {
+      <ul class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-hidden pr-2">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <li class="flex items-center justify-between p-3 rounded-xl bg-surface border border-transparent">
+            <!-- Lado Izquierdo Skeleton -->
+            <div class="flex items-center gap-4">
+              <div class="flex flex-col gap-1.5 w-14 shrink-0">
+                <app-skeleton-block variant="text" width="40px" height="16px" />
+                <app-skeleton-block variant="text" width="55px" height="9px" />
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex -space-x-2 shrink-0">
+                  <app-skeleton-block variant="circle" width="32px" height="32px" class="relative z-10 border-2 border-surface" />
+                  <app-skeleton-block variant="circle" width="32px" height="32px" class="relative z-0 border-2 border-surface" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="80px" height="14px" />
+                  <app-skeleton-block variant="text" width="60px" height="10px" />
+                </div>
+              </div>
+            </div>
+            <!-- Lado Derecho Skeleton -->
+            <div class="flex items-center gap-4 shrink-0">
+               <div class="hidden sm:flex flex-col items-end">
+                 <app-skeleton-block variant="text" width="50px" height="12px" />
+               </div>
+              <app-skeleton-block variant="circle" width="32px" height="32px" />
+            </div>
+          </li>
+        }
+      </ul>
+    } @else if (classes().length === 0) {
       <div class="border border-border-subtle rounded-xl bg-surface-hover mb-6 flex-1 flex flex-col justify-center">
         <app-empty-state
           icon="clock"
@@ -142,6 +175,7 @@ import { TooltipModule } from 'primeng/tooltip';
 })
 export class LiveClassesPanelComponent {
   readonly classes = input<LiveClassModel[]>([]);
+  readonly loading = input<boolean>(false);
   readonly actionClick = output<LiveClassModel>();
   private scrollContainer = viewChild<ElementRef<HTMLUListElement>>('scrollContainer');
 
