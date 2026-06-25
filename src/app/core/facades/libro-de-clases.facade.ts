@@ -2,6 +2,8 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { PromocionOption, CursoOption } from '@core/models/ui/sesion-profesional.model';
 import type {
   LibroCabecera,
@@ -23,6 +25,7 @@ export class LibroDeClasesFacade {
 private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly auth = inject(AuthFacade);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _promociones = signal<PromocionOption[]>([]);
@@ -97,8 +100,18 @@ private readonly supabase = inject(SupabaseService);
 
   // ── Carga de promociones ────────────────────────────────────────────────────
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   private async loadPromociones(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
       .from('professional_promotions')
@@ -583,7 +596,7 @@ private readonly supabase = inject(SupabaseService);
         if (error) throw error;
       } else {
         // INSERT nuevo registro
-        const branchId = this.branchFacade.selectedBranchId();
+        const branchId = this.getActiveBranchId();
         const { data, error } = await this.supabase.client
           .from('class_book')
           .insert({

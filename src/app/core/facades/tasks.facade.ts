@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -143,9 +144,17 @@ export class TasksFacade {
   // 4. FETCH
 
   private async fetchData(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
     const currentUser = this.auth.currentUser();
     if (!currentUser?.dbId) return;
+
+    // Scope de sede: secretaria con grant respeta el selector (como admin); sin grant,
+    // anclada a su sede. loadRecipients NO se toca (selector de destinatarios — AC-E2).
+    const branchId = resolveBranchScope(
+      currentUser.role,
+      currentUser.branchId,
+      this.branchFacade.selectedBranchId(),
+      currentUser.canAccessBothBranches,
+    );
 
     const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
 

@@ -7,6 +7,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { StandaloneCourse } from '@core/models/dto/standalone-course.model';
 import type {
@@ -141,8 +142,18 @@ export class CursosSingularesFacade {
 
   // ── 4. Métodos de acción — Cursos ──────────────────────────────────────────
 
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   async initialize(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
     if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
@@ -563,7 +574,7 @@ export class CursosSingularesFacade {
   }
 
   private async fetchCursos(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
       .from('standalone_courses')
