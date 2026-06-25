@@ -14,6 +14,8 @@ export interface CrearSecretariaPayload {
   email: string;
   telefono: string;
   branchId: number;
+  /** Grant multi-sede (spec 0017). */
+  canAccessBothBranches?: boolean;
 }
 
 export interface EditarSecretariaPayload {
