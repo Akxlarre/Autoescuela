@@ -372,6 +372,6 @@
 | `app-user-panel` | `user` | `action`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `daySelect`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 | `app-live-classes-panel` | `classes` (LiveClassModel[], []) | `actionClick` (LiveClassModel) | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
-| `app-alerts-drawer` | — (inyecta DashboardAlertsFacade directamente) | — | `src/app/features/dashboard/alerts-drawer/alerts-drawer.component.ts` |
+| `app-alerts-drawer` | — (Smart: inyecta DashboardAlertsFacade y Router) | — | `src/app/features/dashboard/alerts-drawer/alerts-drawer.component.ts` | Drawer de alertas: skeleton 4-rows, empty state, lista ordenada error→warning→info→success, badge conteo, botones de acción con estado procesando por alerta, scrollbar custom. |
 
 <!-- AUTO-GENERATED:END -->
