@@ -67,6 +67,7 @@ export class AuthFacade {
       first_names: string;
       paternal_last_name: string;
       branch_id: number;
+      can_access_both_branches: boolean;
       first_login: boolean;
       active: boolean;
       role_id: number;
@@ -78,7 +79,7 @@ export class AuthFacade {
     const result = await this.supabase.client
       .from('users')
       .select(
-        'id, first_names, paternal_last_name, branch_id, first_login, active, role_id, roles(name)',
+        'id, first_names, paternal_last_name, branch_id, can_access_both_branches, first_login, active, role_id, roles(name)',
       )
       .eq('supabase_uid', authUser.id)
       .maybeSingle();
@@ -118,6 +119,7 @@ export class AuthFacade {
       initials: getInitialsFromDisplayName(name),
       firstLogin: dbUser?.first_login,
       branchId: dbUser?.branch_id,
+      canAccessBothBranches: dbUser?.can_access_both_branches ?? false,
       isActive: dbUser?.active,
     };
     this._currentUser.set(user);
