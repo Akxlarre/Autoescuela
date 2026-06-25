@@ -2,6 +2,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   ElementRef,
+  computed,
   inject,
   signal,
   viewChild,
@@ -82,7 +83,7 @@ import { Button } from 'primeng/button';
         class="shrink-0 flex items-center overflow-visible sm:flex-1 sm:min-w-0"
         aria-label="Contexto de sede activa"
       >
-        @if (auth.currentUser()?.role === 'admin') {
+        @if (canSeeBranchSelector()) {
           <app-branch-selector
             [branches]="branchFacade.branches()"
             [selectedBranchId]="branchFacade.selectedBranchId()"
@@ -228,43 +229,56 @@ export class TopbarComponent {
   protected readonly search = inject(SearchPanelFacadeService);
   protected readonly theme = inject(ThemeService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
- 
+
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly router = inject(Router);
- 
+
   protected readonly panelOpen = signal(false);
   protected readonly userPanelOpen = signal(false);
- 
+
+  /**
+   * El selector de sede aparece para el admin y para la secretaria con grant multi-sede
+   * (spec 0017): con el grant se comporta como admin (alterna sede / "Todas"); sin grant, no.
+   */
+  protected readonly canSeeBranchSelector = computed(() => {
+    const user = this.auth.currentUser();
+    if (!user) return false;
+    const role = user.role as string;
+    if (role === 'admin') return true;
+    const esSecretaria = role === 'secretaria' || role === 'secretary';
+    return esSecretaria && !!user.canAccessBothBranches;
+  });
+
   private readonly bellWrapperRef = viewChild<ElementRef<HTMLElement>>('bellWrapper');
- 
+
   openSearch(wrapper: HTMLElement): void {
     this.search.toggle(wrapper);
   }
- 
+
   cycleTheme(event: MouseEvent): void {
     const btnEl = (event.target as HTMLElement).closest?.('button') as HTMLElement | null;
     if (btnEl) this.gsap.animateThemeToggleIcon(btnEl);
     this.theme.cycleColorMode(event);
   }
- 
+
   togglePanel(): void {
     const opening = !this.panelOpen();
- 
+
     // Animación Aladino solo al abrir — una campana suena al recibir, no al colgar
     if (opening) {
       const btnEl = this.bellWrapperRef()?.nativeElement?.querySelector<HTMLElement>('button');
       if (btnEl) this.gsap.animateBell(btnEl);
     }
- 
+
     this.panelOpen.set(opening);
     if (opening) this.userPanelOpen.set(false); // Close user panel if notifications open
   }
- 
+
   onNotifClicked(n: Notification): void {
     this.panelOpen.set(false);
     if (n.referenceType !== 'task') return;
- 
+
     const role = this.auth.currentUser()?.role as string | undefined;
     const route =
       role === 'admin'
@@ -272,17 +286,13 @@ export class TopbarComponent {
         : role === 'secretary' || role === 'secretaria'
           ? '/app/secretaria/observaciones'
           : '/app/instructor/tareas';
- 
+
     void this.router.navigateByUrl(route);
   }
- 
+
   onUserAction(action: 'profile' | 'settings'): void {
     this.userPanelOpen.set(false);
-    this.layoutDrawer.open(
-      AjustesDrawerComponent,
-      'Ajustes del Sistema',
-      'settings'
-    );
+    this.layoutDrawer.open(AjustesDrawerComponent, 'Ajustes del Sistema', 'settings');
   }
 
   async onLogout(): Promise<void> {
