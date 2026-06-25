@@ -135,6 +135,7 @@
 | `20260314100000_public_enrollment_anon_rls.sql` | Policies SELECT anónimas para `branches` (todas) y `courses` (activas, no convalidación) para la vista de matrícula pública. |
 | `20260315100000_enable_realtime_class_b_sessions.sql` | Habilita Supabase Realtime en `class_b_sessions` (`ALTER PUBLICATION supabase_realtime ADD TABLE`). Permite que secretarias/admin reciban actualizaciones en vivo de slots ocupados durante matrícula. |
 | `20260624120000_rls_branch_scope_students_instructors.sql` | **Spec 0017.** Recrea `select_students` y `select_instructors` aplicando `branch_visible(<sede del user dueño>)` a la rama `secretary` (antes `IN ('admin','secretary')` sin filtro de sede → fuga multi-sede). Reutiliza `can_access_both_branches` (RF-013): `branch_visible` ya lo honra, así que la secretaria con grant ve todas las sedes. Ramas admin/instructor/student preservadas de `20260301000011`. `select_enrollments` y `select_users` SIN cambios (este último por fix-002). |
+| `20260625120000_enable_realtime_users.sql` | **Spec 0017 / AC-E3.** Habilita Supabase Realtime en `users` (`ALTER PUBLICATION supabase_realtime ADD TABLE`, idempotente vía `pg_publication_tables`). Permite que `AuthFacade` refleje el otorgar/revocar del grant `can_access_both_branches` en caliente (sin re-login) suscribiéndose a su propia fila (`id=eq.{dbId}`). Realtime respeta RLS. |
 
 ## GRANTs Data API (Supabase PostgREST)
 
