@@ -15,6 +15,8 @@
 //   active           : boolean — estado de la cuenta
 //   email            : string  — nuevo email (si cambió, se actualiza en Auth también)
 //   currentEmail     : string  — email actual, para detectar si cambió
+//   canAccessBothBranches : boolean (opcional) — grant multi-sede (spec 0017). Si se omite,
+//                                                no se toca; false = revocar.
 //
 // Flujo:
 //   1. Valida que el llamador sea admin
@@ -97,6 +99,7 @@ Deno.serve(async (req: Request) => {
       active,
       email,
       currentEmail,
+      canAccessBothBranches,
     } = await req.json();
 
     if (
@@ -154,6 +157,12 @@ Deno.serve(async (req: Request) => {
     // Solo incluir email en la tabla si cambió (para mantener sincronía con Auth)
     if (emailChanged) {
       updatePayload['email'] = email.trim().toLowerCase();
+    }
+
+    // Grant multi-sede (spec 0017): opcional. Solo se escribe si viene en el body
+    // (las llamadas que no lo envían no lo tocan); false = revocar el grant.
+    if (canAccessBothBranches !== undefined) {
+      updatePayload['can_access_both_branches'] = !!canAccessBothBranches;
     }
 
     const { error: updateError } = await supabaseAudit

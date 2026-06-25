@@ -14,4 +14,6 @@ export interface SecretariaTableRow {
   maternalLastName: string;
   branchId: number | null;
   phone: string;
+  /** RF-013 / spec 0017: grant que permite ver todas las sedes (como admin). */
+  canAccessBothBranches: boolean;
 }

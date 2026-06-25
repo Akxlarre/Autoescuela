@@ -25,6 +25,8 @@ export interface EditarSecretariaPayload {
   active: boolean;
   email: string;
   currentEmail: string;
+  /** Grant multi-sede (spec 0017). Opcional: si se omite, el flag se preserva (el toggle llega en T3.2). */
+  canAccessBothBranches?: boolean;
 }
 
 interface BranchOption {
@@ -53,6 +55,7 @@ interface SecretariaRow {
   active: boolean;
   updated_at: string | null;
   branch_id: number | null;
+  can_access_both_branches: boolean;
   roles: RoleRow | null;
   branches: BranchRow | null;
 }
@@ -61,8 +64,8 @@ interface SecretariaRow {
 
 @Injectable({ providedIn: 'root' })
 export class SecretariasFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
 
@@ -150,6 +153,7 @@ private readonly supabase = inject(SupabaseService);
         active,
         updated_at,
         branch_id,
+        can_access_both_branches,
         roles!inner ( name ),
         branches ( name )
       `,
@@ -190,12 +194,14 @@ private readonly supabase = inject(SupabaseService);
       const { error } = await this.supabase.client.functions.invoke('create-secretary', {
         body: payload,
       });
-      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
+      if (error)
+        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear secretaria');
       this.toast.success('Secretaria creada', 'La cuenta ha sido creada correctamente.');
       await this.refreshSilently();
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear secretaria';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear secretaria';
       this.toast.error('Error', msg);
       return false;
     } finally {
@@ -217,10 +223,12 @@ private readonly supabase = inject(SupabaseService);
           active: payload.active,
           email: payload.email.trim().toLowerCase(),
           currentEmail: payload.currentEmail.trim().toLowerCase(),
+          canAccessBothBranches: payload.canAccessBothBranches,
         },
       });
 
-      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar secretaria');
+      if (error)
+        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar secretaria');
 
       this._initialized = false;
       await this.refreshSilently();
@@ -230,7 +238,10 @@ private readonly supabase = inject(SupabaseService);
       );
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar secretaria';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al actualizar secretaria';
       this.toast.error('Error', msg);
       return false;
     } finally {
@@ -258,6 +269,7 @@ private readonly supabase = inject(SupabaseService);
       maternalLastName: r.maternal_last_name ?? '',
       branchId: r.branch_id,
       phone: r.phone ?? '',
+      canAccessBothBranches: r.can_access_both_branches ?? false,
     };
   }
 }
