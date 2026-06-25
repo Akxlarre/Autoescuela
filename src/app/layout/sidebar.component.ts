@@ -17,6 +17,7 @@ import { MenuConfigService } from '@core/services/auth/menu-config.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { canAccessProfessional } from '@core/utils/professional-access.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 
 /**
@@ -109,17 +110,16 @@ export class SidebarComponent {
    * Determina si la sede activa tiene habilitados los cursos profesionales.
    */
   protected readonly hasProfessional = computed(() => {
-    const role = this.auth.currentUser()?.role;
-    if (role === 'admin') {
-      const activeId = this.branchFacade.selectedBranchId();
-      if (activeId === null) return true; // Sede "Todas las escuelas" -> ver todo
-      return this.branchFacade.branches().find((b) => b.id === activeId)?.hasProfessional ?? false;
-    } else if (role === 'secretaria') {
-      const activeId = this.auth.currentUser()?.branchId;
-      if (!activeId) return false;
-      return this.branchFacade.branches().find((b) => b.id === activeId)?.hasProfessional ?? false;
-    }
-    return false;
+    const user = this.auth.currentUser();
+    // Núcleo testeable (fix-028): honra el grant multi-sede (RF-013) tanto para admin como
+    // para secretaria con grant — ambos respetan el selector; sin grant, la sede fija.
+    return canAccessProfessional(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      this.branchFacade.branches(),
+      user?.canAccessBothBranches,
+    );
   });
 
   /**
@@ -153,16 +153,14 @@ export class SidebarComponent {
 
       const role = this.auth.currentUser()?.role;
       if (role === 'secretaria') {
-        // Verificar si cuenta con autorización multisede (RF-013)
-        // Simulamos la autorización multisede (e.g. email de testing o flag)
-        const email = this.auth.currentUser()?.email ?? '';
-        const canConmute = email.includes('multisede') || email.includes('autorizada');
+        // Autorización multisede real (RF-013 / spec 0017): el grant del admin.
+        const canConmute = this.auth.currentUser()?.canAccessBothBranches ?? false;
 
         if (!canConmute) {
           await this.confirmModal.confirm({
-            title: 'Acceso Denegado 🔒',
+            title: 'Acceso denegado',
             message:
-              'Su cuenta de secretaria no está autorizada para operar en múltiples sedes ni conmutar al portal de Clase Profesional (RF-013). Contacte a su Administrador.',
+              'Su cuenta de secretaria no está autorizada para operar en múltiples sedes ni conmutar al portal de Clase Profesional. Contacte a su Administrador.',
             severity: 'danger',
             confirmLabel: 'Entendido',
             cancelLabel: 'Cerrar',
@@ -173,7 +171,7 @@ export class SidebarComponent {
 
       // Si es Admin o Secretaria autorizada: sugerir conmutación rápida
       const confirmed = await this.confirmModal.confirm({
-        title: 'Módulo de Clase Profesional 🔒',
+        title: 'Módulo de Clase Profesional',
         message:
           'Este módulo requiere conmutar la sucursal activa a "Conductores Chillán" (Clase Profesional). ¿Desea realizar el cambio ahora?',
         severity: 'warn',

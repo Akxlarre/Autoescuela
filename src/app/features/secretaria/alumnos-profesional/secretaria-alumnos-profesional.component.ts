@@ -63,8 +63,13 @@ export class SecretariaAlumnosProfesionalComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // fix-028: con grant, la secretaria se comporta como admin → fuerza sede con profesional.
+    this.branchFacade.setProfessionalOnly(true);
     this.facade.initialize();
-    this.destroyRef.onDestroy(() => this.facade.dispose());
+    this.destroyRef.onDestroy(() => {
+      this.branchFacade.setProfessionalOnly(false);
+      this.facade.dispose();
+    });
   }
 
   protected requestArchivar(alumnoId: string): void {

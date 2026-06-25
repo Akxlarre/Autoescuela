@@ -1,5 +1,6 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { CertificacionProfesionalContentComponent } from '@shared/components/certificacion-profesional-content/certificacion-profesional-content.component';
 
 /**
@@ -41,10 +42,17 @@ import { CertificacionProfesionalContentComponent } from '@shared/components/cer
     />
   `,
 })
-export class SecretariaProfesionalCertificadosComponent implements OnInit {
+export class SecretariaProfesionalCertificadosComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(CertificacionProfesionalFacade);
+  private readonly branchFacade = inject(BranchFacade);
 
   ngOnInit(): void {
+    // fix-028: con grant, la secretaria se comporta como admin → fuerza sede con profesional.
+    this.branchFacade.setProfessionalOnly(true);
     void this.facade.initialize();
+  }
+
+  ngOnDestroy(): void {
+    this.branchFacade.setProfessionalOnly(false);
   }
 }

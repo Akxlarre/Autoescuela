@@ -289,6 +289,8 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   ngOnInit(): void {
+    // fix-028: fuerza una sede con Clase Profesional (deshabilita "Todas"/sedes sin profesional).
+    this.branchFacade.setProfessionalOnly(true);
     void this.facade.initialize();
   }
 
@@ -298,6 +300,7 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy, AfterViewI
   }
 
   ngOnDestroy(): void {
+    this.branchFacade.setProfessionalOnly(false);
     // Ya no limpiamos el facade aquí, porque el drawer puede seguir abierto
     // mientras navegamos. El componente del drawer (AdminPreInscritoDrawerComponent)
     // se encarga de limpiarlo en su propio ngOnDestroy().

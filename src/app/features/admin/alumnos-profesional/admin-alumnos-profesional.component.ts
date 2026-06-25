@@ -63,8 +63,14 @@ export class AdminAlumnosProfesionalComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // fix-028: fuerza una sede con Clase Profesional (deshabilita "Todas"/sedes sin profesional
+    // en el selector) para no quedar en una vista vacía. Patrón de las demás páginas profesionales.
+    this.branchFacade.setProfessionalOnly(true);
     this.facade.initialize();
-    this.destroyRef.onDestroy(() => this.facade.dispose());
+    this.destroyRef.onDestroy(() => {
+      this.branchFacade.setProfessionalOnly(false);
+      this.facade.dispose();
+    });
   }
 
   protected requestArchivar(alumnoId: string): void {
