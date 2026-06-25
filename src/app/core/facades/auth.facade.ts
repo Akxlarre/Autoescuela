@@ -1,8 +1,10 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { User } from '@core/models/ui/user.model';
 import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { mapAuthError } from '@core/utils/auth-errors.utils';
 
 /**
@@ -18,8 +20,13 @@ import { mapAuthError } from '@core/utils/auth-errors.utils';
 export class AuthFacade {
   private supabase = inject(SupabaseService);
   private router = inject(Router);
+  private branchFacade = inject(BranchFacade);
 
   private _currentUser = signal<User | null>(null);
+
+  /** Canal Realtime de la fila propia de `users` (grant multi-sede en caliente, AC-E3). */
+  private realtimeChannel: RealtimeChannel | null = null;
+  private realtimeDbId: number | null = null;
 
   readonly currentUser = this._currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
@@ -41,6 +48,7 @@ export class AuthFacade {
       if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
         this.loadUserFromSession(session.user);
       } else if (event === 'SIGNED_OUT') {
+        this.disposeRealtime();
         this._currentUser.set(null);
       }
     });
@@ -60,7 +68,18 @@ export class AuthFacade {
   }): Promise<void> {
     // Si ya tenemos el usuario y el ID no ha cambiado, no recargamos
     if (this._currentUser()?.id === authUser.id) return;
+    this._currentUser.set(await this.buildUserFromDb(authUser));
+  }
 
+  /**
+   * Lee el perfil de `users` desde la BD y lo mapea al modelo de UI.
+   * Reutilizado por la carga inicial de sesión y por el refresh en caliente (Realtime).
+   */
+  private async buildUserFromDb(authUser: {
+    id: string;
+    email?: string;
+    user_metadata?: Record<string, unknown>;
+  }): Promise<User> {
     // Definimos la interfaz para la respuesta del JOIN con roles
     interface UserWithRole {
       id: number;
@@ -110,7 +129,7 @@ export class AuthFacade {
       roleName = roleMap[roleName];
     }
 
-    const user: User = {
+    return {
       id: authUser.id,
       dbId: dbUser?.id,
       name,
@@ -122,7 +141,54 @@ export class AuthFacade {
       canAccessBothBranches: dbUser?.can_access_both_branches ?? false,
       isActive: dbUser?.active,
     };
-    this._currentUser.set(user);
+  }
+
+  // ── Realtime: grant multi-sede en caliente (AC-E3, spec 0017) ──────────────
+
+  /**
+   * Suscribe Realtime a la fila propia de `users` para reflejar en vivo los cambios del
+   * grant `can_access_both_branches` (otorgar/revocar sin re-login). Idempotente: no
+   * re-suscribe si ya hay un canal para el mismo usuario. Llamar desde AppShell cuando
+   * el usuario está autenticado.
+   */
+  initializeRealtime(): void {
+    const dbId = this._currentUser()?.dbId;
+    if (!dbId || dbId === this.realtimeDbId) return;
+    this.disposeRealtime();
+    this.realtimeDbId = dbId;
+    this.realtimeChannel = this.supabase.client
+      .channel('user-self')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${dbId}` },
+        () => void this.refreshProfile(),
+      )
+      .subscribe();
+  }
+
+  /** Cancela la suscripción Realtime. Llamar al logout. Idempotente. */
+  disposeRealtime(): void {
+    if (this.realtimeChannel) {
+      this.supabase.client.removeChannel(this.realtimeChannel);
+      this.realtimeChannel = null;
+    }
+    this.realtimeDbId = null;
+  }
+
+  /**
+   * Re-lee el perfil del usuario actual (forzado, sin el guard de id) tras un cambio en su
+   * fila de `users`. Si el grant multi-sede fue revocado, resetea la sede activa para que el
+   * selector desaparezca y las facades vuelvan a anclar a la sede propia.
+   */
+  private async refreshProfile(): Promise<void> {
+    const cur = this._currentUser();
+    if (!cur) return;
+    const wasGranted = cur.canAccessBothBranches ?? false;
+    const updated = await this.buildUserFromDb({ id: cur.id, email: cur.email });
+    this._currentUser.set(updated);
+    if (wasGranted && !(updated.canAccessBothBranches ?? false)) {
+      this.branchFacade.reset();
+    }
   }
 
   async login(email: string, password: string): Promise<{ error: Error | null }> {
@@ -169,6 +235,7 @@ export class AuthFacade {
   }
 
   logout(): void {
+    this.disposeRealtime();
     this.supabase.signOut();
     this._currentUser.set(null);
     this.router.navigate(['/']);
