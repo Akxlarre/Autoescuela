@@ -1,9 +1,11 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { MODULE_COUNT } from '@core/utils/professional-modules';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { AlumnoStatus } from '@core/models/ui/alumno-table-row.model';
 import type {
   AlumnoProfesionalTableRow,
@@ -43,6 +45,7 @@ export class AdminAlumnosProfesionalFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly authFacade = inject(AuthFacade);
   private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
@@ -94,8 +97,22 @@ export class AdminAlumnosProfesionalFacade {
   }
 
   /** SWR Initialization */
+  /**
+   * Sede activa para el scope de queries (fix-027).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   async initialize(): Promise<void> {
-    const currentBranchId = this.branchFacade.selectedBranchId();
+    const currentBranchId = this.getActiveBranchId();
     this.setupRealtime();
 
     if (this._initialized && currentBranchId === this._lastBranchId) {
@@ -122,7 +139,7 @@ export class AdminAlumnosProfesionalFacade {
 
   private async refreshSilently(): Promise<void> {
     try {
-      const currentBranchId = this.branchFacade.selectedBranchId();
+      const currentBranchId = this.getActiveBranchId();
       await this.fetchData(currentBranchId);
       this._lastBranchId = currentBranchId;
     } catch {

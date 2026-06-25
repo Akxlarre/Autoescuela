@@ -2,6 +2,8 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -112,10 +114,11 @@ const LICENSE_STATUS_LABELS: Record<string, string> = {
 
 @Injectable({ providedIn: 'root' })
 export class InstructoresFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly authFacade = inject(AuthFacade);
 
   // ── Estado privado ─────────────────────────────────────────────────────────
   private readonly _instructores = signal<InstructorTableRow[]>([]);
@@ -180,8 +183,22 @@ private readonly supabase = inject(SupabaseService);
     this._selectedInstructor.set(inst);
   }
 
+  /**
+   * Sede activa para el scope de queries (fix-027).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   async initialize(): Promise<void> {
-    const currentBranchId = this.branchFacade.selectedBranchId();
+    const currentBranchId = this.getActiveBranchId();
     if (this._initialized && currentBranchId === this._lastBranchId) {
       this.refreshSilently();
       return;
@@ -205,7 +222,7 @@ private readonly supabase = inject(SupabaseService);
   }
 
   private async fetchData(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
 
     let query = this.supabase.client
       .from('instructors')
@@ -498,7 +515,8 @@ private readonly supabase = inject(SupabaseService);
         body: payload,
       });
 
-      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear instructor');
+      if (error)
+        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al crear instructor');
 
       // Verificar si la respuesta contiene un error
       if (data?.error) throw new Error(data.error);
@@ -508,7 +526,8 @@ private readonly supabase = inject(SupabaseService);
       await Promise.all([this.refreshSilently(), this.loadVehicles()]);
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear instructor';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear instructor';
       this.toast.error('Error', msg);
       return false;
     } finally {
@@ -544,7 +563,8 @@ private readonly supabase = inject(SupabaseService);
         },
       });
 
-      if (error) throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar instructor');
+      if (error)
+        throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar instructor');
       if (data?.error) throw new Error(data.error);
 
       this._vehiclesLoaded = false;
@@ -555,7 +575,10 @@ private readonly supabase = inject(SupabaseService);
       );
       return true;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar instructor';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al actualizar instructor';
       this.toast.error('Error', msg);
       return false;
     } finally {

@@ -1,9 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { calcAverage, getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   ArchivoAlumnoRow,
   ArchivoCursoOption,
@@ -29,6 +31,7 @@ const PCT_TEORIA_MIN = 75;
 export class ArchivoFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly authFacade = inject(AuthFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -172,8 +175,22 @@ export class ArchivoFacade {
     this._cursos.set(opts);
   }
 
+  /**
+   * Sede activa para el scope de queries (fix-027).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   private async fetchAlumnos(promotionCourseId: number): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
 
     // Step 1: Enrollments del curso
     let enrollmentQuery = this.supabase.client
