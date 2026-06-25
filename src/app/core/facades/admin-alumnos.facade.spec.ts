@@ -243,4 +243,47 @@ describe('AdminAlumnosFacade', () => {
       expect(eq).not.toHaveBeenCalled();
     });
   });
+
+  // ─── spec 0017 (T2.4): grant multi-sede de la secretaria ───────────────────
+  describe('grant multi-sede (spec 0017, AC1/AC2)', () => {
+    function mockStudentsCapturingEq(): { eq: any } {
+      const eq = vi.fn(() => builder);
+      const builder: any = {
+        select: vi.fn(() => builder),
+        neq: vi.fn(() => builder),
+        eq,
+        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      };
+      supabaseSpy.client.from = vi.fn(() => builder);
+      return { eq };
+    }
+
+    it('secretaria con grant: respeta el selector (sede elegida), no su sede propia', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({
+        role: 'secretaria',
+        branchId: 1,
+        canAccessBothBranches: true,
+      });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(2);
+      const { eq } = mockStudentsCapturingEq();
+
+      await facade.initialize();
+
+      expect(eq).toHaveBeenCalledWith('users.branch_id', 2);
+    });
+
+    it('secretaria con grant + "Todas" (null): NO aplica filtro de sede (como admin)', async () => {
+      authFacadeSpy.currentUser.mockReturnValue({
+        role: 'secretaria',
+        branchId: 1,
+        canAccessBothBranches: true,
+      });
+      branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+      const { eq } = mockStudentsCapturingEq();
+
+      await facade.initialize();
+
+      expect(eq).not.toHaveBeenCalled();
+    });
+  });
 });
