@@ -5,7 +5,9 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { AsistenciaClaseBContentComponent } from '@shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component';
 import { AsistenciaTeoriaDrawerComponent } from '../../admin/asistencia/asistencia-teoria-drawer.component';
 import { AgendarTeoriaDrawerComponent } from '../../admin/asistencia/agendar-teoria-drawer.component';
-import type { ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
+import { AdminIniciarClaseDrawerComponent } from '../../admin/asistencia/admin-iniciar-clase-drawer.component';
+import { AdminFinalizarClaseDrawerComponent } from '../../admin/asistencia/admin-finalizar-clase-drawer.component';
+import type { ClaseTeoricoRow, ClasePracticaRow } from '@core/models/ui/asistencia-clase-b.model';
 
 /**
  * SecretariaAsistenciaComponent — Smart component.
@@ -38,6 +40,8 @@ import type { ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
       (dateChange)="facade.setDate($event)"
       (refreshRequested)="onRefresh()"
       (scheduleNewClass)="openAgendarDrawer()"
+      (iniciarClase)="openIniciarClaseDrawer($event)"
+      (finalizarClase)="openFinalizarClaseDrawer($event)"
     />
   `,
 })
@@ -69,6 +73,24 @@ export class SecretariaAsistenciaComponent implements OnInit {
       AgendarTeoriaDrawerComponent,
       'Agendar nueva clase teórica',
       'calendar-plus',
+    );
+  }
+
+  protected openIniciarClaseDrawer(row: ClasePracticaRow): void {
+    this.facade.selectPractica(row);
+    this.layoutDrawer.open(
+      AdminIniciarClaseDrawerComponent,
+      `Iniciar Clase — ${row.alumnoName ?? 'Alumno'}`,
+      'play',
+    );
+  }
+
+  protected openFinalizarClaseDrawer(row: ClasePracticaRow): void {
+    this.facade.selectPractica(row);
+    this.layoutDrawer.open(
+      AdminFinalizarClaseDrawerComponent,
+      `Finalizar Clase — ${row.alumnoName ?? 'Alumno'}`,
+      'flag',
     );
   }
 

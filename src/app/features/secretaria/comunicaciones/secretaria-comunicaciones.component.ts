@@ -1,30 +1,37 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { IconComponent } from '@shared/components/icon/icon.component';
+import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 
 @Component({
   selector: 'app-secretaria-comunicaciones',
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [BentoGridLayoutDirective, IconComponent, SectionHeroComponent],
   template: `
-    <div class="p-6">
-      <div class="flex items-center gap-3 mb-6">
-        <div>
-          <h1 class="text-2xl font-semibold text-text-primary">Comunicaciones</h1>
-          <p class="text-sm text-text-muted mt-0.5">Mockup: /secretaria/comunicaciones</p>
-        </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning"
-          
-        >
-          PLANO
-        </span>
-      </div>
+    <div class="bento-grid" appBentoGridLayout>
+      <app-section-hero
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="false"
+        title="Comunicaciones"
+        subtitle="Mensajería y avisos para alumnos e instructores"
+        [actions]="[]"
+      />
+
       <div
-        class="card p-8 flex flex-col items-center justify-center gap-2 text-center border-dashed"
-        
+        class="bento-banner card flex flex-col items-center justify-center gap-4 py-16 text-center"
       >
-        <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
-        <code class="text-xs text-text-muted">
-          mock/web/src/pages/secretaria/comunicaciones.astro
-        </code>
+        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-subtle">
+          <app-icon name="message-square" [size]="28" color="var(--text-muted)" />
+        </div>
+        <div class="space-y-1">
+          <p class="font-semibold text-primary">Próximamente</p>
+          <p class="text-sm text-secondary max-w-xs">
+            El módulo de comunicaciones está en desarrollo y estará disponible en una próxima
+            actualización.
+          </p>
+        </div>
       </div>
     </div>
   `,
