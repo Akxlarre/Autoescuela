@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { FlotaFacade } from './flota.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from './auth.facade';
 
 describe('FlotaFacade', () => {
   let service: FlotaFacade;
@@ -9,9 +10,9 @@ describe('FlotaFacade', () => {
   beforeEach(() => {
     supabaseMock = {
       client: {
-        from: (window as any).vi.fn().mockReturnValue({
-          select: (window as any).vi.fn().mockReturnValue({
-            order: (window as any).vi.fn().mockResolvedValue({ data: [], error: null }),
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
         }),
       },
@@ -21,6 +22,7 @@ describe('FlotaFacade', () => {
       providers: [
         FlotaFacade,
         { provide: SupabaseService, useValue: supabaseMock },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
       ],
     });
 
@@ -39,7 +41,7 @@ describe('FlotaFacade', () => {
   it('selectVehicle should update selectedVehicleId signal', () => {
     service.selectVehicle(123);
     expect(service.selectedVehicleId()).toBe(123);
-    
+
     service.selectVehicle(null);
     expect(service.selectedVehicleId()).toBeNull();
   });

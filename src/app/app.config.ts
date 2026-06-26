@@ -74,6 +74,7 @@ import {
   // ── User & People ──
   User,
   UserCheck,
+  UserCog,
   UserMinus,
   UserPen,
   UserPlus,
@@ -342,6 +343,7 @@ export const appConfig: ApplicationConfig = {
         // ── User & People ──
         User,
         UserCheck,
+        UserCog,
         UserMinus,
         UserPen,
         UserPlus,

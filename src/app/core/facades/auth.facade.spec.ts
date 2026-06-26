@@ -141,7 +141,9 @@ describe('AuthFacade', () => {
     } as any);
     const result = await service.login('user@example.com', 'wrong');
     expect(result.error).toBeInstanceOf(Error);
-    expect(result.error?.message).toBe('Invalid credentials');
+    expect(result.error?.message).toBe(
+      'Error de autenticación. Por favor, verifica tus datos e intenta de nuevo.',
+    );
   });
 
   it('resetPasswordForEmail() should call supabase.resetPasswordForEmail', async () => {

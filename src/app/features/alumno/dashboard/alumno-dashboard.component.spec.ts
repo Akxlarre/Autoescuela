@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { signal } from '@angular/core';
 import { AlumnoDashboardComponent } from './alumno-dashboard.component';
 import { StudentHomeFacade } from '@core/facades/student-home.facade';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { StudentHomeSnapshot } from '@core/models/ui/student-home.model';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -167,10 +168,9 @@ describe('AlumnoDashboardComponent — defaults (Clase B, sin faltas)', () => {
     expect(component.semaphoreLabel()).toBe('Al día');
   });
 
-  it('heroActions incluye "Agendar clase" como acción primaria', () => {
+  it('heroActions no tiene acciones cuando cert está bloqueado', () => {
     const actions = component.heroActions();
-    const agendar = actions.find((a) => a.id === 'agendar');
-    expect(agendar?.primary).toBe(true);
+    expect(actions.length).toBe(0);
   });
 
   it('heroActions NO incluye "Descargar certificado" cuando cert está bloqueado', () => {

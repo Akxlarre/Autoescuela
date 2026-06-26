@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { AuditoriaFacade } from './auditoria.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { AuthFacade } from './auth.facade';
 
 describe('AuditoriaFacade', () => {
   let facade: AuditoriaFacade;
@@ -17,20 +18,21 @@ describe('AuditoriaFacade', () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             order: vi.fn().mockReturnValue({
-               range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 })
+              range: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
             }),
-            not: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 })
-          })
-        })
-      })
+            not: vi.fn().mockResolvedValue({ data: [], error: null, count: 0 }),
+          }),
+        }),
+      }),
     };
 
     TestBed.configureTestingModule({
       providers: [
         AuditoriaFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
-        { provide: ToastService, useValue: toastSpy }
-      ]
+        { provide: ToastService, useValue: toastSpy },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+      ],
     });
 
     facade = TestBed.inject(AuditoriaFacade);

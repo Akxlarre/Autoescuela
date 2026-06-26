@@ -3,6 +3,7 @@ import { AsistenciaProfesionalFacade } from './asistencia-profesional.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { AuthFacade } from './auth.facade';
 
 describe('AsistenciaProfesionalFacade', () => {
   let facade: AsistenciaProfesionalFacade;
@@ -20,21 +21,21 @@ describe('AsistenciaProfesionalFacade', () => {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({
           in: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: [], error: null })
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           eq: vi.fn().mockReturnValue({
             order: vi.fn().mockResolvedValue({ data: [], error: null }),
-            not: vi.fn().mockResolvedValue({ data: [], error: null })
-          })
+            not: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
         }),
         update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null })
+          eq: vi.fn().mockResolvedValue({ error: null }),
         }),
         insert: vi.fn().mockResolvedValue({ error: null }),
         delete: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null })
-        })
-      })
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      }),
     };
 
     TestBed.configureTestingModule({
@@ -42,8 +43,9 @@ describe('AsistenciaProfesionalFacade', () => {
         AsistenciaProfesionalFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: ToastService, useValue: toastSpy },
-        { provide: ConfirmModalService, useValue: confirmSpy }
-      ]
+        { provide: ConfirmModalService, useValue: confirmSpy },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+      ],
     });
 
     facade = TestBed.inject(AsistenciaProfesionalFacade);

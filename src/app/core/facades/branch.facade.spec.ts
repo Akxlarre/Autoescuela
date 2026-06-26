@@ -3,8 +3,8 @@ import { BranchFacade } from './branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 
 const MOCK_BRANCHES = [
-  { id: 1, name: 'Sede Central', slug: 'central' },
-  { id: 2, name: 'Sede Norte', slug: 'norte' },
+  { id: 1, name: 'Sede Central', slug: 'central', hasProfessional: false },
+  { id: 2, name: 'Sede Norte', slug: 'norte', hasProfessional: false },
 ];
 
 function buildSupabaseMock(response: { data: unknown; error: unknown }) {
@@ -74,7 +74,7 @@ describe('BranchFacade', () => {
 
       await facade.loadBranches();
 
-      expect(facade.error()).toBe('DB error');
+      expect(facade.error()).toBe('Ha ocurrido un error inesperado. Por favor, intenta de nuevo.');
       expect(facade.branches()).toEqual([]);
     });
 

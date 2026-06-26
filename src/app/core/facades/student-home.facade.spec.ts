@@ -2,7 +2,18 @@ import { TestBed } from '@angular/core/testing';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StudentHomeFacade } from './student-home.facade';
 import { AuthFacade } from './auth.facade';
+import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { ToastService } from '@core/services/ui/toast.service';
+
+const toastMock = { success: vi.fn(), error: vi.fn(), warn: vi.fn() };
+const contextMock = {
+  initialize: vi.fn().mockResolvedValue(undefined),
+  activeEnrollmentId: vi.fn().mockReturnValue(42),
+  enrollments: vi.fn().mockReturnValue([]),
+  setActive: vi.fn(),
+  reset: vi.fn(),
+};
 
 // ── Helpers de mock ───────────────────────────────────────────────────────────
 
@@ -106,6 +117,8 @@ describe('StudentHomeFacade', () => {
           },
         },
         { provide: SupabaseService, useValue: supabaseMock },
+        { provide: ToastService, useValue: toastMock },
+        { provide: StudentEnrollmentContextFacade, useValue: contextMock },
       ],
     });
 
@@ -183,6 +196,11 @@ describe('StudentHomeFacade — sin enrollment activo', () => {
           },
         },
         { provide: SupabaseService, useValue: supabaseMock },
+        { provide: ToastService, useValue: toastMock },
+        {
+          provide: StudentEnrollmentContextFacade,
+          useValue: { ...contextMock, activeEnrollmentId: vi.fn().mockReturnValue(null) },
+        },
       ],
     });
 
@@ -213,6 +231,8 @@ describe('StudentHomeFacade — error handling', () => {
         StudentHomeFacade,
         { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 1 }) } },
         { provide: SupabaseService, useValue: errorMock },
+        { provide: ToastService, useValue: toastMock },
+        { provide: StudentEnrollmentContextFacade, useValue: contextMock },
       ],
     });
 

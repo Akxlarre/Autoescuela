@@ -5,6 +5,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { AuthFacade } from './auth.facade';
 
 describe('DmsFacade', () => {
   let facade: DmsFacade;
@@ -43,12 +44,10 @@ describe('DmsFacade', () => {
       storage: {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
-          createSignedUrl: vi
-            .fn()
-            .mockResolvedValue({
-              data: { signedUrl: 'https://example.com/signed/doc' },
-              error: null,
-            }),
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: { signedUrl: 'https://example.com/signed/doc' },
+            error: null,
+          }),
         }),
       },
       auth: {
@@ -65,6 +64,7 @@ describe('DmsFacade', () => {
         { provide: ConfirmModalService, useValue: confirmSpy },
         { provide: ToastService, useValue: toastSpy },
         { provide: DmsViewerService, useValue: viewerSpy },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
       ],
     });
 
@@ -94,14 +94,17 @@ describe('DmsFacade', () => {
       expect(result).toBe(true);
     });
 
-    it('should call dmsViewer.openByUrl on openDocument', () => {
-      facade.openDocument('http://test.com', 'File');
-      expect(viewerSpy.openByUrl).toHaveBeenCalledWith('http://test.com', 'File');
+    it('should call dmsViewer.openByUrl on openDocument', async () => {
+      await facade.openDocument('storage/path/doc.pdf', 'File');
+      expect(viewerSpy.openByUrl).toHaveBeenCalledWith('https://example.com/signed/doc', 'File');
     });
 
-    it('should use default filename in openDocument if not provided', () => {
-      facade.openDocument('http://test.com');
-      expect(viewerSpy.openByUrl).toHaveBeenCalledWith('http://test.com', 'Documento');
+    it('should use default filename in openDocument if not provided', async () => {
+      await facade.openDocument('storage/path/doc.pdf');
+      expect(viewerSpy.openByUrl).toHaveBeenCalledWith(
+        'https://example.com/signed/doc',
+        'Documento',
+      );
     });
 
     it('should call layoutDrawer.close on closeDrawer', () => {

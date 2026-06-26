@@ -69,7 +69,6 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `AbsenceEvidence` | `dto` | `src/app/core/models/dto/absence-evidence.model.ts` |
 | `AlertConfig` | `dto` | `src/app/core/models/dto/alert-config.model.ts` |
 | `AuditLog` | `dto` | `src/app/core/models/dto/audit-log.model.ts` |
-| `BiometricRecord` | `dto` | `src/app/core/models/dto/biometric-record.model.ts` |
 | `Branch` | `dto` | `src/app/core/models/dto/branch.model.ts` |
 | `CashClosing` | `dto` | `src/app/core/models/dto/cash-closing.model.ts` |
 | `CertificateBatch` | `dto` | `src/app/core/models/dto/certificate-batch.model.ts` |
