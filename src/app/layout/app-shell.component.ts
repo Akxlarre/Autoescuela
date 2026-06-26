@@ -8,7 +8,7 @@ import {
   afterNextRender,
   Injector,
 } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 
 import { LayoutService } from '@core/services/ui/layout.service';
 import { SearchPanelFacadeService } from '@core/services/ui/search-panel.service';
@@ -199,6 +199,7 @@ export class AppShellComponent {
   private readonly branchFacade = inject(BranchFacade);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly injector = inject(Injector);
+  private readonly router = inject(Router);
 
   private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
 
@@ -259,11 +260,12 @@ export class AppShellComponent {
     // Inicializar notificaciones persistentes + Realtime
     this.notificationsFacade.initialize();
 
-    // Dispose al logout
+    // Dispose al logout o expiración de sesión; redirige al login en ambos casos
     effect(() => {
       if (!this.auth.isAuthenticated()) {
         this.notificationsFacade.dispose();
         this.auth.disposeRealtime();
+        void this.router.navigate(['/login']);
       }
     });
 
