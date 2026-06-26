@@ -6,6 +6,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
 import { calcAverage } from '@core/utils/professional-modules';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   CertificacionProfesionalAlumnoRow,
   CertificacionProfesionalKpis,
@@ -296,7 +297,7 @@ export class CertificacionProfesionalFacade {
         data: { session },
       } = await this.supabase.client.auth.getSession();
       const token = session?.access_token ?? '';
-      const branchId = this.branchFacade.selectedBranchId();
+      const branchId = this.getActiveBranchId();
       const functionsUrl = (this.supabase.client.functions as any).url as string;
       const anonKey = (this.supabase.client as any).supabaseKey as string;
 
@@ -396,9 +397,23 @@ export class CertificacionProfesionalFacade {
    * Admin: elegible=true siempre (sin chequeo de asistencia ni pago).
    * Secretaria: elegible = teoria >= 75% && pago correcto.
    */
+  /**
+   * Sede activa para el scope de queries (fix-027).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   private async fetchAlumnos(promotionCourseId: number): Promise<void> {
     const token = ++this._alumnosFetchToken;
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
     const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
     // Promotion info from already-loaded _promociones (no extra query)

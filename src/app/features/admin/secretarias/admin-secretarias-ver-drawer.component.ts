@@ -41,17 +41,12 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             >
               <div
                 class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
-                
               >
                 {{ sec.initials }}
               </div>
               <div class="text-center">
                 <p class="text-base font-semibold text-text-primary">{{ sec.nombre }}</p>
-                <a
-                  [href]="'mailto:' + sec.email"
-                  class="text-sm text-brand no-underline"
-                  
-                >
+                <a [href]="'mailto:' + sec.email" class="text-sm text-brand no-underline">
                   {{ sec.email }}
                 </a>
               </div>
@@ -60,7 +55,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               @if (sec.estado === 'activa') {
                 <span
                   class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
-                  
                 >
                   <app-icon name="check-circle" [size]="12" />
                   Activa
@@ -68,7 +62,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               } @else {
                 <span
                   class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
-                  
                 >
                   <app-icon name="circle" [size]="12" />
                   Inactiva
@@ -96,6 +89,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   variant="surface"
                   [compact]="true"
                   icon="map-pin"
+                />
+                <app-stat-box
+                  label="Acceso a sedes"
+                  [value]="sec.canAccessBothBranches ? 'Todas las sedes' : 'Solo su sede'"
+                  variant="surface"
+                  [compact]="true"
+                  icon="building-2"
                 />
                 @if (sec.phone) {
                   <app-stat-box
@@ -137,17 +137,12 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             </div>
 
             <!-- Rol y permisos -->
-            <div
-              class="rounded-lg p-4 mb-6 bg-brand/6 border border-brand/20"
-              
-            >
+            <div class="rounded-lg p-4 mb-6 bg-brand/6 border border-brand/20">
               <div class="flex items-center gap-2 mb-2">
                 <app-icon name="shield-check" [size]="15" color="var(--ds-brand)" />
-                <span class="text-sm font-semibold text-brand" 
-                  >Rol: Secretaria</span
-                >
+                <span class="text-sm font-semibold text-brand">Rol: Secretaria</span>
               </div>
-              <p class="text-xs leading-relaxed text-brand" >
+              <p class="text-xs leading-relaxed text-brand">
                 Gestión de matrículas, pagos, agenda y alumnos.
               </p>
             </div>

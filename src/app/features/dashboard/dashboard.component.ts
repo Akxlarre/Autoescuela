@@ -111,6 +111,7 @@ import { to24hTime } from '@core/utils/date.utils';
         appScrollReveal
         data-row-span="2"
         [classes]="liveClasses()"
+        [loading]="loading()"
         (actionClick)="handleLiveClassAction($event)"
       />
 

@@ -5,6 +5,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { formatRut } from '@core/utils/rut.utils';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
@@ -275,10 +276,24 @@ export class CertificacionClaseBFacade {
     }
   }
 
+  /**
+   * Sede activa para el scope de queries (fix-027).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   async exportar(): Promise<void> {
     this._isExporting.set(true);
     try {
-      const branchId = this.branchFacade.selectedBranchId();
+      const branchId = this.getActiveBranchId();
       const body: Record<string, unknown> = {};
       if (branchId !== null) body['branch_id'] = branchId;
 
@@ -342,7 +357,7 @@ export class CertificacionClaseBFacade {
   }
 
   private async fetchAlumnos(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
     const isAdmin = this.authFacade.currentUser()?.role === 'admin';
 
     // Step 1: Enrollments para certificado.

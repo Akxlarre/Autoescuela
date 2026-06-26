@@ -263,6 +263,7 @@ export class AppShellComponent {
     effect(() => {
       if (!this.auth.isAuthenticated()) {
         this.notificationsFacade.dispose();
+        this.auth.disposeRealtime();
       }
     });
 
@@ -271,6 +272,14 @@ export class AppShellComponent {
       const role = this.auth.currentUser()?.role;
       if (role === 'admin' || role === 'secretaria') {
         this.branchFacade.loadBranches();
+      }
+    });
+
+    // Realtime de la fila propia de `users` → grant multi-sede en caliente (AC-E3, spec 0017).
+    // Idempotente: AuthFacade no re-suscribe si ya hay canal para el mismo usuario.
+    effect(() => {
+      if (this.auth.currentUser()?.dbId) {
+        this.auth.initializeRealtime();
       }
     });
   }

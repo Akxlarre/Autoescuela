@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { toISODate, getChileDateTimeRange } from '@core/utils/date.utils';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   IngresoRow,
   EgresoRow,
@@ -166,8 +167,12 @@ export class CuadraturaFacade {
 
   private getActiveBranchId(): number | null {
     const user = this.auth.currentUser();
-    if (user?.role === 'admin') return this.branchFacade.selectedBranchId();
-    return user?.branchId ?? null;
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
   }
 
   async initialize(): Promise<void> {

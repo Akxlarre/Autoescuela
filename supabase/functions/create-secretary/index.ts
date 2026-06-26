@@ -13,6 +13,7 @@
 //   email             : string  — correo de acceso
 //   telefono          : string  — teléfono de contacto
 //   branchId          : number  — ID de la sede asignada
+//   canAccessBothBranches : boolean (opcional) — grant multi-sede (spec 0017); default false
 //
 // Flujo:
 //   1. Valida que el email no exista ya en auth.users
@@ -86,8 +87,16 @@ Deno.serve(async (req: Request) => {
     );
 
     // ── Leer body ─────────────────────────────────────────────────────────────
-    const { firstNames, paternalLastName, maternalLastName, rut, email, telefono, branchId } =
-      await req.json();
+    const {
+      firstNames,
+      paternalLastName,
+      maternalLastName,
+      rut,
+      email,
+      telefono,
+      branchId,
+      canAccessBothBranches,
+    } = await req.json();
 
     if (!firstNames || !paternalLastName || !maternalLastName || !rut || !email || !branchId) {
       return errorResponse(
@@ -142,6 +151,7 @@ Deno.serve(async (req: Request) => {
       phone: telefono || null,
       role_id: roleRow.id,
       branch_id: branchId,
+      can_access_both_branches: !!canAccessBothBranches,
       active: true,
       first_login: true,
     });

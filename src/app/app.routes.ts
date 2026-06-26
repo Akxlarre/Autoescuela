@@ -5,6 +5,7 @@ import { guestGuard } from '@core/guards/guest.guard';
 import { hasRoleGuard } from '@core/guards/role.guard';
 import { roleRedirectGuard } from '@core/guards/role-redirect.guard';
 import { enrollmentDraftGuard } from '@core/guards/enrollment-draft.guard';
+import { professionalBranchGuard } from '@core/guards/professional-branch.guard';
 
 /**
  * Rutas de la aplicación, estructuradas por portal de rol.
@@ -386,6 +387,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/alumnos',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/alumnos-profesional/secretaria-alumnos-profesional.component').then(
                 (m) => m.SecretariaAlumnosProfesionalComponent,
@@ -393,6 +395,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/pre-inscritos',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/alumnos-pre-inscritos/secretaria-alumnos-pre-inscritos.component').then(
                 (m) => m.SecretariaAlumnosPreInscritosComponent,
@@ -421,6 +424,7 @@ export const routes: Routes = [
           },
           {
             path: 'asistencia/profesional',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/asistencia-profesional/secretaria-asistencia-profesional.component').then(
                 (m) => m.SecretariaAsistenciaProfesionalComponent,
@@ -519,6 +523,7 @@ export const routes: Routes = [
 
           {
             path: 'profesional/relatores',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-relatores/secretaria-profesional-relatores.component').then(
                 (m) => m.SecretariaProfesionalRelatoresComponent,
@@ -526,6 +531,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/promociones',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-promociones/secretaria-profesional-promociones.component').then(
                 (m) => m.SecretariaProfesionalPromocionesComponent,
@@ -533,6 +539,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/asistencia',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-asistencia/secretaria-profesional-asistencia.component').then(
                 (m) => m.SecretariaProfesionalAsistenciaComponent,
@@ -540,6 +547,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/notas',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-notas/secretaria-profesional-notas.component').then(
                 (m) => m.SecretariaProfesionalNotasComponent,
@@ -547,6 +555,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/certificados',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-certificados/secretaria-profesional-certificados.component').then(
                 (m) => m.SecretariaProfesionalCertificadosComponent,
@@ -554,6 +563,7 @@ export const routes: Routes = [
           },
           {
             path: 'profesional/archivo',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/profesional-archivo/secretaria-profesional-archivo.component').then(
                 (m) => m.SecretariaProfesionalArchivoComponent,
@@ -575,6 +585,7 @@ export const routes: Routes = [
           },
           {
             path: 'ex-alumnos-profesional',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/ex-alumnos-profesional/secretaria-ex-alumnos-profesional.component').then(
                 (m) => m.SecretariaExAlumnosProfesionalComponent,
@@ -589,6 +600,7 @@ export const routes: Routes = [
           },
           {
             path: 'libro-de-clases',
+            canActivate: [professionalBranchGuard],
             loadComponent: () =>
               import('./features/secretaria/libro-de-clases/secretaria-libro-de-clases.component').then(
                 (m) => m.SecretariaLibroDeClasesComponent,

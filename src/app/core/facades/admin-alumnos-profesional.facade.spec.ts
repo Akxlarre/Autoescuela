@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { AdminAlumnosProfesionalFacade } from './admin-alumnos-profesional.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
@@ -9,6 +10,7 @@ describe('AdminAlumnosProfesionalFacade', () => {
   let facade: AdminAlumnosProfesionalFacade;
   let supabaseSpy: any;
   let branchFacadeSpy: any;
+  let authFacadeSpy: any;
   let builders: Record<string, any>;
 
   /** Builder thenable: cualquier método encadena, `await` resuelve {data,error}. */
@@ -64,6 +66,8 @@ describe('AdminAlumnosProfesionalFacade', () => {
 
   beforeEach(() => {
     branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
+    // Default: admin con "Todas las escuelas" → sin filtro de sede.
+    authFacadeSpy = { currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: null }) };
     supabaseSpy = {
       client: {
         from: vi.fn(),
@@ -78,6 +82,7 @@ describe('AdminAlumnosProfesionalFacade', () => {
         AdminAlumnosProfesionalFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: BranchFacade, useValue: branchFacadeSpy },
+        { provide: AuthFacade, useValue: authFacadeSpy },
         { provide: ToastService, useValue: { success: vi.fn(), error: vi.fn() } },
         {
           provide: ErrorSanitizerService,
@@ -154,5 +159,22 @@ describe('AdminAlumnosProfesionalFacade', () => {
     mockTables({ enrollments: [] });
     await facade.initialize();
     expect(builders['enrollments'].eq).toHaveBeenCalledWith('branch_id', 2);
+  });
+
+  // ─── fix-027: aislamiento por sede de la secretaria ────────────────────────
+  it('secretaria: filtra por su branchId aunque el selector (admin) sea null (fix-027)', async () => {
+    authFacadeSpy.currentUser.mockReturnValue({ role: 'secretaria', branchId: 1 });
+    branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+    mockTables({ enrollments: [] });
+    await facade.initialize();
+    expect(builders['enrollments'].eq).toHaveBeenCalledWith('branch_id', 1);
+  });
+
+  it('secretaria sin sede (misconfig): filtra por sentinel → ninguna fila (fix-027)', async () => {
+    authFacadeSpy.currentUser.mockReturnValue({ role: 'secretaria', branchId: null });
+    branchFacadeSpy.selectedBranchId.mockReturnValue(null);
+    mockTables({ enrollments: [] });
+    await facade.initialize();
+    expect(builders['enrollments'].eq).toHaveBeenCalledWith('branch_id', -1);
   });
 });

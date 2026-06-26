@@ -1,8 +1,10 @@
 ﻿import { Injectable, inject, signal, computed } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
   AlumnoTableRow,
@@ -74,6 +76,7 @@ export class AdminAlumnosFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly authFacade = inject(AuthFacade);
   private readonly toast = inject(ToastService);
 
   // ── 1. ESTADO PRIVADO ────────────────────────────────────────────────────
@@ -134,10 +137,24 @@ export class AdminAlumnosFacade {
   }
 
   /**
+   * Sede activa para el scope de queries (fix-027).
+   * admin → respeta el selector; secretaria → su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
+  /**
    * SWR Initialization
    */
   async initialize(): Promise<void> {
-    const currentBranchId = this.branchFacade.selectedBranchId();
+    const currentBranchId = this.getActiveBranchId();
     this.setupRealtime();
 
     if (this._initialized && currentBranchId === this._lastBranchId) {
@@ -160,7 +177,7 @@ export class AdminAlumnosFacade {
 
   private async refreshSilently(): Promise<void> {
     try {
-      const currentBranchId = this.branchFacade.selectedBranchId();
+      const currentBranchId = this.getActiveBranchId();
       await this.fetchAlumnosData(currentBranchId);
       this._lastBranchId = currentBranchId;
     } catch {
@@ -214,7 +231,7 @@ export class AdminAlumnosFacade {
       const { data, error } = await this.supabase.client.functions.invoke('export-students', {
         body: {
           format: req.format,
-          branch_id: this.branchFacade.selectedBranchId(),
+          branch_id: this.getActiveBranchId(),
           search: req.search,
           curso: req.curso,
           estado: req.estado,

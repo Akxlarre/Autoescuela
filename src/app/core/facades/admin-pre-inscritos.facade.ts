@@ -3,6 +3,7 @@ import { normalizePhoto } from '@core/utils/image.utils';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { ProfessionalPreRegistration } from '@core/models/dto/professional-pre-registration.model';
 import type { ProfessionalPromotion } from '@core/models/dto/professional-promotion.model';
 import type { PromotionCourse } from '@core/models/dto/promotion-course.model';
@@ -97,9 +98,19 @@ export class AdminPreInscritosFacade {
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────
 
+  private getActiveBranchId(): number | null {
+    const user = this.authFacade.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   /** SWR: primer acceso con skeleton, re-visitas con refresh silencioso. */
   async initialize(): Promise<void> {
-    const branchId = this.branchFacade.selectedBranchId();
+    const branchId = this.getActiveBranchId();
 
     if (this._initialized && branchId === this._lastBranchId) {
       void this.refreshSilently();
@@ -382,7 +393,7 @@ export class AdminPreInscritosFacade {
     if (this._promocionesCargadas()) return;
     this._promocionesCargando.set(true);
     try {
-      const branchId = this.branchFacade.selectedBranchId();
+      const branchId = this.getActiveBranchId();
 
       let query = this.supabase.client
         .from('professional_promotions')
@@ -463,7 +474,7 @@ export class AdminPreInscritosFacade {
 
   private async refreshSilently(): Promise<void> {
     try {
-      await this.fetchData(this.branchFacade.selectedBranchId());
+      await this.fetchData(this.getActiveBranchId());
     } catch {
       // Swallowed — datos stale siguen visibles
     }

@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 
 describe('CertificacionProfesionalFacade', () => {
   let facade: CertificacionProfesionalFacade;
@@ -11,6 +12,7 @@ describe('CertificacionProfesionalFacade', () => {
   let toastSpy: any;
   let dmsViewerSpy: any;
   let branchFacadeSpy: any;
+  let authFacadeSpy: any;
 
   const makeQuery = (resolvedValue: any) => ({
     select: vi.fn().mockReturnThis(),
@@ -32,18 +34,17 @@ describe('CertificacionProfesionalFacade', () => {
           }),
         },
         functions: {
-          invoke: vi
-            .fn()
-            .mockResolvedValue({
-              data: { pdfUrl: 'https://pdf', pdfPath: 'path/file.pdf' },
-              error: null,
-            }),
+          invoke: vi.fn().mockResolvedValue({
+            data: { pdfUrl: 'https://pdf', pdfPath: 'path/file.pdf' },
+            error: null,
+          }),
         },
       },
     };
     toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
     dmsViewerSpy = { openByUrl: vi.fn() };
     branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
+    authFacadeSpy = { currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: null }) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -52,6 +53,7 @@ describe('CertificacionProfesionalFacade', () => {
         { provide: ToastService, useValue: toastSpy },
         { provide: DmsViewerService, useValue: dmsViewerSpy },
         { provide: BranchFacade, useValue: branchFacadeSpy },
+        { provide: AuthFacade, useValue: authFacadeSpy },
       ],
     });
 
@@ -187,20 +189,25 @@ describe('CertificacionProfesionalFacade', () => {
     });
   });
 
-  describe('acciones de placeholder', () => {
-    it('enviarEmail muestra toast info', async () => {
+  // Antes "acciones de placeholder": estos métodos ya son implementaciones reales
+  // (no muestran toast.info). Actualizado en hotfix-016.
+  describe('acciones reales', () => {
+    it('enviarEmail invoca la Edge Function y muestra toast de éxito', async () => {
       await facade.enviarEmail(1);
-      expect(toastSpy.info).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith('send-certificate-email', {
+        body: { enrollment_id: 1, type: 'professional' },
+      });
+      expect(toastSpy.success).toHaveBeenCalled();
     });
 
-    it('generarPendientes muestra toast info', async () => {
+    it('generarPendientes sin elegibles no invoca generación', async () => {
       await facade.generarPendientes();
-      expect(toastSpy.info).toHaveBeenCalled();
+      expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
     });
 
-    it('exportar muestra toast info', async () => {
+    it('exportar siempre restablece isExporting al terminar', async () => {
       await facade.exportar();
-      expect(toastSpy.info).toHaveBeenCalled();
+      expect(facade.isExporting()).toBe(false);
     });
   });
 });

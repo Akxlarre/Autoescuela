@@ -9,6 +9,8 @@ export interface User {
   initials: string;
   firstLogin?: boolean;
   branchId?: number | null;
+  /** RF-013 / spec 0017: grant que permite a una secretaria ver todas las sedes (como admin). */
+  canAccessBothBranches?: boolean;
   isActive?: boolean;
   avatarUrl?: string;
 }

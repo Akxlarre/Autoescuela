@@ -1,6 +1,7 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { FixedExpense } from '@core/models/dto/fixed-expense.model';
 import type {
   FiltrosReporte,
@@ -23,8 +24,8 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class ReportesContablesFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -67,16 +68,20 @@ private readonly supabase = inject(SupabaseService);
    */
   private readonly _effectiveBranchId = computed<number | null>(() => {
     const user = this.authFacade.currentUser();
-    if (!user) return null;
-    if (user.role === 'secretaria') return user.branchId ?? null;
-    return this.branchFacade.selectedBranchId();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
   });
 
   /** Etiqueta de escuela para el banner del reporte. */
   private readonly _escuelaLabel = computed<string>(() => {
     const user = this.authFacade.currentUser();
     if (!user) return '';
-    if (user.role === 'secretaria') {
+    // Secretaria SIN grant → su sede fija. Con grant (o admin) → la sede del selector (hotfix-017).
+    if (user.role === 'secretaria' && !user.canAccessBothBranches) {
       const branchId = user.branchId;
       const branch = this.branchFacade.branches().find((b) => b.id === branchId);
       return branch?.name ?? 'Mi escuela';
@@ -240,7 +245,10 @@ private readonly supabase = inject(SupabaseService);
       this._reporte.set(buildReporte(payments, allExpenses, this._escuelaLabel(), branchId));
       this._error.set(null);
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar el reporte contable.';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar el reporte contable.';
       this._error.set(msg);
       this.toast.error('Error en reportes', msg);
     }

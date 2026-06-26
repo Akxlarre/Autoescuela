@@ -38,12 +38,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
       <ng-template #content>
-        <div
-          class="flex items-start gap-3 rounded-lg p-3 mb-5 bg-brand/6 border border-brand/20"
-          
-        >
+        <div class="flex items-start gap-3 rounded-lg p-3 mb-5 bg-brand/6 border border-brand/20">
           <app-icon name="clipboard-list" [size]="16" color="var(--ds-brand)" />
-          <p class="text-xs leading-relaxed text-brand" >
+          <p class="text-xs leading-relaxed text-brand">
             El rol de <strong>secretaria</strong> se asigna automáticamente. Tendrá acceso a gestión
             de matrículas, pagos, agenda y alumnos.
           </p>
@@ -206,6 +203,37 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               <span class="field-error">Selecciona una sede.</span>
             }
           </div>
+
+          <!-- Acceso a sedes — grant multi-sede (spec 0017) -->
+          <div class="flex flex-col gap-1.5">
+            <label class="field-label">Acceso a sedes</label>
+            <div class="flex items-center gap-3">
+              <button
+                class="estado-btn"
+                [class.estado-btn--inactive]="!verTodasLasSedes()"
+                (click)="verTodasLasSedes.set(false)"
+                data-llm-action="toggle-secretary-all-branches-grant"
+              >
+                <app-icon name="map-pin" [size]="14" />
+                Solo su sede
+              </button>
+              <button
+                class="estado-btn"
+                [class.estado-btn--grant]="verTodasLasSedes()"
+                (click)="verTodasLasSedes.set(true)"
+                data-llm-action="toggle-secretary-all-branches-grant"
+              >
+                <app-icon name="building-2" [size]="14" />
+                Todas las sedes
+              </button>
+            </div>
+            @if (verTodasLasSedes()) {
+              <p class="text-xs text-text-muted">
+                Podrá ver y operar en todas las sedes desde el selector del encabezado, igual que un
+                administrador.
+              </p>
+            }
+          </div>
         </div>
 
         <!-- Acciones -->
@@ -292,6 +320,34 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
       font-size: 12px;
       color: var(--state-error, #ef4444);
     }
+
+    .estado-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 0;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-default);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: var(--text-sm);
+      font-family: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--duration-fast);
+    }
+    .estado-btn--inactive {
+      border-color: var(--border-strong, var(--text-muted));
+      background: var(--bg-elevated);
+      color: var(--text-secondary);
+    }
+    .estado-btn--grant {
+      border-color: var(--ds-brand);
+      background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
+      color: var(--ds-brand);
+    }
   `,
 })
 export class AdminSecretariasCrearDrawerComponent {
@@ -307,6 +363,7 @@ export class AdminSecretariasCrearDrawerComponent {
   protected readonly email = signal('');
   protected readonly telefono = signal('');
   protected readonly sedeId = signal<number | null>(null);
+  protected readonly verTodasLasSedes = signal(false);
 
   // ── Touched ────────────────────────────────────────────────────────────────
   protected readonly nombresTouched = signal(false);
@@ -396,6 +453,7 @@ export class AdminSecretariasCrearDrawerComponent {
       email: this.email().trim().toLowerCase(),
       telefono: this.telefono().trim(),
       branchId: this.sedeId()!,
+      canAccessBothBranches: this.verTodasLasSedes(),
     });
 
     if (ok) {

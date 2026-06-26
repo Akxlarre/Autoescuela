@@ -45,11 +45,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             <!-- Mini-header con la secretaria que se está editando -->
             <div
               class="flex items-center gap-3 rounded-lg p-3 mb-5 bg-elevated border border-border-subtle"
-              
             >
               <div
                 class="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-sm font-bold bg-brand-tint text-brand"
-                
               >
                 {{ sec.initials }}
               </div>
@@ -217,6 +215,37 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   </p>
                 }
               </div>
+
+              <!-- Acceso a sedes — grant multi-sede (spec 0017) -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label">Acceso a sedes</label>
+                <div class="flex items-center gap-3">
+                  <button
+                    class="estado-btn"
+                    [class.estado-btn--inactive]="!verTodasLasSedes()"
+                    (click)="verTodasLasSedes.set(false)"
+                    data-llm-action="toggle-secretary-all-branches-grant"
+                  >
+                    <app-icon name="map-pin" [size]="14" />
+                    Solo su sede
+                  </button>
+                  <button
+                    class="estado-btn"
+                    [class.estado-btn--grant]="verTodasLasSedes()"
+                    (click)="verTodasLasSedes.set(true)"
+                    data-llm-action="toggle-secretary-all-branches-grant"
+                  >
+                    <app-icon name="building-2" [size]="14" />
+                    Todas las sedes
+                  </button>
+                </div>
+                @if (verTodasLasSedes()) {
+                  <p class="text-xs text-text-muted">
+                    Podrá ver y operar en todas las sedes desde el selector del encabezado, igual
+                    que un administrador.
+                  </p>
+                }
+              </div>
             </div>
 
             <!-- Acciones -->
@@ -326,6 +355,11 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
       background: var(--bg-elevated);
       color: var(--text-secondary);
     }
+    .estado-btn--grant {
+      border-color: var(--ds-brand);
+      background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
+      color: var(--ds-brand);
+    }
   `,
 })
 export class AdminSecretariasEditarDrawerComponent implements OnInit {
@@ -340,6 +374,7 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
   protected readonly telefono = signal('');
   protected readonly sedeId = signal<number | null>(null);
   protected readonly activo = signal(true);
+  protected readonly verTodasLasSedes = signal(false);
 
   // Email original para detectar cambios
   protected currentEmail = '';
@@ -394,6 +429,7 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
         this.telefono.set(sec.phone);
         this.sedeId.set(sec.branchId);
         this.activo.set(sec.estado === 'activa');
+        this.verTodasLasSedes.set(sec.canAccessBothBranches);
         this.nombresTouched.set(false);
         this.paternoTouched.set(false);
         this.maternoTouched.set(false);
@@ -425,6 +461,7 @@ export class AdminSecretariasEditarDrawerComponent implements OnInit {
       active: this.activo(),
       email: this.email().trim().toLowerCase(),
       currentEmail: this.currentEmail,
+      canAccessBothBranches: this.verTodasLasSedes(),
     });
 
     if (ok) {
