@@ -386,6 +386,13 @@ export const routes: Routes = [
               ),
           },
           {
+            path: 'alumnos/:id',
+            loadComponent: () =>
+              import('./features/admin/alumno-detalle/admin-alumno-detalle.component').then(
+                (m) => m.AdminAlumnoDetalleComponent,
+              ),
+          },
+          {
             path: 'profesional/alumnos',
             canActivate: [professionalBranchGuard],
             loadComponent: () =>
