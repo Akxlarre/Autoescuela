@@ -194,6 +194,21 @@
 
 // ── Fila de resultado individual ─────────────────────────────────────────────
 .search-panel__result-item {
+  border-radius: var(--radius-md, 8px);
+  outline: none;
+
+  &:focus > .search-panel__result-item-inner {
+    background: var(--color-primary-muted, var(--bg-surface-elevated));
+
+    .search-panel__result-arrow,
+    .search-panel__expand-chevron {
+      opacity: 1;
+    }
+  }
+}
+
+// ── Fila interior (clickable) ─────────────────────────────────────────────────
+.search-panel__result-item-inner {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -201,15 +216,13 @@
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
   transition: background 100ms ease;
-  outline: none;
 
-  &:hover,
-  &:focus {
+  &:hover {
     background: var(--color-primary-muted, var(--bg-surface-elevated));
 
-    .search-panel__result-arrow {
+    .search-panel__result-arrow,
+    .search-panel__expand-chevron {
       opacity: 1;
-      transform: translateX(2px);
     }
   }
 }
@@ -271,6 +284,75 @@
   transition:
     opacity 100ms ease,
     transform 100ms ease;
+}
+
+// ── Chevron expandible (alumno) ───────────────────────────────────────────────
+.search-panel__expand-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  opacity: 0.4;
+  transition:
+    transform 200ms ease,
+    opacity 200ms ease,
+    color 200ms ease;
+
+  &--open {
+    transform: rotate(90deg);
+    opacity: 1;
+    color: var(--color-primary);
+  }
+}
+
+// ── Estante de acciones rápidas (expandible con CSS transition) ───────────────
+.search-panel__action-shelf {
+  overflow: hidden;
+  max-height: 0;
+  // padding horizontal alineado con el body del resultado (icon 30px + gap 10px)
+  padding: 0 10px 0 50px;
+  transition:
+    max-height 200ms ease,
+    padding-bottom 200ms ease;
+
+  &--open {
+    max-height: 52px; // suficiente para una fila de chips
+    padding-bottom: 8px;
+  }
+}
+
+.search-panel__action-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.search-panel__action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle, var(--bg-surface));
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    border-color 120ms ease;
+
+  &:hover {
+    background: var(--color-primary-muted, var(--bg-surface-elevated));
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
 }
 
 // ── Badge de estado del alumno ────────────────────────────────────────────────
