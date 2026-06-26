@@ -45,20 +45,23 @@ export class AuthFacade {
     this.whenReady = Promise.race([readyPromise, timeout]);
 
     this.supabase.client.auth.onAuthStateChange((event: any, session: any) => {
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        this.loadUserFromSession(session.user);
+      if (event === 'INITIAL_SESSION') {
+        // INITIAL_SESSION siempre dispara al arrancar (con o sin sesión).
+        // Es la única fuente de verdad para la carga inicial; evita la race
+        // condition que provocaba "Refresh Token Not Found" cuando getUser()
+        // y INITIAL_SESSION intentaban rotar el token en paralelo.
+        if (session?.user) {
+          void this.loadUserFromSession(session.user).finally(() => resolveReady());
+        } else {
+          resolveReady();
+        }
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        void this.loadUserFromSession(session.user);
       } else if (event === 'SIGNED_OUT') {
         this.disposeRealtime();
         this._currentUser.set(null);
       }
     });
-
-    this.supabase
-      .getUser()
-      .then(async ({ data: { user } }: any) => {
-        if (user) await this.loadUserFromSession(user);
-      })
-      .finally(() => resolveReady());
   }
 
   private async loadUserFromSession(authUser: {
