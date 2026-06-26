@@ -15,30 +15,40 @@ describe('ErrorSanitizerService', () => {
   });
 
   it('should handle Supabase AuthApiError (invalid credentials)', () => {
-    const error = { name: 'AuthApiError', message: 'invalid credentials', code: 400 };
+    const error = {
+      name: 'AuthApiError',
+      message: 'Invalid login credentials',
+      code: 'invalid_credentials',
+    };
     const result = service.sanitize(error);
     expect(result.message).toBe('El correo electrónico o la contraseña son incorrectos.');
-    expect(result.code).toBe('400');
+    expect(result.code).toBe('invalid_credentials');
   });
 
   it('should handle Postgres unique constraint violation (23505)', () => {
     const error = { code: '23505', message: 'duplicate key value violates unique constraint' };
     const result = service.sanitize(error);
-    expect(result.message).toBe('Ya existe un registro con estos datos. Verifica el RUT o el correo ingresado.');
+    expect(result.message).toBe(
+      'Ya existe un registro con estos datos. Verifica el RUT o el correo ingresado.',
+    );
     expect(result.code).toBe('23505');
   });
 
   it('should handle HttpErrorResponse 500', () => {
     const error = new HttpErrorResponse({ status: 500, statusText: 'Internal Server Error' });
     const result = service.sanitize(error);
-    expect(result.message).toBe('Ha ocurrido un error inesperado en el servidor. Inténtalo más tarde.');
+    expect(result.message).toBe(
+      'Ha ocurrido un error inesperado en el servidor. Inténtalo más tarde.',
+    );
     expect(result.code).toBe(500);
   });
 
   it('should handle Network Error (TypeError: Failed to fetch)', () => {
     const error = new TypeError('Failed to fetch');
     const result = service.sanitize(error);
-    expect(result.message).toBe('No se pudo conectar al servidor. Por favor, verifica tu conexión a internet.');
+    expect(result.message).toBe(
+      'No se pudo conectar al servidor. Por favor, verifica tu conexión a internet.',
+    );
     expect(result.isNetworkError).toBe(true);
   });
 
@@ -67,7 +77,9 @@ describe('ErrorSanitizerService', () => {
   it('should handle CUPOS_AGOTADOS trigger exception', () => {
     const error = { message: 'RAISE EXCEPTION CUPOS_AGOTADOS' };
     const result = service.sanitize(error);
-    expect(result.message).toBe('No quedan cupos disponibles en este curso. Actualiza la lista para ver el estado actual.');
+    expect(result.message).toBe(
+      'No quedan cupos disponibles en este curso. Actualiza la lista para ver el estado actual.',
+    );
     expect(result.code).toBe('CUPOS_AGOTADOS');
   });
 });

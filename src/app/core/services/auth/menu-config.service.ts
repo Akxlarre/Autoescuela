@@ -160,8 +160,11 @@ const ADMIN_NAV: NavGroup[] = [
     group: 'Recursos y Logística',
     items: [
       { label: 'Instructores', icon: 'user-check', routerLink: '/app/admin/instructores' },
+      { label: 'Secretarias', icon: 'user-cog', routerLink: '/app/admin/secretarias' },
+      { label: 'Auditoría', icon: 'shield-check', routerLink: '/app/admin/auditoria' },
       { label: 'Flota', icon: 'truck', routerLink: '/app/admin/flota' },
       { label: 'DMS Documentos', icon: 'folder-open', routerLink: '/app/admin/documentos' },
+      { label: 'Sitio Web', icon: 'globe', routerLink: '/app/admin/configuracion-web' },
     ],
   },
 ];

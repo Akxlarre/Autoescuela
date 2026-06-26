@@ -22,6 +22,7 @@ describe('EpqPrintService', () => {
     const focus = vi.fn();
     const fakeWin = {
       document: { open: vi.fn(), write: vi.fn(), close: vi.fn() },
+      history: { pushState: vi.fn() },
       focus,
       print,
     } as unknown as Window;

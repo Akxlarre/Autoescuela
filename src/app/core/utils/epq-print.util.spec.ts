@@ -7,7 +7,8 @@ describe('buildEpqTestHtml', () => {
     const html = buildEpqTestHtml();
     // Una fila <tr> por pregunta dentro del tbody.
     const rowCount = (html.match(/<tr>/g) ?? []).length;
-    expect(rowCount).toBe(EPQ_QUESTIONS.length);
+    // +1 because the table has a <thead><tr> header row in addition to the question rows
+    expect(rowCount).toBe(EPQ_QUESTIONS.length + 1);
     expect(EPQ_QUESTIONS.length).toBe(81);
   });
 

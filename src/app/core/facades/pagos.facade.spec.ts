@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { PagosFacade } from './pagos.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
+import { AuthFacade } from './auth.facade';
 
 describe('PagosFacade', () => {
   let facade: PagosFacade;
@@ -16,36 +17,37 @@ describe('PagosFacade', () => {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
-             gte: vi.fn().mockReturnValue({
-               lte: vi.fn().mockResolvedValue({ data: [], error: null })
-             }),
-             resolveTo: vi.fn().mockResolvedValue({ data: [], error: null }),
-             maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-             order: vi.fn().mockResolvedValue({ data: [], error: null })
+            gte: vi.fn().mockReturnValue({
+              lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+            }),
+            resolveTo: vi.fn().mockResolvedValue({ data: [], error: null }),
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           gt: vi.fn().mockReturnValue({
-             neq: vi.fn().mockResolvedValue({ data: [], error: null })
+            neq: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           order: vi.fn().mockReturnValue({
-             limit: vi.fn().mockResolvedValue({ data: [], error: null })
+            limit: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           gte: vi.fn().mockReturnValue({
-             lte: vi.fn().mockResolvedValue({ data: [], error: null })
-          })
+            lte: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
         }),
         insert: vi.fn().mockResolvedValue({ error: null }),
         update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null })
-        })
-      })
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      }),
     };
 
     TestBed.configureTestingModule({
       providers: [
         PagosFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
-        { provide: ToastService, useValue: toastSpy }
-      ]
+        { provide: ToastService, useValue: toastSpy },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+      ],
     });
 
     facade = TestBed.inject(PagosFacade);

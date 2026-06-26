@@ -11,32 +11,35 @@ describe('AdminHorariosFacade', () => {
   beforeEach(() => {
     supabaseMock = {
       client: {
-        from: jasmine.createSpy('from').and.returnValue({
-          select: jasmine.createSpy('select').and.returnValue({
-            eq: jasmine.createSpy('eq').and.returnValue({
-              eq: jasmine.createSpy('eq').and.returnValue({
-                eq: jasmine.createSpy('eq').and.returnValue(Promise.resolve({ data: [{ id: 1, name: 'Curso', license_class: 'B', schedule_blocks: [] }], error: null }))
-              })
-            })
+        from: vi.fn().mockReturnValue({
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({
+                  data: [{ id: 1, name: 'Curso', license_class: 'B', schedule_blocks: [] }],
+                  error: null,
+                }),
+              }),
+            }),
           }),
-          update: jasmine.createSpy('update').and.returnValue({
-            in: jasmine.createSpy('in').and.returnValue(Promise.resolve({ error: null }))
-          })
-        })
-      }
+          update: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        }),
+      },
     };
 
     toastMock = {
-      success: jasmine.createSpy('success'),
-      error: jasmine.createSpy('error')
+      success: vi.fn(),
+      error: vi.fn(),
     };
 
     TestBed.configureTestingModule({
       providers: [
         AdminHorariosFacade,
         { provide: SupabaseService, useValue: supabaseMock },
-        { provide: ToastService, useValue: toastMock }
-      ]
+        { provide: ToastService, useValue: toastMock },
+      ],
     });
 
     facade = TestBed.inject(AdminHorariosFacade);
@@ -54,22 +57,20 @@ describe('AdminHorariosFacade', () => {
   });
 
   it('should update schedule blocks and show success toast', async () => {
-    // Pre-load data to test local cache update
     await facade.loadCourses(1);
-    
+
     const result = await facade.updateScheduleBlocks([1], [{ from: '08:00', to: '08:45' }]);
-    expect(result).toBeTrue();
+    expect(result).toBe(true);
     expect(supabaseMock.client.from).toHaveBeenCalledWith('courses');
     expect(toastMock.success).toHaveBeenCalledWith('Horarios base actualizados correctamente');
-    
-    // Verify local cache updated
+
     expect(facade.courses()[0].schedule_blocks.length).toBe(1);
     expect(facade.courses()[0].schedule_blocks[0].from).toBe('08:00');
   });
 
   it('should not update if courseIds is empty', async () => {
     const result = await facade.updateScheduleBlocks([], [{ from: '08:00', to: '08:45' }]);
-    expect(result).toBeFalse();
+    expect(result).toBe(false);
     expect(supabaseMock.client.from).not.toHaveBeenCalledWith('courses');
   });
 });

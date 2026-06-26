@@ -47,7 +47,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           class="flex items-center gap-1.5 text-xs font-semibold text-text-muted bg-subtle px-2.5 py-1 rounded-md w-fit border border-border-subtle"
         >
           <app-icon name="map-pin" [size]="12" class="text-brand" />
-          <span class="truncate max-w-[150px]">{{ currentSedeLabel() }}</span>
+          <span class="truncate max-w-37.5">{{ currentSedeLabel() }}</span>
         </div>
       </div>
 

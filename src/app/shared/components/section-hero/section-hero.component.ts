@@ -340,7 +340,7 @@ import type {
         [attr.aria-label]="title()"
       >
         @if (loading()) {
-          <div class="flex items-center gap-3 px-4 py-1.5 min-h-[52px]">
+          <div class="flex items-center gap-3 px-4 py-1.5 min-h-13">
             <app-skeleton-block variant="circle" width="32px" height="32px" />
             <div class="flex-1 min-w-0 flex flex-col gap-1.5">
               <app-skeleton-block variant="text" width="100px" height="11px" />
@@ -366,7 +366,7 @@ import type {
         } @else {
           <!-- Fila 1: columna en <sm (LEFT luego RIGHT), fila en sm+ -->
           <div
-            class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 sm:py-2.5 sm:min-h-[60px]"
+            class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 sm:py-2.5 sm:min-h-15"
           >
             <!-- LEFT: back | icon | title -->
             <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -457,7 +457,36 @@ import type {
                   aria-label="Acciones principales"
                 >
                   @for (action of actions(); track action.id) {
-                    @if (action.route) {
+                    @if (action.menu) {
+                      <button
+                        type="button"
+                        [class]="
+                          (action.hiddenOnMobile ? 'hidden sm:inline-flex ' : '') +
+                          (action.primary ? 'btn-primary' : 'btn-secondary')
+                        "
+                        class="whitespace-nowrap shrink-0 inline-flex items-center gap-1.5"
+                        [disabled]="action.disabled ?? false"
+                        [attr.data-llm-action]="action.id"
+                        aria-haspopup="menu"
+                        [attr.aria-expanded]="openMenuId() === action.id"
+                        (click)="toggleMenu(action.id, $event)"
+                      >
+                        @if (action.icon) {
+                          <app-icon
+                            [name]="action.icon"
+                            [size]="15"
+                            [class.animate-spin]="action.loading"
+                          />
+                        }
+                        {{ action.label }}
+                        <app-icon
+                          name="chevron-down"
+                          [size]="13"
+                          class="hero-menu__chevron"
+                          [class.hero-menu__chevron--open]="openMenuId() === action.id"
+                        />
+                      </button>
+                    } @else if (action.route) {
                       <a
                         [routerLink]="action.route"
                         [class]="
@@ -513,7 +542,7 @@ import type {
             <div class="border-t border-border-subtle flex flex-wrap">
               @for (kpi of kpis(); track kpi.id) {
                 <div
-                  class="px-4 py-2.5 flex items-center gap-3 border-r border-b sm:border-b-0 border-border-subtle flex-1 min-w-[45%] sm:min-w-[auto]"
+                  class="px-4 py-2.5 flex items-center gap-3 border-r border-b sm:border-b-0 border-border-subtle flex-1 min-w-[45%] sm:min-w-auto"
                 >
                   <div class="min-w-0 flex-1">
                     <p
@@ -560,6 +589,47 @@ import type {
           }
         }
       </div>
+
+      <!-- Panel del menú — fuera del slimRef para evitar el containing-block
+           de cualquier transform que pudiera tener el wrapper. -->
+      @if (openMenuId()) {
+        <div
+          appAnimateIn
+          role="menu"
+          class="hero-menu-panel"
+          [style.top.px]="menuPos()?.top"
+          [style.right.px]="menuPos()?.right"
+        >
+          @for (item of openMenuItems(); track item.id) {
+            @if (item.header) {
+              <div class="hero-menu-panel__header">{{ item.label }}</div>
+            } @else {
+              <button
+                type="button"
+                role="menuitem"
+                class="hero-menu-panel__item"
+                [class.hero-menu-panel__item--disabled]="item.disabled"
+                [disabled]="item.disabled ?? false"
+                [attr.data-llm-action]="item.id"
+                (click)="onMenuItemClick(item)"
+              >
+                @if (item.icon) {
+                  <app-icon [name]="item.icon" [size]="15" class="hero-menu-panel__item-icon" />
+                }
+                <span class="hero-menu-panel__item-body">
+                  <span class="hero-menu-panel__item-label">{{ item.label }}</span>
+                  @if (item.hint) {
+                    <span class="hero-menu-panel__item-hint">{{ item.hint }}</span>
+                  }
+                </span>
+                @if (item.disabled) {
+                  <app-icon name="lock" [size]="12" class="hero-menu-panel__item-lock" />
+                }
+              </button>
+            }
+          }
+        </div>
+      }
     } @else {
       <!-- ── FULL MODE ──────────────────────────────────────────────
            TOAST-STYLE HERO — Fondo state-info + borde + bar.
