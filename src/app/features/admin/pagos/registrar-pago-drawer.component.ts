@@ -516,11 +516,8 @@ export class RegistrarPagoDrawerComponent {
   private readonly sanitizer = inject(ErrorSanitizerService);
   readonly tipoConceptoOptions = [
     { label: 'Matrícula', value: 'Matrícula' },
-    { label: 'Mensualidad 1/4', value: 'Mensualidad 1/4' },
-    { label: 'Mensualidad 2/4', value: 'Mensualidad 2/4' },
-    { label: 'Mensualidad 3/4', value: 'Mensualidad 3/4' },
-    { label: 'Mensualidad 4/4', value: 'Mensualidad 4/4' },
     { label: 'Abono', value: 'Abono' },
+    { label: 'Segunda Cuota (Clases 7-12)', value: 'Segunda Cuota (Clases 7-12)' },
     { label: 'Pago Total', value: 'Pago Total' },
     { label: 'Otro', value: 'Otro' },
   ];
