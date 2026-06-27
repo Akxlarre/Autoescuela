@@ -15,6 +15,30 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
+function mapConcepto(type: string | null): string | null {
+  if (!type) return null;
+  switch (type.toLowerCase()) {
+    case 'enrollment':
+      return 'Matrícula';
+    case 'online':
+      return 'Online';
+    default:
+      return type;
+  }
+}
+
+function mapEstado(status: string | null): string | null {
+  if (!status) return null;
+  switch (status.toLowerCase()) {
+    case 'paid':
+      return 'completado';
+    case 'partial':
+      return 'pendiente';
+    default:
+      return status;
+  }
+}
+
 function resolveMetodo(row: {
   transfer_amount: number;
   cash_amount: number;
@@ -52,8 +76,8 @@ const METODOS_CONFIG: { key: string; metodo: string; color: string; icono: strin
 
 @Injectable({ providedIn: 'root' })
 export class PagosFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
@@ -281,12 +305,12 @@ private readonly supabase = inject(SupabaseService);
           fecha: row.payment_date,
           alumno:
             `${row.enrollments?.students?.users?.first_names ?? ''} ${row.enrollments?.students?.users?.paternal_last_name ?? ''}`.trim(),
-          concepto: row.type,
+          concepto: mapConcepto(row.type),
           monto: row.total_amount ?? 0,
           metodo,
           metodoIcono: icono,
           nroDocumento: row.document_number,
-          estado: row.status,
+          estado: mapEstado(row.status),
         };
       }),
     );
@@ -427,12 +451,12 @@ private readonly supabase = inject(SupabaseService);
         return {
           id: row.id,
           fecha: row.payment_date,
-          concepto: row.type,
+          concepto: mapConcepto(row.type),
           metodo,
           metodoIcono: icono,
           nroDocumento: row.document_number,
           monto: row.total_amount,
-          estado: row.status,
+          estado: mapEstado(row.status),
         };
       }),
     );

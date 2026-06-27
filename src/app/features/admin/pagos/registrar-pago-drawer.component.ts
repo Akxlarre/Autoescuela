@@ -82,7 +82,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
             @if (facade.enrollmentSeleccionado() === null) {
               <div class="flex flex-col gap-1.5" appAnimateIn>
                 <label for="pago-enrollment" class="field-label">
-                  ALUMNO / MATRÍCULA <span class="text-error">*</span>
+                  ALUMNO <span class="text-error">*</span>
                 </label>
                 @if (facade.alumnosConDeuda().length === 0) {
                   <p
@@ -367,7 +367,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                 type="text"
                 formControlName="document_number"
                 class="field-input"
-                placeholder="Ej: TRF-00482, REC-01234..."
+                placeholder="Ej: REC-01234, TRF-00482"
                 data-llm-description="Número de documento de respaldo del pago (boleta, comprobante de transferencia, etc.)"
               />
             </div>
@@ -513,8 +513,8 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
   `,
 })
 export class RegistrarPagoDrawerComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-readonly tipoConceptoOptions = [
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  readonly tipoConceptoOptions = [
     { label: 'Matrícula', value: 'Matrícula' },
     { label: 'Mensualidad 1/4', value: 'Mensualidad 1/4' },
     { label: 'Mensualidad 2/4', value: 'Mensualidad 2/4' },
@@ -671,7 +671,9 @@ readonly tipoConceptoOptions = [
       this.layoutDrawer.back();
     } catch (err) {
       this.saveError.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar. Intenta de nuevo.',
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al guardar. Intenta de nuevo.',
       );
     } finally {
       this.isSaving.set(false);
