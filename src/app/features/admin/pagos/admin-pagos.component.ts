@@ -27,7 +27,6 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
-import { RentabilidadCursosComponent } from './rentabilidad-cursos.component';
 import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
@@ -55,7 +54,6 @@ const POR_PAGINA = 5;
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
-    RentabilidadCursosComponent,
     BentoGridLayoutDirective,
   ],
   template: `
@@ -78,7 +76,7 @@ const POR_PAGINA = 5;
       <div class="bento-banner">
         <div class="flex flex-col gap-6">
           <!-- ── Alumnos con saldo pendiente ────────────────────────────────────── -->
-          <div class="card p-0 overflow-hidden">
+          <div class="card p-0 overflow-hidden" [class.deudores-compact]="layoutDrawer.isOpen()">
             <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
               <div>
                 <h2 class="text-base font-semibold text-text-primary">
@@ -139,9 +137,9 @@ const POR_PAGINA = 5;
                   class="hidden lg:grid px-6 py-2 grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
                 >
                   <span>Alumno</span>
-                  <span>RUT</span>
-                  <span class="text-right">Total a Pagar</span>
-                  <span class="text-right">Pagado</span>
+                  <span class="dc-rut">RUT</span>
+                  <span class="text-right dc-total">Total a Pagar</span>
+                  <span class="text-right dc-pagado">Pagado</span>
                   <span class="text-right">Saldo</span>
                   <span class="text-right">Acciones</span>
                 </div>
@@ -162,7 +160,7 @@ const POR_PAGINA = 5;
                       </div>
 
                       <!-- RUT Desktop only -->
-                      <span class="hidden lg:block text-sm text-text-secondary">
+                      <span class="hidden lg:block text-sm text-text-secondary dc-rut">
                         {{ alumno.rut }}
                       </span>
 
@@ -170,7 +168,7 @@ const POR_PAGINA = 5;
                       <div
                         class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
                       >
-                        <div class="flex flex-col lg:block text-center lg:text-right">
+                        <div class="flex flex-col lg:block text-center lg:text-right dc-total">
                           <span
                             class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Total</span
@@ -179,7 +177,7 @@ const POR_PAGINA = 5;
                             clp(alumno.totalAPagar)
                           }}</span>
                         </div>
-                        <div class="flex flex-col lg:block text-center lg:text-right">
+                        <div class="flex flex-col lg:block text-center lg:text-right dc-pagado">
                           <span
                             class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Pagado</span
@@ -506,10 +504,6 @@ const POR_PAGINA = 5;
             </div>
           </div>
 
-          <div class="card p-6" [class.force-compact]="layoutDrawer.isOpen()">
-            <app-rentabilidad-cursos />
-          </div>
-
           @if (facade.error()) {
             <div class="card p-4 flex items-center gap-3 border-error bg-error/8">
               <app-icon name="alert-circle" [size]="18" color="var(--state-error)" />
@@ -668,10 +662,17 @@ const POR_PAGINA = 5;
       .force-compact .lg\\:text-center {
         text-align: left !important;
       }
-      .force-compact app-rentabilidad-cursos .flex.flex-col.lg\\:grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0.75rem !important;
+      .deudores-compact .hidden.lg\\:grid {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto auto !important;
+      }
+      .deudores-compact .deudores-row {
+        grid-template-columns: minmax(0, 1fr) auto auto !important;
+      }
+      .deudores-compact .dc-rut,
+      .deudores-compact .dc-total,
+      .deudores-compact .dc-pagado {
+        display: none !important;
       }
     `,
   ],
