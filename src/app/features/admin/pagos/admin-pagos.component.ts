@@ -27,7 +27,6 @@ import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { AdminPagoDetalleDrawerComponent } from './admin-pago-detalle-drawer.component';
-import { RentabilidadCursosComponent } from './rentabilidad-cursos.component';
 import { formatCLP, formatChileanDate, toISODate } from '@core/utils/date.utils';
 
 function toCompact(amount: number): { value: number; suffix: string } {
@@ -55,7 +54,6 @@ const POR_PAGINA = 5;
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
-    RentabilidadCursosComponent,
     BentoGridLayoutDirective,
   ],
   template: `
@@ -506,10 +504,6 @@ const POR_PAGINA = 5;
             </div>
           </div>
 
-          <div class="card p-6" [class.force-compact]="layoutDrawer.isOpen()">
-            <app-rentabilidad-cursos />
-          </div>
-
           @if (facade.error()) {
             <div class="card p-4 flex items-center gap-3 border-error bg-error/8">
               <app-icon name="alert-circle" [size]="18" color="var(--state-error)" />
@@ -667,11 +661,6 @@ const POR_PAGINA = 5;
       .force-compact .lg\\:text-right,
       .force-compact .lg\\:text-center {
         text-align: left !important;
-      }
-      .force-compact app-rentabilidad-cursos .flex.flex-col.lg\\:grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 0.75rem !important;
       }
     `,
   ],
