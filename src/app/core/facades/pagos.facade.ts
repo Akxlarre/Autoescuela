@@ -365,7 +365,7 @@ export class PagosFacade {
       voucher_amount: payload.voucher_amount,
       document_number: payload.document_number || null,
       payment_date: payload.payment_date,
-      status: 'completado',
+      status: 'paid',
     });
     if (insertError) throw insertError;
 

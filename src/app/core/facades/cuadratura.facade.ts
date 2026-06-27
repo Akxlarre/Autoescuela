@@ -220,9 +220,8 @@ export class CuadraturaFacade {
     let query: any = this.supabase.client
       .from('payments')
       .select('*, enrollments!inner(branch_id)')
-      .eq('status', 'paid')
-      .gte('created_at', start)
-      .lte('created_at', end);
+      .in('status', ['paid', 'completado'])
+      .eq('payment_date', today);
 
     if (branchId) {
       query = query.eq('enrollments.branch_id', branchId);
@@ -230,7 +229,7 @@ export class CuadraturaFacade {
 
     // El ordenamiento y limitación siempre al final de la cadena de filtros
     const [{ data }, singulares] = await Promise.all([
-      query.order('created_at', { ascending: true }),
+      query.order('payment_date', { ascending: true }),
       this.fetchSingularSales(start, end, branchId),
     ]);
     this._pagosHoy.set([...(data ?? []).map(mapPaymentToIngreso), ...singulares]);
