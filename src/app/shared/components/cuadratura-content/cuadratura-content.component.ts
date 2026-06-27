@@ -425,6 +425,36 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
 
           <!-- 1. Formulación Esperada (System Math) -->
           <div class="px-6 py-5 bg-brand/5 border-b border-brand/10 flex flex-col gap-2.5">
+            <!-- Fondo de Caja (Apertura) — editable -->
+            <div class="flex items-center justify-between gap-3">
+              <label
+                for="fondo-apertura"
+                class="text-[13px] font-semibold text-text-secondary shrink-0"
+                >Fondo de Apertura</label
+              >
+              <div class="relative">
+                <span
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] font-bold pointer-events-none"
+                  style="color: var(--text-muted)"
+                  >$</span
+                >
+                <input
+                  id="fondo-apertura"
+                  type="text"
+                  inputmode="numeric"
+                  pattern="[0-9]*"
+                  autocomplete="off"
+                  class="w-28 h-8 text-[13px] font-black text-right pl-6 pr-3 rounded-lg bg-surface border border-border-muted focus:border-brand focus:ring-2 outline-none transition-all tabular-nums"
+                  style="focus-ring-color: color-mix(in srgb, var(--ds-brand) 20%, transparent)"
+                  [value]="fondoLocal() || ''"
+                  placeholder="0"
+                  [disabled]="cajaYaCerrada()"
+                  (input)="onFondoChange($event)"
+                  (focus)="selectAll($event)"
+                  data-llm-description="Monto de efectivo con el que abre la caja el día de hoy"
+                />
+              </div>
+            </div>
             <div
               class="flex items-center justify-between text-[13px] font-semibold text-text-secondary"
             >
@@ -442,153 +472,193 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                 >Debe Haber en Caja</span
               >
               <span class="text-[17px] font-black text-text-primary tabular-nums tracking-tight">{{
-                clp(saldoTeorico())
+                clp(saldoComputado())
               }}</span>
             </div>
           </div>
 
-          <!-- 2. Arqueo Form (Billetes y Monedas) -->
-          <div class="px-6 py-6 grid grid-cols-1 gap-y-4 bg-surface">
-            <!-- Billetes -->
-            <div class="flex flex-col gap-3">
-              <div
-                class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1"
-              >
-                <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted"
-                  >Billetes</span
-                >
-                <app-icon
-                  name="banknote"
-                  [size]="14"
-                  color="var(--text-muted)"
-                  class="opacity-50"
-                />
-              </div>
-              @for (billete of billetes(); track billete.key) {
-                <div class="flex items-center justify-between group">
-                  <span
-                    class="text-[13px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors cursor-default"
-                  >
-                    {{ billete.label.replace('Billetes de ', '') }}
-                  </span>
-                  <div class="flex items-center gap-2.5">
-                    <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
-                    <input
-                      type="text"
-                      inputmode="numeric"
-                      pattern="[0-9]*"
-                      autocomplete="off"
-                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
-                      [value]="cantidades()[billete.key] || ''"
-                      placeholder="0"
-                      [disabled]="cajaYaCerrada()"
-                      (input)="onCantidadChange(billete.key, $event)"
-                      (focus)="selectAll($event)"
-                    />
-                  </div>
-                </div>
-              }
-            </div>
-
-            <!-- Monedas -->
-            <div class="flex flex-col gap-3">
-              <div
-                class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1"
-              >
-                <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted"
-                  >Monedas</span
-                >
-                <app-icon name="circle" [size]="14" color="var(--text-muted)" class="opacity-50" />
-              </div>
-              @for (moneda of monedas(); track moneda.key) {
-                <div class="flex items-center justify-between group">
-                  <span
-                    class="text-[13px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors cursor-default"
-                  >
-                    {{ moneda.label.replace('Monedas de ', '') }}
-                  </span>
-                  <div class="flex items-center gap-2.5">
-                    <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
-                    <input
-                      type="text"
-                      inputmode="numeric"
-                      pattern="[0-9]*"
-                      autocomplete="off"
-                      class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
-                      [value]="cantidades()[moneda.key] || ''"
-                      placeholder="0"
-                      [disabled]="cajaYaCerrada()"
-                      (input)="onCantidadChange(moneda.key, $event)"
-                      (focus)="selectAll($event)"
-                    />
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- 3. Dynamic Differential Status -->
+          <!-- Toggle: Realizar arqueo de efectivo físico -->
           <div
-            class="px-6 py-5 border-y border-border-muted/50 transition-colors flex flex-col gap-3"
-            [style.background]="'color-mix(in srgb, ' + colorDiferencia() + ' 8%, transparent)'"
-            aria-live="polite"
+            class="px-6 py-4 border-b border-border-muted/50 flex items-center justify-between gap-4 bg-surface"
           >
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
-                >Total Físico Arqueado</span
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[13px] font-semibold text-text-primary"
+                >Realizar arqueo de efectivo físico</span
               >
-              <span
-                class="text-[16px] font-black tabular-nums"
-                [style.color]="totalArqueo() > 0 ? 'var(--text-primary)' : 'var(--text-muted)'"
+              <span class="text-[11px] text-text-muted"
+                >Contar billetes y monedas para cierre presencial</span
               >
-                {{ clp(totalArqueo()) }}
-              </span>
             </div>
-            <div class="flex items-center justify-between">
+            <button
+              type="button"
+              role="switch"
+              [attr.aria-checked]="realizarArqueo()"
+              class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 disabled:opacity-40"
+              [style.background]="realizarArqueo() ? 'var(--ds-brand)' : 'var(--border-muted)'"
+              [disabled]="cajaYaCerrada()"
+              (click)="realizarArqueo.update((v) => !v)"
+              data-llm-action="toggle-arqueo-efectivo"
+            >
               <span
-                class="text-[13px] font-black uppercase tracking-widest"
-                [style.color]="colorDiferencia()"
-                >Diferencia</span
-              >
-              <span
-                class="text-[22px] font-black tabular-nums tracking-tighter"
-                [style.color]="colorDiferencia()"
-              >
-                {{ diferencia() > 0 ? '+' : '' }}{{ clp(diferencia()) }}
-              </span>
-            </div>
+                class="inline-block h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-in-out"
+                [style.transform]="realizarArqueo() ? 'translateX(20px)' : 'translateX(2px)'"
+              ></span>
+            </button>
           </div>
 
-          <!-- 4. Justificación y CTAs (Fondo de Tarjeta) -->
+          <!-- 2. Arqueo Form (Billetes y Monedas) — solo si arqueo activo -->
+          @if (realizarArqueo()) {
+            <div class="px-6 py-6 grid grid-cols-1 gap-y-4 bg-surface">
+              <!-- Billetes -->
+              <div class="flex flex-col gap-3">
+                <div
+                  class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1"
+                >
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted"
+                    >Billetes</span
+                  >
+                  <app-icon
+                    name="banknote"
+                    [size]="14"
+                    color="var(--text-muted)"
+                    class="opacity-50"
+                  />
+                </div>
+                @for (billete of billetes(); track billete.key) {
+                  <div class="flex items-center justify-between group">
+                    <span
+                      class="text-[13px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors cursor-default"
+                    >
+                      {{ billete.label.replace('Billetes de ', '') }}
+                    </span>
+                    <div class="flex items-center gap-2.5">
+                      <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
+                      <input
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        autocomplete="off"
+                        class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                        [value]="cantidades()[billete.key] || ''"
+                        placeholder="0"
+                        [disabled]="cajaYaCerrada()"
+                        (input)="onCantidadChange(billete.key, $event)"
+                        (focus)="selectAll($event)"
+                      />
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Monedas -->
+              <div class="flex flex-col gap-3">
+                <div
+                  class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1"
+                >
+                  <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted"
+                    >Monedas</span
+                  >
+                  <app-icon
+                    name="circle"
+                    [size]="14"
+                    color="var(--text-muted)"
+                    class="opacity-50"
+                  />
+                </div>
+                @for (moneda of monedas(); track moneda.key) {
+                  <div class="flex items-center justify-between group">
+                    <span
+                      class="text-[13px] font-semibold text-text-secondary group-hover:text-text-primary transition-colors cursor-default"
+                    >
+                      {{ moneda.label.replace('Monedas de ', '') }}
+                    </span>
+                    <div class="flex items-center gap-2.5">
+                      <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
+                      <input
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        autocomplete="off"
+                        class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                        [value]="cantidades()[moneda.key] || ''"
+                        placeholder="0"
+                        [disabled]="cajaYaCerrada()"
+                        (input)="onCantidadChange(moneda.key, $event)"
+                        (focus)="selectAll($event)"
+                      />
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- 3. Dynamic Differential Status -->
+            <div
+              class="px-6 py-5 border-y border-border-muted/50 transition-colors flex flex-col gap-3"
+              [style.background]="'color-mix(in srgb, ' + colorDiferencia() + ' 8%, transparent)'"
+              aria-live="polite"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
+                  >Total Físico Arqueado</span
+                >
+                <span
+                  class="text-[16px] font-black tabular-nums"
+                  [style.color]="totalArqueo() > 0 ? 'var(--text-primary)' : 'var(--text-muted)'"
+                >
+                  {{ clp(totalArqueo()) }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span
+                  class="text-[13px] font-black uppercase tracking-widest"
+                  [style.color]="colorDiferencia()"
+                  >Diferencia</span
+                >
+                <span
+                  class="text-[22px] font-black tabular-nums tracking-tighter"
+                  [style.color]="colorDiferencia()"
+                >
+                  {{ diferencia() > 0 ? '+' : '' }}{{ clp(diferencia()) }}
+                </span>
+              </div>
+            </div>
+          }
+
+          <!-- 4. Justificación y CTA -->
           <div
             class="px-6 py-6 border-t border-border-muted/50 mt-auto flex flex-col gap-5 bg-subtle/30"
           >
-            <div class="flex flex-col gap-2.5">
-              <div class="flex items-center justify-between">
-                <label
-                  class="text-[12px] font-bold uppercase tracking-widest"
-                  [style.color]="diferencia() !== 0 ? 'var(--state-warning)' : 'var(--text-muted)'"
-                >
-                  {{
-                    diferencia() !== 0 ? 'Justificación Obligatoria' : 'Observaciones (Opcional)'
-                  }}
-                </label>
-                <app-icon
-                  name="message-circle"
-                  [size]="14"
-                  color="var(--text-muted)"
-                  class="opacity-50"
-                />
+            @if (realizarArqueo()) {
+              <div class="flex flex-col gap-2.5">
+                <div class="flex items-center justify-between">
+                  <label
+                    class="text-[12px] font-bold uppercase tracking-widest"
+                    [style.color]="
+                      diferencia() !== 0 ? 'var(--state-warning)' : 'var(--text-muted)'
+                    "
+                  >
+                    {{
+                      diferencia() !== 0 ? 'Justificación Obligatoria' : 'Observaciones (Opcional)'
+                    }}
+                  </label>
+                  <app-icon
+                    name="message-circle"
+                    [size]="14"
+                    color="var(--text-muted)"
+                    class="opacity-50"
+                  />
+                </div>
+                <textarea
+                  rows="2"
+                  class="w-full text-[13px] px-4 py-3.5 rounded-xl resize-none bg-surface border border-border-muted focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-shadow placeholder:text-text-muted/60"
+                  placeholder="Ej: Faltan $500 por vuelto mal dado..."
+                  [disabled]="cajaYaCerrada()"
+                  [value]="notas()"
+                  (input)="notas.set(getInputValue($event))"
+                ></textarea>
               </div>
-              <textarea
-                rows="2"
-                class="w-full text-[13px] px-4 py-3.5 rounded-xl resize-none bg-surface border border-border-muted focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-shadow placeholder:text-text-muted/60"
-                placeholder="Ej: Faltan $500 por vuelto mal dado..."
-                [disabled]="cajaYaCerrada()"
-                [value]="notas()"
-                (input)="notas.set(getInputValue($event))"
-              ></textarea>
-            </div>
+            }
 
             <button
               class="w-full flex items-center justify-center gap-2.5 font-bold text-[14px] py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
@@ -607,12 +677,12 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               } @else if (cajaYaCerrada()) {
                 <app-icon name="lock" [size]="18" />
                 <span class="tracking-wide">Caja Cerrada Exitosamente</span>
-              } @else if (diferencia() !== 0 && notas().trim().length === 0) {
+              } @else if (realizarArqueo() && diferencia() !== 0 && notas().trim().length === 0) {
                 <app-icon name="alert-triangle" [size]="18" />
                 <span class="tracking-wide">Justifica la diferencia para cerrar</span>
               } @else {
                 <app-icon name="lock" [size]="18" />
-                <span class="tracking-wide">Validar Arqueo y Cerrar Caja</span>
+                <span class="tracking-wide">Cerrar Caja</span>
               }
             </button>
           </div>
@@ -707,10 +777,11 @@ export class CuadraturaContentComponent implements AfterViewInit {
   // ── Inputs (datos del facade, pasados por el smart component) ─────────────
   readonly pagosHoy = input.required<IngresoRow[]>();
   readonly gastosHoy = input.required<EgresoRow[]>();
-  readonly fondoInicial = input<number>(50_000);
+  readonly fondoInicial = input<number>(0);
+  readonly ingresosEfectivoHoy = input<number>(0);
   readonly totalIngresosHoy = input.required<number>();
   readonly totalEgresosHoy = input.required<number>();
-  readonly saldoTeorico = input.required<number>();
+  readonly saldoTeorico = input<number>(0);
   readonly cajaYaCerrada = input<boolean>(false);
   readonly isLoading = input<boolean>(false);
   readonly isSaving = input<boolean>(false);
@@ -727,6 +798,7 @@ export class CuadraturaContentComponent implements AfterViewInit {
   readonly eliminarIngreso = output<IngresoRow>();
   readonly eliminarEgreso = output<EgresoRow>();
   readonly exportRequested = output<'excel' | 'pdf'>();
+  readonly fondoInicialChange = output<number>();
 
   // ── Estado interno del arqueo ─────────────────────────────────────────────
   protected readonly cantidades = signal<Record<string, number>>({
@@ -742,6 +814,8 @@ export class CuadraturaContentComponent implements AfterViewInit {
   });
 
   protected readonly notas = signal<string>('');
+  protected readonly fondoLocal = signal<number>(0);
+  protected readonly realizarArqueo = signal<boolean>(false);
 
   // ── Constantes ────────────────────────────────────────────────────────────
   protected readonly billetes = signal(BILLETES);
@@ -763,11 +837,15 @@ export class CuadraturaContentComponent implements AfterViewInit {
     );
   });
 
-  protected readonly diferencia = computed(() => this.totalArqueo() - this.saldoTeorico());
+  protected readonly saldoComputado = computed(
+    () => this.fondoLocal() + this.ingresosEfectivoHoy() - this.totalEgresosHoy(),
+  );
 
-  /** Si hay diferencia, exigir justificación para habilitar el cierre. */
+  protected readonly diferencia = computed(() => this.totalArqueo() - this.saldoComputado());
+
   protected readonly puedeCerrar = computed(() => {
     if (this.cajaYaCerrada() || this.isSaving()) return false;
+    if (!this.realizarArqueo()) return true;
     if (this.diferencia() === 0) return true;
     return this.notas().trim().length > 0;
   });
@@ -860,20 +938,29 @@ export class CuadraturaContentComponent implements AfterViewInit {
     this.eliminarEgreso.emit(egreso);
   }
 
+  protected onFondoChange(event: Event): void {
+    const raw = (event.target as HTMLInputElement).value.replace(/\D/g, '');
+    const fondo = raw === '' ? 0 : parseInt(raw, 10) || 0;
+    this.fondoLocal.set(fondo);
+    this.fondoInicialChange.emit(fondo);
+  }
+
   protected onGuardarCierre(): void {
     const c = this.cantidades();
+    const conArqueo = this.realizarArqueo();
+    const saldo = this.saldoComputado();
     this.guardarCierre.emit({
-      bill20000: c['bill20000'],
-      bill10000: c['bill10000'],
-      bill5000: c['bill5000'],
-      bill2000: c['bill2000'],
-      bill1000: c['bill1000'],
-      coin500: c['coin500'],
-      coin100: c['coin100'],
-      coin50: c['coin50'],
-      coin10: c['coin10'],
+      bill20000: conArqueo ? c['bill20000'] : 0,
+      bill10000: conArqueo ? c['bill10000'] : 0,
+      bill5000: conArqueo ? c['bill5000'] : 0,
+      bill2000: conArqueo ? c['bill2000'] : 0,
+      bill1000: conArqueo ? c['bill1000'] : 0,
+      coin500: conArqueo ? c['coin500'] : 0,
+      coin100: conArqueo ? c['coin100'] : 0,
+      coin50: conArqueo ? c['coin50'] : 0,
+      coin10: conArqueo ? c['coin10'] : 0,
       notes: this.notas(),
-      arqueoTotal: this.totalArqueo(),
+      arqueoTotal: conArqueo ? this.totalArqueo() : saldo,
     });
   }
 
