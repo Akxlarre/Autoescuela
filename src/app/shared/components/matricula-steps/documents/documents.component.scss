@@ -1,0 +1,31 @@
+// Banner de foto reutilizada de una matrícula anterior (fix-020)
+.prev-photo-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--state-info-bg);
+  border: 1px solid var(--state-info-border);
+  color: var(--state-info);
+}
+
+.prev-photo-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--color-primary-text);
+  background: var(--ds-brand);
+  border: 1px solid var(--ds-brand);
+  transition: opacity var(--duration-fast);
+
+  &:hover {
+    opacity: 0.9;
+  }
+}

@@ -29,6 +29,8 @@ export class DocumentsComponent {
   fileSelected = output<{ type: string; file: File }>();
   /** Emitido al abrir/cerrar el lightbox. null = cerrar. */
   lightboxOpen = output<string | null>();
+  /** Emitido al confirmar la reutilización de la foto de una matrícula anterior (fix-020). */
+  confirmPhoto = output<void>();
   next = output<void>();
   back = output<void>();
 
@@ -88,10 +90,16 @@ export class DocumentsComponent {
     const hasCarnet =
       !!d.carnetPhoto?.capturedDataUrl || d.uploadedDocuments.has('id_photo' as DocumentType);
     if (!hasCarnet) return false;
+    // Re-matrícula (fix-020): una foto anterior sin confirmar NO habilita el avance.
+    if (d.photoNeedsConfirmation) return false;
     return d.requiredDocuments
       .filter((doc: { required: boolean }) => doc.required)
       .every((doc: { type: DocumentType }) => this.isUploaded(doc.type));
   });
+
+  onConfirmPhoto(): void {
+    this.confirmPhoto.emit();
+  }
 
   isUploaded(type: DocumentType): boolean {
     return this.data().uploadedDocuments.has(type);

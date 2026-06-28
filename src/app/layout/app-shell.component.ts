@@ -110,9 +110,10 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
               >
                 {{ confirmModal.config()?.title }}
               </h3>
-              <p class="text-sm text-text-secondary leading-relaxed">
-                {{ confirmModal.config()?.message }}
-              </p>
+              <p
+                class="text-sm text-text-secondary leading-relaxed"
+                [innerHTML]="confirmModal.config()?.message"
+              ></p>
             </div>
           </div>
           <div class="flex items-center gap-3 justify-end">

@@ -3,7 +3,7 @@ import {
   Component,
   computed,
   input,
-  signal,
+  output,
   inject,
   viewChild,
   ElementRef,
@@ -100,11 +100,12 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                   <th class="py-3 px-5">Licencia</th>
                   <th class="py-3 px-5">Año / Sede</th>
                   <th class="py-3 px-5">Estado cuenta</th>
+                  <th class="py-3 px-5 w-10"></th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-border-subtle">
                 @for (egresado of filtered(); track egresado.id) {
-                  <tr class="hover:bg-elevated transition-colors">
+                  <tr class="rematricula-row hover:bg-elevated transition-colors">
                     <td class="py-4 px-5">
                       <div class="flex flex-col gap-0.5">
                         <span class="font-bold text-text-primary">{{ egresado.nombre }}</span>
@@ -132,10 +133,22 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
                         <span class="text-xs font-bold text-success">Al día</span>
                       }
                     </td>
+                    <td class="py-4 px-5 text-right">
+                      <button
+                        type="button"
+                        class="rematricular-btn"
+                        (click)="reEnroll.emit(egresado)"
+                        data-llm-action="re-enroll-student"
+                        [attr.aria-label]="'Re-matricular a ' + egresado.nombre"
+                      >
+                        <app-icon name="user-plus" [size]="14" />
+                        <span>Re-matricular</span>
+                      </button>
+                    </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="4" class="p-0">
+                    <td colspan="5" class="p-0">
                       <app-empty-state
                         icon="graduation-cap"
                         message="No hay ex-alumnos profesionales"
@@ -154,11 +167,34 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
       </div>
     </div>
   `,
+  styles: `
+    .rematricular-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ds-brand);
+      background: var(--color-primary-tint);
+      border: 1px solid color-mix(in srgb, var(--ds-brand) 25%, transparent);
+      transition: all var(--duration-fast);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .rematricular-btn:hover {
+      background: var(--ds-brand);
+      color: var(--color-primary-text);
+    }
+  `,
 })
 export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   readonly egresados = input.required<EgresadoTableRow[]>();
   readonly isLoading = input(false);
   readonly backRoute = input<string>('/app/admin/clase-profesional/alumnos');
+  /** Emite el egresado a re-matricular; el Smart muestra confirmación y navega al wizard (fix-020). */
+  readonly reEnroll = output<EgresadoTableRow>();
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');

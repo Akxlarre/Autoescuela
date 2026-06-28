@@ -47,6 +47,7 @@ interface CategoryMeta {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PersonalDataComponent {
+  private _rutPrefillTimer: ReturnType<typeof setTimeout> | undefined;
   readonly genderOptions = [
     { label: 'Masculino', value: 'M' },
     { label: 'Femenino', value: 'F' },
@@ -62,6 +63,8 @@ export class PersonalDataComponent {
   next = output<void>();
   cancel = output<void>();
   branchChange = output<number | null>();
+  /** Emite el RUT al perder el foco si es válido, para precargar un alumno existente (fix-020). */
+  rutBlur = output<string>();
 
   // ── Category selection (local UI state) ───────────────────────────────────
 
@@ -170,6 +173,17 @@ export class PersonalDataComponent {
   onRutInput(raw: string): void {
     const formatted = formatRut(raw);
     this.dataChange.emit({ ...this.data(), rut: formatted });
+
+    clearTimeout(this._rutPrefillTimer);
+    if (validateRut(formatted)) {
+      this._rutPrefillTimer = setTimeout(() => this.rutBlur.emit(formatted), 500);
+    }
+  }
+
+  /** Al perder el foco cancela el timer (ya se emitirá aquí si el RUT es válido). */
+  onRutBlur(): void {
+    clearTimeout(this._rutPrefillTimer);
+    if (this.rutValid()) this.rutBlur.emit(this.data().rut);
   }
 
   emitField<K extends keyof EnrollmentPersonalData>(

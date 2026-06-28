@@ -96,6 +96,8 @@ export interface EnrollmentDocumentsData {
   photoTab: PhotoTab;
   cameraState: CameraState;
   carnetPhoto: CarnetPhoto | null;
+  /** true = la foto visible viene de una matrícula anterior y debe confirmarse o reemplazarse (fix-020). */
+  photoNeedsConfirmation: boolean;
   // Professional documents (only when view === 'professional')
   uploadedDocuments: Map<DocumentType, UploadedDocument>;
   requiredDocuments: DocumentRequirement[];

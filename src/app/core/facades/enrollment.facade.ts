@@ -10,6 +10,7 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
+import { evaluateReenrollment, type ReenrollmentVerdict } from '@core/utils/reenrollment.utils';
 import { toISODate, to24hTime } from '@core/utils/date.utils';
 import { calcAge } from '@core/utils/age.utils';
 import type { Course } from '@core/models/dto/course.model';
@@ -416,17 +417,15 @@ export class EnrollmentFacade {
   } | null> {
     const { data: user, error } = await this.supabase.client
       .from('users')
-      .select('id, first_names, paternal_last_name, maternal_last_name, email, phone')
+      .select(
+        'id, first_names, paternal_last_name, maternal_last_name, email, phone, students(id, birth_date, gender, address, current_license_class, license_obtained_date)',
+      )
       .eq('rut', normalizeRutForStorage(rut))
       .maybeSingle();
 
     if (error || !user) return null;
 
-    const { data: student } = await this.supabase.client
-      .from('students')
-      .select('id, birth_date, gender, address, current_license_class, license_obtained_date')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const student = Array.isArray(user.students) ? user.students[0] : user.students;
 
     return {
       studentId: student?.id ?? null,
@@ -443,6 +442,34 @@ export class EnrollmentFacade {
     };
   }
 
+  /**
+   * Precarga los datos personales de una persona ya registrada por su RUT
+   * para rellenar el Paso 1 del wizard (fix-020). Solo lectura + mapeo DTO→UI,
+   * NO persiste nada. Devuelve `null` si el RUT no existe en el sistema.
+   *
+   * Usado por las dos entradas que reutilizan el wizard: el blur del RUT en
+   * "Nueva matrícula" y el botón "Re-matricular" de la vista de Ex-alumnos.
+   * No incluye `rut` (lo escribió el operador) ni la selección de curso (es una
+   * decisión nueva): el alumno que vuelve puede matricularse en otro curso.
+   */
+  async prefillFromStudent(rut: string): Promise<Partial<EnrollmentPersonalData> | null> {
+    const found = await this.findUserByRut(rut);
+    if (!found) return null;
+
+    return {
+      firstNames: found.firstNames,
+      paternalLastName: found.paternalLastName,
+      maternalLastName: found.maternalLastName,
+      email: found.email,
+      phone: found.phone,
+      birthDate: found.birthDate ?? '',
+      gender: (found.gender as EnrollmentPersonalData['gender']) ?? '',
+      address: found.address ?? '',
+      currentLicense: (found.currentLicense as CurrentLicenseType) ?? null,
+      licenseDate: found.licenseDate,
+    };
+  }
+
   /** Devuelve el RUT del dueño del email, o null si no está en la BD. */
   private async findUserByEmail(email: string): Promise<string | null> {
     const { data } = await this.supabase.client
@@ -453,19 +480,41 @@ export class EnrollmentFacade {
     return data?.rut ?? null;
   }
 
-  private async checkDuplicateEnrollment(
+  /**
+   * Evalúa si el alumno puede (re)matricularse en un curso (fix-020).
+   *
+   * Trae todas sus matrículas en el mismo `license_class` y delega el veredicto
+   * en la función pura `evaluateReenrollment`:
+   *  - `block`   → tiene una matrícula viva (active/pending_payment)
+   *  - `confirm` → solo histórico (completed/cancelled) → re-matrícula legítima
+   *  - `allow`   → sin matrícula previa en este curso
+   *
+   * Exclusiones deliberadas de la query:
+   *  - `status='draft'`: los borradores son propiedad del flujo de reanudación
+   *    (`findExistingDraft`/`loadActiveDrafts`), no de este guard. Contarlos
+   *    bloquearía el reinicio de una matrícula que el sistema reutilizaría sola.
+   *  - la matrícula actual en edición (`_draft().enrollmentId`): un draft que se
+   *    está reanudando no debe verse a sí mismo como duplicado.
+   */
+  private async evaluateCourseReenrollment(
     studentId: number,
     licenseClass: string,
-  ): Promise<{ status: string } | null> {
-    const { data } = await this.supabase.client
+  ): Promise<ReenrollmentVerdict> {
+    let query = this.supabase.client
       .from('enrollments')
       .select('id, status, courses!inner(license_class)')
       .eq('student_id', studentId)
       .eq('courses.license_class', licenseClass)
-      .in('status', ['active', 'pending_payment', 'completed'])
-      .limit(1)
-      .maybeSingle();
-    return data ? { status: (data as any).status } : null;
+      .neq('status', 'draft');
+
+    const currentId = this._draft().enrollmentId;
+    if (currentId != null) {
+      query = query.neq('id', currentId) as typeof query;
+    }
+
+    const { data } = await query;
+    const statuses = (data ?? []).map((r: any) => r.status as string);
+    return evaluateReenrollment(statuses);
   }
 
   /**
@@ -487,36 +536,60 @@ export class EnrollmentFacade {
           const course = this._courses().find((c) => c.license_class === licenseClass);
           const courseName = course?.name ?? licenseClass;
 
-          // Si ya tiene matrícula activa/completada en el mismo curso → modal de bloqueo sin opción de continuar
-          if (existing.studentId) {
-            const duplicate = await this.checkDuplicateEnrollment(existing.studentId, licenseClass);
-            if (duplicate) {
-              const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
-              await this.confirm({
-                title: 'Matrícula duplicada',
-                message: `${fullName} ya tiene una matrícula ${statusLabel} en ${courseName}. No es posible crear una nueva matrícula para el mismo curso.`,
-                severity: 'danger',
-                confirmLabel: 'Entendido',
-              });
-              this._isLoading.set(false);
-              return false;
-            }
+          // Veredicto de re-matrícula en el MISMO curso (fix-020).
+          // Sin perfil de alumno (solo personal) → no hay matrículas posibles → 'allow'.
+          const verdict: ReenrollmentVerdict = existing.studentId
+            ? await this.evaluateCourseReenrollment(existing.studentId, licenseClass)
+            : 'allow';
+
+          // 'block' → tiene una matrícula viva (activa/pendiente de pago) en este curso.
+          if (verdict === 'block') {
+            await this.confirm({
+              title: 'Matrícula duplicada',
+              message: `${fullName} ya tiene una matrícula en curso en ${courseName}. No es posible crear una nueva mientras esa siga vigente.`,
+              severity: 'danger',
+              confirmLabel: 'Entendido',
+            });
+            this._isLoading.set(false);
+            return false;
           }
 
-          // RUT existe pero sin matrícula en este curso → pedir confirmación explícita.
-          // El mensaje varía según si la persona tiene historial como alumno o solo como personal.
-          const isStaffOnly = !existing.studentId;
-          const confirmTitle = isStaffOnly
-            ? 'Personal de la autoescuela'
-            : 'RUT ya registrado en el sistema';
-          const confirmMessage = isStaffOnly
-            ? `${fullName} (${existing.email}) está registrado en el sistema como personal de la autoescuela.\n\n` +
-              `Estás a punto de matricularlo/a como alumno en: ${courseName}.\n\n` +
-              `Se creará un perfil de alumno vinculado a su cuenta existente. Sus datos de acceso no se verán afectados.`
-            : `El RUT ingresado pertenece a ${fullName} (${existing.email}), quien ya tiene matrículas anteriores.\n\n` +
-              `Estás a punto de matricularlo/a en un nuevo curso: ${courseName}.\n\n` +
-              `Sus datos personales se actualizarán con los valores del formulario: Nombre completo, Email, Teléfono, Dirección, Fecha de nacimiento, Género, Licencia actual.\n\n` +
-              `Ambas matrículas quedarán visibles en su perfil.`;
+          // Construir la confirmación según el veredicto:
+          //  - 'confirm' → re-matrícula en el mismo curso (egresó o canceló antes).
+          //  - 'allow'   → RUT existe pero sin matrícula en este curso (personal u otro curso).
+          let confirmTitle: string;
+          let confirmMessage: string;
+          const isProfessional = licenseClass !== 'B';
+          const personalFields = [
+            'Nombre completo',
+            'Email',
+            'Teléfono',
+            'Dirección',
+            'Fecha de nacimiento',
+            'Género',
+            ...(isProfessional ? ['Licencia actual'] : []),
+          ].join(', ');
+
+          if (verdict === 'confirm') {
+            confirmTitle = 'Re-matrícula en el mismo curso';
+            confirmMessage =
+              `${fullName} (${existing.email}) ya cursó anteriormente ${courseName}.\n\n` +
+              `Se creará una NUEVA matrícula; el registro anterior se conserva como historial.\n\n` +
+              `Sus datos personales se actualizarán con los valores del formulario: ${personalFields}.`;
+          } else {
+            const isStaffOnly = !existing.studentId;
+            confirmTitle = isStaffOnly
+              ? 'Personal de la autoescuela'
+              : 'RUT ya registrado en el sistema';
+            confirmMessage = isStaffOnly
+              ? `${fullName} (${existing.email}) está registrado en el sistema como personal de la autoescuela.\n\n` +
+                `Estás a punto de matricularlo/a como alumno en: ${courseName}.\n\n` +
+                `Se creará un perfil de alumno vinculado a su cuenta existente. Sus datos de acceso no se verán afectados.`
+              : `El RUT ingresado pertenece a ${fullName} (${existing.email}), quien ya tiene matrículas anteriores.\n\n` +
+                `Estás a punto de matricularlo/a en un nuevo curso: ${courseName}.\n\n` +
+                `Sus datos personales se actualizarán con los valores del formulario: ${personalFields}.\n\n` +
+                `Ambas matrículas quedarán visibles en su perfil.`;
+          }
           const confirmed = await this.confirm({
             title: confirmTitle,
             message: confirmMessage,
@@ -556,15 +629,16 @@ export class EnrollmentFacade {
       const courseId = await this.resolveCourseId(data, branchId);
       if (!courseId) return false;
 
-      // 3.5. Verificar que no exista ya una matrícula activa/completada para el mismo curso
+      // 3.5. Red de seguridad: solo bloquea si hay una matrícula VIVA en el mismo
+      // curso (race condition). La re-matrícula de histórico ('confirm') ya fue
+      // aceptada por el operador en el Step 0, así que aquí pasa sin re-preguntar.
       const courseForCheck = this._courses().find((c) => c.id === courseId);
       const licenseClassForCheck = courseForCheck?.license_class;
       if (licenseClassForCheck) {
-        const duplicate = await this.checkDuplicateEnrollment(studentId, licenseClassForCheck);
-        if (duplicate) {
-          const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+        const verdict = await this.evaluateCourseReenrollment(studentId, licenseClassForCheck);
+        if (verdict === 'block') {
           this._error.set(
-            `El alumno ya tiene una matrícula ${statusLabel} en ${courseForCheck?.name ?? licenseClassForCheck}. No es posible crear una nueva matrícula para el mismo curso.`,
+            `El alumno ya tiene una matrícula en curso en ${courseForCheck?.name ?? licenseClassForCheck}. No es posible crear una nueva mientras esa siga vigente.`,
           );
           this._isLoading.set(false);
           return false;

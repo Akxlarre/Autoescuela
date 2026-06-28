@@ -352,6 +352,130 @@ describe('EnrollmentFacade', () => {
     });
   });
 
+  // ── Re-matrícula: precarga de datos (fix-020) ──
+
+  describe('prefillFromStudent', () => {
+    it('devuelve null cuando el RUT no existe', async () => {
+      vi.spyOn(facade, 'findUserByRut').mockResolvedValue(null);
+      const result = await facade.prefillFromStudent('12345678-9');
+      expect(result).toBeNull();
+    });
+
+    it('mapea los datos del alumno encontrado a campos del Paso 1', async () => {
+      vi.spyOn(facade, 'findUserByRut').mockResolvedValue({
+        studentId: 7,
+        firstNames: 'Ana',
+        paternalLastName: 'Pérez',
+        maternalLastName: 'Soto',
+        email: 'ana@example.com',
+        phone: '987654321',
+        birthDate: '1990-05-10',
+        gender: 'F',
+        address: 'Calle 1',
+        currentLicense: 'B',
+        licenseDate: '2015-01-01',
+      });
+
+      const result = await facade.prefillFromStudent('12345678-9');
+
+      expect(result).toEqual({
+        firstNames: 'Ana',
+        paternalLastName: 'Pérez',
+        maternalLastName: 'Soto',
+        email: 'ana@example.com',
+        phone: '987654321',
+        birthDate: '1990-05-10',
+        gender: 'F',
+        address: 'Calle 1',
+        currentLicense: 'B',
+        licenseDate: '2015-01-01',
+      });
+    });
+
+    it('no incluye rut ni selección de curso (decisión nueva del operador)', async () => {
+      vi.spyOn(facade, 'findUserByRut').mockResolvedValue({
+        studentId: 7,
+        firstNames: 'Ana',
+        paternalLastName: 'Pérez',
+        maternalLastName: '',
+        email: 'ana@example.com',
+        phone: '',
+        birthDate: null,
+        gender: null,
+        address: null,
+        currentLicense: null,
+        licenseDate: null,
+      });
+
+      const result = await facade.prefillFromStudent('12345678-9');
+
+      expect(result).not.toHaveProperty('rut');
+      expect(result).not.toHaveProperty('courseType');
+      expect(result).not.toHaveProperty('courseCategory');
+      // Campos nulos de BD normalizados a string vacío donde el modelo lo exige.
+      expect(result?.birthDate).toBe('');
+      expect(result?.gender).toBe('');
+      expect(result?.address).toBe('');
+    });
+  });
+
+  // ── Re-matrícula: guard de duplicados (fix-020) ──
+
+  describe('evaluateCourseReenrollment', () => {
+    function mockEnrollmentsQuery(rows: any[]) {
+      const neqCalls: [string, unknown][] = [];
+      const builder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockImplementation((col: string, val: unknown) => {
+          neqCalls.push([col, val]);
+          return builder;
+        }),
+        then: (resolve: any, reject: any) =>
+          Promise.resolve({ data: rows, error: null }).then(resolve, reject),
+      };
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+      return { neqCalls };
+    }
+
+    it('block cuando hay una matrícula viva (active) en el curso', async () => {
+      mockEnrollmentsQuery([{ id: 1, status: 'active' }]);
+      const verdict = await (facade as any).evaluateCourseReenrollment(5, 'B');
+      expect(verdict).toBe('block');
+    });
+
+    it('confirm cuando solo hay matrículas históricas (completed)', async () => {
+      mockEnrollmentsQuery([{ id: 1, status: 'completed' }]);
+      const verdict = await (facade as any).evaluateCourseReenrollment(5, 'B');
+      expect(verdict).toBe('confirm');
+    });
+
+    it('allow cuando no hay matrículas previas en el curso', async () => {
+      mockEnrollmentsQuery([]);
+      const verdict = await (facade as any).evaluateCourseReenrollment(5, 'B');
+      expect(verdict).toBe('allow');
+    });
+
+    it('excluye los drafts de la query (los maneja el flujo de reanudación)', async () => {
+      const { neqCalls } = mockEnrollmentsQuery([]);
+      await (facade as any).evaluateCourseReenrollment(5, 'B');
+      expect(neqCalls).toContainEqual(['status', 'draft']);
+    });
+
+    it('excluye la matrícula actual en edición para no verse como duplicado', async () => {
+      (facade as any)._draft.set({ enrollmentId: 99, studentId: 5, userId: 7 });
+      const { neqCalls } = mockEnrollmentsQuery([]);
+      await (facade as any).evaluateCourseReenrollment(5, 'B');
+      expect(neqCalls).toContainEqual(['id', 99]);
+    });
+
+    it('no añade filtro de id cuando no hay matrícula en edición', async () => {
+      const { neqCalls } = mockEnrollmentsQuery([]);
+      await (facade as any).evaluateCourseReenrollment(5, 'B');
+      expect(neqCalls.some(([col]) => col === 'id')).toBe(false);
+    });
+  });
+
   // ── Generate Contract ──
 
   describe('generateContract', () => {

@@ -33,6 +33,7 @@
               (change)="onRutInput($any($event.target).value)"
               (keydown)="onRutKeydown($event)"
               (paste)="onRutPaste($event)"
+              (blur)="onRutBlur()"
               placeholder="12.345.678-9"
               maxlength="12"
               data-llm-description="Chilean RUT number of the student"

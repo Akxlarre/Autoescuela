@@ -6,10 +6,12 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -184,11 +186,16 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
                       }
                     </td>
                     <td class="py-4 px-5 text-right">
-                      <app-icon
-                        name="chevron-right"
-                        [size]="16"
-                        class="text-muted opacity-0 group-hover:opacity-100 transition-opacity"
-                      />
+                      <button
+                        type="button"
+                        class="rematricular-btn"
+                        (click)="reEnroll(egresado)"
+                        data-llm-action="re-enroll-student"
+                        [attr.aria-label]="'Re-matricular a ' + egresado.nombre"
+                      >
+                        <app-icon name="user-plus" [size]="14" />
+                        <span>Re-matricular</span>
+                      </button>
                     </td>
                   </tr>
                 } @empty {
@@ -301,10 +308,32 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
       background: var(--state-success-bg);
       border: 1px solid var(--state-success-border);
     }
+
+    .rematricular-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--ds-brand);
+      background: var(--color-primary-tint);
+      border: 1px solid color-mix(in srgb, var(--ds-brand) 25%, transparent);
+      transition: all var(--duration-fast);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .rematricular-btn:hover {
+      background: var(--ds-brand);
+      color: var(--color-primary-text);
+    }
   `,
 })
 export class SecretariaExAlumnosComponent implements OnInit {
   protected readonly facade = inject(ExAlumnosFacade);
+  private readonly router = inject(Router);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   // ── Hero Config ─────────────────────────────────────────────────────────────
   protected readonly heroActions: SectionHeroAction[] = [
@@ -390,6 +419,21 @@ export class SecretariaExAlumnosComponent implements OnInit {
 
   ngOnInit(): void {
     void this.facade.loadEgresados();
+  }
+
+  /** Re-matricula a un egresado: muestra confirmación y luego abre el wizard con datos precargados. */
+  protected async reEnroll(egresado: EgresadoTableRow): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Re-matricular alumno',
+      message: `Se abrirá el formulario de nueva matrícula con los datos personales de <strong>${egresado.nombre}</strong> precargados. Podrás seleccionar un curso nuevo antes de continuar.`,
+      severity: 'info',
+      confirmLabel: 'Continuar',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+    void this.router.navigate(['/app/secretaria/matricula'], {
+      queryParams: { rut: egresado.rut },
+    });
   }
 
   protected handleHeroAction(actionId: string): void {
