@@ -71,7 +71,9 @@
       "Skill(spec-verify)",
       "Skill(spec-verify:*)",
       "mcp__playwright__browser_fill_form",
-      "mcp__playwright__browser_snapshot"
+      "mcp__playwright__browser_snapshot",
+      "Bash(Remove-Item \"c:\\\\Proyecto Autoescuela\\\\Repository\\\\Autoescuela\\\\src\\\\app\\\\features\\\\admin\\\\pagos\\\\rentabilidad-cursos.component.ts\")",
+      "PowerShell(Remove-Item \"c:\\\\Proyecto Autoescuela\\\\Repository\\\\Autoescuela\\\\src\\\\app\\\\features\\\\admin\\\\pagos\\\\rentabilidad-cursos.component.ts\" -Confirm:$false)"
     ]
   },
   "enableAllProjectMcpServers": true,

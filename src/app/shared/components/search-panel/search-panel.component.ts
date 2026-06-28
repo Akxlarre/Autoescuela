@@ -8,7 +8,12 @@ import {
 } from '@angular/core';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
-import type { SearchResult, SearchResultGroup } from '@core/models/ui/global-search.model';
+import type {
+  AlumnoQuickAction,
+  AlumnoResult,
+  SearchResult,
+  SearchResultGroup,
+} from '@core/models/ui/global-search.model';
 
 /**
  * SearchPanelComponent — Command Palette global (Dumb).
@@ -16,6 +21,11 @@ import type { SearchResult, SearchResultGroup } from '@core/models/ui/global-sea
  * Recibe datos vía `input()` y emite eventos vía `output()`.
  * Sin inyección de facades: toda la lógica de búsqueda vive en
  * GlobalSearchFacade, coordinada desde AppShellComponent.
+ *
+ * Comportamiento de alumnos:
+ * - Click en fila → expande/colapsa menú contextual con acciones rápidas.
+ * - Click en chip de acción → emite `resultSelected` con ruta de la acción.
+ * - Enter en fila colapsada → expande; Enter en fila expandida → Ver Ficha.
  */
 @Component({
   selector: 'app-search-panel',
@@ -93,46 +103,85 @@ import type { SearchResult, SearchResultGroup } from '@core/models/ui/global-sea
                     role="option"
                     tabindex="0"
                     [attr.aria-label]="result.label"
-                    (click)="selectResult(result)"
-                    (keydown.enter)="selectResult(result)"
+                    [attr.aria-expanded]="
+                      result.type === 'alumno' ? isExpanded(result.studentId) : null
+                    "
                     (keydown.arrowDown)="focusNext($event)"
                     (keydown.arrowUp)="focusPrev($event)"
-                    data-llm-action="search-navigate-result"
+                    data-llm-action="search-result-item"
                   >
                     @if (result.type === 'action') {
-                      <span class="search-panel__result-icon search-panel__result-icon--action">
-                        <app-icon [name]="result.icon" [size]="15" aria-hidden="true" />
-                      </span>
-                      <span class="search-panel__result-body">
-                        <span class="search-panel__result-label">{{ result.label }}</span>
-                        <span class="search-panel__result-desc">{{ result.description }}</span>
-                      </span>
-                      <app-icon
-                        name="arrow-right"
-                        [size]="14"
-                        class="search-panel__result-arrow"
-                        aria-hidden="true"
-                      />
-                    } @else {
-                      <span class="search-panel__result-icon search-panel__result-icon--alumno">
-                        <app-icon name="user" [size]="15" aria-hidden="true" />
-                      </span>
-                      <span class="search-panel__result-body">
-                        <span class="search-panel__result-label">{{ result.label }}</span>
-                        <span class="search-panel__result-desc">
-                          {{ result.rut }}&nbsp;·&nbsp;<span
-                            class="search-panel__status"
-                            [attr.data-status]="statusClass(result.status)"
-                            >{{ result.status }}</span
-                          >
+                      <!-- Acción de navegación -->
+                      <span
+                        class="search-panel__result-item-inner"
+                        (click)="selectResult(result)"
+                        (keydown.enter)="selectResult(result)"
+                      >
+                        <span class="search-panel__result-icon search-panel__result-icon--action">
+                          <app-icon [name]="result.icon" [size]="15" aria-hidden="true" />
                         </span>
+                        <span class="search-panel__result-body">
+                          <span class="search-panel__result-label">{{ result.label }}</span>
+                          <span class="search-panel__result-desc">{{ result.description }}</span>
+                        </span>
+                        <app-icon
+                          name="arrow-right"
+                          [size]="14"
+                          class="search-panel__result-arrow"
+                          aria-hidden="true"
+                        />
                       </span>
-                      <app-icon
-                        name="arrow-right"
-                        [size]="14"
-                        class="search-panel__result-arrow"
-                        aria-hidden="true"
-                      />
+                    } @else {
+                      <!-- Alumno — click expande, Enter expande/navega -->
+                      <span
+                        class="search-panel__result-item-inner"
+                        (click)="toggleAlumno(result)"
+                        (keydown.enter)="onResultEnter(result)"
+                        data-llm-action="search-alumno-row"
+                      >
+                        <span class="search-panel__result-icon search-panel__result-icon--alumno">
+                          <app-icon name="user" [size]="15" aria-hidden="true" />
+                        </span>
+                        <span class="search-panel__result-body">
+                          <span class="search-panel__result-label">{{ result.label }}</span>
+                          <span class="search-panel__result-desc">
+                            {{ result.rut }}&nbsp;·&nbsp;<span
+                              class="search-panel__status"
+                              [attr.data-status]="statusClass(result.status)"
+                              >{{ result.status }}</span
+                            >
+                          </span>
+                        </span>
+                        <app-icon
+                          name="chevron-right"
+                          [size]="14"
+                          class="search-panel__expand-chevron"
+                          [class.search-panel__expand-chevron--open]="isExpanded(result.studentId)"
+                          aria-hidden="true"
+                        />
+                      </span>
+
+                      <!-- Estante de acciones rápidas (expandible) -->
+                      <div
+                        class="search-panel__action-shelf"
+                        [class.search-panel__action-shelf--open]="isExpanded(result.studentId)"
+                        [attr.aria-hidden]="!isExpanded(result.studentId)"
+                      >
+                        <div class="search-panel__action-chips">
+                          @for (action of result.quickActions; track action.actionType) {
+                            <button
+                              type="button"
+                              class="search-panel__action-chip"
+                              (click)="selectQuickAction(action)"
+                              [attr.data-llm-action]="'search-alumno-action-' + action.actionType"
+                              tabindex="-1"
+                            >
+                              <app-icon [name]="action.icon" [size]="12" aria-hidden="true" />
+                              {{ action.label }}
+                            </button>
+                          }
+                        </div>
+                      </div>
                     }
                   </li>
                 }
@@ -146,7 +195,7 @@ import type { SearchResult, SearchResultGroup } from '@core/models/ui/global-sea
       @if (query().length > 0 && groups().length > 0) {
         <div class="search-panel__footer">
           <span><kbd>↑↓</kbd> navegar</span>
-          <span><kbd>↵</kbd> abrir</span>
+          <span><kbd>↵</kbd> expandir / abrir</span>
           <span><kbd>Esc</kbd> cerrar</span>
         </div>
       }
@@ -168,6 +217,9 @@ export class SearchPanelComponent {
   /** Estado local del input — pura UI */
   protected readonly query = signal('');
 
+  /** ID del alumno expandido — nil = todos colapsados */
+  private readonly _expandedId = signal<string | null>(null);
+
   @HostBinding('style.right') get rightStyle(): string {
     return `${this.rightPx()}px`;
   }
@@ -183,11 +235,52 @@ export class SearchPanelComponent {
   onInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.query.set(value);
+    this._expandedId.set(null); // colapsar al cambiar el query
     this.queryChange.emit(value);
   }
 
+  // ── Acciones por tipo de resultado ──────────────────────────────────────
+
   protected selectResult(result: SearchResult): void {
     this.resultSelected.emit(result);
+  }
+
+  /** Toggle del menú contextual del alumno. */
+  protected toggleAlumno(result: AlumnoResult): void {
+    this._expandedId.update((id) => (id === result.studentId ? null : result.studentId));
+  }
+
+  /**
+   * Navega a la ruta de la acción rápida reutilizando el output `resultSelected`
+   * con un ActionResult sintético. El shell llama a `facade.navigate()` sin cambios.
+   */
+  protected selectQuickAction(action: AlumnoQuickAction): void {
+    this.resultSelected.emit({
+      type: 'action',
+      id: action.actionType,
+      label: action.label,
+      description: '',
+      icon: action.icon,
+      route: action.route,
+    });
+  }
+
+  /**
+   * Enter en un alumno:
+   * - colapsado → expande el menú contextual
+   * - expandido → ejecuta "Ver Ficha" (primera acción)
+   */
+  protected onResultEnter(result: AlumnoResult): void {
+    if (this.isExpanded(result.studentId)) {
+      const view = result.quickActions.at(0);
+      if (view) this.selectQuickAction(view);
+    } else {
+      this.toggleAlumno(result);
+    }
+  }
+
+  protected isExpanded(studentId: string): boolean {
+    return this._expandedId() === studentId;
   }
 
   protected onChipClick(q: string): void {

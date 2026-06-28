@@ -20,6 +20,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import { RentabilidadCursosComponent } from '@shared/components/rentabilidad-cursos/rentabilidad-cursos.component';
 import {
   RANGOS_REPORTE,
   computeDateRange,
@@ -44,6 +45,7 @@ import {
     SelectModule,
     DateInputComponent,
     BentoGridLayoutDirective,
+    RentabilidadCursosComponent,
   ],
   styles: [
     `
@@ -695,6 +697,15 @@ import {
                 </tfoot>
               </table>
             </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── Rentabilidad Estimada por Tipo de Curso (RF-040) ───────────────── -->
+      @if (!isLoading()) {
+        <div class="bento-banner">
+          <div class="card p-6">
+            <app-rentabilidad-cursos />
           </div>
         </div>
       }

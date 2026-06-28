@@ -58,7 +58,6 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             <!-- Finanzas (Ingresos, Gastos, Margen) -->
             <div
               class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
-              
             >
               <div class="flex flex-col lg:block text-center lg:text-right">
                 <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
@@ -95,10 +94,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 <span class="text-[10px] lg:hidden uppercase font-bold text-text-muted"
                   >Rentabilidad</span
                 >
-                <span
-                  class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15"
-                  
-                >
+                <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
                   {{ item.rentabilidadPorcentaje }}%
                 </span>
               </div>
@@ -108,8 +104,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 class="flex items-center justify-end lg:justify-center flex-1 lg:flex-none ml-4 lg:ml-0"
               >
                 <div
-                  class="h-2 rounded-full overflow-hidden w-full lg:w-full"
-                  class="bg-border-muted"
+                  class="h-2 rounded-full overflow-hidden w-full lg:w-full bg-border-muted"
                   style="max-width: 120px"
                 >
                   <div
@@ -129,7 +124,6 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
         class="flex flex-col lg:grid gap-3 lg:gap-4 px-4 py-4 border-t-2 border-border-muted bg-surface"
         style="border-radius: 0 0 6px 6px"
       >
-        <!-- Desktop Grid Container wrapper para que respete el lg:grid de arriba -->
         <div
           class="flex flex-col lg:grid lg:contents gap-3"
           style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;"
@@ -140,7 +134,6 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             >
             <span
               class="text-xs font-bold px-2.5 py-1 rounded-full lg:hidden text-success bg-success/15"
-              
             >
               {{ totales().rentabilidadPorcentaje }}% Rentabilidad
             </span>
@@ -148,7 +141,6 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
 
           <div
             class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
-            
           >
             <div class="flex flex-col lg:block text-center lg:text-right">
               <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
@@ -179,10 +171,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
           </div>
 
           <div class="hidden lg:flex justify-end">
-            <span
-              class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15"
-              
-            >
+            <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
               {{ totales().rentabilidadPorcentaje }}%
             </span>
           </div>
@@ -195,7 +184,6 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
     <!-- ── Nota al pie ────────────────────────────────────────────────────────── -->
     <div
       class="mt-4 px-4 py-3 rounded-lg text-xs text-text-muted border border-border-muted bg-text-muted/8"
-      
     >
       <strong>Nota:</strong> Los gastos directos incluyen bencina, horas instructor, materiales y
       mantención asignables al tipo de curso. No incluyen gastos fijos (arriendo, servicios,

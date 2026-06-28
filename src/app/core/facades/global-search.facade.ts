@@ -3,11 +3,46 @@ import { Router } from '@angular/router';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
 import type {
+  AlumnoQuickAction,
   AlumnoResult,
   SearchResult,
   SearchResultGroup,
 } from '@core/models/ui/global-search.model';
 import { getActionResults } from '@core/utils/search-intents';
+
+/** Construye las 4 acciones rápidas contextuales de un alumno en el Omnibar. */
+export function buildAlumnoQuickActions(
+  detailBase: string,
+  rolePrefix: string,
+  studentId: string,
+): AlumnoQuickAction[] {
+  return [
+    {
+      label: 'Ver Ficha',
+      icon: 'user',
+      actionType: 'view',
+      route: [`${detailBase}/${studentId}`],
+    },
+    {
+      label: 'Registrar Pago',
+      icon: 'credit-card',
+      actionType: 'payment',
+      route: [`${rolePrefix}/pagos`],
+    },
+    {
+      label: 'Agendar Clase',
+      icon: 'calendar',
+      actionType: 'schedule',
+      route: [`${rolePrefix}/agenda`],
+    },
+    {
+      label: 'Nueva Matrícula',
+      icon: 'user-plus',
+      actionType: 'enrollment',
+      route: [`${rolePrefix}/matricula`],
+    },
+  ];
+}
 
 @Injectable({ providedIn: 'root' })
 export class GlobalSearchFacade {
@@ -41,7 +76,6 @@ export class GlobalSearchFacade {
     if (q.length < 2) return [];
 
     const prefix = this.rolePrefix();
-    // Secretaria no tiene ruta de detalle; lleva a la lista con filtro
     const role = this.auth.currentUser()?.role ?? 'admin';
     const detailBase = role === 'admin' ? `${prefix}/alumnos` : `${prefix}/alumnos`;
 
@@ -62,6 +96,7 @@ export class GlobalSearchFacade {
         rut: a.rut,
         status: a.status,
         route: [`${detailBase}/${a.id}`],
+        quickActions: buildAlumnoQuickActions(detailBase, prefix, a.id),
       }));
   });
 
