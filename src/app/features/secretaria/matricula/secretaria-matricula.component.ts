@@ -9,7 +9,7 @@ import {
   OnInit,
   OnDestroy,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { calcAge } from '@core/utils/age.utils';
 import { normalizePhoto } from '@core/utils/image.utils';
@@ -22,6 +22,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { EnrollmentFacade } from '@core/facades/enrollment.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 // Models
 import type { EnrollmentWizardStep } from '@core/models/ui/enrollment-wizard.model';
@@ -103,11 +104,13 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
 export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthFacade);
   protected readonly branchFacade = inject(BranchFacade);
   readonly enrollment = inject(EnrollmentFacade);
   readonly docs = inject(EnrollmentDocumentsFacade);
   readonly payment = inject(EnrollmentPaymentFacade);
+  private readonly toast = inject(ToastService);
 
   // ── activeStep (0-indexed para p-stepper, derivado del facade 1-based) ───
   readonly activeStep = computed(() => this.enrollment.currentStep() - 1);
@@ -267,6 +270,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       photoTab: this.docs.photoTab(),
       cameraState: this.docs.cameraState(),
       carnetPhoto: this.docs.carnetPhoto(),
+      photoNeedsConfirmation: this.docs.photoNeedsConfirmation(),
       uploadedDocuments: this.docs.documents(),
       requiredDocuments:
         view === 'professional'
@@ -479,6 +483,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this._contractStatus.set('pending');
     this._signedContractUpload.set(null);
     await this.enrollment.loadCourses(branch);
+
+    // Re-matrícula desde Ex-alumnos (fix-020): el RUT viaja por query param.
+    // Precarga los datos del alumno que vuelve antes de mostrar el wizard.
+    const rut = this.route.snapshot.queryParamMap.get('rut');
+    if (rut) await this.prefillStep1(rut);
+
     this._viewMode.set('wizard');
   }
 
@@ -550,6 +560,28 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     this._step1Form.set(data);
   }
 
+  /**
+   * Blur del RUT en el Paso 1: precarga los datos de un alumno existente (fix-020).
+   * Entrada compartida con "Re-matricular" de Ex-alumnos (vía query param `rut`).
+   */
+  async onStep1RutBlur(rut: string): Promise<void> {
+    await this.prefillStep1(rut);
+  }
+
+  /**
+   * Rellena el formulario del Paso 1 con los datos de la persona dueña del `rut`,
+   * sin pisar el RUT escrito ni la selección de curso. No hace nada si no existe.
+   */
+  private async prefillStep1(rut: string): Promise<void> {
+    const prefill = await this.enrollment.prefillFromStudent(rut);
+    if (!prefill) return;
+    this._step1Form.update((form) => ({ ...form, ...prefill, rut }));
+    this.toast.info(
+      'Datos precargados',
+      'Se cargaron los datos personales de este alumno automáticamente.',
+    );
+  }
+
   async onStep1Next(): Promise<void> {
     this._isSaving.set(true);
     try {
@@ -594,10 +626,24 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     if (s2.view === 'class-b' && !s2.slotSelection.isComplete) return;
     this._isSaving.set(true);
     try {
-      await this.enrollment.saveAssignment();
+      const ok = await this.enrollment.saveAssignment();
+      // Al entrar al Paso 3: si es un alumno que vuelve y la matrícula aún no tiene
+      // foto propia, precargar la de su matrícula anterior para confirmar/reemplazar (fix-020).
+      if (ok) {
+        const { studentId, enrollmentId } = this.enrollment.draft();
+        if (studentId && enrollmentId) {
+          await this.docs.loadPreviousPhoto(studentId, enrollmentId);
+        }
+      }
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /** Confirma reutilizar la foto de la matrícula anterior (fix-020). */
+  async onConfirmPhoto(): Promise<void> {
+    const { enrollmentId } = this.enrollment.draft();
+    if (enrollmentId) await this.docs.confirmPreviousPhoto(enrollmentId);
   }
 
   // ── Paso 3: Documentos ────────────────────────────────────────────────────

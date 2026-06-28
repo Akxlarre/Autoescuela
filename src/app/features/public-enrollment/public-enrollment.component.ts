@@ -215,6 +215,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
             <app-public-personal-data
               [data]="step1Data()"
               [context]="context()"
+              [loading]="facade.isLoading()"
               (dataChange)="onPersonalDataChange($event)"
               (next)="onPersonalDataNext()"
               (back)="facade.goBack()"
@@ -678,6 +679,8 @@ export class PublicEnrollmentComponent {
       carnetPhoto: photoUrl
         ? { source: 'upload' as const, capturedDataUrl: photoUrl, fileName: 'foto-carnet.jpg' }
         : null,
+      // El flujo público es anónimo: nunca precarga foto anterior (fix-020).
+      photoNeedsConfirmation: false,
       uploadedDocuments: new Map(),
       requiredDocuments: [],
       hvcValidation: null,

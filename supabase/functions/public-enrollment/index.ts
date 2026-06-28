@@ -37,6 +37,11 @@ import {
   isOriginAllowed,
   isRateLimited,
 } from '../_shared/anti-abuse.ts';
+import {
+  type ReenrollmentVerdict,
+  evaluateReenrollment,
+  reenrollmentBlockMessage,
+} from '../_shared/reenrollment.ts';
 
 // ─── CORS (S2 — allowlist por env var PUBLIC_ENROLLMENT_ALLOWED_ORIGINS) ───
 // Antes era Access-Control-Allow-Origin: '*' (abierto a cualquier origen, incluso
@@ -593,14 +598,15 @@ async function handleSubmitClaseB(supabase: any, body: any) {
 
     if (!course) return errorResponse('No se encontró curso Clase B activo para esta sede', 404);
 
-    // 3.5. Verificar matrícula duplicada
-    const duplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
-    if (duplicate) {
-      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+    // 3.5. Veredicto de re-matrícula (fix-020): bloquea matrícula viva; histórico
+    // (completed/cancelled) en el mismo curso se deriva a la autoescuela (no online).
+    const verdict = await evaluateCourseReenrollment(supabase, studentId, 'B');
+    const blockMsg = reenrollmentBlockMessage(verdict, 'Clase B');
+    if (blockMsg) {
       return jsonResponse({
         success: false,
-        error: 'DUPLICATE_ENROLLMENT',
-        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+        error: verdict === 'confirm' ? 'REENROLLMENT_REQUIRES_CONTACT' : 'DUPLICATE_ENROLLMENT',
+        message: blockMsg,
       });
     }
 
@@ -776,17 +782,13 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
       .maybeSingle();
 
     if (existingStudent) {
-      const enrollmentDuplicate = await checkDuplicateEnrollmentByLicenseClass(
-        supabase,
-        existingStudent.id,
-        licenseClass,
-      );
-      if (enrollmentDuplicate) {
-        const statusLabel = enrollmentDuplicate.status === 'completed' ? 'finalizada' : 'activa';
+      const verdict = await evaluateCourseReenrollment(supabase, existingStudent.id, licenseClass);
+      const blockMsg = reenrollmentBlockMessage(verdict, licenseClassLabel(licenseClass));
+      if (blockMsg) {
         return jsonResponse({
           success: false,
-          error: 'DUPLICATE_ENROLLMENT',
-          message: `Ya existe una matrícula ${statusLabel} en ${licenseClassLabel(licenseClass)} para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+          error: verdict === 'confirm' ? 'REENROLLMENT_REQUIRES_CONTACT' : 'DUPLICATE_ENROLLMENT',
+          message: blockMsg,
         });
       }
     }
@@ -923,15 +925,15 @@ async function handleInitiatePayment(supabase: any, body: any) {
       });
     }
 
-    // 1. Verificar duplicado por RUT (lectura pura — no crea nada en BD)
-    console.log('[initiate-payment] Step 1 — duplicate check by RUT');
-    const duplicate = await checkDuplicateByRut(supabase, personalData?.rut, 'B');
-    if (duplicate) {
-      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+    // 1. Veredicto de re-matrícula por RUT (lectura pura — no crea nada en BD)
+    console.log('[initiate-payment] Step 1 — reenrollment verdict by RUT');
+    const verdict = await evaluateReenrollmentByRut(supabase, personalData?.rut, 'B');
+    const blockMsg = reenrollmentBlockMessage(verdict, 'Clase B');
+    if (blockMsg) {
       return jsonResponse({
         success: false,
-        error: 'DUPLICATE_ENROLLMENT',
-        message: `Ya existe una matrícula ${statusLabel} en Clase B para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+        error: verdict === 'confirm' ? 'REENROLLMENT_REQUIRES_CONTACT' : 'DUPLICATE_ENROLLMENT',
+        message: blockMsg,
       });
     }
 
@@ -1139,9 +1141,10 @@ async function handleConfirmPayment(supabase: any, body: any) {
       userId = await findOrCreateUser(supabase, snapshot.personalData, snapshot.branchId);
       const studentId = await findOrCreateStudent(supabase, userId, snapshot.personalData);
 
-      // 6. Guardia contra race condition: dos pagos simultáneos con el mismo RUT
-      const raceDuplicate = await checkDuplicateEnrollmentByLicenseClass(supabase, studentId, 'B');
-      if (raceDuplicate) {
+      // 6. Guardia contra race condition: una matrícula del mismo curso apareció
+      // entre initiate-payment y este commit (cualquier veredicto != 'allow').
+      const raceVerdict = await evaluateCourseReenrollment(supabase, studentId, 'B');
+      if (raceVerdict !== 'allow') {
         console.error('[confirm-payment] RACE_DUPLICATE — pago cobrado sin matrícula creada', {
           attemptId: attempt.id,
           sessionToken: attempt.session_token,
@@ -1647,17 +1650,13 @@ async function handleCheckDuplicate(supabase: any, body: any) {
     .maybeSingle();
 
   if (student) {
-    const duplicate = await checkDuplicateEnrollmentByLicenseClass(
-      supabase,
-      student.id,
-      licenseClass,
-    );
-    if (duplicate) {
-      const statusLabel = duplicate.status === 'completed' ? 'finalizada' : 'activa';
+    const verdict = await evaluateCourseReenrollment(supabase, student.id, licenseClass);
+    const blockMsg = reenrollmentBlockMessage(verdict, licenseClassLabel(licenseClass));
+    if (blockMsg) {
       return jsonResponse({
         eligible: false,
-        error: 'DUPLICATE_ENROLLMENT',
-        message: `Ya existe una matrícula ${statusLabel} en ${licenseClassLabel(licenseClass)} para el RUT ingresado. Si crees que esto es un error o necesitas ayuda, comunícate directamente con la autoescuela.`,
+        error: verdict === 'confirm' ? 'REENROLLMENT_REQUIRES_CONTACT' : 'DUPLICATE_ENROLLMENT',
+        message: blockMsg,
       });
     }
   }
@@ -1684,33 +1683,30 @@ async function handleCheckDuplicate(supabase: any, body: any) {
   return jsonResponse({ eligible: true });
 }
 
-async function checkDuplicateEnrollmentByLicenseClass(
+/**
+ * Veredicto de re-matrícula (fix-020) por alumno + clase de licencia.
+ * Trae TODAS las matrículas del mismo curso y delega en `evaluateReenrollment`:
+ *  - `block`   → matrícula viva (active/pending_payment/draft) → no continuar.
+ *  - `confirm` → solo histórico (completed/cancelled) → en público se DERIVA a la
+ *                autoescuela (no se auto-permite online; decisión de negocio).
+ *  - `allow`   → sin matrícula previa → continuar.
+ */
+async function evaluateCourseReenrollment(
   supabase: any,
   studentId: number,
   licenseClass: string,
-): Promise<{ status: string } | null> {
+): Promise<ReenrollmentVerdict> {
   const { data } = await supabase
     .from('enrollments')
-    .select('id, status, courses!inner(license_class)')
+    .select('status, courses!inner(license_class)')
     .eq('student_id', studentId)
-    .eq('courses.license_class', licenseClass)
-    .in('status', ['active', 'completed'])
-    .limit(1)
-    .maybeSingle();
-  return data ?? null;
+    .eq('courses.license_class', licenseClass);
+  const statuses = (data ?? []).map((r: any) => r.status as string);
+  return evaluateReenrollment(statuses);
 }
 
-/**
- * Verifica duplicado de matrícula por RUT sin crear nada en BD.
- * Usado en initiate-payment para validar antes de iniciar el pago.
- */
-async function checkDuplicateByRut(
-  supabase: any,
-  rawRut: string,
-  licenseClass: string,
-): Promise<{ status: string } | null> {
-  if (!rawRut) return null;
-
+/** Normaliza un RUT crudo al formato canónico de BD ("12.345.678-9"). */
+function normalizeRutForDb(rawRut: string): string {
   const clean = rawRut.replace(/[^0-9kK]/g, '');
   const body = clean.slice(0, -1);
   const dv = clean.slice(-1).toUpperCase();
@@ -1720,19 +1716,34 @@ async function checkDuplicateByRut(
     .split('')
     .reverse()
     .join('');
-  const rut = `${withDots}-${dv}`;
+  return `${withDots}-${dv}`;
+}
+
+/**
+ * Veredicto de re-matrícula por RUT sin crear nada en BD.
+ * Usado en initiate-payment para validar antes de iniciar el pago.
+ * Devuelve 'allow' si el RUT/alumno no existe (nada que bloquear).
+ */
+async function evaluateReenrollmentByRut(
+  supabase: any,
+  rawRut: string,
+  licenseClass: string,
+): Promise<ReenrollmentVerdict> {
+  if (!rawRut) return 'allow';
+
+  const rut = normalizeRutForDb(rawRut);
 
   const { data: user } = await supabase.from('users').select('id').eq('rut', rut).maybeSingle();
-  if (!user) return null;
+  if (!user) return 'allow';
 
   const { data: student } = await supabase
     .from('students')
     .select('id')
     .eq('user_id', user.id)
     .maybeSingle();
-  if (!student) return null;
+  if (!student) return 'allow';
 
-  return checkDuplicateEnrollmentByLicenseClass(supabase, student.id, licenseClass);
+  return evaluateCourseReenrollment(supabase, student.id, licenseClass);
 }
 
 async function findOrCreateUser(supabase: any, personalData: any, branchId: number) {

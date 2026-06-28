@@ -43,8 +43,8 @@ const STORAGE_BUCKET = 'documents';
  */
 @Injectable({ providedIn: 'root' })
 export class EnrollmentDocumentsFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)
@@ -62,6 +62,12 @@ private readonly supabase = inject(SupabaseService);
   // ── Persisted document records (from student_documents table) ──
   private readonly _persistedDocs = signal<StudentDocument[]>([]);
 
+  // ── Foto de matrícula anterior (re-matrícula, fix-020) ──
+  /** Path en Storage de la foto de una matrícula previa, mostrada como preview. */
+  private readonly _previousPhotoPath = signal<string | null>(null);
+  /** true mientras la foto mostrada es la anterior y aún no se confirma/reemplaza. */
+  private readonly _photoNeedsConfirmation = signal<boolean>(false);
+
   // ── UI state ──
   private readonly _isUploading = signal(false);
   private readonly _error = signal<string | null>(null);
@@ -78,6 +84,9 @@ private readonly supabase = inject(SupabaseService);
   readonly persistedDocs = this._persistedDocs.asReadonly();
   readonly isUploading = this._isUploading.asReadonly();
   readonly error = this._error.asReadonly();
+
+  /** true = la foto visible viene de una matrícula anterior y debe confirmarse o reemplazarse (fix-020). */
+  readonly photoNeedsConfirmation = this._photoNeedsConfirmation.asReadonly();
 
   // ── Computed: count of uploaded documents ──
   readonly uploadedCount = computed(() => {
@@ -106,6 +115,105 @@ private readonly supabase = inject(SupabaseService);
   clearCarnetPhoto(): void {
     this._carnetPhoto.set(null);
     this._cameraState.set('idle');
+    this._photoNeedsConfirmation.set(false);
+    this._previousPhotoPath.set(null);
+  }
+
+  /**
+   * Precarga la foto de carnet de una matrícula ANTERIOR del mismo alumno (fix-020).
+   *
+   * Muestra esa foto como preview pero marca `photoNeedsConfirmation = true`: el
+   * operador debe confirmarla (`confirmPreviousPhoto`) o subir una nueva antes de
+   * avanzar. No copia ni registra nada todavía — solo display.
+   *
+   * No hace nada si la matrícula actual ya tiene foto propia, o si el alumno no
+   * tiene ninguna foto previa. Devuelve true solo si cargó una foto anterior.
+   */
+  async loadPreviousPhoto(studentId: number, currentEnrollmentId: number): Promise<boolean> {
+    // La matrícula actual ya tiene foto propia → nada que precargar.
+    if (this._carnetPhoto()) return false;
+
+    const { data, error } = await this.supabase.client
+      .from('student_documents')
+      .select('storage_url, file_name, uploaded_at, enrollments!inner(student_id)')
+      .eq('type', 'id_photo')
+      .eq('enrollments.student_id', studentId)
+      .neq('enrollment_id', currentEnrollmentId)
+      .order('uploaded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data?.storage_url) return false;
+
+    const { data: signed } = await this.supabase.client.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(data.storage_url, 3600);
+
+    this._previousPhotoPath.set(data.storage_url);
+    this._photoNeedsConfirmation.set(true);
+    this._carnetPhoto.set({
+      source: 'upload',
+      capturedDataUrl: signed?.signedUrl ?? data.storage_url,
+      fileName: data.file_name ?? 'foto-anterior.jpg',
+    });
+    return true;
+  }
+
+  /**
+   * Confirma reutilizar la foto de la matrícula anterior (fix-020): copia el objeto
+   * al destino de la matrícula nueva (`students/{enrollmentId}/id_photo`) y lo
+   * registra en student_documents. Tras confirmar deja de requerir confirmación.
+   */
+  async confirmPreviousPhoto(enrollmentId: number): Promise<boolean> {
+    const sourcePath = this._previousPhotoPath();
+    if (!sourcePath) return false;
+
+    this._isUploading.set(true);
+    this._error.set(null);
+
+    try {
+      const destPath = `students/${enrollmentId}/id_photo`;
+
+      if (sourcePath !== destPath) {
+        const { error: copyError } = await this.supabase.client.storage
+          .from(STORAGE_BUCKET)
+          .copy(sourcePath, destPath);
+
+        // Si el destino ya existía (re-confirmación), continuar con el upsert del registro.
+        if (copyError && !/exist/i.test(copyError.message)) {
+          this._error.set(
+            'Error al reutilizar la foto: ' + this.sanitizer.sanitize(copyError).message,
+          );
+          return false;
+        }
+      }
+
+      const { error: dbError } = await this.supabase.client.from('student_documents').upsert(
+        {
+          enrollment_id: enrollmentId,
+          type: 'id_photo',
+          file_name: 'foto-carnet.jpg',
+          storage_url: destPath,
+          status: 'approved',
+          uploaded_at: new Date().toISOString(),
+        },
+        { onConflict: 'enrollment_id,type' },
+      );
+
+      if (dbError) {
+        this._error.set('Error al registrar la foto: ' + this.sanitizer.sanitize(dbError).message);
+        return false;
+      }
+
+      this._previousPhotoPath.set(null);
+      this._photoNeedsConfirmation.set(false);
+      return true;
+    } catch {
+      this._error.set('Error inesperado al reutilizar la foto');
+      return false;
+    } finally {
+      this._isUploading.set(false);
+    }
   }
 
   /**
@@ -136,7 +244,9 @@ private readonly supabase = inject(SupabaseService);
         .upload(filePath, blob, { upsert: true });
 
       if (uploadError) {
-        this._error.set('Error al subir foto carnet: ' + this.sanitizer.sanitize(uploadError).message);
+        this._error.set(
+          'Error al subir foto carnet: ' + this.sanitizer.sanitize(uploadError).message,
+        );
         return false;
       }
 
@@ -155,7 +265,9 @@ private readonly supabase = inject(SupabaseService);
       );
 
       if (dbError) {
-        this._error.set('Error al registrar foto carnet: ' + this.sanitizer.sanitize(dbError).message);
+        this._error.set(
+          'Error al registrar foto carnet: ' + this.sanitizer.sanitize(dbError).message,
+        );
         return false;
       }
 
@@ -166,6 +278,10 @@ private readonly supabase = inject(SupabaseService);
         capturedDataUrl: dataUrl,
         fileName: fileName,
       });
+
+      // Reemplazo de la foto anterior: ya es una foto nueva confirmada (fix-020).
+      this._photoNeedsConfirmation.set(false);
+      this._previousPhotoPath.set(null);
 
       return true;
     } catch {
@@ -204,7 +320,9 @@ private readonly supabase = inject(SupabaseService);
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) {
-        this._error.set('Error al subir documento: ' + this.sanitizer.sanitize(uploadError).message);
+        this._error.set(
+          'Error al subir documento: ' + this.sanitizer.sanitize(uploadError).message,
+        );
         return false;
       }
 
@@ -223,7 +341,9 @@ private readonly supabase = inject(SupabaseService);
       );
 
       if (dbError) {
-        this._error.set('Error al registrar documento: ' + this.sanitizer.sanitize(dbError).message);
+        this._error.set(
+          'Error al registrar documento: ' + this.sanitizer.sanitize(dbError).message,
+        );
         return false;
       }
 
@@ -340,6 +460,10 @@ private readonly supabase = inject(SupabaseService);
     // Reset carnet photo before rebuilding — prevents stale photo from a prior
     // enrollment session persisting when the resumed draft has no id_photo yet.
     this._carnetPhoto.set(null);
+    // El estado de la matrícula actual manda: limpiar la confirmación de foto
+    // anterior (fix-020). Si esta matrícula tiene su propia foto, no hay nada que confirmar.
+    this._photoNeedsConfirmation.set(false);
+    this._previousPhotoPath.set(null);
 
     // Rebuild local document map from persisted records
     const docMap = new Map<DocumentType, UploadedDocument>();
@@ -382,7 +506,9 @@ private readonly supabase = inject(SupabaseService);
       .eq('id', enrollmentId);
 
     if (error) {
-      this._error.set('Error al actualizar estado de documentos: ' + this.sanitizer.sanitize(error).message);
+      this._error.set(
+        'Error al actualizar estado de documentos: ' + this.sanitizer.sanitize(error).message,
+      );
       return false;
     }
     return true;
@@ -433,6 +559,8 @@ private readonly supabase = inject(SupabaseService);
     this._documents.set(new Map());
     this._hvcValidation.set(null);
     this._persistedDocs.set([]);
+    this._previousPhotoPath.set(null);
+    this._photoNeedsConfirmation.set(false);
     this._isUploading.set(false);
     this._error.set(null);
   }

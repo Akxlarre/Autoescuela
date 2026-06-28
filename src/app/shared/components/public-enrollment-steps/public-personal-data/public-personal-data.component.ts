@@ -391,7 +391,8 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
                 Tienes 17 años — No puedes inscribirte online
               </p>
               <p class="text-xs mt-0.5" style="color: var(--text-secondary);">
-                Por ley necesitas autorización notarial de tus padres o apoderado. Sigue estos pasos presenciales:
+                Por ley necesitas autorización notarial de tus padres o apoderado. Sigue estos pasos
+                presenciales:
               </p>
             </div>
           </div>
@@ -682,6 +683,7 @@ export class PublicPersonalDataComponent {
         this._birthDateInvalid.set(isInvalidDate(d.birthDate));
         setTimeout(() => this.focusFirstError(), 0);
       } else {
+        this._submitting.set(false);
         this.next.emit();
       }
     }, 10);

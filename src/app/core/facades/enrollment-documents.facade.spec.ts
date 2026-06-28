@@ -31,12 +31,10 @@ function createMockSupabaseService() {
         from: vi.fn().mockReturnValue({
           upload: vi.fn().mockResolvedValue({ error: null }),
           remove: vi.fn().mockResolvedValue({ error: null }),
-          createSignedUrl: vi
-            .fn()
-            .mockResolvedValue({
-              data: { signedUrl: 'https://example.com/signed/photo.jpg' },
-              error: null,
-            }),
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: { signedUrl: 'https://example.com/signed/photo.jpg' },
+            error: null,
+          }),
         }),
       },
     },
@@ -242,6 +240,84 @@ describe('EnrollmentDocumentsFacade', () => {
         fileName: 'foto.png',
       });
       expect(facade.allRequiredUploaded('non-professional', false)).toBe(true);
+    });
+  });
+
+  // ── Foto de matrícula anterior (re-matrícula, fix-020) ──
+
+  describe('loadPreviousPhoto', () => {
+    function mockPhotoQuery(data: any) {
+      const builder: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data, error: null }),
+      };
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+      return builder;
+    }
+
+    it('no precarga nada si la matrícula actual ya tiene foto propia', async () => {
+      facade.setCarnetPhoto({
+        source: 'upload',
+        dataUrl: 'data:image/png;base64,abc',
+        fileName: 'foto.png',
+      });
+      const result = await facade.loadPreviousPhoto(5, 100);
+      expect(result).toBe(false);
+      expect(facade.photoNeedsConfirmation()).toBe(false);
+    });
+
+    it('devuelve false si el alumno no tiene foto previa', async () => {
+      mockPhotoQuery(null);
+      const result = await facade.loadPreviousPhoto(5, 100);
+      expect(result).toBe(false);
+      expect(facade.photoNeedsConfirmation()).toBe(false);
+    });
+
+    it('carga la foto anterior y exige confirmación', async () => {
+      mockPhotoQuery({ storage_url: 'students/40/id_photo', file_name: 'vieja.jpg' });
+      const result = await facade.loadPreviousPhoto(5, 100);
+      expect(result).toBe(true);
+      expect(facade.photoNeedsConfirmation()).toBe(true);
+      expect(facade.carnetPhoto()).not.toBeNull();
+    });
+  });
+
+  describe('confirmPreviousPhoto', () => {
+    it('devuelve false si no hay foto anterior pendiente', async () => {
+      const result = await facade.confirmPreviousPhoto(100);
+      expect(result).toBe(false);
+    });
+
+    it('copia la foto al destino de la matrícula nueva y limpia el flag', async () => {
+      const copySpy = vi.fn().mockResolvedValue({ error: null });
+      mockSupabase.client.storage.from = vi.fn().mockReturnValue({ copy: copySpy });
+      mockSupabase.client.from = vi.fn().mockReturnValue(createMockQueryBuilder());
+
+      // Simular estado tras loadPreviousPhoto
+      (facade as any)._previousPhotoPath.set('students/40/id_photo');
+      (facade as any)._photoNeedsConfirmation.set(true);
+
+      const result = await facade.confirmPreviousPhoto(100);
+
+      expect(result).toBe(true);
+      expect(copySpy).toHaveBeenCalledWith('students/40/id_photo', 'students/100/id_photo');
+      expect(facade.photoNeedsConfirmation()).toBe(false);
+    });
+  });
+
+  describe('reemplazo limpia la confirmación pendiente', () => {
+    it('uploadCarnetPhoto exitoso apaga photoNeedsConfirmation', async () => {
+      (facade as any)._photoNeedsConfirmation.set(true);
+      (facade as any)._previousPhotoPath.set('students/40/id_photo');
+
+      const ok = await facade.uploadCarnetPhoto('data:image/png;base64,abc', 'nueva.png', 100);
+
+      expect(ok).toBe(true);
+      expect(facade.photoNeedsConfirmation()).toBe(false);
     });
   });
 

@@ -33,6 +33,30 @@
             gorros ni filtros.
           </p>
 
+          <!-- Banner: foto reutilizada de una matrícula anterior (fix-020) -->
+          @if (data().photoNeedsConfirmation) {
+            <div class="prev-photo-banner">
+              <app-icon name="info" [size]="16" />
+              <div class="flex-1">
+                <p class="text-sm font-bold text-text-primary m-0">
+                  Foto de una matrícula anterior
+                </p>
+                <p class="text-xs text-text-secondary m-0">
+                  Confírmala si sigue vigente o sube una nueva. No podrás continuar hasta decidir.
+                </p>
+              </div>
+              <button
+                type="button"
+                class="prev-photo-confirm"
+                (click)="onConfirmPhoto()"
+                data-llm-action="confirm-previous-photo"
+              >
+                <app-icon name="check" [size]="14" />
+                Usar esta foto
+              </button>
+            </div>
+          }
+
           <!-- Tabs Selector -->
           <div class="flex p-1 bg-subtle rounded-lg w-fit">
             <button
@@ -243,15 +267,11 @@
                     [class.bg-surface]="!isUploaded(doc.type)"
                     [class.border-border-default]="!isUploaded(doc.type)"
                     [class.text-text-primary]="!isUploaded(doc.type)"
-                    [class.hover:bg-base]="
-                      !isUploaded(doc.type) && uploadingDocType() !== doc.type
-                    "
+                    [class.hover:bg-base]="!isUploaded(doc.type) && uploadingDocType() !== doc.type"
                     [class.bg-subtle]="isUploaded(doc.type)"
                     [class.border-border-subtle]="isUploaded(doc.type)"
                     [class.text-text-secondary]="isUploaded(doc.type)"
-                    [class.hover:bg-base]="
-                      isUploaded(doc.type) && uploadingDocType() !== doc.type
-                    "
+                    [class.hover:bg-base]="isUploaded(doc.type) && uploadingDocType() !== doc.type"
                   >
                     @if (uploadingDocType() === doc.type) {
                       <app-icon name="loader" [size]="14" class="animate-spin" />
@@ -273,9 +293,7 @@
 
       <!-- Alerta de Autorización Notarial (menor de edad) -->
       @if (data().isMinor) {
-        <div
-          class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3"
-        >
+        <div class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3">
           <app-icon name="alert-triangle" [size]="20" class="text-warning mt-0.5 shrink-0" />
           <div>
             <p class="text-sm font-bold text-warning">Alumno menor de edad</p>
@@ -289,9 +307,7 @@
 
       <!-- Alerta HVC Vencida (RF-082.3) -->
       @if (data().hvcValidation?.expired) {
-        <div
-          class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3"
-        >
+        <div class="p-4 bg-warning-subtle border border-warning-border rounded-xl flex gap-3">
           <app-icon name="alert-triangle" [size]="20" class="text-warning mt-0.5 shrink-0" />
           <div>
             <p class="text-sm font-bold text-warning">Hoja de Vida del Conductor vencida</p>
