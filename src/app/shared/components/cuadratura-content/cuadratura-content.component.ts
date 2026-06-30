@@ -15,6 +15,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type { CierrePayload, EgresoRow, IngresoRow } from '@core/models/ui/cuadratura.model';
@@ -38,7 +39,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
   selector: 'app-cuadratura-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, BentoGridLayoutDirective],
+  imports: [
+    IconComponent,
+    SkeletonBlockComponent,
+    SectionHeroComponent,
+    BentoGridLayoutDirective,
+    CardHoverDirective,
+  ],
   template: `
     <div
       class="bento-grid p-6 pb-12"
@@ -88,7 +95,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
       <!-- ─ Columna izquierda (2/3): Tablas de Registro de Sistema ─────────────────── -->
       <div class="bento-feature flex flex-col gap-6">
         <!-- REGISTRO DE INGRESOS -->
-        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
+        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm" appCardHover>
           <!-- Header -->
           <div
             class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5 border-b border-border-muted/50"
@@ -322,7 +329,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         </div>
 
         <!-- REGISTRO DE EGRESOS (Movido a la izquierda) -->
-        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm">
+        <div class="bento-card p-0 flex flex-col overflow-hidden shadow-sm" appCardHover>
           <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted/50">
             <div class="flex items-center gap-3">
               <div

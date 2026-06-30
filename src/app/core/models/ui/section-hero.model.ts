@@ -39,6 +39,8 @@ export interface SectionHeroKpi {
   sparkline?: number[];
   color?: 'default' | 'success' | 'warning' | 'error';
   icon?: string;
+  /** Si true, el KPI se renderiza como button y emite kpiClick con su id. */
+  clickable?: boolean;
 }
 
 /** Acción (CTA) del hero. Solo una debe tener primary: true. */

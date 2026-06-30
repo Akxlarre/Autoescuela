@@ -541,49 +541,93 @@ import type {
             <!-- Fila 2: KPIs + sparklines -->
             <div class="border-t border-border-subtle flex flex-wrap">
               @for (kpi of kpis(); track kpi.id) {
-                <div
-                  class="px-4 py-2.5 flex items-center gap-3 border-r border-b sm:border-b-0 border-border-subtle flex-1 min-w-[45%] sm:min-w-auto"
-                >
-                  <div class="min-w-0 flex-1">
-                    <p
-                      class="text-[11px] uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
-                    >
-                      {{ kpi.label }}
-                    </p>
-                    <div class="flex items-baseline gap-1.5">
-                      <span class="text-lg font-semibold text-text-primary leading-none">
-                        {{ kpi.prefix ?? '' }}{{ kpi.value }}{{ kpi.suffix ?? '' }}
-                      </span>
-                      @if (kpi.trend !== undefined && kpi.trend !== 0) {
+                @if (kpi.clickable) {
+                  <button
+                    type="button"
+                    class="group px-4 py-2.5 flex items-center gap-3 border-r border-b sm:border-b-0 border-border-subtle flex-1 min-w-[45%] sm:min-w-auto text-left cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                    [style.background]="getKpiBgTint(kpi)"
+                    [attr.data-llm-action]="'kpi-' + kpi.id"
+                    (click)="kpiClick.emit(kpi.id)"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <p
+                        class="text-[11px] uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
+                      >
+                        {{ kpi.label }}
+                      </p>
+                      <div
+                        class="flex items-baseline gap-1.5 transition-transform duration-200 ease-out group-hover:-translate-y-0.5"
+                      >
                         <span
-                          class="text-[11px] font-medium leading-none"
-                          [style.color]="getTrendColor(kpi.trend)"
+                          class="text-lg font-semibold leading-none"
+                          [style.color]="getKpiValueColor(kpi)"
                         >
-                          {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
-                          }}{{ kpi.trendLabel ?? '' }}
+                          {{ kpi.prefix ?? '' }}{{ kpi.value }}{{ kpi.suffix ?? '' }}
                         </span>
-                      }
+                        @if (kpi.trend !== undefined && kpi.trend !== 0) {
+                          <span
+                            class="text-[11px] font-medium leading-none"
+                            [style.color]="getTrendColor(kpi.trend)"
+                          >
+                            {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
+                            }}{{ kpi.trendLabel ?? '' }}
+                          </span>
+                        }
+                      </div>
+                      <div
+                        class="flex items-center gap-0.5 mt-1 transition-transform duration-200 ease-out delay-75 group-hover:translate-x-1"
+                        [style.color]="getKpiValueColor(kpi)"
+                      >
+                        <span class="text-[9px] font-medium leading-none opacity-70">Ver</span>
+                        <app-icon name="arrow-right" [size]="9" />
+                      </div>
                     </div>
+                  </button>
+                } @else {
+                  <div
+                    class="px-4 py-2.5 flex items-center gap-3 border-r border-b sm:border-b-0 border-border-subtle flex-1 min-w-[45%] sm:min-w-auto"
+                  >
+                    <div class="min-w-0 flex-1">
+                      <p
+                        class="text-[11px] uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
+                      >
+                        {{ kpi.label }}
+                      </p>
+                      <div class="flex items-baseline gap-1.5">
+                        <span class="text-lg font-semibold text-text-primary leading-none">
+                          {{ kpi.prefix ?? '' }}{{ kpi.value }}{{ kpi.suffix ?? '' }}
+                        </span>
+                        @if (kpi.trend !== undefined && kpi.trend !== 0) {
+                          <span
+                            class="text-[11px] font-medium leading-none"
+                            [style.color]="getTrendColor(kpi.trend)"
+                          >
+                            {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
+                            }}{{ kpi.trendLabel ?? '' }}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                    @if (kpi.sparkline?.length) {
+                      <svg
+                        width="40"
+                        height="20"
+                        viewBox="0 0 40 20"
+                        aria-hidden="true"
+                        style="flex-shrink:0; opacity:0.65"
+                      >
+                        <polyline
+                          [attr.points]="getSparklinePoints(kpi.sparkline!)"
+                          fill="none"
+                          [attr.stroke]="getSparklineColor(kpi)"
+                          stroke-width="1.5"
+                          stroke-linejoin="round"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    }
                   </div>
-                  @if (kpi.sparkline?.length) {
-                    <svg
-                      width="40"
-                      height="20"
-                      viewBox="0 0 40 20"
-                      aria-hidden="true"
-                      style="flex-shrink:0; opacity:0.65"
-                    >
-                      <polyline
-                        [attr.points]="getSparklinePoints(kpi.sparkline!)"
-                        fill="none"
-                        [attr.stroke]="getSparklineColor(kpi)"
-                        stroke-width="1.5"
-                        stroke-linejoin="round"
-                        stroke-linecap="round"
-                      />
-                    </svg>
-                  }
-                </div>
+                }
               }
             </div>
           }
@@ -884,6 +928,7 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
 
   readonly actionClick = output<string>();
   readonly backClicked = output<void>();
+  readonly kpiClick = output<string>();
 
   /** Muestra el botón "Volver" como <button> (sin ruta). Útil para vistas inline como Papelera. */
   readonly backClickable = input<boolean>(false);
@@ -894,15 +939,17 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
   private readonly slimRef = viewChild<ElementRef<HTMLElement>>('slimRef');
 
+  private hoverCleanup: (() => void) | null = null;
+
   ngAfterViewInit(): void {
     if (this.density() === 'full') {
       // animateHero solo en modo full — slim entra por animateBentoGrid del shell.
       if (this.animateOnInit()) {
         this.gsap.animateHero(this.cardRef()?.nativeElement);
       }
-      this.gsap.addCardHover(this.cardRef()?.nativeElement);
+      this.hoverCleanup = this.gsap.addCardHover(this.cardRef()?.nativeElement);
     } else {
-      this.gsap.addCardHover(this.slimRef()?.nativeElement);
+      this.hoverCleanup = this.gsap.addCardHover(this.slimRef()?.nativeElement);
     }
   }
 
@@ -954,6 +1001,7 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     document.removeEventListener('click', this.outsideListener);
     this.detachReposition();
+    this.hoverCleanup?.();
   }
 
   protected toggleMenu(id: string, event: MouseEvent): void {
@@ -1023,6 +1071,34 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
       return 'var(--state-error)';
     if (kpi.color === 'warning') return 'var(--state-warning)';
     return 'var(--ds-brand)';
+  }
+
+  getKpiValueColor(kpi: SectionHeroKpi): string {
+    switch (kpi.color) {
+      case 'success':
+        return 'var(--state-success)';
+      case 'error':
+        return 'var(--state-error)';
+      case 'warning':
+        return 'var(--state-warning)';
+      default:
+        return 'var(--text-primary)';
+    }
+  }
+
+  getKpiBgTint(kpi: SectionHeroKpi): string {
+    const hasValue = +kpi.value > 0;
+    if (!hasValue) return 'transparent';
+    switch (kpi.color) {
+      case 'error':
+        return 'var(--state-error-bg)';
+      case 'warning':
+        return 'var(--state-warning-bg)';
+      case 'success':
+        return 'var(--state-success-bg)';
+      default:
+        return 'transparent';
+    }
   }
 
   getSparklinePoints(data: number[], w = 40, h = 20): string {

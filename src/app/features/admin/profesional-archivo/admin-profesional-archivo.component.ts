@@ -20,6 +20,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 @Component({
   selector: 'app-admin-profesional-archivo',
@@ -33,6 +34,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -47,7 +49,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
       />
 
       <!-- ═══ Buscador / Selector Principal & Cursos ═══ -->
-      <section class="bento-banner bento-card p-5">
+      <section class="bento-banner bento-card p-5" appCardHover>
         <div class="flex flex-col md:flex-row gap-6">
           <!-- Selector -->
           <div class="flex-1 max-w-xl">
@@ -144,7 +146,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
       <!-- ═══ Tabla de alumnos ═══ -->
       @if (facade.selectedCursoId()) {
-        <section class="bento-banner bento-card p-5">
+        <section class="bento-banner bento-card p-5" appCardHover>
           <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <div class="flex items-center gap-2">

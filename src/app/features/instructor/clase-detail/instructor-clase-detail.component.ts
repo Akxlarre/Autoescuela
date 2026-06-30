@@ -20,6 +20,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import {
   EVALUATION_CHECKLIST_ITEMS,
   EvaluationChecklistItem,
@@ -42,6 +43,7 @@ import {
     AlertCardComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
@@ -66,28 +68,61 @@ import {
             <!-- Skeleton: Resumen de Clase Estilo "Ticket" -->
             <div class="bento-card relative overflow-hidden">
               <div class="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5 relative z-10">
-                <app-skeleton-block variant="rect" width="56px" height="56px" borderRadius="1rem" class="shrink-0" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="56px"
+                  height="56px"
+                  borderRadius="1rem"
+                  class="shrink-0"
+                />
                 <div class="flex-1 min-w-0 flex flex-col gap-2">
                   <app-skeleton-block variant="text" width="60%" height="20px" />
                   <app-skeleton-block variant="text" width="30%" height="14px" />
                 </div>
-                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" class="hidden sm:block shrink-0" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="80px"
+                  height="24px"
+                  borderRadius="999px"
+                  class="hidden sm:block shrink-0"
+                />
               </div>
 
               <div class="mb-5 sm:hidden mt-2">
-                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="80px"
+                  height="24px"
+                  borderRadius="999px"
+                />
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 pt-4 sm:pt-5 border-t border-border-default/50 relative z-10">
-                <div class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none">
-                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-6 pt-4 sm:pt-5 border-t border-border-default/50 relative z-10"
+              >
+                <div
+                  class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none"
+                >
+                  <app-skeleton-block
+                    variant="circle"
+                    width="32px"
+                    height="32px"
+                    class="shrink-0"
+                  />
                   <div class="flex flex-col gap-1 w-full">
                     <app-skeleton-block variant="text" width="60px" height="10px" />
                     <app-skeleton-block variant="text" width="80px" height="14px" />
                   </div>
                 </div>
-                <div class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none">
-                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                <div
+                  class="flex items-center gap-3 bg-subtle/50 sm:bg-transparent p-2 sm:p-0 rounded-xl sm:rounded-none"
+                >
+                  <app-skeleton-block
+                    variant="circle"
+                    width="32px"
+                    height="32px"
+                    class="shrink-0"
+                  />
                   <div class="flex flex-col gap-1 w-full">
                     <app-skeleton-block variant="text" width="60px" height="10px" />
                     <app-skeleton-block variant="text" width="80px" height="14px" />
@@ -106,7 +141,12 @@ import {
                       <app-skeleton-block variant="text" width="40%" height="16px" />
                       <div class="flex items-center justify-between">
                         <app-skeleton-block variant="text" width="80%" height="12px" />
-                        <app-skeleton-block variant="rect" width="100px" height="32px" borderRadius="999px" />
+                        <app-skeleton-block
+                          variant="rect"
+                          width="100px"
+                          height="32px"
+                          borderRadius="999px"
+                        />
                       </div>
                     </div>
                   }
@@ -117,11 +157,22 @@ import {
                 <!-- Observaciones y Botón -->
                 <div class="space-y-4 w-full max-w-2xl mx-auto">
                   <app-skeleton-block variant="text" width="180px" height="14px" />
-                  <app-skeleton-block variant="rect" width="100%" height="120px" borderRadius="1rem" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="100%"
+                    height="120px"
+                    borderRadius="1rem"
+                  />
                 </div>
 
                 <div class="pt-4 flex justify-center">
-                  <app-skeleton-block variant="rect" width="320px" height="56px" borderRadius="1rem" class="w-full sm:w-80" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="320px"
+                    height="56px"
+                    borderRadius="1rem"
+                    class="w-full sm:w-80"
+                  />
                 </div>
               </div>
             </div>
@@ -131,7 +182,7 @@ import {
             </app-alert-card>
           } @else if (clasesFacade.selectedClass(); as cls) {
             <!-- Resumen de Clase Estilo "Ticket" -->
-            <div class="bento-card relative overflow-hidden">
+            <div class="bento-card relative overflow-hidden" appCardHover>
               <div
                 class="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full pointer-events-none -mr-8 -mt-8"
               ></div>
@@ -213,7 +264,10 @@ import {
             @if (!showFinalStep()) {
               <!-- STEP 1: EVALUATION (DURING CLASS) -->
               <div class="grid grid-cols-1 gap-6 mt-2">
-                <div class="bento-card p-6 sm:p-10 space-y-10 relative overflow-hidden">
+                <div
+                  class="bento-card p-6 sm:p-10 space-y-10 relative overflow-hidden"
+                  appCardHover
+                >
                   <!-- Checklist Premium -->
                   <div class="relative z-10 w-full max-w-2xl mx-auto">
                     <app-evaluation-checklist

@@ -32,6 +32,7 @@ import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 @Component({
   selector: 'app-admin-alumno-detalle',
@@ -48,6 +49,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
     AdminHistorialPagosComponent,
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -244,7 +246,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
         }
 
         <!-- Bento Item 1: Info Personal (común) -->
-        <div class="bento-card bento-tall">
+        <div class="bento-card bento-tall" appCardHover>
           <div class="flex flex-col gap-5">
             <div class="flex items-center gap-4">
               <div
@@ -295,6 +297,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
             class="bento-card bento-wide flex flex-col gap-4"
             data-row-span-md="2"
             data-row-span="2"
+            appCardHover
           >
             <!-- Cabecera + KPI -->
             <div class="flex items-start justify-between w-full">
@@ -408,7 +411,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
         <!-- ── PROGRESO: CLASE PROFESIONAL ── -->
         @if (alumno.licenseGroup === 'professional') {
           <!-- Asistencia Teórica Prof -->
-          <div class="bento-card bento-wide">
+          <div class="bento-card bento-wide" appCardHover>
             <div class="bento-card__body bento-card__body--spread">
               <div class="flex items-start justify-between w-full">
                 <div class="flex flex-col">
@@ -480,7 +483,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
           </div>
 
           <!-- Asistencia Práctica Prof -->
-          <div class="bento-card bento-wide">
+          <div class="bento-card bento-wide" appCardHover>
             <div class="bento-card__body bento-card__body--spread">
               <div class="flex items-start justify-between w-full">
                 <div class="flex flex-col">
@@ -555,7 +558,7 @@ import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
           </div>
 
           <!-- Nota promedio + Elegibilidad Prof -->
-          <div class="bento-card bento-wide">
+          <div class="bento-card bento-wide" appCardHover>
             <div class="bento-card__body bento-card__body--spread">
               <div class="flex items-start justify-between w-full">
                 <div class="flex flex-col">

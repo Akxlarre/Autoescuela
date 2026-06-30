@@ -1,18 +1,11 @@
-import {
-  Directive,
-  ElementRef,
-  inject,
-  afterNextRender,
-} from '@angular/core';
+import { DestroyRef, Directive, ElementRef, inject, afterNextRender } from '@angular/core';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 /**
  * Aplica el efecto hover de card vía GSAP: sombra elevada + y: -2px al hacer hover.
  * Usa tokens del design system (`--card-shadow-hover`, `--border-strong`).
  * Respeta `prefers-reduced-motion` vía GsapAnimationsService.
- *
- * Aplicar sobre cualquier elemento `.card` para consistencia visual automática,
- * sin necesidad de inyectar GsapAnimationsService en cada componente.
+ * Limpia listeners automáticamente al destruir el elemento (sin memory leak).
  *
  * @example
  * <div class="card" appCardHover>
@@ -26,10 +19,15 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 export class CardHoverDirective {
   private readonly el = inject(ElementRef<HTMLElement>);
   private readonly gsap = inject(GsapAnimationsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
+    let cleanup: (() => void) | null = null;
+
     afterNextRender(() => {
-      this.gsap.addCardHover(this.el.nativeElement);
+      cleanup = this.gsap.addCardHover(this.el.nativeElement);
     });
+
+    this.destroyRef.onDestroy(() => cleanup?.());
   }
 }

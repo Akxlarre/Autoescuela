@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { Button } from 'primeng/button';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 export interface ComentarioMock {
   iniciales: string;
@@ -15,9 +16,12 @@ export interface ComentarioMock {
   selector: 'app-admin-ex-alumnos-comments',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TooltipModule, CommonModule, IconComponent, Button],
+  imports: [TooltipModule, CommonModule, IconComponent, Button, CardHoverDirective],
   template: `
-    <div class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden">
+    <div
+      class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden"
+      appCardHover
+    >
       <!-- Header -->
       <div class="flex items-center justify-between mb-6">
         <div class="flex flex-col">

@@ -112,6 +112,7 @@ import type {
               <!-- Columna Principal: Tabla de Alumnos -->
               <div
                 class="bento-card p-0 overflow-hidden col-span-full lg:col-span-8 flex flex-col h-[500px]"
+                appCardHover
               >
                 <div
                   class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
@@ -237,6 +238,7 @@ import type {
               <!-- Columna Secundaria: Últimos documentos subidos -->
               <div
                 class="bento-card p-0 overflow-hidden col-span-full lg:col-span-4 flex flex-col h-[500px]"
+                appCardHover
               >
                 <div class="px-5 py-4 border-b border-border-subtle shrink-0 bg-surface">
                   <h2 class="text-base font-semibold m-0 text-text-primary">Últimos subidos</h2>
@@ -302,7 +304,7 @@ import type {
 
             <!-- ══ TAB: DOCUMENTOS DE LA ESCUELA ═══════════════════════════ -->
             @case ('school') {
-              <div class="bento-card p-0 overflow-hidden col-span-full flex flex-col">
+              <div class="bento-card p-0 overflow-hidden col-span-full flex flex-col" appCardHover>
                 <div
                   class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
                 >

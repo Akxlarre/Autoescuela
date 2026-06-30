@@ -329,39 +329,56 @@ export class GsapAnimationsService {
     });
   }
 
-  /**
-   * Hover en cards — sombra elevada sobre fondo claro.
-   * Usa tokens del design system (white-labeling).
-   * @param el - Elemento card
-   */
-  addCardHover(el: HTMLElement | null | undefined): void {
-    if (!el || !this.shouldAnimate()) return;
+  private readonly _hoverBound = new WeakSet<HTMLElement>();
 
-    // Tokens leídos en cada evento para reflejar el tema activo correctamente.
+  /**
+   * Hover en cards — sombra elevada + elevación Y vía GSAP.
+   * Retorna cleanup para remover listeners al destruir el elemento.
+   */
+  addCardHover(el: HTMLElement | null | undefined): (() => void) | null {
+    if (!el || !this.shouldAnimate()) return null;
+    if (this._hoverBound.has(el)) return null;
+    this._hoverBound.add(el);
+
+    // Tokens leídos en cada evento para reflejar el tema activo (claro/oscuro).
     const t = (name: string) =>
       getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
-    const enter = () =>
+    const enter = () => {
+      gsap.killTweensOf(el);
+      el.style.willChange = 'transform, box-shadow';
       gsap.to(el, {
-        boxShadow: t('--card-shadow-hover') || t('--shadow-lg'),
-        borderColor: t('--border-strong') || t('--border-default'),
+        boxShadow: t('--card-shadow-hover-glow'),
         y: -2,
         duration: 0.22,
         ease: 'power2.out',
       });
+    };
 
-    const leave = () =>
+    const leave = () => {
+      gsap.killTweensOf(el);
       gsap.to(el, {
         boxShadow: t('--card-shadow') || t('--shadow-md'),
-        borderColor: t('--border-default') || t('--border-subtle'),
         y: 0,
         duration: 0.32,
         ease: 'power2.inOut',
-        clearProps: 'boxShadow,borderColor,transform',
+        clearProps: 'boxShadow,transform',
+        onComplete: () => {
+          el.style.willChange = '';
+        },
       });
+    };
 
     el.addEventListener('mouseenter', enter);
     el.addEventListener('mouseleave', leave);
+
+    return () => {
+      el.removeEventListener('mouseenter', enter);
+      el.removeEventListener('mouseleave', leave);
+      gsap.killTweensOf(el);
+      el.style.willChange = '';
+      this._hoverBound.delete(el);
+    };
   }
 
   /**

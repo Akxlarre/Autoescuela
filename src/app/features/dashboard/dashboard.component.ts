@@ -108,6 +108,7 @@ import { to24hTime } from '@core/utils/date.utils';
       <!-- ── Izquierda: Live Classes (Lista vertical compacta) ─── -->
       <app-live-classes-panel
         class="bento-wide bento-card w-full"
+        appCardHover
         appScrollReveal
         data-row-span="2"
         [classes]="liveClasses()"
@@ -179,7 +180,13 @@ import { to24hTime } from '@core/utils/date.utils';
                   >
                     {{ item.title }}
                   </p>
-                  <p class="m-0 text-xs text-text-muted truncate" [pTooltip]="item.description" tooltipPosition="bottom">{{ item.description }}</p>
+                  <p
+                    class="m-0 text-xs text-text-muted truncate"
+                    [pTooltip]="item.description"
+                    tooltipPosition="bottom"
+                  >
+                    {{ item.description }}
+                  </p>
                 </div>
 
                 <!-- Timestamp -->
@@ -222,7 +229,9 @@ import { to24hTime } from '@core/utils/date.utils';
         @if (loading()) {
           <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
             @for (i of [1, 2, 3]; track i) {
-              <li class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse">
+              <li
+                class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
+              >
                 <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
                 <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
                   <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
@@ -258,11 +267,17 @@ import { to24hTime } from '@core/utils/date.utils';
                   >
                     {{ alert.title }}
                   </p>
-                  <p class="m-0 text-xs text-text-muted truncate" [pTooltip]="alert.description" tooltipPosition="bottom">{{ alert.description }}</p>
+                  <p
+                    class="m-0 text-xs text-text-muted truncate"
+                    [pTooltip]="alert.description"
+                    tooltipPosition="bottom"
+                  >
+                    {{ alert.description }}
+                  </p>
                 </div>
 
                 <!-- Botón descartar -->
-                <button 
+                <button
                   class="shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-none bg-transparent cursor-pointer text-text-muted hover:bg-subtle hover:text-text-primary transition-colors self-center"
                   (click)="dashboardAlertsFacade.dismissAlert(alert.id)"
                   pTooltip="Descartar"
@@ -410,7 +425,7 @@ export class DashboardComponent {
     if (cls.type === 'practical' && cls.status === 'pending') {
       // Flujo real de Iniciar Clase
       const localTime = to24hTime(cls.scheduledAt);
-      
+
       const row: any = {
         id: cls.originalId,
         classNumber: cls.classNumber,
@@ -420,18 +435,13 @@ export class DashboardComponent {
         status: 'pendiente',
         vehicleBrand: cls.vehicleBrand,
         vehicleModel: cls.vehicleModel,
-        vehiclePlate: cls.vehiclePlate
+        vehiclePlate: cls.vehiclePlate,
       };
-      
+
       this.asistenciaFacade.selectPractica(row);
-      const { AdminIniciarClaseDrawerComponent } = await import(
-        '../admin/asistencia/admin-iniciar-clase-drawer.component'
-      );
-      this.layoutDrawer.open(
-        AdminIniciarClaseDrawerComponent,
-        'Iniciar Clase Práctica',
-        'play'
-      );
+      const { AdminIniciarClaseDrawerComponent } =
+        await import('../admin/asistencia/admin-iniciar-clase-drawer.component');
+      this.layoutDrawer.open(AdminIniciarClaseDrawerComponent, 'Iniciar Clase Práctica', 'play');
     } else {
       // Flujo normal informativo
       const slot: any = {
@@ -445,9 +455,9 @@ export class DashboardComponent {
         vehicleId: 0,
         vehiclePlate: cls.vehicle || '',
         studentName: cls.studentName,
-        classNumber: 0
+        classNumber: 0,
       };
-      
+
       this.agendaFacade.setSelectedSlot(slot);
       const title = cls.studentName ? `Clase: ${cls.studentName}` : 'Detalle de clase';
       this.layoutDrawer.open(AgendaSlotDetailDrawerComponent, title, 'calendar-clock');
@@ -464,29 +474,41 @@ export class DashboardComponent {
 
   getAlertIcon(severity: string): string {
     switch (severity) {
-      case 'warning': return 'triangle-alert';
-      case 'error': return 'octagon-alert';
-      case 'success': return 'check-circle';
+      case 'warning':
+        return 'triangle-alert';
+      case 'error':
+        return 'octagon-alert';
+      case 'success':
+        return 'check-circle';
       case 'info':
-      default: return 'info';
+      default:
+        return 'info';
     }
   }
 
   getAlertColor(severity: string): string {
     switch (severity) {
-      case 'warning': return 'var(--state-warning)';
-      case 'error': return 'var(--state-error)';
-      case 'success': return 'var(--state-success)';
-      default: return 'var(--text-primary)';
+      case 'warning':
+        return 'var(--state-warning)';
+      case 'error':
+        return 'var(--state-error)';
+      case 'success':
+        return 'var(--state-success)';
+      default:
+        return 'var(--text-primary)';
     }
   }
 
   getAlertBg(severity: string): string {
     switch (severity) {
-      case 'warning': return 'var(--state-warning-bg)';
-      case 'error': return 'var(--state-error-bg)';
-      case 'success': return 'var(--state-success-bg)';
-      default: return 'var(--bg-subtle)';
+      case 'warning':
+        return 'var(--state-warning-bg)';
+      case 'error':
+        return 'var(--state-error-bg)';
+      case 'success':
+        return 'var(--state-success-bg)';
+      default:
+        return 'var(--bg-subtle)';
     }
   }
 }

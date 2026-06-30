@@ -23,7 +23,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
-import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 
@@ -80,7 +79,6 @@ interface ExpedienteStatus {
     TagModule,
     TooltipModule,
     IconComponent,
-    ActionKpiCardComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
@@ -108,28 +106,8 @@ interface ExpedienteStatus {
         backLabel="Alumnos"
         (backClicked)="trashViewToggled.emit()"
         (actionClick)="handleHeroAction($event)"
+        (kpiClick)="onHeroKpiClick($event)"
       />
-      <div class="bento-square">
-        <app-action-kpi-card
-          label="Por Vencer"
-          [value]="alumnosPorVencer()"
-          icon="alert-triangle"
-          size="md"
-          color="error"
-          [pulse]="true"
-          [loading]="isLoading()"
-          (click)="openPorVencerDrawer()"
-        >
-          <div
-            footer
-            class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors"
-          >
-            <span>Ver detalles</span>
-            <app-icon name="arrow-right" [size]="12" />
-          </div>
-        </app-action-kpi-card>
-      </div>
-      <!-- (End FAQs/KPIs) -->
 
       <!-- Filtros y Tabla (Dual-Viewport) -->
       <div
@@ -792,6 +770,14 @@ export class AlumnosListContentComponent implements AfterViewInit {
       icon: 'circle-alert',
       color: 'warning',
     },
+    {
+      id: 'por-vencer',
+      label: 'Por Vencer',
+      value: this.alumnosPorVencer(),
+      icon: 'alert-triangle',
+      color: 'error',
+      clickable: true,
+    },
   ]);
 
   searchTerm = '';
@@ -930,6 +916,10 @@ export class AlumnosListContentComponent implements AfterViewInit {
       default:
         break;
     }
+  }
+
+  onHeroKpiClick(kpiId: string): void {
+    if (kpiId === 'por-vencer') this.openPorVencerDrawer();
   }
 
   openNuevaMatriculaDrawer(): void {

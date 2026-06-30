@@ -1,13 +1,17 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 @Component({
   selector: 'app-admin-stats-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, CardHoverDirective],
   template: `
-    <div class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden">
+    <div
+      class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden"
+      appCardHover
+    >
       <div class="flex flex-col mb-6">
         <h3 class="text-base font-bold text-text-primary m-0">Tasas de Aprobación</h3>
         <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"

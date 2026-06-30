@@ -293,6 +293,9 @@
   --card-radius: var(--radius-lg);
   --card-shadow: var(--shadow-md);
   --card-shadow-hover: var(--shadow-lg);
+  /* Glow de marca en hover — anillo nítido + difuso solo hacia afuera/abajo (sin bleed interior) */
+  --card-shadow-hover-glow:
+    0 0 0 1px rgba(14, 165, 233, 0.22), 0 12px 28px -6px rgba(14, 165, 233, 0.22);
   --card-padding: var(--space-6);
   --accent-border-width: 3px;
 
@@ -384,6 +387,9 @@
   --shadow-sm: 0 0 0 1px var(--border-subtle);
   --shadow-md: 0 0 0 1px var(--border-default), 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 0 0 1px var(--border-default), 0 8px 32px rgba(0, 0, 0, 0.6);
+  /* Glow de marca en hover — anillo nítido + difuso solo hacia afuera/abajo (sin bleed interior) */
+  --card-shadow-hover-glow:
+    0 0 0 1px rgba(56, 189, 248, 0.28), 0 12px 32px -6px rgba(56, 189, 248, 0.2);
 
   --shadow-layout-topbar: 0 1px 0 0 var(--border-subtle);
   --shadow-layout-sidebar: 1px 0 0 0 var(--border-subtle);

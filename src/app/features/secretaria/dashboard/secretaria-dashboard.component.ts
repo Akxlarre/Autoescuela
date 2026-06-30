@@ -79,6 +79,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <app-live-classes-panel
         class="bento-wide bento-card w-full"
+        appCardHover
         appScrollReveal
         data-row-span="2"
         [classes]="liveClasses()"

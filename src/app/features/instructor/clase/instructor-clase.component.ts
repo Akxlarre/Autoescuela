@@ -12,6 +12,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 @Component({
   selector: 'app-instructor-clase',
@@ -28,6 +29,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -46,29 +48,58 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             <!-- Skeleton: Resumen de Clase Estilo "Ticket" -->
             <div class="bento-card relative overflow-hidden">
               <div class="flex items-start sm:items-center gap-4 mb-5 relative z-10">
-                <app-skeleton-block variant="rect" width="56px" height="56px" borderRadius="1rem" class="shrink-0" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="56px"
+                  height="56px"
+                  borderRadius="1rem"
+                  class="shrink-0"
+                />
                 <div class="flex-1 min-w-0 flex flex-col gap-2">
                   <app-skeleton-block variant="text" width="50%" height="20px" />
                   <app-skeleton-block variant="text" width="30%" height="14px" />
                 </div>
-                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" class="hidden sm:inline-flex shrink-0" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="80px"
+                  height="24px"
+                  borderRadius="999px"
+                  class="hidden sm:inline-flex shrink-0"
+                />
               </div>
 
               <!-- P-tag para mobile -->
               <div class="mb-4 sm:hidden">
-                <app-skeleton-block variant="rect" width="80px" height="24px" borderRadius="999px" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="80px"
+                  height="24px"
+                  borderRadius="999px"
+                />
               </div>
 
-              <div class="grid grid-cols-2 gap-4 pt-4 border-t border-border-default/50 relative z-10">
+              <div
+                class="grid grid-cols-2 gap-4 pt-4 border-t border-border-default/50 relative z-10"
+              >
                 <div class="flex items-center gap-3">
-                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                  <app-skeleton-block
+                    variant="circle"
+                    width="32px"
+                    height="32px"
+                    class="shrink-0"
+                  />
                   <div class="flex flex-col gap-1 w-full">
                     <app-skeleton-block variant="text" width="50px" height="10px" />
                     <app-skeleton-block variant="text" width="70px" height="14px" />
                   </div>
                 </div>
                 <div class="flex items-center gap-3">
-                  <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
+                  <app-skeleton-block
+                    variant="circle"
+                    width="32px"
+                    height="32px"
+                    class="shrink-0"
+                  />
                   <div class="flex flex-col gap-1 w-full min-w-0">
                     <app-skeleton-block variant="text" width="60px" height="10px" />
                     <app-skeleton-block variant="text" width="100px" height="14px" />
@@ -79,19 +110,33 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
             <!-- Skeleton: Formulario de Odómetro -->
             <div class="flex flex-col gap-6 mt-6">
-              <div class="bento-card p-8 sm:p-12 relative overflow-hidden border-2 border-border-default">
+              <div
+                class="bento-card p-8 sm:p-12 relative overflow-hidden border-2 border-border-default"
+              >
                 <div class="flex flex-col items-center justify-center relative z-10">
                   <!-- Ícono Gauge -->
                   <app-skeleton-block variant="circle" width="64px" height="64px" class="mb-6" />
                   <!-- Label -->
                   <app-skeleton-block variant="text" width="160px" height="14px" class="mb-2" />
                   <!-- Input -->
-                  <app-skeleton-block variant="rect" width="180px" height="80px" borderRadius="0.5rem" class="mt-2" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="180px"
+                    height="80px"
+                    borderRadius="0.5rem"
+                    class="mt-2"
+                  />
                 </div>
               </div>
 
               <div class="flex justify-center mt-2">
-                <app-skeleton-block variant="rect" width="320px" height="56px" borderRadius="1rem" class="w-full sm:w-80" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="320px"
+                  height="56px"
+                  borderRadius="1rem"
+                  class="w-full sm:w-80"
+                />
               </div>
             </div>
           } @else if (clasesFacade.error()) {
@@ -100,7 +145,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             </app-alert-card>
           } @else if (clasesFacade.selectedClass(); as cls) {
             <!-- Resumen de Clase Estilo "Ticket" -->
-            <div class="bento-card relative overflow-hidden">
+            <div class="bento-card relative overflow-hidden" appCardHover>
               <div
                 class="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full pointer-events-none -mr-8 -mt-8"
               ></div>
@@ -178,6 +223,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                 <!-- Gran Tarjeta de Odómetro -->
                 <div
                   class="bento-card p-8 sm:p-12 relative overflow-hidden transition-all duration-300 group focus-within:ring-2 focus-within:ring-brand/30 focus-within:border-brand border-2"
+                  appCardHover
                   [class.border-border-default]="
                     startForm.get('kmStart')?.valid || !startForm.get('kmStart')?.touched
                   "
