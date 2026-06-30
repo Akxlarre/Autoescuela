@@ -433,7 +433,10 @@ function collectStyles(cache) {
 
   const tokenUsage = {};
   const classUsage = {};
-  let   typoDrift  = 0;
+  let   typoSize     = 0;   // text-4xl/3xl/2xl → candidatas a clase semántica
+  let   typoWeight   = 0;   // font-bold/semibold → peso genérico, informativo
+  const typoClusters = new Map();
+  const TYPO_UTIL_RE = /\b(?:text-4xl|text-3xl|text-2xl|font-bold|font-semibold)\b/;
 
   for (const filePath of walkDir(SRC_APP)) {
     if (!filePath.endsWith('.ts') || filePath.endsWith('.spec.ts')) continue;
@@ -457,9 +460,25 @@ function collectStyles(cache) {
       }
     }
 
-    // Typography drift: text-4xl / font-bold etc. without semantic equivalent
-    const drift = (template.match(/\b(?:text-4xl|text-3xl|text-2xl|font-bold|font-semibold)\b/g) ?? []).length;
-    typoDrift += drift;
+    // Typography drift — conteo crudo, separado por intención.
+    // size = candidata a clase semántica de número/título; weight = peso genérico (informativo).
+    typoSize   += (template.match(/\b(?:text-4xl|text-3xl|text-2xl)\b/g) ?? []).length;
+    typoWeight += (template.match(/\b(?:font-bold|font-semibold)\b/g) ?? []).length;
+
+    // Clusters repetidos: combinaciones idénticas de utilidades con tipografía
+    // que se repiten → candidatas a promoverse a una clase del DS.
+    const classRe = /(?<![\w-])class\s*=\s*"([^"]*)"/g;
+    let cm;
+    while ((cm = classRe.exec(template)) !== null) {
+      const raw = cm[1].trim();
+      if (!TYPO_UTIL_RE.test(raw)) continue;
+      const tokens = raw.split(/\s+/).filter(Boolean);
+      if (tokens.length < 3) continue; // necesita ser un "combo" real, no un font-bold suelto
+      const key = [...tokens].sort().join(' ');
+      const entry = typoClusters.get(key) ?? { count: 0, sample: raw };
+      entry.count += 1;
+      typoClusters.set(key, entry);
+    }
   }
 
   return {
@@ -469,7 +488,9 @@ function collectStyles(cache) {
     classUsage,
     bentoClasses: [...new Set(bentoClasses)].sort(),
     primengGroups,
-    typoDrift,
+    typoSize,
+    typoWeight,
+    typoClusters,
   };
 }
 
@@ -757,10 +778,30 @@ function generateStylesContent(data) {
   }
 
   // ── Typography drift ──────────────────────────────────────────────────────
-  lines.push('## Deuda de tipografía\n');
-  lines.push(`Usos de \`text-4xl / text-3xl / text-2xl / font-bold / font-semibold\` sin clase semántica equivalente: **${data.typoDrift}**\n`);
-  lines.push('> Convertir progresivamente a `.kpi-value` (números KPI) o nuevas clases semánticas del DS.');
+  lines.push('## Tipografía — drift de utilidades\n');
+  lines.push('> Conteo crudo de utilidades de tipografía en templates. **No es deuda directa:** el peso de fuente (`font-bold/semibold`) es legítimo en botones, headers y títulos, y no tiene una clase semántica que lo reemplace. La señal accionable son los _clusters repetidos_ (abajo).\n');
+  lines.push('| Categoría | Usos | Interpretación |');
+  lines.push('|-----------|------|----------------|');
+  lines.push(`| Tamaño display (\`text-4xl/3xl/2xl\`) | ${data.typoSize} | Candidatas a \`.kpi-value\` o heading semántico |`);
+  lines.push(`| Peso de fuente (\`font-bold/semibold\`) | ${data.typoWeight} | Informativo — legítimo en botones/headers/títulos |`);
   lines.push('');
+
+  const typoClusters = [...data.typoClusters.entries()]
+    .map(([, v]) => v)
+    .filter(c => c.count >= 5)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 15);
+
+  if (typoClusters.length > 0) {
+    lines.push('### Clusters repetidos (candidatos a clase semántica)\n');
+    lines.push('Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5 veces → promover a una clase del DS:\n');
+    lines.push('| Repeticiones | Cluster |');
+    lines.push('|--------------|---------|');
+    for (const c of typoClusters) {
+      lines.push(`| ${c.count} | \`${c.sample}\` |`);
+    }
+    lines.push('');
+  }
 
   return lines.join('\n') + '\n';
 }
@@ -995,9 +1036,10 @@ async function main() {
   process.stdout.write('\r');
   const topTokenCount  = Object.values(styles.tokenUsage).filter(c => c > 0).length;
   const semanticCount  = styles.semanticClasses.length;
+  const typoDriftTotal = styles.typoSize + styles.typoWeight;
   console.log(styleChanged
-    ? green(`  ✓ STYLES.md actualizado (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${styles.typoDrift})`)
-    : dim(`  — STYLES.md sin cambios    (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${styles.typoDrift})`),
+    ? green(`  ✓ STYLES.md actualizado (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${typoDriftTotal} [size ${styles.typoSize} · weight ${styles.typoWeight}])`)
+    : dim(`  — STYLES.md sin cambios    (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${typoDriftTotal} [size ${styles.typoSize} · weight ${styles.typoWeight}])`),
   );
   if (styleChanged) changes.push('STYLES.md');
 

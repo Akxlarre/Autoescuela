@@ -289,11 +289,36 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | **tooltip** | `.p-tooltip` · `.p-tooltip-arrow` · `.p-tooltip-bottom` · `.p-tooltip-left` · `.p-tooltip-right` +2 |
 | **yearpicker** | `.p-yearpicker-year` |
 
-## Deuda de tipografía
+## Tipografía — drift de utilidades
 
-Usos de `text-4xl / text-3xl / text-2xl / font-bold / font-semibold` sin clase semántica equivalente: **1330**
+> Conteo crudo de utilidades de tipografía en templates. **No es deuda directa:** el peso de fuente (`font-bold/semibold`) es legítimo en botones, headers y títulos, y no tiene una clase semántica que lo reemplace. La señal accionable son los _clusters repetidos_ (abajo).
 
-> Convertir progresivamente a `.kpi-value` (números KPI) o nuevas clases semánticas del DS.
+| Categoría | Usos | Interpretación |
+|-----------|------|----------------|
+| Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 1275 | Informativo — legítimo en botones/headers/títulos |
+
+### Clusters repetidos (candidatos a clase semántica)
+
+Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5 veces → promover a una clase del DS:
+
+| Repeticiones | Cluster |
+|--------------|---------|
+| 67 | `text-sm font-semibold text-text-primary` |
+| 37 | `text-sm font-bold text-text-primary` |
+| 31 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
+| 17 | `text-lg font-semibold text-text-primary` |
+| 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
+| 14 | `text-base font-bold text-text-primary` |
+| 14 | `text-[10px] font-bold text-text-muted uppercase tracking-wider` |
+| 14 | `text-xs font-semibold text-text-primary` |
+| 14 | `text-sm font-semibold truncate text-text-primary` |
+| 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
+| 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
+| 13 | `font-bold text-lg text-text-primary` |
+| 13 | `text-base font-semibold text-text-primary` |
+| 12 | `text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted` |
+| 11 | `text-2xl font-semibold text-text-primary` |
 
 
 <!-- AUTO-GENERATED:END -->
