@@ -334,6 +334,7 @@
 .toast-gsap-active,
 .toast-gsap-to {
   animation: none !important;
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

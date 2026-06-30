@@ -32,7 +32,7 @@ export class AppComponent {
 
   protected readonly toastMotionOptions = computed(() => ({
     name: 'p-toast-message',
-    duration: { enter: 250, leave: 180 },
+    duration: { enter: 250, leave: 300 },
     enterClass: { from: 'toast-gsap-from', active: 'toast-gsap-active', to: 'toast-gsap-to' },
     leaveClass: { from: 'toast-gsap-from', active: 'toast-gsap-active', to: 'toast-gsap-to' },
     onBeforeEnter: (event?: { element: Element }) => {
