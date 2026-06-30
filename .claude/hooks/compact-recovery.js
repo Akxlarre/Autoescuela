@@ -23,6 +23,7 @@ const indexFiles = [
   'indices/DIRECTIVES.md',
   'indices/STYLES.md',
   'indices/PIPES.md',
+  'indices/USAGE-MAP.md',
 ];
 
 let output = '';

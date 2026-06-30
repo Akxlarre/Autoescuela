@@ -91,6 +91,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `DocumentTemplate` | `dto` | `src/app/core/models/dto/document-template.model.ts` |
 | `Enrollment` | `dto` | `src/app/core/models/dto/enrollment.model.ts` |
 | `Expense` | `dto` | `src/app/core/models/dto/expense.model.ts` |
+| `FixedExpense` | `dto` | `src/app/core/models/dto/fixed-expense.model.ts` |
 | `InstructorAdvance` | `dto` | `src/app/core/models/dto/instructor-advance.model.ts` |
 | `InstructorMonthlyHour` | `dto` | `src/app/core/models/dto/instructor-monthly-hour.model.ts` |
 | `InstructorMonthlyPayment` | `dto` | `src/app/core/models/dto/instructor-monthly-payment.model.ts` |
@@ -139,11 +140,11 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `VehicleAssignment` | `dto` | `src/app/core/models/dto/vehicle-assignment.model.ts` |
 | `VehicleDocument` | `dto` | `src/app/core/models/dto/vehicle-document.model.ts` |
 | `Vehicle` | `dto` | `src/app/core/models/dto/vehicle.model.ts` |
-| `BrandConfig`, `HeroMediaConfig`, `HeroConfig`, `CourseConfig`, `WhyUsConfig`, `FAQConfig`, `ContactConfig`, `HourConfig`, `PromoConfig`, `TestimonialConfig`, `SocialConfig`, `SiteData`, `WebsiteConfig` | `dto` | `src/app/core/models/dto/website-config.model.ts` |
-| `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendableStudent`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
-| `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
-| `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
+| `BrandConfig`, `HeroMediaConfig`, `HeroBackgroundConfig`, `HeroConfig`, `CourseConfig`, `WhyUsConfig`, `FAQConfig`, `ContactConfig`, `HourConfig`, `PromoConfig`, `TestimonialConfig`, `SocialConfig`, `PricingFooterItem`, `PricingFooterConfig`, `SiteData`, `WebsiteConfig` | `dto` | `src/app/core/models/dto/website-config.model.ts` |
+| `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
+| `EnrollmentSummary`, `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `SemaforoAsistencia`, `AlumnoProfesionalTableRow` | `ui` | `src/app/core/models/ui/alumno-profesional-table-row.model.ts` |
+| `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
 | `ClasePracticaStatus`, `ZoomLinkStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClaseTeoricoRow`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `TeoriaAsistenciaStatus`, `TeoriaAlumnoElegible`, `NuevaClaseTeoricaPayload`, `FinishClassPayload`, `TeoriaAlumnoAsistencia` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
@@ -153,7 +154,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |
 | `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
 | `TipoCursoSingular`, `EstadoCursoSingular`, `SingularPaymentMethod`, `SingularPaymentStatus`, `CursoSingularRow`, `CursosSingularesKpis`, `InscriptoCursoSingular`, `NuevoCursoSingularFormData`, `SingularStudentSearch`, `SingularPersonalDataForm`, `SingularPaymentForm` | `ui` | `src/app/core/models/ui/cursos-singulares.model.ts` |
-| `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertModel`, `QuickActionModel`, `SystemStatusModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |
+| `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertActionType`, `AlertAction`, `AlertModel`, `QuickActionModel`, `SystemStatusModel`, `LiveClassModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |
 | `DmsTab`, `TemplateCategory`, `TemplateCategoryFilter`, `StudentWithDocsRow`, `DmsStudentDocRow`, `SchoolDocRow`, `TemplateCard`, `DmsKpis`, `UploadStudentDocPayload`, `UploadSchoolDocPayload`, `UploadTemplatePayload`, `DmsViewerDocument` | `ui` | `src/app/core/models/ui/dms.model.ts` |
 | `EgresadoTableRow` | `ui` | `src/app/core/models/ui/egresado-table.model.ts` |
 | `StudentSummaryBanner`, `PaymentMode`, `PaymentModeOption`, `InstructorOption`, `SlotStatus`, `TimeSlot`, `WeekDay`, `WeekRange`, `ScheduleGrid`, `SlotSelection`, `PromotionStatus`, `PromotionOption`, `PromotionGroup`, `SingularFeature`, `AssignmentView`, `EnrollmentAssignmentData` | `ui` | `src/app/core/models/ui/enrollment-assignment.model.ts` |
@@ -163,7 +164,8 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `PaymentMethod`, `PaymentMethodOption`, `PricingBreakdown`, `DiscountData`, `AvailableDiscount`, `SingularPaymentAlert`, `EnrollmentPaymentData` | `ui` | `src/app/core/models/ui/enrollment-payment.model.ts` |
 | `Gender`, `CourseCategory`, `CourseType`, `SingularCourseCode`, `CurrentLicenseType`, `ValidationBook`, `AgeAlertStatus`, `SingularCourseOption`, `CourseOption`, `SenceCodeOption`, `HistoricalPromotion`, `EnrollmentPersonalData`, `AgeValidation`, `LicenseValidation` | `ui` | `src/app/core/models/ui/enrollment-personal-data.model.ts` |
 | `EnrollmentWizardStep`, `StepStatus`, `StepConfig`, `CourseSummary`, `Requirement`, `SidebarSummary`, `EnrollmentWizardState`, `DraftSummary` | `ui` | `src/app/core/models/ui/enrollment-wizard.model.ts` |
-| `CeldaNota`, `FilaEvaluacion`, `GrillaEvaluacion` | `ui` | `src/app/core/models/ui/evaluaciones-profesional.model.ts` |
+| `CeldaNota`, `FilaEvaluacion`, `CursoEstado`, `CursoResumen`, `PromocionConCursos`, `GrillaEvaluacion` | `ui` | `src/app/core/models/ui/evaluaciones-profesional.model.ts` |
+| `AlumnoQuickActionType`, `AlumnoQuickAction`, `ActionResult`, `AlumnoResult`, `SearchResult`, `SearchResultGroup` | `ui` | `src/app/core/models/ui/global-search.model.ts` |
 | `HistorialCierre`, `HistorialFiltro` | `ui` | `src/app/core/models/ui/historial-cuadraturas.model.ts` |
 | `InstructorDashboardData`, `InstructorDashboardKpis`, `InstructorClassRow`, `InstructorStudentCard`, `InstructorStudentDetail`, `FichaTecnicaRow`, `EvaluationFormData`, `EvaluationChecklistItem`, `ScheduleBlock`, `WeekScheduleKpis`, `ScheduleDay`, `DaySchedule`, `WeekSchedule`, `MonthlyHoursRow`, `LiquidacionKpis`, `SessionDetailRow`, `ExamScoreRow`, `RegisterExamPayload`, `AttendanceClassRow`, `UpcomingDay` | `ui` | `src/app/core/models/ui/instructor-portal.model.ts` |
 | `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory`, `InstructorHoraRow`, `InstructorHorarioSession` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
@@ -173,14 +175,17 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `RentabilidadCurso`, `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
 | `PreInscritoStatusSeverity`, `PreInscritoTableRow`, `EvaluarTestPayload`, `CompletarMatriculaPayload`, `PromocionOption`, `PromocionCourseOption` | `ui` | `src/app/core/models/ui/pre-inscrito-table.model.ts` |
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |
+| `PublicEnrollmentContext` | `ui` | `src/app/core/models/ui/public-enrollment-context.model.ts` |
 | `RelatorCursoAsignado`, `RelatorTableRow` | `ui` | `src/app/core/models/ui/relator-table.model.ts` |
-| `RangoReporte`, `RangoOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `DetalleDiario`, `ReporteContable` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
+| `RangoReporte`, `RangoOption`, `FiltrosReporte`, `ReporteKpis`, `CategoriaIngreso`, `CategoriaGasto`, `EvolucionMensual`, `DetalleDiario`, `ReporteContable`, `GastoFijoCategory`, `GastoFijoRow`, `RegistrarGastoFijoPayload` | `ui` | `src/app/core/models/ui/reportes-contables.model.ts` |
 | `ResolvedCourse` | `ui` | `src/app/core/models/ui/resolved-course.model.ts` |
 | `SecretariaTableRow` | `ui` | `src/app/core/models/ui/secretaria-table.model.ts` |
-| `SectionHeroChip`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
+| `SectionHeroChip`, `SectionHeroMenuItem`, `SectionHeroKpi`, `SectionHeroAction` | `ui` | `src/app/core/models/ui/section-hero.model.ts` |
 | `ServicioEspecial`, `VentaServicio`, `VentaFormData`, `NuevoServicioFormData`, `ServiciosEspecialesKpis` | `ui` | `src/app/core/models/ui/servicios-especiales.model.ts` |
 | `SesionTipo`, `SesionStatus`, `AsistenciaStatus`, `SesionProfesional`, `SesionAlumnoAsistencia`, `PromocionOption`, `CursoOption`, `ResumenAlumnoAsistencia`, `WeekDay`, `AlumnoFirmaSemana` | `ui` | `src/app/core/models/ui/sesion-profesional.model.ts` |
-| `LicenseGroup`, `CertificateState`, `AttendanceSemaphore`, `StudentHomeHero`, `StudentHomePractice`, `StudentHomeProgress`, `StudentHomeSession`, `StudentHomeAttendance`, `StudentHomeModule`, `StudentHomeGrades`, `StudentHomeCertificate`, `StudentHomeNextClass`, `StudentHomeSideWidgets`, `StudentHomeSnapshot` | `ui` | `src/app/core/models/ui/student-home.model.ts` |
+| `StudentSessionStatus`, `StudentPracticeSessionRow`, `StudentTheorySessionRow`, `StudentProfSessionRow`, `StudentClasesKpis`, `StudentClasesData` | `ui` | `src/app/core/models/ui/student-clases.model.ts` |
+| `LicenseGroup`, `CertificateState`, `AttendanceSemaphore`, `EnrollmentTab`, `StudentHomeHero`, `StudentHomePractice`, `StudentHomeProgress`, `StudentHomeSession`, `StudentHomeAttendance`, `StudentHomeModule`, `StudentHomeGrades`, `StudentHomeCertificate`, `StudentHomeNextClass`, `StudentHomeSideWidgets`, `StudentHomeSnapshot` | `ui` | `src/app/core/models/ui/student-home.model.ts` |
+| `StudentHorarioSessionItem`, `StudentHorarioDay`, `StudentHorarioWeekMeta` | `ui` | `src/app/core/models/ui/student-horario.model.ts` |
 | `StudentPaymentEnrollmentInfo`, `StudentPaymentInstructor`, `StudentPaymentHistoryItem`, `StudentPaymentStatus`, `StudentPaymentStep`, `StudentPaymentWizardState`, `StudentPaymentResult` | `ui` | `src/app/core/models/ui/student-payment.model.ts` |
 | `TaskRow`, `TaskWithReplies`, `TaskFilter`, `RoleMatrixKey`, `CreateTaskPayload`, `RecipientOption` | `ui` | `src/app/core/models/ui/task.model.ts` |
 | `UserRole`, `User` | `ui` | `src/app/core/models/ui/user.model.ts` |

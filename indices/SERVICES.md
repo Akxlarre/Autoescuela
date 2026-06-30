@@ -9,7 +9,7 @@ Servicios estructurales compartidos que proveen funcionalidades base, autenticac
 |----------|---------------------------|-----------------------|--------------|--------|
 | `SupabaseService` | Cliente Supabase singleton — NO inyectar en UI, solo en Facades/Services | `core/services/infrastructure/supabase.service.ts` | @supabase/supabase-js | ✅ Estable |
 | `ThemeService` | Modo claro/oscuro/sistema con `[data-mode='dark']` en documentElement; persiste en localStorage | `core/services/theme.service.ts` | GsapAnimationsService, MessageService | ✅ Estable |
-| `GsapAnimationsService` | Centraliza TODAS las animaciones GSAP: bento, counters, hover, page enter, reduced-motion. **Sistema de tokens (fix-018):** registra `CustomEase` en constructor; `getCssDuration(token, fallback)` lee tokens `--duration-*` en ms y los convierte a segundos; `getCssEase(token, fallback)` convierte `cubic-bezier(...)` del design system a CustomEase con cache (evita hardcodear motion). **`animateBentoGrid(containerEl, { skipOpacity? })`** retorna `() => void` (cleanup para `DestroyRef`): separa celdas en "hero" (`.card-accent`, `.bento-banner`, `.bento-hero`, `[data-animate-hero]`) → scale+lift, y celdas regulares → stagger, ambas leen tokens `--duration-reveal-hero/cell`, `--stagger-reveal`, `--delay-reveal-grid`, `--ease-out-expo`. `skipOpacity=true` omite la transición de opacidad cuando una View Transition ya cubre el fade. Retira `.is-reveal-pending` en `immediateRender` (sin parpadeo). Fixes perf: `will-change` limpiado en `onComplete`; tokens leídos dinámicamente en `addCardHover`. | `core/services/ui/gsap-animations.service.ts` | gsap, ScrollTrigger, CustomEase | ✅ Estable |
+| `GsapAnimationsService` | Centraliza TODAS las animaciones GSAP: bento, counters, hover, page enter, reduced-motion. **Sistema de tokens (fix-018):** registra `CustomEase` en constructor; `getCssDuration(token, fallback)` lee tokens `--duration-*` en ms y los convierte a segundos; `getCssEase(token, fallback)` convierte `cubic-bezier(...)` del design system a CustomEase con cache (evita hardcodear motion). **`animateBentoGrid(containerEl, { skipOpacity? })`** retorna `() => void` (cleanup para `DestroyRef`): separa celdas en "hero" (`.card-accent`, `.bento-banner`, `.bento-hero`, `[data-animate-hero]`) → scale+lift, y celdas regulares → stagger, ambas leen tokens `--duration-reveal-hero/cell`, `--stagger-reveal`, `--delay-reveal-grid`, `--ease-out-expo`. `skipOpacity=true` omite la transición de opacidad cuando una View Transition ya cubre el fade. Retira `.is-reveal-pending` en `immediateRender` (sin parpadeo). **`addCardHover(el)` (hotfix-001+002):** retorna `(() => void) | null` para cleanup explícito; `WeakSet` previene doble registro; `gsap.killTweensOf(el)` antes de cada tween; `will-change` en enter, limpiado en `onComplete`. **Glow de marca (hotfix-002):** usa token `--card-shadow-hover-glow` (anillo 1px + difuso `0 12px 28px -6px` sin bleed interior); elimina cambio de `borderColor`. Token sky-500 light / sky-400 dark. Tokens definidos en `_variables.scss` (`:root` y `[data-mode='dark']`). | `core/services/ui/gsap-animations.service.ts` | gsap, ScrollTrigger, CustomEase | ✅ Estable |
 | `LayoutService` | Estado responsive del sidebar drawer en mobile (`sidebarOpen` signal) | `core/services/layout.service.ts` | — | ✅ Estable |
 | `RoleService` | Dev utility — signal `currentRole` (`UserRole`), persiste en sessionStorage. Expone `setRole()`. Tipos: `admin\|secretaria\|instructor\|alumno\|relator`. | `core/services/auth/role.service.ts` | — | ✅ Estable |
 | `MenuConfigService` | Navegación por rol — `menuItems = computed<NavGroup[]>()` según `AuthFacade.currentUser()?.role`. Interfaces: `NavItem { label, icon, routerLink, badge? }` / `NavGroup { group, items }`. 5 navs: admin, secretaria, instructor, alumno, relator. | `core/services/auth/menu-config.service.ts` | AuthFacade | ✅ Estable |
@@ -132,10 +132,12 @@ Funciones server-side que requieren `SERVICE_ROLE_KEY` o lógica que no puede ej
 |-------|-------------|---------|
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
 | `RoleService` | — | `src/app/core/services/auth/role.service.ts` |
+| `ErrorSanitizerService` | — | `src/app/core/services/infrastructure/error-sanitizer.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
-| `DmsViewerService` | — | `src/app/core/services/ui/dms-viewer.service.ts` |
+| `DmsViewerService` | `LayoutDrawerFacadeService` | `src/app/core/services/ui/dms-viewer.service.ts` |
+| `EpqPrintService` | — | `src/app/core/services/ui/epq-print.service.ts` |
 | `GsapAnimationsService` | `PLATFORM_ID`, `NgZone` | `src/app/core/services/ui/gsap-animations.service.ts` |
 | `LayoutDrawerFacadeService` | `LayoutDrawerService` | `src/app/core/services/ui/layout-drawer.facade.service.ts` |
 | `LayoutDrawerService` | — | `src/app/core/services/ui/layout-drawer.service.ts` |
@@ -143,14 +145,7 @@ Funciones server-side que requieren `SERVICE_ROLE_KEY` o lógica que no puede ej
 | `ModalOverlayService` | — | `src/app/core/services/ui/modal-overlay.service.ts` |
 | `SearchPanelFacadeService` | `SearchPanelFacadeService` | `src/app/core/services/ui/search-panel.service.ts` |
 | `TaskCreateContextService` | — | `src/app/core/services/ui/task-create-context.service.ts` |
-| `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `MessageService` | `src/app/core/services/ui/theme.service.ts` |
+| `ThemeService` | `ThemeService`, `PLATFORM_ID`, `GsapAnimationsService`, `ToastService` | `src/app/core/services/ui/theme.service.ts` |
 | `ToastService` | `MessageService` | `src/app/core/services/ui/toast.service.ts` |
-
-## Utils (funciones puras en `core/utils/`)
-
-| Función / Export | Descripción | Path |
-|---|---|---|
-| `getSparklinePoints(data, w?, h?)` | Convierte array de valores 0-1 en string de puntos SVG para `<polyline>`. 6-8 puntos típicos, w=40 h=20 default. | `src/app/core/utils/sparkline.utils.ts` |
-| `buildCarnetMenu(state)` | Construye items `SectionHeroMenuItem[]` para el menú Carnet Clase B (fix-019). Reglas: carnet-6 siempre, carnet-12 requiere 6 clases completadas. | `src/app/core/utils/carnet-menu.util.ts` |
 
 <!-- AUTO-GENERATED:END -->

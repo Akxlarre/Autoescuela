@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * indices-sync.js — Auto-indexer (v6.1)
+ * indices-sync.js — Auto-indexer (v7.0)
  *
  * Escanea el proyecto Angular usando el AST de TypeScript y actualiza
  * automáticamente las secciones entre marcadores en los archivos indices/*.md
@@ -119,6 +119,71 @@ function extractPublicSignals(content) {
   return signals;
 }
 
+/**
+ * Extracts inline template content from a component .ts file.
+ * Falls back to reading external templateUrl if no inline template found.
+ */
+function extractTemplateContent(tsContent, filePath) {
+  // Try inline template: template: `...`
+  const inlineMatch = tsContent.match(/template\s*:\s*`([\s\S]*?)`/);
+  if (inlineMatch) return inlineMatch[1];
+
+  // Fallback: external templateUrl
+  const urlMatch = tsContent.match(/templateUrl\s*:\s*['"](.+?)['"]/);
+  if (urlMatch) {
+    const htmlPath = path.resolve(path.dirname(filePath), urlMatch[1]);
+    if (fs.existsSync(htmlPath)) return fs.readFileSync(htmlPath, 'utf-8');
+  }
+
+  return '';
+}
+
+/**
+ * Detects UI patterns in a template string.
+ * Returns { loading, empty, error, skeleton } booleans.
+ */
+function detectPagePatterns(templateContent) {
+  const t = templateContent;
+  return {
+    loading:  /isLoading\s*\(/.test(t) || /\bloading\]/.test(t),
+    empty:    /app-empty-state/.test(t) || /emptymessage/.test(t),
+    error:    /app-alert-card[\s\S]{0,120}error/.test(t) || /error-state/.test(t) || /\.error\s*\(/.test(t),
+    skeleton: /skeleton-block/.test(t) || /-skeleton[\s>"']/.test(t),
+  };
+}
+
+/**
+ * Escapes special regex characters in a string.
+ */
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Converts a directive selector string to a RegExp for template detection.
+ * Handles:
+ *   [attrName]               → \battrName\b
+ *   element[attrName]        → \battrName\b
+ *   *structName              → \*structName\b
+ *   comma-separated          → takes first part
+ */
+function directiveSelectorToPattern(selector) {
+  if (!selector) return null;
+  // Take first part if comma-separated
+  const first = selector.split(',')[0].trim();
+  // [attrName] or element[attrName]
+  const attrMatch = first.match(/\[([^\]]+)\]/);
+  if (attrMatch) {
+    return new RegExp(`\\b${escapeRegex(attrMatch[1])}\\b`);
+  }
+  // *structDirective
+  if (first.startsWith('*')) {
+    return new RegExp(`\\*${escapeRegex(first.slice(1))}\\b`);
+  }
+  // element selector
+  return new RegExp(`<${escapeRegex(first)}[\\s/>]`);
+}
+
 // ─── Directory Walker ─────────────────────────────────────────────────────────
 
 function* walkDir(dir) {
@@ -221,6 +286,210 @@ function collectModels(cache, prevResults) {
   return results;
 }
 
+function collectDirectives(cache, prevResults) {
+  const results = [];
+  const prevMap = new Map((prevResults ?? []).map(r => [r.filePath, r]));
+  let skipped = 0;
+  const directivesDir = path.join(SRC_APP, 'core', 'directives');
+  for (const filePath of walkDir(directivesDir)) {
+    if (!filePath.endsWith('.directive.ts') || filePath.endsWith('.spec.ts')) continue;
+    const relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+    try {
+      const { content, changed } = readIfChanged(filePath, cache);
+      if (!changed && prevMap.has(relPath)) { results.push(prevMap.get(relPath)); skipped++; continue; }
+      const src = content ?? fs.readFileSync(filePath, 'utf-8');
+      const classMatch = src.match(/export\s+(?:class\s+(\w+)|const\s+(\w+))/);
+      const className = classMatch?.[1] ?? classMatch?.[2] ?? path.basename(filePath, '.directive.ts');
+      const selectorMatch = src.match(/selector\s*:\s*['"]([^'"]+)['"]/);
+      const selector = selectorMatch?.[1] ?? null;
+      const { inputs, outputs } = extractSignalInputsOutputs(src);
+      results.push({ className, selector, inputs, outputs, filePath: relPath });
+    } catch { /* skip */ }
+  }
+  if (skipped > 0) process.stdout.write(dim(` (${skipped} cached)`));
+  return results;
+}
+
+function collectGuards(cache, prevResults) {
+  const results = [];
+  const prevMap = new Map((prevResults ?? []).map(r => [r.filePath, r]));
+  let skipped = 0;
+  const guardsDir = path.join(SRC_APP, 'core', 'guards');
+  for (const filePath of walkDir(guardsDir)) {
+    if (!filePath.endsWith('.guard.ts') || filePath.endsWith('.spec.ts')) continue;
+    const relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+    try {
+      const { content, changed } = readIfChanged(filePath, cache);
+      if (!changed && prevMap.has(relPath)) { results.push(prevMap.get(relPath)); skipped++; continue; }
+      const src = content ?? fs.readFileSync(filePath, 'utf-8');
+      // Guards can be classes or arrow functions / const functions
+      const nameMatch = src.match(/export\s+(?:class\s+(\w+)|(?:const|function)\s+(\w+))/);
+      const name = nameMatch?.[1] ?? nameMatch?.[2] ?? path.basename(filePath, '.guard.ts');
+      const deps = extractInjected(src);
+      // Detect CanActivateFn vs CanDeactivateFn
+      const type = /CanDeactivate/.test(src) ? 'CanDeactivateFn'
+        : /CanMatch/.test(src) ? 'CanMatchFn'
+        : 'CanActivateFn';
+      results.push({ name, deps, type, filePath: relPath });
+    } catch { /* skip */ }
+  }
+  if (skipped > 0) process.stdout.write(dim(` (${skipped} cached)`));
+  return results;
+}
+
+function collectUtils(cache, prevResults) {
+  const results = [];
+  const prevMap = new Map((prevResults ?? []).map(r => [r.filePath, r]));
+  let skipped = 0;
+  const utilsDir = path.join(SRC_APP, 'core', 'utils');
+  for (const filePath of walkDir(utilsDir)) {
+    if (!filePath.endsWith('.ts') || filePath.endsWith('.spec.ts')) continue;
+    const relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+    try {
+      const { content, changed } = readIfChanged(filePath, cache);
+      if (!changed && prevMap.has(relPath)) { results.push(prevMap.get(relPath)); skipped++; continue; }
+      const src = content ?? fs.readFileSync(filePath, 'utf-8');
+      const exports = [];
+      const re = /export\s+(?:(?:async\s+)?function\s+(\w+)|const\s+(\w+)|class\s+(\w+)|type\s+(\w+)|interface\s+(\w+))/g;
+      let m;
+      while ((m = re.exec(src)) !== null) {
+        const name = m[1] ?? m[2] ?? m[3] ?? m[4] ?? m[5];
+        if (name) exports.push(name);
+      }
+      if (exports.length === 0) continue;
+      results.push({ filePath: relPath, exports });
+    } catch { /* skip */ }
+  }
+  if (skipped > 0) process.stdout.write(dim(` (${skipped} cached)`));
+  return results;
+}
+
+function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
+  const results = {
+    componentUsage:  {},
+    directiveUsage:  {},
+    facadeUsage:     {},
+    serviceUsage:    {},
+    pagePatterns:    [],
+  };
+  const prevPages = new Map((prevResults?.pagePatterns ?? []).map(r => [r.filePath, r]));
+  let skipped = 0;
+
+  // Pre-compile directive patterns (done once, not per-template)
+  const directivesWithPatterns = (directiveItems ?? [])
+    .filter(d => d.selector)
+    .map(d => ({ selector: d.selector, pattern: directiveSelectorToPattern(d.selector) }))
+    .filter(d => d.pattern !== null);
+
+  const selectors = new Set(sharedSelectors);
+
+  // Scan features/ and layout/
+  const scanDirs = [
+    { dir: path.join(SRC_APP, 'features'), isPage: true },
+    { dir: path.join(SRC_APP, 'layout'),   isPage: false },
+  ];
+
+  for (const { dir, isPage } of scanDirs) {
+    for (const filePath of walkDir(dir)) {
+      if (!filePath.endsWith('.component.ts') || filePath.endsWith('.spec.ts')) continue;
+      const relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+      const consumer = relPath
+        .replace(/^src\/app\//, '')
+        .replace(/\/[^/]+\.component\.ts$/, '');
+
+      try {
+        const { content, changed } = readIfChanged(filePath, cache);
+        const src = content ?? fs.readFileSync(filePath, 'utf-8');
+
+        // If unchanged and we have prev data, reuse it
+        if (!changed && prevPages.has(relPath)) {
+          const prev = prevPages.get(relPath);
+          if (prev._componentHits) prev._componentHits.forEach(s => {
+            (results.componentUsage[s] ??= new Set()).add(consumer);
+          });
+          if (prev._directiveHits) prev._directiveHits.forEach(s => {
+            (results.directiveUsage[s] ??= new Set()).add(consumer);
+          });
+          if (prev._facadeHits) prev._facadeHits.forEach(f => {
+            (results.facadeUsage[f] ??= new Set()).add(consumer);
+          });
+          if (prev._serviceHits) prev._serviceHits.forEach(s => {
+            (results.serviceUsage[s] ??= new Set()).add(consumer);
+          });
+          if (isPage) results.pagePatterns.push(prev);
+          skipped++;
+          continue;
+        }
+
+        const templateContent = extractTemplateContent(src, filePath);
+
+        // Shared component usage
+        const componentHits = [];
+        for (const sel of selectors) {
+          const tagRe = new RegExp(`<${sel}[\\s/>]`);
+          if (tagRe.test(templateContent)) {
+            (results.componentUsage[sel] ??= new Set()).add(consumer);
+            componentHits.push(sel);
+          }
+        }
+
+        // Directive usage in templates
+        const directiveHits = [];
+        for (const { selector, pattern } of directivesWithPatterns) {
+          if (pattern.test(templateContent)) {
+            (results.directiveUsage[selector] ??= new Set()).add(consumer);
+            directiveHits.push(selector);
+          }
+        }
+
+        // Injected facades and services
+        const injected = extractInjected(src);
+        const facadeHits = [];
+        const serviceHits = [];
+        for (const dep of injected) {
+          if (dep.endsWith('Facade')) {
+            (results.facadeUsage[dep] ??= new Set()).add(consumer);
+            facadeHits.push(dep);
+          } else if (dep.endsWith('Service')) {
+            (results.serviceUsage[dep] ??= new Set()).add(consumer);
+            serviceHits.push(dep);
+          }
+        }
+
+        if (isPage) {
+          const patterns = detectPagePatterns(templateContent);
+          results.pagePatterns.push({
+            page: consumer,
+            filePath: relPath,
+            patterns,
+            _componentHits:  componentHits,
+            _directiveHits:  directiveHits,
+            _facadeHits:     facadeHits,
+            _serviceHits:    serviceHits,
+          });
+        }
+      } catch { /* skip unparseable */ }
+    }
+  }
+
+  // Convert Sets to sorted arrays for serialization
+  for (const key of Object.keys(results.componentUsage)) {
+    results.componentUsage[key] = [...results.componentUsage[key]].sort();
+  }
+  for (const key of Object.keys(results.directiveUsage)) {
+    results.directiveUsage[key] = [...results.directiveUsage[key]].sort();
+  }
+  for (const key of Object.keys(results.facadeUsage)) {
+    results.facadeUsage[key] = [...results.facadeUsage[key]].sort();
+  }
+  for (const key of Object.keys(results.serviceUsage)) {
+    results.serviceUsage[key] = [...results.serviceUsage[key]].sort();
+  }
+
+  if (skipped > 0) process.stdout.write(dim(` (${skipped} cached)`));
+  return results;
+}
+
 // ─── Markdown Table Generators ────────────────────────────────────────────────
 
 function generateComponentsTable(items) {
@@ -265,6 +534,106 @@ function generateModelsTable(items) {
   return header + '\n' + rows.join('\n') + '\n';
 }
 
+function generateDirectivesAutoTable(items) {
+  if (items.length === 0) return '_Sin directivas auto-detectadas aún._\n';
+  const header = '| Clase | Selector | Inputs | Outputs | Archivo |\n|-------|----------|--------|---------|---------|';
+  const rows = items.map(d => {
+    const ins  = d.inputs.length  > 0 ? d.inputs.map(i => `\`${i}\``).join(', ') : '—';
+    const outs = d.outputs.length > 0 ? d.outputs.map(o => `\`${o}\``).join(', ') : '—';
+    const sel  = d.selector ? `\`${d.selector}\`` : '—';
+    return `| \`${d.className}\` | ${sel} | ${ins} | ${outs} | \`${d.filePath}\` |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateGuardsTable(items) {
+  if (items.length === 0) return '_Sin guards auto-detectados aún._\n';
+  const header = '| Guard | Tipo | Dependencias | Archivo |\n|-------|------|-------------|---------|';
+  const rows = items.map(g => {
+    const deps = g.deps.length > 0 ? g.deps.map(d => `\`${d}\``).join(', ') : '—';
+    return `| \`${g.name}\` | \`${g.type}\` | ${deps} | \`${g.filePath}\` |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateUtilsTable(items) {
+  if (items.length === 0) return '_Sin utilidades auto-detectadas aún._\n';
+  const header = '| Archivo | Exports |\n|---------|---------|';
+  const rows = items.map(u => {
+    const exps = u.exports.map(e => `\`${e}\``).join(', ');
+    return `| \`${u.filePath}\` | ${exps} |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateUsageMapContent(usageData) {
+  const lines = [];
+
+  // ── Componentes shared → Consumidores
+  const compEntries = Object.entries(usageData.componentUsage).sort((a, b) => a[0].localeCompare(b[0]));
+  if (compEntries.length > 0) {
+    lines.push('## Componentes shared → Consumidores\n');
+    lines.push('| Componente | Usado en |');
+    lines.push('|------------|----------|');
+    for (const [sel, consumers] of compEntries) {
+      lines.push(`| \`${sel}\` | ${consumers.map(c => `\`${c}\``).join(', ')} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Directivas → Consumidores
+  const dirEntries = Object.entries(usageData.directiveUsage ?? {}).sort((a, b) => a[0].localeCompare(b[0]));
+  if (dirEntries.length > 0) {
+    lines.push('## Directivas → Consumidores\n');
+    lines.push('| Directiva | Usada en |');
+    lines.push('|-----------|---------|');
+    for (const [sel, consumers] of dirEntries) {
+      lines.push(`| \`${sel}\` | ${consumers.map(c => `\`${c}\``).join(', ')} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Facades → Consumidores
+  const facEntries = Object.entries(usageData.facadeUsage).sort((a, b) => a[0].localeCompare(b[0]));
+  if (facEntries.length > 0) {
+    lines.push('## Facades → Consumidores\n');
+    lines.push('| Facade | Inyectada en |');
+    lines.push('|--------|-------------|');
+    for (const [name, consumers] of facEntries) {
+      lines.push(`| \`${name}\` | ${consumers.map(c => `\`${c}\``).join(', ')} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Services → Consumidores
+  const svcEntries = Object.entries(usageData.serviceUsage).sort((a, b) => a[0].localeCompare(b[0]));
+  if (svcEntries.length > 0) {
+    lines.push('## Services → Consumidores\n');
+    lines.push('| Service | Inyectado en |');
+    lines.push('|---------|-------------|');
+    for (const [name, consumers] of svcEntries) {
+      lines.push(`| \`${name}\` | ${consumers.map(c => `\`${c}\``).join(', ')} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Matriz de patrones por página (solo features/, no layout/)
+  if (usageData.pagePatterns.length > 0) {
+    lines.push('## Matriz de patrones por página\n');
+    lines.push('| Página | Loading | Empty | Error | Skeleton |');
+    lines.push('|--------|---------|-------|-------|----------|');
+    const sorted = [...usageData.pagePatterns].sort((a, b) => a.page.localeCompare(b.page));
+    for (const entry of sorted) {
+      const p = entry.patterns;
+      const flag = (v) => v ? '✅' : '❌';
+      lines.push(`| \`${entry.page}\` | ${flag(p.loading)} | ${flag(p.empty)} | ${flag(p.error)} | ${flag(p.skeleton)} |`);
+    }
+    lines.push('');
+  }
+
+  return lines.length > 0 ? lines.join('\n') + '\n' : '_Sin consumidores detectados aún._\n';
+}
+
 // ─── Marker Injection ─────────────────────────────────────────────────────────
 
 const MARKER_BEGIN = '<!-- AUTO-GENERATED:BEGIN -->';
@@ -297,7 +666,7 @@ function injectGenerated(filePath, generatedContent) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log(bold(cyan('🔄  indices:sync — Auto-indexer (AST Mode + Incremental Cache)\n')));
+  console.log(bold(cyan('🔄  indices:sync — Auto-indexer (AST Mode + Incremental Cache) v7.0\n')));
 
   if (!fs.existsSync(INDICES_DIR)) {
     console.error(`\x1b[31mNo se encontró el directorio indices/ en ${ROOT}\x1b[0m`);
@@ -375,11 +744,72 @@ async function main() {
   );
   if (modChanged) changes.push('MODELS.md');
 
+  // ── DIRECTIVES.md ──────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando core/directives/**/*.directive.ts...'));
+  const directives  = collectDirectives(cache, prev.directives);
+  const dirChanged = injectGenerated(
+    path.join(INDICES_DIR, 'DIRECTIVES.md'),
+    generateDirectivesAutoTable(directives),
+  );
+  process.stdout.write('\r');
+  console.log(dirChanged
+    ? green(`  ✓ DIRECTIVES.md actualizado (${directives.length} directivas detectadas)`)
+    : dim(`  — DIRECTIVES.md sin cambios    (${directives.length} directivas detectadas)`),
+  );
+  if (dirChanged) changes.push('DIRECTIVES.md');
+
+  // ── GUARDS.md ──────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando core/guards/**/*.guard.ts...'));
+  const guards  = collectGuards(cache, prev.guards);
+  const guardChanged = injectGenerated(
+    path.join(INDICES_DIR, 'GUARDS.md'),
+    generateGuardsTable(guards),
+  );
+  process.stdout.write('\r');
+  console.log(guardChanged
+    ? green(`  ✓ GUARDS.md actualizado (${guards.length} guards detectados)`)
+    : dim(`  — GUARDS.md sin cambios    (${guards.length} guards detectados)`),
+  );
+  if (guardChanged) changes.push('GUARDS.md');
+
+  // ── UTILS.md ───────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando core/utils/**/*.ts...'));
+  const utils  = collectUtils(cache, prev.utils);
+  const utilChanged = injectGenerated(
+    path.join(INDICES_DIR, 'UTILS.md'),
+    generateUtilsTable(utils),
+  );
+  process.stdout.write('\r');
+  console.log(utilChanged
+    ? green(`  ✓ UTILS.md actualizado (${utils.length} utilidades detectadas)`)
+    : dim(`  — UTILS.md sin cambios    (${utils.length} utilidades detectadas)`),
+  );
+  if (utilChanged) changes.push('UTILS.md');
+
+  // ── USAGE-MAP.md ───────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando features/ y layout/ (usage map + directivas)...'));
+  const sharedSelectors    = components.map(c => c.selector).filter(Boolean);
+  const directiveSelectors = directives.filter(d => d.selector);
+  const usageMap  = collectUsageMap(cache, prev.usageMap, sharedSelectors, directiveSelectors);
+  const usageChanged = injectGenerated(
+    path.join(INDICES_DIR, 'USAGE-MAP.md'),
+    generateUsageMapContent(usageMap),
+  );
+  process.stdout.write('\r');
+  const pageCount = usageMap.pagePatterns.length;
+  const compCount = Object.keys(usageMap.componentUsage).length;
+  const dirUsageCount = Object.keys(usageMap.directiveUsage).length;
+  console.log(usageChanged
+    ? green(`  ✓ USAGE-MAP.md actualizado (${pageCount} páginas, ${compCount} componentes, ${dirUsageCount} directivas mapeadas)`)
+    : dim(`  — USAGE-MAP.md sin cambios    (${pageCount} páginas, ${compCount} componentes, ${dirUsageCount} directivas mapeadas)`),
+  );
+  if (usageChanged) changes.push('USAGE-MAP.md');
+
   // Persist cache for next run
   saveCache({
     scriptMtime: selfMtime,
     mtimes: cache,
-    results: { components, services, facades, models },
+    results: { components, services, facades, models, directives, guards, utils, usageMap },
   });
 
   console.log('');
