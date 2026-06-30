@@ -364,6 +364,115 @@ function collectUtils(cache, prevResults) {
   return results;
 }
 
+function collectStyles(cache) {
+  const STYLES_DIR = path.join(ROOT, 'src', 'styles');
+
+  // ── 1. Parse SCSS source files ────────────────────────────────────────────
+  const tokensBySection = new Map(); // section label → [{name, value}]
+  const semanticClasses = [];        // [{name, file}]
+  const bentoClasses    = [];
+  const primengGroups   = new Map(); // base-component → Set<selector>
+
+  const varsPath = path.join(STYLES_DIR, 'tokens', '_variables.scss');
+  if (fs.existsSync(varsPath)) {
+    const src = fs.readFileSync(varsPath, 'utf-8');
+    let currentSection = 'General';
+
+    for (const line of src.split('\n')) {
+      // Section header patterns:
+      //   /* ── Section Name ──────... */
+      //   /* Section Name */
+      const secMatch =
+        line.match(/\/\*\s*─+\s*([^─\n*]{4,80?}?)\s*─*\s*\*\//) ??
+        line.match(/\/\*\s+([A-ZÁÉÍÓÚ][^─\n*]{3,60?}?)\s+\*\//);
+      if (secMatch) {
+        const candidate = secMatch[1].trim().replace(/^CAPA\s+\d+\s*[—–-]\s*/i, '');
+        if (candidate.length >= 4 && !/={3}/.test(candidate)) currentSection = candidate;
+      }
+
+      // CSS custom property declaration
+      const varMatch = line.match(/^\s+(--[\w-]+)\s*:\s*(.+?);/);
+      if (varMatch) {
+        if (!tokensBySection.has(currentSection)) tokensBySection.set(currentSection, []);
+        tokensBySection.get(currentSection).push({ name: varMatch[1], value: varMatch[2].trim() });
+      }
+
+      // Top-level semantic class (not nested, not state pseudo-class)
+      const clsMatch = line.match(/^(\.[\w-]+)\s*\{/);
+      if (clsMatch && !clsMatch[1].startsWith('.p-')) {
+        semanticClasses.push({ name: clsMatch[1], file: 'src/styles/tokens/_variables.scss' });
+      }
+    }
+  }
+
+  const bentoPath = path.join(STYLES_DIR, 'layout', '_bento-grid.scss');
+  if (fs.existsSync(bentoPath)) {
+    const src = fs.readFileSync(bentoPath, 'utf-8');
+    const re = /\.(bento-[\w-]+)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) bentoClasses.push(m[1]);
+  }
+
+  const primePath = path.join(STYLES_DIR, 'vendors', '_primeng-overrides.scss');
+  if (fs.existsSync(primePath)) {
+    const src = fs.readFileSync(primePath, 'utf-8');
+    const re = /\.(p-[\w][\w-]*)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const sel  = m[1];
+      const base = sel.replace(/^p-/, '').split('-')[0];
+      if (!primengGroups.has(base)) primengGroups.set(base, new Set());
+      primengGroups.get(base).add('.' + sel);
+    }
+  }
+
+  // ── 2. Cross-reference: count token/class usage in all templates ──────────
+  const allTokenNames = [];
+  for (const tokens of tokensBySection.values()) allTokenNames.push(...tokens.map(t => t.name));
+  const classNames = semanticClasses.map(c => c.name.replace(/^\./, ''));
+
+  const tokenUsage = {};
+  const classUsage = {};
+  let   typoDrift  = 0;
+
+  for (const filePath of walkDir(SRC_APP)) {
+    if (!filePath.endsWith('.ts') || filePath.endsWith('.spec.ts')) continue;
+    let content;
+    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
+    const template = extractTemplateContent(content, filePath);
+    const full     = content + template;
+
+    // Token usage: var(--token-name) — one pass via regex
+    const varRe = /var\((--[\w-]+)\)/g;
+    let m;
+    while ((m = varRe.exec(full)) !== null) {
+      tokenUsage[m[1]] = (tokenUsage[m[1]] ?? 0) + 1;
+    }
+
+    // Semantic class usage: word-boundary match in template
+    for (const cls of classNames) {
+      if (template.includes(cls)) {
+        const n = (template.match(new RegExp(`\\b${escapeRegex(cls)}\\b`, 'g')) ?? []).length;
+        if (n > 0) classUsage[cls] = (classUsage[cls] ?? 0) + n;
+      }
+    }
+
+    // Typography drift: text-4xl / font-bold etc. without semantic equivalent
+    const drift = (template.match(/\b(?:text-4xl|text-3xl|text-2xl|font-bold|font-semibold)\b/g) ?? []).length;
+    typoDrift += drift;
+  }
+
+  return {
+    tokensBySection,
+    tokenUsage,
+    semanticClasses,
+    classUsage,
+    bentoClasses: [...new Set(bentoClasses)].sort(),
+    primengGroups,
+    typoDrift,
+  };
+}
+
 function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
   const results = {
     componentUsage:  {},
@@ -564,6 +673,96 @@ function generateUtilsTable(items) {
     return `| \`${u.filePath}\` | ${exps} |`;
   });
   return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateStylesContent(data) {
+  const lines = [];
+
+  // ── Top 25 tokens by usage ────────────────────────────────────────────────
+  // Build a flat map name → value for quick lookup
+  const tokenValueMap = new Map();
+  for (const tokens of data.tokensBySection.values()) {
+    for (const t of tokens) tokenValueMap.set(t.name, t.value);
+  }
+
+  const topTokens = Object.entries(data.tokenUsage)
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 25);
+
+  if (topTokens.length > 0) {
+    lines.push('## Tokens canónicos — top 25 por frecuencia de uso real\n');
+    lines.push('| Token | Usos | Valor |');
+    lines.push('|-------|------|-------|');
+    for (const [token, count] of topTokens) {
+      const val = tokenValueMap.get(token) ?? '—';
+      const display = val.length > 60 ? val.slice(0, 57) + '…' : val;
+      lines.push(`| \`${token}\` | ${count} | \`${display}\` |`);
+    }
+    lines.push('');
+  }
+
+  // ── Semantic classes with usage ───────────────────────────────────────────
+  const semanticWithUsage = data.semanticClasses
+    .map(c => ({ ...c, usage: data.classUsage[c.name.replace(/^\./, '')] ?? 0 }))
+    .sort((a, b) => b.usage - a.usage);
+
+  if (semanticWithUsage.length > 0) {
+    lines.push('## Clases semánticas del Design System\n');
+    lines.push('| Clase | Usos en templates | Archivo |');
+    lines.push('|-------|------------------|---------|');
+    for (const cls of semanticWithUsage) {
+      lines.push(`| \`${cls.name}\` | ${cls.usage || '—'} | \`${cls.file}\` |`);
+    }
+    lines.push('');
+  }
+
+  // ── Bento grid cells ──────────────────────────────────────────────────────
+  if (data.bentoClasses.length > 0) {
+    lines.push('## Bento Grid — Clases de celda disponibles\n');
+    lines.push('| Clase CSS | Proporción |');
+    lines.push('|-----------|-----------|');
+    const descriptions = {
+      'bento-grid':    'Contenedor raíz (con [appBentoGridLayout])',
+      'bento-hero':    '100% ancho — para app-section-hero',
+      'bento-banner':  '100% ancho — para tablas y listados',
+      'bento-wide':    '2/3 ancho',
+      'bento-square':  '1/3 ancho (cuadrado)',
+      'bento-tall':    '1/3 ancho × 2 filas',
+      'bento-feature': '2/3 ancho × 2 filas',
+      'bento-media':   'Celda de media (imagen/video)',
+      'bento-card':    'Alias visual de celda con card',
+    };
+    for (const cls of data.bentoClasses) {
+      lines.push(`| \`.${cls}\` | ${descriptions[cls] ?? '—'} |`);
+    }
+    lines.push('');
+  }
+
+  // ── PrimeNG override coverage ─────────────────────────────────────────────
+  const primeEntries = [...data.primengGroups.entries()]
+    .filter(([base]) => base.length > 1)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (primeEntries.length > 0) {
+    lines.push('## PrimeNG — Componentes con override en _primeng-overrides.scss\n');
+    lines.push('| Componente | Selectores |');
+    lines.push('|-----------|-----------|');
+    for (const [base, selectors] of primeEntries) {
+      const selList = [...selectors].sort().slice(0, 5).map(s => `\`${s}\``).join(' · ');
+      const extra   = selectors.size > 5 ? ` +${selectors.size - 5}` : '';
+      lines.push(`| **${base}** | ${selList}${extra} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Typography drift ──────────────────────────────────────────────────────
+  lines.push('## Deuda de tipografía\n');
+  lines.push(`Usos de \`text-4xl / text-3xl / text-2xl / font-bold / font-semibold\` sin clase semántica equivalente: **${data.typoDrift}**\n`);
+  lines.push('> Convertir progresivamente a `.kpi-value` (números KPI) o nuevas clases semánticas del DS.');
+  lines.push('');
+
+  return lines.join('\n') + '\n';
 }
 
 function generateUsageMapContent(usageData) {
@@ -786,6 +985,22 @@ async function main() {
   );
   if (utilChanged) changes.push('UTILS.md');
 
+  // ── STYLES.md ──────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando styles/ + cross-ref en templates...'));
+  const styles      = collectStyles(cache);
+  const styleChanged = injectGenerated(
+    path.join(INDICES_DIR, 'STYLES.md'),
+    generateStylesContent(styles),
+  );
+  process.stdout.write('\r');
+  const topTokenCount  = Object.values(styles.tokenUsage).filter(c => c > 0).length;
+  const semanticCount  = styles.semanticClasses.length;
+  console.log(styleChanged
+    ? green(`  ✓ STYLES.md actualizado (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${styles.typoDrift})`)
+    : dim(`  — STYLES.md sin cambios    (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${styles.typoDrift})`),
+  );
+  if (styleChanged) changes.push('STYLES.md');
+
   // ── USAGE-MAP.md ───────────────────────────────────────────────────────────
   process.stdout.write(dim('  Escaneando features/ y layout/ (usage map + directivas)...'));
   const sharedSelectors    = components.map(c => c.selector).filter(Boolean);
@@ -809,7 +1024,7 @@ async function main() {
   saveCache({
     scriptMtime: selfMtime,
     mtimes: cache,
-    results: { components, services, facades, models, directives, guards, utils, usageMap },
+    results: { components, services, facades, models, directives, guards, utils, usageMap, styles },
   });
 
   console.log('');

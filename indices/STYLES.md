@@ -162,3 +162,138 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 4. **Componentes PrimeNG**: los overrides ya están en `_primeng-overrides.scss` — NO sobrescribir en componentes individuales
 5. **Animaciones de página**: usar View Transitions API (`_view-transitions.scss`) — NO crear transiciones de ruta custom
 6. **Contexto gradient**: dentro de `.surface-hero`, NO agregar clases de color condicionales — el token cascade lo resuelve automáticamente
+
+## Auto-Index — Métricas del Design System (generado automáticamente)
+
+<!-- AUTO-GENERATED:BEGIN -->
+## Tokens canónicos — top 25 por frecuencia de uso real
+
+| Token | Usos | Valor |
+|-------|------|-------|
+| `--ds-brand` | 496 | `#38bdf8` |
+| `--text-muted` | 448 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 297 | `var(--color-primary-text)` |
+| `--border-subtle` | 244 | `rgba(255, 255, 255, 0.18)` |
+| `--state-error` | 244 | `#f87171` |
+| `--text-secondary` | 235 | `rgba(255, 255, 255, 0.78)` |
+| `--state-success` | 230 | `#4ade80` |
+| `--bg-surface` | 203 | `#18181b` |
+| `--color-primary` | 191 | `#38bdf8` |
+| `--state-warning` | 168 | `#fbbf24` |
+| `--border-default` | 153 | `rgba(255, 255, 255, 0.28)` |
+| `--bg-elevated` | 90 | `#27272a` |
+| `--text-sm` | 82 | `0.875rem` |
+| `--bg-subtle` | 81 | `rgba(255, 255, 255, 0.1)` |
+| `--duration-fast` | 74 | `200ms` |
+| `--radius-md` | 66 | `10px` |
+| `--bg-base` | 56 | `#09090b` |
+| `--border-muted` | 56 | `var(--border-subtle)` |
+| `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
+| `--state-success-bg` | 52 | `rgba(74, 222, 128, 0.1)` |
+| `--color-primary-text` | 48 | `#ffffff` |
+| `--text-xs` | 47 | `0.75rem` |
+| `--state-warning-bg` | 47 | `rgba(251, 191, 36, 0.1)` |
+| `--color-success` | 45 | `—` |
+| `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
+
+## Clases semánticas del Design System
+
+| Clase | Usos en templates | Archivo |
+|-------|------------------|---------|
+| `.card` | 483 | `src/styles/tokens/_variables.scss` |
+| `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
+| `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
+| `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
+| `.card-tinted` | 10 | `src/styles/tokens/_variables.scss` |
+| `.surface-glass` | 9 | `src/styles/tokens/_variables.scss` |
+| `.surface-hero` | 6 | `src/styles/tokens/_variables.scss` |
+| `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
+| `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
+| `.badge-pulse` | 1 | `src/styles/tokens/_variables.scss` |
+
+## Bento Grid — Clases de celda disponibles
+
+| Clase CSS | Proporción |
+|-----------|-----------|
+| `.bento-1x1` | — |
+| `.bento-2x1` | — |
+| `.bento-2x2` | — |
+| `.bento-3x1` | — |
+| `.bento-3x2` | — |
+| `.bento-4x1` | — |
+| `.bento-activity-lg` | — |
+| `.bento-alerts-lg` | — |
+| `.bento-banner` | 100% ancho — para tablas y listados |
+| `.bento-card` | Alias visual de celda con card |
+| `.bento-card--flush` | — |
+| `.bento-card__body` | — |
+| `.bento-card__body--bottom` | — |
+| `.bento-card__body--center` | — |
+| `.bento-card__body--spread` | — |
+| `.bento-feature` | 2/3 ancho × 2 filas |
+| `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
+| `.bento-grid--forms` | — |
+| `.bento-grid--four-equal` | — |
+| `.bento-grid--wizard` | — |
+| `.bento-hero` | 100% ancho — para app-section-hero |
+| `.bento-media` | Celda de media (imagen/video) |
+| `.bento-media--center` | — |
+| `.bento-media--left` | — |
+| `.bento-media--top` | — |
+| `.bento-square` | 1/3 ancho (cuadrado) |
+| `.bento-tall` | 1/3 ancho × 2 filas |
+| `.bento-wide` | 2/3 ancho |
+
+## PrimeNG — Componentes con override en _primeng-overrides.scss
+
+| Componente | Selectores |
+|-----------|-----------|
+| **avatar** | `.p-avatar` |
+| **badge** | `.p-badge` |
+| **breadcrumb** | `.p-breadcrumb` · `.p-breadcrumb-chevron` · `.p-breadcrumb-home` · `.p-breadcrumb-separator` |
+| **button** | `.p-button` · `.p-button-danger` · `.p-button-icon-only` · `.p-button-outlined` · `.p-button-primary` +3 |
+| **card** | `.p-card` |
+| **checkbox** | `.p-checkbox` · `.p-checkbox-box` |
+| **colorpicker** | `.p-colorpicker` · `.p-colorpicker-panel` |
+| **datatable** | `.p-datatable` · `.p-datatable-header` · `.p-datatable-sm` · `.p-datatable-table` · `.p-datatable-table-wrapper` +3 |
+| **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-next` +5 |
+| **dialog** | `.p-dialog` · `.p-dialog-content` · `.p-dialog-header` · `.p-dialog-mask` |
+| **disabled** | `.p-disabled` |
+| **focus** | `.p-focus` |
+| **highlight** | `.p-highlight` |
+| **ink** | `.p-ink` |
+| **inputnumber** | `.p-inputnumber` · `.p-inputnumber-input` |
+| **inputtext** | `.p-inputtext` |
+| **inputwrapper** | `.p-inputwrapper` |
+| **menu** | `.p-menu` · `.p-menu-item-content` · `.p-menu-item-link` · `.p-menu-item-link-active` · `.p-menu-list` +1 |
+| **menuitem** | `.p-menuitem-badge` · `.p-menuitem-link` · `.p-menuitem-text` |
+| **monthpicker** | `.p-monthpicker-month` |
+| **multiselect** | `.p-multiselect` · `.p-multiselect-panel` |
+| **overlay** | `.p-overlay-mask` |
+| **progressbar** | `.p-progressbar` · `.p-progressbar-value` |
+| **select** | `.p-select` · `.p-select-item` · `.p-select-item-focus` · `.p-select-label` · `.p-select-list` +6 |
+| **skeleton** | `.p-skeleton` |
+| **sortable** | `.p-sortable-column` |
+| **step** | `.p-step` · `.p-step-header` · `.p-step-number` · `.p-step-title` |
+| **steplist** | `.p-steplist` |
+| **steppanel** | `.p-steppanel` · `.p-steppanel-content` |
+| **steppanels** | `.p-steppanels` |
+| **stepper** | `.p-stepper` · `.p-stepper-nav` · `.p-stepper-panels` · `.p-stepper-separator` |
+| **tab** | `.p-tab` · `.p-tab-active` |
+| **tablist** | `.p-tablist` |
+| **tabpanel** | `.p-tabpanel` |
+| **tabs** | `.p-tabs` |
+| **toast** | `.p-toast` · `.p-toast-close-button` · `.p-toast-close-icon` · `.p-toast-detail` · `.p-toast-message` +11 |
+| **togglebutton** | `.p-togglebutton` · `.p-togglebutton-checked` |
+| **toggleswitch** | `.p-toggleswitch` · `.p-toggleswitch-checked` |
+| **tooltip** | `.p-tooltip` · `.p-tooltip-arrow` · `.p-tooltip-bottom` · `.p-tooltip-left` · `.p-tooltip-right` +2 |
+| **yearpicker** | `.p-yearpicker-year` |
+
+## Deuda de tipografía
+
+Usos de `text-4xl / text-3xl / text-2xl / font-bold / font-semibold` sin clase semántica equivalente: **1330**
+
+> Convertir progresivamente a `.kpi-value` (números KPI) o nuevas clases semánticas del DS.
+
+
+<!-- AUTO-GENERATED:END -->
