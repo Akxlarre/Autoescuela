@@ -200,7 +200,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 479 | `src/styles/tokens/_variables.scss` |
+| `.card` | 254 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |

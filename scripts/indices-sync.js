@@ -364,7 +364,7 @@ function collectUtils(cache, prevResults) {
   return results;
 }
 
-function collectStyles(cache) {
+function collectStyles() {
   const STYLES_DIR = path.join(ROOT, 'src', 'styles');
 
   // ── 1. Parse SCSS source files ────────────────────────────────────────────
@@ -383,8 +383,8 @@ function collectStyles(cache) {
       //   /* ── Section Name ──────... */
       //   /* Section Name */
       const secMatch =
-        line.match(/\/\*\s*─+\s*([^─\n*]{4,80?}?)\s*─*\s*\*\//) ??
-        line.match(/\/\*\s+([A-ZÁÉÍÓÚ][^─\n*]{3,60?}?)\s+\*\//);
+        line.match(/\/\*\s*─+\s*([^─\n*]{4,80}?)\s*─*\s*\*\//) ??
+        line.match(/\/\*\s+([A-ZÁÉÍÓÚ][^─\n*]{3,60}?)\s+\*\//);
       if (secMatch) {
         const candidate = secMatch[1].trim().replace(/^CAPA\s+\d+\s*[—–-]\s*/i, '');
         if (candidate.length >= 4 && !/={3}/.test(candidate)) currentSection = candidate;
@@ -452,10 +452,11 @@ function collectStyles(cache) {
       tokenUsage[m[1]] = (tokenUsage[m[1]] ?? 0) + 1;
     }
 
-    // Semantic class usage: word-boundary match in template
+    // Semantic class usage: los guards (?<![\w-]) / (?![\w-]) evitan contar
+    // `card` dentro de `card-accent`, `bento-card`, `kpi-card`, etc.
     for (const cls of classNames) {
       if (template.includes(cls)) {
-        const n = (template.match(new RegExp(`\\b${escapeRegex(cls)}\\b`, 'g')) ?? []).length;
+        const n = (template.match(new RegExp(`(?<![\\w-])${escapeRegex(cls)}(?![\\w-])`, 'g')) ?? []).length;
         if (n > 0) classUsage[cls] = (classUsage[cls] ?? 0) + n;
       }
     }
@@ -494,7 +495,7 @@ function collectStyles(cache) {
   };
 }
 
-function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
+function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems, facadeNames) {
   const results = {
     componentUsage:  {},
     directiveUsage:  {},
@@ -512,6 +513,8 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
     .filter(d => d.pattern !== null);
 
   const selectors = new Set(sharedSelectors);
+  const directiveSelectorSet = new Set(directivesWithPatterns.map(d => d.selector));
+  const facadeSet = new Set(facadeNames ?? []);
 
   // Scan features/ and layout/
   const scanDirs = [
@@ -531,16 +534,18 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
         const { content, changed } = readIfChanged(filePath, cache);
         const src = content ?? fs.readFileSync(filePath, 'utf-8');
 
-        // If unchanged and we have prev data, reuse it
+        // If unchanged and we have prev data, reuse it.
+        // Los hits previos se filtran contra los artefactos actuales: si un
+        // componente/directiva/facade fue eliminado, no debe reaparecer en el mapa.
         if (!changed && prevPages.has(relPath)) {
           const prev = prevPages.get(relPath);
-          if (prev._componentHits) prev._componentHits.forEach(s => {
+          if (prev._componentHits) prev._componentHits.filter(s => selectors.has(s)).forEach(s => {
             (results.componentUsage[s] ??= new Set()).add(consumer);
           });
-          if (prev._directiveHits) prev._directiveHits.forEach(s => {
+          if (prev._directiveHits) prev._directiveHits.filter(s => directiveSelectorSet.has(s)).forEach(s => {
             (results.directiveUsage[s] ??= new Set()).add(consumer);
           });
-          if (prev._facadeHits) prev._facadeHits.forEach(f => {
+          if (prev._facadeHits) prev._facadeHits.filter(f => facadeSet.has(f)).forEach(f => {
             (results.facadeUsage[f] ??= new Set()).add(consumer);
           });
           if (prev._serviceHits) prev._serviceHits.forEach(s => {
@@ -1028,7 +1033,7 @@ async function main() {
 
   // ── STYLES.md ──────────────────────────────────────────────────────────────
   process.stdout.write(dim('  Escaneando styles/ + cross-ref en templates...'));
-  const styles      = collectStyles(cache);
+  const styles      = collectStyles();
   const styleChanged = injectGenerated(
     path.join(INDICES_DIR, 'STYLES.md'),
     generateStylesContent(styles),
@@ -1047,7 +1052,8 @@ async function main() {
   process.stdout.write(dim('  Escaneando features/ y layout/ (usage map + directivas)...'));
   const sharedSelectors    = components.map(c => c.selector).filter(Boolean);
   const directiveSelectors = directives.filter(d => d.selector);
-  const usageMap  = collectUsageMap(cache, prev.usageMap, sharedSelectors, directiveSelectors);
+  const facadeNames = facades.map(f => f.className);
+  const usageMap  = collectUsageMap(cache, prev.usageMap, sharedSelectors, directiveSelectors, facadeNames);
   const usageChanged = injectGenerated(
     path.join(INDICES_DIR, 'USAGE-MAP.md'),
     generateUsageMapContent(usageMap),
@@ -1066,7 +1072,9 @@ async function main() {
   saveCache({
     scriptMtime: selfMtime,
     mtimes: cache,
-    results: { components, services, facades, models, directives, guards, utils, usageMap, styles },
+    // styles se excluye a propósito: contiene Maps (se serializan como {} en JSON)
+    // y collectStyles hace rescan completo en cada corrida, nunca lee resultados previos.
+    results: { components, services, facades, models, directives, guards, utils, usageMap },
   });
 
   console.log('');

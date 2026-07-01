@@ -93,7 +93,7 @@ const RULES = {
     'ARCH-08': {
         name: 'No hardcoded Tailwind colors',
         doc: 'docs/TECH-STACK-RULES.md#arch-08',
-        fix: 'Usa tokens semánticos: text-primary, text-muted, bg-surface, bg-base, var(--ds-brand).',
+        fix: 'Usa tokens semánticos: text-text-primary, text-text-muted, bg-surface, bg-base, var(--ds-brand). (OJO: las formas cortas text-primary/text-muted NO existen en @theme y no generan CSS)',
     },
     'ARCH-09': {
         name: 'Complexity warning (shared components)',
@@ -375,7 +375,7 @@ function analyzeTemplate(filePath) {
         reportError(
             'ARCH-08', filePath,
             `Colores Tailwind hardcodeados en template: ${[...new Set(colorMatches)].join(', ')}`,
-            'Usa tokens semánticos: text-primary, text-muted, bg-surface, bg-base.'
+            'Usa tokens semánticos: text-text-primary, text-text-muted, bg-surface, bg-base.'
         );
     }
 }
