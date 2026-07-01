@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { Router } from '@angular/router';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
@@ -12,7 +11,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
 @Component({
   selector: 'app-alerts-drawer',
   standalone: true,
-  imports: [IconComponent, EmptyStateComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="flex flex-col h-full">

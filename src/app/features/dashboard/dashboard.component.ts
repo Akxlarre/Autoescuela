@@ -11,8 +11,6 @@ import {
 } from '@angular/core';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
-import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -79,8 +77,6 @@ import { to24hTime } from '@core/utils/date.utils';
     TooltipModule,
     BentoGridLayoutDirective,
     CardHoverDirective,
-    ScrollRevealDirective,
-    AnimateInDirective,
     IconComponent,
     SectionHeroComponent,
     EmptyStateComponent,
@@ -109,7 +105,6 @@ import { to24hTime } from '@core/utils/date.utils';
       <app-live-classes-panel
         class="bento-wide bento-card w-full"
         appCardHover
-        appScrollReveal
         data-row-span="2"
         [classes]="liveClasses()"
         [loading]="loading()"
@@ -120,7 +115,6 @@ import { to24hTime } from '@core/utils/date.utils';
       <div
         class="bento-wide bento-card flex flex-col w-full"
         appCardHover
-        [appScrollReveal]="{ delay: 0.1 }"
       >
         <!-- Header de sección -->
         <div class="flex items-center justify-between mb-4">
@@ -160,7 +154,6 @@ import { to24hTime } from '@core/utils/date.utils';
             @for (item of activities().slice(0, 4); track item.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
               >
                 <!-- Ícono del evento -->
                 <div
@@ -209,7 +202,6 @@ import { to24hTime } from '@core/utils/date.utils';
       <div
         class="bento-wide bento-card flex flex-col w-full"
         appCardHover
-        [appScrollReveal]="{ delay: 0.2 }"
       >
         <!-- Header de sección -->
         <div class="flex items-center justify-between mb-4">
@@ -247,7 +239,6 @@ import { to24hTime } from '@core/utils/date.utils';
             @for (alert of alerts().slice(0, 3); track alert.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
-                [appAnimateIn]="{ delay: 0.2 + i * 0.05 }"
               >
                 <!-- Ícono del evento (según severity) -->
                 <div
@@ -396,12 +387,14 @@ export class DashboardComponent {
       void this.dashboardAlertsFacade.initialize();
     });
 
-    // SWR Lifecycle Hook: animar grid cuando sale de loading (o de inmediato si hubo hit map de caché)
+    // SWR Lifecycle Hook: animar grid solo la primera vez que salen los datos de loading
+    let gridAnimated = false;
     effect(() => {
       const isReady = !this.loading();
       const el = this.bentoGrid()?.nativeElement;
 
-      if (isReady && el) {
+      if (isReady && el && !gridAnimated) {
+        gridAnimated = true;
         Promise.resolve().then(() => {
           this.gsap.animateBentoGrid(el);
         });

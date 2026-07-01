@@ -19,6 +19,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SelectModule } from 'primeng/select';
@@ -36,6 +37,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
     SessionDayCardComponent,
     SelectModule,
   ],
@@ -54,7 +56,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
 
       <!-- ═══ CONTENIDO PRINCIPAL: Integrado con Filtros y Grilla ═══ -->
       <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col overflow-hidden">
+        <div class="card p-0 flex flex-col overflow-hidden" appCardHover>
           <!-- TOOLBAR: Filtros + Navegación -->
           <div
             class="p-4 lg:px-6 lg:py-4 flex flex-col xl:flex-row gap-4 border-b xl:items-center justify-between bg-surface border-border-muted"
@@ -88,7 +90,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
             @if (facade.selectedCursoId()) {
               <div class="flex items-center gap-1 bg-elevated border border-subtle rounded-lg p-1">
                 <button
-                  class="flex items-center justify-center rounded-md p-1.5 text-secondary hover:bg-surface hover:text-primary transition-colors"
+                  class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
                   (click)="facade.prevWeek()"
                   title="Semana Anterior"
                 >
@@ -96,7 +98,9 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 </button>
 
                 <div class="px-3 flex flex-col items-center justify-center min-w-[200px]">
-                  <span class="text-sm font-semibold text-primary">{{ facade.weekLabel() }}</span>
+                  <span class="text-sm font-semibold text-text-primary">{{
+                    facade.weekLabel()
+                  }}</span>
                   @if (!facade.isCurrentWeek()) {
                     <button
                       class="mt-0.5 text-[10px] font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
@@ -108,7 +112,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 </div>
 
                 <button
-                  class="flex items-center justify-center rounded-md p-1.5 text-secondary hover:bg-surface hover:text-primary transition-colors"
+                  class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
                   (click)="facade.nextWeek()"
                   title="Semana Siguiente"
                 >
@@ -156,8 +160,8 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                   color="var(--text-muted)"
                   class="mb-3"
                 />
-                <h3 class="text-sm font-semibold text-primary">Información Semanal</h3>
-                <p class="mt-1 text-xs text-secondary">
+                <h3 class="text-sm font-semibold text-text-primary">Información Semanal</h3>
+                <p class="mt-1 text-xs text-text-secondary">
                   Selecciona la Promoción y luego el Módulo de Curso para revisar su Calendario.
                 </p>
               </div>
@@ -168,19 +172,19 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
 
       <!-- ═══ Firma Semanal ═══ -->
       @if (facade.selectedCursoId()) {
-        <div class="bento-banner card p-0 flex flex-col overflow-hidden">
+        <div class="bento-banner card p-0 flex flex-col overflow-hidden" appCardHover>
           <div
-            class="p-4 lg:px-6 lg:py-4 border-b flex justify-between items-center bg-surface border-muted"
+            class="p-4 lg:px-6 lg:py-4 border-b flex justify-between items-center bg-surface border-border-muted"
           >
             <div class="flex items-center gap-2">
               <app-icon name="pen-line" [size]="16" color="var(--ds-brand)" />
-              <h2 class="text-sm font-semibold text-primary">
+              <h2 class="text-sm font-semibold text-text-primary">
                 Firma semanal de asistencia teórica
               </h2>
-              <span class="text-xs text-muted ml-1">{{ facade.weekLabel() }}</span>
+              <span class="text-xs text-text-muted ml-1">{{ facade.weekLabel() }}</span>
             </div>
             @if (!facade.isLoadingFirmas()) {
-              <span class="text-xs font-medium text-secondary">
+              <span class="text-xs font-medium text-text-secondary">
                 {{ facade.firmasSemanaCount().firmaron }}/{{ facade.firmasSemanaCount().total }}
                 firmaron
               </span>
@@ -195,7 +199,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
             </div>
           } @else if (facade.firmasSemana().length === 0) {
             <div class="card p-8 text-center">
-              <p class="text-sm text-muted">No hay alumnos matriculados en este curso.</p>
+              <p class="text-sm text-text-muted">No hay alumnos matriculados en este curso.</p>
             </div>
           } @else {
             <div class="card overflow-hidden">
@@ -231,8 +235,8 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                         <div class="flex items-center gap-2">
                           <div class="initials-avatar">{{ alumno.initials }}</div>
                           <div>
-                            <p class="text-sm font-medium text-primary">{{ alumno.nombre }}</p>
-                            <p class="text-xs text-muted">{{ alumno.rut }}</p>
+                            <p class="text-sm font-medium text-text-primary">{{ alumno.nombre }}</p>
+                            <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                           </div>
                         </div>
                       </td>
@@ -242,7 +246,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                           facade.weekDays()[0]?.theory === null &&
                           facade.weekDays()[1]?.theory === null
                         ) {
-                          <span class="text-xs text-muted">Sin sesiones</span>
+                          <span class="text-xs text-text-muted">Sin sesiones</span>
                         } @else {
                           <span
                             class="pct-badge"
@@ -286,7 +290,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 <div
                   class="flex items-center justify-between border-t border-border px-4 py-3 bg-surface"
                 >
-                  <span class="text-xs text-secondary">
+                  <span class="text-xs text-text-secondary">
                     {{ selectedForSign().length }} alumno{{
                       selectedForSign().length > 1 ? 's' : ''
                     }}
@@ -310,11 +314,15 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
 
       <!-- ═══ Resumen de asistencia por alumno ═══ -->
       @if (facade.selectedCursoId()) {
-        <div class="bento-banner card p-0 flex flex-col overflow-hidden mb-6">
-          <div class="p-4 lg:px-6 lg:py-4 border-b flex items-center gap-2 bg-surface border-muted">
+        <div class="bento-banner card p-0 flex flex-col overflow-hidden mb-6" appCardHover>
+          <div
+            class="p-4 lg:px-6 lg:py-4 border-b flex items-center gap-2 bg-surface border-border-muted"
+          >
             <app-icon name="users" [size]="16" color="var(--ds-brand)" />
-            <h2 class="text-sm font-semibold text-primary">Resumen de asistencia por alumno</h2>
-            <span class="text-xs text-muted ml-1">(sesiones completadas)</span>
+            <h2 class="text-sm font-semibold text-text-primary">
+              Resumen de asistencia por alumno
+            </h2>
+            <span class="text-xs text-text-muted ml-1">(sesiones completadas)</span>
           </div>
 
           @if (facade.isLoadingResumen()) {
@@ -325,7 +333,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
             </div>
           } @else if (facade.resumenAlumnos().length === 0) {
             <div class="card p-8 text-center">
-              <p class="text-sm text-muted">No hay alumnos matriculados en este curso.</p>
+              <p class="text-sm text-text-muted">No hay alumnos matriculados en este curso.</p>
             </div>
           } @else {
             <div class="card overflow-hidden">
@@ -346,12 +354,12 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                         <div class="flex items-center gap-2">
                           <div class="initials-avatar">{{ alumno.initials }}</div>
                           <div>
-                            <p class="text-sm font-medium text-primary">{{ alumno.nombre }}</p>
-                            <p class="text-xs text-muted">{{ alumno.rut }}</p>
+                            <p class="text-sm font-medium text-text-primary">{{ alumno.nombre }}</p>
+                            <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                           </div>
                         </div>
                       </td>
-                      <td class="text-center text-sm text-secondary">
+                      <td class="text-center text-sm text-text-secondary">
                         {{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}
                       </td>
                       <td class="text-center">
@@ -364,7 +372,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                           {{ alumno.pctTeoria }}%
                         </span>
                       </td>
-                      <td class="text-center text-sm text-secondary">
+                      <td class="text-center text-sm text-text-secondary">
                         {{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}
                       </td>
                       <td class="text-center">
@@ -500,7 +508,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
       background: var(--color-bg-elevated, var(--bg-elevated));
       color: var(--text-muted);
     }
-    .border-muted {
+    .border-border-muted {
       border-color: var(--border-muted);
     }
   `,

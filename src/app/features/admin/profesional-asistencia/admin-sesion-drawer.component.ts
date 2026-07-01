@@ -55,7 +55,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <app-icon [name]="sesion.tipo === 'theory' ? 'book-open' : 'wrench'" [size]="20" />
-                <span class="text-sm font-semibold text-primary">
+                <span class="text-sm font-semibold text-text-primary">
                   {{ sesion.tipo === 'theory' ? 'Sesión Teórica' : 'Sesión Práctica' }}
                 </span>
               </div>
@@ -107,8 +107,8 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 
             @if (sesion.zoomLink) {
               <div class="mt-2">
-                <span class="text-xs text-muted">Zoom</span>
-                <p class="truncate text-xs text-primary">{{ sesion.zoomLink }}</p>
+                <span class="text-xs text-text-muted">Zoom</span>
+                <p class="truncate text-xs text-text-primary">{{ sesion.zoomLink }}</p>
               </div>
             }
           </div>
@@ -120,7 +120,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               [class]="
                 mode() === 'attendance' && !isFuture()
                   ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-surface border-border text-secondary hover:bg-elevated hover:text-primary'
+                  : 'bg-surface border-border text-text-secondary hover:bg-elevated hover:text-text-primary'
               "
               [class.opacity-50]="isFuture()"
               [disabled]="isFuture()"
@@ -135,7 +135,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               [class]="
                 mode() === 'edit'
                   ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-surface border-border text-secondary hover:bg-elevated hover:text-primary'
+                  : 'bg-surface border-border text-text-secondary hover:bg-elevated hover:text-text-primary'
               "
               (click)="mode.set('edit')"
               data-llm-action="switch-to-edit-mode"
@@ -150,8 +150,8 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
             @if (sesion.status === 'cancelled') {
               <div class="py-10 text-center">
                 <app-icon name="ban" [size]="36" color="var(--state-error)" />
-                <p class="mt-3 text-sm font-medium text-primary">Sesión cancelada</p>
-                <p class="mt-1 text-xs text-muted">
+                <p class="mt-3 text-sm font-medium text-text-primary">Sesión cancelada</p>
+                <p class="mt-1 text-xs text-text-muted">
                   No se puede registrar asistencia en una sesión cancelada. Usa "Reactivar" para
                   habilitarla.
                 </p>
@@ -159,8 +159,8 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
             } @else if (isFuture()) {
               <div class="py-10 text-center">
                 <app-icon name="clock" [size]="36" color="var(--color-text-muted)" />
-                <p class="mt-3 text-sm font-medium text-primary">Sesión aún no disponible</p>
-                <p class="mt-1 text-xs text-muted">
+                <p class="mt-3 text-sm font-medium text-text-primary">Sesión aún no disponible</p>
+                <p class="mt-1 text-xs text-text-muted">
                   El registro de asistencia estará habilitado a partir del
                   {{ formatDateDisplay(facade.selectedSesion()!.date) }}.
                 </p>
@@ -183,15 +183,13 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
             } @else {
               <!-- Bulk actions -->
               @if (facade.asistenciaAlumnos().length > 0) {
-                <div
-                  class="mb-3 flex items-center justify-between rounded-lg bg-elevated p-2"
-                >
-                  <span class="text-xs text-secondary">
+                <div class="mb-3 flex items-center justify-between rounded-lg bg-elevated p-2">
+                  <span class="text-xs text-text-secondary">
                     {{ facade.asistenciaAlumnos().length }} alumnos
                   </span>
                   <div class="flex gap-2">
                     <button
-                      class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-secondary transition-colors hover:border-success hover:text-success"
+                      class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-success hover:text-success"
                       (click)="marcarTodos('present')"
                       data-llm-action="mark-all-present"
                     >
@@ -199,7 +197,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                       Todos presentes
                     </button>
                     <button
-                      class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-secondary transition-colors hover:border-error hover:text-error"
+                      class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-error hover:text-error"
                       (click)="marcarTodos('absent')"
                       data-llm-action="mark-all-absent"
                     >
@@ -223,13 +221,13 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                       </div>
                       <div class="min-w-0">
                         <p
-                          class="truncate text-sm font-medium text-primary"
+                          class="truncate text-sm font-medium text-text-primary"
                           [pTooltip]="alumno.nombre"
                           tooltipPosition="top"
                         >
                           {{ alumno.nombre }}
                         </p>
-                        <p class="text-xs text-muted">{{ alumno.rut }}</p>
+                        <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                       </div>
                     </div>
 
@@ -241,7 +239,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                         [class.bg-success]="localStatus()[alumno.studentId] === 'present'"
                         [class.text-white]="localStatus()[alumno.studentId] === 'present'"
                         [class.border-border]="localStatus()[alumno.studentId] !== 'present'"
-                        [class.text-secondary]="localStatus()[alumno.studentId] !== 'present'"
+                        [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'present'"
                         (click)="setStatus(alumno.studentId, 'present')"
                         data-llm-action="mark-present"
                       >
@@ -254,7 +252,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                         [class.bg-error]="localStatus()[alumno.studentId] === 'absent'"
                         [class.text-white]="localStatus()[alumno.studentId] === 'absent'"
                         [class.border-border]="localStatus()[alumno.studentId] !== 'absent'"
-                        [class.text-secondary]="localStatus()[alumno.studentId] !== 'absent'"
+                        [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'absent'"
                         (click)="setStatus(alumno.studentId, 'absent')"
                         data-llm-action="mark-absent"
                       >
@@ -267,7 +265,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                         [class.bg-warning]="localStatus()[alumno.studentId] === 'excused'"
                         [class.text-white]="localStatus()[alumno.studentId] === 'excused'"
                         [class.border-border]="localStatus()[alumno.studentId] !== 'excused'"
-                        [class.text-secondary]="localStatus()[alumno.studentId] !== 'excused'"
+                        [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'excused'"
                         (click)="setStatus(alumno.studentId, 'excused')"
                         data-llm-action="mark-excused"
                       >
@@ -296,7 +294,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               @if (facade.asistenciaAlumnos().length === 0) {
                 <div class="py-8 text-center">
                   <app-icon name="users" [size]="32" color="var(--color-text-muted)" />
-                  <p class="mt-2 text-sm text-muted">No hay alumnos inscritos en este curso</p>
+                  <p class="mt-2 text-sm text-text-muted">No hay alumnos inscritos en este curso</p>
                 </div>
               }
             }
@@ -317,9 +315,9 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 
               <!-- Notas -->
               <div>
-                <label class="mb-1 block text-xs font-medium text-secondary">Notas</label>
+                <label class="mb-1 block text-xs font-medium text-text-secondary">Notas</label>
                 <textarea
-                  class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary"
+                  class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary"
                   rows="3"
                   placeholder="Notas opcionales..."
                   [ngModel]="editNotes()"

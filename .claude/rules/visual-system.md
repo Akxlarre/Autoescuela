@@ -8,7 +8,7 @@
 
 ## Tokens de color (PROHIBIDO hardcodear)
 
-- Textos: `text-primary`, `text-secondary`, `text-muted`
+- Textos: `text-text-primary`, `text-text-secondary`, `text-text-muted` (el doble `text-` NO es typo: el token en `@theme` es `--color-text-*`. ⚠️ La forma corta `text-primary`/`text-secondary`/`text-muted` NO existe → Tailwind no genera CSS → el texto hereda el color del padre)
 - Fondos: `bg-base` (página), `bg-surface` (cards), `bg-surface-elevated`
 - Marca: `var(--ds-brand)`, `var(--color-primary)`
 - **NUNCA**: `text-red-500`, `bg-[#ff0000]`, u otras utilities de colores arbitrarios de Tailwind. Usa siempre variables abstractas.

@@ -23,7 +23,6 @@ import { TooltipModule } from 'primeng/tooltip';
 
 // Shared
 import { IconComponent } from '../icon/icon.component';
-import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
@@ -31,6 +30,7 @@ import { SectionHeroComponent } from '../section-hero/section-hero.component';
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 // Services
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -66,12 +66,12 @@ interface SemaforoInfo {
     TagModule,
     TooltipModule,
     IconComponent,
-    ActionKpiCardComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
+    CardHoverDirective,
   ],
   template: `
     <div
@@ -95,24 +95,9 @@ interface SemaforoInfo {
         (actionClick)="handleHeroAction($event)"
       />
 
-      <div class="bento-square">
-        <app-action-kpi-card
-          label="En riesgo"
-          [value]="enRiesgo()"
-          icon="alert-triangle"
-          size="md"
-          color="error"
-          [pulse]="enRiesgo() > 0"
-          [loading]="isLoading()"
-        >
-          <div footer class="flex items-center gap-1 text-xs text-text-muted mt-2">
-            <span>Asistencia crítica</span>
-          </div>
-        </app-action-kpi-card>
-      </div>
 
       <!-- Filtros + Tabla -->
-      <div class="bento-banner card p-0 overflow-hidden shadow-sm">
+      <div class="bento-banner card p-0 overflow-hidden shadow-sm" appCardHover>
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <div class="relative flex-1 min-w-52 max-w-xs">
@@ -466,6 +451,13 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
       value: this.conDeuda(),
       icon: 'circle-alert',
       color: 'warning',
+    },
+    {
+      id: 'riesgo',
+      label: 'En riesgo',
+      value: this.enRiesgo(),
+      icon: 'alert-triangle',
+      color: 'error',
     },
   ]);
 

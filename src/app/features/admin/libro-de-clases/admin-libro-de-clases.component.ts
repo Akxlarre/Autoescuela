@@ -16,6 +16,7 @@ import { SelectModule } from 'primeng/select';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LibroDeClasesFacade } from '@core/facades/libro-de-clases.facade';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -38,6 +39,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     AsyncBtnComponent,
     EmptyStateComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -53,7 +55,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       />
 
       <!-- ═══ Filtros ═══ -->
-      <div class="bento-banner card p-4">
+      <div class="bento-banner card p-4" appCardHover>
         @if (facade.isLoading()) {
           <!-- Skeleton de selectores mientras cargan las promociones -->
           <div class="flex flex-col gap-4 sm:flex-row">
@@ -69,7 +71,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         } @else {
           <div class="flex flex-col gap-4 sm:flex-row">
             <div class="flex-1">
-              <label class="mb-1 block text-xs font-medium text-secondary">Promoción</label>
+              <label class="mb-1 block text-xs font-medium text-text-secondary">Promoción</label>
               <p-select
                 [options]="promoOptions()"
                 optionLabel="name"
@@ -82,7 +84,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
               />
             </div>
             <div class="flex-1">
-              <label class="mb-1 block text-xs font-medium text-secondary">Curso</label>
+              <label class="mb-1 block text-xs font-medium text-text-secondary">Curso</label>
               <p-select
                 [options]="cursoOptions()"
                 optionLabel="courseCode"
@@ -114,7 +116,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
       <!-- ═══ Error ═══ -->
       @if (facade.error(); as err) {
-        <div class="bento-banner card p-4 text-center text-error">
+        <div class="bento-banner card p-4 text-center text-error" appCardHover>
           <p>{{ err }}</p>
         </div>
       }
@@ -135,13 +137,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       <!-- ═══ Contenido del Libro ═══ -->
       @if (facade.hasDatos() && !facade.isLoadingSections()) {
         <!-- ── 1. Cabecera — card-accent: acento de marca único de la página ── -->
-        <section class="bento-banner card card-accent p-6">
+        <section class="bento-banner card card-accent p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('cabecera')"
             data-llm-action="toggle-cabecera-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon name="file-text" [size]="18" class="mr-2 inline-block align-text-bottom" />
               Libro de Control de Clases
             </h2>
@@ -156,32 +158,36 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
               <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2 text-sm">
                   <p>
-                    <span class="font-medium text-secondary">Autoescuela:</span>
+                    <span class="font-medium text-text-secondary">Autoescuela:</span>
                     {{ cab.branchName }}
                   </p>
-                  <p><span class="font-medium text-secondary">Curso:</span> {{ cab.courseName }}</p>
                   <p>
-                    <span class="font-medium text-secondary">Código:</span> {{ cab.courseCode }}
+                    <span class="font-medium text-text-secondary">Curso:</span> {{ cab.courseName }}
                   </p>
                   <p>
-                    <span class="font-medium text-secondary">Licencia:</span> {{ cab.licenseClass }}
+                    <span class="font-medium text-text-secondary">Código:</span>
+                    {{ cab.courseCode }}
+                  </p>
+                  <p>
+                    <span class="font-medium text-text-secondary">Licencia:</span>
+                    {{ cab.licenseClass }}
                   </p>
                 </div>
                 <div class="space-y-2 text-sm">
                   <p>
-                    <span class="font-medium text-secondary">Promoción:</span>
+                    <span class="font-medium text-text-secondary">Promoción:</span>
                     {{ cab.promotionName }} ({{ cab.promotionCode }})
                   </p>
                   <p>
-                    <span class="font-medium text-secondary">Fecha inicio:</span>
+                    <span class="font-medium text-text-secondary">Fecha inicio:</span>
                     {{ formatDate(cab.startDate) }}
                   </p>
                   <p>
-                    <span class="font-medium text-secondary">Fecha término:</span>
+                    <span class="font-medium text-text-secondary">Fecha término:</span>
                     {{ formatDate(cab.endDate) }}
                   </p>
                   <p>
-                    <span class="font-medium text-secondary">Dirección:</span>
+                    <span class="font-medium text-text-secondary">Dirección:</span>
                     {{ cab.branchAddress || '—' }}
                   </p>
                 </div>
@@ -189,13 +195,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
               <!-- Campos editables del Libro -->
               <div class="mt-4 border-t pt-4 border-border-default">
-                <h3 class="mb-3 text-sm font-semibold text-secondary">
+                <h3 class="mb-3 text-sm font-semibold text-text-secondary">
                   <app-icon name="edit-3" [size]="14" class="mr-1 inline-block align-text-bottom" />
                   Datos del Libro de Clases
                 </h3>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
-                    <label class="mb-1 block text-xs font-medium text-secondary">
+                    <label class="mb-1 block text-xs font-medium text-text-secondary">
                       Código Autorizado por SENCE
                     </label>
                     <input
@@ -208,7 +214,9 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                     />
                   </div>
                   <div>
-                    <label class="mb-1 block text-xs font-medium text-secondary">Horario</label>
+                    <label class="mb-1 block text-xs font-medium text-text-secondary"
+                      >Horario</label
+                    >
                     <input
                       type="text"
                       class="ldc-input"
@@ -229,7 +237,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                     data-llm-action="save-class-book-fields"
                   />
                   @if (!hasEditableChanges()) {
-                    <span class="text-xs text-muted">Sin cambios</span>
+                    <span class="text-xs text-text-muted">Sin cambios</span>
                   }
                 </div>
               </div>
@@ -238,13 +246,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </section>
 
         <!-- ── 2. Profesores por módulo ── -->
-        <section class="bento-banner card p-6">
+        <section class="bento-banner card p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('profesores')"
             data-llm-action="toggle-profesores-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon name="users" [size]="18" class="mr-2 inline-block align-text-bottom" />
               Profesores por Módulo
               <span class="section-meta">{{ facade.profesores().length }} módulos</span>
@@ -280,20 +288,20 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </section>
 
         <!-- ── 3. Lista de Clase ── -->
-        <section class="bento-banner card p-6">
+        <section class="bento-banner card p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('alumnos')"
             data-llm-action="toggle-alumnos-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="list-checks"
                 [size]="18"
                 class="mr-2 inline-block align-text-bottom"
               />
               Lista de Clase
-              <span class="ml-2 text-sm font-normal text-muted"
+              <span class="ml-2 text-sm font-normal text-text-muted"
                 >({{ facade.totalAlumnos() }} alumnos)</span
               >
             </h2>
@@ -327,7 +335,9 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                   }
                   @if (facade.alumnos().length === 0) {
                     <tr>
-                      <td colspan="5" class="py-6 text-center text-muted">Sin alumnos inscritos</td>
+                      <td colspan="5" class="py-6 text-center text-text-muted">
+                        Sin alumnos inscritos
+                      </td>
                     </tr>
                   }
                 </tbody>
@@ -337,13 +347,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </section>
 
         <!-- ── 4. Control de Asistencia ── -->
-        <section class="bento-banner card p-6">
+        <section class="bento-banner card p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('asistencia')"
             data-llm-action="toggle-asistencia-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="calendar-check"
                 [size]="18"
@@ -361,22 +371,24 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
           @if (isSectionOpen('asistencia')) {
             <!-- Leyenda de estados -->
             <div class="mt-3 flex flex-wrap gap-3">
-              <span class="flex items-center gap-1.5 text-xs text-secondary">
+              <span class="flex items-center gap-1.5 text-xs text-text-secondary">
                 <span class="attendance-present">P</span> Presente
               </span>
-              <span class="flex items-center gap-1.5 text-xs text-secondary">
+              <span class="flex items-center gap-1.5 text-xs text-text-secondary">
                 <span class="attendance-absent">A</span> Ausente
               </span>
-              <span class="flex items-center gap-1.5 text-xs text-secondary">
+              <span class="flex items-center gap-1.5 text-xs text-text-secondary">
                 <span class="attendance-excused">J</span> Justificado
               </span>
             </div>
             @if (facade.asistenciaSemanal().length === 0) {
-              <p class="mt-4 text-sm text-muted">Sin sesiones registradas</p>
+              <p class="mt-4 text-sm text-text-muted">Sin sesiones registradas</p>
             }
             @for (semana of facade.asistenciaSemanal(); track semana.weekStartDate) {
               <div class="mt-4">
-                <h3 class="mb-2 text-sm font-semibold text-secondary">{{ semana.weekLabel }}</h3>
+                <h3 class="mb-2 text-sm font-semibold text-text-secondary">
+                  {{ semana.weekLabel }}
+                </h3>
                 <div class="overflow-x-auto">
                   <table class="ldc-table ldc-table-compact">
                     <thead>
@@ -386,7 +398,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                         @for (dia of semana.dias; track dia.date) {
                           <th class="w-20 text-center">
                             <div class="text-xs">{{ dia.dayLabel }}</div>
-                            <div class="text-[10px] text-muted">
+                            <div class="text-[10px] text-text-muted">
                               {{ formatShortDate(dia.date) }}
                             </div>
                           </th>
@@ -408,7 +420,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                               } @else if (status === 'excused') {
                                 <span class="attendance-excused">J</span>
                               } @else {
-                                <span class="text-muted">—</span>
+                                <span class="text-text-muted">—</span>
                               }
                             </td>
                           }
@@ -416,7 +428,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                             @if (alumno.firmaSemanal) {
                               <app-icon name="check" [size]="14" color="var(--state-success)" />
                             } @else {
-                              <span class="text-muted">—</span>
+                              <span class="text-text-muted">—</span>
                             }
                           </td>
                         </tr>
@@ -430,13 +442,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </section>
 
         <!-- ── 5. Calendario de Clases ── -->
-        <section class="bento-banner card p-6">
+        <section class="bento-banner card p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('calendario')"
             data-llm-action="toggle-calendario-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon name="calendar" [size]="18" class="mr-2 inline-block align-text-bottom" />
               Calendario de Clases
               <span class="section-meta">{{ facade.calendario().length }} clases</span>
@@ -471,7 +483,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                   }
                   @if (facade.calendario().length === 0) {
                     <tr>
-                      <td colspan="5" class="py-6 text-center text-muted">
+                      <td colspan="5" class="py-6 text-center text-text-muted">
                         Sin clases programadas
                       </td>
                     </tr>
@@ -483,13 +495,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </section>
 
         <!-- ── 6. Evaluaciones ── -->
-        <section class="bento-banner card p-6">
+        <section class="bento-banner card p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('evaluaciones')"
             data-llm-action="toggle-evaluaciones-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="clipboard-list"
                 [size]="18"
@@ -527,7 +539,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                           @if (nota !== null) {
                             <span [class.text-error]="nota < 75">{{ nota }}</span>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
                       }
@@ -540,14 +552,17 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                             {{ fila.notaFinal }}
                           </span>
                         } @else {
-                          <span class="text-muted">—</span>
+                          <span class="text-text-muted">—</span>
                         }
                       </td>
                     </tr>
                   }
                   @if (facade.evaluaciones().length === 0) {
                     <tr>
-                      <td [attr.colspan]="MODULE_COUNT + 3" class="py-6 text-center text-muted">
+                      <td
+                        [attr.colspan]="MODULE_COUNT + 3"
+                        class="py-6 text-center text-text-muted"
+                      >
                         Sin evaluaciones registradas
                       </td>
                     </tr>
@@ -559,13 +574,13 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         </section>
 
         <!-- ── 7. Resumen Asistencia ── -->
-        <section class="bento-banner card p-6">
+        <section class="bento-banner card p-6" appCardHover>
           <button
             class="section-toggle"
             (click)="toggleSection('resumen')"
             data-llm-action="toggle-resumen-section"
           >
-            <h2 class="text-lg font-semibold text-primary">
+            <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="bar-chart-2"
                 [size]="18"
@@ -618,7 +633,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                   }
                   @if (facade.resumenAsistencia().length === 0) {
                     <tr>
-                      <td colspan="4" class="py-6 text-center text-muted">
+                      <td colspan="4" class="py-6 text-center text-text-muted">
                         Sin datos de asistencia
                       </td>
                     </tr>

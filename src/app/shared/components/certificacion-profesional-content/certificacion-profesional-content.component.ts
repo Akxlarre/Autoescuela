@@ -19,6 +19,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import type {
@@ -59,6 +60,7 @@ const PAGE_SIZE = 10;
     IconComponent,
     EmptyStateComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -74,10 +76,10 @@ const PAGE_SIZE = 10;
       />
 
       <!-- ── Selección en cascada ───────────────────────────────────── -->
-      <div class="bento-banner card flex flex-wrap items-end gap-4">
+      <div class="bento-banner card flex flex-wrap items-end gap-4" appCardHover>
         <!-- Selector de Promoción -->
         <div class="flex flex-col gap-1.5 min-w-55 flex-1">
-          <label class="text-xs font-semibold uppercase tracking-wider text-muted">
+          <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">
             Promoción
           </label>
           @if (isLoading()) {
@@ -101,7 +103,7 @@ const PAGE_SIZE = 10;
         <div class="flex flex-col gap-1.5 min-w-50 flex-1">
           <label
             class="text-xs font-semibold uppercase tracking-wider"
-            [class.text-muted]="!selectedPromocionId()"
+            [class.text-text-muted]="!selectedPromocionId()"
           >
             Curso
           </label>
@@ -177,7 +179,7 @@ const PAGE_SIZE = 10;
         </div>
 
         <!-- ── Tabla + Toolbar (card unificado) ─────────────────────── -->
-        <div class="bento-banner card overflow-hidden">
+        <div class="bento-banner card overflow-hidden" appCardHover>
           <div
             class="flex flex-wrap items-center gap-3 p-4"
             style="border-bottom: 1px solid var(--border-default)"
@@ -464,51 +466,51 @@ const PAGE_SIZE = 10;
                 <thead>
                   <tr class="border-b border-(--border-default)">
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Alumno
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       RUT
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Promoción
                     </th>
                     <th
-                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                       title="Asistencia a clases teóricas (mínimo 75%)"
                     >
                       Teoría
                     </th>
                     <th
-                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                       title="Asistencia a clases prácticas (recomendado 100%)"
                     >
                       Práctica
                     </th>
                     <th
-                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                       title="Promedio de módulos (mínimo 75 en escala MTT)"
                     >
                       Nota Prom.
                     </th>
                     <th
-                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                       title="Saldo pendiente de pago"
                     >
                       Pago
                     </th>
                     <th
-                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Estado
                     </th>
                     <th
-                      class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Acciones
                     </th>
@@ -521,19 +523,19 @@ const PAGE_SIZE = 10;
                       class="border-b border-(--border-default) last:border-b-0 transition-colors"
                       [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
                     >
-                      <td class="px-4 py-3 font-medium text-primary">
+                      <td class="px-4 py-3 font-medium text-text-primary">
                         {{ alumno.nombre }}
                       </td>
                       <td class="px-4 py-3 text-brand">
                         {{ alumno.rut }}
                       </td>
-                      <td class="px-4 py-3 text-xs text-muted max-w-40 truncate">
+                      <td class="px-4 py-3 text-xs text-text-muted max-w-40 truncate">
                         {{ alumno.promocion }}
                       </td>
                       <!-- Teoría -->
                       <td class="px-4 py-3 text-center">
                         @if (alumno.pctAsistenciaTeoria === null) {
-                          <span class="text-xs text-muted">Sin registro</span>
+                          <span class="text-xs text-text-muted">Sin registro</span>
                         } @else {
                           <span
                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -550,7 +552,7 @@ const PAGE_SIZE = 10;
                       <!-- Práctica -->
                       <td class="px-4 py-3 text-center">
                         @if (alumno.pctAsistenciaPractica === null) {
-                          <span class="text-xs text-muted">Sin registro</span>
+                          <span class="text-xs text-text-muted">Sin registro</span>
                         } @else {
                           <span
                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -567,7 +569,7 @@ const PAGE_SIZE = 10;
                       <!-- Nota promedio -->
                       <td class="px-4 py-3 text-center">
                         @if (alumno.notaPromedio === null) {
-                          <span class="text-xs text-muted">Sin notas</span>
+                          <span class="text-xs text-text-muted">Sin notas</span>
                         } @else {
                           <span
                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
@@ -788,7 +790,7 @@ const PAGE_SIZE = 10;
             <!-- Paginación alumnos -->
             @if (totalPagesAlumnos() > 1) {
               <div
-                class="flex items-center justify-between px-4 py-3 border-t border-(--border-default) text-xs text-muted"
+                class="flex items-center justify-between px-4 py-3 border-t border-(--border-default) text-xs text-text-muted"
               >
                 <span>
                   {{ currentPageAlumnos() * PAGE_SIZE + 1 }}–{{
@@ -824,7 +826,7 @@ const PAGE_SIZE = 10;
 
       <!-- ── Historial de Emisiones — siempre visible ───────────────── -->
       <div class="bento-banner">
-        <h2 class="flex items-center gap-2 text-lg font-semibold text-primary mb-4">
+        <h2 class="flex items-center gap-2 text-lg font-semibold text-text-primary mb-4">
           <app-icon name="scroll" [size]="20" />
           Historial de Emisiones (Log)
         </h2>
@@ -837,7 +839,7 @@ const PAGE_SIZE = 10;
               }
             </div>
           } @else if (log().length === 0) {
-            <div class="p-6 text-center text-muted text-sm">
+            <div class="p-6 text-center text-text-muted text-sm">
               No hay registros de emisión de certificados profesionales aún
             </div>
           } @else {
@@ -846,22 +848,22 @@ const PAGE_SIZE = 10;
                 <thead>
                   <tr class="border-b border-(--border-default)">
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Fecha/Hora
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Acción
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Alumno
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Usuario
                     </th>
@@ -872,7 +874,7 @@ const PAGE_SIZE = 10;
                     <tr
                       class="border-b border-(--border-default) last:border-b-0 hover:bg-(--bg-subtle) transition-colors"
                     >
-                      <td class="px-4 py-3 text-muted text-xs font-mono">
+                      <td class="px-4 py-3 text-text-muted text-xs font-mono">
                         {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
                       </td>
                       <td class="px-4 py-3">
@@ -884,8 +886,8 @@ const PAGE_SIZE = 10;
                           {{ getAccionLabel(entry.accion) }}
                         </span>
                       </td>
-                      <td class="px-4 py-3 text-primary">{{ entry.alumnoNombre }}</td>
-                      <td class="px-4 py-3 text-muted">{{ entry.usuarioNombre }}</td>
+                      <td class="px-4 py-3 text-text-primary">{{ entry.alumnoNombre }}</td>
+                      <td class="px-4 py-3 text-text-muted">{{ entry.usuarioNombre }}</td>
                     </tr>
                   }
                 </tbody>
@@ -895,7 +897,7 @@ const PAGE_SIZE = 10;
             <!-- Paginación log -->
             @if (totalPagesLog() > 1) {
               <div
-                class="flex items-center justify-between px-4 py-3 border-t border-(--border-default) text-xs text-muted"
+                class="flex items-center justify-between px-4 py-3 border-t border-(--border-default) text-xs text-text-muted"
               >
                 <span>
                   {{ currentPageLog() * PAGE_SIZE + 1 }}–{{

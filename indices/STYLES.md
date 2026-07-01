@@ -170,29 +170,29 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 496 | `#38bdf8` |
-| `--text-muted` | 448 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 297 | `var(--color-primary-text)` |
+| `--ds-brand` | 482 | `#38bdf8` |
+| `--text-muted` | 437 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 292 | `var(--color-primary-text)` |
 | `--border-subtle` | 244 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 244 | `#f87171` |
 | `--text-secondary` | 235 | `rgba(255, 255, 255, 0.78)` |
 | `--state-success` | 230 | `#4ade80` |
-| `--bg-surface` | 203 | `#18181b` |
-| `--color-primary` | 191 | `#38bdf8` |
+| `--bg-surface` | 200 | `#18181b` |
+| `--color-primary` | 190 | `#38bdf8` |
 | `--state-warning` | 168 | `#fbbf24` |
-| `--border-default` | 153 | `rgba(255, 255, 255, 0.28)` |
+| `--border-default` | 152 | `rgba(255, 255, 255, 0.28)` |
 | `--bg-elevated` | 90 | `#27272a` |
-| `--text-sm` | 82 | `0.875rem` |
-| `--bg-subtle` | 81 | `rgba(255, 255, 255, 0.1)` |
+| `--text-sm` | 81 | `0.875rem` |
+| `--bg-subtle` | 79 | `rgba(255, 255, 255, 0.1)` |
 | `--duration-fast` | 74 | `200ms` |
-| `--radius-md` | 66 | `10px` |
+| `--radius-md` | 65 | `10px` |
 | `--bg-base` | 56 | `#09090b` |
-| `--border-muted` | 56 | `var(--border-subtle)` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
+| `--border-muted` | 54 | `var(--border-subtle)` |
 | `--state-success-bg` | 52 | `rgba(74, 222, 128, 0.1)` |
 | `--color-primary-text` | 48 | `#ffffff` |
-| `--text-xs` | 47 | `0.75rem` |
 | `--state-warning-bg` | 47 | `rgba(251, 191, 36, 0.1)` |
+| `--text-xs` | 46 | `0.75rem` |
 | `--color-success` | 45 | `—` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 
@@ -200,7 +200,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 483 | `src/styles/tokens/_variables.scss` |
+| `.card` | 479 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |

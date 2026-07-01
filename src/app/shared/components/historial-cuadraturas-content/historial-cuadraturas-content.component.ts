@@ -15,6 +15,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import type { HistorialCierre } from '@core/models/ui/historial-cuadraturas.model';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
@@ -60,7 +61,13 @@ function formatCLP(value: number): string {
 @Component({
   selector: 'app-historial-cuadraturas-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, SectionHeroComponent, BentoGridLayoutDirective],
+  imports: [
+    IconComponent,
+    SkeletonBlockComponent,
+    SectionHeroComponent,
+    BentoGridLayoutDirective,
+    CardHoverDirective,
+  ],
   styles: `
     .cal-cell {
       min-height: 120px;
@@ -159,6 +166,7 @@ function formatCLP(value: number): string {
       <!-- ── Barra: navegación de mes + exportación ─────────────────────────── -->
       <div
         class="bento-banner card px-4 py-2.5 flex items-center justify-between relative overflow-visible"
+        appCardHover
       >
         <div class="flex items-center border border-border-subtle rounded-xl overflow-hidden">
           <button

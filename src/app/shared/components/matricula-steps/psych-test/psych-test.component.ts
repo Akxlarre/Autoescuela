@@ -35,7 +35,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
 
       <!-- Progress bar -->
       <div>
-        <div class="flex items-center justify-between text-xs text-secondary mb-1.5">
+        <div class="flex items-center justify-between text-xs text-text-secondary mb-1.5">
           <span>{{ answeredCount() }} de {{ totalQuestions }} respondidas</span>
           <span>Página {{ currentPage() }} / {{ totalPages }}</span>
         </div>
@@ -64,8 +64,8 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
                 : undefined
             "
           >
-            <p class="text-sm text-primary mb-3 leading-relaxed">
-              <span class="font-semibold text-secondary mr-1">{{ q.idx + 1 }}.</span>
+            <p class="text-sm text-text-primary mb-3 leading-relaxed">
+              <span class="font-semibold text-text-secondary mr-1">{{ q.idx + 1 }}.</span>
               {{ q.text }}
             </p>
             <div class="flex gap-2">
@@ -73,7 +73,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
                 type="button"
                 class="flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                 [class.border-border]="answers()[q.idx] !== true"
-                [class.text-secondary]="answers()[q.idx] !== true"
+                [class.text-text-secondary]="answers()[q.idx] !== true"
                 [class.bg-surface]="answers()[q.idx] !== true"
                 [class.text-white]="answers()[q.idx] === true"
                 [style.border-color]="answers()[q.idx] === true ? 'var(--ds-brand)' : undefined"
@@ -87,7 +87,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
                 type="button"
                 class="flex-1 py-2.5 rounded-lg border-2 text-sm font-semibold transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
                 [class.border-border]="answers()[q.idx] !== false"
-                [class.text-secondary]="answers()[q.idx] !== false"
+                [class.text-text-secondary]="answers()[q.idx] !== false"
                 [class.bg-surface]="answers()[q.idx] !== false"
                 [class.text-white]="answers()[q.idx] === false"
                 [style.border-color]="answers()[q.idx] === false ? 'var(--ds-brand)' : undefined"
@@ -114,7 +114,7 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
       >
         <button
           type="button"
-          class="flex items-center gap-1.5 text-sm text-secondary hover:text-primary transition-colors cursor-pointer"
+          class="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           (click)="onBack()"
         >
           <app-icon name="arrow-left" [size]="16" />

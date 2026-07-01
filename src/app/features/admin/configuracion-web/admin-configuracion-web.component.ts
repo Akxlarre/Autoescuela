@@ -17,6 +17,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { SiteData } from '@core/models/dto/website-config.model';
@@ -28,6 +29,7 @@ import { CursosTabComponent } from './tabs/cursos-tab.component';
 import { PromoTabComponent } from './tabs/promo-tab.component';
 import { ContactoTabComponent } from './tabs/contacto-tab.component';
 import { FaqsTabComponent } from './tabs/faqs-tab.component';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -39,6 +41,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     ReactiveFormsModule,
     SectionHeroComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
     IconComponent,
     SkeletonBlockComponent,
     GeneralTabComponent,
@@ -47,6 +50,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     PromoTabComponent,
     ContactoTabComponent,
     FaqsTabComponent,
+    TabsComponent,
   ],
   template: `
     <div #bentoGrid class="bento-grid" appBentoGridLayout>
@@ -66,6 +70,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
       <!-- Main Editor Bento Card -->
       <div
         class="bento-banner card p-0 overflow-hidden"
+        appCardHover
         style="min-height: 500px; display: flex; flex-direction: column;"
       >
         <!-- Header with branch selection for Admin and Tabs Switcher -->
@@ -81,26 +86,13 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
           <!-- Custom Tabs Switching (oculto si el admin no eligió sede aún) -->
           @if (!noBranchSelected()) {
-            <div class="flex flex-wrap" role="tablist" aria-label="Secciones de configuración">
-              @for (tab of tabs; track tab.id) {
-                <button
-                  role="tab"
-                  class="flex-1 min-w-[120px] px-4 py-3.5 text-xs font-semibold uppercase tracking-wider transition-all border-b-[3px] cursor-pointer"
-                  [style.border-color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-                  [style.color]="
-                    activeTab() === tab.id ? 'var(--text-primary)' : 'var(--text-muted)'
-                  "
-                  [style.background]="'transparent'"
-                  [attr.aria-selected]="activeTab() === tab.id"
-                  (click)="activeTab.set(tab.id)"
-                >
-                  <div class="flex items-center justify-center gap-1.5">
-                    <app-icon [name]="tab.icon" [size]="14" />
-                    <span>{{ tab.label }}</span>
-                  </div>
-                </button>
-              }
-            </div>
+            <app-tabs
+              [tabs]="tabs"
+              [activeId]="activeTab()"
+              variant="line"
+              [uppercase]="true"
+              (activeIdChange)="activeTab.set($any($event))"
+            />
           }
         </div>
 

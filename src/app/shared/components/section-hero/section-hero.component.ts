@@ -556,7 +556,7 @@ import type {
                         {{ kpi.label }}
                       </p>
                       <div
-                        class="flex items-baseline gap-1.5 transition-transform duration-200 ease-out group-hover:-translate-y-0.5"
+                        class="flex items-baseline gap-1.5 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 flex-wrap"
                       >
                         <span
                           class="text-lg font-semibold leading-none"
@@ -572,6 +572,9 @@ import type {
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
                             }}{{ kpi.trendLabel ?? '' }}
                           </span>
+                        }
+                        @if (kpi.subValue) {
+                          <span class="text-[10px] font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
                         }
                       </div>
                       <div
@@ -593,7 +596,7 @@ import type {
                       >
                         {{ kpi.label }}
                       </p>
-                      <div class="flex items-baseline gap-1.5">
+                      <div class="flex items-baseline gap-1.5 flex-wrap">
                         <span class="text-lg font-semibold text-text-primary leading-none">
                           {{ kpi.prefix ?? '' }}{{ kpi.value }}{{ kpi.suffix ?? '' }}
                         </span>
@@ -605,6 +608,9 @@ import type {
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
                             }}{{ kpi.trendLabel ?? '' }}
                           </span>
+                        }
+                        @if (kpi.subValue) {
+                          <span class="text-[10px] font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
                         }
                       </div>
                     </div>

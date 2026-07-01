@@ -1,9 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  OnInit,
-  inject,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -16,6 +11,7 @@ import {
 } from '@shared/components/horizontal-bar-chart/horizontal-bar-chart.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -31,6 +27,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     HorizontalBarChartComponent,
     BentoGridLayoutDirective,
     ScrollRevealDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -101,7 +98,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         <div class="bento-banner">
           <div class="flex flex-col gap-6">
             <!-- Breakdown Chart -->
-            <div class="card p-6" appScrollReveal>
+            <div class="card p-6" appCardHover appScrollReveal>
               <h3
                 class="text-base font-bold text-text-primary mb-4 border-b border-border-subtle pb-2"
               >
@@ -111,7 +108,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
             </div>
 
             <!-- Daily Logs Table -->
-            <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
+            <div class="card p-0 overflow-hidden" appCardHover [appScrollReveal]="{ delay: 0.1 }">
               <div
                 class="px-6 py-4 border-b border-border-subtle bg-subtle flex justify-between items-center"
               >
@@ -182,7 +179,6 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 export class InstructorLiquidacionComponent implements OnInit {
   public facade = inject(InstructorHorasFacade);
   readonly heroActions: SectionHeroAction[] = [];
-
 
   async ngOnInit() {
     await this.facade.initialize();

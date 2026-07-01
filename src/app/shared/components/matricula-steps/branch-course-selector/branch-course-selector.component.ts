@@ -20,8 +20,8 @@ interface BranchCardMeta {
     <div class="space-y-8">
       <!-- Branch Selection -->
       <div>
-        <h2 class="text-lg font-semibold text-primary mb-2">Elige tu sede</h2>
-        <p class="text-sm text-secondary mb-6">
+        <h2 class="text-lg font-semibold text-text-primary mb-2">Elige tu sede</h2>
+        <p class="text-sm text-text-secondary mb-6">
           Selecciona la escuela de conductores donde deseas matricularte.
         </p>
         <div class="grid sm:grid-cols-2 gap-4">
@@ -54,7 +54,7 @@ interface BranchCardMeta {
                   <p class="text-base font-bold text-text-primary">
                     {{ card.branch.name }}
                   </p>
-                  <p class="text-xs text-muted">{{ card.address }}</p>
+                  <p class="text-xs text-text-muted">{{ card.address }}</p>
                 </div>
                 @if (selectedBranchId() === card.branch.id) {
                   <div
@@ -65,16 +65,15 @@ interface BranchCardMeta {
                   </div>
                 }
               </div>
-              <p class="text-xs text-secondary mb-3">{{ card.description }}</p>
+              <p class="text-xs text-text-secondary mb-3">{{ card.description }}</p>
               <div class="flex flex-wrap gap-1.5">
                 @for (course of card.courses; track course.name) {
                   <span
                     class="text-xs px-2.5 py-1 rounded-full font-medium border border-border inline-flex items-center gap-1 bg-elevated text-text-primary"
-                    
                   >
                     {{ course.name }}
                     @if (course.price > 0) {
-                      <span class="text-muted">·</span>
+                      <span class="text-text-muted">·</span>
                       <span class="text-brand">{{
                         course.price | currency: 'CLP' : 'symbol-narrow' : '1.0-0'
                       }}</span>
@@ -90,8 +89,8 @@ interface BranchCardMeta {
       <!-- Flow Type Selection (only visible when branch is selected) -->
       @if (selectedBranchId() !== null && availableFlows().length > 1) {
         <div>
-          <h2 class="text-lg font-semibold text-primary mb-2">Tipo de licencia</h2>
-          <p class="text-sm text-secondary mb-4">
+          <h2 class="text-lg font-semibold text-text-primary mb-2">Tipo de licencia</h2>
+          <p class="text-sm text-text-secondary mb-4">
             Selecciona el tipo de curso al que deseas inscribirte.
           </p>
           <div class="grid sm:grid-cols-2 gap-4">
@@ -114,10 +113,10 @@ interface BranchCardMeta {
                     {{ flow.label }}
                   </p>
                 </div>
-                <p class="text-xs text-secondary">{{ flow.description }}</p>
+                <p class="text-xs text-text-secondary">{{ flow.description }}</p>
                 @if (flow.value === 'professional') {
                   <div class="mt-3 p-2.5 rounded-lg bg-elevated border border-border">
-                    <p class="text-xs text-muted flex items-center gap-1.5">
+                    <p class="text-xs text-text-muted flex items-center gap-1.5">
                       <app-icon name="info" [size]="14" />
                       Solo pre-inscripción. La matrícula completa se realiza presencialmente.
                     </p>

@@ -19,6 +19,7 @@ import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-
 import type { AnticipoCuentaCorriente, AnticipoHistorial } from '@core/models/ui/anticipos.model';
 import { RegistrarAnticipoDrawerComponent } from './registrar-anticipo-drawer.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 // ─── Formatter ───────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ function clp(n: number): string {
     SkeletonBlockComponent,
     AlertCardComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #pageRef>
@@ -63,7 +65,7 @@ function clp(n: number): string {
       }
 
       <!-- ── Cuenta Corriente por Instructor ───────────────────────────────── -->
-      <div class="bento-banner card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
         <div
           class="flex items-center gap-2 px-5 py-4"
           style="border-bottom: 1px solid var(--border-subtle)"
@@ -219,7 +221,7 @@ function clp(n: number): string {
       </div>
 
       <!-- ── Historial de Anticipos ─────────────────────────────────────────── -->
-      <div class="bento-banner card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
         <div
           class="flex items-center justify-between px-5 py-4"
           style="border-bottom: 1px solid var(--border-subtle)"

@@ -16,6 +16,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { todayIso } from '@core/utils/date.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
@@ -58,6 +59,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
     DateInputComponent,
   ],
   template: `
@@ -81,7 +83,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           <section class="bento-banner card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <app-icon name="alert-triangle" [size]="18" [style.color]="'var(--state-warning)'" />
-              <h2 class="text-sm font-semibold text-primary">Alertas y Acciones Urgentes</h2>
+              <h2 class="text-sm font-semibold text-text-primary">Alertas y Acciones Urgentes</h2>
             </div>
 
             @for (alerta of alertas(); track alerta.enrollmentId) {
@@ -175,11 +177,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       <!-- ── Grid Inferior (Teoria + Práctica) ────────────────────────────── -->
       <div class="bento-banner flex flex-col gap-6">
         <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
-        <section class="bento-banner card p-5 flex flex-col gap-4">
+        <section class="bento-banner card p-5 flex flex-col gap-4" appCardHover>
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <app-icon name="calendar-check" [size]="18" [style.color]="'var(--color-primary)'" />
-              <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
+              <h2 class="text-sm font-semibold text-text-primary">
+                Asistencia del Día — Prácticas
+              </h2>
             </div>
             <div class="flex items-center gap-2">
               <!-- Selector de fecha -->
@@ -251,7 +255,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               }
             </div>
           } @else if (filteredPracticas().length === 0) {
-            <p class="text-sm text-secondary text-center py-6">
+            <p class="text-sm text-text-secondary text-center py-6">
               No hay registros que coincidan con los filtros seleccionados.
             </p>
           } @else {
@@ -259,25 +263,33 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-20">
                       Agendada
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16">
                       Inicio
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16">
                       Fin
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                      Sede
+                    </th>
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                       Instructor
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Alumno</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                      Alumno
+                    </th>
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                       Vehículo
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Estado</th>
-                    <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                      Estado
+                    </th>
+                    <th class="text-right text-xs font-semibold text-text-secondary pb-2">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -286,29 +298,31 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                       class="border-b transition-colors hover:bg-elevated"
                       [style.border-color]="'var(--border-subtle)'"
                     >
-                      <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                      <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
                         {{ row.horaInicio }}
                       </td>
                       <td class="py-3 pr-4 whitespace-nowrap">
                         @if (row.horaInicioReal) {
-                          <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
+                          <span class="font-medium text-text-primary">{{
+                            row.horaInicioReal
+                          }}</span>
                         } @else {
-                          <span class="text-muted">—</span>
+                          <span class="text-text-muted">—</span>
                         }
                       </td>
                       <td class="py-3 pr-4 whitespace-nowrap">
                         @if (row.horaFinReal) {
-                          <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
+                          <span class="font-medium text-text-primary">{{ row.horaFinReal }}</span>
                         } @else {
-                          <span class="text-muted">—</span>
+                          <span class="text-text-muted">—</span>
                         }
                       </td>
-                      <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
+                      <td class="py-3 pr-4 text-text-secondary text-xs">{{ row.branchName }}</td>
+                      <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
                       <td class="py-3 pr-4">
                         @if (row.alumnoName) {
                           <span
-                            class="text-secondary"
+                            class="text-text-secondary"
                             [style.color]="
                               row.status === 'ausente' ? 'var(--color-primary)' : undefined
                             "
@@ -316,23 +330,23 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             {{ row.alumnoName }}
                           </span>
                         } @else {
-                          <span class="text-muted italic">Sin agendar</span>
+                          <span class="text-text-muted italic">Sin agendar</span>
                         }
                       </td>
                       <td class="py-3 pr-4">
                         @if (row.vehiclePlate) {
                           <div class="flex flex-col">
-                            <span class="text-xs font-medium text-primary">{{
+                            <span class="text-xs font-medium text-text-primary">{{
                               row.vehiclePlate
                             }}</span>
                             @if (row.vehicleBrand || row.vehicleModel) {
-                              <span class="text-xs text-muted">
+                              <span class="text-xs text-text-muted">
                                 {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
                               </span>
                             }
                           </div>
                         } @else {
-                          <span class="text-muted">—</span>
+                          <span class="text-text-muted">—</span>
                         }
                       </td>
                       <td class="py-3 pr-4">
@@ -379,7 +393,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                           }
                           @if (row.status === 'en_curso') {
-                            <span class="indicator-live text-xs text-secondary">En clase</span>
+                            <span class="indicator-live text-xs text-text-secondary">En clase</span>
                             <!-- Finalizar clase -->
                             <button
                               class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
@@ -434,11 +448,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         </section>
 
         <!-- ── Clases Teóricas (Zoom) ──────────────────────────────────────── -->
-        <section class="bento-banner card p-5 flex flex-col gap-4">
+        <section class="bento-banner card p-5 flex flex-col gap-4" appCardHover>
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <app-icon name="video" [size]="18" [style.color]="'var(--color-primary)'" />
-              <h2 class="text-sm font-semibold text-primary">Clases Teóricas (Zoom Automático)</h2>
+              <h2 class="text-sm font-semibold text-text-primary">
+                Clases Teóricas (Zoom Automático)
+              </h2>
               @if (clasesTeorias().length > 0) {
                 <span
                   class="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -483,7 +499,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               }
             </div>
           } @else if (clasesTeorias().length === 0) {
-            <p class="text-sm text-secondary text-center py-4">
+            <p class="text-sm text-text-secondary text-center py-4">
               No hay clases teóricas programadas para hoy.
             </p>
           } @else {
@@ -491,19 +507,27 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Hora</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Tema</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                      Hora
+                    </th>
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                      Sede
+                    </th>
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                      Tema
+                    </th>
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                       Instructor
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                       Inscritos
                     </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                    <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                       Estado Enlace
                     </th>
-                    <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                    <th class="text-right text-xs font-semibold text-text-secondary pb-2">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -512,13 +536,15 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                       class="border-b transition-colors hover:bg-elevated"
                       [style.border-color]="'var(--border-subtle)'"
                     >
-                      <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                      <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
                         {{ clase.horaInicio }} – {{ clase.horaFin }}
                       </td>
-                      <td class="py-3 pr-4 text-secondary text-xs">{{ clase.branchName }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ clase.tema }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ clase.instructorName }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ clase.inscritosCount }} alumnos</td>
+                      <td class="py-3 pr-4 text-text-secondary text-xs">{{ clase.branchName }}</td>
+                      <td class="py-3 pr-4 text-text-secondary">{{ clase.tema }}</td>
+                      <td class="py-3 pr-4 text-text-secondary">{{ clase.instructorName }}</td>
+                      <td class="py-3 pr-4 text-text-secondary">
+                        {{ clase.inscritosCount }} alumnos
+                      </td>
                       <td class="py-3 pr-4">
                         <span
                           class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full"
@@ -563,20 +589,20 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             aria-label="Justificar inasistencia"
           >
             <div class="flex items-center justify-between">
-              <h3 class="text-base font-semibold text-primary">Justificar Inasistencia</h3>
+              <h3 class="text-base font-semibold text-text-primary">Justificar Inasistencia</h3>
               <button
-                class="p-1 rounded-md text-muted hover:text-primary"
+                class="p-1 rounded-md text-text-muted hover:text-text-primary"
                 aria-label="Cerrar"
                 (click)="closeJustifyModal()"
               >
                 <app-icon name="x" [size]="18" />
               </button>
             </div>
-            <p class="text-sm text-secondary">
+            <p class="text-sm text-text-secondary">
               Ingresa el motivo de la justificación para registrar en el historial del alumno.
             </p>
             <textarea
-              class="w-full rounded-lg border p-3 text-sm text-primary bg-surface resize-none focus:outline-none"
+              class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
               [style.border-color]="'var(--border-subtle)'"
               rows="3"
               placeholder="Ej: Certificado médico presentado..."

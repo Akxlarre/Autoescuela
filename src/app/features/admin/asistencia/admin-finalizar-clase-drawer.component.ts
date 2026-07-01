@@ -49,13 +49,13 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
           </div>
           <div class="flex-1 min-w-0">
             <p
-              class="font-semibold text-primary truncate"
+              class="font-semibold text-text-primary truncate"
               [pTooltip]="cls.alumnoName ?? 'Sin alumno'"
               tooltipPosition="top"
             >
               {{ cls.alumnoName ?? 'Sin alumno' }}
             </p>
-            <p class="text-xs text-muted mt-0.5">
+            <p class="text-xs text-text-muted mt-0.5">
               {{ cls.horaInicio }} · {{ cls.instructorName }}
               @if (cls.vehiclePlate) {
                 · {{ cls.vehiclePlate }}
@@ -65,7 +65,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
               }
             </p>
           </div>
-          <span class="indicator-live text-xs text-secondary shrink-0 hidden sm:flex"
+          <span class="indicator-live text-xs text-text-secondary shrink-0 hidden sm:flex"
             >En clase</span
           >
         </div>
@@ -82,7 +82,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
         <div class="flex flex-col items-center rounded-2xl border border-border-default/60 p-6">
           <app-icon name="gauge" [size]="24" class="text-brand mb-3" />
           <label
-            class="text-xs font-bold text-secondary uppercase tracking-widest mb-3"
+            class="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3"
             for="kmEndAdmin"
           >
             Kilometraje al Retorno
@@ -96,17 +96,19 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
               formControlName="kmEnd"
               min="1"
               max="999999"
-              class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-4xl font-display font-black text-primary text-center p-0 w-28 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
+              class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-4xl font-display font-black text-text-primary text-center p-0 w-28 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
               placeholder="0"
               data-llm-description="Odómetro final del vehículo al retorno de la clase práctica"
             />
-            <span class="text-xl font-bold text-muted select-none mt-1">km</span>
+            <span class="text-xl font-bold text-text-muted select-none mt-1">km</span>
           </div>
           @if (cls.kmStart !== null) {
-            <p class="text-xs text-muted mt-3 flex items-center gap-1">
+            <p class="text-xs text-text-muted mt-3 flex items-center gap-1">
               <app-icon name="map-pin" [size]="11" />
               Km. de salida:
-              <span class="font-semibold text-primary ml-0.5">{{ cls.kmStart | number }} km</span>
+              <span class="font-semibold text-text-primary ml-0.5"
+                >{{ cls.kmStart | number }} km</span
+              >
             </p>
           }
           @if (
@@ -121,7 +123,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
               <span>Debe ser mayor al inicial ({{ cls.kmStart }} km)</span>
             </div>
           } @else if (cls.kmStart === null) {
-            <p class="text-xs text-muted mt-3 opacity-70">
+            <p class="text-xs text-text-muted mt-3 opacity-70">
               Verifique el odómetro del tablero central.
             </p>
           }
@@ -129,7 +131,9 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
 
         <!-- Calificación -->
         <div class="flex flex-col items-center border-t border-b border-border-subtle py-5">
-          <h3 class="text-xs font-bold text-secondary uppercase tracking-widest text-center mb-4">
+          <h3
+            class="text-xs font-bold text-text-secondary uppercase tracking-widest text-center mb-4"
+          >
             Calificación General
           </h3>
           <div
@@ -143,7 +147,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
                 [class.text-white]="selectedGrade() === grade"
                 [class.shadow-sm]="selectedGrade() === grade"
                 [class.scale-110]="selectedGrade() === grade"
-                [class.text-muted]="selectedGrade() !== grade"
+                [class.text-text-muted]="selectedGrade() !== grade"
                 (click)="selectedGrade.set(grade)"
               >
                 {{ grade }}
@@ -161,7 +165,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
         <!-- Observaciones -->
         <div class="flex flex-col gap-2">
           <label
-            class="text-xs font-bold text-secondary uppercase tracking-widest flex items-center gap-2"
+            class="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2"
             for="obsAdmin"
           >
             <app-icon name="pen-tool" [size]="14" />
@@ -171,7 +175,7 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
             id="obsAdmin"
             formControlName="observations"
             rows="3"
-            class="form-control w-full resize-none rounded-xl p-3 text-sm border border-border-default/60 bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand/40 placeholder:text-muted"
+            class="form-control w-full resize-none rounded-xl p-3 text-sm border border-border-default/60 bg-surface focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand/40 placeholder:text-text-muted"
             placeholder="Áreas de mejora, destrezas adquiridas..."
             data-llm-description="Observaciones del instructor sobre el desempeño del alumno en la clase práctica"
           ></textarea>
@@ -181,14 +185,14 @@ import type { FinishClassPayload } from '@core/models/ui/asistencia-clase-b.mode
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <h3
-              class="text-xs font-bold text-secondary uppercase tracking-widest flex items-center gap-2"
+              class="text-xs font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2"
             >
               <app-icon name="pen-line" [size]="14" />
-              Firmas <span class="font-normal normal-case text-muted">(opcional)</span>
+              Firmas <span class="font-normal normal-case text-text-muted">(opcional)</span>
             </h3>
             <button
               type="button"
-              class="text-xs text-muted hover:text-primary transition-colors cursor-pointer"
+              class="text-xs text-text-muted hover:text-text-primary transition-colors cursor-pointer"
               (click)="signaturesExpanded.set(!signaturesExpanded())"
             >
               {{ signaturesExpanded() ? 'Ocultar' : 'Mostrar' }}

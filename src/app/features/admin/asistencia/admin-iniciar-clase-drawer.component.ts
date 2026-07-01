@@ -51,13 +51,13 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
           </div>
           <div class="flex-1 min-w-0">
             <p
-              class="font-semibold text-primary truncate"
+              class="font-semibold text-text-primary truncate"
               [pTooltip]="cls.alumnoName ?? 'Sin alumno'"
               tooltipPosition="top"
             >
               {{ cls.alumnoName ?? 'Sin alumno' }}
             </p>
-            <p class="text-xs text-muted mt-0.5">
+            <p class="text-xs text-text-muted mt-0.5">
               {{ cls.horaInicio }} · {{ cls.instructorName }}
               @if (selectedVehicle(); as v) {
                 · {{ v.plate }}
@@ -85,7 +85,7 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
         <!-- Selector de vehículo -->
         @if (facade.vehiclesPorSede().length > 0) {
           <div class="flex flex-col gap-2">
-            <label class="text-xs font-bold text-secondary uppercase tracking-widest">
+            <label class="text-xs font-bold text-text-secondary uppercase tracking-widest">
               Vehículo
             </label>
             <p-select
@@ -114,7 +114,7 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
             <app-icon name="gauge" [size]="28" />
           </div>
           <label
-            class="text-xs font-bold text-secondary uppercase tracking-widest mb-3"
+            class="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3"
             for="kmStartAdmin"
           >
             Kilometraje Actual
@@ -127,11 +127,11 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
               type="number"
               formControlName="kmStart"
               max="999999"
-              class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl font-display font-black text-primary text-center p-0 w-36 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
+              class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl font-display font-black text-text-primary text-center p-0 w-36 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
               placeholder="0"
               data-llm-description="Odómetro inicial del vehículo para iniciar clase práctica"
             />
-            <span class="text-2xl font-bold text-muted select-none mt-1">km</span>
+            <span class="text-2xl font-bold text-text-muted select-none mt-1">km</span>
           </div>
           @if (form.get('kmStart')?.invalid && form.get('kmStart')?.touched) {
             <div
@@ -145,7 +145,7 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
               }
             </div>
           } @else {
-            <p class="text-xs text-muted mt-3 opacity-70">
+            <p class="text-xs text-text-muted mt-3 opacity-70">
               Verifique el panel del vehículo antes de arrancar.
             </p>
           }

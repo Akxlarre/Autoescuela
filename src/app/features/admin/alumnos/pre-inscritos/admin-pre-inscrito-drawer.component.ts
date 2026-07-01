@@ -53,7 +53,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
       <!-- ── Header info ────────────────────────────────────────────── -->
       <div class="mb-6 pb-4" style="border-bottom: 1px solid var(--border-subtle)">
         <div class="flex items-center justify-between gap-3 mb-2">
-          <p class="text-sm text-secondary font-mono">{{ p.rut }}</p>
+          <p class="text-sm text-text-secondary font-mono">{{ p.rut }}</p>
           <div class="flex items-center gap-2">
             <span
               class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white bg-brand"
@@ -63,7 +63,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
             <p-tag [value]="p.statusLabel" [severity]="p.statusSeverity" [rounded]="true" />
           </div>
         </div>
-        <p class="text-xs text-secondary">{{ p.sucursal }} · {{ p.canal }}</p>
+        <p class="text-xs text-text-secondary">{{ p.sucursal }} · {{ p.canal }}</p>
       </div>
 
       <!-- ── Tabs ────────────────────────────────────────────────────── -->
@@ -143,66 +143,72 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
               <div class="space-y-4" #tabContent>
                 <div class="grid grid-cols-2 gap-3">
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">Nombre</span>
-                    <p class="text-sm font-medium text-primary mt-1">{{ p.nombreCompleto }}</p>
+                    <span class="text-xs text-text-secondary uppercase tracking-wide">Nombre</span>
+                    <p class="text-sm font-medium text-text-primary mt-1">{{ p.nombreCompleto }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">RUT</span>
-                    <p class="text-sm font-mono text-primary mt-1">{{ p.rut }}</p>
+                    <span class="text-xs text-text-secondary uppercase tracking-wide">RUT</span>
+                    <p class="text-sm font-mono text-text-primary mt-1">{{ p.rut }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">Correo</span>
-                    <p class="text-sm text-primary mt-1 break-all">{{ p.email }}</p>
+                    <span class="text-xs text-text-secondary uppercase tracking-wide">Correo</span>
+                    <p class="text-sm text-text-primary mt-1 break-all">{{ p.email }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">Teléfono</span>
-                    <p class="text-sm text-primary mt-1">{{ p.telefono || '—' }}</p>
+                    <span class="text-xs text-text-secondary uppercase tracking-wide"
+                      >Teléfono</span
+                    >
+                    <p class="text-sm text-text-primary mt-1">{{ p.telefono || '—' }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide"
+                    <span class="text-xs text-text-secondary uppercase tracking-wide"
                       >Sede solicitada</span
                     >
-                    <p class="text-sm text-primary mt-1">{{ p.sucursal }}</p>
+                    <p class="text-sm text-text-primary mt-1">{{ p.sucursal }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">Clase</span>
-                    <p class="text-sm font-semibold text-primary mt-1">
+                    <span class="text-xs text-text-secondary uppercase tracking-wide">Clase</span>
+                    <p class="text-sm font-semibold text-text-primary mt-1">
                       {{ p.licencia }}
                       @if (p.convalida) {
-                        <span class="text-xs text-secondary ml-1">(convalidación simultánea)</span>
+                        <span class="text-xs text-text-secondary ml-1"
+                          >(convalidación simultánea)</span
+                        >
                       }
                     </p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide"
+                    <span class="text-xs text-text-secondary uppercase tracking-wide"
                       >Fecha nacimiento</span
                     >
-                    <p class="text-sm text-primary mt-1">{{ p.birthDate ?? '—' }}</p>
+                    <p class="text-sm text-text-primary mt-1">{{ p.birthDate ?? '—' }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">Género</span>
-                    <p class="text-sm text-primary mt-1">
+                    <span class="text-xs text-text-secondary uppercase tracking-wide">Género</span>
+                    <p class="text-sm text-text-primary mt-1">
                       {{ p.gender === 'M' ? 'Masculino' : p.gender === 'F' ? 'Femenino' : '—' }}
                     </p>
                   </div>
                   @if (p.address) {
                     <div class="card col-span-2">
-                      <span class="text-xs text-secondary uppercase tracking-wide">Dirección</span>
-                      <p class="text-sm text-primary mt-1">{{ p.address }}</p>
+                      <span class="text-xs text-text-secondary uppercase tracking-wide"
+                        >Dirección</span
+                      >
+                      <p class="text-sm text-text-primary mt-1">{{ p.address }}</p>
                     </div>
                   }
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide"
+                    <span class="text-xs text-text-secondary uppercase tracking-wide"
                       >Pre-inscrito el</span
                     >
-                    <p class="text-sm text-primary mt-1">{{ p.fechaPreInscripcion }}</p>
+                    <p class="text-sm text-text-primary mt-1">{{ p.fechaPreInscripcion }}</p>
                   </div>
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide">Vence</span>
+                    <span class="text-xs text-text-secondary uppercase tracking-wide">Vence</span>
                     <p
                       class="text-sm mt-1"
                       [class.text-danger]="p.isVencido"
-                      [class.text-secondary]="!p.isVencido"
+                      [class.text-text-secondary]="!p.isVencido"
                     >
                       {{ p.fechaVencimiento }}{{ p.isVencido ? ' (vencido)' : '' }}
                     </p>
@@ -211,10 +217,10 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                 @if (p.notes) {
                   <div class="card">
-                    <span class="text-xs text-secondary uppercase tracking-wide"
+                    <span class="text-xs text-text-secondary uppercase tracking-wide"
                       >Observaciones</span
                     >
-                    <p class="text-sm text-primary mt-1">{{ p.notes }}</p>
+                    <p class="text-sm text-text-primary mt-1">{{ p.notes }}</p>
                   </div>
                 }
 
@@ -245,8 +251,8 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         class="mt-0.5 shrink-0"
                       />
                       <div>
-                        <h3 class="text-sm font-semibold text-primary">Test pendiente</h3>
-                        <p class="text-xs text-secondary mt-0.5">
+                        <h3 class="text-sm font-semibold text-text-primary">Test pendiente</h3>
+                        <p class="text-xs text-text-secondary mt-0.5">
                           El alumno no respondió el test psicológico online. Debe rendirlo de forma
                           presencial: descarga e imprime el test, el alumno lo contesta en papel y
                           luego registras el resultado abajo.
@@ -289,7 +295,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         "
                       />
                       <div>
-                        <p class="text-sm font-semibold text-primary">
+                        <p class="text-sm font-semibold text-text-primary">
                           {{
                             p.psychResult === 'fit'
                               ? 'Apto psicológicamente'
@@ -297,7 +303,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           }}
                         </p>
                         @if (p.psychEvaluatedByName) {
-                          <p class="text-xs text-secondary">
+                          <p class="text-xs text-text-secondary">
                             {{ p.psychEvaluatedByName }}
                             @if (p.psychEvaluatedAt) {
                               · {{ p.psychEvaluatedAt | slice: 0 : 10 }}
@@ -317,10 +323,10 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   @if (p.psychResult === 'unfit' && p.psychRejectionReason) {
                     <div class="card">
-                      <span class="text-xs text-secondary uppercase tracking-wide"
+                      <span class="text-xs text-text-secondary uppercase tracking-wide"
                         >Motivo de rechazo</span
                       >
-                      <p class="text-sm text-primary mt-1">{{ p.psychRejectionReason }}</p>
+                      <p class="text-sm text-text-primary mt-1">{{ p.psychRejectionReason }}</p>
                     </div>
                   }
                 }
@@ -328,7 +334,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 <!-- Formulario de evaluación -->
                 @if (p.psychResult === null || showReEvaluate()) {
                   <div class="card card-accent space-y-4">
-                    <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
                       <app-icon name="clipboard-check" [size]="15" />
                       {{ p.psychResult !== null ? 'Re-evaluar test' : 'Evaluar test psicológico' }}
                     </h3>
@@ -338,7 +344,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         type="button"
                         class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-semibold transition-all cursor-pointer"
                         [class.text-white]="evalResult() === 'fit'"
-                        [class.text-secondary]="evalResult() !== 'fit'"
+                        [class.text-text-secondary]="evalResult() !== 'fit'"
                         [style.border-color]="
                           evalResult() === 'fit' ? 'var(--color-success)' : undefined
                         "
@@ -359,7 +365,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                         type="button"
                         class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 text-sm font-semibold transition-all cursor-pointer"
                         [class.text-white]="evalResult() === 'unfit'"
-                        [class.text-secondary]="evalResult() !== 'unfit'"
+                        [class.text-text-secondary]="evalResult() !== 'unfit'"
                         [style.border-color]="
                           evalResult() === 'unfit' ? 'var(--color-danger)' : undefined
                         "
@@ -380,7 +386,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                     @if (evalResult() === 'unfit') {
                       <textarea
-                        class="w-full rounded-lg border border-border bg-surface text-sm text-primary px-3 py-2 resize-none focus:outline-none"
+                        class="w-full rounded-lg border border-border bg-surface text-sm text-text-primary px-3 py-2 resize-none focus:outline-none"
                         rows="3"
                         placeholder="Describe el motivo del rechazo…"
                         data-llm-description="rejection reason for unfit psych test"
@@ -419,7 +425,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 <!-- Respuestas EPQ -->
                 @if (p.psychAnswers && p.psychAnswers.length > 0) {
                   <div class="card space-y-3">
-                    <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
                       <app-icon name="list" [size]="15" />
                       Respuestas ({{ p.psychAnswers.length }} preguntas)
                     </h3>
@@ -427,15 +433,15 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       @for (q of questions; track $index) {
                         <div class="flex items-start gap-2 p-2 rounded-lg bg-surface">
                           <span
-                            class="text-xs text-secondary font-mono w-5 shrink-0 pt-0.5 text-right"
+                            class="text-xs text-text-secondary font-mono w-5 shrink-0 pt-0.5 text-right"
                           >
                             {{ $index + 1 }}.
                           </span>
-                          <p class="text-xs text-primary flex-1 leading-relaxed">{{ q }}</p>
+                          <p class="text-xs text-text-primary flex-1 leading-relaxed">{{ q }}</p>
                           <span
                             class="shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
                             [class.text-white]="p.psychAnswers![$index] === true"
-                            [class.text-secondary]="p.psychAnswers![$index] !== true"
+                            [class.text-text-secondary]="p.psychAnswers![$index] !== true"
                             [style.background]="
                               p.psychAnswers![$index] === true
                                 ? 'var(--ds-brand)'
@@ -458,7 +464,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 @if (p.status !== 'approved' && p.status !== 'pending_contract') {
                   <div class="flex flex-col items-center justify-center py-10 gap-3">
                     <app-icon name="lock" [size]="32" color="var(--color-text-muted)" />
-                    <p class="text-sm text-secondary text-center">
+                    <p class="text-sm text-text-secondary text-center">
                       Requiere evaluación psicológica <strong>Apto</strong>.
                     </p>
                   </div>
@@ -470,16 +476,16 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   >
                     <app-icon name="check-circle" [size]="16" color="var(--color-success)" />
                     <div>
-                      <p class="text-sm font-semibold text-primary">
+                      <p class="text-sm font-semibold text-text-primary">
                         Matrícula creada correctamente
                       </p>
-                      <p class="text-xs text-secondary font-mono">N° {{ enroll.number }}</p>
+                      <p class="text-xs text-text-secondary font-mono">N° {{ enroll.number }}</p>
                     </div>
                   </div>
 
                   <!-- Card contrato -->
                   <div class="card space-y-4">
-                    <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
                       <app-icon name="file-signature" [size]="15" />
                       Contrato de matrícula
                     </h3>
@@ -497,8 +503,8 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           "
                         />
                         <div>
-                          <p class="text-sm font-medium text-primary">Contrato PDF</p>
-                          <p class="text-xs text-secondary">
+                          <p class="text-sm font-medium text-text-primary">Contrato PDF</p>
+                          <p class="text-xs text-text-secondary">
                             @if (isGeneratingContract()) {
                               Generando…
                             } @else if (contractPdfUrl()) {
@@ -555,7 +561,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           color="var(--ds-brand)"
                           class="shrink-0 mt-0.5"
                         />
-                        <ol class="space-y-1 text-secondary list-decimal pl-3">
+                        <ol class="space-y-1 text-text-secondary list-decimal pl-3">
                           <li>Descarga e imprime el contrato (2 copias).</li>
                           <li>El alumno firma ambas copias con nombre y RUT.</li>
                           <li>Escanea o fotografía la copia firmada.</li>
@@ -565,7 +571,9 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                       <!-- Upload contrato firmado -->
                       <div class="space-y-2">
-                        <label class="text-xs font-medium text-secondary uppercase tracking-wide">
+                        <label
+                          class="text-xs font-medium text-text-secondary uppercase tracking-wide"
+                        >
                           Subir contrato firmado
                         </label>
                         @if (!signedContractFile()) {
@@ -585,8 +593,10 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                               [size]="24"
                               color="var(--color-text-muted)"
                             />
-                            <span class="text-xs text-secondary">Seleccionar archivo</span>
-                            <span class="text-xs text-secondary opacity-60">PDF, JPG o PNG</span>
+                            <span class="text-xs text-text-secondary">Seleccionar archivo</span>
+                            <span class="text-xs text-text-secondary opacity-60"
+                              >PDF, JPG o PNG</span
+                            >
                           </label>
                         } @else {
                           <div
@@ -598,7 +608,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                                 [size]="16"
                                 color="var(--color-success)"
                               />
-                              <p class="text-sm text-primary truncate">
+                              <p class="text-sm text-text-primary truncate">
                                 {{ signedContractFile()!.name }}
                               </p>
                             </div>
@@ -656,7 +666,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                     class="flex items-center gap-3 rounded-xl p-3 bg-brand/8 border border-brand/20"
                   >
                     <app-icon name="check-circle" [size]="16" color="var(--ds-brand)" />
-                    <p class="text-sm text-primary">
+                    <p class="text-sm text-text-primary">
                       <strong>{{ p.nombreCompleto }}</strong> — Clase
                       <strong>{{ p.licencia }}</strong>
                     </p>
@@ -664,16 +674,16 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Promoción -->
                   <div class="space-y-1.5">
-                    <label class="text-xs font-medium text-secondary uppercase tracking-wide">
+                    <label class="text-xs font-medium text-text-secondary uppercase tracking-wide">
                       Promoción <span class="text-danger">*</span>
                     </label>
                     @if (facade.promocionesCargando()) {
-                      <p class="text-sm text-secondary flex items-center gap-2">
+                      <p class="text-sm text-text-secondary flex items-center gap-2">
                         <app-icon name="loader-circle" [size]="13" class="animate-spin" />
                         Cargando promociones…
                       </p>
                     } @else if (facade.promociones().length === 0) {
-                      <p class="text-sm text-secondary">
+                      <p class="text-sm text-text-secondary">
                         No hay promociones activas para clase {{ facade.selected()?.licencia }}.
                       </p>
                     } @else {
@@ -693,7 +703,9 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                   <!-- Cursos dentro de la promoción -->
                   @if (selectedCourses().length > 0) {
                     <div class="space-y-2">
-                      <label class="text-xs font-medium text-secondary uppercase tracking-wide">
+                      <label
+                        class="text-xs font-medium text-text-secondary uppercase tracking-wide"
+                      >
                         Curso <span class="text-danger">*</span>
                       </label>
                       @for (course of selectedCourses(); track course.promotionCourseId) {
@@ -715,8 +727,10 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           "
                         >
                           <div>
-                            <p class="text-sm font-medium text-primary">{{ course.courseName }}</p>
-                            <p class="text-xs text-secondary">
+                            <p class="text-sm font-medium text-text-primary">
+                              {{ course.courseName }}
+                            </p>
+                            <p class="text-xs text-text-secondary">
                               {{ course.enrolledStudents }}/{{ course.maxStudents }}
                             </p>
                           </div>
@@ -735,13 +749,13 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Datos complementarios -->
                   <div class="card space-y-3">
-                    <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
                       <app-icon name="user-check" [size]="15" />
                       Datos complementarios
                     </h3>
                     <div class="grid grid-cols-2 gap-3">
                       <div class="space-y-1">
-                        <label class="text-xs text-secondary uppercase tracking-wide"
+                        <label class="text-xs text-text-secondary uppercase tracking-wide"
                           >Licencia previa</label
                         >
                         <p-select
@@ -766,7 +780,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Documentos -->
                   <div class="card space-y-3">
-                    <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
                       <app-icon name="folder-open" [size]="15" />
                       Documentos
                     </h3>
@@ -788,7 +802,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             "
                           />
                           <div class="min-w-0">
-                            <p class="text-xs font-medium text-primary truncate">
+                            <p class="text-xs font-medium text-text-primary truncate">
                               {{ doc.label }}
                               @if (doc.required) {
                                 <span class="text-danger">*</span>
@@ -796,7 +810,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             </p>
                             @if (docFileSignal(doc.key)(); as file) {
                               <p
-                                class="text-xs text-secondary truncate"
+                                class="text-xs text-text-secondary truncate"
                                 [pTooltip]="file.name"
                                 tooltipPosition="top"
                               >
@@ -825,7 +839,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                             [for]="'doc-' + doc.key"
                             class="text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer transition-colors"
                             [class.border-border]="!docFileSignal(doc.key)()"
-                            [class.text-secondary]="!docFileSignal(doc.key)()"
+                            [class.text-text-secondary]="!docFileSignal(doc.key)()"
                             [class.hover:bg-elevated]="!docFileSignal(doc.key)()"
                             [class.border-success-muted]="!!docFileSignal(doc.key)()"
                             [class.text-success]="!!docFileSignal(doc.key)()"
@@ -845,7 +859,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       </div>
                     }
 
-                    <p class="text-xs text-secondary">
+                    <p class="text-xs text-text-secondary">
                       <app-icon name="info" [size]="12" class="inline mr-1" />
                       Los documentos se subirán al crear la matrícula. El contrato se genera en el
                       siguiente paso.
@@ -854,7 +868,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
 
                   <!-- Pago -->
                   <div class="card space-y-4">
-                    <h3 class="text-sm font-semibold text-primary flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-text-primary flex items-center gap-2">
                       <app-icon name="credit-card" [size]="15" />
                       Pago
                     </h3>
@@ -894,7 +908,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       >
                         <div class="flex items-center gap-2">
                           <app-icon name="tag" [size]="13" color="var(--color-success)" />
-                          <span class="text-xs text-primary">{{
+                          <span class="text-xs text-text-primary">{{
                             formDiscountReason() || 'Descuento'
                           }}</span>
                         </div>
@@ -913,14 +927,14 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       </div>
                     } @else {
                       <div class="space-y-2">
-                        <span class="text-xs text-secondary uppercase tracking-wide"
+                        <span class="text-xs text-text-secondary uppercase tracking-wide"
                           >Descuento</span
                         >
                         <div class="grid grid-cols-2 gap-2">
                           <input
                             type="number"
                             min="0"
-                            class="border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface focus:outline-none"
+                            class="border border-border rounded-lg px-3 py-2 text-sm text-text-primary bg-surface focus:outline-none"
                             placeholder="Monto $"
                             data-llm-description="manual discount amount in CLP"
                             [value]="formDiscountInput()"
@@ -928,7 +942,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                           />
                           <input
                             type="text"
-                            class="border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface focus:outline-none"
+                            class="border border-border rounded-lg px-3 py-2 text-sm text-text-primary bg-surface focus:outline-none"
                             placeholder="Motivo del descuento"
                             data-llm-description="reason for manual discount"
                             [value]="formDiscountReason()"

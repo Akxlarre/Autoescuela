@@ -34,6 +34,8 @@
 | `app-stat-box` | Métrica / Info Card | `label` (string, req), `value` (string\|number, req), `variant` ('default'\|'success'\|'warning'\|'error'\|'brand'\|'surface'), `icon` (string), `suffix` (string), `compact` (boolean), `useMono` (boolean). Componente premium para desgloses financieros y métricas secundarias en bento grids o drawers. | `shared/components/stat-box/stat-box.component.ts` | ✅ Estable |
 | `app-action-kpi-card` | KPI / Métrica Interactiva | Variante de KPI interactiva: hover GSAP, cursor pointer, `pulse` en ícono, slot `[footer]`. `bento-card` + `[loading]` con skeleton. `iconBg()` unificado con `var(--state-*-bg, ...)` — mismo token que `kpi-card-variant`. Sin `CommonModule`. | `shared/components/kpi-card/action-kpi-card.component.ts` | ✅ Estable |
 
+| `app-tabs` | Navegación / UI | `tabs` (TabOption[], req), `activeId` (string, req), `variant` ('line'\|'segmented'\|'pill', default 'line'), `uppercase` (boolean, false). Outputs: `activeIdChange` (string). Reemplaza las implementaciones estáticas de "tablist". Soporta contadores numéricos e íconos (kebab-case) nativamente. Adaptable y accesible. | `shared/components/tabs/tabs.component.ts` | ✅ Estable |
+
 ## Moléculas — Feedback
 *Comunicación de estados del sistema al usuario.*
 
@@ -328,7 +330,7 @@
 | `app-certificacion-profesional-content` | `promociones`, `cursos`, `selectedPromocionId`, `selectedCursoId`, `alumnos`, `kpis`, `log`, `isLoading`, `isLoadingAlumnos`, `generatingId`, `sendingEmailId`, `sendingMasivo`, `isExporting`, `isGeneratingPendientes` | `promocionSelected`, `cursoSelected`, `generarCertificado`, `verCertificado`, `enviarEmail`, `generarPendientes`, `enviarEmailsMasivo`, `exportar` | `src/app/shared/components/certificacion-profesional-content/certificacion-profesional-content.component.ts` |
 | `app-cuadratura-content` | `pagosHoy`, `gastosHoy`, `fondoInicial`, `ingresosEfectivoHoy`, `totalIngresosHoy`, `totalEgresosHoy`, `saldoTeorico`, `cajaYaCerrada`, `isLoading`, `isSaving`, `isExporting`, `isDrawerOpen`, `sanitized` | `guardarCierre`, `abrirIngreso`, `abrirEgreso`, `eliminarIngreso`, `eliminarEgreso`, `exportRequested`, `fondoInicialChange` | `src/app/shared/components/cuadratura-content/cuadratura-content.component.ts` |
 | `app-daily-schedule-timeline` | `daySchedule`, `weekDays`, `selectedDateString`, `isLoading` | `daySelect`, `blockClick` | `src/app/shared/components/daily-schedule-timeline/daily-schedule-timeline.component.ts` |
-| `app-date-input` | `value`, `label`, `id`, `required`, `disabled`, `readonlyInput`, `min`, `max`, `placeholder` | `valueChange` | `src/app/shared/components/date-input/date-input.component.ts` |
+| `app-date-input` | `value`, `label`, `id`, `required`, `disabled`, `inline`, `readonlyInput`, `min`, `max`, `placeholder`, `styleClass`, `inputStyleClass` | `valueChange` | `src/app/shared/components/date-input/date-input.component.ts` |
 | `app-detalle-cuadratura-modal` | — | — | `src/app/shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component.ts` |
 | `app-dms-list-content` | `basePath`, `studentsWithDocs`, `recentDocs`, `schoolDocs`, `templates`, `isLoading`, `isAdmin` | `uploadStudentDoc`, `uploadSchoolDoc`, `uploadTemplate`, `viewStudentDocs`, `viewDocument`, `deleteStudentDoc`, `deleteSchoolDoc`, `deleteTemplate`, `downloadTemplate` | `src/app/shared/components/dms-list-content/dms-list-content.component.ts` |
 | `app-dms-viewer-modal` | — | `closed` | `src/app/shared/components/dms-viewer-modal/dms-viewer-modal.component.ts` |
@@ -386,6 +388,7 @@
 | `app-signature-pad` | `label`, `height` | `signatureChange` | `src/app/shared/components/signature-pad/signature-pad.component.ts` |
 | `app-skeleton-block` | `variant`, `width`, `height`, `borderRadius` | — | `src/app/shared/components/skeleton-block/skeleton-block.component.ts` |
 | `app-stat-box` | `label`, `value`, `variant`, `icon`, `suffix`, `compact`, `useMono` | — | `src/app/shared/components/stat-box/stat-box.component.ts` |
+| `app-tabs` | `tabs`, `activeId`, `variant`, `uppercase` | `activeIdChange` | `src/app/shared/components/tabs/tabs.component.ts` |
 | `app-task-card` | `task`, `loading` | `cardClicked` | `src/app/shared/components/task-card/task-card.component.ts` |
 | `app-task-reply-thread` | `replies`, `taskStatus`, `currentUserId` | `replySent` | `src/app/shared/components/task-reply-thread/task-reply-thread.component.ts` |
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |

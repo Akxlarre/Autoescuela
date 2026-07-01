@@ -33,6 +33,7 @@ import { SectionHeroComponent } from '../section-hero/section-hero.component';
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 // Services
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -77,6 +78,7 @@ import type {
     SectionHeroComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Panel de flota">
@@ -117,6 +119,7 @@ import type {
       <div
         class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
         appAnimateIn
+        appCardHover
       >
         <!-- Toolbar -->
         <div class="toolbar-wrapper">

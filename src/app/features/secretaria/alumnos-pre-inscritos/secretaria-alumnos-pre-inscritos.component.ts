@@ -20,6 +20,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -41,6 +42,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #pageRef>
@@ -58,10 +60,10 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
       />
 
       <!-- Filtros -->
-      <div class="bento-banner card flex flex-wrap items-center gap-3">
+      <div class="bento-banner card flex flex-wrap items-center gap-3" appCardHover>
         <input
           type="text"
-          class="border border-border rounded-lg px-3 py-2 text-sm text-primary bg-surface w-full sm:w-64 focus:outline-none focus:ring-2"
+          class="border border-border rounded-lg px-3 py-2 text-sm text-text-primary bg-surface w-full sm:w-64 focus:outline-none focus:ring-2"
           style="focus-ring-color: var(--ds-brand)"
           placeholder="Buscar por nombre o RUT…"
           data-llm-description="search input for pre-inscribed students by name or RUT"
@@ -91,7 +93,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
         @if (searchQuery() || filterStatus() || filterLicencia()) {
           <button
             type="button"
-            class="text-sm text-secondary hover:text-primary transition-colors flex items-center gap-1 cursor-pointer"
+            class="text-sm text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1 cursor-pointer"
             (click)="resetFiltros()"
           >
             <app-icon name="x" [size]="14" />
@@ -99,13 +101,13 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
           </button>
         }
 
-        <span class="ml-auto text-sm text-secondary">
+        <span class="ml-auto text-sm text-text-secondary">
           {{ filtered().length }} resultado{{ filtered().length !== 1 ? 's' : '' }}
         </span>
       </div>
 
       <!-- Tabla -->
-      <div class="bento-banner card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
         @if (facade.isLoading()) {
           <div class="p-6 space-y-3">
             @for (i of skeletonRows; track i) {
@@ -115,7 +117,9 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
         } @else if (filtered().length === 0) {
           <div class="flex flex-col items-center justify-center py-16 gap-3">
             <app-icon name="users" [size]="40" color="var(--color-text-muted)" />
-            <p class="text-secondary text-sm">No hay pre-inscritos con los filtros aplicados</p>
+            <p class="text-text-secondary text-sm">
+              No hay pre-inscritos con los filtros aplicados
+            </p>
           </div>
         } @else {
           <p-table
@@ -145,11 +149,11 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
               >
                 <td>
                   <div>
-                    <p class="text-sm font-medium text-primary">{{ row.nombreCompleto }}</p>
-                    <p class="text-xs text-secondary">{{ row.email }}</p>
+                    <p class="text-sm font-medium text-text-primary">{{ row.nombreCompleto }}</p>
+                    <p class="text-xs text-text-secondary">{{ row.email }}</p>
                   </div>
                 </td>
-                <td class="text-sm font-mono text-secondary">{{ row.rut }}</td>
+                <td class="text-sm font-mono text-text-secondary">{{ row.rut }}</td>
                 <td>
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold text-white bg-brand"
@@ -169,7 +173,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
                       No Apto
                     </span>
                   } @else {
-                    <span class="inline-flex items-center gap-1 text-xs text-secondary">
+                    <span class="inline-flex items-center gap-1 text-xs text-text-secondary">
                       <app-icon name="clock" [size]="14" />
                       Pendiente
                     </span>
@@ -182,7 +186,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
                     [rounded]="true"
                   />
                 </td>
-                <td class="text-sm text-secondary">{{ row.fechaPreInscripcion }}</td>
+                <td class="text-sm text-text-secondary">{{ row.fechaPreInscripcion }}</td>
                 <td>
                   @if (row.isVencido) {
                     <span class="text-xs text-danger font-medium">Vencido</span>
@@ -191,7 +195,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
                       {{ row.diasParaVencer }}d
                     </span>
                   } @else {
-                    <span class="text-xs text-secondary">{{ row.fechaVencimiento }}</span>
+                    <span class="text-xs text-text-secondary">{{ row.fechaVencimiento }}</span>
                   }
                 </td>
                 <td>

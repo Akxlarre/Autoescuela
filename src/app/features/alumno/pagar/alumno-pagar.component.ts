@@ -8,6 +8,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
  * AlumnoPagarComponent — Pago del saldo pendiente de matrícula Clase B.
@@ -32,6 +33,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
@@ -45,7 +47,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
       />
 
       <!-- ── Stepper ── -->
-      <div class="bento-banner card px-6 py-4">
+      <div class="bento-banner card px-6 py-4" appCardHover>
         <div class="flex items-center">
           @for (s of steps(); track s.n; let last = $last) {
             <!-- Nodo del paso -->
@@ -122,7 +124,10 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
             <app-skeleton-block variant="rect" width="100%" height="80px" />
           </div>
         } @else if (facade.status()?.hasPaymentPending === false) {
-          <div class="bento-banner card p-8 flex flex-col items-center gap-4 text-center">
+          <div
+            class="bento-banner card p-8 flex flex-col items-center gap-4 text-center"
+            appCardHover
+          >
             <div class="w-14 h-14 rounded-full flex items-center justify-center bg-success-subtle">
               <app-icon name="check-circle" [size]="28" class="text-success" />
             </div>
@@ -151,7 +156,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
                 </span>
               </div>
 
-              <div class="card p-5 flex flex-col gap-3">
+              <div class="card p-5 flex flex-col gap-3" appCardHover>
                 <div class="flex items-center gap-3">
                   <app-icon name="graduation-cap" [size]="16" class="text-text-muted shrink-0" />
                   <div class="flex-1 flex justify-between items-center gap-2">
@@ -184,7 +189,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 
             <!-- Columna derecha: clases ya agendadas + CTA -->
             <div class="flex flex-col gap-4">
-              <div class="card p-5 flex flex-col gap-3">
+              <div class="card p-5 flex flex-col gap-3" appCardHover>
                 <div class="flex items-center gap-3">
                   <div
                     class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-success-subtle"
@@ -224,7 +229,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
         <div class="bento-banner flex flex-col gap-4">
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <!-- Clases ya agendadas -->
-            <div class="card p-5 flex flex-col gap-4">
+            <div class="card p-5 flex flex-col gap-4" appCardHover>
               <div
                 class="w-10 h-10 rounded-full flex items-center justify-center bg-success-subtle"
               >

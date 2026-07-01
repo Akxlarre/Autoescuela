@@ -35,6 +35,8 @@ export interface SectionHeroKpi {
   /** Positivo = verde (▲), negativo = rojo (▼). */
   trend?: number;
   trendLabel?: string;
+  /** Texto adicional (ej: '3 operaciones') renderizado bajo o junto al valor. */
+  subValue?: string;
   /** 6-8 puntos normalizados 0-1 para el sparkline SVG inline. */
   sparkline?: number[];
   color?: 'default' | 'success' | 'warning' | 'error';

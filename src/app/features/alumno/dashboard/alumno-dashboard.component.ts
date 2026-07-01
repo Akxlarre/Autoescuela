@@ -22,6 +22,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { StudentHomeFacade } from '@core/facades/student-home.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
+
 @Component({
   selector: 'app-alumno-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +40,7 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
     RouterLink,
     ScrollRevealDirective,
     AnimateInDirective,
+    TabsComponent,
   ],
   template: `
     <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi progreso">
@@ -55,27 +58,13 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
 
       <!-- ── Selector de matrícula (solo con >1 enrollment) ───────────────── -->
       @if (context.enrollments().length > 1) {
-        <div class="bento-banner">
-          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mis matrículas">
-            @for (enr of context.enrollments(); track enr.id) {
-              <button
-                type="button"
-                role="tab"
-                class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
-                [class.bg-brand-muted]="context.activeEnrollmentId() === enr.id"
-                [class.border-brand]="context.activeEnrollmentId() === enr.id"
-                [class.text-primary]="context.activeEnrollmentId() === enr.id"
-                [class.bg-surface]="context.activeEnrollmentId() !== enr.id"
-                [class.border-border-subtle]="context.activeEnrollmentId() !== enr.id"
-                [class.text-text-secondary]="context.activeEnrollmentId() !== enr.id"
-                [attr.aria-selected]="context.activeEnrollmentId() === enr.id"
-                [attr.data-llm-action]="'select-enrollment-' + enr.id"
-                (click)="selectEnrollment(enr.id)"
-              >
-                {{ enr.label }}
-              </button>
-            }
-          </div>
+        <div class="bento-banner p-2">
+          <app-tabs
+            [tabs]="enrollmentTabs()"
+            [activeId]="activeEnrollmentStr()"
+            variant="pill"
+            (activeIdChange)="selectEnrollment(+$event)"
+          />
         </div>
       }
 
@@ -581,13 +570,23 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
 export class AlumnoDashboardComponent {
   private readonly facade = inject(StudentHomeFacade);
   readonly context = inject(StudentEnrollmentContextFacade);
-    
+
   // ── Estado ────────────────────────────────────────────────────────────────
 
   readonly loading = computed(() => this.facade.isLoading());
   readonly snapshot = computed(() => this.facade.snapshot());
   readonly hero = computed(() => this.facade.hero());
   readonly progress = computed(() => this.facade.progress());
+  
+  readonly enrollmentTabs = computed(() => {
+    return this.context.enrollments().map((enr) => ({
+      id: String(enr.id),
+      label: enr.label,
+    }));
+  });
+
+  readonly activeEnrollmentStr = computed(() => String(this.context.activeEnrollmentId()));
+
   readonly attendance = computed(() => this.facade.attendance());
   readonly grades = computed(() => this.facade.grades());
   readonly certificate = computed(() => this.facade.certificate());

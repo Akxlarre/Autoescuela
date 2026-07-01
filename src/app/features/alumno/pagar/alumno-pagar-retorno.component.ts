@@ -5,6 +5,7 @@ import { StudentPaymentFacade } from '@core/facades/student-payment.facade';
 import type { StudentPaymentResult } from '@core/models/ui/student-payment.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
  * AlumnoPagarRetornoComponent — Página de retorno desde Webpay Plus.
@@ -19,12 +20,12 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
   selector: 'app-alumno-pagar-retorno',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, CardHoverDirective],
   template: `
     <div class="p-6 max-w-lg mx-auto flex flex-col items-center justify-center min-h-[60vh] gap-6">
       <!-- ── Cargando ── -->
       @if (isConfirming()) {
-        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
+        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center" appCardHover>
           <app-skeleton-block variant="circle" width="64px" height="64px" />
           <app-skeleton-block variant="text" width="70%" height="24px" />
           <app-skeleton-block variant="text" width="90%" height="16px" />
@@ -35,11 +36,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 
       <!-- ── Abandono / timeout ── -->
       @if (!isConfirming() && wasAbandoned()) {
-        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center bg-warning-subtle"
-            
-          >
+        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center" appCardHover>
+          <div class="w-16 h-16 rounded-full flex items-center justify-center bg-warning-subtle">
             <app-icon name="clock" [size]="32" class="text-warning" />
           </div>
           <div>
@@ -65,11 +63,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 
       <!-- ── Rechazado ── -->
       @if (!isConfirming() && result()?.rejected) {
-        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center bg-error-subtle"
-            
-          >
+        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center" appCardHover>
+          <div class="w-16 h-16 rounded-full flex items-center justify-center bg-error-subtle">
             <app-icon name="x-circle" [size]="32" class="text-error" />
           </div>
           <div>
@@ -93,11 +88,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 
       <!-- ── Error técnico ── -->
       @if (!isConfirming() && !wasAbandoned() && !result()?.rejected && result()?.error) {
-        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center bg-error-subtle"
-            
-          >
+        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center" appCardHover>
+          <div class="w-16 h-16 rounded-full flex items-center justify-center bg-error-subtle">
             <app-icon name="alert-circle" [size]="32" class="text-error" />
           </div>
           <div>
@@ -116,11 +108,8 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 
       <!-- ── Éxito ── -->
       @if (!isConfirming() && result()?.success && !result()?.error) {
-        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center">
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center bg-success-subtle"
-            
-          >
+        <div class="card p-8 w-full flex flex-col items-center gap-4 text-center" appCardHover>
+          <div class="w-16 h-16 rounded-full flex items-center justify-center bg-success-subtle">
             <app-icon name="check-circle" [size]="32" class="text-success" />
           </div>
           <div>
@@ -141,9 +130,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
                 </p>
               }
               @if ((r.pendingBalance ?? 0) === 0) {
-                <p class="text-xs mt-2 text-success" >
-                  Tu matrícula está completamente pagada.
-                </p>
+                <p class="text-xs mt-2 text-success">Tu matrícula está completamente pagada.</p>
               }
             }
           </div>

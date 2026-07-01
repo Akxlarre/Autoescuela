@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { ReportesContablesFacade } from '@core/facades/reportes-contables.facade';
@@ -24,6 +25,7 @@ import {
     ReactiveFormsModule,
     IconComponent,
     SelectModule,
+    DateInputComponent,
     DrawerContentLoaderComponent,
     SkeletonBlockComponent,
   ],
@@ -115,17 +117,11 @@ import {
 
             <!-- Fecha -->
             <div class="flex flex-col gap-1.5">
-              <label
-                class="text-xs font-semibold uppercase tracking-wider"
-                style="color: var(--text-muted)"
-              >
-                Fecha *
-              </label>
-              <input
-                type="date"
-                formControlName="date"
-                class="h-10 px-3 rounded-xl text-sm outline-none transition-all"
-                style="background: var(--bg-subtle); border: 1px solid var(--border-muted); color: var(--text-primary)"
+              <app-date-input
+                label="Fecha"
+                [required]="true"
+                [value]="form.get('date')?.value ?? ''"
+                (valueChange)="form.get('date')?.setValue($event); form.get('date')?.markAsTouched()"
                 data-llm-description="fecha en que ocurrió o se registra el gasto fijo"
               />
               @if (form.get('date')?.invalid && form.get('date')?.touched) {
