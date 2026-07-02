@@ -51,7 +51,7 @@ const ADMIN_NAV: NavGroup[] = [
     group: 'Operaciones Diarias',
     items: [
       { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/admin/dashboard' },
-      { label: 'Comunicación', icon: 'message-circle', routerLink: '/app/admin/tareas' },
+      { label: 'Coordinación', icon: 'message-circle', routerLink: '/app/admin/tareas' },
       { label: 'Nueva Matrícula', icon: 'file-plus', routerLink: '/app/admin/matricula' },
     ],
   },
@@ -175,9 +175,14 @@ const SECRETARIA_NAV: NavGroup[] = [
     items: [
       { label: 'Inicio', icon: 'layout-dashboard', routerLink: '/app/secretaria/dashboard' },
       {
-        label: 'Comunicación',
+        label: 'Observaciones',
         icon: 'message-circle',
         routerLink: '/app/secretaria/observaciones',
+      },
+      {
+        label: 'Comunicación Externa',
+        icon: 'mail',
+        routerLink: '/app/secretaria/comunicaciones',
       },
       { label: 'Nueva Matrícula', icon: 'file-plus', routerLink: '/app/secretaria/matricula' },
     ],
@@ -275,11 +280,6 @@ const SECRETARIA_NAV: NavGroup[] = [
         icon: 'banknote',
         routerLink: '/app/secretaria/contabilidad/liquidaciones',
       },
-      {
-        label: 'Comunicaciones',
-        icon: 'message-circle',
-        routerLink: '/app/secretaria/comunicaciones',
-      },
     ],
   },
   {
@@ -309,7 +309,7 @@ const INSTRUCTOR_NAV: NavGroup[] = [
         routerLink: '/app/instructor/ensayos-teoricos',
       },
       { label: 'Mis Horas', icon: 'dollar-sign', routerLink: '/app/instructor/liquidacion' },
-      { label: 'Comunicación', icon: 'message-circle', routerLink: '/app/instructor/tareas' },
+      { label: 'Tareas Recibidas', icon: 'message-circle', routerLink: '/app/instructor/tareas' },
     ],
   },
 ];

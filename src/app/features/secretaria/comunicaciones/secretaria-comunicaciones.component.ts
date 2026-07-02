@@ -14,7 +14,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
         density="slim"
         [animateOnInit]="false"
         [loading]="false"
-        title="Comunicaciones"
+        title="Comunicación Externa"
         subtitle="Mensajería y avisos para alumnos e instructores"
         [actions]="[]"
       />
@@ -23,7 +23,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
         class="bento-banner card flex flex-col items-center justify-center gap-4 py-16 text-center"
       >
         <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-subtle">
-          <app-icon name="message-square" [size]="28" color="var(--text-muted)" />
+          <app-icon name="mail" [size]="28" color="var(--text-muted)" />
         </div>
         <div class="space-y-1">
           <p class="font-semibold text-primary">Próximamente</p>

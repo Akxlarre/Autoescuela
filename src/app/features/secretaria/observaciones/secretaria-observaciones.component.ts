@@ -41,7 +41,7 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
       <!-- Hero -->
       <app-section-hero
         class="bento-hero"
-        title="Comunicación"
+        title="Observaciones"
         contextLine="Comunicación operativa con el equipo"
         icon="message-circle"
         [actions]="heroActions"
@@ -98,7 +98,6 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
               @if (tab.count() > 0) {
                 <span
                   class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
-                  
                 >
                   {{ tab.count() }}
                 </span>
@@ -132,7 +131,8 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
 export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
   private readonly authFacade = inject(AuthFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);  private readonly destroyRef = inject(DestroyRef);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly activeTab = signal<ObsTab>('mis-obs');
 
   private readonly currentDbId = computed(() => this.authFacade.currentUser()?.dbId);
@@ -225,7 +225,7 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
-  ngAfterViewInit(): void {  }
+  ngAfterViewInit(): void {}
 
   protected onHeroAction(id: string): void {
     if (id === 'nueva-comunicacion') {

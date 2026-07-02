@@ -45,7 +45,7 @@ interface FilterTab {
       <!-- Hero (sin CTA — instructor es receptor puro en v1) -->
       <app-section-hero
         class="bento-hero"
-        title="Comunicación"
+        title="Tareas Recibidas"
         contextLine="Tareas y consultas asignadas por secretaría"
         icon="message-circle"
         [actions]="[]"
@@ -93,7 +93,6 @@ interface FilterTab {
               @if (tab.count() > 0) {
                 <span
                   class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
-                  
                 >
                   {{ tab.count() }}
                 </span>
@@ -126,7 +125,8 @@ interface FilterTab {
 })
 export class InstructorTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);  private readonly destroyRef = inject(DestroyRef);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly skeletons = [1, 2, 3];
 
   // ── filtro por tipo ──────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
-  ngAfterViewInit(): void {  }
+  ngAfterViewInit(): void {}
 
   protected openDetail(taskId: string): void {
     this.facade.selectTask(taskId);
