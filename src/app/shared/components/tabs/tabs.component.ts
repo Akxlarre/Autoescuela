@@ -28,9 +28,10 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
         @for (tab of tabs(); track tab.id) {
           <button
             role="tab"
-            class="flex-1 min-w-[120px] px-4 py-3.5 text-sm font-medium transition-colors border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
+            class="flex-1 min-w-[120px] px-4 py-3.5 text-sm font-medium transition-all duration-300 border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
             [class.border-brand]="activeId() === tab.id"
             [class.border-transparent]="activeId() !== tab.id"
+            [class.tab-line-active]="activeId() === tab.id"
             [style.color]="activeId() === tab.id ? 'var(--ds-brand, var(--text-primary))' : 'var(--text-muted)'"
             [style.border-color]="activeId() === tab.id ? 'var(--ds-brand, var(--color-brand))' : 'transparent'"
             [attr.aria-selected]="activeId() === tab.id"
@@ -130,6 +131,13 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
     }
     .custom-scrollbar-hidden::-webkit-scrollbar {
       display: none;
+    }
+    .tab-line-active {
+      background: radial-gradient(
+        50% 20px at bottom center, 
+        color-mix(in srgb, var(--ds-brand, #0ea5e9) 15%, transparent) 0%, 
+        transparent 100%
+      ) no-repeat bottom center;
     }
   `]
 })

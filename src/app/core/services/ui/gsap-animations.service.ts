@@ -922,7 +922,6 @@ export class GsapAnimationsService {
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          borderLeft: '1px solid var(--border-subtle)',
         });
         if (panelEl) gsap.set(panelEl, { clearProps: 'x' }); // limpiar posible estado móvil
         return;
@@ -932,7 +931,6 @@ export class GsapAnimationsService {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        borderLeft: '1px solid var(--border-subtle)',
         overflow: 'hidden',
       });
       if (panelEl) gsap.set(panelEl, { clearProps: 'x' });

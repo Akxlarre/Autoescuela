@@ -98,6 +98,7 @@ import { to24hTime } from '@core/utils/date.utils';
         density="slim"
         [kpis]="heroKpis()"
         [loading]="loading()"
+        [loadingKpiCount]="4"
         (actionClick)="handleQuickAction($event)"
       />
 
@@ -113,7 +114,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Arriba: Actividad reciente ─── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full"
+        class="bento-wide bento-card flex flex-col w-full h-[280px]"
         appCardHover
       >
         <!-- Header de sección -->
@@ -134,15 +135,17 @@ import { to24hTime } from '@core/utils/date.utils';
         <!-- Lista de actividad con stagger -->
         @if (loading()) {
           <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-            @for (i of [1, 2, 3, 4]; track i) {
+            @for (i of [1, 2, 3]; track i) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
               >
                 <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
-                  <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
-                  <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
+                <div class="flex-1 min-w-0 flex flex-col gap-1">
+                  <div class="h-4 bg-border-subtle rounded w-2/3"></div>
+                  <div class="h-3 bg-border-subtle rounded w-1/3"></div>
                 </div>
+                <!-- Timestamp placeholder -->
+                <div class="shrink-0 w-24 h-3 bg-border-subtle rounded self-center"></div>
               </li>
             }
           </ul>
@@ -151,7 +154,7 @@ import { to24hTime } from '@core/utils/date.utils';
             #activityList
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (item of activities().slice(0, 4); track item.id; let i = $index) {
+            @for (item of activities().slice(0, 3); track item.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
               >
@@ -200,7 +203,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Abajo: Alertas Importantes ───── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full"
+        class="bento-wide bento-card flex flex-col w-full h-[280px]"
         appCardHover
       >
         <!-- Header de sección -->
@@ -220,15 +223,17 @@ import { to24hTime } from '@core/utils/date.utils';
 
         @if (loading()) {
           <ul class="m-0 p-0 list-none flex flex-col gap-1 overflow-hidden">
-            @for (i of [1, 2, 3]; track i) {
+            @for (i of [1, 2]; track i) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle animate-pulse"
               >
                 <div class="shrink-0 w-8 h-8 rounded-full bg-border-subtle"></div>
-                <div class="flex-1 min-w-0 flex flex-col gap-2 py-1">
-                  <div class="h-3.5 bg-border-subtle rounded w-2/3"></div>
-                  <div class="h-2.5 bg-border-subtle rounded w-1/3"></div>
+                <div class="flex-1 min-w-0 flex flex-col gap-1">
+                  <div class="h-4 bg-border-subtle rounded w-2/3"></div>
+                  <div class="h-3 bg-border-subtle rounded w-1/3"></div>
                 </div>
+                <!-- Botón descartar placeholder -->
+                <div class="shrink-0 w-6 h-6 rounded-full bg-border-subtle self-center"></div>
               </li>
             }
           </ul>
@@ -236,7 +241,7 @@ import { to24hTime } from '@core/utils/date.utils';
           <ul
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (alert of alerts().slice(0, 3); track alert.id; let i = $index) {
+            @for (alert of alerts().slice(0, 2); track alert.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
               >

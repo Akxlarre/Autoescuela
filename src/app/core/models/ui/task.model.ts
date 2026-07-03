@@ -2,6 +2,7 @@ import type { Task as TaskDto, TaskStatus, TaskType } from '@core/models/dto/tas
 import type { TaskReply } from '@core/models/dto/task-reply.model';
 
 export type { TaskType, TaskStatus } from '@core/models/dto/task.model';
+export type { TaskReply } from '@core/models/dto/task-reply.model';
 
 export interface TaskRow extends TaskDto {
   senderName: string;

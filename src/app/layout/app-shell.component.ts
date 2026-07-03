@@ -153,7 +153,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
     }
 
     <div
-      class="shell-container flex sm:grid h-dvh w-full max-w-[100vw] overflow-hidden bg-base sm:grid-cols-1 lg:grid-cols-[auto_1fr]"
+      class="shell-container flex sm:grid h-dvh w-full max-w-[100vw] overflow-hidden bg-surface sm:grid-cols-1 lg:grid-cols-[auto_1fr]"
     >
       <!-- Sidebar -->
       <app-sidebar
@@ -164,21 +164,23 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
 
       <!-- Main Column: topbar + (content area + drawer) -->
       <div
-        class="flex flex-col flex-1 w-full max-w-[100vw] lg:max-w-none min-w-0 bg-(--bg-canvas) overflow-hidden"
+        class="flex flex-col flex-1 w-full max-w-[100vw] lg:max-w-none min-w-0 bg-surface overflow-hidden"
       >
         <!-- Topbar spans full width of the main column -->
         <app-topbar />
 
         <!-- Shifting container for main content and drawer -->
-        <div class="flex flex-1 min-w-0 w-full overflow-hidden relative">
+        <div class="flex flex-1 min-w-0 w-full overflow-hidden relative bg-surface gap-2 lg:pr-2">
           <main
             #mainContent
-            class="shell-content flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 w-full max-w-full"
-            style="container-type: inline-size; container-name: layoutmain; scrollbar-gutter: stable;"
+            class="flex-1 flex flex-col overflow-hidden w-full max-w-full bg-base lg:rounded-t-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle focus:outline-none"
+            style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"
           >
-            <router-outlet (activate)="onRouteActivate()" />
+            <div class="shell-content flex-1 overflow-y-auto overflow-x-hidden mt-3 mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pl-6 lg:pr-4 pb-4 lg:pb-4" style="scrollbar-gutter: stable;">
+              <router-outlet (activate)="onRouteActivate()" />
+            </div>
           </main>
 
           <!-- Layout-shifting Drawer -->

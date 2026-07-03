@@ -259,7 +259,8 @@ import type { BranchOption } from '@core/models/ui/branch.model';
       }
 
       .branch-trigger__dot--all {
-        background: var(--text-muted);
+        background: var(--state-success);
+        box-shadow: 0 0 0 3px var(--state-success-border);
       }
 
       /* ── Label: oculto en mobile, visible en desktop ── */
@@ -373,6 +374,11 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 
       .branch-panel__item-dot--all {
         background: var(--text-muted);
+      }
+
+      .branch-panel__item--selected .branch-panel__item-dot--all {
+        background: var(--state-success);
+        box-shadow: 0 0 0 3px var(--state-success-border);
       }
 
       .branch-panel__item-label {

@@ -348,12 +348,12 @@ import type {
             </div>
             <app-skeleton-block variant="rect" width="96px" height="32px" />
           </div>
-          @if (kpis().length) {
+          @if (kpis().length || loadingKpiCount() > 0) {
             <div
               class="border-t border-border-subtle grid"
               style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr))"
             >
-              @for (k of kpis(); track k.id) {
+              @for (i of skeletonKpis(); track i) {
                 <div
                   class="px-4 py-2.5 border-r border-border-subtle last:border-r-0 flex flex-col gap-1.5"
                 >
@@ -941,6 +941,12 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   readonly density = input<'full' | 'slim'>('full');
   readonly kpis = input<SectionHeroKpi[]>([]);
   readonly loading = input<boolean>(false);
+  readonly loadingKpiCount = input<number>(0);
+
+  protected readonly skeletonKpis = computed(() => {
+    const count = this.kpis().length || this.loadingKpiCount();
+    return Array.from({ length: count }, (_, i) => i);
+  });
 
   private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
   private readonly slimRef = viewChild<ElementRef<HTMLElement>>('slimRef');

@@ -458,7 +458,7 @@ export class InstructorClaseDetailComponent implements OnInit {
         {
           id: 'back_to_eval',
           label: 'Editar Evaluación',
-          icon: 'pen-to-square',
+          icon: 'square-pen',
           primary: false,
         },
       ];

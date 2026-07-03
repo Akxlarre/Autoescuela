@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, input, output, ElementRef, viewChild, effect } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  input,
+  output,
+  ElementRef,
+  viewChild,
+  effect,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
 import { IconComponent } from '../icon/icon.component';
@@ -35,7 +43,9 @@ import { TooltipModule } from 'primeng/tooltip';
     @if (loading()) {
       <ul class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-hidden pr-2">
         @for (i of [1, 2, 3, 4, 5]; track i) {
-          <li class="flex items-center justify-between p-3 rounded-xl bg-surface border border-transparent">
+          <li
+            class="flex items-center justify-between p-3 rounded-xl bg-surface border border-transparent"
+          >
             <!-- Lado Izquierdo Skeleton -->
             <div class="flex items-center gap-4">
               <div class="flex flex-col gap-1.5 w-14 shrink-0">
@@ -44,8 +54,18 @@ import { TooltipModule } from 'primeng/tooltip';
               </div>
               <div class="flex items-center gap-3">
                 <div class="flex -space-x-2 shrink-0">
-                  <app-skeleton-block variant="circle" width="32px" height="32px" class="relative z-10 border-2 border-surface" />
-                  <app-skeleton-block variant="circle" width="32px" height="32px" class="relative z-0 border-2 border-surface" />
+                  <app-skeleton-block
+                    variant="circle"
+                    width="32px"
+                    height="32px"
+                    class="relative z-10 border-2 border-surface"
+                  />
+                  <app-skeleton-block
+                    variant="circle"
+                    width="32px"
+                    height="32px"
+                    class="relative z-0 border-2 border-surface"
+                  />
                 </div>
                 <div class="flex flex-col gap-1.5">
                   <app-skeleton-block variant="text" width="80px" height="14px" />
@@ -55,16 +75,18 @@ import { TooltipModule } from 'primeng/tooltip';
             </div>
             <!-- Lado Derecho Skeleton -->
             <div class="flex items-center gap-4 shrink-0">
-               <div class="hidden sm:flex flex-col items-end">
-                 <app-skeleton-block variant="text" width="50px" height="12px" />
-               </div>
+              <div class="hidden sm:flex flex-col items-end">
+                <app-skeleton-block variant="text" width="50px" height="12px" />
+              </div>
               <app-skeleton-block variant="circle" width="32px" height="32px" />
             </div>
           </li>
         }
       </ul>
     } @else if (classes().length === 0) {
-      <div class="border border-border-subtle rounded-xl bg-surface-hover mb-6 flex-1 flex flex-col justify-center">
+      <div
+        class="border border-border-subtle rounded-xl bg-surface-hover flex-1 flex flex-col justify-center"
+      >
         <app-empty-state
           icon="clock"
           message="Sin clases actuales"
@@ -73,7 +95,10 @@ import { TooltipModule } from 'primeng/tooltip';
       </div>
     } @else {
       <!-- Contenedor vertical scrollable -->
-      <ul #scrollContainer class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 relative">
+      <ul
+        #scrollContainer
+        class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 relative"
+      >
         @for (cls of classes(); track cls.id; let i = $index) {
           <li
             [attr.data-status]="cls.status"
@@ -86,33 +111,48 @@ import { TooltipModule } from 'primeng/tooltip';
             <div class="flex items-center gap-4 min-w-0">
               <!-- Hora y Estado -->
               <div class="flex flex-col shrink-0 w-14">
-                <span class="text-base font-bold text-text-primary leading-none">{{ formatTime(cls.scheduledAt) }}</span>
-                <span class="text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300" [ngClass]="{
-                  'text-warning group-hover:text-warning': cls.status === 'pending',
-                  'text-success group-hover:text-success': cls.status === 'in_progress',
-                  'text-text-muted': cls.status === 'completed'
-                }">
+                <span class="text-base font-bold text-text-primary leading-none">{{
+                  formatTime(cls.scheduledAt)
+                }}</span>
+                <span
+                  class="text-[9px] font-bold uppercase tracking-widest mt-1 transition-colors duration-300"
+                  [class.text-warning]="cls.status === 'pending'"
+                  [class.text-success]="cls.status === 'in_progress'"
+                  [class.text-text-muted]="cls.status === 'completed'"
+                >
                   {{ statusLabel(cls.status) }}
                 </span>
               </div>
 
               <!-- Participantes (Avatares solapados) -->
               <div class="flex items-center gap-3 min-w-0">
-                <div class="flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1">
+                <div
+                  class="flex -space-x-2 shrink-0 transition-transform duration-300 group-hover:translate-x-1"
+                >
                   <!-- Alumno Avatar -->
-                  <div class="w-8 h-8 rounded-full bg-brand-muted text-brand border-2 border-surface flex items-center justify-center text-xs font-bold z-10 transition-colors duration-300"
-                       [pTooltip]="'Alumno: ' + cls.studentName" tooltipPosition="top">
+                  <div
+                    class="w-8 h-8 rounded-full bg-brand-muted text-brand border-2 border-surface flex items-center justify-center text-xs font-bold z-10 transition-colors duration-300"
+                    [pTooltip]="'Alumno: ' + cls.studentName"
+                    tooltipPosition="top"
+                  >
                     {{ cls.studentName.charAt(0) }}
                   </div>
                   <!-- Instructor Avatar -->
-                  <div class="w-8 h-8 rounded-full bg-subtle text-text-secondary border-2 border-surface flex items-center justify-center z-0 transition-colors duration-300"
-                       [pTooltip]="'Instructor: ' + cls.instructorName" tooltipPosition="top">
+                  <div
+                    class="w-8 h-8 rounded-full bg-subtle text-text-secondary border-2 border-surface flex items-center justify-center z-0 transition-colors duration-300"
+                    [pTooltip]="'Instructor: ' + cls.instructorName"
+                    tooltipPosition="top"
+                  >
                     <app-icon name="user" [size]="14" />
                   </div>
                 </div>
-                
-                <div class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1">
-                  <span class="text-sm font-semibold text-text-primary truncate">{{ cls.studentName.split(' ')[0] }}</span>
+
+                <div
+                  class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1"
+                >
+                  <span class="text-sm font-semibold text-text-primary truncate">{{
+                    cls.studentName.split(' ')[0]
+                  }}</span>
                   <span class="text-[10px] text-text-muted truncate uppercase tracking-wider">
                     {{ cls.type === 'practical' ? cls.vehicle || 'Sin auto' : 'Teórica' }}
                   </span>
@@ -122,24 +162,30 @@ import { TooltipModule } from 'primeng/tooltip';
 
             <!-- Lado Derecho: Tiempo Relativo y Acción -->
             <div class="flex items-center gap-4 shrink-0">
-               <div class="hidden sm:flex flex-col text-right">
-                 <span class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1" [ngClass]="{
-                  'text-warning': cls.status === 'pending',
-                  'text-success': cls.status === 'in_progress',
-                  'text-text-muted': cls.status === 'completed'
-                 }">
-                   {{ getRelativeTime(cls.scheduledAt, cls.status) }}
-                 </span>
-               </div>
+              <div class="hidden sm:flex flex-col text-right">
+                <span
+                  class="text-xs font-bold transition-transform duration-300 group-hover:-translate-x-1"
+                  [class.text-warning]="cls.status === 'pending'"
+                  [class.text-success]="cls.status === 'in_progress'"
+                  [class.text-text-muted]="cls.status === 'completed'"
+                >
+                  {{ getRelativeTime(cls.scheduledAt, cls.status) }}
+                </span>
+              </div>
 
-              <div class="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm hover-icon-container"
-                   [ngClass]="{
-                     'bg-brand text-brand-contrast': cls.status === 'in_progress',
-                     'bg-surface-hover text-brand': cls.status === 'pending',
-                     'bg-subtle text-text-muted': cls.status === 'completed'
-                   }">
-                <app-icon [name]="cls.status === 'completed' ? 'chevron-right' : 'play'" [size]="14"
-                          [class.animate-pulse]="cls.status === 'in_progress'" />
+              <div
+                class="flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:shadow-sm hover-icon-container"
+                [class.bg-brand]="cls.status === 'in_progress'"
+                [class.text-brand-text]="cls.status === 'in_progress'"
+                [class.bg-subtle]="cls.status === 'pending' || cls.status === 'completed'"
+                [class.text-brand]="cls.status === 'pending'"
+                [class.text-text-muted]="cls.status === 'completed'"
+              >
+                <app-icon
+                  [name]="cls.status === 'completed' ? 'chevron-right' : 'play'"
+                  [size]="14"
+                  [class.animate-pulse]="cls.status === 'in_progress'"
+                />
               </div>
             </div>
           </li>
@@ -147,31 +193,33 @@ import { TooltipModule } from 'primeng/tooltip';
       </ul>
     }
   `,
-  styles: [`
-    .hover-icon-container {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    
-    /* Scrollbar minimalista para listas */
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background-color: var(--border-subtle);
-      border-radius: 4px;
-    }
-    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-      background-color: var(--text-muted);
-    }
-    
-    /* Forzar color blanco en el icono cuando la fila (group) está en hover */
-    .group:hover .hover-icon-container {
-      color: #ffffff !important;
-    }
-  `]
+  styles: [
+    `
+      .hover-icon-container {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      /* Scrollbar minimalista para listas */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background-color: var(--border-subtle);
+        border-radius: 4px;
+      }
+      .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background-color: var(--text-muted);
+      }
+
+      /* Forzar color blanco en el icono cuando la fila (group) está en hover */
+      .group:hover .hover-icon-container {
+        color: #ffffff !important;
+      }
+    `,
+  ],
 })
 export class LiveClassesPanelComponent {
   readonly classes = input<LiveClassModel[]>([]);
@@ -185,7 +233,9 @@ export class LiveClassesPanelComponent {
       const container = this.scrollContainer()?.nativeElement;
       if (classList.length > 0 && container) {
         // Encontrar la primera clase en curso o pendiente para centrarla
-        const targetIndex = classList.findIndex(c => c.status === 'in_progress' || c.status === 'pending');
+        const targetIndex = classList.findIndex(
+          (c) => c.status === 'in_progress' || c.status === 'pending',
+        );
         if (targetIndex !== -1) {
           // Esperamos a que Angular renderice los items
           setTimeout(() => {
@@ -196,12 +246,12 @@ export class LiveClassesPanelComponent {
               const containerHeight = container.clientHeight;
               const elementOffset = targetEl.offsetTop;
               const elementHeight = targetEl.clientHeight;
-              
-              const scrollTo = elementOffset - (containerHeight / 2) + (elementHeight / 2);
-              
+
+              const scrollTo = elementOffset - containerHeight / 2 + elementHeight / 2;
+
               container.scrollTo({
                 top: scrollTo,
-                behavior: 'smooth'
+                behavior: 'smooth',
               });
             }
           }, 100);
