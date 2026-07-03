@@ -27,11 +27,40 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
+import { parseThemeTokens, findDeadTokenClasses } from './lib/theme-tokens.js';
+import { kebabToPascal, collectUsedIcons, parseRegisteredIcons } from './lib/icon-registry.js';
 
 // TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
+
+// ── ARCH-11 v2: whitelist derivada del @theme (spec 0019) ────────────────────
+// --strict trata las clases muertas como error; por defecto son warning
+// (rollout AC5: el backlog pre-existente se migra en fix-030).
+const STRICT = process.argv.includes('--strict');
+let THEME = null;
+try {
+    THEME = parseThemeTokens(path.join(process.cwd(), 'src', 'tailwind.css'));
+} catch (e) {
+    console.warn('\x1b[33m%s\x1b[0m', `⚠️  ARCH-11 deshabilitado: ${String(e?.message || e)}`);
+}
+let deadTokenTotal = 0;
+
+function reportDeadTokenClasses(filePath, content) {
+    if (!THEME) return;
+    const dead = findDeadTokenClasses(content, THEME);
+    if (dead.length === 0) return;
+    deadTokenTotal += dead.length;
+    const detail = dead
+        .map(d => d.suggestion ? `${d.cls} → ${d.suggestion}` : d.cls)
+        .join(', ');
+    const report = STRICT ? reportError : reportWarning;
+    report(
+        'ARCH-11', filePath,
+        `Clases de token muertas (no existen en @theme, no generan CSS): ${detail}`,
+    );
+}
 
 // ─── Colores de consola ───────────────────────────────────────────────────────
 const red    = '\x1b[31m%s\x1b[0m';
@@ -106,11 +135,76 @@ const RULES = {
         fix: 'Extrae lógica a helpers/servicios y reduce inject() y métodos largos. Mantén la Facade como orquestador.',
     },
       'ARCH-11': {
-        name: 'Clases de token no canónicas (no generan CSS)',
-        doc: 'indices/ANTI-PATTERNS.md (AP-011)',
-        fix: 'Usa clases del @theme: bg-{base,surface,elevated,subtle}, text/bg/border-{success,warning,error,info}(-subtle|-border), border-border-subtle. NO uses bg-bg-*, *-state-*, bg-surface-{elevated,hover,base}, *-divider.',
+        name: 'Clases de token muertas (whitelist derivada del @theme)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-011) + specs/0019',
+        fix: 'Usa solo clases cuyo token exista en el @theme de src/tailwind.css (la sugerencia → indica la forma canónica). Backlog pre-existente = warning; corre con --strict para tratarlas como error.',
+    },
+    'ARCH-12': {
+        name: 'No DTO imports in components',
+        doc: '.claude/rules/models.md (tabla de capas)',
+        fix: 'Los componentes solo importan de core/models/ui/. Mapea el DTO a un modelo ui/ en la Facade, o re-exporta el tipo desde un modelo ui/ si el DTO ya sirve tal cual.',
+    },
+    'ARCH-13': {
+        name: 'No effect() inside facades',
+        doc: '.claude/rules/facades.md (§7 Reactividad)',
+        fix: 'La reactividad va en el Smart Component (constructor con effect()), no en la Facade (singleton que nunca se destruye e imposible de testear).',
+    },
+    'ARCH-14': {
+        name: 'Icono Lucide sin registrar (crash en runtime)',
+        doc: 'CLAUDE.md (Íconos Lucide) + specs/0020',
+        fix: 'Importa el ícono de lucide-angular y agrégalo al LucideAngularModule.pick({...}) de app.config.ts.',
     },
 };
+
+// ── ARCH-14: acumuladores de íconos usados durante el barrido (spec 0020) ────
+const iconUsage = new Map();       // kebab → Set<archivo>
+const iconDynamicFiles = new Set();
+
+function trackIconUsage(filePath, content) {
+    const { statics, ternaryLiterals, dynamicCount } = collectUsedIcons(content);
+    for (const name of [...statics, ...ternaryLiterals]) {
+        if (!iconUsage.has(name)) iconUsage.set(name, new Set());
+        iconUsage.get(name).add(path.relative(process.cwd(), filePath));
+    }
+    if (dynamicCount > 0) iconDynamicFiles.add(path.relative(process.cwd(), filePath));
+}
+
+/** Post-barrido: diff usados vs registrados en app.config.ts. */
+function checkIconRegistry() {
+    const appConfigPath = path.join(process.cwd(), 'src', 'app', 'app.config.ts');
+    if (!fs.existsSync(appConfigPath)) return;
+    let registered;
+    try {
+        registered = parseRegisteredIcons(fs.readFileSync(appConfigPath, 'utf-8'), ts);
+    } catch (e) {
+        console.warn(yellow, `⚠️  ARCH-14 deshabilitado: ${String(e?.message || e)}`);
+        return;
+    }
+    if (registered.size === 0) return;
+
+    const usedPascal = new Set();
+    for (const [kebab, files] of iconUsage) {
+        const pascal = kebabToPascal(kebab);
+        usedPascal.add(pascal);
+        if (!registered.has(pascal)) {
+            reportError(
+                'ARCH-14',
+                [...files][0],
+                `Ícono '${kebab}' usado pero '${pascal}' no está en pick() — usado en: ${[...files].join(', ')}`,
+            );
+        }
+    }
+
+    const orphans = [...registered].filter(p => !usedPascal.has(p)).sort();
+    if (orphans.length > 0) {
+        console.warn(yellow, `⚠️  ARCH-14 (info): ${orphans.length} ícono(s) registrados sin uso detectado (candidatos a limpiar del pick): ${orphans.join(', ')}`);
+        console.log('');
+    }
+    if (iconDynamicFiles.size > 0) {
+        console.log(`   ℹ ARCH-14: ${iconDynamicFiles.size} archivo(s) con [name] dinámico no verificable estáticamente.`);
+        console.log('');
+    }
+}
 
 const targetDirs = [
     path.join(process.cwd(), 'src', 'app', 'features'),
@@ -209,6 +303,14 @@ function analyzeTypeScript(filePath) {
                     'Importación de @angular/animations detectada',
                 );
             }
+
+            // Regla 12: los componentes nunca importan DTOs crudos (tabla de capas de models.md)
+            if (isComponent && /models\/dto\//.test(specifier)) {
+                reportError(
+                    'ARCH-12', filePath,
+                    `Componente importa DTO crudo: '${specifier}'`,
+                );
+            }
         }
     }
 
@@ -274,6 +376,14 @@ function analyzeTypeScript(filePath) {
         }
     }
 
+    // ── Regla 6 (inline): directivas deprecadas en templates inline de .ts ──
+    if (isComponent) {
+        const inlineTemplate = content.match(/template\s*:\s*`([\s\S]*?)`/);
+        if (inlineTemplate) {
+            checkDeprecatedDirectives(inlineTemplate[1], filePath, 'template inline');
+        }
+    }
+
     // ── Regla 8: Colores Tailwind hardcodeados en .ts ───────────────────────
     const hardcodedColorRe =
         /(?:text|bg|border|ring|from|to|via)-(?:red|blue|green|yellow|purple|pink|orange|teal|cyan|indigo|emerald|rose|amber|lime|sky|violet|fuchsia)-\d{2,3}/g;
@@ -301,12 +411,19 @@ function analyzeTypeScript(filePath) {
     }
 
     // ── ARCH-10 (WARNING): facades complejas ────────────────────────────────
+    // ── ARCH-13 (ERROR): effect() dentro de una facade ──────────────────────
     if (isFacade) {
         let injectCalls = 0;
         walkAst(sourceFile, node => {
             if (!ts.isCallExpression(node)) return;
             const callee = node.expression;
             if (ts.isIdentifier(callee) && callee.text === 'inject') injectCalls++;
+            if (ts.isIdentifier(callee) && callee.text === 'effect') {
+                reportError(
+                    'ARCH-13', filePath,
+                    'Llamada a effect() dentro de una Facade',
+                );
+            }
         });
 
         if (injectCalls > 5) {
@@ -332,24 +449,17 @@ function analyzeTypeScript(filePath) {
         });
     }
 
-    // ── Regla 11: Clases de token NO canónicas (no existen en @theme) ────────
-    const deadTokenClassRe =
-        /\b(?:bg-bg-(?:base|surface|elevated|subtle|overlay)|(?:text|bg|border)-state-(?:success|warning|error|info)|bg-surface-(?:elevated|hover|base)|(?:border|bg|divide)-divider)\b/g;
-    const deadTokenMatches = content.match(deadTokenClassRe);
-    if (deadTokenMatches) {
-        reportError(
-            'ARCH-11', filePath,
-            `Clases de token no canónicas (no generan CSS): ${[...new Set(deadTokenMatches)].join(', ')}`,
-        );
-    }
+    // ── Regla 11 v2: clases muertas contra whitelist derivada del @theme ─────
+    reportDeadTokenClasses(filePath, content);
+
+    // ── Regla 14: acumular íconos usados (template inline + configs icon:) ───
+    trackIconUsage(filePath, content);
 }
 
 // ─── Análisis de Templates HTML ─────────────────────────────────────────────
 
-function analyzeTemplate(filePath) {
-    const content = fs.readFileSync(filePath, 'utf-8');
-
-    // ── Regla 6: Directivas deprecadas ──────────────────────────────────────
+// ── Regla 6: Directivas deprecadas (compartido entre .html y templates inline) ──
+function checkDeprecatedDirectives(templateContent, filePath, origin) {
     const deprecatedDirectives = [
         { pattern: /\*ngIf/g, name: '*ngIf', replacement: '@if {}' },
         { pattern: /\*ngFor/g, name: '*ngFor', replacement: '@for {}' },
@@ -358,14 +468,20 @@ function analyzeTemplate(filePath) {
     ];
 
     for (const { pattern, name, replacement } of deprecatedDirectives) {
-        if (pattern.test(content)) {
+        if (pattern.test(templateContent)) {
             reportError(
                 'ARCH-06', filePath,
-                `Directiva deprecada ${name} detectada en template`,
+                `Directiva deprecada ${name} detectada en ${origin}`,
                 `Usa ${replacement}.`
             );
         }
     }
+}
+
+function analyzeTemplate(filePath) {
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    checkDeprecatedDirectives(content, filePath, 'template');
 
     // ── Regla 8: Colores Tailwind hardcodeados en .html ─────────────────────
     const hardcodedColorRe =
@@ -378,6 +494,12 @@ function analyzeTemplate(filePath) {
             'Usa tokens semánticos: text-text-primary, text-text-muted, bg-surface, bg-base.'
         );
     }
+
+    // ── Regla 11 v2: clases muertas también en templates externos ───────────
+    reportDeadTokenClasses(filePath, content);
+
+    // ── Regla 14: acumular íconos usados en templates externos ──────────────
+    trackIconUsage(filePath, content);
 }
 
 // ─── Análisis de Estilos SCSS ───────────────────────────────────────────────
@@ -446,7 +568,15 @@ for (const dir of targetDirs) {
     scanDirectory(dir);
 }
 
+// ── ARCH-14: diff íconos usados vs registrados (post-barrido) ────────────────
+checkIconRegistry();
+
 console.log('');
+
+if (deadTokenTotal > 0 && !STRICT) {
+    console.warn(yellow, `⚠️  ARCH-11: ${deadTokenTotal} clase(s) muerta(s) pre-existentes (backlog fix-030). Corre 'npm run lint:arch -- --strict' para tratarlas como error.`);
+    console.log('');
+}
 
 if (errors > 0) {
     console.error(red, `❌ Auditoría falló: ${errors} error(es), ${warnings} advertencia(s).`);

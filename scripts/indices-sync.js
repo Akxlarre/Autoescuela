@@ -20,6 +20,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
+import { parseMigrations, renderDatabaseMd } from './lib/sql-schema.js';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -364,6 +365,131 @@ function collectUtils(cache, prevResults) {
   return results;
 }
 
+function collectPipes(cache, prevResults) {
+  const results = [];
+  const prevMap = new Map((prevResults ?? []).map(r => [r.filePath, r]));
+  let skipped = 0;
+  // Barrido completo de src/app: los pipes viven en core/pipes/ y shared/pipes/,
+  // pero el sufijo .pipe.ts se busca en todo el árbol (AC-E3 de la spec 0018).
+  for (const filePath of walkDir(SRC_APP)) {
+    if (!filePath.endsWith('.pipe.ts') || filePath.endsWith('.spec.ts')) continue;
+    const relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+    try {
+      const { content, changed } = readIfChanged(filePath, cache);
+      if (!changed && prevMap.has(relPath)) { results.push(prevMap.get(relPath)); skipped++; continue; }
+      const src = content ?? fs.readFileSync(filePath, 'utf-8');
+      const classMatch = src.match(/export\s+class\s+(\w+)/);
+      const className = classMatch?.[1] ?? path.basename(filePath, '.pipe.ts');
+      const nameMatch = src.match(/name\s*:\s*['"]([^'"]+)['"]/);
+      const pipeName = nameMatch?.[1] ?? null;
+      const pure = !/pure\s*:\s*false/.test(src);
+      results.push({ pipeName, className, pure, filePath: relPath });
+    } catch { /* skip */ }
+  }
+  if (skipped > 0) process.stdout.write(dim(` (${skipped} cached)`));
+  return results;
+}
+
+/**
+ * DATABASE.md desde migraciones (spec 0022). Cache liviano: si el stamp
+ * `count:maxMtime` del directorio no cambió, reusa el markdown ya renderizado
+ * (string en cache — sin Maps, que no sobreviven JSON.stringify).
+ */
+function collectDatabase(cacheData) {
+  const migrationsDir = path.join(ROOT, 'supabase', 'migrations');
+  if (!fs.existsSync(migrationsDir)) return { markdown: null, stamp: null, stats: null };
+
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
+  const maxMtime = Math.max(...files.map(f => fs.statSync(path.join(migrationsDir, f)).mtimeMs), 0);
+  const stamp = `${files.length}:${maxMtime}`;
+
+  if (cacheData.dbStamp === stamp && cacheData.dbMarkdown) {
+    process.stdout.write(dim(' (cached)'));
+    return { markdown: cacheData.dbMarkdown, stamp, stats: cacheData.dbStats ?? null };
+  }
+
+  const state = parseMigrations(migrationsDir);
+  const markdown = renderDatabaseMd(state);
+  const stats = {
+    tables: state.tables.size,
+    views: state.views.size,
+    functions: state.functions.size,
+    warnings: state.warnings.length +
+      [...state.tables.values()].reduce((n, t) => n + t.parseWarnings.length, 0),
+  };
+  return { markdown, stamp, stats };
+}
+
+function collectRoutes() {
+  const results = [];
+
+  for (const routesFile of walkDir(SRC_APP)) {
+    if (!routesFile.endsWith('.routes.ts') || routesFile.endsWith('.spec.ts')) continue;
+    const relFile = path.relative(ROOT, routesFile).replace(/\\/g, '/');
+    let src;
+    try { src = fs.readFileSync(routesFile, 'utf-8'); } catch { continue; }
+    const sf = ts.createSourceFile(routesFile, src, ts.ScriptTarget.Latest, true);
+
+    const getProp = (obj, name) =>
+      obj.properties.find(p => ts.isPropertyAssignment(p) && p.name?.getText(sf) === name);
+
+    function processRoute(node, prefix) {
+      if (!ts.isObjectLiteralExpression(node)) return;
+
+      const pathProp = getProp(node, 'path');
+      const seg = pathProp && ts.isStringLiteral(pathProp.initializer) ? pathProp.initializer.text : '';
+      const fullPath = [prefix, seg].filter(Boolean).join('/');
+
+      let component = null;
+      let importPath = null;
+      const loadProp = getProp(node, 'loadComponent');
+      if (loadProp) {
+        const txt = loadProp.initializer.getText(sf);
+        component = txt.match(/=>\s*m\.(\w+)/)?.[1] ?? null;
+        importPath = txt.match(/import\(\s*['"]([^'"]+)['"]/)?.[1] ?? null;
+      }
+      const compProp = getProp(node, 'component');
+      if (compProp) component = compProp.initializer.getText(sf);
+
+      const guards = [];
+      for (const g of ['canActivate', 'canMatch', 'canDeactivate']) {
+        const p = getProp(node, g);
+        if (p && ts.isArrayLiteralExpression(p.initializer)) {
+          for (const el of p.initializer.elements) guards.push(el.getText(sf));
+        }
+      }
+
+      const redirectProp = getProp(node, 'redirectTo');
+      const redirectTo = redirectProp ? redirectProp.initializer.getText(sf).replace(/['"]/g, '') : null;
+
+      const childrenProp = getProp(node, 'children');
+      const childElements = childrenProp && ts.isArrayLiteralExpression(childrenProp.initializer)
+        ? childrenProp.initializer.elements
+        : [];
+
+      // Se registran hojas, componentes, redirects Y grupos con guards propios
+      // (ej: /app/admin con hasRoleGuard — sin esto, esos guards no aparecerían).
+      if (component || redirectTo || guards.length > 0 || childElements.length === 0) {
+        results.push({ path: '/' + fullPath, component, importPath, guards, redirectTo, file: relFile });
+      }
+      for (const el of childElements) processRoute(el, fullPath);
+    }
+
+    walkAst(sf, node => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        node.name.getText(sf) === 'routes' &&
+        node.initializer &&
+        ts.isArrayLiteralExpression(node.initializer)
+      ) {
+        for (const el of node.initializer.elements) processRoute(el, '');
+      }
+    });
+  }
+
+  return results;
+}
+
 function collectStyles() {
   const STYLES_DIR = path.join(ROOT, 'src', 'styles');
 
@@ -495,7 +621,7 @@ function collectStyles() {
   };
 }
 
-function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems, facadeNames) {
+function collectUsageMap(cache, prevResults, sharedComponents, directiveItems, facadeNames) {
   const results = {
     componentUsage:  {},
     directiveUsage:  {},
@@ -512,14 +638,19 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems, fa
     .map(d => ({ selector: d.selector, pattern: directiveSelectorToPattern(d.selector) }))
     .filter(d => d.pattern !== null);
 
-  const selectors = new Set(sharedSelectors);
+  const selectors = new Set(sharedComponents.map(c => c.selector).filter(Boolean));
   const directiveSelectorSet = new Set(directivesWithPatterns.map(d => d.selector));
   const facadeSet = new Set(facadeNames ?? []);
+  // Para excluir el self-match: el template de un componente no es su propio consumidor.
+  const selectorFile = new Map(
+    sharedComponents.filter(c => c.selector).map(c => [c.selector, c.filePath]),
+  );
 
-  // Scan features/ and layout/
+  // Scan features/, layout/ y shared/ (shared consume shared — spec 0021 AC-E1)
   const scanDirs = [
     { dir: path.join(SRC_APP, 'features'), isPage: true },
     { dir: path.join(SRC_APP, 'layout'),   isPage: false },
+    { dir: path.join(SRC_APP, 'shared'),   isPage: false },
   ];
 
   for (const { dir, isPage } of scanDirs) {
@@ -558,9 +689,10 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems, fa
 
         const templateContent = extractTemplateContent(src, filePath);
 
-        // Shared component usage
+        // Shared component usage (excluye self-match)
         const componentHits = [];
         for (const sel of selectors) {
+          if (selectorFile.get(sel) === relPath) continue;
           const tagRe = new RegExp(`<${sel}[\\s/>]`);
           if (tagRe.test(templateContent)) {
             (results.componentUsage[sel] ??= new Set()).add(consumer);
@@ -697,6 +829,29 @@ function generateUtilsTable(items) {
   const rows = items.map(u => {
     const exps = u.exports.map(e => `\`${e}\``).join(', ');
     return `| \`${u.filePath}\` | ${exps} |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generatePipesTable(items) {
+  if (items.length === 0) return '_Sin pipes auto-detectados aún._\n';
+  const header = '| Pipe | Clase | Pure | Archivo |\n|------|-------|------|---------|';
+  const rows = items.map(p => {
+    const name = p.pipeName ? `\`${p.pipeName}\`` : '—';
+    return `| ${name} | \`${p.className}\` | ${p.pure ? '✅' : '❌ impure'} | \`${p.filePath}\` |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateRoutesTable(items) {
+  if (items.length === 0) return '_Sin rutas auto-detectadas aún._\n';
+  const header = '| Path | Componente | Guards | Archivo de rutas |\n|------|-----------|--------|------------------|';
+  const rows = items.map(r => {
+    const comp = r.redirectTo
+      ? `→ redirect a \`${r.redirectTo}\``
+      : r.component ? `\`${r.component}\`` : '—';
+    const guards = r.guards.length > 0 ? r.guards.map(g => `\`${g}\``).join(', ') : '—';
+    return `| \`${r.path}\` | ${comp} | ${guards} | \`${r.file}\` |`;
   });
   return header + '\n' + rows.join('\n') + '\n';
 }
@@ -876,6 +1031,24 @@ function generateUsageMapContent(usageData) {
     lines.push('');
   }
 
+  // ── Artefactos sin consumidores (candidatos a revisión)
+  const orphans = usageData.orphans ?? { components: [], directives: [] };
+  if (orphans.components.length > 0 || orphans.directives.length > 0) {
+    lines.push('## Sin consumidores detectados (candidatos a revisión)\n');
+    lines.push('> ⚠️ Un componente enrutado directo (ver ROUTES.md, ya excluidos), instanciado dinámicamente');
+    lines.push('> (`ViewContainerRef`, overlays) o usado solo en specs puede aparecer aquí sin estar muerto.');
+    lines.push('> Verificar antes de eliminar.\n');
+    lines.push('| Artefacto | Tipo | Archivo |');
+    lines.push('|-----------|------|---------|');
+    for (const c of orphans.components) {
+      lines.push(`| \`${c.selector}\` | componente | \`${c.filePath}\` |`);
+    }
+    for (const d of orphans.directives) {
+      lines.push(`| \`${d.selector}\` | directiva | \`${d.filePath}\` |`);
+    }
+    lines.push('');
+  }
+
   return lines.length > 0 ? lines.join('\n') + '\n' : '_Sin consumidores detectados aún._\n';
 }
 
@@ -1031,6 +1204,20 @@ async function main() {
   );
   if (utilChanged) changes.push('UTILS.md');
 
+  // ── PIPES.md ───────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando src/app/**/*.pipe.ts...'));
+  const pipes  = collectPipes(cache, prev.pipes);
+  const pipeChanged = injectGenerated(
+    path.join(INDICES_DIR, 'PIPES.md'),
+    generatePipesTable(pipes),
+  );
+  process.stdout.write('\r');
+  console.log(pipeChanged
+    ? green(`  ✓ PIPES.md actualizado (${pipes.length} pipes detectados)`)
+    : dim(`  — PIPES.md sin cambios    (${pipes.length} pipes detectados)`),
+  );
+  if (pipeChanged) changes.push('PIPES.md');
+
   // ── STYLES.md ──────────────────────────────────────────────────────────────
   process.stdout.write(dim('  Escaneando styles/ + cross-ref en templates...'));
   const styles      = collectStyles();
@@ -1048,12 +1235,54 @@ async function main() {
   );
   if (styleChanged) changes.push('STYLES.md');
 
+  // ── DATABASE.md ────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Parseando supabase/migrations/*.sql...'));
+  const db = collectDatabase(cacheData);
+  let dbChanged = false;
+  if (db.markdown) {
+    dbChanged = injectGenerated(path.join(INDICES_DIR, 'DATABASE.md'), db.markdown);
+  }
+  process.stdout.write('\r');
+  if (db.stats) {
+    const warn = db.stats.warnings > 0 ? ` ⚠ ${db.stats.warnings} sentencias sin parsear` : '';
+    console.log(dbChanged
+      ? green(`  ✓ DATABASE.md actualizado (${db.stats.tables} tablas, ${db.stats.views} vistas, ${db.stats.functions} funciones${warn})`)
+      : dim(`  — DATABASE.md sin cambios    (${db.stats.tables} tablas, ${db.stats.views} vistas, ${db.stats.functions} funciones${warn})`),
+    );
+  }
+  if (dbChanged) changes.push('DATABASE.md');
+
+  // ── ROUTES.md ──────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando src/app/**/*.routes.ts...'));
+  const routes = collectRoutes();
+  const routesChanged = injectGenerated(
+    path.join(INDICES_DIR, 'ROUTES.md'),
+    generateRoutesTable(routes),
+  );
+  process.stdout.write('\r');
+  console.log(routesChanged
+    ? green(`  ✓ ROUTES.md actualizado (${routes.length} rutas detectadas)`)
+    : dim(`  — ROUTES.md sin cambios    (${routes.length} rutas detectadas)`),
+  );
+  if (routesChanged) changes.push('ROUTES.md');
+
   // ── USAGE-MAP.md ───────────────────────────────────────────────────────────
-  process.stdout.write(dim('  Escaneando features/ y layout/ (usage map + directivas)...'));
-  const sharedSelectors    = components.map(c => c.selector).filter(Boolean);
+  process.stdout.write(dim('  Escaneando features/, layout/ y shared/ (usage map + directivas)...'));
   const directiveSelectors = directives.filter(d => d.selector);
   const facadeNames = facades.map(f => f.className);
-  const usageMap  = collectUsageMap(cache, prev.usageMap, sharedSelectors, directiveSelectors, facadeNames);
+  const usageMap  = collectUsageMap(cache, prev.usageMap, components, directiveSelectors, facadeNames);
+
+  // Huérfanos: sin usage y (para componentes) sin ruta que los cargue directo
+  const routedFiles = new Set(
+    routes
+      .map(r => r.importPath)
+      .filter(Boolean)
+      .map(p => 'src/app/' + p.replace(/^\.\//, '') + '.ts'),
+  );
+  usageMap.orphans = {
+    components: components.filter(c => !usageMap.componentUsage[c.selector] && !routedFiles.has(c.filePath)),
+    directives: directives.filter(d => d.selector && !usageMap.directiveUsage[d.selector]),
+  };
   const usageChanged = injectGenerated(
     path.join(INDICES_DIR, 'USAGE-MAP.md'),
     generateUsageMapContent(usageMap),
@@ -1071,10 +1300,13 @@ async function main() {
   // Persist cache for next run
   saveCache({
     scriptMtime: selfMtime,
+    dbStamp: db.stamp,
+    dbMarkdown: db.markdown,
+    dbStats: db.stats,
     mtimes: cache,
     // styles se excluye a propósito: contiene Maps (se serializan como {} en JSON)
     // y collectStyles hace rescan completo en cada corrida, nunca lee resultados previos.
-    results: { components, services, facades, models, directives, guards, utils, usageMap },
+    results: { components, services, facades, models, directives, guards, utils, pipes, usageMap },
   });
 
   console.log('');

@@ -23,7 +23,7 @@ function ensureTempDir() {
 
 function runArchitect() {
   return new Promise((resolve) => {
-    const proc = spawn(process.execPath, [ARCHITECT_PATH], {
+    const proc = spawn(process.execPath, [ARCHITECT_PATH, ...process.argv.slice(2)], {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
     });
