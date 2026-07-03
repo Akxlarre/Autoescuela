@@ -11,6 +11,7 @@ import { TagModule } from 'primeng/tag';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -26,6 +27,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
     TagModule,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
     SectionHeroComponent,
     KpiCardVariantComponent,
     SkeletonBlockComponent,
@@ -85,7 +87,7 @@ import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.
           }
 
           <!-- Tabla de historial -->
-          <div class="card p-0 overflow-hidden">
+          <div class="card p-0 overflow-hidden" appCardHover>
             <div
               class="px-6 py-4 border-b border-border-subtle bg-subtle flex items-center justify-between"
             >

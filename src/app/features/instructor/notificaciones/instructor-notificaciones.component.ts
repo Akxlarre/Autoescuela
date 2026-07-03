@@ -14,13 +14,14 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-instructor-notificaciones',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, BentoGridLayoutDirective],
+  imports: [SectionHeroComponent, IconComponent, BentoGridLayoutDirective, CardHoverDirective],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
@@ -36,7 +37,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
       />
 
       <div class="bento-banner">
-        <div class="card p-0 overflow-hidden divide-y divide-border-subtle">
+        <div class="card p-0 overflow-hidden divide-y divide-border-subtle" appCardHover>
           @if (notifications().length === 0) {
             <div class="p-12 text-center">
               <app-icon
@@ -95,7 +96,8 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     </div>
   `,
 })
-export class InstructorNotificacionesComponent implements OnInit, AfterViewInit {  private notificationsFacade = inject(NotificationsFacade);
+export class InstructorNotificacionesComponent implements OnInit, AfterViewInit {
+  private notificationsFacade = inject(NotificationsFacade);
   private destroyRef = inject(DestroyRef);
   readonly heroActions: SectionHeroAction[] = [
     { id: 'mark-all-read', label: 'Marcar todas como leídas', icon: 'check-check', primary: true },
@@ -118,7 +120,7 @@ export class InstructorNotificacionesComponent implements OnInit, AfterViewInit 
     this.destroyRef.onDestroy(() => this.notificationsFacade.dispose());
   }
 
-  ngAfterViewInit() {  }
+  ngAfterViewInit() {}
 
   onHeroAction(id: string) {
     if (id === 'mark-all-read') this.markAllRead();

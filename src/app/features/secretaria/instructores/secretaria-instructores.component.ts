@@ -18,13 +18,20 @@ import { AdminInstructorEditarDrawerComponent } from '../../admin/instructores/a
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 type FilterTab = 'all' | 'active' | 'expiring';
 
 @Component({
   selector: 'app-secretaria-instructores',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, IconComponent, SkeletonBlockComponent, BentoGridLayoutDirective],
+  imports: [
+    SectionHeroComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    BentoGridLayoutDirective,
+    CardHoverDirective,
+  ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
@@ -72,7 +79,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       </div>
 
       <!-- ── Table ────────────────────────────────────────────────────────── -->
-      <div class="bento-banner card overflow-hidden">
+      <div class="bento-banner card overflow-hidden" appCardHover>
         <div class="overflow-x-auto">
           <table class="instructor-table">
             <thead>

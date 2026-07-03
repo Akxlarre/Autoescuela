@@ -121,8 +121,8 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
               <app-icon name="graduation-cap" [size]="28" color="var(--text-muted)" />
             </div>
             <div class="space-y-1">
-              <p class="font-semibold text-primary">Sin promociones activas</p>
-              <p class="text-sm text-muted max-w-xs">
+              <p class="font-semibold text-text-primary">Sin promociones activas</p>
+              <p class="text-sm text-text-muted max-w-xs">
                 No hay promociones en curso o planificadas. Crea una para comenzar el registro de
                 notas.
               </p>
@@ -144,8 +144,8 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
               <div class="flex items-center gap-3 min-w-0">
                 <app-icon name="graduation-cap" [size]="18" color="var(--ds-brand)" />
                 <div class="min-w-0">
-                  <h2 class="font-bold text-primary text-sm truncate">{{ promo.name }}</h2>
-                  <p class="text-xs text-muted">{{ promo.code }}</p>
+                  <h2 class="font-bold text-text-primary text-sm truncate">{{ promo.name }}</h2>
+                  <p class="text-xs text-text-muted">{{ promo.code }}</p>
                 </div>
               </div>
               <div class="flex items-center gap-3 shrink-0">
@@ -155,7 +155,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                 >
                   {{ promoStatusLabel(promo.status) }}
                 </span>
-                <span class="hidden sm:flex items-center gap-1 text-xs text-secondary">
+                <span class="hidden sm:flex items-center gap-1 text-xs text-text-secondary">
                   <app-icon name="users" [size]="12" />
                   {{ promo.totalAlumnos }}
                 </span>
@@ -193,7 +193,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                   </div>
 
                   <!-- Nombre del curso -->
-                  <p class="text-xs text-secondary line-clamp-2 leading-relaxed">
+                  <p class="text-xs text-text-secondary line-clamp-2 leading-relaxed">
                     {{ curso.courseName }}
                   </p>
 
@@ -207,7 +207,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                         [style.width.%]="pct"
                       ></div>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] text-muted">
+                    <div class="flex items-center justify-between text-[11px] text-text-muted">
                       <span>{{ curso.alumnosConNotas }}/{{ curso.totalAlumnos }} alumnos</span>
                       @if (curso.promedio !== null) {
                         <span
@@ -225,7 +225,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
 
                   <!-- Chevron de acción -->
                   <div
-                    class="flex items-center justify-end text-muted group-hover:text-brand transition-colors"
+                    class="flex items-center justify-end text-text-muted group-hover:text-brand transition-colors"
                   >
                     <app-icon name="chevron-right" [size]="14" />
                   </div>
@@ -234,7 +234,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
 
               @if (promo.cursos.length === 0) {
                 <div
-                  class="col-span-full p-8 flex flex-col items-center gap-2 text-center text-muted"
+                  class="col-span-full p-8 flex flex-col items-center gap-2 text-center text-text-muted"
                 >
                   <app-icon name="book-open" [size]="24" color="var(--text-muted)" />
                   <p class="text-sm">Esta promoción no tiene cursos asignados.</p>
@@ -313,7 +313,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
               <thead>
                 <tr>
                   <th
-                    class="col-alumno px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border"
+                    class="col-alumno px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-text-secondary border-b border-border"
                     style="min-width:220px"
                   >
                     Alumno
@@ -325,23 +325,23 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       [title]="name"
                     >
                       <span
-                        class="block text-[11px] font-bold uppercase tracking-wider text-secondary"
+                        class="block text-[11px] font-bold uppercase tracking-wider text-text-secondary"
                         >Mod {{ $index + 1 }}</span
                       >
                       <span
-                        class="block text-[10px] font-medium text-muted truncate max-w-24 mx-auto mt-0.5 normal-case"
+                        class="block text-[10px] font-medium text-text-muted truncate max-w-24 mx-auto mt-0.5 normal-case"
                         >{{ name }}</span
                       >
                     </th>
                   }
                   <th
-                    class="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border"
+                    class="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-text-secondary border-b border-border"
                     style="min-width:80px"
                   >
                     Progreso
                   </th>
                   <th
-                    class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-secondary border-b border-border"
+                    class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-text-secondary border-b border-border"
                     style="min-width:90px"
                   >
                     Promedio
@@ -355,13 +355,15 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                     <td class="col-alumno px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div
-                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
+                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-brand/10 text-text-primary"
                         >
                           {{ fila.initials }}
                         </div>
                         <div class="min-w-0">
-                          <p class="font-bold text-primary text-xs truncate">{{ fila.nombre }}</p>
-                          <p class="text-[11px] text-muted">{{ fila.rut }}</p>
+                          <p class="font-bold text-text-primary text-xs truncate">
+                            {{ fila.nombre }}
+                          </p>
+                          <p class="text-[11px] text-text-muted">{{ fila.rut }}</p>
                         </div>
                       </div>
                     </td>
@@ -407,7 +409,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       <span
                         class="text-[11px] font-semibold"
                         [class.text-success]="modulosCompletos(fila) === moduleCount"
-                        [class.text-muted]="modulosCompletos(fila) !== moduleCount"
+                        [class.text-text-muted]="modulosCompletos(fila) !== moduleCount"
                         >{{ modulosCompletos(fila) }}/{{ moduleCount }}</span
                       >
                     </td>
@@ -422,7 +424,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                           {{ fila.promedio }}
                         </span>
                       } @else {
-                        <span class="text-muted inline-block w-full text-center">—</span>
+                        <span class="text-text-muted inline-block w-full text-center">—</span>
                       }
                     </td>
                   </tr>
@@ -439,13 +441,13 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3 min-w-0">
                     <div
-                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-brand/10 text-text-primary"
                     >
                       {{ fila.initials }}
                     </div>
                     <div class="min-w-0">
-                      <p class="font-bold text-primary text-sm truncate">{{ fila.nombre }}</p>
-                      <p class="text-[11px] text-muted">{{ fila.rut }}</p>
+                      <p class="font-bold text-text-primary text-sm truncate">{{ fila.nombre }}</p>
+                      <p class="text-[11px] text-text-muted">{{ fila.rut }}</p>
                     </div>
                   </div>
                   @if (fila.promedio !== null) {
@@ -456,12 +458,12 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       {{ fila.promedio }}
                     </span>
                   } @else {
-                    <span class="text-muted text-xs shrink-0">Sin promedio</span>
+                    <span class="text-text-muted text-xs shrink-0">Sin promedio</span>
                   }
                 </div>
 
                 <!-- Progreso -->
-                <div class="flex items-center gap-2 text-[11px] text-muted">
+                <div class="flex items-center gap-2 text-[11px] text-text-muted">
                   <app-icon name="list-checks" [size]="13" />
                   <span
                     [class.text-success]="modulosCompletos(fila) === moduleCount"
@@ -477,8 +479,8 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       class="flex items-center justify-between gap-2 rounded-lg border border-border bg-elevated px-3 py-2"
                     >
                       <div class="min-w-0">
-                        <p class="text-[11px] font-bold text-secondary">Mod {{ m + 1 }}</p>
-                        <p class="text-[10px] text-muted truncate">{{ g.moduleNames[m] }}</p>
+                        <p class="text-[11px] font-bold text-text-secondary">Mod {{ m + 1 }}</p>
+                        <p class="text-[10px] text-text-muted truncate">{{ g.moduleNames[m] }}</p>
                       </div>
                       @if (g.confirmed) {
                         <span
@@ -520,7 +522,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
 
           <!-- ── Leyenda (separada de acciones) ── -->
           <div
-            class="px-4 py-3 bg-elevated border-t border-border flex items-center gap-4 text-xs font-medium text-secondary flex-wrap"
+            class="px-4 py-3 bg-elevated border-t border-border flex items-center gap-4 text-xs font-medium text-text-secondary flex-wrap"
           >
             <span class="flex items-center gap-1.5">
               <span class="h-2 w-2 rounded-full bg-success"></span> Aprobado (≥{{ gradePass }})
@@ -529,7 +531,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
               <span class="h-2 w-2 rounded-full bg-error"></span> Reprobado (&lt;{{ gradePass }})
             </span>
             @if (!g.confirmed) {
-              <span class="flex items-center gap-1.5 text-muted">
+              <span class="flex items-center gap-1.5 text-text-muted">
                 <app-icon name="keyboard" [size]="14" /> Enter baja · Tab avanza
               </span>
             }
@@ -686,7 +688,7 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
       case 'en_edicion':
         return 'bg-warning/10 text-warning-dark border-warning/30';
       default:
-        return 'bg-subtle text-muted border-border';
+        return 'bg-subtle text-text-muted border-border';
     }
   }
 
@@ -715,7 +717,7 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
   protected promoStatusClass(status: string): string {
     return status === 'in_progress'
       ? 'bg-brand/10 text-brand border border-brand/20 font-medium'
-      : 'bg-subtle text-muted border border-border';
+      : 'bg-subtle text-text-muted border border-border';
   }
 
   protected promoStatusLabel(status: string): string {
@@ -724,7 +726,7 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
 
   // ── Helpers de estilo — gradebook ─────────────────────────────────────────
   protected getInputClasses(grade: number | null): string {
-    if (grade === null) return 'bg-surface border-border text-primary';
+    if (grade === null) return 'bg-surface border-border text-text-primary';
     return grade >= this.gradePass
       ? 'bg-success/10 text-success-dark border-success/30'
       : 'bg-error/10 text-error-dark border-error/30';
@@ -733,13 +735,13 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
   protected getReadonlyClasses(passed: boolean | null): string {
     if (passed === true) return 'bg-success/15 text-success border-success/20';
     if (passed === false) return 'bg-error/15 text-error border-error/20';
-    return 'bg-surface border-border text-muted';
+    return 'bg-surface border-border text-text-muted';
   }
 
   protected getPromedioClasses(passed: boolean | null): string {
     if (passed === true) return 'bg-success text-white border-success-dark';
     if (passed === false) return 'bg-error text-white border-error-dark';
-    return 'bg-border text-secondary border-border-subtle';
+    return 'bg-border text-text-secondary border-border-subtle';
   }
 
   protected todasConNota(): boolean {

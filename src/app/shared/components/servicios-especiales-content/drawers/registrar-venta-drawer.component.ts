@@ -168,13 +168,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
       </form>
     </div>
   `,
-  styles: [
-    `
-      input[type='date']::-webkit-calendar-picker-indicator {
-        filter: var(--calendar-icon-filter, invert(0.5));
-      }
-    `,
-  ],
+  styles: [],
 })
 export class RegistrarVentaDrawerComponent {
   protected readonly facade = inject(ServiciosEspecialesFacade);

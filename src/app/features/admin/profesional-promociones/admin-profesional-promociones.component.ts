@@ -22,6 +22,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 import { SelectModule } from 'primeng/select';
@@ -41,6 +42,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -58,7 +60,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
 
       <!-- ── Content (Grillet) ─────────────────────────────────────────────── -->
       <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden">
+        <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden" appCardHover>
           <div
             class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
           >

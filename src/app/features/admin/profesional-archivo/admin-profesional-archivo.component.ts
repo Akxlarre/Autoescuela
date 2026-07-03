@@ -56,7 +56,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             <label class="mb-2 block text-sm font-semibold text-text-primary">
               Promoción archivada
             </label>
-            <p class="mb-4 text-xs text-muted">
+            <p class="mb-4 text-xs text-text-muted">
               Busca y selecciona una promoción archivada para revisar notas y asistencia.
             </p>
 
@@ -88,7 +88,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
               <label class="mb-2 block text-sm font-semibold text-text-primary">
                 Cursos impartidos en esta promoción
               </label>
-              <p class="mb-4 text-xs text-muted">
+              <p class="mb-4 text-xs text-text-muted">
                 Selecciona el curso para ver los resultados de los alumnos.
               </p>
               <div class="flex flex-wrap items-center gap-2">
@@ -116,16 +116,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           @if (facade.promociones().length === 0) {
             <app-icon name="folder-open" [size]="52" color="var(--text-muted)" />
             <div>
-              <p class="text-sm font-medium text-primary">No hay promociones archivadas</p>
-              <p class="mt-1 text-xs text-muted">
+              <p class="text-sm font-medium text-text-primary">No hay promociones archivadas</p>
+              <p class="mt-1 text-xs text-text-muted">
                 Las promociones aparecerán aquí una vez que cambien a estado "Finalizada".
               </p>
             </div>
           } @else {
             <app-icon name="history" [size]="52" color="var(--text-muted)" />
             <div>
-              <p class="text-sm font-medium text-primary">Selecciona una promoción</p>
-              <p class="mt-1 text-xs text-muted">
+              <p class="text-sm font-medium text-text-primary">Selecciona una promoción</p>
+              <p class="mt-1 text-xs text-text-muted">
                 Elige una promoción del desplegable para consultar su historial de asistencia y
                 notas.
               </p>
@@ -140,7 +140,9 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       ) {
         <div class="bento-banner bento-card flex flex-col items-center gap-3 text-center py-12">
           <app-icon name="book-open" [size]="44" color="var(--text-muted)" />
-          <p class="text-sm text-muted">Selecciona un curso para ver el historial de alumnos.</p>
+          <p class="text-sm text-text-muted">
+            Selecciona un curso para ver el historial de alumnos.
+          </p>
         </div>
       }
 
@@ -154,12 +156,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <h2 class="text-sm font-semibold text-text-primary m-0">Resultados por alumno</h2>
               </div>
               <span class="hidden sm:inline text-border-default">|</span>
-              <span class="text-xs font-medium text-secondary">
+              <span class="text-xs font-medium text-text-secondary">
                 {{ cursoLabel() }}
               </span>
             </div>
             <div
-              class="flex items-center gap-4 text-xs text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit"
+              class="flex items-center gap-4 text-xs text-text-secondary bg-surface px-3 py-1.5 rounded-md border border-border-subtle w-fit"
             >
               <span class="flex items-center gap-1.5">
                 <span class="h-2 w-2 rounded-full bg-success"></span>
@@ -179,11 +181,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
               >
                 <div class="flex items-center justify-between">
-                  <span class="text-[10px] uppercase font-bold text-muted tracking-wider">{{
+                  <span class="text-[10px] uppercase font-bold text-text-muted tracking-wider">{{
                     kpi.label
                   }}</span>
                   @if (kpi.icon) {
-                    <app-icon [name]="kpi.icon" [size]="14" class="text-muted opacity-50" />
+                    <app-icon [name]="kpi.icon" [size]="14" class="text-text-muted opacity-50" />
                   }
                 </div>
                 <span
@@ -206,8 +208,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           } @else if (facade.alumnos().length === 0) {
             <div class="p-10 text-center">
               <app-icon name="users" [size]="40" color="var(--text-muted)" class="mb-3" />
-              <p class="text-sm font-medium text-primary">Sin alumnos en este curso</p>
-              <p class="mt-1 text-xs text-muted">
+              <p class="text-sm font-medium text-text-primary">Sin alumnos en este curso</p>
+              <p class="mt-1 text-xs text-text-muted">
                 No hay matrículas registradas para este curso archivado.
               </p>
             </div>
@@ -258,10 +260,10 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                           <div class="flex items-center gap-2.5">
                             <div class="initials-avatar">{{ alumno.initials }}</div>
                             <div class="min-w-0">
-                              <p class="text-sm font-medium text-primary truncate">
+                              <p class="text-sm font-medium text-text-primary truncate">
                                 {{ alumno.nombre }}
                               </p>
-                              <p class="text-xs text-muted">{{ alumno.rut }}</p>
+                              <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
                             </div>
                           </div>
                         </td>
@@ -269,7 +271,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         <!-- Asistencia Teoría -->
                         <td class="text-center">
                           <div class="flex flex-col items-center gap-0.5">
-                            <span class="text-xs text-secondary font-medium">
+                            <span class="text-xs text-text-secondary font-medium">
                               {{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}
                             </span>
                             @if (alumno.pctTeoria !== null) {
@@ -282,7 +284,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                                 {{ alumno.pctTeoria }}%
                               </span>
                             } @else {
-                              <span class="text-xs text-muted">—</span>
+                              <span class="text-xs text-text-muted">—</span>
                             }
                           </div>
                         </td>
@@ -290,7 +292,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         <!-- Asistencia Práctica -->
                         <td class="text-center">
                           <div class="flex flex-col items-center gap-0.5">
-                            <span class="text-xs text-secondary font-medium">
+                            <span class="text-xs text-text-secondary font-medium">
                               {{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}
                             </span>
                             @if (alumno.pctPractica !== null) {
@@ -305,7 +307,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                                 {{ alumno.pctPractica }}%
                               </span>
                             } @else {
-                              <span class="text-xs text-muted">—</span>
+                              <span class="text-xs text-text-muted">—</span>
                             }
                           </div>
                         </td>
@@ -338,7 +340,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                               {{ alumno.notaPromedio }}
                             </span>
                           } @else {
-                            <span class="text-muted text-xs">—</span>
+                            <span class="text-text-muted text-xs">—</span>
                           }
                         </td>
 
@@ -377,7 +379,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         <p class="text-sm font-semibold text-text-primary truncate">
                           {{ alumno.nombre }}
                         </p>
-                        <p class="text-[11px] text-muted">{{ alumno.rut }}</p>
+                        <p class="text-[11px] text-text-muted">{{ alumno.rut }}</p>
                       </div>
                     </div>
                     <div class="shrink-0">
@@ -398,7 +400,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     class="grid grid-cols-2 gap-px bg-border-subtle rounded-lg overflow-hidden border border-border-subtle"
                   >
                     <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide"
+                      <span
+                        class="text-[10px] uppercase font-bold text-text-muted mb-1 tracking-wide"
                         >Teoría</span
                       >
                       <div class="flex items-center gap-2">
@@ -415,12 +418,13 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             {{ alumno.pctTeoria }}%
                           </span>
                         } @else {
-                          <span class="text-xs text-muted">—</span>
+                          <span class="text-xs text-text-muted">—</span>
                         }
                       </div>
                     </div>
                     <div class="bg-surface flex flex-col items-center p-2.5">
-                      <span class="text-[10px] uppercase font-bold text-muted mb-1 tracking-wide"
+                      <span
+                        class="text-[10px] uppercase font-bold text-text-muted mb-1 tracking-wide"
                         >Práctica</span
                       >
                       <div class="flex items-center gap-2">
@@ -437,7 +441,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             {{ alumno.pctPractica }}%
                           </span>
                         } @else {
-                          <span class="text-xs text-muted">—</span>
+                          <span class="text-xs text-text-muted">—</span>
                         }
                       </div>
                     </div>
@@ -446,7 +450,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   <!-- Notas Módulos -->
                   <div>
                     <span
-                      class="text-[10px] uppercase font-bold text-muted block mb-2 tracking-wide"
+                      class="text-[10px] uppercase font-bold text-text-muted block mb-2 tracking-wide"
                       >Evaluaciones</span
                     >
                     <div class="flex flex-wrap gap-1.5">
@@ -454,7 +458,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         <div
                           class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-[36px]"
                         >
-                          <span class="text-[9px] text-muted mb-1 font-medium"
+                          <span class="text-[9px] text-text-muted mb-1 font-medium"
                             >M{{ nota.moduleNumber }}</span
                           >
                           @if (nota.grade !== null) {
@@ -466,7 +470,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                               {{ nota.grade }}
                             </span>
                           } @else {
-                            <span class="text-xs text-muted">—</span>
+                            <span class="text-xs text-text-muted">—</span>
                           }
                         </div>
                       }
@@ -481,7 +485,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             alumno.notaPromedio
                           }}</span>
                         } @else {
-                          <span class="text-xs text-muted">—</span>
+                          <span class="text-xs text-text-muted">—</span>
                         }
                       </div>
                     </div>
@@ -492,7 +496,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
             <!-- Footer: resumen de criterios -->
             <div
-              class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-muted bg-surface border border-border-subtle rounded-lg mt-4"
+              class="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3 text-xs text-text-muted bg-surface border border-border-subtle rounded-lg mt-4"
             >
               <div class="flex items-center gap-2">
                 <app-icon name="info" [size]="13" />

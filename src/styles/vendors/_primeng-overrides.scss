@@ -334,6 +334,7 @@
 .toast-gsap-active,
 .toast-gsap-to {
   animation: none !important;
+  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -674,21 +675,27 @@ app-main-layout p-toast.p-toast-top-center,
 
 /* Premium Dropdown Options Overlay */
 .p-select-panel {
-  padding: var(--space-1) !important;
+  padding: var(--space-2) var(--space-1) !important;
 }
 
-.p-select-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 !important;
+.p-select-list,
+.p-dropdown-items {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  padding: var(--space-1) 0 !important;
 }
 
-.p-select-option {
+.p-select-option,
+.p-dropdown-item {
   border-radius: var(--radius-md) !important;
   padding: var(--space-2) var(--space-3) !important;
-  margin: 0 !important;
+  margin-bottom: 2px !important;
   transition: all var(--motion-duration-fast) var(--motion-ease-standard) !important;
+}
+.p-select-option:last-child,
+.p-dropdown-item:last-child {
+  margin-bottom: 0 !important;
 }
 
 /* El estado "focus" al navegar con teclado o hover suave */
@@ -1079,9 +1086,16 @@ i.pi {
   }
 
   .p-select-option,
-  .p-select-item {
+  .p-select-item,
+  .p-dropdown-item {
     background-color: transparent !important;
     color: var(--text-secondary) !important;
+    margin-bottom: 2px !important;
+  }
+  .p-select-option:last-child,
+  .p-select-item:last-child,
+  .p-dropdown-item:last-child {
+    margin-bottom: 0 !important;
   }
 
   /* Hover & Focus (Not selected) */

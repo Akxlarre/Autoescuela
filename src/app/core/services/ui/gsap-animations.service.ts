@@ -26,6 +26,8 @@ export class GsapAnimationsService {
   private customEaseReady = false;
   /** Cache token → nombre de ease GSAP resuelto (evita recrear CustomEase en cada llamada). */
   private readonly easeCache = new Map<string, string>();
+  /** Cache de tokens de duración para evitar layout thrashing al animar múltiples elementos simultáneamente. */
+  private readonly tokenCache = new Map<string, number>();
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -100,14 +102,11 @@ export class GsapAnimationsService {
   }
 
   /**
-   * Animación de entrada para celdas bento — stagger semántico con jerarquía visual.
+   * Animación de entrada para celdas bento — Playful Spring.
    *
-   * Detecta automáticamente celdas "hero" por clases semánticas (.card-accent, .bento-banner)
-   * y las anima con blur+scale premium. El resto entra en stagger estándar.
-   *
-   * Jerarquía:
-   *   1. Hero cells (.card-accent, .bento-banner, [data-animate-hero]) → blur+scale+fade, t=0
-   *   2. Grid cells regulares                                          → stagger desde abajo + fade, t=0.08s
+   * Anima todas las celdas por igual, con un rebote sutil y táctil (ease-spring).
+   * Elimina la diferencia entre Hero y Grid cells por preferencia de diseño,
+   * manteniendo únicamente el orden escalonado (stagger) para fluidez.
    *
    * @param containerEl - Elemento contenedor del bento-grid
    * @param options - Opciones adicionales (ej: skipOpacity si se usa View Transitions)
@@ -135,21 +134,11 @@ export class GsapAnimationsService {
       const { skipOpacity = false } = options;
 
       // Tempo desde tokens del design system (no hardcodear motion).
-      const heroDuration = this.getCssDuration('--duration-reveal-hero', 0.6);
-      const cellDuration = this.getCssDuration('--duration-reveal-cell', 0.52);
+      // Usamos el duration base de las celdas, pero con el ease-spring para el rebote lúdico.
+      const duration = this.getCssDuration('--duration-reveal-cell', 0.52);
       const staggerEach = this.getTokenMs('--stagger-reveal') / 1000 || 0.06;
-      const gridDelay = this.getTokenMs('--delay-reveal-grid') / 1000 || 0.1;
-      const ease = this.getCssEase('--ease-out-expo', 'expo.out');
-
-      // Separar en hero vs grid regular usando clases semánticas existentes.
-      const heroCells = cells.filter(
-        (el) =>
-          el.classList.contains('card-accent') ||
-          el.classList.contains('bento-banner') ||
-          el.classList.contains('bento-hero') ||
-          el.getAttribute('data-animate-hero') === 'true',
-      );
-      const gridCells = cells.filter((el) => !heroCells.includes(el));
+      // Resolvemos el token --ease-spring, y si falla usamos 'back.out(1.2)'
+      const ease = this.getCssEase('--ease-spring', 'back.out(1.2)');
 
       // Promover solo transform/opacity al compositor (sin filter → sin jank).
       cells.forEach((el) => (el.style.willChange = 'transform, opacity'));
@@ -160,48 +149,24 @@ export class GsapAnimationsService {
           onComplete: () => cells.forEach((el) => (el.style.willChange = '')),
         });
 
-        // ── Hero cells: scale + lift (sin blur — compositor puro) ──
-        if (heroCells.length > 0) {
-          const fromVars: gsap.TweenVars = { scale: 0.97, y: 14 };
+        if (cells.length > 0) {
+          const fromVars: gsap.TweenVars = { y: 30, scale: 0.9 };
           if (!skipOpacity) fromVars.opacity = 0;
 
           tl.fromTo(
-            heroCells,
-            fromVars,
-            {
-              scale: 1,
-              y: 0,
-              opacity: 1,
-              duration: heroDuration,
-              ease,
-              stagger: heroCells.length > 1 ? staggerEach : 0,
-              overwrite: 'auto',
-              clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
-            },
-            0,
-          );
-        }
-
-        // ── Grid cells: lift sutil + fade, escalonado. Entra DESPUÉS del hero
-        //    (--delay-reveal-grid) → cascada en capas, no un bloque plano. ──
-        if (gridCells.length > 0) {
-          const fromVars: gsap.TweenVars = { y: 18, scale: 0.985 };
-          if (!skipOpacity) fromVars.opacity = 0;
-
-          tl.fromTo(
-            gridCells,
+            cells,
             fromVars,
             {
               y: 0,
               scale: 1,
               opacity: 1,
-              duration: cellDuration,
+              duration: duration,
               ease,
               stagger: { each: staggerEach, from: 'start' },
               overwrite: 'auto',
               clearProps: 'transform' + (skipOpacity ? '' : ',opacity'),
             },
-            heroCells.length > 0 ? gridDelay : 0,
+            0, // Inicia de inmediato
           );
         }
       }, containerEl);
@@ -316,6 +281,15 @@ export class GsapAnimationsService {
         gsap.set(shimmerEl, { display: 'none' });
         return tl;
       }
+
+      // Añadimos el efecto de "respiración" juguetón al contenedor del skeleton
+      gsap.to(el, {
+        scale: 0.985,
+        duration: 1.2,
+        yoyo: true,
+        repeat: -1,
+        ease: 'sine.inOut'
+      });
 
       tl.to(shimmerEl, {
         x: '100%',
@@ -467,9 +441,9 @@ export class GsapAnimationsService {
 
     gsap.to(el, {
       opacity: 0,
-      y: -6,
-      duration: 0.18,
-      ease: 'power2.in',
+      y: -8,
+      duration: 0.2,
+      ease: 'power3.in',
       onComplete,
     });
   }
@@ -487,13 +461,13 @@ export class GsapAnimationsService {
 
     gsap.fromTo(
       el,
-      { opacity: 0, y: 8 },
+      { opacity: 0, y: 15 },
       {
         opacity: 1,
         y: 0,
-        duration: 0.28,
-        ease: 'power3.out',
-        clearProps: 'transform',
+        duration: 0.35,
+        ease: 'power4.out',
+        clearProps: 'transform,opacity',
       },
     );
   }
@@ -532,12 +506,14 @@ export class GsapAnimationsService {
     options: { useBlur?: boolean; delay?: number } = {},
   ): void {
     if (!this.shouldAnimate()) {
-      gsap.set(el, { opacity: 1, y: 0, filter: 'none' });
+      gsap.set(el, { opacity: 1, y: 0, scale: 1, filter: 'none' });
       return;
     }
 
     const { useBlur = false, delay = 0 } = options;
+    // Transición cinemática y suave (fade + slide leve) ideal para tablas y listas
     const duration = this.getCssDuration('--duration-page-in', 0.28);
+    const ease = this.getCssEase('--ease-out', 'power3.out');
 
     gsap.fromTo(
       el,
@@ -552,7 +528,7 @@ export class GsapAnimationsService {
         filter: useBlur ? 'blur(0px)' : 'none',
         duration,
         delay,
-        ease: this.getCssEase('--ease-out', 'power3.out'),
+        ease,
         clearProps: 'transform,filter',
       },
     );
@@ -946,7 +922,6 @@ export class GsapAnimationsService {
           display: 'flex',
           flexDirection: 'column',
           position: 'relative',
-          borderLeft: '1px solid var(--border-subtle)',
         });
         if (panelEl) gsap.set(panelEl, { clearProps: 'x' }); // limpiar posible estado móvil
         return;
@@ -956,7 +931,6 @@ export class GsapAnimationsService {
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        borderLeft: '1px solid var(--border-subtle)',
         overflow: 'hidden',
       });
       if (panelEl) gsap.set(panelEl, { clearProps: 'x' });
@@ -1324,7 +1298,13 @@ export class GsapAnimationsService {
       return;
     }
 
+    gsap.killTweensOf(el);
+
     const duration = this.getTokenMs('--duration-toast-enter') / 1000 || 0.25;
+    
+    // Forzamos inline para evitar que Change Detection limpie las clases de motion
+    el.style.transition = 'none';
+    
     gsap.fromTo(
       el,
       { opacity: 0, x: 80 },
@@ -1333,7 +1313,7 @@ export class GsapAnimationsService {
         x: 0,
         duration,
         ease: 'power2.out',
-        clearProps: 'transform',
+        clearProps: 'transform,transition',
       },
     );
   }
@@ -1350,12 +1330,19 @@ export class GsapAnimationsService {
       return;
     }
 
+    gsap.killTweensOf(el);
+
     const duration = this.getTokenMs('--duration-toast-leave') / 1000 || 0.18;
+    
+    // Forzamos inline para evitar que Change Detection restaure la transición CSS
+    el.style.transition = 'none';
+    
     gsap.to(el, {
       opacity: 0,
       x: 80,
       duration,
       ease: 'power2.in',
+      clearProps: 'transition',
       onComplete: () => {
         onComplete?.();
       },
@@ -1653,13 +1640,27 @@ export class GsapAnimationsService {
   /** Obtiene un token de duración en ms (ej: "250ms" → 250) */
   private getTokenMs(name: string): number {
     if (typeof document === 'undefined') return 0;
+    
+    const cached = this.tokenCache.get(name);
+    if (cached !== undefined) return cached;
+    
     const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-    if (!val) return 0;
-    const match = val.match(/^(\d+(?:\.\d+)?)\s*ms$/);
-    if (match) return parseFloat(match[1]);
-    const matchS = val.match(/^(\d+(?:\.\d+)?)\s*s$/);
-    if (matchS) return parseFloat(matchS[1]) * 1000;
-    return 0;
+    let result = 0;
+    
+    if (val) {
+      const match = val.match(/^(\d+(?:\.\d+)?)\s*ms$/);
+      if (match) {
+        result = parseFloat(match[1]);
+      } else {
+        const matchS = val.match(/^(\d+(?:\.\d+)?)\s*s$/);
+        if (matchS) {
+          result = parseFloat(matchS[1]) * 1000;
+        }
+      }
+    }
+    
+    this.tokenCache.set(name, result);
+    return result;
   }
 
   /**

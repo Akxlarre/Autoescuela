@@ -22,7 +22,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
     <div class="flex flex-col gap-4">
       <div class="flex items-center justify-between mb-2">
         <h3
-          class="text-xs sm:text-sm font-bold text-primary uppercase tracking-widest flex items-center gap-2"
+          class="text-xs sm:text-sm font-bold text-text-primary uppercase tracking-widest flex items-center gap-2"
         >
           <app-icon name="list-checks" [size]="16" class="text-brand"></app-icon>
           Aspectos a Evaluar
@@ -32,7 +32,7 @@ import type { EvaluationChecklistItem } from '@core/models/ui/instructor-portal.
           class="bg-elevated border border-border-subtle rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm"
         >
           <span class="text-xs font-bold text-brand">{{ checkedCount }}</span>
-          <span class="text-xs text-muted">de {{ items().length }}</span>
+          <span class="text-xs text-text-muted">de {{ items().length }}</span>
         </div>
       </div>
 

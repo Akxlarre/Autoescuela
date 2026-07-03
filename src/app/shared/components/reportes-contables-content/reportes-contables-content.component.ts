@@ -15,7 +15,6 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -33,6 +32,7 @@ import {
   type RangoReporte,
   type ReporteKpis,
 } from '@core/models/ui/reportes-contables.model';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 @Component({
   selector: 'app-reportes-contables-content',
@@ -40,7 +40,6 @@ import {
   imports: [
     IconComponent,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     FormsModule,
     SelectModule,
     DateInputComponent,
@@ -49,46 +48,6 @@ import {
   ],
   styles: [
     `
-      /* ── Filter bar ───────────────────────────────────────────────────── */
-      .filter-label {
-        display: block;
-        font-size: var(--text-xs);
-        font-weight: var(--font-semibold);
-        color: var(--text-muted);
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin-bottom: 4px;
-      }
-
-      .filter-control {
-        height: 36px;
-        padding: 0 var(--space-3);
-        border: 1px solid var(--border-default);
-        border-radius: var(--radius-md);
-        background: var(--bg-surface);
-        color: var(--text-primary);
-        font-size: var(--text-sm);
-        font-family: var(--font-body);
-        outline: none;
-        cursor: pointer;
-        transition: var(--transition-input);
-
-        &:focus {
-          border-color: var(--color-primary);
-          box-shadow: var(--shadow-focus);
-        }
-      }
-
-      select.filter-control {
-        min-width: 190px;
-        padding-right: var(--space-6);
-        appearance: auto;
-      }
-
-      input[type='date'].filter-control {
-        min-width: 140px;
-      }
-
       /* ── Category bars ────────────────────────────────────────────────── */
       .cat-section-dot {
         display: inline-block;
@@ -241,6 +200,7 @@ import {
           title="Reportes Contables"
           subtitle="Resumen financiero y total neto por rango de fechas"
           icon="bar-chart-2"
+          [kpis]="heroKpis()"
           [actions]="heroActions()"
           [chips]="heroChips()"
           (actionClick)="onHeroAction($event)"
@@ -272,50 +232,40 @@ import {
 
       <!-- ── Barra de filtros ─────────────────────────────────────────────── -->
       <div class="bento-banner">
-        <div
-          class="flex flex-col sm:flex-row sm:items-end gap-4 px-4 py-3 shadow-sm flex-wrap bg-surface"
-          style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
-        >
+        <div class="card p-4 flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
           <!-- Rango -->
-          <div>
-            <label class="filter-label">Rango</label>
-            <p-select
-              [ngModel]="localRango()"
-              (ngModelChange)="onRangoChange($event)"
-              [options]="rangos"
-              optionLabel="label"
-              optionValue="value"
-              styleClass="w-full"
-              data-llm-description="selector de rango de fechas para el reporte contable"
-            />
-          </div>
+          <p-select
+            [ngModel]="localRango()"
+            (ngModelChange)="onRangoChange($event)"
+            [options]="rangos"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="h-9 min-w-48"
+            placeholder="Rango de fechas"
+            data-llm-description="selector de rango de fechas para el reporte contable"
+          />
 
-          <!-- Desde -->
-          <div>
+          @if (localRango() === 'personalizado') {
+            <!-- Desde -->
             <app-date-input
-              label="Desde"
               [value]="localDesde()"
-              [disabled]="localRango() !== 'personalizado'"
               (valueChange)="localDesde.set($event)"
+              placeholder="Desde"
               data-llm-description="fecha de inicio del rango del reporte"
             />
-          </div>
 
-          <!-- Hasta -->
-          <div>
+            <!-- Hasta -->
             <app-date-input
-              label="Hasta"
               [value]="localHasta()"
-              [disabled]="localRango() !== 'personalizado'"
               (valueChange)="localHasta.set($event)"
+              placeholder="Hasta"
               data-llm-description="fecha de fin del rango del reporte"
             />
-          </div>
+          }
 
           <!-- Aplicar -->
           <button
-            class="btn-primary flex items-center gap-2"
-            style="height: 36px; padding: 0 var(--space-4)"
+            class="btn-primary h-9 px-4 flex items-center gap-2"
             (click)="onAplicar()"
             data-llm-action="apply-report-filters"
           >
@@ -331,8 +281,7 @@ import {
                 {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
               </span>
               <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-subtle text-success"
-                style="border:1px solid var(--state-success-border)"
+                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-subtle text-success border border-success/20"
               >
                 {{ pct(kpis()!.margenGanancia) }} margen
               </span>
@@ -341,40 +290,6 @@ import {
         </div>
       </div>
 
-      <!-- ── KPI Cards (tarjetas blancas, estilo Liquidaciones) ──────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis()?.totalIngresos ?? 0"
-          label="Total Ingresos"
-          icon="trending-up"
-          color="success"
-          prefix="$ "
-          [subValue]="(kpis()?.operacionesIngresos ?? 0) + ' operaciones en período'"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis()?.totalGastos ?? 0"
-          label="Total Gastos"
-          icon="trending-down"
-          color="error"
-          prefix="$ "
-          [subValue]="(kpis()?.operacionesGastos ?? 0) + ' egresos en período'"
-          [loading]="isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [value]="kpis()?.totalNeto ?? 0"
-          label="Total Neto"
-          icon="coins"
-          color="default"
-          prefix="$ "
-          subValue="Ingresos Totales – Gastos Totales"
-          [loading]="isLoading()"
-        />
-      </div>
 
       <!-- ── Categorías (Ingresos + Gastos) ────────────────────────────────── -->
       @if (!isLoading()) {
@@ -750,6 +665,41 @@ export class ReportesContablesContentComponent {
   protected readonly heroChips = computed<SectionHeroChip[]>(() => {
     const e = this.escuela();
     return e ? [{ label: e, icon: 'building-2', style: 'success' }] : [];
+  });
+
+  protected readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const data = this.kpis();
+    if (!data) return [];
+    
+    return [
+      {
+        id: 'ingresos',
+        label: 'Total Ingresos',
+        value: data.totalIngresos,
+        prefix: '$ ',
+        icon: 'trending-up',
+        color: 'success',
+        subValue: `${data.operacionesIngresos} operaciones en período`
+      },
+      {
+        id: 'gastos',
+        label: 'Total Gastos',
+        value: data.totalGastos,
+        prefix: '$ ',
+        icon: 'trending-down',
+        color: 'error',
+        subValue: `${data.operacionesGastos} egresos en período`
+      },
+      {
+        id: 'neto',
+        label: 'Total Neto',
+        value: data.totalNeto,
+        prefix: '$ ',
+        icon: 'coins',
+        color: 'default',
+        subValue: 'Ingresos Totales – Gastos Totales'
+      }
+    ];
   });
 
   // ── Estado local del formulario de filtros ────────────────────────────────

@@ -26,6 +26,7 @@ import { AdminInstructorVerDrawerComponent } from './admin-instructor-ver-drawer
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
 import { AdminInstructorHorasDrawerComponent } from './admin-instructor-horas-drawer.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 type FilterTab = 'all' | 'active' | 'expiring';
 
@@ -39,6 +40,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -57,6 +59,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
       <div
         class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
         #listCard
+        appCardHover
       >
         <!-- ── Filter Tabs (Toolbar) ──────────────────────────────────────── -->
         <div

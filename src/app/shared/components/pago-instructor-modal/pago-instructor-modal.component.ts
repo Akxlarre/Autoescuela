@@ -36,7 +36,7 @@ function formatCLP(value: number): string {
       <div class="flex-1">
         @if (row()) {
           <!-- ── Subtítulo Contextual ── -->
-          <div class="mb-5 pb-5 border-b border-border-muted" >
+          <div class="mb-5 pb-5 border-b border-border-muted">
             <div class="flex items-center gap-3">
               <div
                 class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
@@ -45,8 +45,10 @@ function formatCLP(value: number): string {
                 {{ row()!.initials }}
               </div>
               <div>
-                <h3 class="text-base font-bold text-primary leading-tight">{{ row()!.nombre }}</h3>
-                <p class="text-xs text-muted mt-0.5">{{ row()!.rut }}</p>
+                <h3 class="text-base font-bold text-text-primary leading-tight">
+                  {{ row()!.nombre }}
+                </h3>
+                <p class="text-xs text-text-muted mt-0.5">{{ row()!.rut }}</p>
               </div>
             </div>
           </div>
@@ -54,7 +56,7 @@ function formatCLP(value: number): string {
           <div class="flex flex-col gap-6">
             <!-- Resumen de liquidación -->
             <section>
-              <h3 class="text-[11px] font-bold text-secondary uppercase tracking-widest mb-3">
+              <h3 class="text-[11px] font-bold text-text-secondary uppercase tracking-widest mb-3">
                 Resumen Financiero
               </h3>
               <div class="grid grid-cols-2 gap-3">
@@ -97,7 +99,7 @@ function formatCLP(value: number): string {
 
             <!-- Método de pago -->
             <section>
-              <h3 class="text-[11px] font-bold text-secondary uppercase tracking-widest mb-3">
+              <h3 class="text-[11px] font-bold text-text-secondary uppercase tracking-widest mb-3">
                 Método de Pago
               </h3>
 
@@ -148,7 +150,10 @@ function formatCLP(value: number): string {
               <!-- Código de transferencia (condicional) -->
               @if (paymentMethod() === 'transfer') {
                 <div class="mt-2">
-                  <label class="block text-xs font-bold text-secondary mb-2" for="transfer-code">
+                  <label
+                    class="block text-xs font-bold text-text-secondary mb-2"
+                    for="transfer-code"
+                  >
                     Código / N° de transferencia
                   </label>
                   <input
@@ -165,10 +170,7 @@ function formatCLP(value: number): string {
                     aria-label="Código o número de transferencia"
                   />
                   @if (showTransferError()) {
-                    <p
-                      class="text-xs font-medium mt-2 flex items-center gap-1.5 text-error"
-                      
-                    >
+                    <p class="text-xs font-medium mt-2 flex items-center gap-1.5 text-error">
                       <app-icon name="alert-circle" [size]="14" />
                       Ingresa el código de la transferencia para continuar.
                     </p>
@@ -182,11 +184,9 @@ function formatCLP(value: number): string {
 
       <div
         class="flex items-center justify-end gap-3 w-full pt-6 mt-6 border-t sticky bottom-0 bg-surface pb-4 border-border-muted"
-        
       >
         <button
           class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer transition-colors hover:opacity-80 bg-transparent text-text-secondary"
-          
           (click)="cerrar()"
           data-llm-action="cancelar-pago-instructor"
           aria-label="Cancelar"

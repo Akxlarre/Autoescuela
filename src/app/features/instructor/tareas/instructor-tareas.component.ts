@@ -19,6 +19,8 @@ import { TasksFacade } from '@core/facades/tasks.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type { TaskType } from '@core/models/ui/task.model';
 
 type TaskTypeFilter = 'all' | TaskType;
@@ -26,7 +28,7 @@ type TaskTypeFilter = 'all' | TaskType;
 interface FilterTab {
   id: TaskTypeFilter;
   label: string;
-  count: () => number;
+  count: number;
 }
 
 @Component({
@@ -37,8 +39,10 @@ interface FilterTab {
     KpiCardVariantComponent,
     TaskCardComponent,
     EmptyStateComponent,
+    TabsComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -72,35 +76,14 @@ interface FilterTab {
       </div>
 
       <!-- Lista de tareas -->
-      <div class="bento-banner card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
         <!-- Tabs -->
-        <div
-          class="flex border-b border-border-default"
-          role="tablist"
-          aria-label="Filtros de tareas"
-        >
-          @for (tab of filterTabs; track tab.id) {
-            <button
-              role="tab"
-              class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
-              [class.border-b-2]="activeFilter() === tab.id"
-              [style.border-color]="activeFilter() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-              [style.color]="activeFilter() === tab.id ? 'var(--ds-brand)' : 'var(--text-muted)'"
-              [attr.aria-selected]="activeFilter() === tab.id"
-              (click)="activeFilter.set(tab.id)"
-            >
-              {{ tab.label }}
-              @if (tab.count() > 0) {
-                <span
-                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
-                  
-                >
-                  {{ tab.count() }}
-                </span>
-              }
-            </button>
-          }
-        </div>
+        <app-tabs
+          [tabs]="filterTabs()"
+          [activeId]="activeFilter()"
+          variant="line"
+          (activeIdChange)="activeFilter.set($any($event))"
+        />
 
         <!-- Contenido del tab activo -->
         <div class="p-4 flex flex-col gap-3">
@@ -126,7 +109,8 @@ interface FilterTab {
 })
 export class InstructorTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);  private readonly destroyRef = inject(DestroyRef);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly skeletons = [1, 2, 3];
 
   // ── filtro por tipo ──────────────────────────────────────────────────────────
@@ -138,51 +122,35 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
     return filter === 'all' ? tasks : tasks.filter((t) => t.type === filter);
   });
 
-  protected readonly filterTabs: FilterTab[] = [
+  protected readonly filterTabs = computed(() => [
     {
       id: 'all',
       label: 'Todas',
-      count: computed(
-        () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
-      ),
+      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
     },
     {
       id: 'task',
       label: 'Tareas',
-      count: computed(
-        () =>
-          this.facade.receivedTasks().filter((t) => t.type === 'task' && t.status !== 'completed')
-            .length,
-      ),
+      count: this.facade.receivedTasks().filter((t) => t.type === 'task' && t.status !== 'completed').length,
     },
     {
       id: 'question',
       label: 'Consultas',
-      count: computed(
-        () =>
-          this.facade
-            .receivedTasks()
-            .filter((t) => t.type === 'question' && t.status !== 'completed').length,
-      ),
+      count: this.facade.receivedTasks().filter((t) => t.type === 'question' && t.status !== 'completed').length,
     },
     {
       id: 'observation',
       label: 'Observaciones',
-      count: computed(
-        () =>
-          this.facade
-            .receivedTasks()
-            .filter((t) => t.type === 'observation' && t.status !== 'completed').length,
-      ),
+      count: this.facade.receivedTasks().filter((t) => t.type === 'observation' && t.status !== 'completed').length,
     },
-  ];
+  ]);
 
   // Computed usado por los tests (spec: filterChips como signal callable)
   protected readonly filterChips = computed(() =>
-    this.filterTabs.map((tab) => ({
+    this.filterTabs().map((tab) => ({
       value: tab.id,
       label: tab.label,
-      count: tab.count(),
+      count: tab.count,
     })),
   );
 
@@ -251,7 +219,7 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
-  ngAfterViewInit(): void {  }
+  ngAfterViewInit(): void {}
 
   protected openDetail(taskId: string): void {
     this.facade.selectTask(taskId);

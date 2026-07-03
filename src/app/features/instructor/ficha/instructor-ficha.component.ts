@@ -19,6 +19,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -37,6 +38,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     BentoGridLayoutDirective,
     BentoRevealDirective,
     ScrollRevealDirective,
+    CardHoverDirective,
   ],
   styles: [
     `
@@ -54,7 +56,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           display: none;
         }
       }
-    `
+    `,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -106,12 +108,18 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             <!-- 3-Card Grid — skeleton inline -->
             <div class="bento-grid" appScrollReveal>
               @if (facade.detailLoading()) {
-                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
-                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
-                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
+                <div class="bento-wide" data-col-span="4">
+                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+                </div>
+                <div class="bento-wide" data-col-span="4">
+                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+                </div>
+                <div class="bento-wide" data-col-span="4">
+                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+                </div>
               } @else if (facade.studentDetail(); as detail) {
                 <!-- Info Personal -->
-                <div class="card bento-wide" data-col-span="4">
+                <div class="card bento-wide" appCardHover data-col-span="4">
                   <h3 class="kpi-label mb-4">Información del Alumno</h3>
                   <div class="space-y-3">
                     <div>
@@ -154,7 +162,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Clases Prácticas -->
-                <div class="card bento-wide" data-col-span="4">
+                <div class="card bento-wide" appCardHover data-col-span="4">
                   <div class="flex items-start justify-between mb-4">
                     <div class="min-w-0 flex-1 mr-3">
                       <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
@@ -179,7 +187,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                   <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
                     <div
                       class="h-full rounded-full transition-all bg-brand"
-                      
                       [style.width.%]="
                         detail.totalSessions > 0
                           ? (detail.practiceProgress / detail.totalSessions) * 100
@@ -198,7 +205,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Clases Teóricas -->
-                <div class="card bento-wide" data-col-span="4">
+                <div class="card bento-wide" appCardHover data-col-span="4">
                   <div class="flex items-start justify-between mb-4">
                     <div class="min-w-0 flex-1 mr-3">
                       <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
@@ -246,7 +253,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             @if (facade.detailLoading()) {
               <app-skeleton-block variant="rect" width="100%" height="320px" />
             } @else if (facade.studentDetail(); as detail) {
-              <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
+              <div class="card p-0 overflow-hidden" appCardHover [appScrollReveal]="{ delay: 0.1 }">
                 <!-- Cabecera de tabla -->
                 <div class="px-4 md:px-6 py-4 border-b border-border-subtle">
                   <h3 class="text-base md:text-lg font-bold" [style.color]="'var(--text-primary)'">
@@ -263,7 +270,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                     <thead>
                       <tr
                         class="text-xs uppercase tracking-wider border-b bg-subtle border-border-subtle text-text-muted"
-                        
                       >
                         <th class="p-4 font-semibold">N°</th>
                         <th class="p-4 font-semibold">Fecha</th>
@@ -285,7 +291,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                           <td class="p-4 w-14">
                             <div
                               class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
-                              
                             >
                               {{ row.classNumber }}
                             </div>
@@ -389,7 +394,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                         <div class="flex items-center gap-3 min-w-0">
                           <div
                             class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 bg-brand-muted text-brand"
-                            
                           >
                             {{ row.classNumber }}
                           </div>
@@ -479,7 +483,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                             row.sessionId,
                           ]"
                           class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary"
-                          
                         >
                           <app-icon name="eye" [size]="14" />
                           Ver Detalles
@@ -487,13 +490,11 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       } @else if (row.status === 'in_progress') {
                         <span
                           class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold bg-warning-subtle text-warning"
-                          
                           >En Curso</span
                         >
                       } @else if (row.status === 'scheduled') {
                         <span
                           class="flex items-center justify-center gap-1 w-full py-2 rounded-lg text-xs font-semibold bg-brand-muted text-brand"
-                          
                         >
                           <app-icon name="calendar-check" [size]="13" />
                           Agendada
@@ -501,7 +502,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       } @else {
                         <span
                           class="flex items-center justify-center w-full py-2 rounded-lg text-xs bg-elevated text-text-muted"
-                          
                           >Pendiente de agendar</span
                         >
                       }

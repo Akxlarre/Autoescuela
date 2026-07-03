@@ -46,7 +46,7 @@ const TYPE_ICON: Record<string, string> = {
         <div class="flex items-start justify-between gap-2">
           <div class="flex items-center gap-1.5 min-w-0">
             <app-icon [name]="typeIcon()" [size]="14" [ariaHidden]="true" class="shrink-0" />
-            <p class="text-sm font-semibold text-primary truncate text-text-primary">
+            <p class="text-sm font-semibold text-text-primary truncate text-text-primary">
               {{ task().subject }}
             </p>
           </div>

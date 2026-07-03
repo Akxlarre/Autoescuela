@@ -11,8 +11,7 @@ import {
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { formatTaskAge } from '@core/utils/task.utils';
-import type { TaskReply } from '@core/models/dto/task-reply.model';
-import type { TaskStatus } from '@core/models/ui/task.model';
+import type { TaskReply, TaskStatus } from '@core/models/ui/task.model';
 
 @Component({
   selector: 'app-task-reply-thread',

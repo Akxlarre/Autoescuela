@@ -29,6 +29,7 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
 import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
 import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
@@ -50,6 +51,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
     CardHoverDirective,
+    TabsComponent,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -212,35 +214,13 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         <!-- Selector de matrícula (solo visible cuando hay más de una) -->
         @if (facade.enrollmentSummaries().length > 1) {
           <div class="col-span-full flex w-full">
-            <div
-              class="flex flex-nowrap md:flex-wrap items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-1 w-full md:w-auto overflow-x-auto custom-scrollbar-hidden"
-            >
-              @for (enr of facade.enrollmentSummaries(); track enr.id) {
-                <button
-                  type="button"
-                  role="tab"
-                  class="relative px-5 py-2.5 rounded-xl text-sm font-bold transition-all outline-none whitespace-nowrap shrink-0"
-                  [class.text-brand]="alumno.enrollmentId === enr.id"
-                  [class.text-text-muted]="alumno.enrollmentId !== enr.id"
-                  [class.hover:text-text-primary]="alumno.enrollmentId !== enr.id"
-                  [attr.aria-selected]="alumno.enrollmentId === enr.id"
-                  (click)="facade.selectEnrollment(enr.id)"
-                >
-                  @if (alumno.enrollmentId === enr.id) {
-                    <div
-                      class="absolute inset-0 bg-brand-muted border border-brand/20 rounded-xl shadow-sm z-0"
-                    ></div>
-                  }
-                  <span class="relative z-10 flex items-center gap-2">
-                    <app-icon
-                      name="car"
-                      [size]="16"
-                      [class.text-brand]="alumno.enrollmentId === enr.id"
-                    />
-                    {{ enr.courseName }}{{ enr.number ? ' · #' + enr.number : '' }}
-                  </span>
-                </button>
-              }
+            <div class="p-1.5 w-full md:w-auto">
+              <app-tabs
+                [tabs]="enrollmentTabs()"
+                [activeId]="activeEnrollmentStr()"
+                variant="pill"
+                (activeIdChange)="facade.selectEnrollment(+$event)"
+              />
             </div>
           </div>
         }
@@ -880,6 +860,16 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly primeras6Completadas = computed(
     () => this.facade.clasesPracticas().filter((c) => c.numero <= 6 && c.completada).length,
   );
+
+  readonly enrollmentTabs = computed(() => {
+    return this.facade.enrollmentSummaries().map((enr) => ({
+      id: String(enr.id),
+      label: enr.courseName + (enr.number ? ` · #${enr.number}` : ''),
+      icon: 'car'
+    }));
+  });
+
+  readonly activeEnrollmentStr = computed(() => String(this.facade.alumno()?.enrollmentId));
 
   // ── Secciones fijas: configuración de Hero ───────────────────────────────────
   protected readonly heroActions = computed<SectionHeroAction[]>(() => {

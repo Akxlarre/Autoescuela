@@ -416,7 +416,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
         data-col-span="4"
       >
         <!-- ================= ARQUEO FÍSICO Y CIERRE (Checkout Ledger) ================= -->
-        <div class="card-accent card p-0 flex flex-col overflow-hidden">
+        <div class="card-accent card p-0 flex flex-col overflow-hidden" appCardHover>
           <!-- Titular principal -->
           <div class="px-6 py-5 border-b border-border-muted/50 bg-surface">
             <div class="flex items-center gap-3 mb-1.5">

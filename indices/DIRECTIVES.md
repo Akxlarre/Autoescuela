@@ -31,6 +31,7 @@
 | Directiva | Selector | Propósito | Inputs | Estado |
 |-----------|----------|-----------|--------|--------|
 | `ModalOverlayDirective` | `[appModalOverlay]` | Teleporta el modal al overlay container (z-index > topbar) | `appModalOverlay: boolean` | ✅ Estable |
+| `ScrollContainerDirective` | `[appScrollContainer]` | Scroll interno vertical/horizontal con `max-height` configurable. Evita desborde en páginas y drawers. Scrollbar usa tokens del DS. | `maxHeight: string` (`'65vh'`), `scrollX: boolean` (`false`) | ✅ Estable |
 
 ## Auto-Index — Directivas detectadas por AST (generado automáticamente)
 
@@ -45,6 +46,7 @@
 | `HasRoleDirective` | `[appHasRole]` | `appHasRole` | — | `src/app/core/directives/has-role.directive.ts` |
 | `ModalOverlayDirective` | `[appModalOverlay]` | `appModalOverlay` | — | `src/app/core/directives/modal-overlay.directive.ts` |
 | `PressFeedbackDirective` | `[appPressFeedback]` | `appPressFeedback` | — | `src/app/core/directives/press-feedback.directive.ts` |
+| `ScrollContainerDirective` | `[appScrollContainer]` | `maxHeight`, `scrollX` | — | `src/app/core/directives/scroll-container.directive.ts` |
 | `ScrollRevealDirective` | `[appScrollReveal]` | `appScrollReveal` | — | `src/app/core/directives/scroll-reveal.directive.ts` |
 | `SearchShortcutDirective` | `[appSearchShortcut]` | — | — | `src/app/core/directives/search-shortcut.directive.ts` |
 

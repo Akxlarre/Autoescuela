@@ -21,14 +21,24 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 
 type TaskTab = 'sent' | 'received' | 'observations';
 
 @Component({
   selector: 'app-admin-tareas',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SectionHeroComponent, TaskCardComponent, EmptyStateComponent, BentoGridLayoutDirective],
+  imports: [
+    SectionHeroComponent,
+    TaskCardComponent,
+    EmptyStateComponent,
+    BentoGridLayoutDirective,
+    CardHoverDirective,
+    TabsComponent,
+  ],
   template: `
     <div #bentoGrid class="bento-grid" appBentoGridLayout>
       <!-- Hero -->
@@ -45,34 +55,14 @@ type TaskTab = 'sent' | 'received' | 'observations';
       />
 
       <!-- Lista de tareas con tabs -->
-      <div class="bento-banner card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
         <!-- Tabs -->
-        <div
-          class="flex border-b border-border-default"
-          role="tablist"
-          aria-label="Filtros de tareas"
-        >
-          @for (tab of tabs; track tab.id) {
-            <button
-              role="tab"
-              class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
-              [class.border-b-2]="activeTab() === tab.id"
-              [style.border-color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-              [style.color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'var(--text-muted)'"
-              [attr.aria-selected]="activeTab() === tab.id"
-              (click)="activeTab.set(tab.id)"
-            >
-              {{ tab.label }}
-              @if (tab.count() > 0) {
-                <span
-                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
-                >
-                  {{ tab.count() }}
-                </span>
-              }
-            </button>
-          }
-        </div>
+        <app-tabs
+          [tabs]="tabs()"
+          [activeId]="activeTab()"
+          variant="line"
+          (activeIdChange)="activeTab.set($any($event))"
+        />
 
         <!-- Contenido del tab activo -->
         <div class="p-4 flex flex-col gap-3">
@@ -107,27 +97,23 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
 
   protected readonly activeTab = signal<TaskTab>('sent');
 
-  protected readonly tabs = [
+  protected readonly tabs = computed(() => [
     {
-      id: 'sent' as TaskTab,
+      id: 'sent',
       label: 'Asignadas por mí',
-      count: computed(() => this.facade.sentTasks().filter((t) => t.status !== 'completed').length),
+      count: this.facade.sentTasks().filter((t) => t.status !== 'completed').length,
     },
     {
-      id: 'received' as TaskTab,
+      id: 'received',
       label: 'Dirigidas a mí',
-      count: computed(
-        () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
-      ),
+      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
     },
     {
-      id: 'observations' as TaskTab,
+      id: 'observations',
       label: 'Observaciones',
-      count: computed(
-        () => this.facade.observationTasks().filter((t) => t.status !== 'completed').length,
-      ),
+      count: this.facade.observationTasks().filter((t) => t.status !== 'completed').length,
     },
-  ];
+  ]);
 
   protected readonly activeTasks = computed(() => {
     switch (this.activeTab()) {

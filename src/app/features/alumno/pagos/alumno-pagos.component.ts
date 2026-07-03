@@ -11,6 +11,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 function toCompact(amount: number): { value: number; suffix: string } {
   if (amount >= 1_000_000) {
@@ -43,6 +44,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout style="padding-bottom: 5rem;">
@@ -129,7 +131,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
           </div>
         } @else if (!facade.status()?.hasPaymentPending && facade.status() !== null) {
           <!-- Sin deuda pendiente y sin enrollment (ya completado) -->
-          <div class="bento-banner card p-6 flex items-center gap-4">
+          <div class="bento-banner card p-6 flex items-center gap-4" appCardHover>
             <div
               class="w-12 h-12 rounded-full flex items-center justify-center shrink-0 bg-success-subtle"
             >
@@ -143,7 +145,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
         }
 
         <!-- ── Historial de pagos ── -->
-        <div class="bento-banner card p-5 flex flex-col gap-3">
+        <div class="bento-banner card p-5 flex flex-col gap-3" appCardHover>
           <h2 class="text-sm font-semibold text-text-primary uppercase tracking-wide">
             Historial de pagos
           </h2>

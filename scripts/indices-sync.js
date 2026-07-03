@@ -20,6 +20,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
+import { parseMigrations, renderDatabaseMd } from './lib/sql-schema.js';
 
 const require = createRequire(import.meta.url);
 const ts = require('typescript');
@@ -364,7 +365,263 @@ function collectUtils(cache, prevResults) {
   return results;
 }
 
-function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
+function collectPipes(cache, prevResults) {
+  const results = [];
+  const prevMap = new Map((prevResults ?? []).map(r => [r.filePath, r]));
+  let skipped = 0;
+  // Barrido completo de src/app: los pipes viven en core/pipes/ y shared/pipes/,
+  // pero el sufijo .pipe.ts se busca en todo el árbol (AC-E3 de la spec 0018).
+  for (const filePath of walkDir(SRC_APP)) {
+    if (!filePath.endsWith('.pipe.ts') || filePath.endsWith('.spec.ts')) continue;
+    const relPath = path.relative(ROOT, filePath).replace(/\\/g, '/');
+    try {
+      const { content, changed } = readIfChanged(filePath, cache);
+      if (!changed && prevMap.has(relPath)) { results.push(prevMap.get(relPath)); skipped++; continue; }
+      const src = content ?? fs.readFileSync(filePath, 'utf-8');
+      const classMatch = src.match(/export\s+class\s+(\w+)/);
+      const className = classMatch?.[1] ?? path.basename(filePath, '.pipe.ts');
+      const nameMatch = src.match(/name\s*:\s*['"]([^'"]+)['"]/);
+      const pipeName = nameMatch?.[1] ?? null;
+      const pure = !/pure\s*:\s*false/.test(src);
+      results.push({ pipeName, className, pure, filePath: relPath });
+    } catch { /* skip */ }
+  }
+  if (skipped > 0) process.stdout.write(dim(` (${skipped} cached)`));
+  return results;
+}
+
+/**
+ * DATABASE.md desde migraciones (spec 0022). Cache liviano: si el stamp
+ * `count:maxMtime` del directorio no cambió, reusa el markdown ya renderizado
+ * (string en cache — sin Maps, que no sobreviven JSON.stringify).
+ */
+function collectDatabase(cacheData) {
+  const migrationsDir = path.join(ROOT, 'supabase', 'migrations');
+  if (!fs.existsSync(migrationsDir)) return { markdown: null, stamp: null, stats: null };
+
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql'));
+  const maxMtime = Math.max(...files.map(f => fs.statSync(path.join(migrationsDir, f)).mtimeMs), 0);
+  const stamp = `${files.length}:${maxMtime}`;
+
+  if (cacheData.dbStamp === stamp && cacheData.dbMarkdown) {
+    process.stdout.write(dim(' (cached)'));
+    return { markdown: cacheData.dbMarkdown, stamp, stats: cacheData.dbStats ?? null };
+  }
+
+  const state = parseMigrations(migrationsDir);
+  const markdown = renderDatabaseMd(state);
+  const stats = {
+    tables: state.tables.size,
+    views: state.views.size,
+    functions: state.functions.size,
+    warnings: state.warnings.length +
+      [...state.tables.values()].reduce((n, t) => n + t.parseWarnings.length, 0),
+  };
+  return { markdown, stamp, stats };
+}
+
+function collectRoutes() {
+  const results = [];
+
+  for (const routesFile of walkDir(SRC_APP)) {
+    if (!routesFile.endsWith('.routes.ts') || routesFile.endsWith('.spec.ts')) continue;
+    const relFile = path.relative(ROOT, routesFile).replace(/\\/g, '/');
+    let src;
+    try { src = fs.readFileSync(routesFile, 'utf-8'); } catch { continue; }
+    const sf = ts.createSourceFile(routesFile, src, ts.ScriptTarget.Latest, true);
+
+    const getProp = (obj, name) =>
+      obj.properties.find(p => ts.isPropertyAssignment(p) && p.name?.getText(sf) === name);
+
+    function processRoute(node, prefix) {
+      if (!ts.isObjectLiteralExpression(node)) return;
+
+      const pathProp = getProp(node, 'path');
+      const seg = pathProp && ts.isStringLiteral(pathProp.initializer) ? pathProp.initializer.text : '';
+      const fullPath = [prefix, seg].filter(Boolean).join('/');
+
+      let component = null;
+      let importPath = null;
+      const loadProp = getProp(node, 'loadComponent');
+      if (loadProp) {
+        const txt = loadProp.initializer.getText(sf);
+        component = txt.match(/=>\s*m\.(\w+)/)?.[1] ?? null;
+        importPath = txt.match(/import\(\s*['"]([^'"]+)['"]/)?.[1] ?? null;
+      }
+      const compProp = getProp(node, 'component');
+      if (compProp) component = compProp.initializer.getText(sf);
+
+      const guards = [];
+      for (const g of ['canActivate', 'canMatch', 'canDeactivate']) {
+        const p = getProp(node, g);
+        if (p && ts.isArrayLiteralExpression(p.initializer)) {
+          for (const el of p.initializer.elements) guards.push(el.getText(sf));
+        }
+      }
+
+      const redirectProp = getProp(node, 'redirectTo');
+      const redirectTo = redirectProp ? redirectProp.initializer.getText(sf).replace(/['"]/g, '') : null;
+
+      const childrenProp = getProp(node, 'children');
+      const childElements = childrenProp && ts.isArrayLiteralExpression(childrenProp.initializer)
+        ? childrenProp.initializer.elements
+        : [];
+
+      // Se registran hojas, componentes, redirects Y grupos con guards propios
+      // (ej: /app/admin con hasRoleGuard — sin esto, esos guards no aparecerían).
+      if (component || redirectTo || guards.length > 0 || childElements.length === 0) {
+        results.push({ path: '/' + fullPath, component, importPath, guards, redirectTo, file: relFile });
+      }
+      for (const el of childElements) processRoute(el, fullPath);
+    }
+
+    walkAst(sf, node => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        node.name.getText(sf) === 'routes' &&
+        node.initializer &&
+        ts.isArrayLiteralExpression(node.initializer)
+      ) {
+        for (const el of node.initializer.elements) processRoute(el, '');
+      }
+    });
+  }
+
+  return results;
+}
+
+function collectStyles() {
+  const STYLES_DIR = path.join(ROOT, 'src', 'styles');
+
+  // ── 1. Parse SCSS source files ────────────────────────────────────────────
+  const tokensBySection = new Map(); // section label → [{name, value}]
+  const semanticClasses = [];        // [{name, file}]
+  const bentoClasses    = [];
+  const primengGroups   = new Map(); // base-component → Set<selector>
+
+  const varsPath = path.join(STYLES_DIR, 'tokens', '_variables.scss');
+  if (fs.existsSync(varsPath)) {
+    const src = fs.readFileSync(varsPath, 'utf-8');
+    let currentSection = 'General';
+
+    for (const line of src.split('\n')) {
+      // Section header patterns:
+      //   /* ── Section Name ──────... */
+      //   /* Section Name */
+      const secMatch =
+        line.match(/\/\*\s*─+\s*([^─\n*]{4,80}?)\s*─*\s*\*\//) ??
+        line.match(/\/\*\s+([A-ZÁÉÍÓÚ][^─\n*]{3,60}?)\s+\*\//);
+      if (secMatch) {
+        const candidate = secMatch[1].trim().replace(/^CAPA\s+\d+\s*[—–-]\s*/i, '');
+        if (candidate.length >= 4 && !/={3}/.test(candidate)) currentSection = candidate;
+      }
+
+      // CSS custom property declaration
+      const varMatch = line.match(/^\s+(--[\w-]+)\s*:\s*(.+?);/);
+      if (varMatch) {
+        if (!tokensBySection.has(currentSection)) tokensBySection.set(currentSection, []);
+        tokensBySection.get(currentSection).push({ name: varMatch[1], value: varMatch[2].trim() });
+      }
+
+      // Top-level semantic class (not nested, not state pseudo-class)
+      const clsMatch = line.match(/^(\.[\w-]+)\s*\{/);
+      if (clsMatch && !clsMatch[1].startsWith('.p-')) {
+        semanticClasses.push({ name: clsMatch[1], file: 'src/styles/tokens/_variables.scss' });
+      }
+    }
+  }
+
+  const bentoPath = path.join(STYLES_DIR, 'layout', '_bento-grid.scss');
+  if (fs.existsSync(bentoPath)) {
+    const src = fs.readFileSync(bentoPath, 'utf-8');
+    const re = /\.(bento-[\w-]+)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) bentoClasses.push(m[1]);
+  }
+
+  const primePath = path.join(STYLES_DIR, 'vendors', '_primeng-overrides.scss');
+  if (fs.existsSync(primePath)) {
+    const src = fs.readFileSync(primePath, 'utf-8');
+    const re = /\.(p-[\w][\w-]*)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const sel  = m[1];
+      const base = sel.replace(/^p-/, '').split('-')[0];
+      if (!primengGroups.has(base)) primengGroups.set(base, new Set());
+      primengGroups.get(base).add('.' + sel);
+    }
+  }
+
+  // ── 2. Cross-reference: count token/class usage in all templates ──────────
+  const allTokenNames = [];
+  for (const tokens of tokensBySection.values()) allTokenNames.push(...tokens.map(t => t.name));
+  const classNames = semanticClasses.map(c => c.name.replace(/^\./, ''));
+
+  const tokenUsage = {};
+  const classUsage = {};
+  let   typoSize     = 0;   // text-4xl/3xl/2xl → candidatas a clase semántica
+  let   typoWeight   = 0;   // font-bold/semibold → peso genérico, informativo
+  const typoClusters = new Map();
+  const TYPO_UTIL_RE = /\b(?:text-4xl|text-3xl|text-2xl|font-bold|font-semibold)\b/;
+
+  for (const filePath of walkDir(SRC_APP)) {
+    if (!filePath.endsWith('.ts') || filePath.endsWith('.spec.ts')) continue;
+    let content;
+    try { content = fs.readFileSync(filePath, 'utf-8'); } catch { continue; }
+    const template = extractTemplateContent(content, filePath);
+    const full     = content + template;
+
+    // Token usage: var(--token-name) — one pass via regex
+    const varRe = /var\((--[\w-]+)\)/g;
+    let m;
+    while ((m = varRe.exec(full)) !== null) {
+      tokenUsage[m[1]] = (tokenUsage[m[1]] ?? 0) + 1;
+    }
+
+    // Semantic class usage: los guards (?<![\w-]) / (?![\w-]) evitan contar
+    // `card` dentro de `card-accent`, `bento-card`, `kpi-card`, etc.
+    for (const cls of classNames) {
+      if (template.includes(cls)) {
+        const n = (template.match(new RegExp(`(?<![\\w-])${escapeRegex(cls)}(?![\\w-])`, 'g')) ?? []).length;
+        if (n > 0) classUsage[cls] = (classUsage[cls] ?? 0) + n;
+      }
+    }
+
+    // Typography drift — conteo crudo, separado por intención.
+    // size = candidata a clase semántica de número/título; weight = peso genérico (informativo).
+    typoSize   += (template.match(/\b(?:text-4xl|text-3xl|text-2xl)\b/g) ?? []).length;
+    typoWeight += (template.match(/\b(?:font-bold|font-semibold)\b/g) ?? []).length;
+
+    // Clusters repetidos: combinaciones idénticas de utilidades con tipografía
+    // que se repiten → candidatas a promoverse a una clase del DS.
+    const classRe = /(?<![\w-])class\s*=\s*"([^"]*)"/g;
+    let cm;
+    while ((cm = classRe.exec(template)) !== null) {
+      const raw = cm[1].trim();
+      if (!TYPO_UTIL_RE.test(raw)) continue;
+      const tokens = raw.split(/\s+/).filter(Boolean);
+      if (tokens.length < 3) continue; // necesita ser un "combo" real, no un font-bold suelto
+      const key = [...tokens].sort().join(' ');
+      const entry = typoClusters.get(key) ?? { count: 0, sample: raw };
+      entry.count += 1;
+      typoClusters.set(key, entry);
+    }
+  }
+
+  return {
+    tokensBySection,
+    tokenUsage,
+    semanticClasses,
+    classUsage,
+    bentoClasses: [...new Set(bentoClasses)].sort(),
+    primengGroups,
+    typoSize,
+    typoWeight,
+    typoClusters,
+  };
+}
+
+function collectUsageMap(cache, prevResults, sharedComponents, directiveItems, facadeNames) {
   const results = {
     componentUsage:  {},
     directiveUsage:  {},
@@ -381,12 +638,19 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
     .map(d => ({ selector: d.selector, pattern: directiveSelectorToPattern(d.selector) }))
     .filter(d => d.pattern !== null);
 
-  const selectors = new Set(sharedSelectors);
+  const selectors = new Set(sharedComponents.map(c => c.selector).filter(Boolean));
+  const directiveSelectorSet = new Set(directivesWithPatterns.map(d => d.selector));
+  const facadeSet = new Set(facadeNames ?? []);
+  // Para excluir el self-match: el template de un componente no es su propio consumidor.
+  const selectorFile = new Map(
+    sharedComponents.filter(c => c.selector).map(c => [c.selector, c.filePath]),
+  );
 
-  // Scan features/ and layout/
+  // Scan features/, layout/ y shared/ (shared consume shared — spec 0021 AC-E1)
   const scanDirs = [
     { dir: path.join(SRC_APP, 'features'), isPage: true },
     { dir: path.join(SRC_APP, 'layout'),   isPage: false },
+    { dir: path.join(SRC_APP, 'shared'),   isPage: false },
   ];
 
   for (const { dir, isPage } of scanDirs) {
@@ -401,16 +665,18 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
         const { content, changed } = readIfChanged(filePath, cache);
         const src = content ?? fs.readFileSync(filePath, 'utf-8');
 
-        // If unchanged and we have prev data, reuse it
+        // If unchanged and we have prev data, reuse it.
+        // Los hits previos se filtran contra los artefactos actuales: si un
+        // componente/directiva/facade fue eliminado, no debe reaparecer en el mapa.
         if (!changed && prevPages.has(relPath)) {
           const prev = prevPages.get(relPath);
-          if (prev._componentHits) prev._componentHits.forEach(s => {
+          if (prev._componentHits) prev._componentHits.filter(s => selectors.has(s)).forEach(s => {
             (results.componentUsage[s] ??= new Set()).add(consumer);
           });
-          if (prev._directiveHits) prev._directiveHits.forEach(s => {
+          if (prev._directiveHits) prev._directiveHits.filter(s => directiveSelectorSet.has(s)).forEach(s => {
             (results.directiveUsage[s] ??= new Set()).add(consumer);
           });
-          if (prev._facadeHits) prev._facadeHits.forEach(f => {
+          if (prev._facadeHits) prev._facadeHits.filter(f => facadeSet.has(f)).forEach(f => {
             (results.facadeUsage[f] ??= new Set()).add(consumer);
           });
           if (prev._serviceHits) prev._serviceHits.forEach(s => {
@@ -423,9 +689,10 @@ function collectUsageMap(cache, prevResults, sharedSelectors, directiveItems) {
 
         const templateContent = extractTemplateContent(src, filePath);
 
-        // Shared component usage
+        // Shared component usage (excluye self-match)
         const componentHits = [];
         for (const sel of selectors) {
+          if (selectorFile.get(sel) === relPath) continue;
           const tagRe = new RegExp(`<${sel}[\\s/>]`);
           if (tagRe.test(templateContent)) {
             (results.componentUsage[sel] ??= new Set()).add(consumer);
@@ -566,6 +833,139 @@ function generateUtilsTable(items) {
   return header + '\n' + rows.join('\n') + '\n';
 }
 
+function generatePipesTable(items) {
+  if (items.length === 0) return '_Sin pipes auto-detectados aún._\n';
+  const header = '| Pipe | Clase | Pure | Archivo |\n|------|-------|------|---------|';
+  const rows = items.map(p => {
+    const name = p.pipeName ? `\`${p.pipeName}\`` : '—';
+    return `| ${name} | \`${p.className}\` | ${p.pure ? '✅' : '❌ impure'} | \`${p.filePath}\` |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateRoutesTable(items) {
+  if (items.length === 0) return '_Sin rutas auto-detectadas aún._\n';
+  const header = '| Path | Componente | Guards | Archivo de rutas |\n|------|-----------|--------|------------------|';
+  const rows = items.map(r => {
+    const comp = r.redirectTo
+      ? `→ redirect a \`${r.redirectTo}\``
+      : r.component ? `\`${r.component}\`` : '—';
+    const guards = r.guards.length > 0 ? r.guards.map(g => `\`${g}\``).join(', ') : '—';
+    return `| \`${r.path}\` | ${comp} | ${guards} | \`${r.file}\` |`;
+  });
+  return header + '\n' + rows.join('\n') + '\n';
+}
+
+function generateStylesContent(data) {
+  const lines = [];
+
+  // ── Top 25 tokens by usage ────────────────────────────────────────────────
+  // Build a flat map name → value for quick lookup
+  const tokenValueMap = new Map();
+  for (const tokens of data.tokensBySection.values()) {
+    for (const t of tokens) tokenValueMap.set(t.name, t.value);
+  }
+
+  const topTokens = Object.entries(data.tokenUsage)
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 25);
+
+  if (topTokens.length > 0) {
+    lines.push('## Tokens canónicos — top 25 por frecuencia de uso real\n');
+    lines.push('| Token | Usos | Valor |');
+    lines.push('|-------|------|-------|');
+    for (const [token, count] of topTokens) {
+      const val = tokenValueMap.get(token) ?? '—';
+      const display = val.length > 60 ? val.slice(0, 57) + '…' : val;
+      lines.push(`| \`${token}\` | ${count} | \`${display}\` |`);
+    }
+    lines.push('');
+  }
+
+  // ── Semantic classes with usage ───────────────────────────────────────────
+  const semanticWithUsage = data.semanticClasses
+    .map(c => ({ ...c, usage: data.classUsage[c.name.replace(/^\./, '')] ?? 0 }))
+    .sort((a, b) => b.usage - a.usage);
+
+  if (semanticWithUsage.length > 0) {
+    lines.push('## Clases semánticas del Design System\n');
+    lines.push('| Clase | Usos en templates | Archivo |');
+    lines.push('|-------|------------------|---------|');
+    for (const cls of semanticWithUsage) {
+      lines.push(`| \`${cls.name}\` | ${cls.usage || '—'} | \`${cls.file}\` |`);
+    }
+    lines.push('');
+  }
+
+  // ── Bento grid cells ──────────────────────────────────────────────────────
+  if (data.bentoClasses.length > 0) {
+    lines.push('## Bento Grid — Clases de celda disponibles\n');
+    lines.push('| Clase CSS | Proporción |');
+    lines.push('|-----------|-----------|');
+    const descriptions = {
+      'bento-grid':    'Contenedor raíz (con [appBentoGridLayout])',
+      'bento-hero':    '100% ancho — para app-section-hero',
+      'bento-banner':  '100% ancho — para tablas y listados',
+      'bento-wide':    '2/3 ancho',
+      'bento-square':  '1/3 ancho (cuadrado)',
+      'bento-tall':    '1/3 ancho × 2 filas',
+      'bento-feature': '2/3 ancho × 2 filas',
+      'bento-media':   'Celda de media (imagen/video)',
+      'bento-card':    'Alias visual de celda con card',
+    };
+    for (const cls of data.bentoClasses) {
+      lines.push(`| \`.${cls}\` | ${descriptions[cls] ?? '—'} |`);
+    }
+    lines.push('');
+  }
+
+  // ── PrimeNG override coverage ─────────────────────────────────────────────
+  const primeEntries = [...data.primengGroups.entries()]
+    .filter(([base]) => base.length > 1)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (primeEntries.length > 0) {
+    lines.push('## PrimeNG — Componentes con override en _primeng-overrides.scss\n');
+    lines.push('| Componente | Selectores |');
+    lines.push('|-----------|-----------|');
+    for (const [base, selectors] of primeEntries) {
+      const selList = [...selectors].sort().slice(0, 5).map(s => `\`${s}\``).join(' · ');
+      const extra   = selectors.size > 5 ? ` +${selectors.size - 5}` : '';
+      lines.push(`| **${base}** | ${selList}${extra} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Typography drift ──────────────────────────────────────────────────────
+  lines.push('## Tipografía — drift de utilidades\n');
+  lines.push('> Conteo crudo de utilidades de tipografía en templates. **No es deuda directa:** el peso de fuente (`font-bold/semibold`) es legítimo en botones, headers y títulos, y no tiene una clase semántica que lo reemplace. La señal accionable son los _clusters repetidos_ (abajo).\n');
+  lines.push('| Categoría | Usos | Interpretación |');
+  lines.push('|-----------|------|----------------|');
+  lines.push(`| Tamaño display (\`text-4xl/3xl/2xl\`) | ${data.typoSize} | Candidatas a \`.kpi-value\` o heading semántico |`);
+  lines.push(`| Peso de fuente (\`font-bold/semibold\`) | ${data.typoWeight} | Informativo — legítimo en botones/headers/títulos |`);
+  lines.push('');
+
+  const typoClusters = [...data.typoClusters.entries()]
+    .map(([, v]) => v)
+    .filter(c => c.count >= 5)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 15);
+
+  if (typoClusters.length > 0) {
+    lines.push('### Clusters repetidos (candidatos a clase semántica)\n');
+    lines.push('Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5 veces → promover a una clase del DS:\n');
+    lines.push('| Repeticiones | Cluster |');
+    lines.push('|--------------|---------|');
+    for (const c of typoClusters) {
+      lines.push(`| ${c.count} | \`${c.sample}\` |`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n') + '\n';
+}
+
 function generateUsageMapContent(usageData) {
   const lines = [];
 
@@ -627,6 +1027,24 @@ function generateUsageMapContent(usageData) {
       const p = entry.patterns;
       const flag = (v) => v ? '✅' : '❌';
       lines.push(`| \`${entry.page}\` | ${flag(p.loading)} | ${flag(p.empty)} | ${flag(p.error)} | ${flag(p.skeleton)} |`);
+    }
+    lines.push('');
+  }
+
+  // ── Artefactos sin consumidores (candidatos a revisión)
+  const orphans = usageData.orphans ?? { components: [], directives: [] };
+  if (orphans.components.length > 0 || orphans.directives.length > 0) {
+    lines.push('## Sin consumidores detectados (candidatos a revisión)\n');
+    lines.push('> ⚠️ Un componente enrutado directo (ver ROUTES.md, ya excluidos), instanciado dinámicamente');
+    lines.push('> (`ViewContainerRef`, overlays) o usado solo en specs puede aparecer aquí sin estar muerto.');
+    lines.push('> Verificar antes de eliminar.\n');
+    lines.push('| Artefacto | Tipo | Archivo |');
+    lines.push('|-----------|------|---------|');
+    for (const c of orphans.components) {
+      lines.push(`| \`${c.selector}\` | componente | \`${c.filePath}\` |`);
+    }
+    for (const d of orphans.directives) {
+      lines.push(`| \`${d.selector}\` | directiva | \`${d.filePath}\` |`);
     }
     lines.push('');
   }
@@ -786,11 +1204,85 @@ async function main() {
   );
   if (utilChanged) changes.push('UTILS.md');
 
+  // ── PIPES.md ───────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando src/app/**/*.pipe.ts...'));
+  const pipes  = collectPipes(cache, prev.pipes);
+  const pipeChanged = injectGenerated(
+    path.join(INDICES_DIR, 'PIPES.md'),
+    generatePipesTable(pipes),
+  );
+  process.stdout.write('\r');
+  console.log(pipeChanged
+    ? green(`  ✓ PIPES.md actualizado (${pipes.length} pipes detectados)`)
+    : dim(`  — PIPES.md sin cambios    (${pipes.length} pipes detectados)`),
+  );
+  if (pipeChanged) changes.push('PIPES.md');
+
+  // ── STYLES.md ──────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando styles/ + cross-ref en templates...'));
+  const styles      = collectStyles();
+  const styleChanged = injectGenerated(
+    path.join(INDICES_DIR, 'STYLES.md'),
+    generateStylesContent(styles),
+  );
+  process.stdout.write('\r');
+  const topTokenCount  = Object.values(styles.tokenUsage).filter(c => c > 0).length;
+  const semanticCount  = styles.semanticClasses.length;
+  const typoDriftTotal = styles.typoSize + styles.typoWeight;
+  console.log(styleChanged
+    ? green(`  ✓ STYLES.md actualizado (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${typoDriftTotal} [size ${styles.typoSize} · weight ${styles.typoWeight}])`)
+    : dim(`  — STYLES.md sin cambios    (${topTokenCount} tokens en uso, ${semanticCount} clases semánticas, drift: ${typoDriftTotal} [size ${styles.typoSize} · weight ${styles.typoWeight}])`),
+  );
+  if (styleChanged) changes.push('STYLES.md');
+
+  // ── DATABASE.md ────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Parseando supabase/migrations/*.sql...'));
+  const db = collectDatabase(cacheData);
+  let dbChanged = false;
+  if (db.markdown) {
+    dbChanged = injectGenerated(path.join(INDICES_DIR, 'DATABASE.md'), db.markdown);
+  }
+  process.stdout.write('\r');
+  if (db.stats) {
+    const warn = db.stats.warnings > 0 ? ` ⚠ ${db.stats.warnings} sentencias sin parsear` : '';
+    console.log(dbChanged
+      ? green(`  ✓ DATABASE.md actualizado (${db.stats.tables} tablas, ${db.stats.views} vistas, ${db.stats.functions} funciones${warn})`)
+      : dim(`  — DATABASE.md sin cambios    (${db.stats.tables} tablas, ${db.stats.views} vistas, ${db.stats.functions} funciones${warn})`),
+    );
+  }
+  if (dbChanged) changes.push('DATABASE.md');
+
+  // ── ROUTES.md ──────────────────────────────────────────────────────────────
+  process.stdout.write(dim('  Escaneando src/app/**/*.routes.ts...'));
+  const routes = collectRoutes();
+  const routesChanged = injectGenerated(
+    path.join(INDICES_DIR, 'ROUTES.md'),
+    generateRoutesTable(routes),
+  );
+  process.stdout.write('\r');
+  console.log(routesChanged
+    ? green(`  ✓ ROUTES.md actualizado (${routes.length} rutas detectadas)`)
+    : dim(`  — ROUTES.md sin cambios    (${routes.length} rutas detectadas)`),
+  );
+  if (routesChanged) changes.push('ROUTES.md');
+
   // ── USAGE-MAP.md ───────────────────────────────────────────────────────────
-  process.stdout.write(dim('  Escaneando features/ y layout/ (usage map + directivas)...'));
-  const sharedSelectors    = components.map(c => c.selector).filter(Boolean);
+  process.stdout.write(dim('  Escaneando features/, layout/ y shared/ (usage map + directivas)...'));
   const directiveSelectors = directives.filter(d => d.selector);
-  const usageMap  = collectUsageMap(cache, prev.usageMap, sharedSelectors, directiveSelectors);
+  const facadeNames = facades.map(f => f.className);
+  const usageMap  = collectUsageMap(cache, prev.usageMap, components, directiveSelectors, facadeNames);
+
+  // Huérfanos: sin usage y (para componentes) sin ruta que los cargue directo
+  const routedFiles = new Set(
+    routes
+      .map(r => r.importPath)
+      .filter(Boolean)
+      .map(p => 'src/app/' + p.replace(/^\.\//, '') + '.ts'),
+  );
+  usageMap.orphans = {
+    components: components.filter(c => !usageMap.componentUsage[c.selector] && !routedFiles.has(c.filePath)),
+    directives: directives.filter(d => d.selector && !usageMap.directiveUsage[d.selector]),
+  };
   const usageChanged = injectGenerated(
     path.join(INDICES_DIR, 'USAGE-MAP.md'),
     generateUsageMapContent(usageMap),
@@ -808,8 +1300,13 @@ async function main() {
   // Persist cache for next run
   saveCache({
     scriptMtime: selfMtime,
+    dbStamp: db.stamp,
+    dbMarkdown: db.markdown,
+    dbStats: db.stats,
     mtimes: cache,
-    results: { components, services, facades, models, directives, guards, utils, usageMap },
+    // styles se excluye a propósito: contiene Maps (se serializan como {} en JSON)
+    // y collectStyles hace rescan completo en cada corrida, nunca lee resultados previos.
+    results: { components, services, facades, models, directives, guards, utils, pipes, usageMap },
   });
 
   console.log('');
