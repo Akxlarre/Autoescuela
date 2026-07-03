@@ -20,7 +20,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ToastService } from '@core/services/ui/toast.service';
-import type { SiteData } from '@core/models/dto/website-config.model';
+import type { SiteData } from '@core/models/ui/website-config.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { GeneralTabComponent } from './tabs/general-tab.component';
