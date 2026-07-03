@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"C:/Users/Akxlarre/.claude/hooks/sdd/spec-gate.js\""
+            "command": "node .claude/hooks/sdd/spec-gate.js"
           },
           {
             "type": "command",
@@ -25,7 +25,7 @@
           },
           {
             "type": "command",
-            "command": "node \"C:/Users/Akxlarre/.claude/hooks/sdd/plan-injector.js\""
+            "command": "node .claude/hooks/sdd/plan-injector.js"
           }
         ]
       },
@@ -73,6 +73,10 @@
     "Stop": [
       {
         "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/sdd/hotfix-autoclose.js"
+          },
           {
             "type": "command",
             "command": "node -e \"const fs=require('fs'),p=require('path'),t=p.join(process.cwd(),'.claude','temp','session-writes.json');if(!fs.existsSync(t))process.exit(0);try{const w=JSON.parse(fs.readFileSync(t,'utf-8'));if(w.length===0)process.exit(0)}catch{process.exit(0)};require('child_process').execSync('npm run indices:sync --silent',{cwd:process.cwd(),stdio:'pipe'})\""
