@@ -19,6 +19,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { canAccessProfessional } from '@core/utils/professional-access.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { LogoComponent } from '@shared/components/logo/logo.component';
 
 /**
  * SidebarComponent — navegación lateral principal.
@@ -33,26 +34,20 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   selector: 'app-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TooltipModule, RouterLink, RouterLinkActive, IconComponent],
+  imports: [TooltipModule, RouterLink, RouterLinkActive, IconComponent, LogoComponent],
   template: `
     <nav
       #sidebarEl
-      class="flex h-full min-h-0 w-60 flex-col border-r border-border-subtle bg-surface py-4 shadow-(--shadow-layout-sidebar)"
+      class="flex h-full min-h-0 w-60 flex-col max-lg:border-r border-border-subtle bg-surface py-4 max-lg:shadow-(--shadow-layout-sidebar)"
       aria-label="Navegación principal"
     >
-      <!-- Brand & Active Branch Badge -->
-      <div class="px-5 pb-4 pt-2 shrink-0 flex flex-col gap-1.5 border-b border-border-subtle">
-        <span class="font-display text-lg font-bold text-brand">{{ appName }}</span>
-        <div
-          class="flex items-center gap-1.5 text-xs font-semibold text-text-muted bg-subtle px-2.5 py-1 rounded-md w-fit border border-border-subtle"
-        >
-          <app-icon name="map-pin" [size]="12" class="text-brand" />
-          <span class="truncate max-w-37.5">{{ currentSedeLabel() }}</span>
-        </div>
+      <!-- Brand Logo -->
+      <div class="px-5 py-4 shrink-0 flex items-center justify-center">
+        <app-logo />
       </div>
 
       <!-- Nav groups -->
-      <div class="flex flex-1 flex-col overflow-y-auto min-h-0 px-3 pt-4">
+      <div class="flex flex-1 flex-col overflow-y-auto min-h-0 pl-3 pr-3 mr-2 pt-4 pb-4">
         @for (group of menuConfig.menuItems(); track group.group) {
           <div class="mb-6">
             <p
@@ -61,7 +56,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
             >
               {{ group.group }}
             </p>
-            @for (item of group.items; track item.routerLink) {
+            <div class="flex flex-col gap-1">
+              @for (item of group.items; track item.routerLink) {
               <a
                 [routerLink]="
                   item.requiresProfessional && !hasProfessional() ? null : item.routerLink
@@ -85,7 +81,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
                   <app-icon name="lock" [size]="14" class="text-text-muted" />
                 }
               </a>
-            }
+              }
+            </div>
           </div>
         }
       </div>
@@ -94,8 +91,6 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   styles: [],
 })
 export class SidebarComponent {
-  protected readonly appName = 'Autoescuela';
-
   protected readonly auth = inject(AuthFacade);
   protected readonly branchFacade = inject(BranchFacade);
   protected readonly layout = inject(LayoutService);
@@ -120,23 +115,6 @@ export class SidebarComponent {
       this.branchFacade.branches(),
       user?.canAccessBothBranches,
     );
-  });
-
-  /**
-   * Obtiene la etiqueta amigable de la sede actual.
-   */
-  protected readonly currentSedeLabel = computed(() => {
-    const role = this.auth.currentUser()?.role;
-    if (role === 'admin') {
-      return this.branchFacade.selectedBranchLabel();
-    } else if (role === 'secretaria') {
-      const activeId = this.auth.currentUser()?.branchId;
-      if (!activeId) return 'Sede No Asignada';
-      return (
-        this.branchFacade.branches().find((b) => b.id === activeId)?.name ?? 'Cargando Sede...'
-      );
-    }
-    return 'Autoescuela';
   });
 
   constructor() {
