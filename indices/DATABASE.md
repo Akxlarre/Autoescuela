@@ -157,3 +157,2043 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `website-public` | `20260522010000_create_website_public_bucket.sql` | - | **`public: true`** (público) | `image/jpeg`, `image/png`, `image/webp`, `image/svg+xml` | 50 MB | SELECT: público para todos (policy `website_public_select`) · INSERT: authenticated admins/secretaries (`website_public_insert`) y anon temporal en `seeds/*` (`website_public_seed_insert`) · UPDATE: authenticated admins/secretaries (`website_public_update`) · DELETE: authenticated admins (`website_public_delete`). **URLs en BD son URLs públicas absolutas del CDN**; las Facades cargan directamente sin firmas. Carpetas internas: `seeds/` (assets de marca iniciales), `website-assets/branch-{branchId}/` (assets de subida) |
 
 > **Fix aplicado `20260310130000`:** Se reemplazó `auth_user_role()` por subquery `EXISTS(... JOIN roles ...)` en todas las policies de storage para evitar fallos en el contexto de evaluación del schema `storage`. Se agregó `WITH CHECK` a la policy UPDATE (necesario para que `upsert: true` funcione cuando el archivo ya existe). Se cambió `ON CONFLICT DO NOTHING` por `DO UPDATE SET` para forzar actualización de `allowed_mime_types` si el bucket ya existía antes de la migración original.
+
+## Esquema auto-generado desde migraciones
+
+> Regenerado con `npm run indices:sync` (spec 0022). Estado acumulado de las 133+ migraciones
+> en orden cronológico. La documentación manual de arriba complementa; ante discrepancia,
+> esta sección refleja el SQL real.
+
+<!-- AUTO-GENERATED:BEGIN -->
+## Esquema efectivo (76 tablas, acumulado de las migraciones)
+
+### `absence_evidence` — 🔒 RLS
+
+> Adjuntos de licencias médicas para justificar faltas profesionales (RF-071)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `document_type` | TEXT | sí | — | — |
+| `description` | TEXT | sí | — | — |
+| `file_url` | TEXT | NO | — | — |
+| `document_date` | DATE | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `reviewed_by` | INT | sí | — | → `users.id` |
+| `reviewed_at` | TIMESTAMPTZ | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_absence_evidence | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_absence_evidence | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` |
+| update_absence_evidence | UPDATE | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| delete_absence_evidence | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `alert_config` — 🔒 RLS
+
+> Días de anticipación configurables por tipo de alerta (RF-024)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `alert_type` | TEXT | NO | — | — |
+| `advance_days` | SMALLINT | NO | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| all_alert_config | ALL | `auth_user_role() = 'admin'` | — |
+
+### `audit_log` — 🔒 RLS
+
+> Historial inmutable de acciones del sistema (RF-009, RF-010). Sin updated_at.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `user_id` | INT | sí | — | → `users.id` |
+| `action` | TEXT | NO | — | — |
+| `entity` | TEXT | sí | — | — |
+| `entity_id` | INT | sí | — | — |
+| `detail` | TEXT | sí | — | — |
+| `ip` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_audit_log | SELECT | `auth_user_role() = 'admin'` | — |
+| insert_audit_log | INSERT | — | `(SELECT auth.uid()) IS NOT NULL` |
+
+**Índices:** `idx_audit_log_time`, `idx_audit_log_user`
+
+### `branches` — 🔒 RLS
+
+> Sedes físicas de la escuela de conductores (RF-012)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `slug` UQ | TEXT | sí | — | — |
+| `address` | TEXT | sí | — | — |
+| `phone` | TEXT | sí | — | — |
+| `email` | TEXT | sí | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `has_professional` | BOOLEAN | NO | `false` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_branches | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| insert_branches | INSERT | — | `auth_user_role() = 'admin'` |
+| update_branches | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_branches | DELETE | `auth_user_role() = 'admin'` | — |
+| select_branches_anon | SELECT | `true` | — |
+
+### `cash_closings` — 🔒 RLS
+
+> Cuadratura diaria con arqueo físico de billetes/monedas (RF-029, RF-032, RF-037)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `date` | DATE | NO | — | — |
+| `cash_amount` | INTEGER | sí | `0` | — |
+| `transfer_amount` | INTEGER | sí | `0` | — |
+| `card_amount` | INTEGER | sí | `0` | — |
+| `voucher_amount` | INTEGER | sí | `0` | — |
+| `total_income` | INTEGER | sí | — | — |
+| `total_expenses` | INTEGER | sí | — | — |
+| `balance` | INTEGER | sí | — | — |
+| `payments_count` | INTEGER | sí | — | — |
+| `qty_bill_20000` | SMALLINT | sí | `0` | — |
+| `qty_bill_10000` | SMALLINT | sí | `0` | — |
+| `qty_bill_5000` | SMALLINT | sí | `0` | — |
+| `qty_bill_2000` | SMALLINT | sí | `0` | — |
+| `qty_bill_1000` | SMALLINT | sí | `0` | — |
+| `qty_coin_500` | SMALLINT | sí | `0` | — |
+| `qty_coin_100` | SMALLINT | sí | `0` | — |
+| `qty_coin_50` | SMALLINT | sí | `0` | — |
+| `qty_coin_10` | SMALLINT | sí | `0` | — |
+| `arqueo_amount` | INTEGER | sí | — | — |
+| `difference` | INTEGER | sí | — | — |
+| `status` | TEXT | sí | `'open'` | — |
+| `closed` | BOOLEAN | sí | `false` | — |
+| `closed_by` | INT | sí | — | → `users.id` |
+| `closed_at` | TIMESTAMPTZ | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_cash_closings | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND date >= CUR…` | — |
+| insert_cash_closings | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| update_cash_closings | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_cash_closings | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `certificate_batches` — 🔒 RLS
+
+> Lotes de folios Casa de Moneda: rango y disponibilidad (RF-112)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `batch_code` UQ | TEXT | NO | — | — |
+| `folio_from` | INTEGER | NO | — | — |
+| `folio_to` | INTEGER | NO | — | — |
+| `available_folios` | INTEGER | sí | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `received_date` | DATE | sí | — | — |
+| `received_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| all_certificate_batches | ALL | `auth_user_role() = 'admin'` | — |
+
+### `certificate_issuance_log` — 🔒 RLS
+
+> Historial de descargas, envíos e impresiones de certificados (RF-096)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `certificate_id` | INT | NO | — | → `certificates.id` |
+| `action` | TEXT | sí | — | — |
+| `user_id` | INT | sí | — | → `users.id` |
+| `ip` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_certificate_issuance_log | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_certificate_issuance_log | INSERT | — | `auth_user_role() = 'admin'` |
+| update_certificate_issuance_log | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_certificate_issuance_log | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `certificates` — 🔒 RLS
+
+> Certificados emitidos con folio único, QR y link a lote Casa de Moneda (RF-075, RF-076)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `folio` UQ | INTEGER | NO | — | — |
+| `batch_id` | INT | sí | — | → `certificate_batches.id` |
+| `enrollment_id` | INT | sí | — | → `enrollments.id` |
+| `student_id` | INT | sí | — | → `students.id` |
+| `type` | TEXT | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `qr_url` | TEXT | sí | — | — |
+| `issued_date` | DATE | sí | — | — |
+| `issued_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_certificates | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_certificates | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_certificates | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_certificates | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `class_b_exam_attempts` — 🔒 RLS
+
+> Intentos de alumnos en ensayos online con calificación automática (RF-057)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `exam_id` | INT | NO | — | → `class_b_exam_catalog.id` |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `started_at` | TIMESTAMPTZ | NO | — | — |
+| `submitted_at` | TIMESTAMPTZ | sí | — | — |
+| `score` | SMALLINT | sí | — | — |
+| `passed` | BOOLEAN | sí | — | — |
+| `answers` | JSONB | sí | — | — |
+| `timed_out` | BOOLEAN | sí | `false` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| update_class_b_exam_attempts | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_class_b_exam_attempts | DELETE | `auth_user_role() = 'admin'` | — |
+| select_class_b_exam_attempts | SELECT | `auth_user_role() IN ('admin', 'secretary') OR ( auth_user_role() = 'student' …` | — |
+| insert_class_b_exam_attempts | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'student' AND EXISTS ( SEL…` |
+
+### `class_b_exam_catalog` — 🔒 RLS
+
+> Catálogo de ensayos online autogestionados Clase B (RF-057)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `title` | TEXT | NO | — | — |
+| `description` | TEXT | sí | — | — |
+| `time_limit_min` | SMALLINT | NO | — | — |
+| `total_questions` | SMALLINT | NO | — | — |
+| `pass_score` | SMALLINT | NO | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `created_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_exam_catalog | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
+| insert_class_b_exam_catalog | INSERT | — | `auth_user_role() = 'admin'` |
+| update_class_b_exam_catalog | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_class_b_exam_catalog | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `class_b_exam_questions` — 🔒 RLS
+
+> Banco de preguntas reutilizables para ensayos online Clase B (RF-057)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `exam_id` | INT | NO | — | → `class_b_exam_catalog.id` |
+| `question_text` | TEXT | NO | — | — |
+| `option_a` | TEXT | NO | — | — |
+| `option_b` | TEXT | NO | — | — |
+| `option_c` | TEXT | NO | — | — |
+| `option_d` | TEXT | sí | — | — |
+| `correct_option` | CHAR(1) | NO | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_class_b_exam_questions | INSERT | — | `auth_user_role() = 'admin'` |
+| update_class_b_exam_questions | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_class_b_exam_questions | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `class_b_exam_scores` — 🔒 RLS
+
+> Puntajes de ensayos físicos de preparación examen municipal, ingreso manual (RF-057)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `date` | DATE | sí | — | — |
+| `score` | SMALLINT | sí | — | — |
+| `passed` | BOOLEAN | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_class_b_exam_scores | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
+| update_class_b_exam_scores | UPDATE | `auth_user_role() IN ('admin', 'instructor')` | — |
+| delete_class_b_exam_scores | DELETE | `auth_user_role() = 'admin'` | — |
+| select_class_b_exam_scores | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor') OR ( auth_user_role(…` | — |
+
+### `class_b_practice_attendance` — 🔒 RLS
+
+> Asistencia a clases prácticas individuales Clase B. RF-053: 2 inasistencias = deserción
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `class_b_session_id` | INT | NO | — | → `class_b_sessions.id` |
+| `student_id` | INT | NO | — | → `students.id` |
+| `status` | TEXT | sí | — | — |
+| `justification` | TEXT | sí | — | — |
+| `evidence_url` | TEXT | sí | — | — |
+| `consecutive_absences` | INT | sí | `0` | — |
+| `recorded_by` | INT | sí | — | → `users.id` |
+| `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_practice_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor') OR (auth_user_role()…` | — |
+| insert_class_b_practice_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
+| update_class_b_practice_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
+| delete_class_b_practice_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_class_b_practice_attendance_student`
+
+### `class_b_sessions` — 🔒 RLS
+
+> Sesiones prácticas individuales Clase B: 1 alumno + 1 instructor + 1 vehículo, secuencia 1-12 (RF-046)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `vehicle_id` | INT | NO | — | → `vehicles.vehicle_id` |
+| `class_number` | SMALLINT | sí | — | — |
+| `scheduled_at` | TIMESTAMPTZ | sí | — | — |
+| `start_time` | TIME | sí | — | — |
+| `end_time` | TIME | sí | — | — |
+| `duration_min` | SMALLINT | sí | `45` | — |
+| `status` | TEXT | sí | — | — |
+| `counts_as_taken` | BOOLEAN | sí | `false` | — |
+| `cancelled_at` | TIMESTAMPTZ | sí | — | — |
+| `completed_at` | TIMESTAMPTZ | sí | — | — |
+| `evaluation_grade` | NUMERIC(3,1) | sí | — | — |
+| `performance_notes` | TEXT | sí | — | — |
+| `km_start` | INTEGER | sí | — | — |
+| `km_end` | INTEGER | sí | — | — |
+| `gps_start` | POINT | sí | — | — |
+| `gps_end` | POINT | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+| `student_signature` | BOOLEAN | sí | `false` | — |
+| `instructor_signature` | BOOLEAN | sí | `false` | — |
+| `signature_timestamp` | TIMESTAMPTZ | sí | — | — |
+| `original_instructor_id` | INT | sí | — | → `instructors.id` |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `evaluation_checklist` | JSONB | sí | `'[]'::jsonb` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
+| insert_class_b_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` |
+| update_class_b_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
+| delete_class_b_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_class_b_sessions_date_instructor`, `idx_class_b_sessions_date_vehicle`
+
+### `class_b_theory_attendance` — 🔒 RLS
+
+> Asistencia a clases teóricas grupales Clase B Zoom (RF-051, RF-052)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `theory_session_b_id` | INT | NO | — | → `class_b_theory_sessions.id` |
+| `student_id` | INT | NO | — | → `students.id` |
+| `status` | TEXT | sí | — | — |
+| `justification` | TEXT | sí | — | — |
+| `recorded_by` | INT | sí | — | → `users.id` |
+| `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_theory_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor') OR (auth_user_role()…` | — |
+| insert_class_b_theory_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
+| update_class_b_theory_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
+| delete_class_b_theory_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `class_b_theory_sessions` — 🔒 RLS
+
+> Sesiones teóricas grupales Zoom de Clase B (RF-016, RF-051)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `instructor_id` | INT | sí | — | → `instructors.id` |
+| `scheduled_at` | TIMESTAMPTZ | NO | — | — |
+| `start_time` | TIME | sí | — | — |
+| `end_time` | TIME | sí | — | — |
+| `duration_min` | SMALLINT | sí | `90` | — |
+| `topic` | TEXT | sí | — | — |
+| `zoom_link` | TEXT | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_class_b_theory_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor', 'student')` | — |
+| insert_class_b_theory_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
+| update_class_b_theory_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
+| delete_class_b_theory_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_class_b_theory_sessions_branch`
+
+### `class_book` — 🔒 RLS
+
+> Libro oficial por curso profesional, para auditorías MTT. Exclusivo Clase Profesional (RF-103)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `promotion_course_id` | INT | NO | — | → `promotion_courses.id` |
+| `period` | TEXT | NO | — | — |
+| `pdf_url` | TEXT | sí | — | — |
+| `generated_by` | INT | sí | — | → `users.id` |
+| `generated_at` | TIMESTAMPTZ | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `closes_at` | TIMESTAMPTZ | sí | — | — |
+| `closed_at` | TIMESTAMPTZ | sí | — | — |
+| `closed_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `sence_code` | TEXT | sí | — | — |
+| `horario` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_class_book | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_class_book | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND status != '…` | — |
+| delete_class_book | DELETE | `auth_user_role() = 'admin'` | — |
+| select_class_book | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+
+### `courses` — 🔒 RLS
+
+> Catálogo de cursos ofrecidos por sede: Clase B y Profesional (RF-012). '
+  'Los cursos con is_convalidation = true (conv_a4, conv_a3) son contenedores '
+  'de sesiones para convalidaciones simultáneas; no tienen enrollments propios.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `code` UQ | TEXT | sí | — | — |
+| `name` | TEXT | NO | — | — |
+| `type` | TEXT | sí | — | — |
+| `duration_weeks` | INT | sí | — | — |
+| `practical_hours` | NUMERIC(5,1) | sí | — | — |
+| `theory_hours` | NUMERIC(5,1) | sí | — | — |
+| `base_price` | INTEGER | sí | — | — |
+| `license_class` | TEXT | sí | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `active` | BOOLEAN | sí | `true` | — |
+| `schedule_days` | INT[] | sí | `'{1` | — |
+| `schedule_blocks` | JSONB | sí | `'[
+    {"from":"08:30","to":"09:15"},
+    {"from":"09:20","to":"10:05"},
+    {"from":"10:10","to":"10:55"},
+    {"from":"11:00","to":"11:45"},
+    {"from":"11:50","to":"12:35"},
+    {"from":"12:40","to":"13:25"},
+    {"from":"15:00","to":"15:45"},
+    {"from":"15:50","to":"16:35"},
+    {"from":"16:40","to":"17:25"},
+    {"from":"17:30","to":"18:15"},
+    {"from":"18:20","to":"19:05"},
+    {"from":"19:10","to":"19:55"},
+    {"from":"20:00","to":"20:45"}
+  ]'::JSONB` | — |
+| `is_convalidation` | BOOLEAN | NO | `false` | — |
+| `max_classes_per_day` | INTEGER | NO | `1` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_courses | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| insert_courses | INSERT | — | `auth_user_role() = 'admin'` |
+| update_courses | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_courses | DELETE | `auth_user_role() = 'admin'` | — |
+| select_courses_anon | SELECT | `active = true AND (is_convalidation IS NOT TRUE)` | — |
+
+### `digital_contracts` — 🔒 RLS
+
+> Contrato digital firmado por el alumno, con PDF para el DMS (RF-083)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` UQ | INT | NO | — | → `enrollments.id` |
+| `content_hash` | TEXT | sí | — | — |
+| `signature_ip` | TEXT | sí | — | — |
+| `accepted_at` | TIMESTAMPTZ | sí | — | — |
+| `file_name` | TEXT | sí | — | — |
+| `file_url` | TEXT | sí | — | — |
+| `signed_contract_url` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_digital_contracts | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_digital_contracts | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_digital_contracts | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
+| delete_digital_contracts | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
+
+### `disciplinary_notes` — 🔒 RLS
+
+> Notas disciplinarias asociadas al perfil del alumno (RF-109)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `student_id` | INT | NO | — | → `students.id` |
+| `description` | TEXT | NO | — | — |
+| `date` | DATE | NO | — | — |
+| `recorded_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_disciplinary_notes | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_disciplinary_notes | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_disciplinary_notes | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_disciplinary_notes | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `discount_applications` — 🔒 RLS
+
+> Registro de descuento aplicado a una matrícula específica
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `discount_id` | INT | NO | — | → `discounts.id` |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `discount_amount` | INTEGER | NO | — | — |
+| `applied_by` | INT | sí | — | → `users.id` |
+| `applied_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_discount_applications | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_discount_applications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_discount_applications | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_discount_applications | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `discounts` — 🔒 RLS
+
+> Descuentos comerciales aplicables a matrículas (porcentaje o monto fijo)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `discount_type` | TEXT | sí | — | — |
+| `value` | INTEGER | NO | — | — |
+| `valid_from` | DATE | NO | — | — |
+| `valid_until` | DATE | sí | — | — |
+| `applicable_to` | TEXT | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `referral_code` | TEXT | sí | — | — |
+| `created_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_discounts | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_discounts | INSERT | — | `auth_user_role() = 'admin'` |
+| update_discounts | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_discounts | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `document_templates` — 🔒 RLS
+
+> Plantillas descargables del DMS: contratos, formularios MTT, comprobantes. Solo Admin gestiona.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `description` | TEXT | sí | — | — |
+| `category` | TEXT | NO | — | — |
+| `format` | TEXT | NO | — | — |
+| `version` | TEXT | sí | — | — |
+| `file_url` | TEXT | NO | — | — |
+| `download_count` | INTEGER | sí | `0` | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `updated_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_document_templates | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| insert_document_templates | INSERT | — | `auth_user_role() = 'admin'` |
+| update_document_templates | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_document_templates | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `enrollments` — 🔒 RLS
+
+> Matrícula central: Clase B y Profesional (RF-080). El tipo se deriva de course_id → courses.type
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `number` UQ | TEXT | sí | — | — |
+| `student_id` | INT | NO | — | → `students.id` |
+| `course_id` | INT | NO | — | → `courses.id` |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `sence_code_id` | INT | sí | — | → `sence_codes.id` |
+| `base_price` | INTEGER | sí | — | — |
+| `discount` | INTEGER | sí | `0` | — |
+| `total_paid` | INTEGER | sí | `0` | — |
+| `pending_balance` | INTEGER | sí | — | — |
+| `payment_status` | TEXT | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `expires_at` | TIMESTAMPTZ | sí | — | — |
+| `docs_complete` | BOOLEAN | sí | `false` | — |
+| `contract_accepted` | BOOLEAN | sí | `false` | — |
+| `certificate_enabled` | BOOLEAN | sí | `false` | — |
+| `registration_channel` | TEXT | sí | `'in_person'` | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `promotion_course_id` | INT | sí | — | → `promotion_courses.id` |
+| `license_group` | TEXT | sí | — | — |
+| `certificate_b_pdf_url` | TEXT | sí | — | — |
+| `certificate_professional_pdf_url` | TEXT | sí | — | — |
+| `license_pdf_url` | TEXT | sí | — | — |
+| `license_initial_url` | TEXT | sí | — | — |
+| `license_full_url` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| delete_enrollments | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| select_enrollments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| insert_enrollments | INSERT | — | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
+| update_enrollments | UPDATE | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
+
+**Índices:** `idx_enrollments_branch_date`, `idx_enrollments_expired_drafts`
+
+### `expenses` — 🔒 RLS
+
+> Gastos categorizados de la escuela (RF-028)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `category` | TEXT | sí | — | — |
+| `description` | TEXT | NO | — | — |
+| `amount` | INTEGER | NO | — | — |
+| `date` | DATE | NO | — | — |
+| `receipt_url` | TEXT | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_expenses | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| insert_expenses | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| update_expenses | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| delete_expenses | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+
+### `fixed_expenses` — 🔒 RLS
+
+> Gastos fijos del administrador (arriendo, sueldos, servicios, reparaciones) para punto de equilibrio mensual. Admin-only.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `category` | TEXT | NO | — | — |
+| `description` | TEXT | NO | — | — |
+| `amount` | INTEGER | NO | — | — |
+| `date` | DATE | NO | — | — |
+| `created_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_fixed_expenses | SELECT | `auth_user_role() = 'admin'` | — |
+| insert_fixed_expenses | INSERT | — | `auth_user_role() = 'admin'` |
+| update_fixed_expenses | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_fixed_expenses | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `instructor_advances` — 🔒 RLS
+
+> Cuenta corriente interna de anticipos a instructores (RF-038)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `date` | DATE | NO | — | — |
+| `amount` | INTEGER | NO | — | — |
+| `reason` | TEXT | sí | — | — |
+| `description` | TEXT | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `deducted_on` | DATE | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_instructor_advances | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
+| insert_instructor_advances | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_instructor_advances | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_instructor_advances | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `instructor_monthly_hours` — 🔒 RLS
+
+> Cálculo de horas teóricas + prácticas (×1.5) por mes por instructor (RF-047)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `period` | TEXT | NO | — | — |
+| `theory_hours` | NUMERIC(6,1) | sí | `0` | — |
+| `practical_sessions` | INTEGER | sí | `0` | — |
+| `total_equivalent` | NUMERIC(6,1) | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_instructor_monthly_hours | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'instructor' AND instructor…` | — |
+| insert_instructor_monthly_hours | INSERT | — | `auth_user_role() = 'admin'` |
+| update_instructor_monthly_hours | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_instructor_monthly_hours | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `instructor_monthly_payments` — 🔒 RLS
+
+> Liquidación mensual: base_salary − anticipos = net_payment (RF-038)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `period` | TEXT | NO | — | — |
+| `base_salary` | INTEGER | NO | — | — |
+| `advances_deducted` | INTEGER | NO | `0` | — |
+| `net_payment` | INTEGER | NO | — | — |
+| `payment_status` | TEXT | sí | `'pending'` | — |
+| `paid_at` | TIMESTAMPTZ | sí | — | — |
+| `paid_by` | INT | sí | — | → `users.id` |
+| `notes` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_instructor_monthly_payments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'instructor' AND instructor…` | — |
+| insert_instructor_monthly_payments | INSERT | — | `auth_user_role() = 'admin'` |
+| update_instructor_monthly_payments | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_instructor_monthly_payments | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `instructor_replacements` — 🔒 RLS
+
+> Registro de sustituciones de instructores con motivo y clases afectadas (RF-044)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `absent_instructor_id` | INT | NO | — | → `instructors.id` |
+| `replacement_instructor_id` | INT | NO | — | → `instructors.id` |
+| `date` | DATE | NO | — | — |
+| `reason` | TEXT | NO | — | — |
+| `affected_classes` | INT[] | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_instructor_replacements | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_instructor_replacements | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_instructor_replacements | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_instructor_replacements | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `instructors` — 🔒 RLS
+
+> Instructores de Clase B con licencia, disponibilidad y control de clases (RF-041)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `user_id` UQ | INT | NO | — | → `users.id` |
+| `type` | TEXT | sí | — | — |
+| `license_number` | TEXT | sí | — | — |
+| `license_class` | TEXT | sí | — | — |
+| `license_expiry` | DATE | sí | — | — |
+| `license_status` | TEXT | sí | — | — |
+| `active_classes_count` | INT | sí | `0` | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `registration_date` | DATE | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_instructors | INSERT | — | `auth_user_role() = 'admin'` |
+| update_instructors | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_instructors | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `lecturer_monthly_hours` — 🔒 RLS
+
+> Cálculo de horas teóricas y prácticas por relator profesional por mes
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `lecturer_id` | INT | NO | — | → `lecturers.id` |
+| `period` | TEXT | NO | — | — |
+| `theory_hours` | NUMERIC(6,1) | sí | `0` | — |
+| `practical_hours` | NUMERIC(6,1) | sí | `0` | — |
+| `total_hours` | NUMERIC(6,1) | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| all_lecturer_monthly_hours | ALL | `auth_user_role() = 'admin'` | — |
+
+### `lecturers` — 🔒 RLS
+
+> Relatores de Clase Profesional: datos y especializaciones. Sin acceso al sistema (RF-058)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `rut` UQ | TEXT | NO | — | — |
+| `first_names` | TEXT | NO | — | — |
+| `paternal_last_name` | TEXT | NO | — | — |
+| `maternal_last_name` | TEXT | sí | — | — |
+| `email` UQ | TEXT | sí | — | — |
+| `phone` | TEXT | sí | — | — |
+| `specializations` | TEXT[] | sí | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `registration_date` | DATE | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_lecturers | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_lecturers | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_lecturers | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_lecturers | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `license_validations` — 🔒 RLS
+
+> Convalidación simultánea de licencias profesionales: A2+A4 (madre=A2) o A5+A3 (madre=A5). '
+  'Un solo registro por matrícula. El alumno se obtiene vía enrollment_id → enrollments.student_id. '
+  '(RF-064, RF-065, RF-066)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `reduced_hours` | INTEGER | sí | `60` | — |
+| `book2_open_date` | DATE | sí | — | — |
+| `history_ref_id` | INT | sí | — | → `enrollments.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `enrollment_id` | INT | sí | — | → `enrollments.id` |
+| `convalidated_license` | TEXT | sí | — | — |
+| `convalidation_promotion_course_id` | INT | sí | — | → `promotion_courses.id` |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_license_validations | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_license_validations | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_license_validations | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_license_validations | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_license_validations_enrollment`
+
+### `login_attempts` — 🔒 RLS
+
+> Historial de intentos de login para detección de fuerza bruta (RF-014)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `email` | TEXT | NO | — | — |
+| `ip` | TEXT | sí | — | — |
+| `successful` | BOOLEAN | sí | — | — |
+| `user_id` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| all_login_attempts | ALL | `auth_user_role() = 'admin'` | — |
+
+### `maintenance_records` — 🔒 RLS
+
+> Historial y programación de mantenciones de vehículos (RF-089)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `vehicle_id` | INT | NO | — | → `vehicles.id` |
+| `type` | TEXT | sí | — | — |
+| `description` | TEXT | NO | — | — |
+| `scheduled_date` | DATE | sí | — | — |
+| `completed_date` | DATE | sí | — | — |
+| `km_at_time` | INTEGER | sí | — | — |
+| `workshop` | TEXT | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `cost` | INTEGER | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_maintenance_records | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_maintenance_records | INSERT | — | `auth_user_role() = 'admin'` |
+| update_maintenance_records | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_maintenance_records | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `notification_templates` — 🔒 RLS
+
+> Plantillas automáticas: Zoom, cobros, alertas (RF-016, RF-017)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `type` | TEXT | sí | — | — |
+| `subject` | TEXT | sí | — | — |
+| `body` | TEXT | NO | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_notification_templates | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_notification_templates | INSERT | — | `auth_user_role() = 'admin'` |
+| update_notification_templates | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_notification_templates | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `notifications` — 🔒 RLS
+
+> Notificaciones individuales y masivas: email, WhatsApp, sistema (RF-019, RF-020)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `recipient_id` | INT | sí | — | → `users.id` |
+| `type` | TEXT | sí | — | — |
+| `subject` | TEXT | sí | — | — |
+| `message` | TEXT | NO | — | — |
+| `read` | BOOLEAN | sí | `false` | — |
+| `sent_at` | TIMESTAMPTZ | sí | — | — |
+| `sent_ok` | BOOLEAN | sí | `false` | — |
+| `send_error` | TEXT | sí | — | — |
+| `reference_type` | TEXT | sí | — | — |
+| `reference_id` | INT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_notifications | SELECT | `auth_user_role() = 'admin' OR recipient_id = auth_user_id()` | — |
+| update_notifications | UPDATE | `auth_user_role() = 'admin' OR recipient_id = auth_user_id()` | — |
+| delete_notifications | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_notifications | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+
+**Índices:** `idx_unread_notifications`
+
+### `payment_attempts` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `session_token` UQ | TEXT | NO | — | — |
+| `status` | TEXT | NO | `'pending'` | — |
+| `draft_snapshot` | JSONB | NO | `'{}'` | — |
+| `enrollment_id` | INTEGER | sí | — | → `enrollments.id` |
+| `transbank_token` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | NO | `now()` | — |
+| `expires_at` | TIMESTAMPTZ | NO | `(now()` | — |
+
+**Índices:** `idx_payment_attempts_session`, `idx_payment_attempts_transbank`
+
+### `payment_denominations` — 🔒 RLS
+
+> Desglose de billetes y monedas por transacción en efectivo
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `payment_id` | INT | NO | — | → `payments.id` |
+| `denomination` | INTEGER | NO | — | — |
+| `quantity` | SMALLINT | NO | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_payment_denominations | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_payment_denominations | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_payment_denominations | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_payment_denominations | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `payments` — 🔒 RLS
+
+> Pagos por matrícula y servicios: efectivo, voucher, transferencia, tarjeta (RF-026, RF-027)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `type` | TEXT | sí | — | — |
+| `document_number` | TEXT | sí | — | — |
+| `total_amount` | INTEGER | NO | — | — |
+| `cash_amount` | INTEGER | sí | `0` | — |
+| `transfer_amount` | INTEGER | sí | `0` | — |
+| `card_amount` | INTEGER | sí | `0` | — |
+| `voucher_amount` | INTEGER | sí | `0` | — |
+| `status` | TEXT | sí | — | — |
+| `payment_date` | DATE | sí | — | — |
+| `receipt_url` | TEXT | sí | — | — |
+| `requires_receipt` | BOOLEAN | sí | `true` | — |
+| `receipt_id` | INT | sí | — | → `sii_receipts.id` |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_payments | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_payments | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_payments | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_payments | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `pricing_seasons` — 🔒 RLS
+
+> Temporadas de precios especiales (RF-110)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | sí | — | — |
+| `price_class_b` | INTEGER | sí | — | — |
+| `price_a2` | INTEGER | sí | — | — |
+| `start_date` | DATE | sí | — | — |
+| `end_date` | DATE | sí | — | — |
+| `active` | BOOLEAN | sí | `false` | — |
+| `created_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| all_pricing_seasons | ALL | `auth_user_role() = 'admin'` | — |
+
+### `professional_final_records` — 🔒 RLS
+
+> Resultado final Aprobado/Reprobado del alumno en promoción profesional (RF-074)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` UQ | INT | NO | — | → `enrollments.id` |
+| `result` | TEXT | NO | — | — |
+| `final_grade` | NUMERIC(3,1) | sí | — | — |
+| `practical_exam_passed` | BOOLEAN | sí | — | — |
+| `theory_attendance_pct` | NUMERIC(5,2) | sí | — | — |
+| `practical_attendance_pct` | NUMERIC(5,2) | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+| `record_date` | DATE | NO | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_prof_final_records | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_prof_final_records | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_prof_final_records | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_prof_final_records | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `professional_module_grades` — 🔒 RLS
+
+> Notas por módulo técnico profesional, escala MTT 10–100, mínimo aprobación 75 (RF-072). '
+  '7 módulos por curso; módulo 5 varía según license_class (A2/A3 = Pasajeros, A4/A5 = Carga).
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `module` | TEXT | NO | — | — |
+| `grade` | NUMERIC(5,1) | sí | — | — |
+| `passed` | BOOLEAN | sí | — | — |
+| `template_id` | INT | sí | — | — |
+| `recorded_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `module_number` | SMALLINT | sí | — | — |
+| `status` | TEXT | NO | `'draft'` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_prof_module_grades | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_prof_module_grades | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_prof_module_grades | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_prof_module_grades | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_prof_module_grades_enrollment`
+
+### `professional_practice_attendance` — 🔒 RLS
+
+> Asistencia a bloques prácticos profesionales con porcentaje (RF-068)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `session_id` | INT | NO | — | → `professional_practice_sessions.id` |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `status` | TEXT | sí | — | — |
+| `block_percentage` | NUMERIC(5,2) | sí | `100.0` | — |
+| `justification` | TEXT | sí | — | — |
+| `evidence_id` | INT | sí | — | → `absence_evidence.id` |
+| `recorded_by` | INT | sí | — | → `users.id` |
+| `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_prof_practice_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_prof_practice_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_prof_practice_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_prof_practice_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary') OR ( auth_user_role() = 'student' …` | — |
+
+**Índices:** `idx_professional_practice_attendance_enrollment`
+
+### `professional_practice_sessions` — 🔒 RLS
+
+> Sesiones prácticas de campo por curso dentro de una promoción profesional (RF-068)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `promotion_course_id` | INT | NO | — | → `promotion_courses.id` |
+| `date` | DATE | NO | — | — |
+| `start_time` | TIME | sí | — | — |
+| `end_time` | TIME | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_prof_practice_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_prof_practice_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_prof_practice_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_prof_practice_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_professional_sessions_course`
+
+### `professional_pre_registrations` — 🔒 RLS
+
+> Pre-inscripción Clase Profesional con test psicológico y expiración automática
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `temp_user_id` UQ | INT | NO | — | → `users.id` |
+| `desired_course_class` | TEXT | sí | — | — |
+| `psych_test_status` | TEXT | sí | `'not_started'` | — |
+| `psych_test_result` | TEXT | sí | — | — |
+| `registered_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `expires_at` | TIMESTAMPTZ | NO | — | — |
+| `status` | TEXT | sí | `'pending_review'` | — |
+| `converted_enrollment_id` | INT | sí | — | → `enrollments.id` |
+| `psych_test_answers` | JSONB | sí | — | — |
+| `psych_test_completed_at` | TIMESTAMPTZ | sí | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `requested_license_class` | TEXT | sí | — | — |
+| `convalidates_simultaneously` | BOOLEAN | NO | `false` | — |
+| `registration_channel` | TEXT | NO | `'presencial'` | — |
+| `notes` | TEXT | sí | — | — |
+| `psych_evaluated_by` | INT | sí | — | → `users.id` |
+| `psych_evaluated_at` | TIMESTAMPTZ | sí | — | — |
+| `psych_rejection_reason` | TEXT | sí | — | — |
+| `birth_date` | DATE | sí | — | — |
+| `gender` | CHAR(1) | sí | — | — |
+| `address` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_pre_registrations | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_pre_registrations | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_pre_registrations | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_pre_registrations | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `professional_promotions` — 🔒 RLS
+
+> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `code` UQ | TEXT | sí | — | — |
+| `name` | TEXT | sí | — | — |
+| `start_date` | DATE | NO | — | — |
+| `end_date` | DATE | sí | — | — |
+| `max_students` | SMALLINT | sí | `100` | — |
+| `status` | TEXT | sí | — | — |
+| `current_day` | SMALLINT | sí | `0` | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_professional_promotions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
+| insert_professional_promotions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_professional_promotions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_professional_promotions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `professional_theory_attendance` — 🔒 RLS
+
+> Asistencia a clases teóricas Zoom profesionales, marcado manual (RF-078)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `theory_session_prof_id` | INT | NO | — | → `professional_theory_sessions.id` |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `status` | TEXT | sí | — | — |
+| `justification` | TEXT | sí | — | — |
+| `evidence_id` | INT | sí | — | → `absence_evidence.id` |
+| `recorded_by` | INT | sí | — | → `users.id` |
+| `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_prof_theory_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_prof_theory_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_prof_theory_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_prof_theory_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary') OR ( auth_user_role() = 'student' …` | — |
+
+**Índices:** `idx_professional_theory_attendance_enrollment`
+
+### `professional_theory_sessions` — 🔒 RLS
+
+> Sesiones teóricas Zoom por curso dentro de una promoción profesional (RF-016, RF-078)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `promotion_course_id` | INT | NO | — | → `promotion_courses.id` |
+| `date` | DATE | NO | — | — |
+| `start_time` | TIME | sí | — | — |
+| `end_time` | TIME | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `zoom_link` | TEXT | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_prof_theory_sessions | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
+| insert_prof_theory_sessions | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_prof_theory_sessions | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_prof_theory_sessions | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_professional_theory_sessions_course`
+
+### `professional_weekly_signatures` — 🔒 RLS
+
+> Registro de firma semanal presencial de alumnos de Clase Profesional. '
+  'Una fila por alumno × semana, registrada por secretaría al cierre de la semana. '
+  'week_start_date es siempre el lunes de la semana correspondiente.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `promotion_course_id` | INT | NO | — | → `promotion_courses.id` |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `week_start_date` | DATE | NO | — | — |
+| `signed_at` | TIMESTAMPTZ | NO | `now()` | — |
+| `recorded_by` | INT | NO | — | → `users.id` |
+| `notes` | TEXT | sí | — | — |
+
+### `promotion_course_lecturers` — 🔒 RLS
+
+> Relación N:M entre cursos de promoción y relatores. Un curso puede tener '
+  'múltiples relatores con rol opcional (theory|practice|both).
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `promotion_course_id` | INT | NO | — | → `promotion_courses.id` |
+| `lecturer_id` | INT | NO | — | → `lecturers.id` |
+| `role` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_promotion_course_lecturers | SELECT | `true` | — |
+
+**Índices:** `idx_pcl_lecturer`, `idx_pcl_promotion_course`
+
+### `promotion_courses` — 🔒 RLS
+
+> Curso específico (A2/A3/A4/A5) dentro de una promoción, con relator y cupo de 25 (RF-059)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `promotion_id` | INT | NO | — | → `professional_promotions.id` |
+| `course_id` | INT | NO | — | → `courses.id` |
+| `max_students` | SMALLINT | sí | `25` | — |
+| `status` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `code` | TEXT | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_promotion_courses | SELECT | `auth_user_role() IN ('admin', 'secretary', 'student')` | — |
+| insert_promotion_courses | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_promotion_courses | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_promotion_courses | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_promotion_courses_promotion`
+
+### `public_enrollment_throttle` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | BIGSERIAL | NO | — | — |
+| `ip` | TEXT | NO | — | — |
+| `action` | TEXT | NO | — | — |
+| `created_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Índices:** `idx_pe_throttle_lookup`
+
+### `roles` — 🔒 RLS
+
+> Catálogo de roles del sistema con permisos granulares (RF-005)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` UQ | TEXT | NO | — | — |
+| `description` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_roles | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| insert_roles | INSERT | — | `auth_user_role() = 'admin'` |
+| update_roles | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_roles | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `route_incidents` — 🔒 RLS
+
+> Incidentes asociados a vehículo e instructor durante Clase B (RF-111)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `vehicle_id` | INT | NO | — | → `vehicles.id` |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `class_b_session_id` | INT | sí | — | → `class_b_sessions.id` |
+| `occurred_at` | TIMESTAMPTZ | sí | — | — |
+| `description` | TEXT | NO | — | — |
+| `type` | TEXT | sí | — | — |
+| `evidence_url` | TEXT | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_route_incidents | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
+| insert_route_incidents | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` |
+| update_route_incidents | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_route_incidents | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `school_documents` — 🔒 RLS
+
+> Documentos institucionales: facturas folios, resoluciones MTT, decretos. Solo Admin elimina.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `type` | TEXT | NO | — | — |
+| `file_name` | TEXT | NO | — | — |
+| `storage_url` | TEXT | NO | — | — |
+| `description` | TEXT | sí | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `uploaded_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_school_documents | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_school_documents | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_school_documents | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_school_documents | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `school_schedules` — 🔒 RLS
+
+> Horarios de operación por sede y día de semana (RF-095)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `day_of_week` | SMALLINT | sí | — | — |
+| `opening_time` | TIME | sí | — | — |
+| `closing_time` | TIME | sí | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_school_schedules | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| insert_school_schedules | INSERT | — | `auth_user_role() = 'admin'` |
+| update_school_schedules | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_school_schedules | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `sence_codes` — 🔒 RLS
+
+> Códigos SENCE para cursos con franquicia tributaria
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `code` UQ | TEXT | NO | — | — |
+| `description` | TEXT | sí | — | — |
+| `course_id` | INT | sí | — | → `courses.id` |
+| `valid` | BOOLEAN | sí | `true` | — |
+| `start_date` | DATE | sí | — | — |
+| `end_date` | DATE | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_sence_codes | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_sence_codes | INSERT | — | `auth_user_role() = 'admin'` |
+| update_sence_codes | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_sence_codes | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `service_catalog` — 🔒 RLS
+
+> Catálogo dinámico de servicios especiales con precio configurable (RF-034)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `description` | TEXT | sí | — | — |
+| `base_price` | INTEGER | NO | — | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_service_catalog | SELECT | `(SELECT auth.uid()) IS NOT NULL` | — |
+| insert_service_catalog | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_service_catalog | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_service_catalog | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `session_machinery` — 🔒 RLS
+
+> Maquinaria propia/arrendada registrada por sesión práctica profesional (RF-073)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `session_id` | INT | NO | — | → `professional_practice_sessions.id` |
+| `type` | TEXT | sí | — | — |
+| `description` | TEXT | sí | — | — |
+| `rental_cost` | INTEGER | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_session_machinery | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_session_machinery | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_session_machinery | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_session_machinery | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `sii_receipts` — 🔒 RLS
+
+> Boletas y facturas SII con desglose por concepto para cuadratura (RF-033)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `type` | TEXT | NO | `'boleta'` | — |
+| `folio` | INTEGER | NO | — | — |
+| `amount` | INTEGER | NO | — | — |
+| `amount_class_b` | INTEGER | NO | `0` | — |
+| `amount_class_a` | INTEGER | NO | `0` | — |
+| `amount_sensometry` | INTEGER | NO | `0` | — |
+| `amount_other` | INTEGER | NO | `0` | — |
+| `issued_at` | TIMESTAMPTZ | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `recipient_tax_id` | TEXT | sí | — | — |
+| `recipient_name` | TEXT | sí | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_sii_receipts | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_sii_receipts | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_sii_receipts | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_sii_receipts | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `slot_holds` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `session_token` | TEXT | NO | — | — |
+| `instructor_id` | INTEGER | NO | — | → `instructors.id` |
+| `slot_start` | TIMESTAMPTZ | NO | — | — |
+| `expires_at` | TIMESTAMPTZ | NO | `(now()` | — |
+| `created_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Índices:** `idx_slot_holds_session`, `idx_slot_holds_slot_lookup`
+
+### `special_service_sales` — 🔒 RLS
+
+> Venta individual de servicios especiales con metadata variable por tipo (RF-034)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `student_id` | INT | sí | — | → `students.id` |
+| `service_id` | INT | NO | — | → `service_catalog.id` |
+| `sale_date` | DATE | NO | — | — |
+| `price` | INTEGER | NO | — | — |
+| `metadata` | JSONB | sí | — | — |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `is_student` | BOOLEAN | NO | `false` | — |
+| `client_name` | TEXT | sí | — | — |
+| `client_rut` | TEXT | sí | — | — |
+| `status` | TEXT | NO | `'pending'` | — |
+| `paid` | BOOLEAN | NO | `false` | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_special_service_sales | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` | — |
+| insert_special_service_sales | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_special_service_sales | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_special_service_sales | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+**Índices:** `idx_special_service_sales_branch_id`
+
+### `standalone_course_enrollments` — 🔒 RLS
+
+> Inscripción individual a cursos singulares grupales (RF-035)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `standalone_course_id` | INT | NO | — | → `standalone_courses.id` |
+| `student_id` | INT | NO | — | → `students.id` |
+| `amount_paid` | INTEGER | NO | — | — |
+| `payment_status` | TEXT | sí | — | — |
+| `certificate_id` | INT | sí | — | → `certificates.certificate_id` |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `enrolled_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `payment_method` | TEXT | sí | `'efectivo'` | — |
+| `discount_amount` | INTEGER | NO | `0` | — |
+| `discount_reason` | TEXT | sí | — | — |
+| `paid_at` | TIMESTAMPTZ | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_standalone_course_enrollments | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_standalone_course_enrollments | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_standalone_course_enrollments | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_standalone_course_enrollments | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `standalone_courses` — 🔒 RLS
+
+> Cursos singulares grupales: SENCE, Grúa, Retroexcavadora, Maquinaria (RF-035)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `name` | TEXT | NO | — | — |
+| `type` | TEXT | NO | — | — |
+| `billing_type` | TEXT | NO | — | — |
+| `base_price` | INTEGER | NO | — | — |
+| `duration_hours` | INTEGER | NO | — | — |
+| `max_students` | SMALLINT | NO | — | — |
+| `start_date` | DATE | NO | — | — |
+| `end_date` | DATE | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `registered_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_standalone_courses | SELECT | `auth_user_role() IN ('admin', 'secretary')` | — |
+| insert_standalone_courses | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_standalone_courses | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_standalone_courses | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `student_documents` — 🔒 RLS
+
+> Documentos del expediente digital del alumno: foto, cédula, HVC, cert. médico (RF-082)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` | INT | NO | — | → `enrollments.id` |
+| `type` | TEXT | sí | — | — |
+| `file_name` | TEXT | NO | — | — |
+| `storage_url` | TEXT | NO | — | — |
+| `status` | TEXT | sí | — | — |
+| `document_issue_date` | DATE | sí | — | — |
+| `notes` | TEXT | sí | — | — |
+| `uploaded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `reviewed_by` | INT | sí | — | → `users.id` |
+| `reviewed_at` | TIMESTAMPTZ | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_student_documents | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` |
+| update_student_documents | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'student' AND enrollment_id…` | — |
+| delete_student_documents | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
+
+### `student_surveys` — 🔒 RLS
+
+> Encuestas de satisfacción y confirmación de obtención de licencia post-egreso.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `enrollment_id` UQ | INT | NO | — | → `enrollments.id` |
+| `obtained_license` | BOOLEAN | sí | `false` | — |
+| `municipality` | TEXT | sí | — | — |
+| `satisfaction_rating` | SMALLINT | NO | — | — |
+| `comment` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| Surveys visibles para Admin y Sec | SELECT | `auth.uid() IN ( SELECT supabase_uid FROM users WHERE role_id IN (1, 2) )` | — |
+| Allow authenticated read surveys | SELECT | `true` | — |
+
+### `students` — 🔒 RLS
+
+> Datos académicos y de licencia del alumno (RF-006, RF-082)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `user_id` UQ | INT | NO | — | → `users.id` |
+| `birth_date` | DATE | NO | — | — |
+| `gender` | CHAR(1) | sí | — | — |
+| `address` | TEXT | sí | — | — |
+| `is_minor` | BOOLEAN | sí | — | — |
+| `has_notarial_auth` | BOOLEAN | sí | `false` | — |
+| `current_license_class` | TEXT | sí | — | — |
+| `license_obtained_date` | DATE | sí | — | — |
+| `status` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| insert_students | INSERT | — | `auth_user_role() IN ('admin', 'secretary')` |
+| update_students | UPDATE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| delete_students | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+
+### `task_replies` — 🔒 RLS
+
+> Respuestas en hilos type=question. Inmutables. Bloqueadas si task.status=completed (AC9).
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | UUID | NO | `gen_random_uuid()` | — |
+| `task_id` | UUID | NO | — | → `tasks.id` |
+| `from_user_id` | INT | NO | — | → `users.id` |
+| `body` | TEXT | NO | — | — |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| task_replies_select | SELECT | `EXISTS ( SELECT 1 FROM tasks t WHERE t.id = task_id AND t.deleted_at IS NULL …` | — |
+| task_replies_insert | INSERT | — | `from_user_id = auth_user_id() AND EXISTS ( SELECT 1 FROM tasks t WHERE t.id =…` |
+| task_replies_delete | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `idx_task_replies_task`
+
+### `tasks` — 🔒 RLS
+
+> Canal estructurado de comunicación multi-rol: admin↔secretary, secretary→instructor. '
+  'Reemplaza secretary_observations. Spec 0001.
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | UUID | NO | `gen_random_uuid()` | — |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `from_user_id` | INT | NO | — | → `users.id` |
+| `from_role` | TEXT | NO | — | — |
+| `to_user_id` | INT | NO | — | → `users.id` |
+| `to_role` | TEXT | NO | — | — |
+| `type` | TEXT | NO | — | — |
+| `subject` | TEXT | NO | — | — |
+| `body` | TEXT | sí | — | — |
+| `status` | TEXT | NO | `'pending'` | — |
+| `due_date` | TIMESTAMPTZ | sí | — | — |
+| `completed_at` | TIMESTAMPTZ | sí | — | — |
+| `seen_at` | TIMESTAMPTZ | sí | — | — |
+| `seen_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+| `deleted_at` | TIMESTAMPTZ | sí | — | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| tasks_select | SELECT | `deleted_at IS NULL AND ( (auth_user_role() = 'admin' AND branch_visible(branc…` | — |
+| tasks_delete | DELETE | `auth_user_role() = 'admin' AND branch_visible(branch_id)` | — |
+| tasks_insert | INSERT | — | `( auth_user_role() = 'admin' AND from_user_id = auth_user_id() AND from_role …` |
+
+**Índices:** `idx_tasks_branch_status`, `idx_tasks_due_date`, `idx_tasks_from_user_status`, `idx_tasks_to_user_status`
+
+### `users` — 🔒 RLS
+
+> Todos los actores del sistema, incluyendo cuentas temporales de pre-inscripción (RF-001)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `supabase_uid` UQ | UUID | sí | — | — |
+| `rut` UQ | TEXT | NO | — | — |
+| `first_names` | TEXT | NO | — | — |
+| `paternal_last_name` | TEXT | NO | — | — |
+| `maternal_last_name` | TEXT | NO | — | — |
+| `email` UQ | TEXT | NO | — | — |
+| `phone` | TEXT | sí | — | — |
+| `role_id` | INT | sí | — | → `roles.id` |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `can_access_both_branches` | BOOLEAN | sí | `false` | — |
+| `active` | BOOLEAN | sí | `true` | — |
+| `first_login` | BOOLEAN | sí | `true` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `updated_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| delete_users | DELETE | `auth_user_role() = 'admin'` | — |
+| insert_users | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` |
+| update_users | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND branch_vis…` | — |
+| select_users | SELECT | `auth_user_role() = 'admin' OR auth_user_role() = 'secretary' OR (auth_user_ro…` | — |
+
+### `vehicle_assignments` — 🔒 RLS
+
+> Historial de asignación instructor ↔ vehículo (RF-042, RF-045)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `vehicle_id` | INT | NO | — | → `vehicles.vehicle_id` |
+| `start_date` | DATE | NO | — | — |
+| `end_date` | DATE | sí | — | — |
+| `assigned_by` | INT | sí | — | → `users.id` |
+| `reason` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_vehicle_assignments | SELECT | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'instructor…` | — |
+| insert_vehicle_assignments | INSERT | — | `auth_user_role() = 'admin'` |
+| update_vehicle_assignments | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_vehicle_assignments | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `idx_active_vehicle_assignment`, `idx_one_active_vehicle_per_instructor`
+
+### `vehicle_documents` — 🔒 RLS
+
+> SOAP, Rev. Técnica, Permiso Circulación, Seguro de cada vehículo (RF-021)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `vehicle_id` | INT | NO | — | → `vehicles.id` |
+| `type` | TEXT | sí | — | — |
+| `issue_date` | DATE | sí | — | — |
+| `expiry_date` | DATE | NO | — | — |
+| `status` | TEXT | sí | — | — |
+| `file_url` | TEXT | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_vehicle_documents | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
+| insert_vehicle_documents | INSERT | — | `auth_user_role() = 'admin'` |
+| update_vehicle_documents | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_vehicle_documents | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `idx_vehicle_docs_expiry`
+
+### `vehicles` — 🔒 RLS
+
+> Flota de vehículos con patente, estado y kilometraje (RF-087)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `license_plate` UQ | TEXT | NO | — | — |
+| `brand` | TEXT | NO | — | — |
+| `model` | TEXT | NO | — | — |
+| `year` | SMALLINT | NO | — | — |
+| `body_type` | TEXT | sí | — | — |
+| `transmission` | TEXT | sí | — | — |
+| `branch_id` | INT | sí | — | → `branches.id` |
+| `status` | TEXT | sí | — | — |
+| `current_km` | INTEGER | sí | `0` | — |
+| `last_inspection` | DATE | sí | — | — |
+| `last_maintenance` | DATE | sí | — | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_vehicles | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
+| insert_vehicles | INSERT | — | `auth_user_role() = 'admin'` |
+| update_vehicles | UPDATE | `auth_user_role() = 'admin'` | — |
+| delete_vehicles | DELETE | `auth_user_role() = 'admin'` | — |
+
+### `website_config` — 🔒 RLS
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `branch_id` UQ | INT | NO | — | → `branches.id` |
+| `config` | JSONB | NO | — | — |
+| `created_at` | TIMESTAMPTZ | NO | `now()` | — |
+| `updated_at` | TIMESTAMPTZ | NO | `now()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| select_website_config | SELECT | `true` | — |
+| insert_website_config | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| update_website_config | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| delete_website_config | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+
+## Vistas
+
+| Vista | Definida en |
+|-------|-------------|
+| `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql` |
+| `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
+| `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
+| `v_student_progress_b` | `20260412000003_fix_v_student_progress_b_count.sql` |
+
+## Funciones (helpers RLS y lógica de BD)
+
+| Función | Argumentos |
+|---------|-----------|
+| `auth_can_access_both_branches` | `()` |
+| `auth_can_enroll_course_type` | `(p_course_id INT)` |
+| `auth_instructor_id` | `()` |
+| `auth_student_id` | `()` |
+| `auth_user_branch_id` | `()` |
+| `auth_user_id` | `()` |
+| `auth_user_role` | `()` |
+| `auto_transition_promotion_status` | `()` |
+| `auto_transition_standalone_course_status` | `()` |
+| `branch_visible` | `(p_branch_id INT)` |
+| `calculate_vehicle_document_status` | `()` |
+| `cascade_promotion_status_to_courses` | `()` |
+| `check_standalone_course_capacity` | `()` |
+| `cleanup_expired_drafts` | `()` |
+| `cleanup_expired_public_enrollment` | `()` |
+| `cleanup_public_enrollment_throttle` | `()` |
+| `confirm_enrollment_with_payment` | `(p_enrollment_id INTEGER, p_payment_method TEXT, p_total_amount INTEGER, p_discount_id INTEGER DEFAULT NULL, p_discount_amount INTEGER DEFAULT 0, p_registered_by INTEGER DEFAULT NULL, p_is_deposit BOOLEAN DEFAULT FALSE)` |
+| `decrement_batch_folio` | `()` |
+| `generate_license_alert` | `()` |
+| `generate_sessions_from_promotion` | `()` |
+| `get_next_enrollment_number` | `(p_course_id INT)` |
+| `get_student_payment_status` | `(p_supabase_uid TEXT)` |
+| `instructor_enrollment_ids` | `()` |
+| `log_change` | `()` |
+| `prevent_courses_delete_when_in_website_config` | `()` |
+| `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
+| `recalculate_enrollment_balance` | `()` |
+| `set_enrollment_license_group` | `()` |
+| `soft_delete_task` | `(p_task_id UUID)` |
+| `tasks_set_updated_at` | `()` |
+| `trg_class_b_sessions_update_monthly_hours` | `()` |
+| `trg_draft_to_pending_validation_fn` | `()` |
+| `trg_enrollment_validation_fn` | `()` |
+| `update_class_book_to_in_review` | `()` |
+| `update_professional_attendance_flag` | `()` |
+| `user_complete_first_login` | `()` |
+| `validate_website_config_courses_fk` | `()` |
+| `verify_class_b_certificate_enablement` | `()` |
+| `verify_class_b_dropout_rule` | `()` |
+| `verify_professional_certificate_enablement` | `()` |
+
+
+<!-- AUTO-GENERATED:END -->

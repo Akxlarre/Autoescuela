@@ -170,12 +170,12 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 482 | `#38bdf8` |
-| `--text-muted` | 437 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 292 | `var(--color-primary-text)` |
+| `--ds-brand` | 474 | `#38bdf8` |
+| `--text-muted` | 429 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 286 | `var(--color-primary-text)` |
 | `--border-subtle` | 244 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 244 | `#f87171` |
-| `--text-secondary` | 235 | `rgba(255, 255, 255, 0.78)` |
+| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
 | `--state-success` | 230 | `#4ade80` |
 | `--bg-surface` | 200 | `#18181b` |
 | `--color-primary` | 190 | `#38bdf8` |
@@ -183,8 +183,8 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | `--border-default` | 152 | `rgba(255, 255, 255, 0.28)` |
 | `--bg-elevated` | 90 | `#27272a` |
 | `--text-sm` | 81 | `0.875rem` |
-| `--bg-subtle` | 79 | `rgba(255, 255, 255, 0.1)` |
 | `--duration-fast` | 74 | `200ms` |
+| `--bg-subtle` | 73 | `rgba(255, 255, 255, 0.1)` |
 | `--radius-md` | 65 | `10px` |
 | `--bg-base` | 56 | `#09090b` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
@@ -200,7 +200,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 254 | `src/styles/tokens/_variables.scss` |
+| `.card` | 238 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
@@ -296,7 +296,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1274 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1270 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -309,7 +309,6 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 31 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |
 | 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
-| 14 | `text-base font-bold text-text-primary` |
 | 14 | `text-[10px] font-bold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-semibold text-text-primary` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
@@ -317,6 +316,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
 | 13 | `text-base font-semibold text-text-primary` |
+| 12 | `text-base font-bold text-text-primary` |
 | 12 | `text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
 

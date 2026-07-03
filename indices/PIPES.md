@@ -1,13 +1,23 @@
 # Registro de Pipes
 
-> **Regla de Actualización:** El Agente debe sugerir adiciones a esta tabla usando `<memory_update>` cada vez que cree un pipe nuevo.
+> **Regla de Actualización:** La tabla auto-generada se refresca con `npm run indices:sync`.
+> Consultar ANTES de crear un pipe nuevo: si ya existe uno que resuelve la transformación, **reutilizar**.
 
-## Pipes de Formateo
+## Pipes del proyecto (auto-detectados)
 
-| Pipe | Nombre en template | Propósito | Params | Estado |
-|------|--------------------|-----------|--------|--------|
-| `RelativeTimePipe` | `relativeTime` | Convierte fecha a texto relativo ("hace 5 min", "ayer") | `locale` (default: `'es'`) | ✅ Estable |
-| `SafePipe` | `safe` | Bypassea seguridad de Angular para HTML, URL, ResourceUrl, etc. | `type` ('html'|'url'|'resourceUrl'|...) | ✅ Estable |
+<!-- AUTO-GENERATED:BEGIN -->
+| Pipe | Clase | Pure | Archivo |
+|------|-------|------|---------|
+| `safe` | `SafePipe` | ✅ | `src/app/core/pipes/safe.pipe.ts` |
+| `relativeTime` | `RelativeTimePipe` | ❌ impure | `src/app/shared/pipes/relative-time.pipe.ts` |
+| `shortCurrency` | `ShortCurrencyPipe` | ✅ | `src/app/shared/pipes/short-currency.pipe.ts` |
+
+<!-- AUTO-GENERATED:END -->
+
+## Notas manuales
+
+- `SafePipe` (`safe`) bypassea la sanitización de Angular (HTML, URL, ResourceUrl) — usar solo con contenido controlado. Param: `type`.
+- `RelativeTimePipe` (`relativeTime`) — texto relativo ("hace 5 min", "ayer"), locale default `'es'`.
 
 ## Pipes Nativos de Angular (Recordatorio)
 
