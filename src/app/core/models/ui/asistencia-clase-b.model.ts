@@ -7,7 +7,6 @@ import type { EvaluationChecklistItem } from './instructor-portal.model';
 export type { EvaluationChecklistItem };
 
 export type ClasePracticaStatus = 'presente' | 'ausente' | 'en_curso' | 'pendiente';
-export type ZoomLinkStatus = 'sent' | 'pending' | 'not_configured';
 export type NivelAlerta = 'warning' | 'danger';
 
 /** KPIs superiores de la vista de asistencia. */
@@ -24,20 +23,6 @@ export interface AsistenciaClaseBKpis {
   clasesEnCurso: number;
   /** Clases pendientes cuya hora ya pasó y aún no se han iniciado. */
   pendientesPorIniciar: number;
-}
-
-/** Fila de clase teórica grupal (Zoom). */
-export interface ClaseTeoricoRow {
-  id: number;
-  horaInicio: string; // "18:00"
-  horaFin: string; // "19:30"
-  tema: string;
-  instructorName: string;
-  inscritosCount: number;
-  zoomLinkStatus: ZoomLinkStatus;
-  zoomLink: string | null;
-  branchId: number;
-  branchName: string;
 }
 
 /** Fila de clase práctica individual para la tabla de asistencia del día. */
@@ -102,29 +87,6 @@ export interface VehicleOption {
   currentKm: number | null;
 }
 
-/** Estado de asistencia de un alumno en una clase teórica grupal. */
-export type TeoriaAsistenciaStatus = 'presente' | 'ausente' | 'justificado' | 'pendiente';
-
-/** Alumno elegible para inscribirse en una clase teórica. */
-export interface TeoriaAlumnoElegible {
-  studentId: number;
-  enrollmentId: number;
-  alumnoName: string;
-  email: string;
-  selected: boolean;
-}
-
-/** Payload para crear una nueva sesión teórica. */
-export interface NuevaClaseTeoricaPayload {
-  branchId: number;
-  scheduledDate: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
-  topic: string;
-  zoomLink?: string;
-  enrollmentIds: number[];
-}
-
 /** Payload para finalizar una clase práctica desde admin/secretaria. */
 export interface FinishClassPayload {
   sessionId: number;
@@ -135,14 +97,4 @@ export interface FinishClassPayload {
   checklist: EvaluationChecklistItem[];
   studentSignature: string | null;
   instructorSignature: string | null;
-}
-
-/** Alumno con su estado de asistencia para el drawer de una clase teórica. */
-export interface TeoriaAlumnoAsistencia {
-  /** PK de la tabla students — clave primaria usada para upsert de asistencia. */
-  studentId: number;
-  alumnoName: string;
-  email: string;
-  status: TeoriaAsistenciaStatus;
-  justificacion: string | null;
 }

@@ -5,14 +5,22 @@ import type {
   StudentHomeSnapshot,
 } from '@core/models/ui/student-home.model';
 
-/** Pondera prácticas (60%) + asistencia teórica (40%) en un % global 0-100. */
+/**
+ * Progreso global 0-100.
+ *
+ * - Clase B (Spec 0001): la asistencia teórica fue eliminada → se omite `pctTheory`
+ *   y el avance se mide solo sobre prácticas.
+ * - Profesional: conserva la ponderación prácticas (60%) + teoría (40%) pasando
+ *   `pctTheory` (su asistencia teórica vive en `professional_theory_attendance`).
+ */
 export function computeOverallProgress(
   practicesCompleted: number,
   practicesTotal: number,
-  pctTheory: number,
+  pctTheory?: number,
 ): number {
   if (practicesTotal === 0) return 0;
   const pctPractice = (practicesCompleted / practicesTotal) * 100;
+  if (pctTheory === undefined) return Math.round(pctPractice);
   return Math.round(pctPractice * 0.6 + pctTheory * 0.4);
 }
 

@@ -204,48 +204,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                   </div>
                 </div>
 
-                <!-- Clases Teóricas -->
-                <div class="card bento-wide" appCardHover data-col-span="4">
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="min-w-0 flex-1 mr-3">
-                      <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
-                        Clases Teóricas
-                      </h3>
-                      <p class="text-xs mt-0.5" [style.color]="'var(--text-muted)'">
-                        Asistencia a módulos teóricos
-                      </p>
-                    </div>
-                    <span
-                      class="kpi-value shrink-0"
-                      [style.color]="
-                        detail.theoryPercent >= 75 ? 'var(--state-success)' : 'var(--state-warning)'
-                      "
-                      style="font-size: 2rem; line-height: 1"
-                    >
-                      {{ detail.theoryPercent }}%
-                    </span>
-                  </div>
-                  <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
-                    <div
-                      class="h-full rounded-full transition-all"
-                      [style.background]="
-                        detail.theoryPercent >= 75 ? 'var(--state-success)' : 'var(--state-warning)'
-                      "
-                      [style.width.%]="detail.theoryPercent"
-                    ></div>
-                  </div>
-                  <div class="flex items-center justify-between text-sm">
-                    <span [style.color]="'var(--text-muted)'">% asistencia</span>
-                    <span
-                      class="font-semibold"
-                      [style.color]="
-                        detail.theoryPercent >= 75 ? 'var(--state-success)' : 'var(--state-warning)'
-                      "
-                    >
-                      {{ detail.theoryPercent >= 75 ? 'Aprobada' : 'En curso' }}
-                    </span>
-                  </div>
-                </div>
+                <!-- Clases Teóricas eliminadas (Spec 0001 — Ciclos Teóricos) -->
               }
             </div>
 
@@ -549,10 +508,6 @@ export class InstructorFichaComponent implements OnInit {
       {
         label: `${practicePercent}% práctico`,
         style: practicePercent >= 80 ? 'success' : 'default',
-      },
-      {
-        label: `${detail.theoryPercent}% teórico`,
-        style: detail.theoryPercent >= 75 ? 'success' : 'warning',
       },
     ];
   });

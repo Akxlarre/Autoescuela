@@ -398,10 +398,10 @@ export class CertificacionClaseBFacade {
 
     const enrollmentIds = enrollments.map((e: any) => e.id as number);
 
-    // Step 2: Datos de progreso — pct_theory_attendance + fecha última práctica.
+    // Step 2: Datos de progreso — fecha última práctica.
     const { data: progressData } = await this.supabase.client
       .from('v_student_progress_b')
-      .select('enrollment_id, pct_theory_attendance, last_practice_session')
+      .select('enrollment_id, last_practice_session')
       .in('enrollment_id', enrollmentIds);
 
     const progressMap = new Map(
@@ -447,9 +447,8 @@ export class CertificacionClaseBFacade {
         .filter(Boolean)
         .join(' ');
 
-      const rawPct = progress?.pct_theory_attendance;
-      const pctAsistenciaTeoria: number | null =
-        rawPct !== null && rawPct !== undefined ? Number(rawPct) : null;
+      // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos).
+      const pctAsistenciaTeoria: number | null = null;
 
       // Folio only shown when PDF exists; year derived from issuance date, not today's date
       const hasPdf = !!e.certificate_b_pdf_url;

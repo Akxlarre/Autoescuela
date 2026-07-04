@@ -113,7 +113,7 @@
 | `BranchFacade` | `features/admin/agenda`, `features/admin/alumnos`, `features/admin/alumnos-profesional`, `features/admin/alumnos/ex-alumnos`, `features/admin/alumnos/pre-inscritos`, `features/admin/asistencia`, `features/admin/auditoria`, `features/admin/certificacion`, `features/admin/configuracion-horario`, `features/admin/configuracion-web`, `features/admin/contabilidad-cuadratura`, `features/admin/contabilidad-cursos`, `features/admin/contabilidad-historial-cuadraturas`, `features/admin/contabilidad-liquidaciones`, `features/admin/documentos`, `features/admin/ex-alumnos-profesional`, `features/admin/flota`, `features/admin/instructores`, `features/admin/libro-de-clases`, `features/admin/pagos`, `features/admin/profesional-archivo`, `features/admin/profesional-asistencia`, `features/admin/profesional-certificados`, `features/admin/profesional-evaluaciones`, `features/admin/profesional-promociones`, `features/admin/profesional-relatores`, `features/admin/secretarias`, `features/admin/servicios-especiales`, `features/admin/tareas`, `features/dashboard`, `features/secretaria/alumnos-pre-inscritos`, `features/secretaria/alumnos-profesional`, `features/secretaria/asistencia-profesional`, `features/secretaria/ex-alumnos-profesional`, `features/secretaria/libro-de-clases`, `features/secretaria/matricula`, `features/secretaria/profesional-certificados`, `features/secretaria/profesional-notas`, `layout`, `shared/components/ajustes-drawer` |
 | `CertificacionClaseBFacade` | `features/admin/alumno-detalle`, `features/admin/certificacion`, `features/secretaria/certificados` |
 | `CertificacionProfesionalFacade` | `features/admin/alumno-detalle`, `features/admin/profesional-certificados`, `features/secretaria/profesional-certificados` |
-| `ClaseOnlineFacade` | `features/admin/alumnos/clase-online-drawer` |
+| `CiclosTeoricosFacade` | `features/admin/asistencia`, `features/secretaria/asistencia` |
 | `CoursesFacade` | `features/admin/configuracion-web`, `features/admin/configuracion-web/tabs` |
 | `CuadraturaFacade` | `features/admin/contabilidad-cuadratura`, `features/secretaria/contabilidad-cuadratura` |
 | `CursosSingularesFacade` | `features/admin/contabilidad-cursos` |
@@ -183,7 +183,6 @@
 | `features/admin/alumno-detalle/reprogramar-clase-drawer` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/alumnos` | ✅ | ❌ | ❌ | ❌ |
 | `features/admin/alumnos-profesional` | ✅ | ❌ | ❌ | ❌ |
-| `features/admin/alumnos/clase-online-drawer` | ✅ | ❌ | ✅ | ✅ |
 | `features/admin/alumnos/ex-alumnos` | ✅ | ❌ | ❌ | ✅ |
 | `features/admin/alumnos/ex-alumnos/components/comments` | ❌ | ❌ | ❌ | ❌ |
 | `features/admin/alumnos/ex-alumnos/components/stats` | ❌ | ❌ | ❌ | ❌ |
@@ -192,8 +191,6 @@
 | `features/admin/asistencia` | ✅ | ❌ | ❌ | ❌ |
 | `features/admin/asistencia` | ❌ | ❌ | ✅ | ❌ |
 | `features/admin/asistencia` | ❌ | ❌ | ✅ | ❌ |
-| `features/admin/asistencia` | ❌ | ❌ | ❌ | ✅ |
-| `features/admin/asistencia` | ❌ | ❌ | ❌ | ✅ |
 | `features/admin/auditoria` | ✅ | ❌ | ❌ | ✅ |
 | `features/admin/certificacion` | ✅ | ❌ | ❌ | ❌ |
 | `features/admin/configuracion-horario` | ✅ | ❌ | ❌ | ✅ |

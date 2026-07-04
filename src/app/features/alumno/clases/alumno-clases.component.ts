@@ -79,16 +79,18 @@ type TabId = 'practice' | 'theory';
         />
       </div>
 
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Asistencia teoría"
-          [value]="kpis()?.theoryPct ?? 0"
-          suffix="%"
-          icon="clipboard-check"
-          [color]="theoryColor()"
-          [loading]="loading()"
-        />
-      </div>
+      @if (licenseGroup() !== 'class_b') {
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Asistencia teoría"
+            [value]="kpis()?.theoryPct ?? 0"
+            suffix="%"
+            icon="clipboard-check"
+            [color]="theoryColor()"
+            [loading]="loading()"
+          />
+        </div>
+      }
 
       @if (licenseGroup() === 'class_b') {
         <div class="bento-square">

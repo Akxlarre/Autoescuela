@@ -450,40 +450,35 @@ export class AdminAlumnoDetalleFacade {
   }
 
   private async fetchClassBProgress(enrollmentId: number | null, studentId: number): Promise<void> {
-    const [practiceResult, theoryResult, evidenceResult, sessionResult, paymentsResult] =
-      await Promise.all([
-        this.supabase.client
-          .from('class_b_practice_attendance')
-          .select('status')
-          .eq('student_id', studentId),
-        this.supabase.client
-          .from('class_b_theory_attendance')
-          .select('status')
-          .eq('student_id', studentId),
-        enrollmentId
-          ? this.supabase.client
-              .from('absence_evidence')
-              .select('*')
-              .eq('enrollment_id', enrollmentId)
-              .order('document_date', { ascending: false })
-          : Promise.resolve({ data: [] }),
-        enrollmentId
-          ? this.supabase.client
-              .from('class_b_sessions')
-              .select(
-                '*, instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))',
-              )
-              .eq('enrollment_id', enrollmentId)
-              .order('class_number', { ascending: true })
-          : Promise.resolve({ data: [] }),
-        enrollmentId
-          ? this.supabase.client
-              .from('payments')
-              .select('*')
-              .eq('enrollment_id', enrollmentId)
-              .order('payment_date', { ascending: true })
-          : Promise.resolve({ data: [] }),
-      ]);
+    const [practiceResult, evidenceResult, sessionResult, paymentsResult] = await Promise.all([
+      this.supabase.client
+        .from('class_b_practice_attendance')
+        .select('status')
+        .eq('student_id', studentId),
+      enrollmentId
+        ? this.supabase.client
+            .from('absence_evidence')
+            .select('*')
+            .eq('enrollment_id', enrollmentId)
+            .order('document_date', { ascending: false })
+        : Promise.resolve({ data: [] }),
+      enrollmentId
+        ? this.supabase.client
+            .from('class_b_sessions')
+            .select(
+              '*, instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))',
+            )
+            .eq('enrollment_id', enrollmentId)
+            .order('class_number', { ascending: true })
+        : Promise.resolve({ data: [] }),
+      enrollmentId
+        ? this.supabase.client
+            .from('payments')
+            .select('*')
+            .eq('enrollment_id', enrollmentId)
+            .order('payment_date', { ascending: true })
+        : Promise.resolve({ data: [] }),
+    ]);
 
     this._progresoPractico.set({
       completadas: (practiceResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
@@ -491,9 +486,9 @@ export class AdminAlumnoDetalleFacade {
       requeridas: PRACTICAS_REQUERIDAS_B,
     });
 
+    // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos).
     this._progresoTeorico.set({
-      completadas: (theoryResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
-        .length,
+      completadas: 0,
       requeridas: TEORICAS_REQUERIDAS_B,
     });
 

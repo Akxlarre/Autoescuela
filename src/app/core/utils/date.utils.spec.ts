@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { isoToDate, toISODate } from './date.utils';
+import { isoToDate, monthsAgoIso, toISODate, todayIso } from './date.utils';
+
+describe('monthsAgoIso', () => {
+  it('returns a date exactly N months before today', () => {
+    const expected = new Date();
+    expected.setMonth(expected.getMonth() - 3);
+    const expectedIso = `${expected.getFullYear()}-${String(expected.getMonth() + 1).padStart(2, '0')}-${String(expected.getDate()).padStart(2, '0')}`;
+
+    expect(monthsAgoIso(3)).toBe(expectedIso);
+  });
+
+  it('returns todayIso() when months is 0', () => {
+    expect(monthsAgoIso(0)).toBe(todayIso());
+  });
+});
 
 describe('isoToDate', () => {
   it('converts a valid ISO string to a Date with correct day/month/year', () => {

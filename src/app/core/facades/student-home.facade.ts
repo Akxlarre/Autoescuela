@@ -158,7 +158,7 @@ export class StudentHomeFacade {
         // Vista progreso
         this.supabase.client
           .from('v_student_progress_b')
-          .select('completed_practices, pct_theory_attendance')
+          .select('completed_practices')
           .eq('enrollment_id', enrollmentId)
           .maybeSingle(),
         // Sesiones prácticas (para timeline y consecutivas)
@@ -193,18 +193,9 @@ export class StudentHomeFacade {
           .maybeSingle(),
       ]);
 
-    // Theory attendance via student_id
-    const { data: theoryRows } = await this.supabase.client
-      .from('class_b_theory_attendance')
-      .select('status, class_b_theory_sessions!inner(scheduled_at)')
-      .eq('student_id', studentId)
-      .order('class_b_theory_sessions.scheduled_at', { ascending: false })
-      .limit(4);
-
     const PRACTICES_TOTAL = 12;
     const completedPractices: number = progressResult.data?.completed_practices ?? 0;
-    const pctTheory: number = Number(progressResult.data?.pct_theory_attendance ?? 0);
-    const pctOverall = computeOverallProgress(completedPractices, PRACTICES_TOTAL, pctTheory);
+    const pctOverall = computeOverallProgress(completedPractices, PRACTICES_TOTAL);
 
     // Sessions ordenadas cronológicamente para la lista de 1..12
     const sessions = (sessionsResult.data ?? []).slice().reverse();
@@ -253,15 +244,6 @@ export class StudentHomeFacade {
             label: 'Práctica',
           };
         }),
-      ...(theoryRows ?? []).slice(0, 4).map((t: any) => ({
-        id: `t-${t.class_b_theory_sessions.scheduled_at}`,
-        date: t.class_b_theory_sessions.scheduled_at,
-        kind: 'theory' as const,
-        status: (t.status === 'present' || t.status === 'late' ? 'present' : 'absent') as
-          | 'present'
-          | 'absent',
-        label: 'Teoría',
-      })),
     ]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 8);
@@ -269,7 +251,7 @@ export class StudentHomeFacade {
     const progress: StudentHomeProgress = {
       practicesCompleted: completedPractices,
       practicesTotal: PRACTICES_TOTAL,
-      pctTheoryAttendance: pctTheory,
+      pctTheoryAttendance: 0, // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos)
       pctOverall,
       practices,
     };

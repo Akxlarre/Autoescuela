@@ -26,7 +26,7 @@ export class DashboardFacade {
 
   setupRealtime(): void {
     if (this._realtimeChannel) return;
-    
+
     // Intervalo local cada 1 minuto para recalcular el tiempo relativo y clases actuales
     this._liveClassesInterval = setInterval(() => {
       void this.refreshLiveClassesOnly();
@@ -66,7 +66,7 @@ export class DashboardFacade {
   private async refreshLiveClassesOnly(): Promise<void> {
     try {
       const liveClasses = await this.fetchLiveClasses(this.getActiveBranchId());
-      this.data.update(d => d ? { ...d, liveClasses } : null);
+      this.data.update((d) => (d ? { ...d, liveClasses } : null));
     } catch {
       // Swallowed
     }
@@ -157,7 +157,8 @@ export class DashboardFacade {
       .select('id, enrollments!inner(branch_id)', { count: 'exact', head: true })
       .gte('scheduled_at', `${yesterdayStr}T00:00:00`)
       .lte('scheduled_at', `${yesterdayStr}T23:59:59`);
-    if (branchId !== null) classesYesterdayQuery = classesYesterdayQuery.eq('enrollments.branch_id', branchId);
+    if (branchId !== null)
+      classesYesterdayQuery = classesYesterdayQuery.eq('enrollments.branch_id', branchId);
 
     let revenueQuery: any = this.supabase.client
       .from('payments')
@@ -170,14 +171,17 @@ export class DashboardFacade {
       .select('total_amount, enrollments!inner(branch_id)')
       .gte('payment_date', firstOfPrevMonth)
       .lte('payment_date', lastOfPrevMonthStr);
-    if (branchId !== null) prevRevenueQuery = prevRevenueQuery.eq('enrollments.branch_id', branchId);
+    if (branchId !== null)
+      prevRevenueQuery = prevRevenueQuery.eq('enrollments.branch_id', branchId);
 
     let vehiclesQuery: any = this.supabase.client.from('vehicles').select('id, status');
     if (branchId !== null) vehiclesQuery = vehiclesQuery.eq('branch_id', branchId);
 
     let auditLogQuery: any = this.supabase.client
       .from('audit_log')
-      .select('id, action, entity, entity_id, detail, created_at, users(first_names, paternal_last_name)')
+      .select(
+        'id, action, entity, entity_id, detail, created_at, users(first_names, paternal_last_name)',
+      )
       .order('created_at', { ascending: false })
       .limit(6);
     if (branchId !== null) {
@@ -323,7 +327,8 @@ export class DashboardFacade {
     // 1. Clases Prácticas
     let practicasQuery: any = this.supabase.client
       .from('class_b_sessions')
-      .select(`
+      .select(
+        `
         id,
         class_number,
         scheduled_at,
@@ -331,7 +336,8 @@ export class DashboardFacade {
         vehicles(brand, model, license_plate),
         instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
         enrollments!inner(branch_id, students(users(first_names, paternal_last_name)))
-      `)
+      `,
+      )
       .gte('scheduled_at', `${todayStr}T00:00:00`)
       .lte('scheduled_at', `${todayStr}T23:59:59`);
 
@@ -340,82 +346,52 @@ export class DashboardFacade {
     }
 
     const { data: practicasData, error: practicasError } = await practicasQuery;
-    
+
     if (!practicasError && practicasData) {
       const mappedPracticas = practicasData.map((row: any) => {
-        const instRel = row['instructors'] ?? row['instructors!class_b_sessions_instructor_id_fkey'];
+        const instRel =
+          row['instructors'] ?? row['instructors!class_b_sessions_instructor_id_fkey'];
         const instUser = instRel?.users;
         const studentUser = row.enrollments?.students?.users;
         const vehicle = row.vehicles;
 
         let status = 'pending';
         if (row.status === 'in_progress') status = 'in_progress';
-        if (row.status === 'completed' || row.status === 'cancelled' || row.status === 'no_show') status = 'completed';
+        if (row.status === 'completed' || row.status === 'cancelled' || row.status === 'no_show')
+          status = 'completed';
 
         return {
           id: `prac-${row.id}`,
           originalId: row.id,
           classNumber: row.class_number,
-          studentName: studentUser ? `${studentUser.first_names ?? ''} ${studentUser.paternal_last_name ?? ''}`.trim() : 'Desconocido',
-          instructorName: instUser ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim() : 'Sin asignar',
+          studentName: studentUser
+            ? `${studentUser.first_names ?? ''} ${studentUser.paternal_last_name ?? ''}`.trim()
+            : 'Desconocido',
+          instructorName: instUser
+            ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim()
+            : 'Sin asignar',
           timeLabel: '00:00 - 00:45',
           status,
           type: 'practical',
-          vehicle: vehicle ? `${vehicle.brand ?? ''} ${vehicle.model ?? ''} - ${vehicle.license_plate ?? ''}`.trim() : 'Sin vehículo',
+          vehicle: vehicle
+            ? `${vehicle.brand ?? ''} ${vehicle.model ?? ''} - ${vehicle.license_plate ?? ''}`.trim()
+            : 'Sin vehículo',
           vehicleBrand: vehicle?.brand,
           vehicleModel: vehicle?.model,
           vehiclePlate: vehicle?.license_plate,
-          scheduledAt: row.scheduled_at
+          scheduledAt: row.scheduled_at,
         } as LiveClassModel;
       });
       liveClasses = [...liveClasses, ...mappedPracticas];
     }
 
-    // 2. Clases Teóricas
-    let teoricasQuery: any = this.supabase.client
-      .from('class_b_theory_sessions')
-      .select(`
-        id,
-        scheduled_at,
-        status,
-        topic,
-        instructors(users(first_names, paternal_last_name)),
-        branch_id
-      `)
-      .gte('scheduled_at', `${todayStr}T00:00:00`)
-      .lte('scheduled_at', `${todayStr}T23:59:59`);
-
-    if (branchId !== null) {
-      teoricasQuery = teoricasQuery.eq('branch_id', branchId);
-    }
-
-    const { data: teoricasData, error: teoricasError } = await teoricasQuery;
-
-    if (!teoricasError && teoricasData) {
-      const mappedTeoricas = teoricasData.map((row: any) => {
-        const instUser = row.instructors?.users;
-        
-        let status = 'pending';
-        if (row.status === 'in_progress') status = 'in_progress';
-        if (row.status === 'completed' || row.status === 'cancelled') status = 'completed';
-
-        return {
-          id: `theo-${row.id}`,
-          originalId: row.id,
-          studentName: row.topic ? `Teoría: ${row.topic}` : 'Clase Teórica Grupal',
-          instructorName: instUser ? `${instUser.first_names ?? ''} ${instUser.paternal_last_name ?? ''}`.trim() : 'Sin asignar',
-          timeLabel: '00:00 - 00:45',
-          status,
-          type: 'theoretical',
-          vehicle: undefined,
-          scheduledAt: row.scheduled_at
-        } as LiveClassModel;
-      });
-      liveClasses = [...liveClasses, ...mappedTeoricas];
-    }
+    // Las clases teóricas ahora se gestionan por Ciclos (Spec 0001) y no se
+    // muestran en el feed de clases en vivo del dashboard.
 
     // Ordenar cronológicamente
-    liveClasses.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+    liveClasses.sort(
+      (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+    );
 
     return liveClasses;
   }
@@ -424,10 +400,12 @@ export class DashboardFacade {
     const branchId = this.getActiveBranchId();
     let query: any = this.supabase.client
       .from('audit_log')
-      .select('id, action, entity, entity_id, detail, created_at, users(first_names, paternal_last_name)')
+      .select(
+        'id, action, entity, entity_id, detail, created_at, users(first_names, paternal_last_name)',
+      )
       .order('created_at', { ascending: false })
       .limit(limit);
-      
+
     if (branchId !== null) {
       query = query.or(`branch_id.eq.${branchId},branch_id.is.null`);
     }
@@ -447,10 +425,12 @@ export class DashboardFacade {
       vehicles: 'Vehículo',
       professional_pre_registrations: 'Preinscripción',
       standalone_course_enrollments: 'Curso Singular',
-      special_service_sales: 'Servicio Especial'
+      special_service_sales: 'Servicio Especial',
     };
     const entityLabel = entityNames[log.entity] || 'Registro';
-    const userName = log.users ? `${log.users.first_names} ${log.users.paternal_last_name}` : 'Sistema / Online';
+    const userName = log.users
+      ? `${log.users.first_names} ${log.users.paternal_last_name}`
+      : 'Sistema / Online';
 
     let title = `${entityLabel} actualizado`;
     let desc = log.detail || '';
@@ -468,10 +448,9 @@ export class DashboardFacade {
       icon = 'plus';
       iconBg = 'var(--color-success-muted)';
       iconColor = 'var(--color-success)';
-      
+
       if (log.entity === 'enrollments') icon = 'user-plus';
       if (log.entity === 'payments') icon = 'dollar-sign';
-
     } else if (log.action === 'UPDATE') {
       title = `${entityLabel} actualizad${artO}`;
       icon = 'edit-2';
@@ -480,7 +459,6 @@ export class DashboardFacade {
       // Limpiar prefix redundante [Entidad]
       desc = desc.replace(/^\[.*?\]\s*/, '');
       desc = `${userName} modificó: ${desc}`;
-
     } else if (log.action === 'DELETE') {
       title = `${entityLabel} eliminad${artO}`;
       desc = `Eliminad${artO} por ${userName}`;
@@ -492,9 +470,14 @@ export class DashboardFacade {
     const logTime = new Date(log.created_at);
     // Para historial completo, mostrar fecha si no es de hoy
     const isToday = new Date().toDateString() === logTime.toDateString();
-    const timeStr = isToday 
+    const timeStr = isToday
       ? logTime.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-      : logTime.toLocaleDateString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      : logTime.toLocaleDateString('es-CL', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
 
     return {
       id: log.id.toString(),
