@@ -18,6 +18,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
@@ -27,6 +28,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     TooltipModule,
     FormsModule,
     SelectModule,
+    DateInputComponent,
     DatePickerModule,
     IconComponent,
     SkeletonBlockComponent,
@@ -237,15 +239,11 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
             <!-- Fecha de vencimiento -->
             <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-license-expiry">Fecha de vencimiento *</label>
-              <p-datepicker
-                inputId="e-license-expiry"
-                [(ngModel)]="licenseExpiryModel"
-                dateFormat="dd/mm/yy"
-                [showIcon]="true"
-                [style]="{ width: '100%' }"
-                placeholder="dd/mm/aaaa"
-                aria-required="true"
+              <app-date-input
+                label="Fecha de vencimiento"
+                [required]="true"
+                [value]="licenseExpiryIso"
+                (valueChange)="setLicenseExpiryIso($event)"
                 data-llm-description="Fecha de vencimiento de la licencia"
               />
               @if (licenseExpiryTouched() && !licenseExpiryValido()) {
@@ -634,11 +632,23 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.licenseClass.set(v);
   }
 
-  protected get licenseExpiryModel(): Date | null {
-    return this.licenseExpiry();
+  protected get licenseExpiryIso(): string {
+    const d = this.licenseExpiry();
+    if (!d) return '';
+    return d.toISOString().slice(0, 10);
   }
-  protected set licenseExpiryModel(v: Date | null) {
-    this.licenseExpiry.set(v);
+  protected setLicenseExpiryIso(v: string) {
+    if (!v) {
+      this.licenseExpiry.set(null);
+    } else {
+      const parts = v.split('-');
+      if (parts.length === 3) {
+         this.licenseExpiry.set(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+      } else {
+         this.licenseExpiry.set(new Date(v));
+      }
+    }
+    this.licenseExpiryTouched.set(true);
   }
 
   protected get typeModel(): InstructorType | null {

@@ -20,7 +20,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
   template: `
     <div class="flex flex-col gap-2 w-full">
       <div class="flex justify-between items-end mb-1">
-        <label class="text-xs sm:text-sm font-bold text-primary uppercase tracking-widest">{{
+        <label class="text-xs sm:text-sm font-bold text-text-primary uppercase tracking-widest">{{
           label()
         }}</label>
         @if (!isEmpty) {
@@ -43,8 +43,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
           <div
             class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-40 group-focus-within:opacity-20 transition-opacity"
           >
-            <app-icon name="pen-tool" [size]="32" class="text-muted mb-2"></app-icon>
-            <span class="text-sm font-medium text-muted">Firma digitalmente aquí</span>
+            <app-icon name="pen-tool" [size]="32" class="text-text-muted mb-2"></app-icon>
+            <span class="text-sm font-medium text-text-muted">Firma digitalmente aquí</span>
           </div>
         }
 

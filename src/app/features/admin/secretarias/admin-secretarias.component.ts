@@ -25,6 +25,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 @Component({
@@ -38,6 +39,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     IconComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid style="--bento-row-min: 125px;">
@@ -111,7 +113,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
         <!-- Lista de Secretarias -->
         <div class="bento-wide" data-col-span="9">
-          <div class="card p-6 flex flex-col h-full">
+          <div class="card p-6 flex flex-col h-full" appCardHover>
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
               <h2 class="text-base font-bold whitespace-nowrap text-text-primary">
                 Lista de Personal
@@ -267,7 +269,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
         <!-- Sidebar (Panel de Control) -->
         <div class="bento-tall" data-col-span="3">
-          <div class="card p-6 h-full flex flex-col">
+          <div class="card p-6 h-full flex flex-col" appCardHover>
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 text-text-secondary">
               Panel de Control
             </h3>

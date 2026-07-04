@@ -29,6 +29,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 // Directives
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -83,6 +84,7 @@ interface ExpedienteStatus {
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     AnimateInDirective,
+    CardHoverDirective,
     SectionHeroComponent,
   ],
   template: `
@@ -112,6 +114,7 @@ interface ExpedienteStatus {
       <!-- Filtros y Tabla (Dual-Viewport) -->
       <div
         class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
+        appCardHover
         #tableCard
       >
         <!-- Toolbar de la tabla -->
@@ -491,7 +494,8 @@ interface ExpedienteStatus {
               <div class="bento-grid">
                 @for (alumno of filteredAlumnos(); track alumno.id) {
                   <div
-                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 hover:shadow-md transition-all duration-300 bento-wide"
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
+                    appCardHover
                     data-col-span="4"
                   >
                     <!-- Header -->

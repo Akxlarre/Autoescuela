@@ -41,7 +41,7 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent, PressFeedbackDirective],
   host: {
-    class: 'flex flex-col items-center justify-center gap-4 py-12 px-6 text-center',
+    class: 'flex flex-col items-center justify-center gap-4 py-6 px-6 text-center',
     role: 'status',
     '[attr.aria-label]': 'message()',
   },

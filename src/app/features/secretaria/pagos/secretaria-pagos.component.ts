@@ -17,10 +17,12 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DialogModule } from 'primeng/dialog';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
@@ -46,11 +48,13 @@ const POR_PAGINA = 5;
     DatePipe,
     SelectModule,
     DatePickerModule,
+    DateInputComponent,
     DialogModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -70,7 +74,7 @@ const POR_PAGINA = 5;
       <div class="bento-banner">
         <div class="flex flex-col gap-6">
           <!-- Alumnos con saldo pendiente -->
-          <div class="card p-0 overflow-hidden">
+          <div class="card p-0 overflow-hidden" appCardHover>
             <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
               <div>
                 <h2 class="text-base font-semibold text-text-primary">
@@ -239,7 +243,7 @@ const POR_PAGINA = 5;
             class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:col-span-12 items-start"
             [class.force-compact]="layoutDrawer.isOpen()"
           >
-            <div class="lg:col-span-8 card p-0 overflow-hidden">
+            <div class="lg:col-span-8 card p-0 overflow-hidden" appCardHover>
               <div
                 class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
               >
@@ -426,7 +430,7 @@ const POR_PAGINA = 5;
             </div>
 
             <div class="lg:col-span-4 flex flex-col gap-4">
-              <div class="card p-5 flex flex-col gap-4">
+              <div class="card p-5 flex flex-col gap-4" appCardHover>
                 <h3 class="text-sm font-semibold text-text-primary">
                   Métodos de Pago ({{ mesActual() }})
                 </h3>
@@ -500,22 +504,22 @@ const POR_PAGINA = 5;
           <div class="grid grid-cols-2 gap-4">
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Desde</label>
-              <p-datepicker
-                [(ngModel)]="reportStartDate"
+              <app-date-input
                 [inline]="true"
-                dateFormat="dd/mm/yy"
-                [maxDate]="reportEndDate"
+                [value]="reportStartDateIso"
+                (valueChange)="setReportStartDateIso($event)"
+                [max]="reportEndDateIso"
                 data-llm-description="Fecha de inicio del período del reporte"
               />
             </div>
             <div class="flex flex-col gap-1.5">
               <label class="text-sm font-medium text-text-secondary">Hasta</label>
-              <p-datepicker
-                [(ngModel)]="reportEndDate"
+              <app-date-input
                 [inline]="true"
-                dateFormat="dd/mm/yy"
-                [minDate]="reportStartDate"
-                [maxDate]="today"
+                [value]="reportEndDateIso"
+                (valueChange)="setReportEndDateIso($event)"
+                [min]="reportStartDateIso"
+                [max]="todayIso"
                 data-llm-description="Fecha de fin del período del reporte"
               />
             </div>
@@ -675,6 +679,26 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
   protected readonly showReportModal = signal(false);
   protected reportStartDate: Date = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   protected reportEndDate: Date = new Date();
+  
+  protected get reportStartDateIso(): string {
+    return toISODate(this.reportStartDate);
+  }
+  protected setReportStartDateIso(v: string) {
+    if (!v) return;
+    const p = v.split('-');
+    this.reportStartDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+  }
+  protected get reportEndDateIso(): string {
+    return toISODate(this.reportEndDate);
+  }
+  protected setReportEndDateIso(v: string) {
+    if (!v) return;
+    const p = v.split('-');
+    this.reportEndDate = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+  }
+  protected get todayIso(): string {
+    return toISODate(this.today);
+  }
   protected readonly today = new Date();
 
   protected readonly searchQuery = signal('');

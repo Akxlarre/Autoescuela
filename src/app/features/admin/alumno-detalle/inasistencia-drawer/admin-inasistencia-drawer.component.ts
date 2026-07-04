@@ -39,15 +39,17 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             <!-- Info Alumno -->
             <div class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-default">
               <div
-                class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted"
+                class="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-text-muted"
               >
                 <app-icon name="user" [size]="20" />
               </div>
               <div class="flex flex-col">
-                <span class="text-sm font-semibold text-primary">{{
+                <span class="text-sm font-semibold text-text-primary">{{
                   facade.alumno()?.nombre
                 }}</span>
-                <span class="text-xs text-muted">Matrícula {{ facade.alumno()?.matricula }}</span>
+                <span class="text-xs text-text-muted"
+                  >Matrícula {{ facade.alumno()?.matricula }}</span
+                >
               </div>
             </div>
 
@@ -235,8 +237,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
   `,
 })
 export class AdminInasistenciaDrawerComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-readonly tipoJustificacionOptions = [
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  readonly tipoJustificacionOptions = [
     { label: 'Justificación Médica', value: 'Justificación Médica' },
     { label: 'Permiso Personal', value: 'Permiso Personal' },
     { label: 'Emergencia Familiar', value: 'Emergencia Familiar' },
@@ -303,7 +305,9 @@ readonly tipoJustificacionOptions = [
       this.saved.emit();
       this.layoutDrawer.close();
     } catch (err) {
-      this.saveError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.');
+      this.saveError.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.',
+      );
     } finally {
       this.isSaving.set(false);
     }

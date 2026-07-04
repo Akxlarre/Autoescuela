@@ -321,7 +321,7 @@ function formatCLP(value: number): string {
               <app-icon name="chevron-left" [size]="16" />
             </button>
             <span
-              class="text-sm font-semibold px-4 text-primary"
+              class="text-sm font-semibold px-4 text-text-primary"
               style="min-width: 140px; text-align: center"
             >
               {{ mesLabel() }}
@@ -422,7 +422,7 @@ function formatCLP(value: number): string {
                   }
                 } @else if (filtradas().length === 0) {
                   <tr>
-                    <td colspan="7" class="py-12 text-center text-sm text-muted border-none">
+                    <td colspan="7" class="py-12 text-center text-sm text-text-muted border-none">
                       @if (query()) {
                         No se encontraron instructores para "{{ query() }}".
                       } @else {
@@ -447,12 +447,12 @@ function formatCLP(value: number): string {
                           </div>
                           <div class="min-w-0">
                             <p
-                              class="text-sm font-semibold text-primary leading-tight truncate max-w-30 lg:max-w-50"
+                              class="text-sm font-semibold text-text-primary leading-tight truncate max-w-30 lg:max-w-50"
                             >
                               {{ row.nombre }}
                             </p>
                             <p
-                              class="text-xs text-muted mt-0.5 truncate"
+                              class="text-xs text-text-muted mt-0.5 truncate"
                               [pTooltip]="row.rut"
                               tooltipPosition="top"
                             >
@@ -464,10 +464,10 @@ function formatCLP(value: number): string {
 
                       <!-- Clases impartidas -->
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-semibold text-primary">{{
+                        <span class="text-sm font-semibold text-text-primary">{{
                           row.practicalSessions
                         }}</span>
-                        <span class="text-xs text-muted ml-1">{{
+                        <span class="text-xs text-text-muted ml-1">{{
                           row.practicalSessions === 1 ? 'clase' : 'clases'
                         }}</span>
                       </td>
@@ -475,7 +475,7 @@ function formatCLP(value: number): string {
                       <!-- Horas equivalentes -->
                       <td class="text-right tabular-nums">
                         <span class="text-sm font-semibold text-brand">{{ row.totalHours }}</span>
-                        <span class="text-xs text-muted ml-1">hrs</span>
+                        <span class="text-xs text-text-muted ml-1">hrs</span>
                       </td>
 
                       <!-- Base ganado -->
@@ -495,13 +495,13 @@ function formatCLP(value: number): string {
                             </span>
                           </div>
                         } @else {
-                          <span class="text-sm text-muted">—</span>
+                          <span class="text-sm text-text-muted">—</span>
                         }
                       </td>
 
                       <!-- Total a pagar -->
                       <td class="text-right tabular-nums">
-                        <span class="text-sm font-bold text-primary">{{
+                        <span class="text-sm font-bold text-text-primary">{{
                           formatCLP(row.finalPaymentAmount)
                         }}</span>
                       </td>
@@ -549,19 +549,21 @@ function formatCLP(value: number): string {
               @if (!isLoading() && filtradas().length > 0) {
                 <tfoot>
                   <tr>
-                    <td class="text-xs font-bold text-secondary uppercase tracking-wide">
+                    <td class="text-xs font-bold text-text-secondary uppercase tracking-wide">
                       TOTALES — {{ filtradas().length }}
                       {{ filtradas().length === 1 ? 'instructor' : 'instructores' }}
                     </td>
                     <td class="text-right tabular-nums">
-                      <span class="text-sm font-bold text-primary">{{ totales().clases }}</span>
-                      <span class="text-xs text-muted ml-1">{{
+                      <span class="text-sm font-bold text-text-primary">{{
+                        totales().clases
+                      }}</span>
+                      <span class="text-xs text-text-muted ml-1">{{
                         totales().clases === 1 ? 'clase' : 'clases'
                       }}</span>
                     </td>
                     <td class="text-right tabular-nums">
                       <span class="text-sm font-bold text-brand">{{ totales().horas }}</span>
-                      <span class="text-xs text-muted ml-1">hrs</span>
+                      <span class="text-xs text-text-muted ml-1">hrs</span>
                     </td>
                     <td class="text-right tabular-nums">
                       <span class="text-sm font-bold text-success">
@@ -572,7 +574,7 @@ function formatCLP(value: number): string {
                       @if (totales().anticipos > 0) {
                         <span class="anticipo-box">{{ formatCLP(totales().anticipos) }}</span>
                       } @else {
-                        <span class="text-sm text-muted">—</span>
+                        <span class="text-sm text-text-muted">—</span>
                       }
                     </td>
                     <td class="text-right tabular-nums">
@@ -608,7 +610,7 @@ function formatCLP(value: number): string {
               </div>
             }
           } @else if (filtradas().length === 0) {
-            <div class="py-10 text-center text-sm text-muted">
+            <div class="py-10 text-center text-sm text-text-muted">
               @if (query()) {
                 No se encontraron instructores para "{{ query() }}".
               } @else {
@@ -631,10 +633,10 @@ function formatCLP(value: number): string {
                       {{ row.initials }}
                     </div>
                     <div>
-                      <h3 class="text-[15px] font-bold text-primary leading-tight">
+                      <h3 class="text-[15px] font-bold text-text-primary leading-tight">
                         {{ row.nombre }}
                       </h3>
-                      <p class="text-[12px] text-muted mt-0.5">{{ row.rut }}</p>
+                      <p class="text-[12px] text-text-muted mt-0.5">{{ row.rut }}</p>
                     </div>
                   </div>
 
@@ -650,19 +652,21 @@ function formatCLP(value: number): string {
                 <!-- Content Card (Metrics) -->
                 <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
                   <div class="flex flex-col gap-1">
-                    <span class="text-[10px] uppercase font-bold text-muted">Base (Ganado)</span>
+                    <span class="text-[10px] uppercase font-bold text-text-muted"
+                      >Base (Ganado)</span
+                    >
                     <span class="text-[13px] font-bold text-success">
                       {{ formatCLP(row.totalBaseAmount) }}
                     </span>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <span class="text-[10px] uppercase font-bold text-muted"
+                    <span class="text-[10px] uppercase font-bold text-text-muted"
                       >Horas Equivalentes</span
                     >
                     <div class="text-[13px] font-bold tabular-nums text-brand">
                       {{ row.totalHours }}
-                      <span class="font-normal text-muted">hrs</span>
-                      <span class="text-[11px] font-normal text-muted ml-1"
+                      <span class="font-normal text-text-muted">hrs</span>
+                      <span class="text-[11px] font-normal text-text-muted ml-1"
                         >({{ row.practicalSessions }}
                         {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
                       >
@@ -672,7 +676,7 @@ function formatCLP(value: number): string {
                     class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1 border-border-muted"
                   >
                     <div class="flex justify-between items-center w-full">
-                      <span class="text-[10px] uppercase font-bold text-muted"
+                      <span class="text-[10px] uppercase font-bold text-text-muted"
                         >Anticipos Emitidos</span
                       >
                       <span class="text-[13px] font-bold tabular-nums text-error">
@@ -682,7 +686,9 @@ function formatCLP(value: number): string {
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted">
                     <div class="flex justify-between items-center w-full">
-                      <span class="text-[11px] uppercase font-black text-primary">A Pagar</span>
+                      <span class="text-[11px] uppercase font-black text-text-primary"
+                        >A Pagar</span
+                      >
                       <span class="text-[18px] font-black tracking-tight text-brand">
                         {{ formatCLP(row.finalPaymentAmount) }}
                       </span>
@@ -715,23 +721,23 @@ function formatCLP(value: number): string {
 
             <!-- Mobile Totals Summary -->
             <div class="mt-4 p-4 rounded-xl border-2 border-brand/30 bg-brand/5">
-              <h4 class="text-[11px] uppercase font-black tracking-widest text-primary mb-3">
+              <h4 class="text-[11px] uppercase font-black tracking-widest text-text-primary mb-3">
                 Resumen de Totales
               </h4>
               <div class="flex justify-between items-center mb-2">
-                <span class="text-xs text-muted font-medium">Bases Registradas</span>
+                <span class="text-xs text-text-muted font-medium">Bases Registradas</span>
                 <span class="text-sm font-bold tabular-nums text-success">{{
                   formatCLP(totales().base)
                 }}</span>
               </div>
               <div class="flex justify-between items-center mb-2">
-                <span class="text-xs text-muted font-medium">Anticipos a Descontar</span>
+                <span class="text-xs text-text-muted font-medium">Anticipos a Descontar</span>
                 <span class="text-sm font-bold tabular-nums text-error"
                   >- {{ formatCLP(totales().anticipos) }}</span
                 >
               </div>
               <div class="flex justify-between items-center pt-2 mt-2 border-t border-brand/20">
-                <span class="text-xs font-black uppercase text-primary">Total Final</span>
+                <span class="text-xs font-black uppercase text-text-primary">Total Final</span>
                 <span class="text-[18px] font-black tabular-nums tracking-tight text-brand">{{
                   formatCLP(totales().total)
                 }}</span>

@@ -348,12 +348,12 @@ import type {
             </div>
             <app-skeleton-block variant="rect" width="96px" height="32px" />
           </div>
-          @if (kpis().length) {
+          @if (kpis().length || loadingKpiCount() > 0) {
             <div
               class="border-t border-border-subtle grid"
               style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr))"
             >
-              @for (k of kpis(); track k.id) {
+              @for (i of skeletonKpis(); track i) {
                 <div
                   class="px-4 py-2.5 border-r border-border-subtle last:border-r-0 flex flex-col gap-1.5"
                 >
@@ -556,7 +556,7 @@ import type {
                         {{ kpi.label }}
                       </p>
                       <div
-                        class="flex items-baseline gap-1.5 transition-transform duration-200 ease-out group-hover:-translate-y-0.5"
+                        class="flex items-baseline gap-1.5 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 flex-wrap"
                       >
                         <span
                           class="text-lg font-semibold leading-none"
@@ -572,6 +572,9 @@ import type {
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
                             }}{{ kpi.trendLabel ?? '' }}
                           </span>
+                        }
+                        @if (kpi.subValue) {
+                          <span class="text-[10px] font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
                         }
                       </div>
                       <div
@@ -593,7 +596,7 @@ import type {
                       >
                         {{ kpi.label }}
                       </p>
-                      <div class="flex items-baseline gap-1.5">
+                      <div class="flex items-baseline gap-1.5 flex-wrap">
                         <span class="text-lg font-semibold text-text-primary leading-none">
                           {{ kpi.prefix ?? '' }}{{ kpi.value }}{{ kpi.suffix ?? '' }}
                         </span>
@@ -605,6 +608,9 @@ import type {
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
                             }}{{ kpi.trendLabel ?? '' }}
                           </span>
+                        }
+                        @if (kpi.subValue) {
+                          <span class="text-[10px] font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
                         }
                       </div>
                     </div>
@@ -935,6 +941,12 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
   readonly density = input<'full' | 'slim'>('full');
   readonly kpis = input<SectionHeroKpi[]>([]);
   readonly loading = input<boolean>(false);
+  readonly loadingKpiCount = input<number>(0);
+
+  protected readonly skeletonKpis = computed(() => {
+    const count = this.kpis().length || this.loadingKpiCount();
+    return Array.from({ length: count }, (_, i) => i);
+  });
 
   private readonly cardRef = viewChild<ElementRef<HTMLElement>>('cardRef');
   private readonly slimRef = viewChild<ElementRef<HTMLElement>>('slimRef');

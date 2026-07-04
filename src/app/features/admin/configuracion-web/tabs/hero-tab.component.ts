@@ -633,112 +633,112 @@ const INTERFACE_ICONS = [
                   class="flex items-center gap-3 p-2 rounded-xl border border-solid border-border-default bg-elevated transition-colors hover:border-border-strong"
                 >
                   <div class="relative w-40 shrink-0 icon-dropdown-container">
-                      <button
-                        type="button"
-                        class="field-input py-1.5 px-2.5 w-full flex items-center justify-between bg-surface cursor-pointer h-[34px]"
-                        (click)="toggleIconDropdown($index, $event)"
+                    <button
+                      type="button"
+                      class="field-input py-1.5 px-2.5 w-full flex items-center justify-between bg-surface cursor-pointer h-[34px]"
+                      (click)="toggleIconDropdown($index, $event)"
+                    >
+                      <div class="flex items-center gap-2">
+                        @if (featCtrl.get('icon')?.value) {
+                          <app-icon
+                            [name]="featCtrl.get('icon')?.value"
+                            [size]="16"
+                            class="text-brand"
+                          />
+                        } @else {
+                          <span class="text-[11px] text-text-muted">Opcional</span>
+                        }
+                      </div>
+                      <app-icon name="chevron-down" [size]="14" class="text-text-muted" />
+                    </button>
+
+                    @if (showIconDropdown[$index]) {
+                      <div
+                        class="absolute left-0 w-64 bg-surface border rounded-lg shadow-xl p-2.5 z-50 flex flex-col gap-1.5 border-border-subtle"
+                        [class.top-full]="$index === 0"
+                        [class.mt-1]="$index === 0"
+                        [class.bottom-full]="$index > 0"
+                        [class.mb-1]="$index > 0"
+                        (click)="$event.stopPropagation()"
                       >
-                        <div class="flex items-center gap-2">
-                          @if (featCtrl.get('icon')?.value) {
-                            <app-icon
-                              [name]="featCtrl.get('icon')?.value"
-                              [size]="16"
-                              class="text-brand"
-                            />
-                          } @else {
-                            <span class="text-[11px] text-text-muted">Opcional</span>
-                          }
-                        </div>
-                        <app-icon name="chevron-down" [size]="14" class="text-text-muted" />
-                      </button>
-
-                      @if (showIconDropdown[$index]) {
-                        <div
-                          class="absolute left-0 w-64 bg-surface border rounded-lg shadow-xl p-2.5 z-50 flex flex-col gap-1.5 border-border-subtle"
-                          [class.top-full]="$index === 0"
-                          [class.mt-1]="$index === 0"
-                          [class.bottom-full]="$index > 0"
-                          [class.mb-1]="$index > 0"
-                          (click)="$event.stopPropagation()"
-                        >
-                          <!-- Buscador de icono -->
-                          <div class="relative w-full">
-                            <input
-                              type="text"
-                              placeholder="Buscar icono..."
-                              class="field-input py-1 px-2.5 text-xs w-full pr-7 h-[30px]"
-                              [value]="iconSearchQuery()"
-                              (input)="onIconSearch($event)"
-                              (click)="$event.stopPropagation()"
-                              autofocus
-                            />
-                            @if (iconSearchQuery()) {
-                              <button
-                                type="button"
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer border-none bg-transparent"
-                                (click)="clearIconSearch($event)"
-                              >
-                                <app-icon name="x" [size]="10" />
-                              </button>
-                            }
-                          </div>
-
-                          <!-- Categorías -->
-                          <div class="flex flex-wrap gap-1 mb-1 mt-0.5 w-full">
-                            @for (cat of iconCategories; track cat.id) {
-                              <button
-                                type="button"
-                                class="category-pill flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide transition-all cursor-pointer border-none"
-                                [style.background]="
-                                  selectedCategory() === cat.id
-                                    ? 'var(--color-primary-muted, rgba(14, 165, 233, 0.12))'
-                                    : 'var(--bg-subtle)'
-                                "
-                                [style.color]="
-                                  selectedCategory() === cat.id
-                                    ? 'var(--color-primary)'
-                                    : 'var(--text-muted)'
-                                "
-                                (click)="selectCategory(cat.id)"
-                              >
-                                <app-icon [name]="cat.icon" [size]="9" />
-                                <span>{{ cat.label }}</span>
-                              </button>
-                            }
-                          </div>
-
-                          <!-- Rejilla de iconos -->
-                          <div
-                            class="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto pr-1"
-                            (scroll)="onDropdownScroll($event)"
-                          >
+                        <!-- Buscador de icono -->
+                        <div class="relative w-full">
+                          <input
+                            type="text"
+                            placeholder="Buscar icono..."
+                            class="field-input py-1 px-2.5 text-xs w-full pr-7 h-[30px]"
+                            [value]="iconSearchQuery()"
+                            (input)="onIconSearch($event)"
+                            (click)="$event.stopPropagation()"
+                            autofocus
+                          />
+                          @if (iconSearchQuery()) {
                             <button
                               type="button"
-                              class="col-span-6 flex items-center justify-center gap-1 py-1 rounded hover:bg-muted text-[9px] text-text-muted transition-colors cursor-pointer border-none"
-                              (click)="
-                                featCtrl.get('icon')?.setValue(''); showIconDropdown[$index] = false
-                              "
+                              class="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary cursor-pointer border-none bg-transparent"
+                              (click)="clearIconSearch($event)"
                             >
                               <app-icon name="x" [size]="10" />
-                              <span>Ocultar Icono</span>
                             </button>
-
-                            @for (iconName of renderedIcons(); track iconName) {
-                              <button
-                                type="button"
-                                class="flex flex-col items-center justify-center p-1 rounded hover:bg-brand-muted hover:text-brand transition-colors border border-transparent hover:border-brand/20 cursor-pointer h-7"
-                                [title]="iconName"
-                                (click)="
-                                  featCtrl.get('icon')?.setValue(iconName);
-                                  showIconDropdown[$index] = false
-                                "
-                              >
-                                <app-icon [name]="iconName" [size]="14" />
-                              </button>
-                            }
-                          </div>
+                          }
                         </div>
-                      }
+
+                        <!-- Categorías -->
+                        <div class="flex flex-wrap gap-1 mb-1 mt-0.5 w-full">
+                          @for (cat of iconCategories; track cat.id) {
+                            <button
+                              type="button"
+                              class="category-pill flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide transition-all cursor-pointer border-none"
+                              [style.background]="
+                                selectedCategory() === cat.id
+                                  ? 'var(--color-primary-muted, rgba(14, 165, 233, 0.12))'
+                                  : 'var(--bg-subtle)'
+                              "
+                              [style.color]="
+                                selectedCategory() === cat.id
+                                  ? 'var(--color-primary)'
+                                  : 'var(--text-muted)'
+                              "
+                              (click)="selectCategory(cat.id)"
+                            >
+                              <app-icon [name]="cat.icon" [size]="9" />
+                              <span>{{ cat.label }}</span>
+                            </button>
+                          }
+                        </div>
+
+                        <!-- Rejilla de iconos -->
+                        <div
+                          class="grid grid-cols-6 gap-1 max-h-32 overflow-y-auto pr-1"
+                          (scroll)="onDropdownScroll($event)"
+                        >
+                          <button
+                            type="button"
+                            class="col-span-6 flex items-center justify-center gap-1 py-1 rounded hover:bg-subtle text-[9px] text-text-muted transition-colors cursor-pointer border-none"
+                            (click)="
+                              featCtrl.get('icon')?.setValue(''); showIconDropdown[$index] = false
+                            "
+                          >
+                            <app-icon name="x" [size]="10" />
+                            <span>Ocultar Icono</span>
+                          </button>
+
+                          @for (iconName of renderedIcons(); track iconName) {
+                            <button
+                              type="button"
+                              class="flex flex-col items-center justify-center p-1 rounded hover:bg-brand-muted hover:text-brand transition-colors border border-transparent hover:border-brand/20 cursor-pointer h-7"
+                              [title]="iconName"
+                              (click)="
+                                featCtrl.get('icon')?.setValue(iconName);
+                                showIconDropdown[$index] = false
+                              "
+                            >
+                              <app-icon [name]="iconName" [size]="14" />
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
                   </div>
 
                   <div class="flex-1 relative">

@@ -19,6 +19,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AgendaSlotComponent } from './agenda-slot.component';
+import { ScrollContainerDirective } from '@core/directives/scroll-container.directive';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -69,6 +70,7 @@ interface CellSummary {
     SectionHeroComponent,
     AgendaSlotComponent,
     BentoGridLayoutDirective,
+    ScrollContainerDirective,
     CardHoverDirective,
     AnimateInDirective,
   ],
@@ -180,6 +182,9 @@ interface CellSummary {
         @if (isLoading()) {
           <div
             class="agenda-grid"
+            appScrollContainer
+            maxHeight="65vh"
+            [scrollX]="true"
             style="grid-template-columns: 64px repeat(5, minmax(100px, 1fr))"
             aria-hidden="true"
           >
@@ -215,6 +220,9 @@ interface CellSummary {
           <div
             #calendarGrid
             class="agenda-grid"
+            appScrollContainer
+            maxHeight="65vh"
+            [scrollX]="true"
             [style]="gridTemplateStyle()"
             role="grid"
             [attr.aria-label]="'Grilla de horarios, semana ' + (weekData()?.weekLabel ?? '')"
@@ -461,9 +469,7 @@ interface CellSummary {
       display: grid;
       /* grid-template-columns set via [style] binding */
       border-top: 1px solid var(--color-border);
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scroll-behavior: smooth;
+      /* overflow, max-height y scroll-behavior los maneja ScrollContainerDirective */
 
       @media (max-width: 640px) {
         /* Columnas compactas en mobile para scroll horizontal fluido */

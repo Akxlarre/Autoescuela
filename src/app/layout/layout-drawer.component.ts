@@ -11,6 +11,7 @@ import {
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 
@@ -29,12 +30,12 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 @Component({
   selector: 'app-layout-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent, PressFeedbackDirective, NgComponentOutlet],
+  imports: [CommonModule, IconComponent, PressFeedbackDirective, CardHoverDirective, NgComponentOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // En desktop: hermano flex que empuja el contenido (layout-shift)
     // En mobile: fixed por GSAP (override via estilos inline en animación)
-    class: 'shrink-0 overflow-hidden',
+    class: 'shrink-0 overflow-visible relative z-30',
     style: 'width: 0px; display: none; box-sizing: border-box;',
   },
   template: `
@@ -52,18 +53,34 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     <div
       #panelEl
       data-drawer-panel
-      class="relative z-10 flex flex-col w-full h-full bg-surface overflow-hidden"
+      class="relative z-10 flex flex-col w-full h-full bg-base lg:rounded-t-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle overflow-hidden"
       style="min-height: 0;"
     >
       <!-- Header -->
       <header
-        class="flex items-center justify-between px-4 py-4 shrink-0 border-b"
-        style="border-color: var(--border-subtle);"
+        class="bento-card flex-row! items-center justify-between px-4! py-3! shrink-0 mx-4 mt-4 mb-2 z-20 gap-4"
+        appCardHover
       >
-        <div class="flex items-center gap-3 min-w-0">
+        <!-- LADO IZQUIERDO: Navegación e Identidad -->
+        <div class="flex items-center min-w-0 flex-1">
+          <!-- Botón Volver (Movido a la izquierda, posición UX estándar) -->
+          @if (canGoBack()) {
+            <button
+              appPressFeedback
+              (click)="back()"
+              class="flex items-center justify-center gap-1.5 px-2.5 py-1.5 mr-3 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-subtle shrink-0"
+              aria-label="Volver"
+              data-llm-action="drawer-back"
+            >
+              <app-icon name="arrow-left" [size]="16" />
+              <span class="hidden md:inline">Volver</span>
+            </button>
+            <div class="w-px h-5 mr-3 shrink-0" style="background-color: var(--border-subtle);"></div>
+          }
+
           @if (icon()) {
             <div
-              class="flex items-center justify-center rounded-lg w-8 h-8 shrink-0"
+              class="flex items-center justify-center rounded-lg w-8 h-8 shrink-0 mr-3"
               style="background: var(--color-primary-tint); color: var(--color-primary);"
             >
               <app-icon [name]="icon()!" [size]="18" />
@@ -74,57 +91,42 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
           </h2>
         </div>
 
-        <div class="flex items-center gap-1 shrink-0">
-          <!-- Botón volver (visible cuando hay historial de navegación) -->
-          @if (canGoBack()) {
-            <button
-              appPressFeedback
-              (click)="back()"
-              class="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium"
-              style="color: var(--text-secondary);"
-              onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
-              onmouseout="this.style.color='var(--text-secondary)'; this.style.backgroundColor='transparent';"
-              aria-label="Volver"
-              data-llm-action="drawer-back"
-            >
-              <app-icon name="arrow-left" [size]="16" />
-              <span class="hidden sm:inline">Volver</span>
-            </button>
-          }
-
+        <!-- LADO DERECHO: Acciones y Cerrar -->
+        <div class="flex items-center shrink-0">
           <!-- Acciones Dinámicas -->
-          @for (action of actions(); track action.label) {
-            <button
-              appPressFeedback
-              (click)="action.callback()"
-              class="flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium"
-              style="color: var(--text-muted);"
-              onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
-              onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
-              [attr.data-llm-action]="action.llmAction"
-            >
-              <app-icon [name]="action.icon" [size]="16" />
-              <span class="hidden sm:inline">{{ action.label }}</span>
-            </button>
+          @if (actions().length > 0) {
+            <div class="flex items-center gap-1 mr-3">
+              @for (action of actions(); track action.label) {
+                <button
+                  appPressFeedback
+                  (click)="action.callback()"
+                  class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg border-none bg-transparent cursor-pointer transition-colors text-sm font-medium text-text-muted hover:text-text-primary hover:bg-subtle"
+                  [attr.data-llm-action]="action.llmAction"
+                >
+                  <app-icon [name]="action.icon" [size]="16" />
+                  <span class="hidden sm:inline">{{ action.label }}</span>
+                </button>
+              }
+            </div>
+            
+            <!-- Separador visual antes de cerrar -->
+            <div class="w-px h-5 mr-3 shrink-0" style="background-color: var(--border-subtle);"></div>
           }
 
-          <!-- Botón cerrar — siempre visible con área de toque generosa -->
+          <!-- Botón Cerrar -->
           <button
             appPressFeedback
             (click)="close()"
-            class="flex items-center justify-center w-10 h-10 rounded-full border-none bg-transparent cursor-pointer transition-colors"
-            style="color: var(--text-muted);"
-            onmouseover="this.style.color='var(--text-primary)'; this.style.backgroundColor='var(--bg-subtle)';"
-            onmouseout="this.style.color='var(--text-muted)'; this.style.backgroundColor='transparent';"
+            class="flex items-center justify-center w-8 h-8 rounded-full border-none bg-transparent cursor-pointer transition-colors text-text-muted hover:text-text-primary hover:bg-subtle shrink-0"
             aria-label="Cerrar panel"
           >
-            <app-icon name="x" [size]="22" />
+            <app-icon name="x" [size]="20" />
           </button>
         </div>
       </header>
 
       <!-- Body Dinámico -->
-      <div class="flex-1 w-full overflow-y-auto px-4 py-2 box-border flex flex-col">
+      <div class="flex-1 overflow-y-auto mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pr-2 py-2 box-border flex flex-col">
         @if (component()) {
           <ng-container *ngComponentOutlet="component()!" />
         }

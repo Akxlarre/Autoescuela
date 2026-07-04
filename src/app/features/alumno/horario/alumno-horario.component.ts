@@ -10,6 +10,7 @@ import {
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { StudentHorarioFacade } from '@core/facades/student-horario.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -20,6 +21,7 @@ import type {
   StudentHorarioDay,
   StudentHorarioSessionItem,
 } from '@core/models/ui/student-horario.model';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 
 @Component({
   selector: 'app-alumno-horario',
@@ -28,9 +30,11 @@ import type {
     BentoGridLayoutDirective,
     BentoRevealDirective,
     ScrollRevealDirective,
+    CardHoverDirective,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    TabsComponent,
   ],
   template: `
     <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mi horario">
@@ -47,27 +51,13 @@ import type {
 
       <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
       @if (context.enrollments().length > 1) {
-        <div class="bento-banner">
-          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mis matrículas">
-            @for (enr of context.enrollments(); track enr.id) {
-              <button
-                type="button"
-                role="tab"
-                class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
-                [class.bg-brand-muted]="context.activeEnrollmentId() === enr.id"
-                [class.border-brand]="context.activeEnrollmentId() === enr.id"
-                [class.text-primary]="context.activeEnrollmentId() === enr.id"
-                [class.bg-surface]="context.activeEnrollmentId() !== enr.id"
-                [class.border-border-subtle]="context.activeEnrollmentId() !== enr.id"
-                [class.text-text-secondary]="context.activeEnrollmentId() !== enr.id"
-                [attr.aria-selected]="context.activeEnrollmentId() === enr.id"
-                [attr.data-llm-action]="'select-enrollment-' + enr.id"
-                (click)="selectEnrollment(enr.id)"
-              >
-                {{ enr.label }}
-              </button>
-            }
-          </div>
+        <div class="bento-banner p-2">
+          <app-tabs
+            [tabs]="enrollmentTabs()"
+            [activeId]="activeEnrollmentStr()"
+            variant="pill"
+            (activeIdChange)="selectEnrollment(+$event)"
+          />
         </div>
       }
 
@@ -76,6 +66,7 @@ import type {
         <div class="bento-banner" appScrollReveal>
           <div
             class="card card-tinted flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4"
+            appCardHover
             style="border-left: 3px solid var(--ds-brand)"
           >
             <div
@@ -113,7 +104,7 @@ import type {
       }
 
       <!-- ── CALENDARIO SEMANAL ─────────────────────────────────────────────────── -->
-      <div class="bento-banner card flex flex-col gap-4" appScrollReveal>
+      <div class="bento-banner card flex flex-col gap-4" appScrollReveal appCardHover>
         <!-- Navegación de semana -->
         <div class="flex items-center gap-2">
           <button
@@ -274,7 +265,7 @@ import type {
       <!-- ── SIN MATRÍCULA ────────────────────────────────────────────────────── -->
       @if (!loading() && facade.licenseGroup() === null) {
         <div class="bento-banner" appScrollReveal>
-          <div class="card flex flex-col items-center gap-3 py-10 text-center">
+          <div class="card flex flex-col items-center gap-3 py-10 text-center" appCardHover>
             <app-icon name="calendar-x" [size]="36" class="text-text-muted" />
             <p class="text-sm text-text-muted m-0">
               Sin matrícula activa. Consulta a la secretaría.
@@ -288,7 +279,7 @@ import type {
 export class AlumnoHorarioComponent {
   readonly facade = inject(StudentHorarioFacade);
   readonly context = inject(StudentEnrollmentContextFacade);
-    
+
   readonly skeletonDays = [1, 2, 3, 4, 5, 6, 7];
 
   readonly legend = [
@@ -303,6 +294,15 @@ export class AlumnoHorarioComponent {
   readonly loading = computed(() => this.facade.isLoading());
   readonly weekDays = computed(() => this.facade.weekDays());
   readonly nextSession = computed(() => this.facade.nextSession());
+
+  readonly enrollmentTabs = computed(() => {
+    return this.context.enrollments().map((enr) => ({
+      id: String(enr.id),
+      label: enr.label,
+    }));
+  });
+
+  readonly activeEnrollmentStr = computed(() => String(this.context.activeEnrollmentId()));
 
   readonly heroContextLine = computed(() => {
     const next = this.nextSession();

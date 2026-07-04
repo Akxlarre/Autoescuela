@@ -21,6 +21,8 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 
 type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
@@ -35,6 +37,8 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
     EmptyStateComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
+    TabsComponent,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -77,35 +81,14 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
       </div>
 
       <!-- Lista con tabs -->
-      <div class="bento-banner card p-0 overflow-hidden">
+      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
         <!-- Tabs -->
-        <div
-          class="flex border-b border-border-default"
-          role="tablist"
-          aria-label="Filtros de observaciones"
-        >
-          @for (tab of tabs; track tab.id) {
-            <button
-              role="tab"
-              class="flex-1 px-4 py-3 text-sm font-medium transition-colors"
-              [class.border-b-2]="activeTab() === tab.id"
-              [style.border-color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'transparent'"
-              [style.color]="activeTab() === tab.id ? 'var(--ds-brand)' : 'var(--text-muted)'"
-              [attr.aria-selected]="activeTab() === tab.id"
-              (click)="activeTab.set(tab.id)"
-            >
-              {{ tab.label }}
-              @if (tab.count() > 0) {
-                <span
-                  class="ml-1.5 inline-flex items-center justify-center rounded-full text-xs w-5 h-5 bg-subtle text-text-muted"
-                  
-                >
-                  {{ tab.count() }}
-                </span>
-              }
-            </button>
-          }
-        </div>
+        <app-tabs
+          [tabs]="tabs()"
+          [activeId]="activeTab()"
+          variant="line"
+          (activeIdChange)="activeTab.set($any($event))"
+        />
 
         <!-- Contenido -->
         <div class="p-4 flex flex-col gap-3">
@@ -132,7 +115,8 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
 export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
   private readonly authFacade = inject(AuthFacade);
-  private readonly drawer = inject(LayoutDrawerFacadeService);  private readonly destroyRef = inject(DestroyRef);
+  private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly activeTab = signal<ObsTab>('mis-obs');
 
   private readonly currentDbId = computed(() => this.authFacade.currentUser()?.dbId);
@@ -149,25 +133,23 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
   );
 
-  protected readonly tabs = [
+  protected readonly tabs = computed(() => [
     {
-      id: 'mis-obs' as ObsTab,
+      id: 'mis-obs',
       label: 'Mis observaciones',
-      count: computed(() => this.myObservations().filter((t) => t.status !== 'completed').length),
+      count: this.myObservations().filter((t) => t.status !== 'completed').length,
     },
     {
-      id: 'recibidas' as ObsTab,
+      id: 'recibidas',
       label: 'Tareas recibidas',
-      count: computed(
-        () => this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
-      ),
+      count: this.facade.receivedTasks().filter((t) => t.status !== 'completed').length,
     },
     {
-      id: 'instructores' as ObsTab,
+      id: 'instructores',
       label: 'A instructores',
-      count: computed(() => this.toInstructorTasks().length),
+      count: this.toInstructorTasks().length,
     },
-  ];
+  ]);
 
   protected readonly activeTasks = computed(() => {
     switch (this.activeTab()) {
@@ -225,7 +207,7 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
-  ngAfterViewInit(): void {  }
+  ngAfterViewInit(): void {}
 
   protected onHeroAction(id: string): void {
     if (id === 'nueva-comunicacion') {

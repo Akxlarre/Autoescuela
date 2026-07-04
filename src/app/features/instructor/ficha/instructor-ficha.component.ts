@@ -19,6 +19,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 @Component({
@@ -37,6 +38,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     BentoGridLayoutDirective,
     BentoRevealDirective,
     ScrollRevealDirective,
+    CardHoverDirective,
   ],
   styles: [
     `
@@ -117,7 +119,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
               } @else if (facade.studentDetail(); as detail) {
                 <!-- Info Personal -->
-                <div class="card bento-wide" data-col-span="4">
+                <div class="card bento-wide" appCardHover data-col-span="4">
                   <h3 class="kpi-label mb-4">Información del Alumno</h3>
                   <div class="space-y-3">
                     <div>
@@ -160,7 +162,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                 </div>
 
                 <!-- Clases Prácticas -->
-                <div class="card bento-wide" data-col-span="4">
+                <div class="card bento-wide" appCardHover data-col-span="4">
                   <div class="flex items-start justify-between mb-4">
                     <div class="min-w-0 flex-1 mr-3">
                       <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
@@ -210,7 +212,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             @if (facade.detailLoading()) {
               <app-skeleton-block variant="rect" width="100%" height="320px" />
             } @else if (facade.studentDetail(); as detail) {
-              <div class="card p-0 overflow-hidden" [appScrollReveal]="{ delay: 0.1 }">
+              <div class="card p-0 overflow-hidden" appCardHover [appScrollReveal]="{ delay: 0.1 }">
                 <!-- Cabecera de tabla -->
                 <div class="px-4 md:px-6 py-4 border-b border-border-subtle">
                   <h3 class="text-base md:text-lg font-bold" [style.color]="'var(--text-primary)'">

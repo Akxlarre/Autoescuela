@@ -20,10 +20,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
     >
       <!-- Hoy indicator -->
       @if (day().isToday) {
-        <div
-          class="absolute top-0 left-0 w-full h-1 bg-brand"
-          
-        ></div>
+        <div class="absolute top-0 left-0 w-full h-1 bg-brand"></div>
       }
 
       <!-- Cabecera del Día -->
@@ -88,7 +85,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
               @if (session.status !== 'cancelled') {
                 <span class="text-xs font-bold text-text-primary">
                   {{ session.attendanceCount
-                  }}<span class="text-muted font-medium">/{{ session.enrolledCount }}</span>
+                  }}<span class="text-text-muted font-medium">/{{ session.enrolledCount }}</span>
                 </span>
               } @else {
                 <app-icon name="ban" [size]="14" color="var(--state-error)" class="opacity-70" />
@@ -141,7 +138,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
               @if (session.status !== 'cancelled') {
                 <span class="text-xs font-bold text-text-primary">
                   {{ session.attendanceCount
-                  }}<span class="text-muted font-medium">/{{ session.enrolledCount }}</span>
+                  }}<span class="text-text-muted font-medium">/{{ session.enrolledCount }}</span>
                 </span>
               } @else {
                 <app-icon name="ban" [size]="14" color="var(--state-error)" class="opacity-70" />
@@ -155,11 +152,12 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
           <div class="flex flex-col items-center justify-center py-6 px-2 opacity-50 flex-1">
             <div
               class="w-8 h-8 rounded-full flex items-center justify-center mb-2 bg-surface border border-dashed border-border-subtle"
-              
             >
               <app-icon name="minus" [size]="14" color="var(--text-muted)" />
             </div>
-            <p class="text-center text-[11px] uppercase tracking-widest text-muted font-semibold">
+            <p
+              class="text-center text-[11px] uppercase tracking-widest text-text-muted font-semibold"
+            >
               Sin carga
             </p>
           </div>

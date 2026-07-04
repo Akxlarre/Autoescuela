@@ -16,6 +16,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
@@ -39,6 +40,7 @@ const ACTION_OPTIONS = [
     IconComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
+    CardHoverDirective,
     DateInputComponent,
   ],
   template: `
@@ -55,7 +57,7 @@ const ACTION_OPTIONS = [
       />
 
       <!-- ── Filtros ──────────────────────────────────────────────────────── -->
-      <div class="bento-banner card p-5">
+      <div class="bento-banner card p-5" appCardHover>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <!-- Fecha desde -->
           <div class="flex flex-col gap-1">
@@ -79,7 +81,7 @@ const ACTION_OPTIONS = [
 
           <!-- Secretaria -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-secondary">Secretaria</label>
+            <label class="text-xs font-medium text-text-secondary">Secretaria</label>
             <p-select
               [options]="secretariaOptions()"
               [(ngModel)]="secretariaModel"
@@ -94,7 +96,7 @@ const ACTION_OPTIONS = [
 
           <!-- Acción -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-secondary">Acción</label>
+            <label class="text-xs font-medium text-text-secondary">Acción</label>
             <p-select
               [options]="actionOptions"
               [(ngModel)]="accionModel"
@@ -109,7 +111,7 @@ const ACTION_OPTIONS = [
 
           <!-- Módulo -->
           <div class="flex flex-col gap-1">
-            <label class="text-xs font-medium text-secondary">Módulo</label>
+            <label class="text-xs font-medium text-text-secondary">Módulo</label>
             <p-select
               [options]="moduloOptions"
               [(ngModel)]="moduloModel"
@@ -126,7 +128,7 @@ const ACTION_OPTIONS = [
         <!-- Acciones de filtro -->
         <div class="flex items-center justify-between flex-wrap gap-3">
           <button
-            class="filter-clear-btn flex items-center gap-2 text-sm text-secondary"
+            class="filter-clear-btn flex items-center gap-2 text-sm text-text-secondary"
             (click)="clearFilters()"
             data-llm-action="limpiar-filtros-auditoria"
           >
@@ -178,12 +180,12 @@ const ACTION_OPTIONS = [
       </div>
 
       <!-- ── Tabla ─────────────────────────────────────────────────────────── -->
-      <div class="bento-banner card card-accent p-0 overflow-hidden">
+      <div class="bento-banner card card-accent p-0 overflow-hidden" appCardHover>
         <!-- Scroll wrapper: habilita scroll horizontal en pantallas chicas -->
         <div class="overflow-x-auto">
           <!-- Header tabla -->
           <div
-            class="audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide text-muted audit-header"
+            class="audit-grid px-6 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted audit-header"
           >
             <span>Fecha/Hora</span>
             <span>Usuario</span>
@@ -211,7 +213,7 @@ const ACTION_OPTIONS = [
           } @else if (facade.logs().length === 0) {
             <div class="py-16 flex flex-col items-center gap-3">
               <app-icon name="shield-off" [size]="36" />
-              <p class="text-sm text-muted">
+              <p class="text-sm text-text-muted">
                 No hay registros de auditoría para los filtros seleccionados.
               </p>
             </div>
@@ -219,13 +221,15 @@ const ACTION_OPTIONS = [
             @for (log of facade.logs(); track log.id) {
               <div class="audit-row audit-grid px-6 py-4 items-start audit-row-border">
                 <!-- Fecha/Hora -->
-                <span class="text-sm tabular-nums text-secondary">
+                <span class="text-sm tabular-nums text-text-secondary">
                   {{ log.fechaHora | date: 'yyyy-MM-dd HH:mm:ss' }}
                 </span>
 
                 <!-- Usuario -->
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-semibold text-primary">{{ log.usuarioNombre }}</span>
+                  <span class="text-sm font-semibold text-text-primary">{{
+                    log.usuarioNombre
+                  }}</span>
                   <a [href]="'mailto:' + log.usuarioEmail" class="text-xs brand-link">
                     {{ log.usuarioEmail }}
                   </a>
@@ -246,13 +250,13 @@ const ACTION_OPTIONS = [
                 </div>
 
                 <!-- Módulo -->
-                <span class="text-sm text-secondary">{{ log.modulo }}</span>
+                <span class="text-sm text-text-secondary">{{ log.modulo }}</span>
 
                 <!-- Detalles -->
                 <span class="text-sm text-brand">{{ log.detalle }}</span>
 
                 <!-- IP -->
-                <span class="text-sm tabular-nums text-muted">{{ log.ip }}</span>
+                <span class="text-sm tabular-nums text-text-muted">{{ log.ip }}</span>
               </div>
             }
           }
@@ -281,7 +285,7 @@ const ACTION_OPTIONS = [
               <div class="hidden sm:flex items-center gap-1">
                 @for (p of visiblePages(); track p) {
                   @if (p === -1) {
-                    <span class="text-xs px-1 text-muted">…</span>
+                    <span class="text-xs px-1 text-text-muted">…</span>
                   } @else {
                     <button
                       class="page-btn"
@@ -295,7 +299,7 @@ const ACTION_OPTIONS = [
               </div>
 
               <!-- Indicador compacto solo en mobile -->
-              <span class="text-xs text-muted sm:hidden px-2">
+              <span class="text-xs text-text-muted sm:hidden px-2">
                 {{ facade.currentPage() }} / {{ facade.totalPages() }}
               </span>
 
@@ -314,7 +318,7 @@ const ACTION_OPTIONS = [
 
       <!-- ── Banner informativo ─────────────────────────────────────────────── -->
       <div
-        class="bento-banner flex items-start gap-3 p-4 rounded-lg text-sm text-secondary warning-banner"
+        class="bento-banner flex items-start gap-3 p-4 rounded-lg text-sm text-text-secondary warning-banner"
       >
         <app-icon name="info" [size]="16" color="var(--state-warning)" class="mt-0.5 shrink-0" />
         <p>

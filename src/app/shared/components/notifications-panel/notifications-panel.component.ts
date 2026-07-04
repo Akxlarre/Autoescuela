@@ -26,10 +26,10 @@ import { IconComponent } from '@shared/components/icon/icon.component';
     >
       <!-- Header -->
       <div class="notif-panel__header">
-        <span class="text-sm font-semibold text-primary">Notificaciones</span>
+        <span class="text-sm font-semibold text-text-primary">Notificaciones</span>
         @if (unreadCount() > 0) {
           <button
-            class="text-xs text-muted hover:text-primary cursor-pointer transition-colors"
+            class="text-xs text-text-muted hover:text-text-primary cursor-pointer transition-colors"
             data-llm-action="mark-all-notifications-read"
             (click)="markAllRead.emit()"
           >

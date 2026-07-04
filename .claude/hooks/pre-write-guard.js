@@ -81,6 +81,7 @@ process.stdin.on('end', () => {
           `  - indices/DIRECTIVES.md\n` +
           `  - indices/STYLES.md\n` +
           `  - indices/PIPES.md\n` +
+          `  - indices/ROUTES.md\n` +
           `Esto te ayudara a reutilizar lo que ya existe y no duplicar trabajo.\n` +
           `El bloqueo se levantara automaticamente cuando leas cualquier archivo de indices/.`
         );
@@ -93,6 +94,15 @@ process.stdin.on('end', () => {
     // ═══════════════════════════════════════════════════════════════════════
 
     const violations = [];
+    let themeTokens = null;
+    let findDeadTokenClasses = null;
+    try {
+      const themeLib = require(path.join(process.cwd(), 'scripts', 'lib', 'theme-tokens.js'));
+      findDeadTokenClasses = themeLib.findDeadTokenClasses;
+      themeTokens = themeLib.parseThemeTokens(path.join(process.cwd(), 'src', 'tailwind.css'));
+    } catch {
+      // fail-open: si el theme no carga, este check puntual se omite (el resto del hook sigue activo)
+    }
 
     // --- TypeScript / HTML checks (solo en src/app/) ---
     if (normalizedPath.includes('src/app/') && (normalizedPath.endsWith('.ts') || normalizedPath.endsWith('.html'))) {
@@ -142,16 +152,21 @@ process.stdin.on('end', () => {
       if (hardcodedColorRe.test(newContent))
         violations.push(
           'No usar colores Tailwind hardcodeados (ej: text-red-500, bg-blue-200).\n' +
-          '     Usa tokens semanticos: text-primary, text-muted, bg-surface, bg-base, var(--ds-brand).'
+          '     Usa tokens semanticos: text-text-primary, text-text-muted, bg-surface, bg-base, var(--ds-brand).'
         );
-      // Clases de token NO canonicas (no existen en @theme -> no generan CSS)
-      const deadTokenClassRe =
-        /\b(?:bg-bg-(?:base|surface|elevated|subtle|overlay)|(?:text|bg|border)-state-(?:success|warning|error|info)|bg-surface-(?:elevated|hover|base)|(?:border|bg|divide)-divider)\b/;
-      if (deadTokenClassRe.test(newContent))
-        violations.push(
-          'Clases de token no canonicas que no generan CSS (Tailwind v4 las ignora silenciosamente).\n' +
-          '     Usa: bg-{base,surface,elevated,subtle}, text/bg/border-{success,warning,error,info}(-subtle|-border), border-border-subtle. NO uses bg-bg-*, *-state-*, bg-surface-{elevated,hover,base}, *-divider. Ver AP-011.'
-        );
+      // Clases de token muertas: whitelist derivada del @theme real (spec 0019 — reemplaza la lista negra manual)
+      if (themeTokens && findDeadTokenClasses) {
+        const deadHits = findDeadTokenClasses(newContent, themeTokens);
+        if (deadHits.length > 0) {
+          const detail = deadHits
+            .map(d => (d.suggestion ? `${d.cls} -> ${d.suggestion}` : d.cls))
+            .join(', ');
+          violations.push(
+            `Clases de token muertas (no existen en @theme, no generan CSS): ${detail}\n` +
+            '     Usa solo clases cuyo token exista en @theme (src/tailwind.css). Ver indices/ANTI-PATTERNS.md (AP-011) y specs/0019.'
+          );
+        }
+      }
       // Dumb component con inject de Facade (shared/ no debe tener Facades)
       if (normalizedPath.includes('shared/') && normalizedPath.endsWith('.component.ts')) {
         if (/inject\s*\(\s*\w*Facade/.test(newContent))
@@ -262,7 +277,7 @@ process.stdin.on('end', () => {
           '  - Coordina Dumb components de shared/ pasando signals.',
           '  - OnPush obligatorio. Signals para estado, no BehaviorSubject.',
           '[REGLA visual-system.md] Prioridad UI: 1) indices/COMPONENTS.md 2) PrimeNG 3) Custom.',
-          '  - Colores: solo tokens (text-primary, bg-surface, var(--ds-brand)).',
+          '  - Colores: solo tokens (text-text-primary, bg-surface, var(--ds-brand)).',
           '  - Regla 3-2-1: max 3 elementos con var(--ds-brand) por viewport (2 interactivos, 1 decorativo).',
           '  - Layout: usar .bento-grid con clases de proporcion. Solo 1 .card-accent por seccion.',
           '  - KPIs: usar <app-kpi-card> (ya existe en shared/). No recrear composicion KPI manualmente.',
@@ -338,7 +353,7 @@ process.stdin.on('end', () => {
       contextParts.push(
         '[REGLA architecture.md] Template Angular: usa @if/@for/@switch, no *ngIf/*ngFor.',
         '  - Bindings: [class.x]="expr", [style.x]="expr". No [ngClass]/[ngStyle].',
-        '[REGLA visual-system.md] Colores: text-primary, text-muted, bg-surface, bg-base. No Tailwind hardcodeado.',
+        '[REGLA visual-system.md] Colores: text-text-primary, text-text-muted, bg-surface, bg-base. No Tailwind hardcodeado.',
         '  - Bento Grid: .bento-grid + [appBentoGridLayout]. Hijos: .bento-square/.bento-wide/.bento-tall/.bento-feature/.bento-hero.',
         '  - Iconos: <app-icon name="kebab-case" [size]="16" /> SIEMPRE. PROHIBIDO emojis en la UI.',
         '  - KPIs: <span class="kpi-value">24K</span> + <span class="kpi-label">USUARIOS</span>. No text-4xl plano.',

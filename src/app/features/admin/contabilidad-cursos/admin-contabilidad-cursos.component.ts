@@ -17,6 +17,7 @@ import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
@@ -91,6 +92,7 @@ const BILLING_LABEL: Record<string, string> = {
     SectionHeroComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div
@@ -115,7 +117,7 @@ const BILLING_LABEL: Record<string, string> = {
 
       <!-- ── Contenido Principal (Listado) ─────────────────────────────────── -->
       <div class="bento-banner">
-        <section class="card pb-10" aria-label="Listado de cursos singulares">
+        <section class="card pb-10" aria-label="Listado de cursos singulares" appCardHover>
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div class="flex items-center gap-2">
               <app-icon name="list" [size]="18" color="var(--ds-brand)" />

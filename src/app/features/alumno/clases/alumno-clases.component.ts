@@ -12,6 +12,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { StudentClasesFacade } from '@core/facades/student-clases.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -19,7 +20,8 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
-import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
+import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 
 type TabId = 'practice' | 'theory';
 
@@ -31,11 +33,13 @@ type TabId = 'practice' | 'theory';
     BentoRevealDirective,
     ScrollRevealDirective,
     AnimateInDirective,
+    CardHoverDirective,
     SectionHeroComponent,
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     AlertCardComponent,
+    TabsComponent,
   ],
   template: `
     <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mis clases">
@@ -52,27 +56,13 @@ type TabId = 'practice' | 'theory';
 
       <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
       @if (context.enrollments().length > 1) {
-        <div class="bento-banner">
-          <div class="flex flex-wrap gap-2" role="tablist" aria-label="Mis matrículas">
-            @for (enr of context.enrollments(); track enr.id) {
-              <button
-                type="button"
-                role="tab"
-                class="px-4 py-1.5 rounded-full text-sm font-medium border transition-colors"
-                [class.bg-brand-muted]="context.activeEnrollmentId() === enr.id"
-                [class.border-brand]="context.activeEnrollmentId() === enr.id"
-                [class.text-primary]="context.activeEnrollmentId() === enr.id"
-                [class.bg-surface]="context.activeEnrollmentId() !== enr.id"
-                [class.border-border-subtle]="context.activeEnrollmentId() !== enr.id"
-                [class.text-text-secondary]="context.activeEnrollmentId() !== enr.id"
-                [attr.aria-selected]="context.activeEnrollmentId() === enr.id"
-                [attr.data-llm-action]="'select-enrollment-' + enr.id"
-                (click)="selectEnrollment(enr.id)"
-              >
-                {{ enr.label }}
-              </button>
-            }
-          </div>
+        <div class="bento-banner p-2">
+          <app-tabs
+            [tabs]="enrollmentTabs()"
+            [activeId]="activeEnrollmentStr()"
+            variant="pill"
+            (activeIdChange)="selectEnrollment(+$event)"
+          />
         </div>
       }
 
@@ -115,52 +105,16 @@ type TabId = 'practice' | 'theory';
       }
 
       <!-- ── PANEL PRINCIPAL ──────────────────────────────────────────────────── -->
-      <div class="bento-banner card flex flex-col gap-4" appScrollReveal>
+      <div class="bento-banner card flex flex-col gap-4" appScrollReveal appCardHover>
         <!-- Tabs -->
         @if (!loading()) {
-          <div
-            class="flex gap-1 self-start p-1 rounded-lg bg-subtle"
-            role="tablist"
-            aria-label="Ver clases"
-          >
-            <button
-              role="tab"
-              [attr.aria-selected]="activeTab() === 'practice'"
-              class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0"
-              [style.background]="activeTab() === 'practice' ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="
-                activeTab() === 'practice' ? 'var(--text-primary)' : 'var(--text-muted)'
-              "
-              [style.boxShadow]="
-                activeTab() === 'practice' ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12))' : 'none'
-              "
-              (click)="activeTab.set('practice')"
-              data-llm-action="tab-clases-practicas"
-            >
-              @if (licenseGroup() === 'class_b') {
-                Prácticas
-              } @else {
-                Prácticas
-              }
-            </button>
-            @if (licenseGroup() !== 'class_b') {
-              <button
-                role="tab"
-                [attr.aria-selected]="activeTab() === 'theory'"
-                class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0"
-                [style.background]="activeTab() === 'theory' ? 'var(--bg-surface)' : 'transparent'"
-                [style.color]="
-                  activeTab() === 'theory' ? 'var(--text-primary)' : 'var(--text-muted)'
-                "
-                [style.boxShadow]="
-                  activeTab() === 'theory' ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12))' : 'none'
-                "
-                (click)="activeTab.set('theory')"
-                data-llm-action="tab-clases-teoria"
-              >
-                Teoría
-              </button>
-            }
+          <div class="p-1 self-start">
+            <app-tabs
+              [tabs]="viewTabs()"
+              [activeId]="activeTab()"
+              variant="segmented"
+              (activeIdChange)="activeTab.set($any($event))"
+            />
           </div>
         }
 
@@ -383,6 +337,26 @@ export class AlumnoClasesComponent {
   readonly profPracticeSessions = computed(() =>
     this.facade.profSessions().filter((s) => s.kind === 'practice'),
   );
+
+  readonly enrollmentTabs = computed(() => {
+    return this.context.enrollments().map((enr) => ({
+      id: String(enr.id),
+      label: enr.label,
+    }));
+  });
+
+  readonly activeEnrollmentStr = computed(() => String(this.context.activeEnrollmentId()));
+
+  readonly viewTabs = computed(() => [
+    {
+      id: 'practice',
+      label: 'Prácticas',
+    },
+    {
+      id: 'theory',
+      label: 'Teoría',
+    },
+  ]);
 
   readonly theoryColor = computed(() => {
     const pct = this.kpis()?.theoryPct ?? 0;

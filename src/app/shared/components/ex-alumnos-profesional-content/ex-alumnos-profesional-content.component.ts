@@ -18,6 +18,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
@@ -39,6 +40,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     SectionHeroComponent,
     EmptyStateComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Ex-Alumnos Profesional">
@@ -55,7 +57,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
         [actions]="[]"
       />
 
-      <div class="bento-banner card p-0 overflow-hidden flex flex-col">
+      <div class="bento-banner card p-0 overflow-hidden flex flex-col" appCardHover>
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <div class="relative flex-1 min-w-52 max-w-xs">

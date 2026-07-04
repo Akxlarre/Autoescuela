@@ -16,6 +16,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { todayIso } from '@core/utils/date.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
@@ -64,6 +65,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
   ],
@@ -134,7 +136,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           <section class="bento-banner card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <app-icon name="alert-triangle" [size]="18" [style.color]="'var(--state-warning)'" />
-              <h2 class="text-sm font-semibold text-primary">Alertas y Acciones Urgentes</h2>
+              <h2 class="text-sm font-semibold text-text-primary">Alertas y Acciones Urgentes</h2>
             </div>
 
             @for (alerta of alertas(); track alerta.enrollmentId) {
@@ -538,20 +540,20 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             aria-label="Justificar inasistencia"
           >
             <div class="flex items-center justify-between">
-              <h3 class="text-base font-semibold text-primary">Justificar Inasistencia</h3>
+              <h3 class="text-base font-semibold text-text-primary">Justificar Inasistencia</h3>
               <button
-                class="p-1 rounded-md text-muted hover:text-primary"
+                class="p-1 rounded-md text-text-muted hover:text-text-primary"
                 aria-label="Cerrar"
                 (click)="closeJustifyModal()"
               >
                 <app-icon name="x" [size]="18" />
               </button>
             </div>
-            <p class="text-sm text-secondary">
+            <p class="text-sm text-text-secondary">
               Ingresa el motivo de la justificación para registrar en el historial del alumno.
             </p>
             <textarea
-              class="w-full rounded-lg border p-3 text-sm text-primary bg-surface resize-none focus:outline-none"
+              class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
               [style.border-color]="'var(--border-subtle)'"
               rows="3"
               placeholder="Ej: Certificado médico presentado..."

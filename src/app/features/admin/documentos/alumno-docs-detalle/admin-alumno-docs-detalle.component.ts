@@ -16,6 +16,7 @@ import { SafePipe } from '@core/pipes/safe.pipe';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer.component';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 /**
  * AdminAlumnoDocsDetalleComponent — Subruta /app/admin/documentos/alumnos/:id
@@ -34,6 +35,7 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
     EmptyStateComponent,
     SkeletonBlockComponent,
     SafePipe,
+    CardHoverDirective,
   ],
   template: `
     <!-- ── SKELETON ── -->
@@ -83,17 +85,15 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
 
         <!-- Split View Layout -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[600px] lg:h-[700px]">
-          
           <!-- Lista de documentos (Columna Izquierda) -->
           <div class="lg:col-span-4 flex flex-col">
-            <div class="bento-card p-0 overflow-hidden flex-1 flex flex-col">
+            <div class="bento-card p-0 overflow-hidden flex-1 flex flex-col" appCardHover>
               <div class="px-5 py-4 border-b border-border-subtle bg-surface">
                 <h2 class="text-base font-semibold m-0 text-text-primary">
                   Documentos
                   @if (facade.studentDocs().length > 0) {
                     <span
                       class="ml-2 text-xs px-2 py-0.5 rounded-full font-semibold bg-brand-tint text-brand"
-                      
                       >{{ facade.studentDocs().length }}</span
                     >
                   }
@@ -126,7 +126,11 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
                           [class.shadow-sm]="selectedDocPath() === doc.fileUrl"
                           [class.bg-subtle]="selectedDocPath() !== doc.fileUrl"
                         >
-                          <app-icon name="file-text" [size]="18" [class.text-brand]="selectedDocPath() === doc.fileUrl" />
+                          <app-icon
+                            name="file-text"
+                            [size]="18"
+                            [class.text-brand]="selectedDocPath() === doc.fileUrl"
+                          />
                         </div>
                         <div class="min-w-0 flex-1">
                           <p
@@ -138,7 +142,11 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
                           >
                             {{ doc.fileName }}
                           </p>
-                          <p class="text-xs m-0 mt-0.5" [class.text-brand]="selectedDocPath() === doc.fileUrl" [class.text-text-secondary]="selectedDocPath() !== doc.fileUrl">
+                          <p
+                            class="text-xs m-0 mt-0.5"
+                            [class.text-brand]="selectedDocPath() === doc.fileUrl"
+                            [class.text-text-secondary]="selectedDocPath() !== doc.fileUrl"
+                          >
                             {{ doc.typeLabel }} · {{ doc.documentAt | slice: 0 : 10 }}
                           </p>
                         </div>
@@ -162,17 +170,24 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
 
           <!-- Previsualización (Columna Derecha) -->
           <div class="lg:col-span-8 flex flex-col h-full">
-            <div class="bento-card p-0 flex-1 flex flex-col overflow-hidden bg-surface">
+            <div
+              class="bento-card p-0 flex-1 flex flex-col overflow-hidden bg-surface"
+              appCardHover
+            >
               @if (selectedDocLoading()) {
                 <div class="flex-1 flex items-center justify-center">
                   <div class="flex flex-col items-center gap-4">
-                    <div class="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin"></div>
+                    <div
+                      class="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin"
+                    ></div>
                     <p class="text-text-secondary font-medium m-0">Cargando documento...</p>
                   </div>
                 </div>
               } @else if (selectedDoc()) {
                 <!-- Header del Preview -->
-                <div class="px-5 py-3 border-b border-border-subtle bg-surface flex items-center justify-between shrink-0">
+                <div
+                  class="px-5 py-3 border-b border-border-subtle bg-surface flex items-center justify-between shrink-0"
+                >
                   <h3 class="font-semibold text-text-primary m-0 truncate pr-4">
                     {{ selectedDoc()?.name }}
                   </h3>
@@ -185,9 +200,11 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
                     Descargar
                   </button>
                 </div>
-                
+
                 <!-- Área de contenido del Preview -->
-                <div class="flex-1 bg-subtle relative overflow-hidden flex items-center justify-center p-0 lg:p-4 min-h-0">
+                <div
+                  class="flex-1 bg-subtle relative overflow-hidden flex items-center justify-center p-0 lg:p-4 min-h-0"
+                >
                   <div class="w-full h-full flex items-center justify-center">
                     @switch (selectedDoc()?.type) {
                       @case ('image') {
@@ -205,13 +222,25 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
                         ></iframe>
                       }
                       @default {
-                        <div class="p-8 surface-glass rounded-2xl flex flex-col items-center gap-4 max-w-sm text-center">
-                          <div class="w-16 h-16 rounded-2xl flex items-center justify-center bg-brand-muted shrink-0">
+                        <div
+                          class="p-8 surface-glass rounded-2xl flex flex-col items-center gap-4 max-w-sm text-center"
+                        >
+                          <div
+                            class="w-16 h-16 rounded-2xl flex items-center justify-center bg-brand-muted shrink-0"
+                          >
                             <app-icon name="file-question" [size]="32" class="text-brand" />
                           </div>
-                          <h4 class="text-lg font-bold text-text-primary m-0">Formato no soportado</h4>
-                          <p class="text-text-secondary text-sm m-0">Este documento debe ser descargado.</p>
-                          <button type="button" class="btn-primary w-full mt-4" (click)="onDownloadSelected()">
+                          <h4 class="text-lg font-bold text-text-primary m-0">
+                            Formato no soportado
+                          </h4>
+                          <p class="text-text-secondary text-sm m-0">
+                            Este documento debe ser descargado.
+                          </p>
+                          <button
+                            type="button"
+                            class="btn-primary w-full mt-4"
+                            (click)="onDownloadSelected()"
+                          >
                             Descargar para abrir
                           </button>
                         </div>
@@ -223,10 +252,14 @@ import { DmsUploadDrawerComponent } from '../dms-upload-drawer/dms-upload-drawer
                 <!-- Empty state de preview -->
                 <div class="flex-1 flex items-center justify-center bg-subtle/30">
                   <div class="text-center p-8 max-w-sm">
-                    <div class="w-16 h-16 rounded-2xl bg-surface shadow-sm border border-border-subtle flex items-center justify-center mx-auto mb-4 text-text-secondary">
+                    <div
+                      class="w-16 h-16 rounded-2xl bg-surface shadow-sm border border-border-subtle flex items-center justify-center mx-auto mb-4 text-text-secondary"
+                    >
                       <app-icon name="eye" [size]="24" />
                     </div>
-                    <h3 class="text-lg font-semibold text-text-primary m-0 mb-2">Previsualización</h3>
+                    <h3 class="text-lg font-semibold text-text-primary m-0 mb-2">
+                      Previsualización
+                    </h3>
                     <p class="text-text-secondary text-sm m-0">
                       Selecciona un documento de la lista para verlo aquí.
                     </p>
@@ -251,7 +284,11 @@ export class AdminAlumnoDocsDetalleComponent implements OnInit {
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
   readonly selectedDocPath = signal<string | null>(null);
-  readonly selectedDoc = signal<{ url: string; name: string; type: 'pdf' | 'image' | 'unknown' } | null>(null);
+  readonly selectedDoc = signal<{
+    url: string;
+    name: string;
+    type: 'pdf' | 'image' | 'unknown';
+  } | null>(null);
   readonly selectedDocLoading = signal(false);
 
   ngOnInit(): void {
@@ -269,7 +306,7 @@ export class AdminAlumnoDocsDetalleComponent implements OnInit {
 
   async onSelectDocument(path: string | null, fileName: string, fileType: string): Promise<void> {
     if (!path) return;
-    
+
     // Si ya está seleccionado, lo deseleccionamos
     if (this.selectedDocPath() === path) {
       this.selectedDocPath.set(null);
@@ -330,7 +367,7 @@ export class AdminAlumnoDocsDetalleComponent implements OnInit {
       );
       // Limpiar visor si eliminamos el seleccionado
       const docs = this.facade.studentDocs();
-      const deletedDoc = docs.find(d => d.id === docId);
+      const deletedDoc = docs.find((d) => d.id === docId);
       if (deletedDoc && deletedDoc.fileUrl === this.selectedDocPath()) {
         this.selectedDocPath.set(null);
         this.selectedDoc.set(null);

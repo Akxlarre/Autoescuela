@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 @Component({
   selector: 'app-alumno-progreso',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [CardHoverDirective],
   template: `
     <div class="p-6">
       <div class="flex items-center gap-3 mb-6">
@@ -12,14 +14,13 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
         </div>
         <span
           class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning"
-          
         >
           PLANO
         </span>
       </div>
       <div
         class="card p-8 flex flex-col items-center justify-center gap-2 text-center border-dashed"
-        
+        appCardHover
       >
         <p class="text-text-muted text-sm">Pendiente calcar desde mockup</p>
         <code class="text-xs text-text-muted"> mockop/web/src/pages/alumno/progreso.astro </code>

@@ -78,7 +78,9 @@ import type {
             </div>
           </div>
         } @else if (query().length === 1) {
-          <p class="search-panel__hint text-muted">Escribe al menos 2 caracteres para buscar</p>
+          <p class="search-panel__hint text-text-muted">
+            Escribe al menos 2 caracteres para buscar
+          </p>
         } @else if (groups().length === 0) {
           <!-- Sin resultados -->
           <div class="search-panel__no-results">

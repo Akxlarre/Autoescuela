@@ -18,6 +18,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import type {
@@ -52,6 +53,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
     IconComponent,
     EmptyStateComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -68,7 +70,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
       />
 
       <!-- ── Tabla + Toolbar (card unificado) ────────────────────────── -->
-      <div class="bento-banner card overflow-hidden">
+      <div class="bento-banner card overflow-hidden" appCardHover>
         <div
           class="flex flex-wrap items-center gap-3 p-4"
           style="border-bottom: 1px solid var(--border-default)"
@@ -304,22 +306,22 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               <thead>
                 <tr class="border-b border-(--border-default)">
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Alumno
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     RUT
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Curso
                   </th>
                   <th
-                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Prácticas
                   </th>
@@ -329,17 +331,17 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     Fecha Término
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     N° Certificado
                   </th>
                   <th
-                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Estado
                   </th>
                   <th
-                    class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Acciones
                   </th>
@@ -352,7 +354,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     class="border-b border-(--border-default) last:border-b-0 transition-colors"
                     [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
                   >
-                    <td class="px-4 py-3 font-medium text-primary">
+                    <td class="px-4 py-3 font-medium text-text-primary">
                       {{ alumno.nombre }}
                     </td>
                     <td class="px-4 py-3 text-brand">
@@ -591,7 +593,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
 
       <!-- ── Historial de Emisiones (Log) ────────────────────────────── -->
       <div class="bento-banner">
-        <h2 class="flex items-center gap-2 text-lg font-semibold text-primary mb-4">
+        <h2 class="flex items-center gap-2 text-lg font-semibold text-text-primary mb-4">
           <app-icon name="scroll" [size]="20" />
           Historial de Emisiones (Log)
         </h2>
@@ -604,29 +606,31 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
               }
             </div>
           } @else if (log().length === 0) {
-            <div class="p-6 text-center text-muted text-sm">No hay registros de emisión aún</div>
+            <div class="p-6 text-center text-text-muted text-sm">
+              No hay registros de emisión aún
+            </div>
           } @else {
             <div class="overflow-x-auto">
               <table class="w-full text-sm">
                 <thead>
                   <tr class="border-b border-(--border-default)">
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Fecha/Hora
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Acción
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Alumno
                     </th>
                     <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                     >
                       Usuario
                     </th>
@@ -637,7 +641,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     <tr
                       class="border-b border-(--border-default) last:border-b-0 hover:bg-(--bg-subtle) transition-colors"
                     >
-                      <td class="px-4 py-3 text-muted text-xs font-mono">
+                      <td class="px-4 py-3 text-text-muted text-xs font-mono">
                         {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
                       </td>
                       <td class="px-4 py-3">
@@ -649,10 +653,10 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                           {{ getAccionLabel(entry.accion) }}
                         </span>
                       </td>
-                      <td class="px-4 py-3 text-primary">
+                      <td class="px-4 py-3 text-text-primary">
                         {{ entry.alumnoNombre }}
                       </td>
-                      <td class="px-4 py-3 text-muted">
+                      <td class="px-4 py-3 text-text-muted">
                         {{ entry.usuarioNombre }}
                       </td>
                     </tr>

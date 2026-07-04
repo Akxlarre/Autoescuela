@@ -18,7 +18,7 @@ import { isoToDate, toISODate } from '@core/utils/date.utils';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (label()) {
-      <label class="field-label" [attr.for]="id()">
+      <label class="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1" [attr.for]="id()">
         {{ label() }}{{ required() ? ' *' : '' }}
       </label>
     }
@@ -28,8 +28,11 @@ import { isoToDate, toISODate } from '@core/utils/date.utils';
       (ngModelChange)="onDateChange($event)"
       dateFormat="dd/mm/yy"
       [showIcon]="true"
+      [inline]="inline()"
       [readonlyInput]="readonlyInput()"
       [style]="{ width: '100%' }"
+      [styleClass]="styleClass()"
+      [inputStyleClass]="inputStyleClass()"
       [placeholder]="placeholder()"
       [minDate]="minDate()"
       [maxDate]="maxDate()"
@@ -47,11 +50,14 @@ export class DateInputComponent {
   id = input<string>('date');
   required = input<boolean>(false);
   disabled = input<boolean>(false);
+  inline = input<boolean>(false);
   /** Impide tipeo libre — fuerza uso exclusivo del calendar picker. */
   readonlyInput = input<boolean>(false);
   min = input<string>('');
   max = input<string>('');
   placeholder = input<string>('dd/mm/aaaa');
+  styleClass = input<string | undefined>(undefined);
+  inputStyleClass = input<string | undefined>(undefined);
 
   valueChange = output<string>();
 

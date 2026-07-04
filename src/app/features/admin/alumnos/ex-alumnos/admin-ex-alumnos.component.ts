@@ -25,6 +25,7 @@ import type {
   SectionHeroKpi,
 } from '@core/models/ui/section-hero.model';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
 @Component({
   selector: 'app-admin-ex-alumnos',
@@ -40,6 +41,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
     AdminStatsPanelComponent,
     AdminExAlumnosCommentsComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout>
@@ -60,7 +62,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
       />
 
       <!-- Archivo Histórico — full width, 1 row -->
-      <div class="bento-banner card p-0! overflow-hidden flex flex-col">
+      <div class="bento-banner card p-0! overflow-hidden flex flex-col" appCardHover>
         <!-- Header -->
         <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-surface">
           <div class="flex items-center gap-3">
@@ -69,7 +71,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
             >
               <app-icon name="archive" [size]="18" />
             </div>
-            <h2 class="text-sm font-bold text-primary m-0">Registro Histórico</h2>
+            <h2 class="text-sm font-bold text-text-primary m-0">Registro Histórico</h2>
           </div>
 
           <div class="flex items-center gap-2">
@@ -96,7 +98,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
             <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
             <button
               type="button"
-              class="p-2 rounded-lg text-muted hover:text-primary transition-colors flex items-center justify-center"
+              class="p-2 rounded-lg text-text-muted hover:text-text-primary transition-colors flex items-center justify-center"
               style="--hover-color: var(--ds-brand)"
               (click)="clearFilters()"
               pTooltip="Limpiar Filtros"
@@ -110,7 +112,9 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
         <!-- Búsqueda -->
         <div class="px-5 py-4 border-b border-border-subtle bg-surface">
           <div class="relative w-full max-w-md">
-            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
+            <span
+              class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            >
               <app-icon name="search" [size]="14" />
             </span>
             <input
@@ -159,8 +163,8 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
                   <tr class="table-row group">
                     <td class="py-4 px-5">
                       <div class="flex flex-col gap-0.5">
-                        <span class="font-bold text-primary">{{ egresado.nombre }}</span>
-                        <span class="text-xs text-muted">{{ egresado.rut }}</span>
+                        <span class="font-bold text-text-primary">{{ egresado.nombre }}</span>
+                        <span class="text-xs text-text-muted">{{ egresado.rut }}</span>
                       </div>
                     </td>
                     <td class="py-4 px-5">
@@ -170,8 +174,8 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
                     </td>
                     <td class="py-4 px-5">
                       <div class="flex flex-col gap-0.5 text-xs">
-                        <span class="font-bold text-primary">{{ egresado.anio }}</span>
-                        <span class="text-muted italic">{{ egresado.sede }}</span>
+                        <span class="font-bold text-text-primary">{{ egresado.anio }}</span>
+                        <span class="text-text-muted italic">{{ egresado.sede }}</span>
                       </div>
                     </td>
                     <td class="py-4 px-5">
@@ -204,7 +208,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
                     <td colspan="5" class="py-20 text-center">
                       <div class="flex flex-col items-center gap-3 opacity-30">
                         <app-icon name="search-x" [size]="48" />
-                        <p class="text-sm font-medium text-secondary">
+                        <p class="text-sm font-medium text-text-secondary">
                           No se encontraron egresados con estos criterios
                         </p>
                       </div>

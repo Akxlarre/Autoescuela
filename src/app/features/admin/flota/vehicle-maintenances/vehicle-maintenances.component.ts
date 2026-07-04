@@ -20,6 +20,7 @@ import { TagModule } from 'primeng/tag';
 // Directives & Services
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 // Shared
@@ -62,6 +63,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
     // Layout
     BentoGridLayoutDirective,
     AnimateInDirective,
+    CardHoverDirective,
     // Shared
     IconComponent,
     SectionHeroComponent,
@@ -86,7 +88,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
       />
 
       <!-- Tabla Historial (Bento Banner) -->
-      <div class="bento-banner card p-0 overflow-hidden shadow-sm" appAnimateIn>
+      <div class="bento-banner card p-0 overflow-hidden shadow-sm" appAnimateIn appCardHover>
         <!-- Header de sección -->
         <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
           <h2 class="text-base font-bold text-text-primary">Historial Cronológico</h2>
@@ -224,6 +226,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
           <div class="bento-square">
             <div
               class="card h-full flex flex-col gap-2 border-l-4"
+              appCardHover
               [class]="scheduledBorderColor(s.status)"
             >
               <div class="flex items-center justify-between">
