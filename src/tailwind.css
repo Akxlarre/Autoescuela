@@ -52,6 +52,9 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
   --color-text-disabled: var(--text-disabled);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-disabled: var(--text-disabled);
 
   /* ── Bordes ── */
   --color-border: var(--border-default); /* Fix: default color for 'border' class */

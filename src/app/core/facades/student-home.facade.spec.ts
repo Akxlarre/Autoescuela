@@ -42,7 +42,7 @@ function mockEnrollmentRow(overrides: Record<string, unknown> = {}) {
 }
 
 function buildSupabaseMock(enrollmentRow: unknown | null = mockEnrollmentRow()) {
-  const progressData = { completed_practices: 8, pct_theory_attendance: 92 };
+  const progressData = { completed_practices: 8 };
   const sessionsData = Array.from({ length: 8 }, (_, i) => ({
     id: i + 1,
     scheduled_at: new Date(Date.now() - (8 - i) * 86400000).toISOString(),
@@ -51,9 +51,6 @@ function buildSupabaseMock(enrollmentRow: unknown | null = mockEnrollmentRow()) 
   const examData = null;
   const certData = null;
   const nextClassData = null;
-  const theoryData = [
-    { status: 'present', class_b_theory_sessions: { scheduled_at: '2026-04-20T09:00:00Z' } },
-  ];
 
   // Fluent mock that chains .from().select()...
   const chain = (data: unknown) => {
@@ -77,7 +74,6 @@ function buildSupabaseMock(enrollmentRow: unknown | null = mockEnrollmentRow()) 
     chain(examData), // class_b_exam_scores
     chain(certData), // certificates
     chain(nextClassData), // class_b_sessions (next class)
-    chain(theoryData), // class_b_theory_attendance
   ];
 
   return {

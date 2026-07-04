@@ -1,17 +1,20 @@
 import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { CiclosTeoricosFacade } from '@core/facades/ciclos-teoricos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AsistenciaClaseBContentComponent } from '@shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component';
-import { AsistenciaTeoriaDrawerComponent } from './asistencia-teoria-drawer.component';
-import { AgendarTeoriaDrawerComponent } from './agendar-teoria-drawer.component';
 import { AdminIniciarClaseDrawerComponent } from './admin-iniciar-clase-drawer.component';
 import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-drawer.component';
-import type { ClasePracticaRow, ClaseTeoricoRow } from '@core/models/ui/asistencia-clase-b.model';
+import type { ClasePracticaRow } from '@core/models/ui/asistencia-clase-b.model';
 
 /**
  * AdminAsistenciaComponent — Smart component.
  * Ruta: /app/admin/asistencia
+ *
+ * Coordina dos dominios bajo pestañas:
+ *  - Prácticas (AsistenciaClaseBFacade)
+ *  - Ciclos Teóricos (CiclosTeoricosFacade) — Spec 0001
  *
  * Reactivo al selector de sede del topbar (BranchFacade.selectedBranchId).
  */
@@ -23,69 +26,75 @@ import type { ClasePracticaRow, ClaseTeoricoRow } from '@core/models/ui/asistenc
   template: `
     <app-asistencia-clase-b-content
       [kpis]="facade.kpis()"
-      [clasesTeorias]="facade.clasesTeorias()"
       [clasesPracticas]="facade.clasesPracticas()"
       [alertas]="facade.alertas()"
       [instructores]="facade.instructores()"
       [selectedDate]="facade.selectedDate()"
       [isLoading]="facade.isLoading()"
-      [isSaving]="facade.isSaving()"
+      [isSaving]="facade.isSaving() || ciclos.isSaving()"
+      [cycles]="ciclos.cycles()"
+      [selectedCycleId]="ciclos.selectedCycleId()"
+      [clasesCiclo]="ciclos.clases()"
+      [rosterCiclo]="ciclos.roster()"
+      [addableStudents]="ciclos.addableStudents()"
+      [isLoadingCiclos]="ciclos.isLoading()"
+      [isLoadingCycle]="ciclos.isLoadingCycle()"
+      [sendingClassId]="ciclos.sendingClassId()"
       (markAttendance)="facade.markAttendance($event.sessionId, $event.status)"
       (justifyAbsence)="facade.justifyAbsence($event.sessionId, $event.reason)"
       (removeSchedule)="facade.removeSchedule($event)"
       (reactivateSchedule)="facade.reactivateSchedule($event)"
       (sendReminder)="facade.sendReminder($event)"
-      (viewAtendanceList)="openTeoriaDrawer($event)"
       (dateChange)="facade.setDate($event)"
       (refreshRequested)="onRefresh()"
-      (scheduleNewClass)="openAgendarDrawer()"
       (iniciarClase)="openIniciarClaseDrawer($event)"
       (finalizarClase)="openFinalizarClaseDrawer($event)"
+      (selectCycle)="ciclos.selectCycle($event)"
+      (saveCicloZoomLink)="ciclos.saveZoomLink($event.classId, $event.link)"
+      (updateCicloTopic)="ciclos.updateTopic($event.classId, $event.tema)"
+      (sendCicloZoom)="ciclos.sendZoomEmail($event.classId, $event.recipientEnrollmentIds)"
+      (moveCicloStudent)="ciclos.moveStudentToCycle($event.enrollmentId, $event.targetCycleId)"
+      (requestAddable)="ciclos.loadAddableStudents()"
+      (addCicloStudent)="onAddStudent($event)"
     />
   `,
 })
 export class AdminAsistenciaComponent {
   protected readonly facade = inject(AsistenciaClaseBFacade);
+  protected readonly ciclos = inject(CiclosTeoricosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   constructor() {
     let previousBranchId: number | null | undefined = undefined;
+    let previousBranchesCount = 0;
 
     effect(() => {
       const branchId = this.branchFacade.selectedBranchId();
+      const branchesCount = this.branchFacade.branches().length;
       this.facade.setBranchFilter(branchId);
+      this.ciclos.setBranchFilter(branchId);
 
       if (previousBranchId === undefined) {
         // First run on component creation — SWR (no skeleton if already cached)
         void this.facade.initialize();
+        void this.ciclos.loadCycles();
       } else if (previousBranchId !== branchId) {
         // Branch actually changed — force full reload with skeleton
         void this.facade.reload();
+        void this.ciclos.loadCycles();
+      } else if (branchId === null && previousBranchesCount === 0 && branchesCount > 0) {
+        // "Todas las sedes" cargó antes de que BranchFacade.loadBranches() resolviera:
+        // los ciclos quedaron con branchName "Sin sede". Reintenta ahora que ya hay sedes.
+        void this.ciclos.loadCycles();
       }
       previousBranchId = branchId;
+      previousBranchesCount = branchesCount;
     });
   }
 
-  protected async openTeoriaDrawer(clase: ClaseTeoricoRow): Promise<void> {
-    await this.facade.openTeoriaDrawer(clase);
-    this.layoutDrawer.open(
-      AsistenciaTeoriaDrawerComponent,
-      `${clase.horaInicio} – ${clase.horaFin} · ${clase.tema}`,
-      'graduation-cap',
-    );
-  }
-
-  protected openAgendarDrawer(): void {
-    this.layoutDrawer.open(
-      AgendarTeoriaDrawerComponent,
-      'Agendar nueva clase teórica',
-      'calendar-plus',
-    );
-  }
-
   protected async onRefresh(): Promise<void> {
-    await this.facade.reload();
+    await Promise.all([this.facade.reload(), this.ciclos.loadCycles()]);
   }
 
   protected openIniciarClaseDrawer(row: ClasePracticaRow): void {
@@ -104,5 +113,11 @@ export class AdminAsistenciaComponent {
       `Finalizar Clase — ${row.alumnoName ?? 'Alumno'}`,
       'flag',
     );
+  }
+
+  /** Override: traer un alumno de otro ciclo al ciclo actualmente seleccionado. */
+  protected onAddStudent(enrollmentId: number): void {
+    const target = this.ciclos.selectedCycleId();
+    if (target !== null) void this.ciclos.moveStudentToCycle(enrollmentId, target);
   }
 }

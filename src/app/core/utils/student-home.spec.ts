@@ -11,21 +11,26 @@ import type { StudentHomeSnapshot } from '@core/models/ui/student-home.model';
 // ── computeOverallProgress ──────────────────────────────────────────────────
 
 describe('computeOverallProgress', () => {
-  it('calcula ponderación 60% prácticas + 40% teoría correctamente', () => {
-    // 8/12 prácticas = 66.7% → 40; 92% teoría → 36.8 = 76.8 ≈ 77
-    expect(computeOverallProgress(8, 12, 92)).toBe(77);
+  it('calcula el progreso solo en base a prácticas completadas', () => {
+    // 8/12 prácticas = 66.7% ≈ 67 (sin componente teórico)
+    expect(computeOverallProgress(8, 12)).toBe(67);
   });
 
   it('devuelve 0 cuando practicesTotal es 0', () => {
-    expect(computeOverallProgress(0, 0, 100)).toBe(0);
+    expect(computeOverallProgress(0, 0)).toBe(0);
   });
 
-  it('devuelve 100 cuando todo está completo', () => {
-    expect(computeOverallProgress(12, 12, 100)).toBe(100);
+  it('devuelve 100 cuando todas las prácticas están completas', () => {
+    expect(computeOverallProgress(12, 12)).toBe(100);
   });
 
   it('devuelve 0 cuando no hay avance', () => {
-    expect(computeOverallProgress(0, 12, 0)).toBe(0);
+    expect(computeOverallProgress(0, 12)).toBe(0);
+  });
+
+  it('profesional: pondera 60% prácticas + 40% teoría cuando se pasa pctTheory', () => {
+    // 8/12 prácticas = 66.7% → 40; 92% teoría → 36.8 = 76.8 ≈ 77
+    expect(computeOverallProgress(8, 12, 92)).toBe(77);
   });
 });
 

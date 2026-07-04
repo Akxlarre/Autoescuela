@@ -20,7 +20,7 @@ export const ENTITY_MODULE_MAP: Record<string, string> = {
   // M4 - Académico B
   enrollments: 'Matrículas',
   class_b_sessions: 'Agenda',
-  class_b_theory_sessions: 'Agenda',
+  class_b_theory_sessions: 'Ciclos Teóricos',
   // M3 - Finanzas
   payments: 'Pagos',
   // M1 - Alumnos (triggers agregados en 20260323110000)

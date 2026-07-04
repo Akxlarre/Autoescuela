@@ -92,10 +92,7 @@ function avatarPalette(name: string) {
           <!-- Progreso -->
           <div>
             <p class="text-xs font-bold uppercase tracking-wider mb-3 text-text-muted">Progreso</p>
-            <div
-              class="rounded-xl p-4 space-y-4 bg-elevated border border-border-subtle"
-              
-            >
+            <div class="rounded-xl p-4 space-y-4 bg-elevated border border-border-subtle">
               <div>
                 <span class="block text-xs mb-0.5 text-text-muted">Curso</span>
                 <span class="text-sm font-semibold text-text-primary">{{ detail.courseName }}</span>
@@ -123,21 +120,7 @@ function avatarPalette(name: string) {
                   ></div>
                 </div>
               </div>
-              <!-- Teoría -->
-              <div>
-                <div class="flex justify-between text-xs mb-1.5">
-                  <span class="text-text-secondary">Asistencia Teórica</span>
-                  <b class="text-success">{{ detail.theoryPercent }}%</b>
-                </div>
-                <div class="w-full rounded-full h-2 bg-border-muted">
-                  <div
-                    class="h-2 rounded-full transition-all duration-500"
-                    [style]="
-                      'width:' + detail.theoryPercent + '%; background: var(--color-success)'
-                    "
-                  ></div>
-                </div>
-              </div>
+              <!-- Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos) -->
             </div>
           </div>
 
@@ -145,7 +128,6 @@ function avatarPalette(name: string) {
           @if (detail.nextClassDate) {
             <div
               class="flex items-center gap-3 p-3.5 rounded-xl bg-brand-muted border border-brand/20"
-              
             >
               <div
                 class="flex items-center justify-center w-9 h-9 rounded-lg shrink-0 bg-brand"
@@ -154,7 +136,7 @@ function avatarPalette(name: string) {
                 <app-icon name="calendar-clock" [size]="16" />
               </div>
               <div>
-                <p class="text-xs font-semibold text-brand" >Próxima Clase</p>
+                <p class="text-xs font-semibold text-brand">Próxima Clase</p>
                 <p class="text-sm font-bold text-text-primary">
                   {{ detail.nextClassDate | date: "EEEE d 'de' MMMM 'a las' HH:mm" }}
                 </p>

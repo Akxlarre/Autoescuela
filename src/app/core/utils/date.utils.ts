@@ -8,6 +8,13 @@ export function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/** Returns the ISO date (YYYY-MM-DD) that is `months` months before today, in local time. */
+export function monthsAgoIso(months: number): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 /**
  * Returns a date string in YYYY-MM-DD format (ISO local).
  * Replaces the 'en-CA' locale trick.

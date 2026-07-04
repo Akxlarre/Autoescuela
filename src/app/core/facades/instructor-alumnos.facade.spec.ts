@@ -87,11 +87,4 @@ describe('InstructorAlumnosFacade', () => {
     // With no students loaded, should set empty and return early
     expect(facade.examScores()).toEqual([]);
   });
-
-  it('fetchTheoryAttendance should query class_b_theory_attendance with instructor filter', async () => {
-    const result = await facade.fetchTheoryAttendance();
-    expect(Array.isArray(result)).toBe(true);
-    const tables = supabaseMock.client.from.mock.calls.map((c: any) => c[0]);
-    expect(tables).toContain('class_b_theory_attendance');
-  });
 });

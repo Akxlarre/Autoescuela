@@ -80,7 +80,6 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `ClassBExamScore` | `dto` | `src/app/core/models/dto/class-b-exam-score.model.ts` |
 | `ClassBPracticeAttendance` | `dto` | `src/app/core/models/dto/class-b-practice-attendance.model.ts` |
 | `ClassBSession` | `dto` | `src/app/core/models/dto/class-b-session.model.ts` |
-| `ClassBTheoryAttendance` | `dto` | `src/app/core/models/dto/class-b-theory-attendance.model.ts` |
 | `ClassBTheorySession` | `dto` | `src/app/core/models/dto/class-b-theory-session.model.ts` |
 | `ClassBook` | `dto` | `src/app/core/models/dto/class-book.model.ts` |
 | `Course` | `dto` | `src/app/core/models/dto/course.model.ts` |
@@ -147,11 +146,12 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |
 | `ArchivoPromocionOption`, `ArchivoCursoOption`, `ArchivoNotaModulo`, `ArchivoAlumnoRow`, `ArchivoKpis` | `ui` | `src/app/core/models/ui/archivo-profesional.model.ts` |
-| `ClasePracticaStatus`, `ZoomLinkStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClaseTeoricoRow`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `TeoriaAsistenciaStatus`, `TeoriaAlumnoElegible`, `NuevaClaseTeoricaPayload`, `FinishClassPayload`, `TeoriaAlumnoAsistencia` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
+| `ClasePracticaStatus`, `NivelAlerta`, `AsistenciaClaseBKpis`, `ClasePracticaRow`, `AlertaFaltaConsecutiva`, `InstructorOption`, `VehicleOption`, `FinishClassPayload` | `ui` | `src/app/core/models/ui/asistencia-clase-b.model.ts` |
 | `AuditAction`, `AuditLogRow` | `ui` | `src/app/core/models/ui/audit-log-row.model.ts` |
 | `BranchOption`, `BranchCoursePrice` | `ui` | `src/app/core/models/ui/branch.model.ts` |
 | `CertificacionAlumnoRow`, `CertificacionKpis`, `CertificacionLogRow` | `ui` | `src/app/core/models/ui/certificacion-clase-b.model.ts` |
 | `PromocionCertOption`, `CursoCertOption`, `ElegibilidadCertProf`, `CertificacionProfesionalAlumnoRow`, `CertificacionProfesionalKpis`, `CertificacionProfesionalLogRow` | `ui` | `src/app/core/models/ui/certificacion-profesional.model.ts` |
+| `CicloStatus`, `CicloOption`, `CicloClaseRow`, `CicloAlumno`, `CicloAlumnoMovible`, `ZoomEmailResult` | `ui` | `src/app/core/models/ui/ciclos-teoricos.model.ts` |
 | `IngresoRow`, `EgresoRow`, `EgresoFormData`, `CierrePayload` | `ui` | `src/app/core/models/ui/cuadratura.model.ts` |
 | `TipoCursoSingular`, `EstadoCursoSingular`, `SingularPaymentMethod`, `SingularPaymentStatus`, `CursoSingularRow`, `CursosSingularesKpis`, `InscriptoCursoSingular`, `NuevoCursoSingularFormData`, `SingularStudentSearch`, `SingularPersonalDataForm`, `SingularPaymentForm` | `ui` | `src/app/core/models/ui/cursos-singulares.model.ts` |
 | `DashboardModel`, `HeroModel`, `KpiModel`, `ActivityModel`, `AlertActionType`, `AlertAction`, `AlertModel`, `QuickActionModel`, `SystemStatusModel`, `LiveClassModel` | `ui` | `src/app/core/models/ui/dashboard.model.ts` |

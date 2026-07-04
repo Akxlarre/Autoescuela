@@ -171,7 +171,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                   }}
                 </p>
                 <p class="text-xs mt-0.5 text-text-muted">
-                  Los alumnos con asistencia teórica incompleta recibirán su certificado igualmente.
+                  Se generará el certificado de todos los alumnos con las prácticas completas.
                 </p>
               </div>
             </div>
@@ -179,19 +179,10 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
               @for (alumno of alumnosPendientes(); track alumno.enrollmentId) {
                 <div class="flex items-center gap-3 px-4 py-2.5">
-                  @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
-                    <app-icon name="alert-triangle" [size]="14" class="text-warning shrink-0" />
-                  } @else {
-                    <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
-                  }
+                  <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
                   <span class="text-sm font-medium flex-1 truncate text-text-primary">
                     {{ alumno.nombre }}
                   </span>
-                  @if (alumno.pctAsistenciaTeoria !== null && alumno.pctAsistenciaTeoria < 100) {
-                    <span class="text-xs text-warning">
-                      {{ alumno.pctAsistenciaTeoria }}% teoría
-                    </span>
-                  }
                 </div>
               }
             </div>
@@ -333,11 +324,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     Prácticas
                   </th>
                   <th
-                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
-                  >
-                    Teoría
-                  </th>
-                  <th
                     class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
                   >
                     Fecha Término
@@ -384,23 +370,6 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                       <span class="font-semibold text-success">
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
-                    </td>
-                    <!-- Teoría: % de asistencia a clases inscritas -->
-                    <td class="px-4 py-3 text-center">
-                      @if (alumno.pctAsistenciaTeoria === null) {
-                        <span class="text-xs text-muted">Sin registro</span>
-                      } @else {
-                        <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                          [style.background]="getTeoriaBg(alumno.pctAsistenciaTeoria)"
-                          [style.color]="getTeoriaColor(alumno.pctAsistenciaTeoria)"
-                        >
-                          @if (alumno.pctAsistenciaTeoria < 100) {
-                            <app-icon name="alert-triangle" [size]="11" />
-                          }
-                          {{ alumno.pctAsistenciaTeoria }}%
-                        </span>
-                      }
                     </td>
                     <td class="px-4 py-3 text-muted">
                       {{ alumno.fechaTermino ?? '—' }}
@@ -982,20 +951,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-  }
-
-  // ── Helpers de color ──
-
-  getTeoriaColor(pct: number): string {
-    if (pct >= 100) return 'var(--state-success)';
-    if (pct >= 75) return 'var(--state-info, var(--color-primary))';
-    return 'var(--state-warning)';
-  }
-
-  getTeoriaBg(pct: number): string {
-    if (pct >= 100) return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-    if (pct >= 75) return 'var(--bg-info-muted, rgba(59,130,246,0.1))';
-    return 'var(--bg-warning-muted, rgba(234,179,8,0.1))';
   }
 
   getAccionLabel(accion: string): string {

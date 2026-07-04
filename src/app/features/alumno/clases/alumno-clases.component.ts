@@ -89,16 +89,18 @@ type TabId = 'practice' | 'theory';
         />
       </div>
 
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Asistencia teoría"
-          [value]="kpis()?.theoryPct ?? 0"
-          suffix="%"
-          icon="clipboard-check"
-          [color]="theoryColor()"
-          [loading]="loading()"
-        />
-      </div>
+      @if (licenseGroup() !== 'class_b') {
+        <div class="bento-square">
+          <app-kpi-card-variant
+            label="Asistencia teoría"
+            [value]="kpis()?.theoryPct ?? 0"
+            suffix="%"
+            icon="clipboard-check"
+            [color]="theoryColor()"
+            [loading]="loading()"
+          />
+        </div>
+      }
 
       @if (licenseGroup() === 'class_b') {
         <div class="bento-square">
@@ -141,20 +143,24 @@ type TabId = 'practice' | 'theory';
                 Prácticas
               }
             </button>
-            <button
-              role="tab"
-              [attr.aria-selected]="activeTab() === 'theory'"
-              class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0"
-              [style.background]="activeTab() === 'theory' ? 'var(--bg-surface)' : 'transparent'"
-              [style.color]="activeTab() === 'theory' ? 'var(--text-primary)' : 'var(--text-muted)'"
-              [style.boxShadow]="
-                activeTab() === 'theory' ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12))' : 'none'
-              "
-              (click)="activeTab.set('theory')"
-              data-llm-action="tab-clases-teoria"
-            >
-              Teoría
-            </button>
+            @if (licenseGroup() !== 'class_b') {
+              <button
+                role="tab"
+                [attr.aria-selected]="activeTab() === 'theory'"
+                class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer border-0"
+                [style.background]="activeTab() === 'theory' ? 'var(--bg-surface)' : 'transparent'"
+                [style.color]="
+                  activeTab() === 'theory' ? 'var(--text-primary)' : 'var(--text-muted)'
+                "
+                [style.boxShadow]="
+                  activeTab() === 'theory' ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12))' : 'none'
+                "
+                (click)="activeTab.set('theory')"
+                data-llm-action="tab-clases-teoria"
+              >
+                Teoría
+              </button>
+            }
           </div>
         }
 
@@ -360,7 +366,7 @@ type TabId = 'practice' | 'theory';
 export class AlumnoClasesComponent {
   readonly facade = inject(StudentClasesFacade);
   readonly context = inject(StudentEnrollmentContextFacade);
-    
+
   readonly activeTab = signal<TabId>('practice');
   readonly skeletonRows = [1, 2, 3, 4, 5];
 

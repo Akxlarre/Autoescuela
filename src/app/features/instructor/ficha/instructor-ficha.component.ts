@@ -54,7 +54,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
           display: none;
         }
       }
-    `
+    `,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -106,9 +106,15 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
             <!-- 3-Card Grid — skeleton inline -->
             <div class="bento-grid" appScrollReveal>
               @if (facade.detailLoading()) {
-                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
-                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
-                <div class="bento-wide" data-col-span="4"><app-skeleton-block variant="rect" width="100%" height="160px" /></div>
+                <div class="bento-wide" data-col-span="4">
+                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+                </div>
+                <div class="bento-wide" data-col-span="4">
+                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+                </div>
+                <div class="bento-wide" data-col-span="4">
+                  <app-skeleton-block variant="rect" width="100%" height="160px" />
+                </div>
               } @else if (facade.studentDetail(); as detail) {
                 <!-- Info Personal -->
                 <div class="card bento-wide" data-col-span="4">
@@ -179,7 +185,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                   <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
                     <div
                       class="h-full rounded-full transition-all bg-brand"
-                      
                       [style.width.%]="
                         detail.totalSessions > 0
                           ? (detail.practiceProgress / detail.totalSessions) * 100
@@ -197,48 +202,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                   </div>
                 </div>
 
-                <!-- Clases Teóricas -->
-                <div class="card bento-wide" data-col-span="4">
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="min-w-0 flex-1 mr-3">
-                      <h3 class="text-base font-semibold" [style.color]="'var(--text-primary)'">
-                        Clases Teóricas
-                      </h3>
-                      <p class="text-xs mt-0.5" [style.color]="'var(--text-muted)'">
-                        Asistencia a módulos teóricos
-                      </p>
-                    </div>
-                    <span
-                      class="kpi-value shrink-0"
-                      [style.color]="
-                        detail.theoryPercent >= 75 ? 'var(--state-success)' : 'var(--state-warning)'
-                      "
-                      style="font-size: 2rem; line-height: 1"
-                    >
-                      {{ detail.theoryPercent }}%
-                    </span>
-                  </div>
-                  <div class="w-full rounded-full h-3 overflow-hidden mb-3 bg-subtle">
-                    <div
-                      class="h-full rounded-full transition-all"
-                      [style.background]="
-                        detail.theoryPercent >= 75 ? 'var(--state-success)' : 'var(--state-warning)'
-                      "
-                      [style.width.%]="detail.theoryPercent"
-                    ></div>
-                  </div>
-                  <div class="flex items-center justify-between text-sm">
-                    <span [style.color]="'var(--text-muted)'">% asistencia</span>
-                    <span
-                      class="font-semibold"
-                      [style.color]="
-                        detail.theoryPercent >= 75 ? 'var(--state-success)' : 'var(--state-warning)'
-                      "
-                    >
-                      {{ detail.theoryPercent >= 75 ? 'Aprobada' : 'En curso' }}
-                    </span>
-                  </div>
-                </div>
+                <!-- Clases Teóricas eliminadas (Spec 0001 — Ciclos Teóricos) -->
               }
             </div>
 
@@ -263,7 +227,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                     <thead>
                       <tr
                         class="text-xs uppercase tracking-wider border-b bg-subtle border-border-subtle text-text-muted"
-                        
                       >
                         <th class="p-4 font-semibold">N°</th>
                         <th class="p-4 font-semibold">Fecha</th>
@@ -285,7 +248,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                           <td class="p-4 w-14">
                             <div
                               class="w-8 h-8 rounded-md flex items-center justify-center font-bold text-sm bg-brand-muted text-brand"
-                              
                             >
                               {{ row.classNumber }}
                             </div>
@@ -389,7 +351,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                         <div class="flex items-center gap-3 min-w-0">
                           <div
                             class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 bg-brand-muted text-brand"
-                            
                           >
                             {{ row.classNumber }}
                           </div>
@@ -479,7 +440,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                             row.sessionId,
                           ]"
                           class="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg text-sm font-semibold border transition-all border-border-default text-text-secondary"
-                          
                         >
                           <app-icon name="eye" [size]="14" />
                           Ver Detalles
@@ -487,13 +447,11 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       } @else if (row.status === 'in_progress') {
                         <span
                           class="indicator-live flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold bg-warning-subtle text-warning"
-                          
                           >En Curso</span
                         >
                       } @else if (row.status === 'scheduled') {
                         <span
                           class="flex items-center justify-center gap-1 w-full py-2 rounded-lg text-xs font-semibold bg-brand-muted text-brand"
-                          
                         >
                           <app-icon name="calendar-check" [size]="13" />
                           Agendada
@@ -501,7 +459,6 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                       } @else {
                         <span
                           class="flex items-center justify-center w-full py-2 rounded-lg text-xs bg-elevated text-text-muted"
-                          
                           >Pendiente de agendar</span
                         >
                       }
@@ -549,10 +506,6 @@ export class InstructorFichaComponent implements OnInit {
       {
         label: `${practicePercent}% práctico`,
         style: practicePercent >= 80 ? 'success' : 'default',
-      },
-      {
-        label: `${detail.theoryPercent}% teórico`,
-        style: detail.theoryPercent >= 75 ? 'success' : 'warning',
       },
     ];
   });

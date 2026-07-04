@@ -16,8 +16,8 @@ import type {
   providedIn: 'root',
 })
 export class InstructorAlumnosFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private profileFacade = inject(InstructorProfileFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
   private layoutDrawer = inject(LayoutDrawerService);
@@ -42,7 +42,7 @@ private profileFacade = inject(InstructorProfileFacade);
   private _studentDetail = signal<InstructorStudentDetail | null>(null);
   /** Alumno seleccionado actualmente para detalle (Drawer) */
   private _activeStudent = signal<InstructorStudentCard | null>(null);
-  
+
   private _examScores = signal<ExamScoreRow[]>([]);
 
   private _isLoading = signal<boolean>(false);
@@ -130,17 +130,16 @@ private profileFacade = inject(InstructorProfileFacade);
           .in('status', ['active', 'in_progress', 'completed']),
         this.supabase.client
           .from('v_student_progress_b')
-          .select('enrollment_id, completed_practices, pct_theory_attendance')
+          .select('enrollment_id, completed_practices')
           .in('enrollment_id', enrollmentIds),
       ]);
 
       if (enrollmentResult.error) throw enrollmentResult.error;
 
-      const progressMap = new Map<number, { completed: number; theoryPct: number }>();
+      const progressMap = new Map<number, { completed: number }>();
       for (const p of progressResult.data || []) {
         progressMap.set(p.enrollment_id, {
           completed: p.completed_practices || 0,
-          theoryPct: p.pct_theory_attendance || 0,
         });
       }
 
@@ -173,7 +172,7 @@ private profileFacade = inject(InstructorProfileFacade);
           practiceProgress: completed,
           totalSessions: total,
           practicePercent: Math.round((completed / total) * 100),
-          theoryPercent: progress?.theoryPct ?? 0,
+          theoryPercent: 0, // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos)
           nextClassDate: nextSession ? nextSession.scheduled_at : null,
           status: row.status as any,
           statusLabel:
@@ -258,12 +257,6 @@ private profileFacade = inject(InstructorProfileFacade);
           });
         }
 
-        const { data: progressData } = await this.supabase.client
-          .from('v_student_progress_b')
-          .select('pct_theory_attendance')
-          .eq('enrollment_id', enrollmentData.id)
-          .maybeSingle();
-
         this._studentDetail.set({
           studentId: studentId,
           enrollmentId: enrollmentData.id,
@@ -275,7 +268,7 @@ private profileFacade = inject(InstructorProfileFacade);
           courseName: (enrollmentData.courses as any)?.name || '',
           practiceProgress: completed,
           totalSessions: 12,
-          theoryPercent: progressData?.pct_theory_attendance ?? 0,
+          theoryPercent: 0, // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos)
           fichaTecnica: fichaData,
         });
       } else {
@@ -357,41 +350,5 @@ private profileFacade = inject(InstructorProfileFacade);
 
   async refreshSilently(): Promise<void> {
     await this.fetchStudents();
-  }
-
-  async fetchTheoryAttendance(): Promise<any[]> {
-    const instructorId = await this.profileFacade.getInstructorId();
-    if (!instructorId) return [];
-
-    try {
-      const { data, error } = await this.supabase.client
-        .from('class_b_theory_attendance')
-        .select(
-          `
-          id, status,
-          class_b_theory_sessions!inner(id, scheduled_at, topic, instructor_id),
-          students!student_id!inner(id, users!inner(first_names, paternal_last_name, rut))
-        `,
-        )
-        .eq('class_b_theory_sessions.instructor_id', instructorId)
-        .order('recorded_at', { ascending: false });
-
-      if (error) throw error;
-
-      return (data || []).map((row) => {
-        const session = row.class_b_theory_sessions as any;
-        const user = (row.students as any)?.users;
-        return {
-          studentName: user ? `${user.first_names} ${user.paternal_last_name}` : 'Unknown',
-          studentRut: user?.rut || '',
-          attendance: row.status === 'present',
-          sessionDate: session?.scheduled_at || null,
-          topic: session?.topic || '',
-        };
-      });
-    } catch (err: any) {
-      console.error('Error fetching theory attendance:', err);
-      return [];
-    }
   }
 }

@@ -319,7 +319,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                     <td class="col-alumno px-4 py-3">
                       <div class="flex items-center gap-3">
                         <div
-                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
+                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-brand/10 text-brand"
                         >
                           {{ fila.initials }}
                         </div>
@@ -396,7 +396,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-3 min-w-0">
                     <div
-                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-primary/10 text-primary"
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold bg-brand/10 text-brand"
                     >
                       {{ fila.initials }}
                     </div>

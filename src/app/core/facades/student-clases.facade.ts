@@ -9,7 +9,6 @@ import type {
   StudentPracticeSessionRow,
   StudentProfSessionRow,
   StudentSessionStatus,
-  StudentTheorySessionRow,
 } from '@core/models/ui/student-clases.model';
 
 // ─── Tipos crudos de Supabase ────────────────────────────────────────────────
@@ -21,11 +20,6 @@ interface RawPracticeSession {
   duration_min: number | null;
   status: string;
   class_b_practice_attendance: { status: string }[];
-}
-
-interface RawTheoryAttendance {
-  status: string;
-  class_b_theory_sessions: { id: number; scheduled_at: string } | null;
 }
 
 interface RawProfTheoryAttendance {
@@ -159,8 +153,10 @@ export class StudentClasesFacade {
 
   // ─── Clase B ─────────────────────────────────────────────────────────────
 
-  private async fetchClassBData(enrollmentId: number, studentId: number): Promise<void> {
-    const [practiceResult, theoryResult, progressResult] = await Promise.all([
+  private async fetchClassBData(enrollmentId: number, _studentId: number): Promise<void> {
+    // La asistencia teórica fue eliminada (Spec 0001 — Ciclos Teóricos): la vista
+    // del alumno solo muestra prácticas.
+    const [practiceResult, progressResult] = await Promise.all([
       this.supabase.client
         .from('class_b_sessions')
         .select(
@@ -171,14 +167,8 @@ export class StudentClasesFacade {
         .order('scheduled_at', { ascending: true }),
 
       this.supabase.client
-        .from('class_b_theory_attendance')
-        .select('status, class_b_theory_sessions!inner(id, scheduled_at)')
-        .eq('student_id', studentId)
-        .order('scheduled_at', { referencedTable: 'class_b_theory_sessions', ascending: false }),
-
-      this.supabase.client
         .from('v_student_progress_b')
-        .select('completed_practices, pct_theory_attendance')
+        .select('completed_practices')
         .eq('enrollment_id', enrollmentId)
         .maybeSingle(),
     ]);
@@ -200,23 +190,7 @@ export class StudentClasesFacade {
       };
     });
 
-    const rawTheory = (theoryResult.data ?? []) as unknown as RawTheoryAttendance[];
-    const theorySessions: StudentTheorySessionRow[] = rawTheory
-      .filter((t) => t.class_b_theory_sessions != null)
-      .map((t) => {
-        const ts = t.class_b_theory_sessions!;
-        const dt = new Date(ts.scheduled_at);
-        return {
-          id: `t-${ts.id}`,
-          scheduledAt: ts.scheduled_at,
-          date: toISODate(dt),
-          time: to24hTime(ts.scheduled_at),
-          attendanceStatus: mapAttendanceStatus(t.status),
-        };
-      });
-
     const completed = progressResult.data?.completed_practices ?? 0;
-    const theoryPct = Number(progressResult.data?.pct_theory_attendance ?? 0);
     const upcoming = practiceSessions.filter(
       (s) => s.status === 'scheduled' || s.status === 'in_progress',
     ).length;
@@ -225,14 +199,14 @@ export class StudentClasesFacade {
       completedPractices: completed,
       totalPractices: 12,
       scheduledUpcoming: upcoming,
-      theoryPct,
+      theoryPct: 0,
     };
 
     this._data.set({
       licenseGroup: 'class_b',
       kpis,
       practiceSessions,
-      theorySessions,
+      theorySessions: [],
       profSessions: [],
     });
   }

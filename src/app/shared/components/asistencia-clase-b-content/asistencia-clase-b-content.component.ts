@@ -20,14 +20,20 @@ import { todayIso } from '@core/utils/date.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { CiclosTeoricosContentComponent } from '@shared/components/ciclos-teoricos-content/ciclos-teoricos-content.component';
 import type {
   AlertaFaltaConsecutiva,
   AsistenciaClaseBKpis,
   ClasePracticaRow,
   ClasePracticaStatus,
-  ClaseTeoricoRow,
   InstructorOption,
 } from '@core/models/ui/asistencia-clase-b.model';
+import type {
+  CicloAlumno,
+  CicloAlumnoMovible,
+  CicloClaseRow,
+  CicloOption,
+} from '@core/models/ui/ciclos-teoricos.model';
 
 type StatusFilter = ClasePracticaStatus | 'todos';
 
@@ -59,6 +65,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     IconComponent,
     BentoGridLayoutDirective,
     DateInputComponent,
+    CiclosTeoricosContentComponent,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -75,8 +82,54 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         (actionClick)="onHeroAction($event)"
       />
 
+      <!-- ── Pestañas: Prácticas | Ciclos Teóricos ──────────────────────────── -->
+      <div class="bento-banner flex items-center">
+        <div
+          class="flex gap-1.5 p-1.5 rounded-xl bg-subtle w-full"
+          role="tablist"
+          aria-label="Ver asistencia"
+        >
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'practicas'"
+            class="flex-1 px-5 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer border-0 flex items-center justify-center gap-2"
+            [style.background]="activeTab() === 'practicas' ? 'var(--bg-surface)' : 'transparent'"
+            [style.color]="activeTab() === 'practicas' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+            [style.boxShadow]="
+              activeTab() === 'practicas'
+                ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
+                : 'none'
+            "
+            data-llm-action="tab-practicas"
+            (click)="activeTab.set('practicas')"
+          >
+            <app-icon name="calendar-check" [size]="18" />
+            Prácticas
+          </button>
+          <button
+            type="button"
+            role="tab"
+            [attr.aria-selected]="activeTab() === 'ciclos'"
+            class="flex-1 px-5 py-3 rounded-lg text-base font-semibold transition-colors cursor-pointer border-0 flex items-center justify-center gap-2"
+            [style.background]="activeTab() === 'ciclos' ? 'var(--bg-surface)' : 'transparent'"
+            [style.color]="activeTab() === 'ciclos' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+            [style.boxShadow]="
+              activeTab() === 'ciclos'
+                ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
+                : 'none'
+            "
+            data-llm-action="tab-ciclos"
+            (click)="activeTab.set('ciclos')"
+          >
+            <app-icon name="video" [size]="18" />
+            Ciclos Teóricos
+          </button>
+        </div>
+      </div>
+
       <!-- ── Alertas ────────────────────────────────────────────────────────── -->
-      @if (!isLoading() && alertas().length > 0) {
+      @if (activeTab() === 'practicas' && !isLoading() && alertas().length > 0) {
         <div class="bento-banner flex flex-col gap-4">
           <section class="bento-banner card p-5 flex flex-col gap-4">
             <div class="flex items-center gap-2">
@@ -172,381 +225,303 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         </div>
       }
 
-      <!-- ── Grid Inferior (Teoria + Práctica) ────────────────────────────── -->
-      <div class="bento-banner flex flex-col gap-6">
-        <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
-        <section class="bento-banner card p-5 flex flex-col gap-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <app-icon name="calendar-check" [size]="18" [style.color]="'var(--color-primary)'" />
-              <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
-            </div>
-            <div class="flex items-center gap-2">
-              <!-- Selector de fecha -->
-              <div class="flex items-center gap-1.5">
-                <app-date-input
-                  [value]="selectedDate()"
-                  data-llm-description="Selector de fecha para clases prácticas"
-                  (valueChange)="onDateChange($event)"
+      <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
+      @if (activeTab() === 'practicas') {
+        <div class="bento-banner flex flex-col gap-6">
+          <section class="bento-banner card p-5 flex flex-col gap-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <app-icon
+                  name="calendar-check"
+                  [size]="18"
+                  [style.color]="'var(--color-primary)'"
                 />
-                @if (isFutureDate()) {
-                  <span
-                    class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
-                  >
-                    Solo lectura
-                  </span>
+                <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Selector de fecha -->
+                <div class="flex items-center gap-1.5">
+                  <app-date-input
+                    [value]="selectedDate()"
+                    data-llm-description="Selector de fecha para clases prácticas"
+                    (valueChange)="onDateChange($event)"
+                  />
+                  @if (isFutureDate()) {
+                    <span
+                      class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
+                    >
+                      Solo lectura
+                    </span>
+                  }
+                </div>
+                <button
+                  class="btn-primary text-sm px-3 py-2 flex items-center gap-1.5"
+                  data-llm-action="refresh-attendance"
+                  (click)="refreshRequested.emit()"
+                >
+                  <app-icon name="refresh-cw" [size]="14" />
+                  Actualizar
+                </button>
+              </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="flex flex-wrap items-center gap-2">
+              @for (f of statusFilters; track f.value) {
+                <button
+                  class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
+                  [style.background]="
+                    activeStatusFilter() === f.value ? 'var(--color-primary)' : 'transparent'
+                  "
+                  [style.color]="
+                    activeStatusFilter() === f.value ? '#fff' : 'var(--text-secondary)'
+                  "
+                  [style.border-color]="
+                    activeStatusFilter() === f.value
+                      ? 'var(--color-primary)'
+                      : 'var(--border-subtle)'
+                  "
+                  (click)="activeStatusFilter.set(f.value)"
+                >
+                  {{ f.label }}
+                  @if (countByStatus(f.value) > 0) {
+                    <span class="ml-1 opacity-80">({{ countByStatus(f.value) }})</span>
+                  }
+                </button>
+              }
+
+              <!-- Filtro instructor -->
+              <div class="ml-auto">
+                <p-select
+                  [options]="instructorSelectOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="selectedInstructorId()"
+                  (ngModelChange)="selectedInstructorId.set($event)"
+                  styleClass="w-auto"
+                  data-llm-description="filter attendance by instructor"
+                />
+              </div>
+            </div>
+
+            <!-- Tabla -->
+            @if (isLoading()) {
+              <div class="flex flex-col gap-2">
+                @for (i of [1, 2, 3, 4, 5]; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="44px" />
                 }
               </div>
-              <button
-                class="btn-primary text-sm px-3 py-2 flex items-center gap-1.5"
-                data-llm-action="refresh-attendance"
-                (click)="refreshRequested.emit()"
-              >
-                <app-icon name="refresh-cw" [size]="14" />
-                Actualizar
-              </button>
-            </div>
-          </div>
-
-          <!-- Filtros -->
-          <div class="flex flex-wrap items-center gap-2">
-            @for (f of statusFilters; track f.value) {
-              <button
-                class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
-                [style.background]="
-                  activeStatusFilter() === f.value ? 'var(--color-primary)' : 'transparent'
-                "
-                [style.color]="activeStatusFilter() === f.value ? '#fff' : 'var(--text-secondary)'"
-                [style.border-color]="
-                  activeStatusFilter() === f.value ? 'var(--color-primary)' : 'var(--border-subtle)'
-                "
-                (click)="activeStatusFilter.set(f.value)"
-              >
-                {{ f.label }}
-                @if (countByStatus(f.value) > 0) {
-                  <span class="ml-1 opacity-80">({{ countByStatus(f.value) }})</span>
-                }
-              </button>
-            }
-
-            <!-- Filtro instructor -->
-            <div class="ml-auto">
-              <p-select
-                [options]="instructorSelectOptions()"
-                optionLabel="label"
-                optionValue="value"
-                [ngModel]="selectedInstructorId()"
-                (ngModelChange)="selectedInstructorId.set($event)"
-                styleClass="w-auto"
-                data-llm-description="filter attendance by instructor"
-              />
-            </div>
-          </div>
-
-          <!-- Tabla -->
-          @if (isLoading()) {
-            <div class="flex flex-col gap-2">
-              @for (i of [1, 2, 3, 4, 5]; track i) {
-                <app-skeleton-block variant="rect" width="100%" height="44px" />
-              }
-            </div>
-          } @else if (filteredPracticas().length === 0) {
-            <p class="text-sm text-secondary text-center py-6">
-              No hay registros que coincidan con los filtros seleccionados.
-            </p>
-          } @else {
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
-                      Agendada
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
-                      Inicio
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
-                      Fin
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
-                      Instructor
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Alumno</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
-                      Vehículo
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Estado</th>
-                    <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (row of filteredPracticas(); track row.id) {
-                    <tr
-                      class="border-b transition-colors hover:bg-elevated"
-                      [style.border-color]="'var(--border-subtle)'"
-                    >
-                      <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
-                        {{ row.horaInicio }}
-                      </td>
-                      <td class="py-3 pr-4 whitespace-nowrap">
-                        @if (row.horaInicioReal) {
-                          <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
-                        } @else {
-                          <span class="text-muted">—</span>
-                        }
-                      </td>
-                      <td class="py-3 pr-4 whitespace-nowrap">
-                        @if (row.horaFinReal) {
-                          <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
-                        } @else {
-                          <span class="text-muted">—</span>
-                        }
-                      </td>
-                      <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
-                      <td class="py-3 pr-4">
-                        @if (row.alumnoName) {
+            } @else if (filteredPracticas().length === 0) {
+              <p class="text-sm text-secondary text-center py-6">
+                No hay registros que coincidan con los filtros seleccionados.
+              </p>
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
+                        Agendada
+                      </th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                        Inicio
+                      </th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                        Fin
+                      </th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                        Instructor
+                      </th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                        Alumno
+                      </th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                        Vehículo
+                      </th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                        Estado
+                      </th>
+                      <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (row of filteredPracticas(); track row.id) {
+                      <tr
+                        class="border-b transition-colors hover:bg-elevated"
+                        [style.border-color]="'var(--border-subtle)'"
+                      >
+                        <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                          {{ row.horaInicio }}
+                        </td>
+                        <td class="py-3 pr-4 whitespace-nowrap">
+                          @if (row.horaInicioReal) {
+                            <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                        <td class="py-3 pr-4 whitespace-nowrap">
+                          @if (row.horaFinReal) {
+                            <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                        <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
+                        <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
+                        <td class="py-3 pr-4">
+                          @if (row.alumnoName) {
+                            <span
+                              class="text-secondary"
+                              [style.color]="
+                                row.status === 'ausente' ? 'var(--color-primary)' : undefined
+                              "
+                            >
+                              {{ row.alumnoName }}
+                            </span>
+                          } @else {
+                            <span class="text-muted italic">Sin agendar</span>
+                          }
+                        </td>
+                        <td class="py-3 pr-4">
+                          @if (row.vehiclePlate) {
+                            <div class="flex flex-col">
+                              <span class="text-xs font-medium text-primary">{{
+                                row.vehiclePlate
+                              }}</span>
+                              @if (row.vehicleBrand || row.vehicleModel) {
+                                <span class="text-xs text-muted">
+                                  {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
+                                </span>
+                              }
+                            </div>
+                          } @else {
+                            <span class="text-muted">—</span>
+                          }
+                        </td>
+                        <td class="py-3 pr-4">
                           <span
-                            class="text-secondary"
-                            [style.color]="
-                              row.status === 'ausente' ? 'var(--color-primary)' : undefined
-                            "
+                            class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
+                            [style.background]="statusBadgeBg(row.status)"
+                            [style.color]="statusBadgeColor(row.status)"
                           >
-                            {{ row.alumnoName }}
+                            <app-icon [name]="statusBadgeIcon(row.status)" [size]="11" />
+                            {{ statusBadgeLabel(row.status) }}
                           </span>
-                        } @else {
-                          <span class="text-muted italic">Sin agendar</span>
-                        }
-                      </td>
-                      <td class="py-3 pr-4">
-                        @if (row.vehiclePlate) {
-                          <div class="flex flex-col">
-                            <span class="text-xs font-medium text-primary">{{
-                              row.vehiclePlate
-                            }}</span>
-                            @if (row.vehicleBrand || row.vehicleModel) {
-                              <span class="text-xs text-muted">
-                                {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
+                        </td>
+                        <td class="py-3 text-right">
+                          <div class="flex items-center justify-end gap-2">
+                            @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
+                              <!-- Iniciar clase -->
+                              <button
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
+                                [style.color]="'var(--color-primary)'"
+                                [style.border-color]="'var(--color-primary)'"
+                                [style.background]="'color-mix(in srgb, var(--color-primary) 8%, transparent)'"
+                                [disabled]="isSaving()"
+                                title="Iniciar clase"
+                                data-llm-action="iniciar-clase-practica"
+                                (click)="iniciarClase.emit(row)"
+                              >
+                                <app-icon name="play" [size]="12" />
+                                Iniciar
+                              </button>
+                              <!-- Marcar inasistencia (solo si ya pasó la hora) -->
+                              @if (isPastStartTime(row.scheduledAt)) {
+                                <button
+                                  class="p-1.5 rounded-md transition-colors cursor-pointer"
+                                  title="Marcar inasistencia"
+                                  [style.color]="'var(--state-error)'"
+                                  [disabled]="isSaving()"
+                                  data-llm-action="mark-ausente"
+                                  (click)="
+                                    markAttendance.emit({ sessionId: row.id, status: 'ausente' })
+                                  "
+                                >
+                                  <app-icon name="x-circle" [size]="16" />
+                                </button>
+                              }
+                            }
+                            @if (row.status === 'en_curso') {
+                              <span class="indicator-live text-xs text-secondary">En clase</span>
+                              <!-- Finalizar clase -->
+                              <button
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
+                                [style.color]="'var(--state-success)'"
+                                [style.border-color]="'var(--state-success)'"
+                                [style.background]="'var(--state-success-bg)'"
+                                [disabled]="isSaving()"
+                                title="Finalizar clase"
+                                data-llm-action="finalizar-clase-practica"
+                                (click)="finalizarClase.emit(row)"
+                              >
+                                <app-icon name="flag" [size]="12" />
+                                Finalizar
+                              </button>
+                            }
+                            @if (row.status === 'ausente' && !row.justificacion) {
+                              <button
+                                class="text-xs font-medium hover:underline"
+                                [style.color]="'var(--color-primary)'"
+                                [disabled]="isSaving()"
+                                data-llm-action="justify-absence"
+                                (click)="openJustifyModal(row.id)"
+                              >
+                                Justificar
+                              </button>
+                            }
+                            @if (row.justificacion) {
+                              <span
+                                class="text-xs italic truncate max-w-40"
+                                [title]="row.justificacion"
+                                [style.color]="'var(--text-muted)'"
+                              >
+                                {{ row.justificacion }}
+                              </span>
+                            }
+                            @if (row.status === 'presente') {
+                              <span
+                                class="text-xs font-medium"
+                                [style.color]="'var(--state-success)'"
+                              >
+                                Finalizada
                               </span>
                             }
                           </div>
-                        } @else {
-                          <span class="text-muted">—</span>
-                        }
-                      </td>
-                      <td class="py-3 pr-4">
-                        <span
-                          class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
-                          [style.background]="statusBadgeBg(row.status)"
-                          [style.color]="statusBadgeColor(row.status)"
-                        >
-                          <app-icon [name]="statusBadgeIcon(row.status)" [size]="11" />
-                          {{ statusBadgeLabel(row.status) }}
-                        </span>
-                      </td>
-                      <td class="py-3 text-right">
-                        <div class="flex items-center justify-end gap-2">
-                          @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
-                            <!-- Iniciar clase -->
-                            <button
-                              class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
-                              [style.color]="'var(--color-primary)'"
-                              [style.border-color]="'var(--color-primary)'"
-                              [style.background]="'color-mix(in srgb, var(--color-primary) 8%, transparent)'"
-                              [disabled]="isSaving()"
-                              title="Iniciar clase"
-                              data-llm-action="iniciar-clase-practica"
-                              (click)="iniciarClase.emit(row)"
-                            >
-                              <app-icon name="play" [size]="12" />
-                              Iniciar
-                            </button>
-                            <!-- Marcar inasistencia (solo si ya pasó la hora) -->
-                            @if (isPastStartTime(row.scheduledAt)) {
-                              <button
-                                class="p-1.5 rounded-md transition-colors cursor-pointer"
-                                title="Marcar inasistencia"
-                                [style.color]="'var(--state-error)'"
-                                [disabled]="isSaving()"
-                                data-llm-action="mark-ausente"
-                                (click)="
-                                  markAttendance.emit({ sessionId: row.id, status: 'ausente' })
-                                "
-                              >
-                                <app-icon name="x-circle" [size]="16" />
-                              </button>
-                            }
-                          }
-                          @if (row.status === 'en_curso') {
-                            <span class="indicator-live text-xs text-secondary">En clase</span>
-                            <!-- Finalizar clase -->
-                            <button
-                              class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
-                              [style.color]="'var(--state-success)'"
-                              [style.border-color]="'var(--state-success)'"
-                              [style.background]="'var(--state-success-bg)'"
-                              [disabled]="isSaving()"
-                              title="Finalizar clase"
-                              data-llm-action="finalizar-clase-practica"
-                              (click)="finalizarClase.emit(row)"
-                            >
-                              <app-icon name="flag" [size]="12" />
-                              Finalizar
-                            </button>
-                          }
-                          @if (row.status === 'ausente' && !row.justificacion) {
-                            <button
-                              class="text-xs font-medium hover:underline"
-                              [style.color]="'var(--color-primary)'"
-                              [disabled]="isSaving()"
-                              data-llm-action="justify-absence"
-                              (click)="openJustifyModal(row.id)"
-                            >
-                              Justificar
-                            </button>
-                          }
-                          @if (row.justificacion) {
-                            <span
-                              class="text-xs italic truncate max-w-40"
-                              [title]="row.justificacion"
-                              [style.color]="'var(--text-muted)'"
-                            >
-                              {{ row.justificacion }}
-                            </span>
-                          }
-                          @if (row.status === 'presente') {
-                            <span
-                              class="text-xs font-medium"
-                              [style.color]="'var(--state-success)'"
-                            >
-                              Finalizada
-                            </span>
-                          }
-                        </div>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-        </section>
-
-        <!-- ── Clases Teóricas (Zoom) ──────────────────────────────────────── -->
-        <section class="bento-banner card p-5 flex flex-col gap-4">
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <app-icon name="video" [size]="18" [style.color]="'var(--color-primary)'" />
-              <h2 class="text-sm font-semibold text-primary">Clases Teóricas (Zoom Automático)</h2>
-              @if (clasesTeorias().length > 0) {
-                <span
-                  class="text-xs font-semibold px-2 py-0.5 rounded-full"
-                  [style.background]="'color-mix(in srgb, var(--color-primary) 12%, transparent)'"
-                  [style.color]="'var(--color-primary)'"
-                >
-                  {{ clasesTeorias().length }}
-                </span>
-              }
-            </div>
-            <div class="flex items-center gap-2">
-              <!-- Selector de fecha -->
-              <div class="flex items-center gap-1.5">
-                <app-date-input
-                  [value]="selectedDate()"
-                  data-llm-description="Selector de fecha para clases teóricas"
-                  (valueChange)="onDateChange($event)"
-                />
-                @if (isFutureDate()) {
-                  <span
-                    class="text-sm font-semibold px-2 py-2 rounded-full text-warning bg-warning/12"
-                  >
-                    Solo lectura
-                  </span>
-                }
+                        </td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
               </div>
-              <button
-                class="btn-primary text-sm px-3 py-2 flex items-center gap-1.5"
-                data-llm-action="schedule-new-theory-class"
-                (click)="scheduleNewClass.emit()"
-              >
-                <app-icon name="calendar-plus" [size]="14" />
-                Agendar nueva clase
-              </button>
-            </div>
-          </div>
+            }
+          </section>
+        </div>
+      }
 
-          @if (isLoading()) {
-            <div class="flex flex-col gap-2">
-              @for (i of [1, 2]; track i) {
-                <app-skeleton-block variant="rect" width="100%" height="48px" />
-              }
-            </div>
-          } @else if (clasesTeorias().length === 0) {
-            <p class="text-sm text-secondary text-center py-4">
-              No hay clases teóricas programadas para hoy.
-            </p>
-          } @else {
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Hora</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Tema</th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
-                      Instructor
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
-                      Inscritos
-                    </th>
-                    <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
-                      Estado Enlace
-                    </th>
-                    <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (clase of clasesTeorias(); track clase.id) {
-                    <tr
-                      class="border-b transition-colors hover:bg-elevated"
-                      [style.border-color]="'var(--border-subtle)'"
-                    >
-                      <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
-                        {{ clase.horaInicio }} – {{ clase.horaFin }}
-                      </td>
-                      <td class="py-3 pr-4 text-secondary text-xs">{{ clase.branchName }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ clase.tema }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ clase.instructorName }}</td>
-                      <td class="py-3 pr-4 text-secondary">{{ clase.inscritosCount }} alumnos</td>
-                      <td class="py-3 pr-4">
-                        <span
-                          class="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-full"
-                          [style.background]="zoomBadgeBg(clase.zoomLinkStatus)"
-                          [style.color]="zoomBadgeColor(clase.zoomLinkStatus)"
-                        >
-                          <app-icon [name]="zoomBadgeIcon(clase.zoomLinkStatus)" [size]="12" />
-                          {{ zoomBadgeLabel(clase.zoomLinkStatus) }}
-                        </span>
-                      </td>
-                      <td class="py-3 text-right">
-                        <button
-                          class="text-xs font-medium hover:underline cursor-pointer"
-                          [style.color]="'var(--color-primary)'"
-                          data-llm-action="view-attendance-list"
-                          (click)="viewAtendanceList.emit(clase)"
-                        >
-                          Ver Detalle
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-        </section>
-      </div>
+      <!-- ── Pestaña Ciclos Teóricos (Spec 0001) ────────────────────────────── -->
+      @if (activeTab() === 'ciclos') {
+        <app-ciclos-teoricos-content
+          class="bento-banner"
+          [cycles]="cycles()"
+          [selectedCycleId]="selectedCycleId()"
+          [clases]="clasesCiclo()"
+          [roster]="rosterCiclo()"
+          [addableStudents]="addableStudents()"
+          [isLoading]="isLoadingCiclos()"
+          [isLoadingCycle]="isLoadingCycle()"
+          [isSaving]="isSaving()"
+          [sendingClassId]="sendingClassId()"
+          (selectCycle)="selectCycle.emit($event)"
+          (saveZoomLink)="saveCicloZoomLink.emit($event)"
+          (updateTopic)="updateCicloTopic.emit($event)"
+          (sendZoom)="sendCicloZoom.emit($event)"
+          (moveStudent)="moveCicloStudent.emit($event)"
+          (requestAddable)="requestAddable.emit()"
+          (addStudent)="addCicloStudent.emit($event)"
+        />
+      }
 
       <!-- ── Modal de justificación ─────────────────────────────────────────── -->
       @if (justifyModalOpen()) {
@@ -609,12 +584,21 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
   // ── Inputs ──────────────────────────────────────────────────────────────────
   readonly kpis = input<AsistenciaClaseBKpis | null>(null);
-  readonly clasesTeorias = input<ClaseTeoricoRow[]>([]);
   readonly clasesPracticas = input<ClasePracticaRow[]>([]);
   readonly alertas = input<AlertaFaltaConsecutiva[]>([]);
   readonly instructores = input<InstructorOption[]>([]);
   readonly isLoading = input(false);
   readonly isSaving = input(false);
+
+  // ── Inputs Ciclos Teóricos (Spec 0001) ──────────────────────────────────────
+  readonly cycles = input<CicloOption[]>([]);
+  readonly selectedCycleId = input<number | null>(null);
+  readonly clasesCiclo = input<CicloClaseRow[]>([]);
+  readonly rosterCiclo = input<CicloAlumno[]>([]);
+  readonly addableStudents = input<CicloAlumnoMovible[]>([]);
+  readonly isLoadingCiclos = input(false);
+  readonly isLoadingCycle = input(false);
+  readonly sendingClassId = input<number | null>(null);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
   readonly selectedDate = input<string>(todayIso());
@@ -624,15 +608,24 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly removeSchedule = output<number>();
   readonly reactivateSchedule = output<number>();
   readonly sendReminder = output<number>();
-  /** Emits the full ClaseTeoricoRow so the smart parent can open the drawer with context. */
-  readonly viewAtendanceList = output<ClaseTeoricoRow>();
   readonly dateChange = output<string>();
   readonly refreshRequested = output<void>();
-  readonly scheduleNewClass = output<void>();
   /** Emite la fila para abrir el drawer de iniciar clase. */
   readonly iniciarClase = output<ClasePracticaRow>();
   /** Emite la fila para abrir el drawer de finalizar clase. */
   readonly finalizarClase = output<ClasePracticaRow>();
+
+  // ── Outputs Ciclos Teóricos (Spec 0001) ─────────────────────────────────────
+  readonly selectCycle = output<number>();
+  readonly saveCicloZoomLink = output<{ classId: number; link: string }>();
+  readonly updateCicloTopic = output<{ classId: number; tema: string }>();
+  readonly sendCicloZoom = output<{ classId: number; recipientEnrollmentIds: number[] }>();
+  readonly moveCicloStudent = output<{ enrollmentId: number; targetCycleId: number }>();
+  readonly requestAddable = output<void>();
+  readonly addCicloStudent = output<number>();
+
+  // ── Tab state ────────────────────────────────────────────────────────────────
+  protected readonly activeTab = signal<'practicas' | 'ciclos'>('practicas');
 
   // ── Local state ─────────────────────────────────────────────────────────────
   protected readonly today = new Date();
@@ -754,52 +747,6 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
       .map((w) => w[0])
       .join('')
       .toUpperCase();
-  }
-
-  // ── Zoom badge helpers ────────────────────────────────────────────────────────
-
-  protected zoomBadgeLabel(status: ClaseTeoricoRow['zoomLinkStatus']): string {
-    switch (status) {
-      case 'sent':
-        return 'Enviado Automáticamente';
-      case 'pending':
-        return 'Pendiente de envío';
-      case 'not_configured':
-        return 'Sin configurar';
-    }
-  }
-
-  protected zoomBadgeIcon(status: ClaseTeoricoRow['zoomLinkStatus']): string {
-    switch (status) {
-      case 'sent':
-        return 'check-circle';
-      case 'pending':
-        return 'clock';
-      case 'not_configured':
-        return 'alert-circle';
-    }
-  }
-
-  protected zoomBadgeBg(status: ClaseTeoricoRow['zoomLinkStatus']): string {
-    switch (status) {
-      case 'sent':
-        return 'var(--state-success-bg)';
-      case 'pending':
-        return 'var(--state-warning-bg)';
-      case 'not_configured':
-        return 'var(--state-error-bg)';
-    }
-  }
-
-  protected zoomBadgeColor(status: ClaseTeoricoRow['zoomLinkStatus']): string {
-    switch (status) {
-      case 'sent':
-        return 'var(--state-success)';
-      case 'pending':
-        return 'var(--state-warning)';
-      case 'not_configured':
-        return 'var(--state-error)';
-    }
   }
 
   // ── Status badge helpers ──────────────────────────────────────────────────────
