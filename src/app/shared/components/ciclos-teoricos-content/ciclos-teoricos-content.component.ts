@@ -281,7 +281,7 @@ import type {
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
                 <app-icon name="users" [size]="20" [style.color]="'var(--color-primary)'" />
-                <h2 class="text-base font-semibold text-text-primary">Alumnos del ciclo</h2>
+                <h2 class="font-semibold text-text-primary">Alumnos del ciclo</h2>
               </div>
               <button
                 class="btn-secondary text-sm px-4 py-2 flex items-center gap-2"
@@ -306,7 +306,7 @@ import type {
                 @for (alumno of roster(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-2 px-2 py-3 rounded-md hover:bg-elevated">
                     <div class="min-w-0 flex-1">
-                      <p class="text-base text-text-primary truncate">{{ alumno.nombre }}</p>
+                      <p class="text-text-primary truncate">{{ alumno.nombre }}</p>
                       <p class="text-sm text-muted truncate">{{ alumno.email || 'Sin correo' }}</p>
                     </div>
                     @if (movingEnrollmentId() === alumno.enrollmentId) {
