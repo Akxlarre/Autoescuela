@@ -7,6 +7,7 @@ import type {
   ClasePracticaUI,
   ElegibilidadProfUI,
   EnrollmentSummary,
+  InasistenciaClaseBUI,
   InasistenciaUI,
   PagoUI,
   ProgresoAsistenciaProf,
@@ -52,6 +53,7 @@ export class AdminAlumnoDetalleFacade {
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
   private readonly _alumno = signal<AlumnoDetalleUI | null>(null);
   private readonly _inasistencias = signal<InasistenciaUI[]>([]);
+  private readonly _inasistenciasClaseB = signal<InasistenciaClaseBUI[]>([]);
   private readonly _clasesPracticas = signal<ClasePracticaUI[]>([]);
   private readonly _historialPagos = signal<PagoUI[]>([]);
   private readonly _progresoPractico = signal<ProgresoUI>({
@@ -119,6 +121,7 @@ export class AdminAlumnoDetalleFacade {
   readonly alumno = this._alumno.asReadonly();
   readonly enrollmentSummaries = this._enrollmentSummaries.asReadonly();
   readonly inasistencias = this._inasistencias.asReadonly();
+  readonly inasistenciasClaseB = this._inasistenciasClaseB.asReadonly();
   readonly clasesPracticas = this._clasesPracticas.asReadonly();
   readonly historialPagos = this._historialPagos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
@@ -185,6 +188,11 @@ export class AdminAlumnoDetalleFacade {
       )
       .on(
         'postgres_changes',
+        { event: '*', schema: 'public', table: 'class_b_practice_attendance' },
+        () => void this.refreshSilently(),
+      )
+      .on(
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'professional_theory_attendance' },
         () => void this.refreshSilently(),
       )
@@ -230,6 +238,7 @@ export class AdminAlumnoDetalleFacade {
     // New student: clear and load
     this._alumno.set(null);
     this._inasistencias.set([]);
+    this._inasistenciasClaseB.set([]);
     this._clasesPracticas.set([]);
     this._historialPagos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
@@ -450,11 +459,22 @@ export class AdminAlumnoDetalleFacade {
   }
 
   private async fetchClassBProgress(enrollmentId: number | null, studentId: number): Promise<void> {
-    const [practiceResult, evidenceResult, sessionResult, paymentsResult] = await Promise.all([
-      this.supabase.client
-        .from('class_b_practice_attendance')
-        .select('status')
-        .eq('student_id', studentId),
+    const [attendanceResult, evidenceResult, sessionResult, paymentsResult] = await Promise.all([
+      enrollmentId
+        ? this.supabase.client
+            .from('class_b_practice_attendance')
+            .select(
+              `
+              id, status, justification, recorded_at,
+              class_b_sessions!inner(
+                id, enrollment_id, class_number, scheduled_at,
+                instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))
+              )
+            `,
+            )
+            .eq('class_b_sessions.enrollment_id', enrollmentId)
+            .order('recorded_at', { ascending: false })
+        : Promise.resolve({ data: [] as any[] }),
       enrollmentId
         ? this.supabase.client
             .from('absence_evidence')
@@ -480,9 +500,10 @@ export class AdminAlumnoDetalleFacade {
         : Promise.resolve({ data: [] }),
     ]);
 
+    const attendanceRows = (attendanceResult.data ?? []) as any[];
+
     this._progresoPractico.set({
-      completadas: (practiceResult.data ?? []).filter((r: any) => r.status === STATUS_PRESENTE)
-        .length,
+      completadas: attendanceRows.filter((r) => r.status === STATUS_PRESENTE).length,
       requeridas: PRACTICAS_REQUERIDAS_B,
     });
 
@@ -501,6 +522,13 @@ export class AdminAlumnoDetalleFacade {
         fileUrl: e.file_url ?? null,
         status: e.status ?? 'pending',
       })),
+    );
+
+    // RF-053: inasistencias automáticas de clase práctica (no_show) + justificadas (excused).
+    this._inasistenciasClaseB.set(
+      attendanceRows
+        .filter((r) => r.status === 'absent' || r.status === 'no_show' || r.status === 'excused')
+        .map((r) => this.mapInasistenciaClaseB(r)),
     );
 
     const sessionMap = new Map<number, any>(
@@ -523,6 +551,7 @@ export class AdminAlumnoDetalleFacade {
             kmFin: null,
             observaciones: null,
             completada: false,
+            ausente: false,
             alumnoFirmo: false,
             instructorFirmo: false,
           };
@@ -547,6 +576,7 @@ export class AdminAlumnoDetalleFacade {
           kmFin: ses.km_end,
           observaciones: ses.performance_notes ?? ses.notes ?? null,
           completada: !!(ses.student_signature && ses.instructor_signature),
+          ausente: ses.status === 'no_show',
           alumnoFirmo: !!ses.student_signature,
           instructorFirmo: !!ses.instructor_signature,
         };
@@ -565,6 +595,41 @@ export class AdminAlumnoDetalleFacade {
     );
   }
 
+  /** Mapea una fila cruda de class_b_practice_attendance (+ join a sesión/instructor) a UI. */
+  private mapInasistenciaClaseB(row: any): InasistenciaClaseBUI {
+    const session = row.class_b_sessions;
+    const instRaw = session?.instructors as any;
+    const inst = Array.isArray(instRaw) ? instRaw[0] : instRaw;
+    const uRaw = inst?.users as any;
+    const uInst = Array.isArray(uRaw) ? uRaw[0] : uRaw;
+    const instructor = uInst ? `${uInst.first_names} ${uInst.paternal_last_name}`.trim() : null;
+
+    return {
+      id: row.id,
+      sessionId: session?.id ?? null,
+      claseNumero: session?.class_number ?? null,
+      fecha: this.formatDate(row.recorded_at ?? session?.scheduled_at),
+      justificada: row.status === 'excused',
+      justificacion: row.justification ?? null,
+      instructor,
+    };
+  }
+
+  /** RF-053: justifica una inasistencia automática de clase práctica Clase B. */
+  async justificarInasistenciaClaseB(attendanceId: number, reason: string): Promise<void> {
+    try {
+      const { error } = await this.supabase.client
+        .from('class_b_practice_attendance')
+        .update({ status: 'excused', justification: reason })
+        .eq('id', attendanceId);
+      if (error) throw error;
+      this.toast.success('Inasistencia justificada correctamente.');
+      await this.refreshSilently();
+    } catch {
+      this.toast.error('Error al justificar la inasistencia.');
+    }
+  }
+
   /**
    * Obtiene progreso académico para alumnos de Clase Profesional:
    * asistencia teórica/práctica, nota promedio y elegibilidad de certificado.
@@ -579,6 +644,7 @@ export class AdminAlumnoDetalleFacade {
       this._notaPromedioProf.set(null);
       this._elegibilidadProf.set({ teoria: false, practica: false, pago: false, nota: false });
       this._inasistencias.set([]);
+      this._inasistenciasClaseB.set([]);
       this._clasesPracticas.set([]);
       this._historialPagos.set([]);
       return;
@@ -695,6 +761,7 @@ export class AdminAlumnoDetalleFacade {
 
     // Clase B específicos: vaciar para no mostrar datos obsoletos
     this._clasesPracticas.set([]);
+    this._inasistenciasClaseB.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: 0 });
     this._progresoTeorico.set({ completadas: 0, requeridas: 0 });
   }

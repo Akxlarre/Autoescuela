@@ -98,6 +98,26 @@ export interface InasistenciaUI {
   status: string;
 }
 
+/**
+ * Inasistencia de clase práctica Clase B (RF-053), derivada de
+ * `class_b_practice_attendance` — incluye tanto las marcadas automáticamente
+ * (fin de jornada / secretaria) como las justificadas.
+ */
+export interface InasistenciaClaseBUI {
+  /** PK de la fila en class_b_practice_attendance */
+  id: number;
+  /** PK de la fila en class_b_sessions asociada */
+  sessionId: number | null;
+  claseNumero: number | null;
+  /** Fecha formateada para mostrar (ej: "20 ene. 2026") */
+  fecha: string;
+  /** true si status='excused' */
+  justificada: boolean;
+  /** Motivo de justificación, si ya fue justificada */
+  justificacion: string | null;
+  instructor: string | null;
+}
+
 export interface ClasePracticaUI {
   numero: number;
   /** PK de la fila en class_b_sessions — null si la clase aún no tiene sesión agendada */
@@ -118,6 +138,8 @@ export interface ClasePracticaUI {
   observaciones: string | null;
   /** true si ambas firmas están presentes */
   completada: boolean;
+  /** true si class_b_sessions.status = 'no_show' (inasistencia, con o sin justificar) */
+  ausente: boolean;
   alumnoFirmo: boolean;
   instructorFirmo: boolean;
 }
