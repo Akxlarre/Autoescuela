@@ -405,11 +405,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         <td class="py-3 pr-4">
                           <span
                             class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
-                            [style.background]="statusBadgeBg(row.status)"
-                            [style.color]="statusBadgeColor(row.status)"
+                            [style.background]="statusBadgeBg(row)"
+                            [style.color]="statusBadgeColor(row)"
                           >
-                            <app-icon [name]="statusBadgeIcon(row.status)" [size]="11" />
-                            {{ statusBadgeLabel(row.status) }}
+                            <app-icon [name]="statusBadgeIcon(row)" [size]="11" />
+                            {{ statusBadgeLabel(row) }}
                           </span>
                         </td>
                         <td class="py-3 text-right">
@@ -753,8 +753,14 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   // ── Status badge helpers ──────────────────────────────────────────────────────
 
-  protected statusBadgeLabel(status: ClasePracticaStatus): string {
-    switch (status) {
+  /** true cuando la inasistencia ya fue justificada por la secretaria. */
+  protected isJustificada(row: ClasePracticaRow): boolean {
+    return row.status === 'ausente' && !!row.justificacion;
+  }
+
+  protected statusBadgeLabel(row: ClasePracticaRow): string {
+    if (this.isJustificada(row)) return 'Justificada';
+    switch (row.status) {
       case 'presente':
         return 'Presente';
       case 'ausente':
@@ -766,8 +772,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  protected statusBadgeIcon(status: ClasePracticaStatus): string {
-    switch (status) {
+  protected statusBadgeIcon(row: ClasePracticaRow): string {
+    if (this.isJustificada(row)) return 'shield-check';
+    switch (row.status) {
       case 'presente':
         return 'check-circle';
       case 'ausente':
@@ -779,8 +786,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  protected statusBadgeBg(status: ClasePracticaStatus): string {
-    switch (status) {
+  protected statusBadgeBg(row: ClasePracticaRow): string {
+    if (this.isJustificada(row)) return 'var(--bg-elevated)';
+    switch (row.status) {
       case 'presente':
         return 'var(--state-success-bg)';
       case 'ausente':
@@ -792,8 +800,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  protected statusBadgeColor(status: ClasePracticaStatus): string {
-    switch (status) {
+  protected statusBadgeColor(row: ClasePracticaRow): string {
+    if (this.isJustificada(row)) return 'var(--text-muted)';
+    switch (row.status) {
       case 'presente':
         return 'var(--state-success)';
       case 'ausente':
