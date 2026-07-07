@@ -181,7 +181,7 @@ type TabId = 'practice' | 'theory';
 
                     <!-- Estado -->
                     <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      class="shrink-0 text-2xs font-bold px-2.5 py-1 rounded-full"
                       [style.background]="statusBg(session.status)"
                       [style.color]="statusColor(session.status)"
                     >
@@ -216,7 +216,7 @@ type TabId = 'practice' | 'theory';
                       <span class="text-xs text-text-muted">Sesión práctica</span>
                     </div>
                     <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      class="shrink-0 text-2xs font-bold px-2.5 py-1 rounded-full"
                       [style.background]="attBg(s.attendanceStatus)"
                       [style.color]="attColor(s.attendanceStatus)"
                     >
@@ -257,7 +257,7 @@ type TabId = 'practice' | 'theory';
                       <span class="text-xs text-text-muted">Sesión de teoría</span>
                     </div>
                     <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      class="shrink-0 text-2xs font-bold px-2.5 py-1 rounded-full"
                       [style.background]="attBg(s.attendanceStatus)"
                       [style.color]="attColor(s.attendanceStatus)"
                     >
@@ -292,7 +292,7 @@ type TabId = 'practice' | 'theory';
                       <span class="text-xs text-text-muted">Sesión de teoría</span>
                     </div>
                     <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
+                      class="shrink-0 text-2xs font-bold px-2.5 py-1 rounded-full"
                       [style.background]="attBg(s.attendanceStatus)"
                       [style.color]="attColor(s.attendanceStatus)"
                     >

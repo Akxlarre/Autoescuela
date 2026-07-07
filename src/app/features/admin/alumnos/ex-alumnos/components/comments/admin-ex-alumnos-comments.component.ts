@@ -26,7 +26,7 @@ export interface ComentarioMock {
       <div class="flex items-center justify-between mb-6">
         <div class="flex flex-col">
           <h3 class="text-base font-bold text-text-primary m-0">Opiniones de Egresados</h3>
-          <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"
+          <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5"
             >Encuestas de Satisfacción</span
           >
         </div>

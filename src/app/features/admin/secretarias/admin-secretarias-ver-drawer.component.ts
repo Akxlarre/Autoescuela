@@ -122,7 +122,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               >
                 <app-icon name="clock" [size]="15" color="var(--text-muted)" />
                 <div class="flex flex-col">
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  <p class="text-2xs font-bold uppercase tracking-wider text-text-muted">
                     Último acceso
                   </p>
                   <p class="text-sm font-medium text-text-primary">

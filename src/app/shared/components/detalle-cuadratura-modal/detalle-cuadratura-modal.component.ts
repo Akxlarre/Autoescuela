@@ -26,13 +26,13 @@ interface DenominacionRow {
         <!-- 1. Header Information (Non-numeric info in Bento-style cards) -->
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div class="card p-3 flex flex-col gap-1 bg-elevated">
-            <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
+            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
               >Cajero</span
             >
             <span class="text-sm font-bold text-text-primary">{{ d.cajero }}</span>
           </div>
           <div class="card p-3 flex flex-col gap-1 bg-elevated">
-            <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
+            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
               >Fecha Cierre</span
             >
             <span class="text-sm font-bold text-text-primary">{{ fechaLabel() }}</span>
@@ -42,7 +42,7 @@ interface DenominacionRow {
             [class.border-success]="d.estadoDiferencia === 'balanced'"
             [class.border-error]="d.estadoDiferencia === 'shortage'"
           >
-            <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
+            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
               >Estado</span
             >
             <div class="flex items-center gap-1.5">
@@ -113,7 +113,7 @@ interface DenominacionRow {
                     <app-icon name="calculator" [size]="18" class="text-brand" />
                     <h3 class="text-sm font-bold text-text-primary">Conciliación Operativa</h3>
                   </div>
-                  <span class="text-[10px] font-black uppercase tracking-widest text-text-muted"
+                  <span class="text-2xs font-black uppercase tracking-widest text-text-muted"
                     >Resumen Financiero</span
                   >
                 </div>
@@ -121,7 +121,7 @@ interface DenominacionRow {
                 <div class="grid grid-cols-2 gap-x-8 gap-y-4">
                   <div class="flex flex-col">
                     <span
-                      class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
+                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
                       >Fondo Inicial</span
                     >
                     <span
@@ -131,7 +131,7 @@ interface DenominacionRow {
                   </div>
                   <div class="flex flex-col">
                     <span
-                      class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
+                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
                       >Ingresos Registrados</span
                     >
                     <span class="text-lg font-black tabular-nums tracking-tight text-success"
@@ -140,7 +140,7 @@ interface DenominacionRow {
                   </div>
                   <div class="flex flex-col">
                     <span
-                      class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
+                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
                       >Egresos / Gastos</span
                     >
                     <span class="text-lg font-black tabular-nums tracking-tight text-error"
@@ -151,7 +151,7 @@ interface DenominacionRow {
                     class="flex flex-col p-3 rounded-xl bg-surface border border-border-muted/30 shadow-subtle"
                   >
                     <span
-                      class="text-[11px] font-semibold text-text-muted uppercase tracking-wider mb-1"
+                      class="text-2xs font-semibold text-text-muted uppercase tracking-wider mb-1"
                       >Cierre Total</span
                     >
                     <span
@@ -171,7 +171,7 @@ interface DenominacionRow {
               <div class="card p-5 bg-subtle/30 border-dashed border-border-muted">
                 <div class="flex items-center gap-2 mb-2">
                   <app-icon name="info" [size]="14" class="text-text-muted" />
-                  <h4 class="text-[10px] font-black text-text-primary uppercase tracking-widest">
+                  <h4 class="text-2xs font-black text-text-primary uppercase tracking-widest">
                     Observaciones
                   </h4>
                 </div>
@@ -188,7 +188,7 @@ interface DenominacionRow {
               <div
                 class="px-4 py-3 bg-subtle border-b border-border-muted flex items-center justify-between"
               >
-                <span class="text-[10px] font-bold text-text-primary uppercase tracking-widest"
+                <span class="text-2xs font-bold text-text-primary uppercase tracking-widest"
                   >Desglose Físico</span
                 >
                 <app-icon name="coins" [size]="13" class="text-text-muted" />
@@ -200,10 +200,10 @@ interface DenominacionRow {
                     class="px-4 py-2.5 flex items-center justify-between hover:bg-subtle/50 transition-colors"
                   >
                     <div class="flex flex-col">
-                      <span class="text-[11px] font-semibold text-text-secondary">{{
+                      <span class="text-2xs font-semibold text-text-secondary">{{
                         den.label
                       }}</span>
-                      <span class="text-[10px] text-text-muted">Cant: {{ den.qty }}</span>
+                      <span class="text-2xs text-text-muted">Cant: {{ den.qty }}</span>
                     </div>
                     <span class="text-xs font-bold tabular-nums text-text-primary">{{
                       formatAmt(den.subtotal)
@@ -215,7 +215,7 @@ interface DenominacionRow {
               <div
                 class="p-4 bg-elevated border-t border-border-muted flex justify-between items-center mt-auto"
               >
-                <span class="text-[11px] font-black text-text-primary uppercase"
+                <span class="text-2xs font-black text-text-primary uppercase"
                   >Total Efectivo</span
                 >
                 <span class="text-base font-black text-brand tabular-nums tracking-tight">{{

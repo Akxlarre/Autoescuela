@@ -164,7 +164,7 @@ interface HorarioBlock {
                   <!-- Start Time -->
                   <div class="flex flex-col gap-1.5 flex-1 min-w-[120px]">
                     <label
-                      class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
+                      class="text-2xs font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
                     >
                       Hora Inicio
                     </label>
@@ -195,7 +195,7 @@ interface HorarioBlock {
                   <!-- End Time -->
                   <div class="flex flex-col gap-1.5 flex-1 min-w-[120px]">
                     <label
-                      class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
+                      class="text-2xs font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
                     >
                       <span>Hora Fin</span>
                       <app-icon name="clock" [size]="12" class="text-text-muted" />
@@ -228,13 +228,13 @@ interface HorarioBlock {
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label class="block text-[11px] font-semibold text-text-muted mb-1"
+                    <label class="block text-2xs font-semibold text-text-muted mb-1"
                       >Duración Bloque (min)</label
                     >
                     <input type="number" [(ngModel)]="turno.blockDuration" class="field-input" />
                   </div>
                   <div>
-                    <label class="block text-[11px] font-semibold text-text-muted mb-1"
+                    <label class="block text-2xs font-semibold text-text-muted mb-1"
                       >Descanso (min)</label
                     >
                     <input type="number" [(ngModel)]="turno.breakDuration" class="field-input" />
@@ -268,7 +268,7 @@ interface HorarioBlock {
                   <app-icon name="layout-list" [size]="16" class="text-success" />
                   3. Vista Previa de la Grilla
                 </h3>
-                <p class="text-[11px] text-text-muted">
+                <p class="text-2xs text-text-muted">
                   Bloques resultantes: <strong>{{ activeBlocksCount() }} activos</strong>.
                   Deshabilita las excepciones (ej. bloque de colación largo).
                 </p>
@@ -281,7 +281,7 @@ interface HorarioBlock {
                   <!-- Cabecera del Turno -->
                   <div class="flex items-center gap-2">
                     <span
-                      class="text-[10px] font-bold uppercase tracking-wider text-text-secondary"
+                      class="text-2xs font-bold uppercase tracking-wider text-text-secondary"
                     >
                       {{ group.turnoName }}
                     </span>

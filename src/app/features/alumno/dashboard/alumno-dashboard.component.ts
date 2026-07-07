@@ -98,7 +98,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
         <div class="bento-card card-tinted flex flex-col gap-2 h-full" appCardHover>
           <div class="flex items-center gap-2">
             <app-icon name="calendar" [size]="14" class="text-brand" />
-            <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted"
+            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted"
               >Próxima clase</span
             >
           </div>
@@ -139,7 +139,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                 (side()?.pendingBalance ?? 0) > 0 ? 'var(--state-warning)' : 'var(--state-success)'
               "
             />
-            <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted"
+            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted"
               >Saldo</span
             >
           </div>
@@ -346,7 +346,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
             @for (mod of grades()?.modules ?? []; track mod.number) {
               <div class="flex items-center gap-2 py-1.5 px-2 rounded-lg bg-subtle">
                 <span
-                  class="shrink-0 text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
+                  class="shrink-0 text-2xs font-bold w-5 h-5 rounded-full flex items-center justify-center"
                   [style.background]="
                     mod.passed === true ? 'var(--state-success-bg)' : 'var(--bg-surface)'
                   "
@@ -512,7 +512,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
           />
         } @else {
           <div class="bento-card flex flex-col gap-2 h-full" appCardHover>
-            <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted">{{
+            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted">{{
               gradeLabel()
             }}</span>
             <div class="flex-1 flex items-center justify-center">
@@ -534,7 +534,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
             [attr.data-color-variant]="certCardColor()"
           >
             <div class="flex items-start justify-between gap-2">
-              <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted"
+              <span class="text-2xs uppercase font-bold tracking-wider text-text-muted"
                 >Certificado</span
               >
               <div

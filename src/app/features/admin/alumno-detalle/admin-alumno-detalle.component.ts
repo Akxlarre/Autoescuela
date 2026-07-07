@@ -243,7 +243,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   >{{ alumno.nombre }}</span
                 >
                 <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
-                <span class="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5"
+                <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
                   >ESTADO: {{ alumno.estado }}</span
                 >
               </div>
@@ -375,11 +375,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       }
                     </div>
                     @if (clase.instructor) {
-                      <span class="text-[11px] text-text-muted truncate">{{
+                      <span class="text-2xs text-text-muted truncate">{{
                         clase.instructor
                       }}</span>
                     } @else {
-                      <span class="text-[11px] text-text-muted italic">Sin agendar</span>
+                      <span class="text-2xs text-text-muted italic">Sin agendar</span>
                     }
                   </div>
                 </div>
@@ -651,7 +651,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
                 >
                   <div class="inas-date-pill border-none! bg-elevated!">
-                    <span class="text-[10px] font-bold text-text-secondary">{{ item.fecha }}</span>
+                    <span class="text-2xs font-bold text-text-secondary">{{ item.fecha }}</span>
                   </div>
                   <div class="flex-1 min-w-0">
                     <p
@@ -659,7 +659,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     >
                       {{ item.documentType }}
                     </p>
-                    <p class="text-[10px] text-text-muted truncate m-0 italic">
+                    <p class="text-2xs text-text-muted truncate m-0 italic">
                       {{ item.description || 'Sin descripción' }}
                     </p>
                   </div>

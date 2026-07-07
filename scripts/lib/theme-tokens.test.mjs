@@ -10,14 +10,20 @@ console.log(`tokens: ${theme.tokens.size} | vocab: ${theme.vocab.size}`);
 // AC4: los 4 patrones de la lista negra vieja + AC2: formas cortas muertas
 const DEAD = [
   'bg-bg-base', 'text-state-error', 'bg-surface-hover', 'border-divider',
-  'text-primary', 'text-secondary', 'text-muted', 'text-brand-contrast', 'divide-divider',
+  'text-primary', 'text-brand-contrast', 'divide-divider',
 ];
 // AC1/AC3/AC-E1/AC-E2: válidas o fuera del vocabulario del DS
+// NOTA (fix-032): 'text-secondary' y 'text-muted' pasaron de DEAD a VALID porque
+// a4675ee agregó los alias --color-secondary/--color-muted/--color-disabled al @theme
+// (sin actualizar esta suite). Generan CSS real ahora; la forma canónica sigue siendo
+// text-text-* (fix-030), pero eso es disciplina de estilo, no clase muerta.
+// 'text-2xs' es el token de 10px formalizado en fix-032.
 const VALID = [
   'text-text-primary', 'bg-surface/50', 'dark:text-text-muted', 'text-sm', 'text-center',
   'bg-gradient-primary', 'from-brand', 'text-warning', 'border-border-subtle',
   'bg-success-subtle', 'text-[9px]', 'text-editor', 'border-collapse', 'text-balance',
   'bg-brand-dark/20', 'hover:bg-elevated', 'via-white', 'text-transparent',
+  'text-secondary', 'text-muted', 'text-2xs',
 ];
 
 let failures = 0;

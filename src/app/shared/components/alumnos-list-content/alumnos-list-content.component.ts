@@ -526,35 +526,35 @@ interface ExpedienteStatus {
                       <p-tag
                         [value]="alumno.status"
                         [severity]="getStatusSeverity(alumno.status)"
-                        styleClass="text-[10px] font-bold px-2 py-0.5 shrink-0"
+                        styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
                       ></p-tag>
                     </div>
 
                     <!-- Body -->
                     <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
                       <div class="flex flex-col">
-                        <span class="text-[11px] text-text-muted mb-0.5">RUT</span>
+                        <span class="text-2xs text-text-muted mb-0.5">RUT</span>
                         <span class="font-medium text-text-secondary font-mono text-xs">{{
                           alumno.rut
                         }}</span>
                       </div>
                       <div class="flex flex-col">
-                        <span class="text-[11px] text-text-muted mb-0.5">Expediente</span>
+                        <span class="text-2xs text-text-muted mb-0.5">Expediente</span>
                         @let exp = getExpedienteStatus(alumno.expediente);
                         <div class="flex items-center">
                           <p-tag
                             [value]="exp.label + ' · ' + exp.count"
                             [severity]="exp.severity"
-                            styleClass="text-[10px] font-bold px-1.5 py-0.5 bg-transparent border border-current"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5 bg-transparent border border-current"
                           ></p-tag>
                         </div>
                       </div>
                       <div class="flex flex-col">
-                        <span class="text-[11px] text-text-muted mb-0.5">Curso</span>
+                        <span class="text-2xs text-text-muted mb-0.5">Curso</span>
                         <div class="flex flex-wrap gap-1">
                           @for (curso of alumno.cursos; track curso.nombre) {
                             <span
-                              class="text-[10px] px-1.5 py-0.5 rounded-full border border-border-subtle text-text-secondary"
+                              class="text-2xs px-1.5 py-0.5 rounded-full border border-border-subtle text-text-secondary"
                               [class.bg-elevated]="curso.licenseGroup === 'class_b'"
                               [class.bg-brand-muted]="curso.licenseGroup === 'professional'"
                               >{{ curso.nombre }}</span
@@ -563,7 +563,7 @@ interface ExpedienteStatus {
                         </div>
                       </div>
                       <div class="flex flex-col">
-                        <span class="text-[11px] text-text-muted mb-0.5">Ingreso</span>
+                        <span class="text-2xs text-text-muted mb-0.5">Ingreso</span>
                         <span class="font-medium text-text-secondary text-xs">{{
                           alumno.fechaIngreso
                         }}</span>

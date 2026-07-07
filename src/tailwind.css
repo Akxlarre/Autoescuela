@@ -88,6 +88,11 @@
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
 
+  /* ── Tipografía extra-escala ── */
+  /* Genera la utilidad text-2xs (10px). Sin par --line-height a propósito:
+     igual que text-[10px], solo fija font-size (el line-height se hereda). */
+  --text-2xs: var(--text-2xs);
+
   /* ── Radios ── */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
@@ -212,7 +217,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -243,7 +248,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -273,7 +278,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -303,30 +308,32 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Botón peligro outline — hero/cabecera. Fondo blanco, borde y texto rojo vibrante. */
+/* Botón peligro outline — hero/cabecera. Superficie del tema, borde y texto rojo de estado.
+   Tokens --btn-danger-* propios: .surface-hero no los reescribe (cascade-immune),
+   pero sí responden a dark mode. */
 @utility btn-danger-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
-  border: 1px solid theme(colors.red.300);
+  border: 1px solid var(--btn-danger-ghost-border);
   border-radius: var(--btn-primary-radius);
-  background: theme(colors.white);
+  background: var(--btn-danger-ghost-bg);
   padding: var(--btn-primary-padding-y) var(--btn-primary-padding-x);
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: theme(colors.red.600);
-  box-shadow: 0 1px 2px theme(colors.black / 5%);
+  color: var(--btn-danger-ghost-text);
+  box-shadow: var(--shadow-sm);
   transition: var(--transition-btn);
 
   &:hover:not(:disabled) {
-    background: theme(colors.red.50);
+    background: var(--btn-danger-ghost-bg-hover);
   }
 
   &:active:not(:disabled) {
@@ -335,11 +342,12 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Botón peligro sólido — acción destructiva principal (ej: confirmar archivado). */
+/* Botón peligro sólido — acción destructiva principal (ej: confirmar archivado).
+   Fondo --state-error-strong: rojo medio con texto blanco AA en ambos modos. */
 @utility btn-danger-solid {
   display: inline-flex;
   align-items: center;
@@ -348,17 +356,17 @@
   cursor: pointer;
   border: none;
   border-radius: var(--btn-primary-radius);
-  background: theme(colors.red.600);
+  background: var(--btn-danger-solid-bg);
   padding: 0.625rem 1.25rem;
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: theme(colors.white);
-  box-shadow: 0 1px 2px theme(colors.black / 5%);
+  color: var(--btn-danger-solid-text);
+  box-shadow: var(--shadow-sm);
   transition: var(--transition-btn);
 
   &:hover:not(:disabled) {
-    background: theme(colors.red.700);
+    background: var(--btn-danger-solid-bg-hover);
   }
 
   &:active:not(:disabled) {
@@ -367,7 +375,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -398,11 +406,12 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.4;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Botón neutro — cancelar/cerrar sin dependencia de tokens de superficie. */
+/* Botón neutro — cancelar/cerrar en modales. Superficie sutil del tema,
+   hover por brightness (mismo patrón que btn-warning-soft/btn-success-soft). */
 @utility btn-neutral {
   display: inline-flex;
   align-items: center;
@@ -411,16 +420,16 @@
   cursor: pointer;
   border: none;
   border-radius: var(--btn-primary-radius);
-  background: theme(colors.gray.100);
+  background: var(--btn-neutral-bg);
   padding: 0.625rem 1.25rem;
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: theme(colors.gray.700);
+  color: var(--btn-neutral-text);
   transition: var(--transition-btn);
 
   &:hover:not(:disabled) {
-    background: theme(colors.gray.200);
+    filter: brightness(0.96);
   }
 
   &:active:not(:disabled) {
@@ -429,7 +438,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 

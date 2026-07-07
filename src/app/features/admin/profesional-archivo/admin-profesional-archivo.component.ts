@@ -181,7 +181,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 class="flex flex-col gap-1.5 p-4 rounded-xl border border-border-subtle bg-surface-elevated"
               >
                 <div class="flex items-center justify-between">
-                  <span class="text-[10px] uppercase font-bold text-text-muted tracking-wider">{{
+                  <span class="text-2xs uppercase font-bold text-text-muted tracking-wider">{{
                     kpi.label
                   }}</span>
                   @if (kpi.icon) {
@@ -379,7 +379,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         <p class="text-sm font-semibold text-text-primary truncate">
                           {{ alumno.nombre }}
                         </p>
-                        <p class="text-[11px] text-text-muted">{{ alumno.rut }}</p>
+                        <p class="text-2xs text-text-muted">{{ alumno.rut }}</p>
                       </div>
                     </div>
                     <div class="shrink-0">
@@ -401,7 +401,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   >
                     <div class="bg-surface flex flex-col items-center p-2.5">
                       <span
-                        class="text-[10px] uppercase font-bold text-text-muted mb-1 tracking-wide"
+                        class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
                         >Teoría</span
                       >
                       <div class="flex items-center gap-2">
@@ -424,7 +424,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     </div>
                     <div class="bg-surface flex flex-col items-center p-2.5">
                       <span
-                        class="text-[10px] uppercase font-bold text-text-muted mb-1 tracking-wide"
+                        class="text-2xs uppercase font-bold text-text-muted mb-1 tracking-wide"
                         >Práctica</span
                       >
                       <div class="flex items-center gap-2">
@@ -450,7 +450,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   <!-- Notas Módulos -->
                   <div>
                     <span
-                      class="text-[10px] uppercase font-bold text-text-muted block mb-2 tracking-wide"
+                      class="text-2xs uppercase font-bold text-text-muted block mb-2 tracking-wide"
                       >Evaluaciones</span
                     >
                     <div class="flex flex-wrap gap-1.5">

@@ -60,3 +60,19 @@
 - **OJO (sí son canónicas, no confundir):** `text-text-primary`, `text-text-muted`, `bg-text-muted`, `bg-brand-dark`, `bg-brand-muted`. Y `rows-divider` es una clase CSS **custom** legítima (en `pagos`), NO Tailwind — no tocar.
 - Detección (regex para `architect.js` / CI): `\b(bg-bg-(base|surface|elevated|subtle|overlay)|(text|bg|border)-state-(success|warning|error|info)|bg-surface-(elevated|hover|base)|(border|bg|divide)-divider)\b`
 - Remediado masivamente en `fix-015` (jun 2026). Ver `indices/UI-CONSISTENCY-AUDIT.md` (H1).
+
+## AP-012 — Pill/badge ad-hoc (evitar)
+- **NO** compongas badges a mano con `rounded-full` + micro-texto (`text-xs`/`text-[10px]`) + `px-*`. Hay ~122 instancias legacy (baseline ARCH-15) y cada una es un punto de divergencia visual.
+- **Sí** usa `<app-badge [variant]="'success' | 'warning' | 'error' | 'info' | 'neutral'">` (`shared/components/badge/`) o las utilidades `badge-*` de `tailwind.css`.
+- Guardrail: **ARCH-15** (ratchet — solo alerta regresiones vs `scripts/lib/class-discipline.baseline.json`). Consolidación total = fase 4 del roadmap de botones.
+
+## AP-013 — Utilities de tamaño sobre `btn-*` (evitar)
+- **NO** montes `px-*`/`py-*`/`p-*`, `text-{size}`/`text-[NNpx]` ni `rounded-*` encima de una utilidad `btn-*` — mutila el contrato del botón (su padding/tipografía/radio los definen los tokens `--btn-*`).
+- **Sí** usa la utilidad tal cual; layout (`w-full`, `flex`, `gap-*`, `h-*`, `shrink-0`, `justify-*`) sí está permitido. Si necesitas un botón más compacto, se crea la variante en el DS (modificador `btn-sm`, fase 4-5 roadmap), no en el consumidor.
+- Guardrail: **ARCH-16** (ratchet, baseline: 120 instancias).
+
+## AP-014 — Tamaño de fuente arbitrario `text-[NNpx]` (evitar)
+- **NO** uses valores JIT como `text-[10px]`, `text-[13px]`. Cada uno es un tamaño fantasma fuera de la escala.
+- **Sí** usa la escala completa: **`text-2xs` (10px, piso absoluto — fix-032)**, `text-xs` (12px), `text-sm` (14px)… El token `text-2xs` solo fija font-size (line-height se hereda), igual que hacía el valor arbitrario.
+- Migrado en fix-032: 252 instancias (`text-[10px]`/`text-[11px]` → `text-2xs`; `text-[12/14/16/18px]` → token exacto). Backlog residual (baseline ARCH-17: 66): tamaños 8/9/13/15/17/22px que requieren decisión de diseño — 8-9px es ilegible, subirlos a `text-2xs`; 13/15/17px deben encajarse en la escala.
+- Guardrail: **ARCH-17** (ratchet). Re-baselinear tras migraciones: `npm run lint:arch -- --update-ds-baseline`.

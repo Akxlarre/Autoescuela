@@ -106,10 +106,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                       <div>
                         @if (slot.type === 'class') {
                           <p class="text-sm font-bold text-text-primary">{{ slot.studentName }}</p>
-                          <p class="text-[11px] text-text-muted">Clase B #{{ slot.classNumber }}</p>
+                          <p class="text-2xs text-text-muted">Clase B #{{ slot.classNumber }}</p>
                         } @else if (slot.type === 'maintenance') {
                           <p class="text-sm font-bold text-warning">{{ slot.description }}</p>
-                          <p class="text-[11px] text-text-muted uppercase tracking-wider">
+                          <p class="text-2xs text-text-muted uppercase tracking-wider">
                             Mantenimiento
                           </p>
                         } @else {

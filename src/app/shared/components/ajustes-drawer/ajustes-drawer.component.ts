@@ -85,28 +85,28 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
                 </h2>
                 @if (currentUser()?.role === 'admin') {
                   <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border text-brand bg-brand-muted border-brand"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-brand bg-brand-muted border-brand"
                   >
                     <app-icon name="shield" [size]="11" />Administrador
                   </span>
                 }
                 @if (currentUser()?.role === 'secretaria') {
                   <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border text-text-secondary bg-base border-border-default"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-text-secondary bg-base border-border-default"
                   >
                     <app-icon name="briefcase" [size]="11" />Secretaria
                   </span>
                 }
                 @if (currentUser()?.role === 'instructor') {
                   <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border text-text-secondary bg-base border-border-default"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-text-secondary bg-base border-border-default"
                   >
                     <app-icon name="car" [size]="11" />Instructor
                   </span>
                 }
                 @if (currentUser()?.role === 'alumno') {
                   <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold border text-text-secondary bg-base border-border-default"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-text-secondary bg-base border-border-default"
                   >
                     <app-icon name="graduation-cap" [size]="11" />Alumno
                   </span>

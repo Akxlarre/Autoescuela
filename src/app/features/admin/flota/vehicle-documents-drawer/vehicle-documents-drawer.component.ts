@@ -102,7 +102,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                       <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">
                         {{ docLabel(doc.type) }}
                       </h4>
-                      <p class="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                      <p class="text-2xs font-medium text-text-muted uppercase tracking-wider">
                         Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
                       </p>
                     </div>
@@ -110,7 +110,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
                   <div class="flex items-center gap-2">
                     <span
-                      class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm border"
+                      class="px-2.5 py-1 rounded-full text-2xs font-bold uppercase tracking-widest shadow-sm border"
                       [class.badge-success]="doc.status === 'valid'"
                       [class.badge-error]="doc.status !== 'valid'"
                     >

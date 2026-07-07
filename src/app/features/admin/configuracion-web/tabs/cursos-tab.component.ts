@@ -94,14 +94,14 @@ import { SelectModule } from 'primeng/select';
                 <div class="flex items-center gap-2">
                   @if (isOrphan) {
                     <span
-                      class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-error bg-error/12"
+                      class="text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-error bg-error/12"
                     >
                       <app-icon name="x-circle" [size]="11" />
                       Curso no existe
                     </span>
                   } @else if (isInactive) {
                     <span
-                      class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-warning bg-warning/12"
+                      class="text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-warning bg-warning/12"
                     >
                       <app-icon name="alert-triangle" [size]="11" />
                       Curso inactivo — no visible en web
@@ -174,7 +174,7 @@ import { SelectModule } from 'primeng/select';
                   >
                   @if (courseCtrl.get('priceOverride')?.value != null) {
                     <span
-                      class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-brand bg-brand/12"
+                      class="text-2xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-brand bg-brand/12"
                     >
                       <app-icon name="tag" [size]="10" />
                       Override activo

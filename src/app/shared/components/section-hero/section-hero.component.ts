@@ -414,7 +414,7 @@ import type {
               <div class="min-w-0 flex-1">
                 @if (contextLine()) {
                   <p
-                    class="text-[11px] uppercase tracking-[0.06em] text-text-muted m-0 leading-none mb-0.5 truncate"
+                    class="text-2xs uppercase tracking-[0.06em] text-text-muted m-0 leading-none mb-0.5 truncate"
                   >
                     {{ contextLine() }}
                   </p>
@@ -423,7 +423,7 @@ import type {
                   {{ title() }}
                 </h1>
                 @if (subtitle() && !contextLine()) {
-                  <p class="text-[11px] text-text-muted m-0 leading-tight truncate">
+                  <p class="text-2xs text-text-muted m-0 leading-tight truncate">
                     {{ subtitle() }}
                   </p>
                 }
@@ -438,7 +438,7 @@ import type {
                 <div class="flex items-center gap-1.5 flex-wrap">
                   @for (chip of chips(); track chip.label) {
                     <span
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap"
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border whitespace-nowrap"
                       [attr.style]="getChipStyleSlim(chip)"
                     >
                       @if (chip.icon) {
@@ -551,7 +551,7 @@ import type {
                   >
                     <div class="min-w-0 flex-1">
                       <p
-                        class="text-[11px] uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
+                        class="text-2xs uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
                       >
                         {{ kpi.label }}
                       </p>
@@ -566,7 +566,7 @@ import type {
                         </span>
                         @if (kpi.trend !== undefined && kpi.trend !== 0) {
                           <span
-                            class="text-[11px] font-medium leading-none"
+                            class="text-2xs font-medium leading-none"
                             [style.color]="getTrendColor(kpi.trend)"
                           >
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
@@ -574,7 +574,7 @@ import type {
                           </span>
                         }
                         @if (kpi.subValue) {
-                          <span class="text-[10px] font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
+                          <span class="text-2xs font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
                         }
                       </div>
                       <div
@@ -592,7 +592,7 @@ import type {
                   >
                     <div class="min-w-0 flex-1">
                       <p
-                        class="text-[11px] uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
+                        class="text-2xs uppercase tracking-[0.05em] text-text-muted m-0 leading-none mb-1 truncate"
                       >
                         {{ kpi.label }}
                       </p>
@@ -602,7 +602,7 @@ import type {
                         </span>
                         @if (kpi.trend !== undefined && kpi.trend !== 0) {
                           <span
-                            class="text-[11px] font-medium leading-none"
+                            class="text-2xs font-medium leading-none"
                             [style.color]="getTrendColor(kpi.trend)"
                           >
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
@@ -610,7 +610,7 @@ import type {
                           </span>
                         }
                         @if (kpi.subValue) {
-                          <span class="text-[10px] font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
+                          <span class="text-2xs font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
                         }
                       </div>
                     </div>

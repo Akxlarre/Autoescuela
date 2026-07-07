@@ -636,7 +636,7 @@ function formatCLP(value: number): string {
                       <h3 class="text-[15px] font-bold text-text-primary leading-tight">
                         {{ row.nombre }}
                       </h3>
-                      <p class="text-[12px] text-text-muted mt-0.5">{{ row.rut }}</p>
+                      <p class="text-xs text-text-muted mt-0.5">{{ row.rut }}</p>
                     </div>
                   </div>
 
@@ -652,7 +652,7 @@ function formatCLP(value: number): string {
                 <!-- Content Card (Metrics) -->
                 <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
                   <div class="flex flex-col gap-1">
-                    <span class="text-[10px] uppercase font-bold text-text-muted"
+                    <span class="text-2xs uppercase font-bold text-text-muted"
                       >Base (Ganado)</span
                     >
                     <span class="text-[13px] font-bold text-success">
@@ -660,13 +660,13 @@ function formatCLP(value: number): string {
                     </span>
                   </div>
                   <div class="flex flex-col gap-1">
-                    <span class="text-[10px] uppercase font-bold text-text-muted"
+                    <span class="text-2xs uppercase font-bold text-text-muted"
                       >Horas Equivalentes</span
                     >
                     <div class="text-[13px] font-bold tabular-nums text-brand">
                       {{ row.totalHours }}
                       <span class="font-normal text-text-muted">hrs</span>
-                      <span class="text-[11px] font-normal text-text-muted ml-1"
+                      <span class="text-2xs font-normal text-text-muted ml-1"
                         >({{ row.practicalSessions }}
                         {{ row.practicalSessions === 1 ? 'clase' : 'clases' }})</span
                       >
@@ -676,7 +676,7 @@ function formatCLP(value: number): string {
                     class="flex flex-col gap-1 col-span-2 border-t pt-2 mt-1 border-border-muted"
                   >
                     <div class="flex justify-between items-center w-full">
-                      <span class="text-[10px] uppercase font-bold text-text-muted"
+                      <span class="text-2xs uppercase font-bold text-text-muted"
                         >Anticipos Emitidos</span
                       >
                       <span class="text-[13px] font-bold tabular-nums text-error">
@@ -686,10 +686,10 @@ function formatCLP(value: number): string {
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted">
                     <div class="flex justify-between items-center w-full">
-                      <span class="text-[11px] uppercase font-black text-text-primary"
+                      <span class="text-2xs uppercase font-black text-text-primary"
                         >A Pagar</span
                       >
-                      <span class="text-[18px] font-black tracking-tight text-brand">
+                      <span class="text-lg font-black tracking-tight text-brand">
                         {{ formatCLP(row.finalPaymentAmount) }}
                       </span>
                     </div>
@@ -708,7 +708,7 @@ function formatCLP(value: number): string {
                     </button>
                   } @else {
                     <button
-                      class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-[14px] shadow-sm"
+                      class="btn-pagar w-full sm:w-auto justify-center py-2.5 text-sm shadow-sm"
                       (click)="abrirModal(row)"
                     >
                       <app-icon name="banknote" [size]="15" />
@@ -721,7 +721,7 @@ function formatCLP(value: number): string {
 
             <!-- Mobile Totals Summary -->
             <div class="mt-4 p-4 rounded-xl border-2 border-brand/30 bg-brand/5">
-              <h4 class="text-[11px] uppercase font-black tracking-widest text-text-primary mb-3">
+              <h4 class="text-2xs uppercase font-black tracking-widest text-text-primary mb-3">
                 Resumen de Totales
               </h4>
               <div class="flex justify-between items-center mb-2">
@@ -738,7 +738,7 @@ function formatCLP(value: number): string {
               </div>
               <div class="flex justify-between items-center pt-2 mt-2 border-t border-brand/20">
                 <span class="text-xs font-black uppercase text-text-primary">Total Final</span>
-                <span class="text-[18px] font-black tabular-nums tracking-tight text-brand">{{
+                <span class="text-lg font-black tabular-nums tracking-tight text-brand">{{
                   formatCLP(totales().total)
                 }}</span>
               </div>

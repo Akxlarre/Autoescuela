@@ -169,7 +169,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                   <span class="font-bold text-sm text-text-primary">{{ m.type }}</span>
                   @if (m.description) {
                     <p
-                      class="text-[11px] text-text-muted truncate max-w-[200px]"
+                      class="text-2xs text-text-muted truncate max-w-[200px]"
                       [pTooltip]="m.description"
                       tooltipPosition="top"
                     >
@@ -188,7 +188,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                   <p-tag
                     [value]="m.status === 'completed' ? 'Completado' : 'Programado'"
                     [severity]="m.status === 'completed' ? 'success' : 'warn'"
-                    styleClass="rounded-full text-[10px] px-2 font-bold uppercase"
+                    styleClass="rounded-full text-2xs px-2 font-bold uppercase"
                   />
                 </td>
                 <td class="pr-6 text-right">
@@ -230,7 +230,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
               [class]="scheduledBorderColor(s.status)"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[10px] font-black uppercase tracking-wider text-text-muted">{{
+                <span class="text-2xs font-black uppercase tracking-wider text-text-muted">{{
                   s.type
                 }}</span>
                 <p-tag

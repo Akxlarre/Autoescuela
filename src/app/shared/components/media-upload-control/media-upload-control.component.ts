@@ -86,7 +86,7 @@ import { ButtonModule } from 'primeng/button';
       <!-- URL Manual Input -->
       <div class="flex gap-2 items-end mt-1">
         <div class="flex-1 flex flex-col gap-1">
-          <label class="text-[10px] font-bold uppercase tracking-wider text-text-muted">{{
+          <label class="text-2xs font-bold uppercase tracking-wider text-text-muted">{{
             label()
           }}</label>
           <div class="relative">
@@ -114,7 +114,7 @@ import { ButtonModule } from 'primeng/button';
           class="absolute inset-0 bg-surface/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-20 bg-surface"
         >
           <app-icon name="loader-2" [size]="20" class="animate-spin text-brand" />
-          <span class="text-[10px] font-bold text-brand uppercase tracking-wider">Subiendo...</span>
+          <span class="text-2xs font-bold text-brand uppercase tracking-wider">Subiendo...</span>
         </div>
       }
     </div>

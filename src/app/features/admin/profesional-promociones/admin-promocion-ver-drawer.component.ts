@@ -181,7 +181,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                   <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
                       <span
-                        class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-[11px] font-bold text-white"
+                        class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-2xs font-bold text-white"
                         [style.background]="courseColor(curso.courseCode)"
                       >
                         {{ curso.courseCode }}
@@ -194,12 +194,12 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
                   <!-- Relatores -->
                   <div class="mb-3">
-                    <p class="text-[10px] font-semibold mb-1.5 text-brand">Relatores</p>
+                    <p class="text-2xs font-semibold mb-1.5 text-brand">Relatores</p>
                     @if (curso.relatores.length > 0) {
                       @for (rel of curso.relatores; track rel.id) {
                         <div class="flex items-center gap-2 mb-1.5">
                           <div
-                            class="flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0 bg-brand-tint text-brand"
+                            class="flex items-center justify-center w-7 h-7 rounded-full text-2xs font-bold shrink-0 bg-brand-tint text-brand"
                           >
                             {{ rel.initials }}
                           </div>
@@ -209,7 +209,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                             </span>
                             @if (rel.role) {
                               <span
-                                class="text-[10px] ml-1 px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+                                class="text-2xs ml-1 px-1.5 py-0.5 rounded bg-elevated text-text-muted"
                               >
                                 {{ roleLabel(rel.role) }}
                               </span>
@@ -231,7 +231,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                     >
                       <div class="flex items-center gap-1.5">
                         <app-icon name="users" [size]="12" color="var(--ds-brand)" />
-                        <span class="text-[11px] font-semibold text-brand"> Alumnos </span>
+                        <span class="text-2xs font-semibold text-brand"> Alumnos </span>
                       </div>
                       <div class="flex items-center gap-2">
                         <span class="text-xs text-text-secondary">
@@ -285,7 +285,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                 style="border-bottom: 1px solid var(--border-subtle);"
                               >
                                 <div
-                                  class="flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold shrink-0 bg-elevated text-text-secondary"
+                                  class="flex items-center justify-center w-7 h-7 rounded-full text-2xs font-bold shrink-0 bg-elevated text-text-secondary"
                                 >
                                   {{ alumno.initials }}
                                 </div>
@@ -293,12 +293,12 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                   <p class="text-xs font-medium truncate text-text-primary">
                                     {{ alumno.nombre }}
                                   </p>
-                                  <p class="text-[10px] font-mono text-text-muted">
+                                  <p class="text-2xs font-mono text-text-muted">
                                     {{ alumno.rut }}
                                   </p>
                                 </div>
                                 <span
-                                  class="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
+                                  class="text-2xs px-1.5 py-0.5 rounded-full shrink-0"
                                   [style.background]="enrollStatusBg(alumno.enrollmentStatus)"
                                   [style.color]="enrollStatusColor(alumno.enrollmentStatus)"
                                 >

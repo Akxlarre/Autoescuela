@@ -197,7 +197,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                     >
                       <div class="flex items-center gap-3">
                         <div class="flex flex-col">
-                          <span class="text-[10px] uppercase font-bold text-text-muted"
+                          <span class="text-2xs uppercase font-bold text-text-muted"
                             >WhatsApp</span
                           >
                           <span class="text-xs font-medium text-text-primary">{{

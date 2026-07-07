@@ -14,7 +14,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     >
       <div class="flex flex-col mb-6">
         <h3 class="text-base font-bold text-text-primary m-0">Tasas de Aprobación</h3>
-        <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"
+        <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5"
           >Métricas de Éxito</span
         >
       </div>
@@ -30,7 +30,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           <div class="progress-bar-track">
             <div class="progress-bar-fill bg-brand" [style.width.%]="municipalRate()"></div>
           </div>
-          <p class="text-[10px] text-text-muted mt-2">
+          <p class="text-2xs text-text-muted mt-2">
             Basado en {{ totalExams() }} exámenes este año.
           </p>
         </div>
@@ -63,7 +63,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       <!-- Balance de Gestión del Año -->
       <div class="mt-8 pt-6 border-t border-border-subtle/50">
         <div class="flex items-center justify-between mb-6">
-          <h3 class="text-[10px] font-black text-text-muted uppercase tracking-[0.2em] m-0">
+          <h3 class="text-2xs font-black text-text-muted uppercase tracking-[0.2em] m-0">
             Balance de Gestión Anual
           </h3>
           <div

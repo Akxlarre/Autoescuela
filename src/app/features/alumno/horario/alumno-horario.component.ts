@@ -76,7 +76,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
             </div>
 
             <div class="flex flex-col gap-1 flex-1 min-w-0">
-              <span class="text-[10px] uppercase font-bold tracking-wider text-brand"
+              <span class="text-2xs uppercase font-bold tracking-wider text-brand"
                 >Próxima clase</span
               >
               <p class="font-semibold text-text-primary m-0 leading-tight">
@@ -209,11 +209,11 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                       }
 
                       @if (session.classNumber) {
-                        <span class="text-[11px] font-semibold text-text-secondary">
+                        <span class="text-2xs font-semibold text-text-secondary">
                           Clase {{ session.classNumber }}
                         </span>
                       } @else {
-                        <span class="text-[11px] font-semibold text-text-secondary">
+                        <span class="text-2xs font-semibold text-text-secondary">
                           {{ kindLabel(session.kind) }}
                         </span>
                       }
@@ -239,7 +239,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                     <div
                       class="rounded-lg py-3 flex items-center justify-center border border-dashed border-border-subtle"
                     >
-                      <span class="text-[10px] text-text-muted">—</span>
+                      <span class="text-2xs text-text-muted">—</span>
                     </div>
                   }
                 </div>
@@ -255,7 +255,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
             @for (item of legend; track item.label) {
               <div class="flex items-center gap-1.5">
                 <div class="w-2 h-2 rounded-full" [style.background]="item.color"></div>
-                <span class="text-[10px] text-text-muted">{{ item.label }}</span>
+                <span class="text-2xs text-text-muted">{{ item.label }}</span>
               </div>
             }
           </div>

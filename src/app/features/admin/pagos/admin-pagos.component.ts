@@ -178,7 +178,7 @@ const POR_PAGINA = 5;
                       >
                         <div class="flex flex-col lg:block text-center lg:text-right dc-total">
                           <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                            class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Total</span
                           >
                           <span class="text-sm text-text-primary">{{
@@ -187,7 +187,7 @@ const POR_PAGINA = 5;
                         </div>
                         <div class="flex flex-col lg:block text-center lg:text-right dc-pagado">
                           <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                            class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Pagado</span
                           >
                           <span
@@ -200,7 +200,7 @@ const POR_PAGINA = 5;
                         </div>
                         <div class="flex flex-col lg:block text-center lg:text-right">
                           <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                            class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Saldo</span
                           >
                           <span class="text-sm font-bold text-warning">{{
@@ -380,7 +380,7 @@ const POR_PAGINA = 5;
                           {{ fechaCorta(pago.fecha) }}
                         </span>
                         <span
-                          class="lg:hidden inline-flex items-center justify-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                          class="lg:hidden inline-flex items-center justify-center gap-1 text-2xs font-semibold px-2 py-0.5 rounded-full"
                           [style.background]="estadoBg(pago.estado)"
                           [style.color]="estadoColor(pago.estado)"
                         >
@@ -417,7 +417,7 @@ const POR_PAGINA = 5;
                             {{ pago.metodo }}
                           </span>
                           <span
-                            class="text-[10px] lg:text-xs font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
+                            class="text-2xs lg:text-xs font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
                           >
                             {{ pago.nroDocumento ?? '—' }}
                           </span>

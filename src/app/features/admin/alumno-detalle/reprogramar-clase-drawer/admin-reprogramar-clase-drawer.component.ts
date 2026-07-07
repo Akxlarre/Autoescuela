@@ -174,7 +174,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                       [class.border-transparent]="selectedDayIndex() !== i"
                       [class.text-text-secondary]="selectedDayIndex() !== i"
                     >
-                      <p class="text-[10px] font-bold uppercase">{{ day.dayOfWeek }}</p>
+                      <p class="text-2xs font-bold uppercase">{{ day.dayOfWeek }}</p>
                       <p class="text-sm font-black">{{ day.label }}</p>
                     </button>
                   }
@@ -183,7 +183,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 <!-- Aviso de restricción cronológica -->
                 @if (minAllowedTimestamp()) {
                   <div class="px-3 pt-2 pb-0">
-                    <p class="text-[11px] text-warning font-medium flex items-center gap-1.5">
+                    <p class="text-2xs text-warning font-medium flex items-center gap-1.5">
                       <app-icon name="clock-alert" [size]="12" />
                       Clase anterior #{{ prevClaseNumero() }} está agendada el {{ prevClaseFecha()
                       }}{{ prevClaseHora() ? ' a las ' + prevClaseHora() : '' }}. Solo se muestran

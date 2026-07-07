@@ -59,6 +59,8 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 
 > **Patrón `/N` (opacity modifier):** En Tailwind v4, todos los colores en `@theme` soportan `bg-TOKEN/N` y `border-TOKEN/N` donde N es el porcentaje de opacidad (1–100). Equivale a `color-mix(in oklch, var(--color-TOKEN) N%, transparent)`. Reemplaza los `style="background: color-mix(...)"` inline.
 
+> **Tipografía (fix-032):** la escala incluye **`text-2xs` (10px)** como piso absoluto para micro-labels (bridge `--text-2xs` en `@theme` → `--text-2xs` de `_variables.scss`). Solo fija font-size (line-height se hereda). **PROHIBIDO `text-[NNpx]` arbitrario** (AP-014, guardrail ARCH-17) y prohibido crear tamaños menores a 10px.
+
 ### Utilities `@utility` en `tailwind.css`
 
 | Clase | CSS generado | Cuándo usar |
@@ -78,12 +80,14 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 | `btn-ghost` | Sin borde, fondo transparente. Hover: `bg-subtle` + texto sube a `text-primary`. Tokens `--btn-ghost-*`. | Acción terciaria discreta (filas de tabla, listas) |
 | `btn-warning-soft` | Fondo `--state-warning-bg`, texto `--state-warning`, borde `--state-warning-border`. Dark-mode aware vía tokens. | Acción de transición de estado warning (ej: "Iniciar") |
 | `btn-success-soft` | Fondo `--state-success-bg`, texto `--state-success`, borde `--state-success-border`. Dark-mode aware vía tokens. | Acción de confirmación positiva (ej: "Completar") |
-| `btn-danger-ghost` | **Fondo blanco puro, borde rojo-300, texto rojo-600**. Usa `theme()` — **inmune a cascade** de `surface-hero`. Hover: rojo-50. | Acción destructiva en heroes/cabeceras |
-| `btn-danger-solid` | **Fondo rojo-600, texto blanco**. Hover: rojo-700. Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
-| `btn-neutral` | **Fondo gris-100, texto gris-700**. Hover: gris-200. Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales (sin dependencia de cascade) |
-| `btn-outline` | Borde `--border-muted`, fondo `--bg-surface`, texto `--text-primary`. Hover: `--bg-elevated`. `:disabled` → opacity 0.4 + cursor not-allowed via CSS. Dark-mode aware vía tokens. | Botones secundarios de paginación, acciones de peso medio |
+| `btn-danger-ghost` | Fondo `--btn-danger-ghost-bg` (→ `--bg-surface`), borde/texto `--state-error-border`/`--state-error`. Dark-mode aware (fix-031). Hover: `--state-error-bg`. | Acción destructiva en heroes/cabeceras |
+| `btn-danger-solid` | Fondo `--btn-danger-solid-bg` (→ `--state-error-strong`, rojo medio con texto blanco AA en ambos modos, sin override dark). Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
+| `btn-neutral` | Fondo `--btn-neutral-bg` (→ `--bg-subtle`), texto `--text-primary`. Hover: `brightness(0.96)` (patrón soft). Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales |
+| `btn-outline` | Borde `--border-muted`, fondo `--bg-surface`, texto `--text-primary`. Hover: `--bg-elevated`. Dark-mode aware vía tokens. | Botones secundarios de paginación, acciones de peso medio |
 
-> **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
+> **Nota cascade (fix-031):** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan tokens de Capa 4 propios (`--btn-danger-*`, `--btn-neutral-*`) que `.surface-hero` **no reescribe** → siguen siendo cascade-immune (la acción destructiva mantiene su identidad roja en cualquier contexto), pero ahora **sí responden a dark mode** porque esos tokens referencian tokens de estado/superficie. Ya no queda ningún `theme(colors.*)` en `tailwind.css`.
+
+> **Disabled unificado (fix-031):** todas las utilidades `btn-*` con `:disabled` por opacidad usan `var(--btn-disabled-opacity)` (0.5). Excepción canónica: `btn-primary` usa disabled semántico (`bg-subtle` + `text-muted`, opacity 1).
 
 ### Badge de estado (`badge-*`)
 
@@ -170,39 +174,39 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 474 | `#38bdf8` |
-| `--text-muted` | 429 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 286 | `var(--color-primary-text)` |
-| `--border-subtle` | 244 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 244 | `#f87171` |
+| `--ds-brand` | 482 | `#38bdf8` |
+| `--text-muted` | 426 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 281 | `var(--color-primary-text)` |
+| `--border-subtle` | 241 | `rgba(255, 255, 255, 0.18)` |
+| `--state-error` | 237 | `#f87171` |
 | `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
-| `--state-success` | 230 | `#4ade80` |
-| `--bg-surface` | 200 | `#18181b` |
-| `--color-primary` | 190 | `#38bdf8` |
-| `--state-warning` | 168 | `#fbbf24` |
-| `--border-default` | 152 | `rgba(255, 255, 255, 0.28)` |
-| `--bg-elevated` | 90 | `#27272a` |
-| `--text-sm` | 81 | `0.875rem` |
+| `--state-success` | 220 | `#4ade80` |
+| `--bg-surface` | 204 | `#18181b` |
+| `--color-primary` | 183 | `#38bdf8` |
+| `--state-warning` | 150 | `#fbbf24` |
+| `--border-default` | 149 | `rgba(255, 255, 255, 0.28)` |
+| `--bg-elevated` | 91 | `#27272a` |
+| `--text-sm` | 77 | `0.875rem` |
 | `--duration-fast` | 74 | `200ms` |
 | `--bg-subtle` | 73 | `rgba(255, 255, 255, 0.1)` |
-| `--radius-md` | 65 | `10px` |
-| `--bg-base` | 56 | `#09090b` |
+| `--radius-md` | 61 | `10px` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 54 | `var(--border-subtle)` |
-| `--state-success-bg` | 52 | `rgba(74, 222, 128, 0.1)` |
+| `--bg-base` | 53 | `#09090b` |
+| `--state-success-bg` | 49 | `rgba(74, 222, 128, 0.1)` |
 | `--color-primary-text` | 48 | `#ffffff` |
-| `--state-warning-bg` | 47 | `rgba(251, 191, 36, 0.1)` |
-| `--text-xs` | 46 | `0.75rem` |
-| `--color-success` | 45 | `—` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
+| `--text-xs` | 44 | `0.75rem` |
+| `--color-success` | 43 | `—` |
+| `--state-warning-bg` | 40 | `rgba(251, 191, 36, 0.1)` |
 
 ## Clases semánticas del Design System
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 238 | `src/styles/tokens/_variables.scss` |
+| `.card` | 239 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
-| `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
+| `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 10 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 9 | `src/styles/tokens/_variables.scss` |
@@ -259,6 +263,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-next` +5 |
 | **dialog** | `.p-dialog` · `.p-dialog-content` · `.p-dialog-header` · `.p-dialog-mask` |
 | **disabled** | `.p-disabled` |
+| **dropdown** | `.p-dropdown-item` · `.p-dropdown-items` |
 | **focus** | `.p-focus` |
 | **highlight** | `.p-highlight` |
 | **ink** | `.p-ink` |
@@ -296,7 +301,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1270 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1259 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -304,20 +309,20 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 67 | `text-sm font-semibold text-text-primary` |
-| 37 | `text-sm font-bold text-text-primary` |
+| 64 | `text-sm font-semibold text-text-primary` |
+| 38 | `text-sm font-bold text-text-primary` |
 | 31 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |
-| 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
-| 14 | `text-[10px] font-bold text-text-muted uppercase tracking-wider` |
-| 14 | `text-xs font-semibold text-text-primary` |
+| 16 | `text-xs font-semibold text-text-primary` |
+| 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
+| 15 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
 | 13 | `text-base font-semibold text-text-primary` |
 | 12 | `text-base font-bold text-text-primary` |
-| 12 | `text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted` |
+| 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
 
 

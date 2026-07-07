@@ -26,7 +26,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
       <!-- Cabecera del Día -->
       <div class="mb-4 mt-1 text-center">
         <span
-          class="block text-[10px] font-bold tracking-widest uppercase mb-0.5"
+          class="block text-2xs font-bold tracking-widest uppercase mb-0.5"
           [style.color]="day().isToday ? 'var(--ds-brand)' : 'var(--text-muted)'"
         >
           {{ day().dayLabel }}
@@ -73,7 +73,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
               <div class="flex flex-col items-start text-left">
                 <span class="text-xs font-semibold text-text-primary">Teoría</span>
                 <span
-                  class="text-[10px] uppercase font-bold tracking-wider mt-0.5"
+                  class="text-2xs uppercase font-bold tracking-wider mt-0.5"
                   [style.color]="getStatusColor(session)"
                 >
                   {{ getStatusShortLabel(session.status) }}
@@ -126,7 +126,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
               <div class="flex flex-col items-start text-left">
                 <span class="text-xs font-semibold text-text-primary">Práctica</span>
                 <span
-                  class="text-[10px] uppercase font-bold tracking-wider mt-0.5"
+                  class="text-2xs uppercase font-bold tracking-wider mt-0.5"
                   [style.color]="getStatusColor(session)"
                 >
                   {{ getStatusShortLabel(session.status) }}
@@ -156,7 +156,7 @@ import type { SesionProfesional, WeekDay } from '@core/models/ui/sesion-profesio
               <app-icon name="minus" [size]="14" color="var(--text-muted)" />
             </div>
             <p
-              class="text-center text-[11px] uppercase tracking-widest text-text-muted font-semibold"
+              class="text-center text-2xs uppercase tracking-widest text-text-muted font-semibold"
             >
               Sin carga
             </p>

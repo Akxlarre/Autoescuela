@@ -191,7 +191,7 @@ import {
                   class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0"
                 >
                   <span
-                    class="text-[9px] sm:text-[10px] uppercase tracking-wider font-bold text-brand leading-tight"
+                    class="text-[9px] sm:text-2xs uppercase tracking-wider font-bold text-brand leading-tight"
                     >Clase</span
                   >
                   <span class="text-lg sm:text-xl font-display font-bold text-brand leading-none">{{
@@ -230,7 +230,7 @@ import {
                   </div>
                   <div>
                     <p
-                      class="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-wider"
+                      class="text-[9px] sm:text-2xs font-bold text-text-muted uppercase tracking-wider"
                     >
                       Km Inicial
                     </p>
@@ -249,7 +249,7 @@ import {
                   </div>
                   <div class="min-w-0 flex-1">
                     <p
-                      class="text-[9px] sm:text-[10px] font-bold text-text-muted uppercase tracking-wider"
+                      class="text-[9px] sm:text-2xs font-bold text-text-muted uppercase tracking-wider"
                     >
                       Iniciada
                     </p>

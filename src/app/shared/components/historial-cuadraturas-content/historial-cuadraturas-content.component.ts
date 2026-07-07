@@ -238,7 +238,7 @@ function formatCLP(value: number): string {
         >
           @for (dia of diasSemana; track dia) {
             <div
-              class="px-2 py-3.5 text-center text-[10px] font-bold text-text-muted bg-subtle uppercase tracking-widest"
+              class="px-2 py-3.5 text-center text-2xs font-bold text-text-muted bg-subtle uppercase tracking-widest"
             >
               {{ dia }}
             </div>
@@ -357,7 +357,7 @@ function formatCLP(value: number): string {
                       [class.border-border-muted]="!celda.isToday"
                     >
                       <span
-                        class="text-[10px] font-bold uppercase tracking-widest"
+                        class="text-2xs font-bold uppercase tracking-widest"
                         [class.text-white]="celda.isToday"
                         [class.text-text-muted]="!celda.isToday"
                       >
@@ -396,7 +396,7 @@ function formatCLP(value: number): string {
                           <app-icon name="loader" [size]="14" class="animate-spin" />
                           <span class="text-[13px] font-bold">Sesión en curso</span>
                         </div>
-                        <span class="text-text-muted text-[11px] font-semibold"
+                        <span class="text-text-muted text-2xs font-semibold"
                           >Esperando cierre operativo</span
                         >
                       }

@@ -101,7 +101,7 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                   }}</span>
                   @if (!facade.isCurrentWeek()) {
                     <button
-                      class="mt-0.5 text-[10px] font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
+                      class="mt-0.5 text-2xs font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
                       (click)="facade.goToCurrentWeek()"
                     >
                       Volver a Hoy

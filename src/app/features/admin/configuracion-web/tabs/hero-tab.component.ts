@@ -187,7 +187,7 @@ const INTERFACE_ICONS = [
           <!-- 1. Layout / Disposición -->
           <div class="studio-card span-full">
             <label class="field-label !mb-0">1. Disposición / Layout de Pantalla</label>
-            <span class="text-[11px] text-text-muted"
+            <span class="text-2xs text-text-muted"
               >Elige cómo se organizarán las columnas en pantallas grandes.</span
             >
 
@@ -342,7 +342,7 @@ const INTERFACE_ICONS = [
                 <span class="text-xs font-semibold text-text-primary"
                   >Tema Sólido / Degradado Activo</span
                 >
-                <p class="text-[11px] text-text-muted m-0 max-w-xs">
+                <p class="text-2xs text-text-muted m-0 max-w-xs">
                   Se mostrará un degradado animado acorde al tema visual (<strong>{{
                     heroGroup().root.get('brand.theme')?.value === 'roja'
                       ? 'Rojo profesional'
@@ -487,10 +487,10 @@ const INTERFACE_ICONS = [
                     @if (heroGroup().get('media.type')?.value === 'image') {
                       <app-icon name="sparkles" [size]="16" class="text-brand mt-0.5" />
                       <div class="flex flex-col">
-                        <span class="text-[11px] font-semibold text-text-primary"
+                        <span class="text-2xs font-semibold text-text-primary"
                           >Efecto Auto-Glow</span
                         >
-                        <span class="text-[11px] text-text-muted leading-tight mt-0.5"
+                        <span class="text-2xs text-text-muted leading-tight mt-0.5"
                           >Las imágenes con formato vertical (Portrait) generarán un desenfoque de
                           luz ambiental automático a su alrededor.</span
                         >
@@ -498,10 +498,10 @@ const INTERFACE_ICONS = [
                     } @else {
                       <app-icon name="film" [size]="16" class="text-brand mt-0.5" />
                       <div class="flex flex-col">
-                        <span class="text-[11px] font-semibold text-text-primary"
+                        <span class="text-2xs font-semibold text-text-primary"
                           >Optimización Recomendada</span
                         >
-                        <span class="text-[11px] text-text-muted leading-tight mt-0.5"
+                        <span class="text-2xs text-text-muted leading-tight mt-0.5"
                           >Sube videos en bucle menores a 5MB, idealmente sin sonido para no
                           interrumpir al usuario. Formato MP4.</span
                         >
@@ -646,7 +646,7 @@ const INTERFACE_ICONS = [
                             class="text-brand"
                           />
                         } @else {
-                          <span class="text-[11px] text-text-muted">Opcional</span>
+                          <span class="text-2xs text-text-muted">Opcional</span>
                         }
                       </div>
                       <app-icon name="chevron-down" [size]="14" class="text-text-muted" />

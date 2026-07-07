@@ -19,7 +19,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
       >
         <div class="flex flex-col">
           <h2 class="text-base font-bold text-text-primary m-0">Estado Financiero</h2>
-          <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"
+          <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5"
             >Control de Pagos</span
           >
         </div>
@@ -76,7 +76,7 @@ import type { PagoUI } from '@core/models/ui/alumno-detalle.model';
 
               <div class="flex items-center justify-between mt-1">
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] text-text-muted font-medium">{{ pago.fecha }}</span>
+                  <span class="text-2xs text-text-muted font-medium">{{ pago.fecha }}</span>
                   @if (pago.metodo) {
                     <span
                       class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-subtle text-text-muted border border-border-subtle"

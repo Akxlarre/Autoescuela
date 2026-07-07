@@ -93,7 +93,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               </div>
             </div>
           </div>
-          <p class="text-[10px] text-text-muted">
+          <p class="text-2xs text-text-muted">
             <app-icon name="info" [size]="10" />
             Las fechas de inicio y término no son modificables una vez creada la promoción.
           </p>

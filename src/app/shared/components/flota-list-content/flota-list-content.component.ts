@@ -254,7 +254,7 @@ import type {
                         <span class="font-bold text-sm text-text-primary"
                           >{{ v.brand }} {{ v.model }}</span
                         >
-                        <span class="text-[11px] text-text-muted">{{ v.year }}</span>
+                        <span class="text-2xs text-text-muted">{{ v.year }}</span>
                       </div>
                     </td>
                     <td>
@@ -276,7 +276,7 @@ import type {
                       <p-tag
                         [severity]="statusSeverity(v.status)"
                         [value]="statusLabel(v.status)"
-                        styleClass="text-[10px] font-bold px-2 py-0.5"
+                        styleClass="text-2xs font-bold px-2 py-0.5"
                       />
                     </td>
                     <td class="pr-6 text-right">

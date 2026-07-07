@@ -60,7 +60,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
               class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
             >
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Ingresos</span
                 >
                 <span class="text-sm font-semibold lg:font-normal text-text-primary">
@@ -68,7 +68,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 </span>
               </div>
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Gastos</span
                 >
                 <span class="text-sm font-medium text-error">
@@ -76,7 +76,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 </span>
               </div>
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Margen</span
                 >
                 <span class="text-sm font-semibold text-success">
@@ -91,7 +91,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             >
               <!-- Rentabilidad badge -->
               <div class="flex items-center gap-2 lg:justify-end">
-                <span class="text-[10px] lg:hidden uppercase font-bold text-text-muted"
+                <span class="text-2xs lg:hidden uppercase font-bold text-text-muted"
                   >Rentabilidad</span
                 >
                 <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
@@ -143,7 +143,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
           >
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+              <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Ingresos</span
               >
               <span class="text-sm font-bold text-center lg:text-right text-text-primary">
@@ -152,7 +152,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             </div>
 
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+              <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Gastos</span
               >
               <span class="text-sm font-bold text-center lg:text-right text-error">
@@ -161,7 +161,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             </div>
 
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+              <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Margen</span
               >
               <span class="text-sm font-bold text-center lg:text-right text-success">

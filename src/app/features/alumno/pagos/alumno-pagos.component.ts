@@ -181,7 +181,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
                       {{ clp(payment.amount) }}
                     </span>
                     <span
-                      class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                      class="text-2xs font-medium px-1.5 py-0.5 rounded-full"
                       [style.background]="
                         payment.status === 'paid'
                           ? 'var(--color-success-muted)'

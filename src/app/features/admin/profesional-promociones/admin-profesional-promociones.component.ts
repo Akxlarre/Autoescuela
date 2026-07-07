@@ -150,7 +150,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                           {{ promo.name }}
                         </span>
                         <span
-                          class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+                          class="text-2xs font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
                         >
                           {{ promo.code }}
                         </span>
@@ -179,7 +179,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                     <div class="hidden md:flex items-center gap-1 shrink-0">
                       @for (curso of promo.cursos; track curso.id) {
                         <span
-                          class="w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold text-white"
+                          class="w-6 h-6 flex items-center justify-center rounded text-2xs font-bold text-white"
                           [style.background]="getCourseColor(curso.courseCode)"
                           [title]="curso.courseName + ': ' + curso.enrolledStudents + ' alumnos'"
                         >

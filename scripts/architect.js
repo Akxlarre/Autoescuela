@@ -29,6 +29,15 @@ import path from 'path';
 import { createRequire } from 'module';
 import { parseThemeTokens, findDeadTokenClasses } from './lib/theme-tokens.js';
 import { kebabToPascal, collectUsedIcons, parseRegisteredIcons } from './lib/icon-registry.js';
+import {
+    findAdhocPills,
+    findButtonSizeOverrides,
+    findArbitraryTextSizes,
+    isPillWhitelisted,
+    buildBaseline,
+    compareWithBaseline,
+    DS_RULES,
+} from './lib/class-discipline.js';
 
 // TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
@@ -154,6 +163,21 @@ const RULES = {
         doc: 'CLAUDE.md (Íconos Lucide) + specs/0020',
         fix: 'Importa el ícono de lucide-angular y agrégalo al LucideAngularModule.pick({...}) de app.config.ts.',
     },
+    'ARCH-15': {
+        name: 'Pill/badge ad-hoc (ratchet)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-012)',
+        fix: 'Usa <app-badge [variant]="..."> (shared/components/badge/) o las utilidades badge-* de tailwind.css en vez de componer rounded-full + micro-texto + px- a mano.',
+    },
+    'ARCH-16': {
+        name: 'Utilities de tamaño sobre btn-* (ratchet)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-013)',
+        fix: 'No mutiles el padding/font-size/radius de una utilidad btn-*. Layout (w-, flex, gap-) sí está permitido. Si necesitas un botón más chico, pide la variante de tamaño al DS.',
+    },
+    'ARCH-17': {
+        name: 'Tamaño de fuente arbitrario text-[NNpx] (ratchet)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-014)',
+        fix: 'Usa la escala tipográfica del DS: text-2xs (10px, piso absoluto — fix-032), text-xs (12px), text-sm (14px)… No inventes valores JIT ni tamaños menores a 10px.',
+    },
 };
 
 // ── ARCH-14: acumuladores de íconos usados durante el barrido (spec 0020) ────
@@ -202,6 +226,66 @@ function checkIconRegistry() {
     }
     if (iconDynamicFiles.size > 0) {
         console.log(`   ℹ ARCH-14: ${iconDynamicFiles.size} archivo(s) con [name] dinámico no verificable estáticamente.`);
+        console.log('');
+    }
+}
+
+// ── ARCH-15/16/17: disciplina de clases del DS con ratchet (fase 2 roadmap botones) ──
+// El backlog pre-existente vive en scripts/lib/class-discipline.baseline.json.
+// Solo se reportan REGRESIONES (un archivo supera su cuota). Mejoras → re-baselinear
+// con `npm run lint:arch -- --update-ds-baseline`.
+const DS_BASELINE_PATH = path.join(process.cwd(), 'scripts', 'lib', 'class-discipline.baseline.json');
+const UPDATE_DS_BASELINE = process.argv.includes('--update-ds-baseline');
+const dsCounts = {
+    'ARCH-15': new Map(),
+    'ARCH-16': new Map(),
+    'ARCH-17': new Map(),
+};
+
+function trackClassDiscipline(filePath, content) {
+    const rel = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+    const add = (rule, count, sample) => {
+        if (count === 0) return;
+        dsCounts[rule].set(rel, { count, sample });
+    };
+    if (!isPillWhitelisted(rel)) {
+        const pills = findAdhocPills(content);
+        add('ARCH-15', pills.length, pills[0]);
+    }
+    const overrides = findButtonSizeOverrides(content);
+    add('ARCH-16', overrides.length, overrides[0] ? `${overrides[0].attr} (→ ${overrides[0].offenders.join(', ')})` : undefined);
+    const sizes = findArbitraryTextSizes(content);
+    add('ARCH-17', sizes.length, [...new Set(sizes)].join(', '));
+}
+
+/** Post-barrido: ratchet contra el baseline (crea/actualiza según flags). */
+function checkClassDiscipline() {
+    if (UPDATE_DS_BASELINE || !fs.existsSync(DS_BASELINE_PATH)) {
+        const baseline = buildBaseline(dsCounts);
+        fs.writeFileSync(DS_BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n');
+        const totals = DS_RULES.map(r => `${r}: ${baseline.rules[r].total}`).join(' | ');
+        console.log(cyan, `   ℹ ARCH-15/16/17: baseline ${UPDATE_DS_BASELINE ? 'actualizado' : 'creado'} (${totals}).`);
+        console.log('');
+        return;
+    }
+    let baseline = null;
+    try {
+        baseline = JSON.parse(fs.readFileSync(DS_BASELINE_PATH, 'utf-8'));
+    } catch (e) {
+        console.warn(yellow, `⚠️  ARCH-15/16/17 deshabilitado: baseline ilegible (${String(e?.message || e)}). Regenera con --update-ds-baseline.`);
+        return;
+    }
+    const { regressions, currentTotal, baselineTotal, improved } = compareWithBaseline(dsCounts, baseline);
+    const report = STRICT ? reportError : reportWarning;
+    for (const r of regressions) {
+        report(
+            r.rule,
+            path.join(process.cwd(), r.file),
+            `Regresión de disciplina DS: ${r.now} caso(s) (cuota baseline: ${r.was}). Ejemplo: ${r.sample || '—'}`,
+        );
+    }
+    if (improved && regressions.length === 0) {
+        console.log(cyan, `   ℹ ARCH-15/16/17: el backlog bajó (${baselineTotal} → ${currentTotal}). Corre 'npm run lint:arch -- --update-ds-baseline' para consolidar la mejora.`);
         console.log('');
     }
 }
@@ -454,6 +538,9 @@ function analyzeTypeScript(filePath) {
 
     // ── Regla 14: acumular íconos usados (template inline + configs icon:) ───
     trackIconUsage(filePath, content);
+
+    // ── Reglas 15/16/17: disciplina de clases del DS (ratchet) ───────────────
+    trackClassDiscipline(filePath, content);
 }
 
 // ─── Análisis de Templates HTML ─────────────────────────────────────────────
@@ -500,6 +587,9 @@ function analyzeTemplate(filePath) {
 
     // ── Regla 14: acumular íconos usados en templates externos ──────────────
     trackIconUsage(filePath, content);
+
+    // ── Reglas 15/16/17: disciplina de clases del DS (ratchet) ───────────────
+    trackClassDiscipline(filePath, content);
 }
 
 // ─── Análisis de Estilos SCSS ───────────────────────────────────────────────
@@ -570,6 +660,9 @@ for (const dir of targetDirs) {
 
 // ── ARCH-14: diff íconos usados vs registrados (post-barrido) ────────────────
 checkIconRegistry();
+
+// ── ARCH-15/16/17: ratchet de disciplina DS (post-barrido) ────────────────────
+checkClassDiscipline();
 
 console.log('');
 

@@ -239,7 +239,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   >
                     <td class="py-3 px-4">
                       <p class="font-medium text-text-primary m-0">{{ venta.cliente }}</p>
-                      <p class="text-[10px] text-text-muted font-mono m-0 uppercase">
+                      <p class="text-2xs text-text-muted font-mono m-0 uppercase">
                         {{ venta.rut }}
                       </p>
                       @if (venta.resultado) {
@@ -319,7 +319,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <div class="flex flex-col gap-0.5">
                     <span class="font-bold text-text-primary">{{ venta.cliente }}</span>
                     <span
-                      class="text-[10px] text-text-muted font-mono uppercase tracking-tighter"
+                      class="text-2xs text-text-muted font-mono uppercase tracking-tighter"
                       >{{ venta.rut }}</span
                     >
                   </div>
@@ -332,14 +332,14 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <span class="text-xs text-text-secondary px-2 py-1 rounded-md bg-subtle">{{
                     venta.servicio
                   }}</span>
-                  <span class="text-[10px] text-text-muted">{{ venta.fecha }}</span>
+                  <span class="text-2xs text-text-muted">{{ venta.fecha }}</span>
                 </div>
 
                 <div
                   class="flex items-center justify-between pt-3 border-t border-border-subtle/50"
                 >
                   <span
-                    class="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                    class="inline-flex items-center px-2.5 py-1 rounded-full text-2xs font-bold uppercase tracking-wider"
                     [style]="
                       venta.estado === 'completado'
                         ? 'background:var(--state-success-bg);color:var(--state-success)'
@@ -352,13 +352,13 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   <div class="flex items-center gap-2">
                     @if (venta.cobrado) {
                       <span
-                        class="text-[10px] font-bold text-success uppercase px-2 py-1 bg-success-subtle border border-success rounded"
+                        class="text-2xs font-bold text-success uppercase px-2 py-1 bg-success-subtle border border-success rounded"
                         >Pagado</span
                       >
                     } @else {
                       <button
                         type="button"
-                        class="text-[10px] font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
+                        class="text-2xs font-bold text-brand uppercase px-3 py-1 bg-brand/10 border border-brand/20 rounded-lg"
                         (click)="cobroRegistrado.emit(venta.id)"
                       >
                         Cobrar

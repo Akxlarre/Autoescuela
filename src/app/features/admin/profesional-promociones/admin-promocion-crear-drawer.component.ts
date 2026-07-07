@@ -159,7 +159,7 @@ function generatePromoName(startIso: string): string {
               <div class="form-input bg-elevated cursor-default" >
                 {{ formatMonday(endDate()) }}
               </div>
-              <p class="text-[10px] mt-1 text-brand" >
+              <p class="text-2xs mt-1 text-brand" >
                 Calculada automáticamente: sábado de la 5ta semana (30 días de clase, lun-sáb)
               </p>
             </div>
@@ -190,7 +190,7 @@ function generatePromoName(startIso: string): string {
                 </div>
               </div>
             </div>
-            <p class="text-[10px] mt-1.5 text-text-muted">
+            <p class="text-2xs mt-1.5 text-text-muted">
               <app-icon name="info" [size]="10" />
               El nombre y código se generan automáticamente a partir de la fecha de inicio
               seleccionada.
@@ -216,7 +216,7 @@ function generatePromoName(startIso: string): string {
               >
                 <div class="flex items-center gap-3 mb-3">
                   <span
-                    class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-[11px] font-bold text-white"
+                    class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-2xs font-bold text-white"
                     [style.background]="courseColor(curso.code)"
                   >
                     {{ curso.code }}
@@ -278,7 +278,7 @@ function generatePromoName(startIso: string): string {
             <app-icon name="info" [size]="12" />
             Reglas de negocio
           </h4>
-          <ul class="text-[11px] flex flex-col gap-1 text-text-muted">
+          <ul class="text-2xs flex flex-col gap-1 text-text-muted">
             <li>Duración fija: <strong>30 días de clase</strong> (lun-sáb = 5 semanas)</li>
             <li>Inicio solo en <strong>lunes</strong>, cada 2 semanas</li>
             <li>Máximo <strong>100 alumnos</strong> por promoción (25 por curso)</li>
