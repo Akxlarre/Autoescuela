@@ -1,15 +1,15 @@
 import { TestBed } from '@angular/core/testing';
-import { CertificacionProfesionalFacade } from './certificacion-profesional.facade';
+import { CertificacionClaseBFacade } from './certificacion-clase-b.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
-import type { CertificacionProfesionalAlumnoRow } from '@core/models/ui/certificacion-profesional.model';
+import type { CertificacionAlumnoRow } from '@core/models/ui/certificacion-clase-b.model';
 
-describe('CertificacionProfesionalFacade', () => {
-  let facade: CertificacionProfesionalFacade;
+describe('CertificacionClaseBFacade', () => {
+  let facade: CertificacionClaseBFacade;
   let supabaseSpy: any;
   let toastSpy: any;
   let dmsViewerSpy: any;
@@ -19,42 +19,42 @@ describe('CertificacionProfesionalFacade', () => {
 
   const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
-  function makeAlumnoRow(
-    overrides: Partial<CertificacionProfesionalAlumnoRow> = {},
-  ): CertificacionProfesionalAlumnoRow {
+  const makeQuery = (resolvedValue: any) => ({
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue(resolvedValue),
+  });
+
+  function makeAlumnoRow(overrides: Partial<CertificacionAlumnoRow> = {}): CertificacionAlumnoRow {
     return {
       enrollmentId: 42,
       studentId: 5,
       nombre: 'Juan López',
       rut: '11.111.111-1',
-      curso: 'Clase Profesional A4',
-      licenseClass: 'A4',
-      promocion: 'PROM-1',
-      fechaInicio: null,
-      fechaTermino: null,
-      pctAsistenciaTeoria: 100,
-      pctAsistenciaPractica: 100,
-      pagoCorrecto: true,
-      notaPromedio: 80,
-      elegibilidad: { promocion: true, teoria: true, practica: true, pago: true, nota: true },
-      elegible: true,
+      curso: 'Clase B',
+      clasesCompletadas: 12,
+      clasesTotales: 12,
+      fechaTermino: '2026-06-01',
+      pctAsistenciaTeoria: null,
       certificadoId: null,
       certificadoFolio: null,
-      storagePath: null,
       certificadoStatus: 'pendiente',
+      storagePath: null,
       emailEnviado: false,
       email: 'juan@test.com',
       ...overrides,
     };
   }
 
-  const makeQuery = (resolvedValue: any) => ({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    in: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    limit: vi.fn().mockResolvedValue(resolvedValue),
-  });
+  function mockFromByTable(handlers: Record<string, any>) {
+    return vi.fn().mockImplementation((table: string) => {
+      if (handlers[table]) return handlers[table];
+      return makeQuery({ data: [], error: null });
+    });
+  }
 
   beforeEach(() => {
     supabaseSpy = {
@@ -75,7 +75,7 @@ describe('CertificacionProfesionalFacade', () => {
         },
       },
     };
-    toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
+    toastSpy = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
     dmsViewerSpy = { openByUrl: vi.fn() };
     branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
     authFacadeSpy = { currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: null }) };
@@ -86,7 +86,7 @@ describe('CertificacionProfesionalFacade', () => {
 
     TestBed.configureTestingModule({
       providers: [
-        CertificacionProfesionalFacade,
+        CertificacionClaseBFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: ToastService, useValue: toastSpy },
         { provide: DmsViewerService, useValue: dmsViewerSpy },
@@ -96,7 +96,7 @@ describe('CertificacionProfesionalFacade', () => {
       ],
     });
 
-    facade = TestBed.inject(CertificacionProfesionalFacade);
+    facade = TestBed.inject(CertificacionClaseBFacade);
   });
 
   it('should be created', () => {
@@ -125,35 +125,23 @@ describe('CertificacionProfesionalFacade', () => {
     });
   });
 
-  describe('initialize()', () => {
-    it('activa isLoading durante la carga', async () => {
-      // La query resolverá inmediatamente pero el flag debe haberse puesto
-      const loadingStates: boolean[] = [];
-      const sub = TestBed.runInInjectionContext(() => {
-        // Simplemente inicializamos y verificamos que no lanza
-        return facade.initialize();
-      });
-      await sub;
-      expect(facade.isLoading()).toBe(false);
-    });
-
-    it('segunda llamada no repite la carga (SWR)', async () => {
-      await facade.initialize();
-      const callsBefore = supabaseSpy.client.from.mock.calls.length;
-      await facade.initialize();
-      // refreshSilently también llama from, pero al menos no dobla las llamadas grandes
-      expect(supabaseSpy.client.from.mock.calls.length).toBeGreaterThanOrEqual(callsBefore);
+  describe('kpis computed', () => {
+    it('cuenta correctamente generados y pendientes', () => {
+      const kpis = facade.kpis();
+      expect(kpis.certificadosGenerados + kpis.pendientesGeneracion).toBe(kpis.totalAlumnos);
     });
   });
 
-  describe('kpis computed', () => {
-    it('cuenta correctamente generados y pendientes', () => {
-      // Inyectamos directamente en el signal privado via facade._alumnos (no es posible,
-      // así que testeamos la lógica via initialize con datos mockeados)
-      // KPI con lista vacía ya está testeado. Aquí verificamos la fórmula.
-      const kpis = facade.kpis();
-      // Con 0 alumnos: generados=0, pendientes=0, pendientesEnvio=0
-      expect(kpis.certificadosGenerados + kpis.pendientesGeneracion).toBe(kpis.totalAlumnos);
+  describe('initialize()', () => {
+    it('no lanza y desactiva isLoading al terminar', async () => {
+      await facade.initialize();
+      expect(facade.isLoading()).toBe(false);
+    });
+
+    it('segunda llamada no repite la carga con skeleton (SWR)', async () => {
+      await facade.initialize();
+      await facade.initialize();
+      expect(facade.isLoading()).toBe(false);
     });
   });
 
@@ -161,20 +149,15 @@ describe('CertificacionProfesionalFacade', () => {
     it('invoca la Edge Function con el enrollment_id correcto', async () => {
       await facade.generarCertificado(42);
       expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith(
-        'generate-certificate-professional-pdf',
+        'generate-certificate-b-pdf',
         { body: { enrollment_id: 42 } },
       );
     });
 
     it('muestra toast de éxito y abre DMS viewer cuando la Edge Function responde ok', async () => {
       await facade.generarCertificado(42);
-      expect(toastSpy.success).toHaveBeenCalledWith(
-        'Certificado profesional generado correctamente',
-      );
-      expect(dmsViewerSpy.openByUrl).toHaveBeenCalledWith(
-        'https://pdf',
-        'Certificado Clase Profesional',
-      );
+      expect(toastSpy.success).toHaveBeenCalledWith('Certificado generado correctamente');
+      expect(dmsViewerSpy.openByUrl).toHaveBeenCalledWith('https://pdf', 'Certificado Clase B');
     });
 
     it('muestra toast de error cuando la Edge Function falla', async () => {
@@ -183,25 +166,18 @@ describe('CertificacionProfesionalFacade', () => {
         error: new Error('500'),
       });
       await facade.generarCertificado(42);
-      expect(toastSpy.error).toHaveBeenCalledWith('No se pudo generar el certificado profesional');
+      expect(toastSpy.error).toHaveBeenCalledWith('No se pudo generar el certificado');
     });
 
     it('limpia generatingId tras la llamada (éxito o error)', async () => {
       await facade.generarCertificado(42);
-      expect(facade.generatingId()).toBeNull();
-
-      supabaseSpy.client.functions.invoke.mockResolvedValueOnce({
-        data: null,
-        error: new Error('err'),
-      });
-      await facade.generarCertificado(99);
       expect(facade.generatingId()).toBeNull();
     });
   });
 
   describe('verCertificado()', () => {
     it('genera signed URL y abre DMS viewer', async () => {
-      await facade.verCertificado('certificates_prof/42/cert.pdf', 'Juan López');
+      await facade.verCertificado('certificates/42/cert.pdf', 'Juan López');
       expect(supabaseSpy.client.storage.from).toHaveBeenCalledWith('documents');
       expect(dmsViewerSpy.openByUrl).toHaveBeenCalledWith(
         'https://signed',
@@ -218,50 +194,16 @@ describe('CertificacionProfesionalFacade', () => {
     });
   });
 
-  describe('reload()', () => {
-    it('re-inicializa el flag _initialized y recarga', async () => {
-      await facade.initialize(); // primera carga
-      const callsAfterInit = supabaseSpy.client.from.mock.calls.length;
-      await facade.reload();
-      // reload debe llamar again a from()
-      expect(supabaseSpy.client.from.mock.calls.length).toBeGreaterThan(callsAfterInit);
-    });
-  });
-
-  // Antes "acciones de placeholder": estos métodos ya son implementaciones reales
-  // (no muestran toast.info). Actualizado en hotfix-016.
-  describe('acciones reales', () => {
-    it('enviarEmail invoca la Edge Function y muestra toast de éxito', async () => {
-      await facade.enviarEmail(1);
-      expect(supabaseSpy.client.functions.invoke).toHaveBeenCalledWith('send-certificate-email', {
-        body: { enrollment_id: 1, type: 'professional' },
-      });
-      expect(toastSpy.success).toHaveBeenCalled();
-    });
-
-    it('generarPendientes sin elegibles no invoca generación', async () => {
+  describe('generarPendientes()', () => {
+    it('sin pendientes no invoca generación', async () => {
       await facade.generarPendientes();
       expect(supabaseSpy.client.functions.invoke).not.toHaveBeenCalled();
-    });
-
-    it('exportar siempre restablece isExporting al terminar', async () => {
-      await facade.exportar();
-      expect(facade.isExporting()).toBe(false);
     });
   });
 
   describe('notificaciones de certificado (Spec 0024, AC7)', () => {
-    function mockFromByTable(handlers: Record<string, any>) {
-      return vi.fn().mockImplementation((table: string) => {
-        if (handlers[table]) return handlers[table];
-        return makeQuery({ data: [], error: null });
-      });
-    }
-
     it('notifica al alumno tras generar un certificado individual', async () => {
-      (facade as any)._alumnos.set([
-        makeAlumnoRow({ enrollmentId: 42, studentId: 5, curso: 'Clase Profesional A4' }),
-      ]);
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
       const studentsHandler = {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({

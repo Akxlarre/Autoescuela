@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -48,6 +49,7 @@ export class CertificacionProfesionalFacade {
   private readonly branchFacade = inject(BranchFacade);
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
+  private readonly notifications = inject(NotificationsFacade);
 
   // ── Estado privado ──
   private readonly _promociones = signal<PromocionCertOption[]>([]);
@@ -169,6 +171,8 @@ export class CertificacionProfesionalFacade {
     const result = await this.invokeGenerateCertificate(enrollmentId);
     if (!result) return;
     this.toast.success('Certificado profesional generado correctamente');
+    const alumno = this._alumnos().find((a) => a.enrollmentId === enrollmentId);
+    if (alumno) this.notifyCertificateReady(alumno);
     // Refresh alumnos first so fetchLog picks up the new cert ID
     const cursoId = this._selectedCursoId();
     if (cursoId !== null) {
@@ -176,6 +180,42 @@ export class CertificacionProfesionalFacade {
       void this.fetchLog();
     }
     this.dmsViewer.openByUrl(result.url, 'Certificado Clase Profesional');
+  }
+
+  /**
+   * Notifica al alumno que su certificado quedó disponible en el portal (AC7).
+   * Solo se llama al generar (no en `descargarPdf`/`enviarEmail`, para no duplicar).
+   * Fire-and-forget: un fallo nunca rompe el flujo de generación (AC-E1).
+   */
+  private notifyCertificateReady(
+    alumno: Pick<CertificacionProfesionalAlumnoRow, 'enrollmentId' | 'studentId' | 'curso'>,
+  ): void {
+    this.resolveStudentUserId(alumno.studentId)
+      .then((userId) => {
+        if (!userId) return;
+        this.notifications
+          .notifyUsers([userId], {
+            subject: 'Tu certificado está listo',
+            message: `Tu certificado de ${alumno.curso} ya está disponible en tu portal.`,
+            referenceType: 'certificate',
+            referenceId: alumno.enrollmentId,
+          })
+          .catch(() => this.toast.warning('No se pudo notificar al alumno'));
+      })
+      .catch(() => {
+        // Resolución de destinatario falló (red/RLS) — no rompe la generación (AC-E1).
+      });
+  }
+
+  /** Resuelve `students.id` → `users.id` para poder notificar al alumno. */
+  private async resolveStudentUserId(studentId: number): Promise<number | null> {
+    const { data, error } = await this.supabase.client
+      .from('students')
+      .select('user_id')
+      .eq('id', studentId)
+      .single();
+    if (error || !data) return null;
+    return (data as { user_id: number }).user_id;
   }
 
   async verCertificado(storagePath: string, nombre: string): Promise<void> {
@@ -234,6 +274,7 @@ export class CertificacionProfesionalFacade {
           errores.push(alumno.nombre);
         } else {
           generados++;
+          this.notifyCertificateReady(alumno);
         }
       } catch {
         errores.push(alumno.nombre);

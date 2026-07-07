@@ -7,6 +7,8 @@ import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.fa
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -73,6 +75,8 @@ export class EnrollmentFacade {
   private readonly paymentFacade = inject(EnrollmentPaymentFacade);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly dmsViewer = inject(DmsViewerService);
+  private readonly notifications = inject(NotificationsFacade);
+  private readonly toast = inject(ToastService);
 
   async confirm(config: {
     title: string;
@@ -1285,6 +1289,7 @@ export class EnrollmentFacade {
 
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
+      this.notifyEnrollmentConfirmed(enrollmentNumber);
 
       return enrollmentNumber;
     } catch (e) {
@@ -1346,6 +1351,7 @@ export class EnrollmentFacade {
 
       await this.refreshEnrollment();
       this.updateStepStatus(6, 'completed');
+      this.notifyEnrollmentConfirmed(enrollmentNumber);
 
       return enrollmentNumber;
     } catch {
@@ -1354,6 +1360,41 @@ export class EnrollmentFacade {
     } finally {
       this._isSubmitting.set(false);
     }
+  }
+
+  /**
+   * Notifica al alumno y a los admins tras la confirmación de una matrícula (AC6).
+   * Fire-and-forget: un fallo del INSERT jamás rompe la confirmación (AC-E1).
+   * Llamada solo desde la rama de éxito de `confirmEnrollment()`/`confirmWithPayment()`,
+   * nunca desde el guardado de un draft (AC-E4).
+   */
+  private notifyEnrollmentConfirmed(enrollmentNumber: string): void {
+    const draft = this._draft();
+    if (!draft.userId) return;
+
+    const pd = this._personalData();
+    const studentName = pd ? `${pd.firstNames} ${pd.paternalLastName}`.trim() : 'Alumno';
+    const courseName = this._courses().find((c) => c.id === this._enrollment()?.course_id)?.name;
+
+    this.notifications
+      .notifyUsers([draft.userId], {
+        subject: 'Matrícula confirmada',
+        message: `Tu matrícula ${enrollmentNumber} ha sido confirmada.`,
+        referenceType: 'enrollment',
+        referenceId: draft.studentId ?? undefined,
+      })
+      .catch(() => this.toast.warning('No se pudo notificar al alumno de su matrícula'));
+
+    this.notifications
+      .notifyRole('admin', null, {
+        subject: 'Nueva matrícula confirmada',
+        message: courseName
+          ? `Matrícula ${enrollmentNumber} — ${studentName} (${courseName})`
+          : `Matrícula ${enrollmentNumber} — ${studentName}`,
+        referenceType: 'enrollment',
+        referenceId: draft.studentId ?? undefined,
+      })
+      .catch(() => this.toast.warning('No se pudo notificar a los administradores'));
   }
 
   // ══════════════════════════════════════════════════════════════════════════════

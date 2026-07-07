@@ -65,8 +65,10 @@
 
   &:hover,
   &:focus-visible {
-    background-color: var(--surface-hover,
-        color-mix(in srgb, var(--color-primary) 6%, transparent));
+    background-color: var(
+      --surface-hover,
+      color-mix(in srgb, var(--color-primary) 6%, transparent)
+    );
   }
 
   &.is-unread {
@@ -146,6 +148,55 @@
   border-radius: var(--radius-full);
   background: var(--ds-brand, var(--color-primary));
   align-self: center;
+}
+
+// ── Grupo colapsado (AC8) ──────────────────────────────────────────────────
+.notif-panel__item--group {
+  padding-right: 8px;
+}
+
+.notif-panel__group-read {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    color: var(--color-primary);
+  }
+}
+
+.notif-panel__group-chevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.notif-panel__group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+}
+
+.notif-panel__item--nested {
+  padding-left: 32px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
 // ── Estado vacío ─────────────────────────────────────────────────────────────

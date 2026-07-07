@@ -2,6 +2,7 @@
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import type {
   AlumnoDetalleUI,
   ClasePracticaUI,
@@ -48,6 +49,7 @@ export class AdminAlumnoDetalleFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
+  private readonly notifications = inject(NotificationsFacade);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
   private readonly _alumno = signal<AlumnoDetalleUI | null>(null);
@@ -973,7 +975,17 @@ export class AdminAlumnoDetalleFacade {
     const vehicleId = this._slotVehicleMap.get(payload.scheduledAt);
     if (!vehicleId) throw new Error('No se pudo determinar el vehículo para este horario.');
 
+    let previousInstructorId: number | null = null;
+
     if (payload.sessionId) {
+      // Capturar instructor anterior ANTES del update — se le notifica el bloque liberado (AC5).
+      const { data: previous } = await this.supabase.client
+        .from('class_b_sessions')
+        .select('instructor_id')
+        .eq('id', payload.sessionId)
+        .single();
+      previousInstructorId = (previous as { instructor_id: number } | null)?.instructor_id ?? null;
+
       const { error } = await this.supabase.client
         .from('class_b_sessions')
         .update({
@@ -999,7 +1011,90 @@ export class AdminAlumnoDetalleFacade {
     }
 
     this.toast.success('Clase reprogramada correctamente.');
+    this.notifyClaseReprogramada(payload, previousInstructorId);
     await this.refreshSilently();
+  }
+
+  /**
+   * Notifica al alumno y al/los instructor(es) tras reprogramar una clase (AC5).
+   * Si cambió el instructor, notifica a ambos: al nuevo (asignación) y al anterior
+   * (bloque liberado). El actor (admin/secretaria) nunca se auto-notifica porque
+   * `notifyUsers` solo inserta para los destinatarios explícitos, no para el actor.
+   * Fire-and-forget: un fallo nunca rompe la reprogramación ya confirmada (AC-E1).
+   */
+  private notifyClaseReprogramada(
+    payload: ReprogramarClasePayload,
+    previousInstructorId: number | null,
+  ): void {
+    const alumno = this._alumno();
+    const fecha = formatChileanDate(payload.scheduledAt);
+    const hora = to24hTime(payload.scheduledAt);
+    const instructorChanged =
+      previousInstructorId !== null && previousInstructorId !== payload.instructorId;
+
+    if (alumno?.userId) {
+      this.notifications
+        .notifyUsers([alumno.userId], {
+          subject: 'Clase reprogramada',
+          message: `Tu clase N° ${payload.claseNumero} fue reprogramada para el ${fecha} a las ${hora}.`,
+          referenceType: 'class_b',
+          referenceId: payload.sessionId ?? undefined,
+        })
+        .catch(() => this.toast.warning('No se pudo notificar al alumno de la reprogramación'));
+    }
+
+    const instructorIds = instructorChanged
+      ? [payload.instructorId, previousInstructorId as number]
+      : [payload.instructorId];
+
+    this.resolveInstructorUserIds(instructorIds)
+      .then((userIdByInstructorId) => {
+        const newInstructorUserId = userIdByInstructorId.get(payload.instructorId);
+        if (newInstructorUserId) {
+          this.notifications
+            .notifyUsers([newInstructorUserId], {
+              subject: 'Clase reprogramada',
+              message: `Se te asignó la clase de ${alumno?.nombre ?? 'un alumno'} para el ${fecha} a las ${hora}.`,
+              referenceType: 'class_b',
+              referenceId: payload.sessionId ?? undefined,
+            })
+            .catch(() => this.toast.warning('No se pudo notificar al instructor'));
+        }
+
+        if (instructorChanged) {
+          const previousUserId = userIdByInstructorId.get(previousInstructorId as number);
+          if (previousUserId) {
+            this.notifications
+              .notifyUsers([previousUserId], {
+                subject: 'Clase reasignada',
+                message: `La clase de ${alumno?.nombre ?? 'un alumno'} que tenías asignada fue reasignada a otro instructor.`,
+                referenceType: 'class_b',
+                referenceId: payload.sessionId ?? undefined,
+              })
+              .catch(() => this.toast.warning('No se pudo notificar al instructor anterior'));
+          }
+        }
+      })
+      .catch(() => {
+        // Resolución de destinatarios falló (red/RLS) — no rompe la reprogramación (AC-E1).
+      });
+  }
+
+  /** Resuelve `instructors.id` → `users.id` para poder notificar a instructores. */
+  private async resolveInstructorUserIds(instructorIds: number[]): Promise<Map<number, number>> {
+    const uniqueIds = [...new Set(instructorIds)];
+    const map = new Map<number, number>();
+
+    const { data, error } = await this.supabase.client
+      .from('instructors')
+      .select('id, user_id')
+      .in('id', uniqueIds);
+
+    if (error || !data) return map;
+    for (const row of data as Array<{ id: number; user_id: number }>) {
+      map.set(row.id, row.user_id);
+    }
+    return map;
   }
 
   private slotDateFromStart(ts: string | null | undefined): string {

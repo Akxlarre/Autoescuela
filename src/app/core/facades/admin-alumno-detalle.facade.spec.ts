@@ -3,12 +3,15 @@ import { AdminAlumnoDetalleFacade } from './admin-alumno-detalle.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 
 describe('AdminAlumnoDetalleFacade', () => {
   let facade: AdminAlumnoDetalleFacade;
   let supabaseSpy: any;
   let invokeSpy: any;
   let dmsViewerSpy: any;
+  let toastSpy: any;
+  let notificationsSpy: any;
 
   beforeEach(() => {
     invokeSpy = vi.fn().mockResolvedValue({
@@ -34,13 +37,19 @@ describe('AdminAlumnoDetalleFacade', () => {
     };
 
     dmsViewerSpy = { openByUrl: vi.fn() };
+    toastSpy = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() };
+    notificationsSpy = {
+      notifyUsers: vi.fn().mockResolvedValue(undefined),
+      notifyRole: vi.fn().mockResolvedValue(undefined),
+    };
 
     TestBed.configureTestingModule({
       providers: [
         AdminAlumnoDetalleFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
-        { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+        { provide: ToastService, useValue: toastSpy },
         { provide: DmsViewerService, useValue: dmsViewerSpy },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
       ],
     });
 
@@ -93,6 +102,145 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(invokeSpy).toHaveBeenCalledWith('generate-student-license-pdf', {
         body: { enrollment_id: 3, variant: 'initial' },
       });
+    });
+  });
+
+  describe('reprogramarClase — notificaciones (Spec 0024, AC5)', () => {
+    const basePayload = {
+      sessionId: 55,
+      enrollmentId: 7,
+      claseNumero: 3,
+      instructorId: 100,
+      scheduledAt: '2026-07-10T14:00:00Z',
+    };
+
+    const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    function mockFromByTable(handlers: Record<string, any>) {
+      return vi.fn().mockImplementation((table: string) => {
+        if (handlers[table]) return handlers[table];
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi
+              .fn()
+              .mockReturnValue({ single: vi.fn().mockResolvedValue({ data: null, error: null }) }),
+          }),
+          update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        };
+      });
+    }
+
+    beforeEach(() => {
+      (facade as any)._alumno.set({ userId: 42, nombre: 'Ana Alumna' });
+      (facade as any)._slotVehicleMap.set(basePayload.scheduledAt, 9);
+    });
+
+    it('notifica al alumno y al instructor cuando el instructor no cambia', async () => {
+      const classBSessionsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { instructor_id: 100 }, error: null }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+      };
+      const instructorsHandler = {
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockResolvedValue({ data: [{ id: 100, user_id: 200 }], error: null }),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({
+        class_b_sessions: classBSessionsHandler,
+        instructors: instructorsHandler,
+      });
+
+      await facade.reprogramarClase(basePayload);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [42],
+        expect.objectContaining({ referenceType: 'class_b', referenceId: 55 }),
+      );
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [200],
+        expect.objectContaining({ referenceType: 'class_b', referenceId: 55 }),
+      );
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(2);
+    });
+
+    it('notifica también al instructor anterior cuando el instructor cambia', async () => {
+      const classBSessionsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { instructor_id: 999 }, error: null }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+      };
+      const instructorsHandler = {
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockResolvedValue({
+            data: [
+              { id: 100, user_id: 200 },
+              { id: 999, user_id: 777 },
+            ],
+            error: null,
+          }),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({
+        class_b_sessions: classBSessionsHandler,
+        instructors: instructorsHandler,
+      });
+
+      await facade.reprogramarClase(basePayload);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([42], expect.any(Object));
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([200], expect.any(Object));
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([777], expect.any(Object));
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(3);
+    });
+
+    it('no rompe la reprogramación si falla la notificación (AC-E1)', async () => {
+      const classBSessionsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { instructor_id: 100 }, error: null }),
+          }),
+        }),
+        update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+      };
+      supabaseSpy.client.from = mockFromByTable({ class_b_sessions: classBSessionsHandler });
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('insert failed'));
+
+      await expect(facade.reprogramarClase(basePayload)).resolves.toBeUndefined();
+      await flushMicrotasks();
+    });
+
+    it('crea la sesión (sin sessionId) y notifica sin buscar instructor anterior', async () => {
+      const insertPayload = { ...basePayload, sessionId: null };
+      const classBSessionsHandler = {
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      };
+      const instructorsHandler = {
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockResolvedValue({ data: [{ id: 100, user_id: 200 }], error: null }),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({
+        class_b_sessions: classBSessionsHandler,
+        instructors: instructorsHandler,
+      });
+
+      await facade.reprogramarClase(insertPayload);
+      await flushMicrotasks();
+
+      expect(classBSessionsHandler.insert).toHaveBeenCalled();
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([42], expect.any(Object));
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([200], expect.any(Object));
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(2);
     });
   });
 });
