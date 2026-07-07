@@ -101,7 +101,7 @@ const RULES = {
     'ARCH-02': {
         name: 'Facade-only injection',
         doc: 'docs/TECH-STACK-RULES.md#arch-02',
-        fix: 'Los componentes vista solo deben inyectar clases tipo Facade (*FacadeService).',
+        fix: 'Los componentes vista solo inyectan Facades (*FacadeService) o servicios UI transversales de core/services/ui/ (Toast, ConfirmModal, Theme…). Servicios de dominio/datos van detrás de una Facade; SupabaseService jamás en componentes.',
     },
     'ARCH-03': {
         name: 'TDD required for core logic',
@@ -366,11 +366,21 @@ function analyzeTypeScript(filePath) {
     const isViewComponent = isComponent && (isInFeatures || isInShared);
 
     // ── Regla 1: Sin importación directa de Supabase en la capa UI ──────────
+    // Mapa identificador importado → module specifier (lo usa la Regla 2 para
+    // distinguir servicios UI transversales de servicios de dominio/datos).
+    const importSpecifiers = new Map();
     for (const statement of sourceFile.statements) {
         if (ts.isImportDeclaration(statement)) {
             const specifier = statement.moduleSpecifier
                 .getText(sourceFile)
                 .replace(/['"]/g, '');
+
+            const bindings = statement.importClause?.namedBindings;
+            if (bindings && ts.isNamedImports(bindings)) {
+                for (const el of bindings.elements) {
+                    importSpecifiers.set(el.name.text, specifier);
+                }
+            }
 
             // Regla 1: Supabase directo en UI (skip si stack.supabase === false)
             if (STACK.supabase && specifier === '@supabase/supabase-js' && (isInFeatures || isInShared)) {
@@ -399,9 +409,15 @@ function analyzeTypeScript(filePath) {
     }
 
     // ── Regla 2: Sin inject(*Service) en componentes vista ──────────────────
-    // Servicios de infraestructura permitidos en componentes (no son Facades pero
-    // son parte del design system y no acceden a datos externos directamente).
+    // Whitelist por PATH de import (facades.md §2): los .service.ts de
+    // core/services/ui/ son utilitarios transversales sin estado de dominio
+    // (Toast, ConfirmModal, Theme, DmsViewer…) y los componentes pueden
+    // inyectarlos. ErrorSanitizerService (infrastructure) es formateo puro.
+    // Los servicios de dominio/datos siguen prohibidos — SupabaseService SIEMPRE.
     const ALLOWED_SERVICES_IN_COMPONENTS = ['GsapAnimationsService'];
+    const NEVER_IN_COMPONENTS = ['SupabaseService'];
+    const UI_SERVICE_PATH_RE = /services\/ui\//;
+    const INFRA_ALLOWED_PATH_RE = /error-sanitizer\.service/;
 
     if (isViewComponent) {
         walkAst(sourceFile, node => {
@@ -414,12 +430,17 @@ function analyzeTypeScript(filePath) {
             const argText = node.arguments[0].getText(sourceFile);
 
             // Dispara si el argumento termina en 'Service' pero NO en 'FacadeService'
-            // y no está en la whitelist de servicios de infraestructura permitidos.
-            if (
-                argText.endsWith('Service') &&
-                !argText.endsWith('FacadeService') &&
-                !ALLOWED_SERVICES_IN_COMPONENTS.includes(argText)
-            ) {
+            // y no proviene de core/services/ui/ ni está en la whitelist explícita.
+            if (!argText.endsWith('Service') || argText.endsWith('FacadeService')) return;
+
+            const spec = importSpecifiers.get(argText) ?? '';
+            const isUiTransversal =
+                UI_SERVICE_PATH_RE.test(spec) || INFRA_ALLOWED_PATH_RE.test(spec);
+            const allowed =
+                !NEVER_IN_COMPONENTS.includes(argText) &&
+                (isUiTransversal || ALLOWED_SERVICES_IN_COMPONENTS.includes(argText));
+
+            if (!allowed) {
                 reportError(
                     'ARCH-02', filePath,
                     `Inyección directa de '${argText}' en componente vista`,
