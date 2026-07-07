@@ -173,7 +173,7 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
         <div class="flex flex-1 min-w-0 w-full overflow-hidden relative bg-surface gap-2 lg:pr-2">
           <main
             #mainContent
-            class="flex-1 flex flex-col overflow-hidden w-full max-w-full bg-base lg:rounded-t-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle focus:outline-none"
+            class="flex-1 flex flex-col overflow-hidden w-full max-w-full bg-base rounded-t-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle focus:outline-none"
             style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"

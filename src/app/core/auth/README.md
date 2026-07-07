@@ -11,7 +11,6 @@ Abstracciones centrales para autenticación y control de acceso basado en roles 
 | `AuthService` | Login, Logout, estado de sesión (Signals: `currentUser`, `isAuthenticated`) |
 | `authGuard` | Guard para rutas protegidas |
 | `AuthInterceptor` | Añade `Authorization: Bearer <token>` a HttpClient; en 401 intenta refresh y retry |
-| `HasRoleDirective` | `*appHasRole="'admin'"` — oculta elementos según rol sin lógica en componente |
 
 ## Uso
 
@@ -26,23 +25,6 @@ providers: [
   provideHttpClient(withInterceptorsFromDi()),
   // ...
 ]
-```
-
-### Directiva *appHasRole
-
-```html
-<button *appHasRole="'admin'">Solo administradores</button>
-<div *appHasRole="['admin', 'member']">Admin o member</div>
-```
-
-Importar en el componente:
-
-```typescript
-import { HasRoleDirective } from '@core/auth';
-
-@Component({
-  imports: [HasRoleDirective, ...],
-})
 ```
 
 ## Flujo de Refresh Token
