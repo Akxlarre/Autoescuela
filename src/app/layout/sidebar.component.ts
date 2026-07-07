@@ -38,7 +38,8 @@ import { LogoComponent } from '@shared/components/logo/logo.component';
   template: `
     <nav
       #sidebarEl
-      class="flex h-full min-h-0 w-60 flex-col max-lg:border-r border-border-subtle bg-surface py-4 max-lg:shadow-(--shadow-layout-sidebar)"
+      class="flex h-full min-h-0 w-60 flex-col max-lg:border-r border-border-subtle bg-surface py-4 max-lg:shadow-(--shadow-layout-sidebar) max-lg:rounded-tr-[var(--radius-2xl)]"
+      style="will-change: transform;"
       aria-label="Navegación principal"
     >
       <!-- Brand Logo -->
@@ -51,7 +52,7 @@ import { LogoComponent } from '@shared/components/logo/logo.component';
         @for (group of menuConfig.menuItems(); track group.group) {
           <div class="mb-6">
             <p
-              class="text-[10px] font-semibold uppercase tracking-widest px-3 mb-1"
+              class="text-2xs font-semibold uppercase tracking-widest px-3 mb-1"
               style="color: var(--text-muted)"
             >
               {{ group.group }}

@@ -910,7 +910,7 @@ export class GsapAnimationsService {
       }
 
       if (panelEl) {
-        tl.fromTo(panelEl, { x: '100%' }, { x: '0%', duration: 0.4, ease: 'power3.out' }, 0);
+        tl.fromTo(panelEl, { x: '100%' }, { x: '0%', duration: 0.3, ease: 'power3.out', clearProps: 'transform' }, 0);
       }
     } else {
       // ── DESKTOP: layout-shift animando el width ───────────────────────────
@@ -941,7 +941,7 @@ export class GsapAnimationsService {
         {
           width: targetWidth,
           opacity: 1,
-          duration: 0.45,
+          duration: 0.3,
           ease: 'power3.out',
           clearProps: 'opacity',
         },
@@ -989,10 +989,10 @@ export class GsapAnimationsService {
       });
 
       if (panelEl) {
-        tl.to(panelEl, { x: '100%', duration: 0.35, ease: 'power3.in' }, 0);
+        tl.to(panelEl, { x: '100%', duration: 0.25, ease: 'power3.in' }, 0);
       }
       if (backdropEl) {
-        tl.to(backdropEl, { opacity: 0, duration: 0.25, ease: 'power2.in' }, 0);
+        tl.to(backdropEl, { opacity: 0, duration: 0.2, ease: 'power2.in' }, 0);
       }
     } else {
       // ── DESKTOP: colapso del width ────────────────────────────────────────
@@ -1005,7 +1005,7 @@ export class GsapAnimationsService {
       gsap.to(drawerEl, {
         width: 0,
         opacity: 0,
-        duration: 0.35,
+        duration: 0.25,
         ease: 'power3.in',
         onComplete: () => {
           gsap.set(drawerEl, { display: 'none', clearProps: 'opacity' });
@@ -1248,7 +1248,8 @@ export class GsapAnimationsService {
   ): void {
     if (!isPlatformBrowser(this.platformId)) return;
 
-    const duration = this.prefersReducedMotion ? 0 : 0.32;
+    const durationOpen = this.prefersReducedMotion ? 0 : 0.3;
+    const durationClose = this.prefersReducedMotion ? 0 : 0.25;
     const easeOpen = 'power3.out';
     const easeClose = 'power3.in';
 
@@ -1258,12 +1259,12 @@ export class GsapAnimationsService {
       gsap.set(aside, { xPercent: -100 });
       gsap.to(backdrop, {
         opacity: 1,
-        duration,
+        duration: durationOpen,
         ease: easeOpen,
       });
       gsap.to(aside, {
         xPercent: 0,
-        duration,
+        duration: durationOpen,
         ease: easeOpen,
         overwrite: 'auto',
       });
@@ -1271,12 +1272,12 @@ export class GsapAnimationsService {
       gsap.killTweensOf([backdrop, aside]);
       gsap.to(backdrop, {
         opacity: 0,
-        duration: this.prefersReducedMotion ? 0 : 0.22,
+        duration: this.prefersReducedMotion ? 0 : 0.2,
         ease: easeClose,
       });
       gsap.to(aside, {
         xPercent: -100,
-        duration,
+        duration: durationClose,
         ease: easeClose,
         overwrite: 'auto',
         onComplete: () => {

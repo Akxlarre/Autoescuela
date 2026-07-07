@@ -81,6 +81,24 @@ $bp-lg: 1024px;
       gap: var(--bento-gap-lg);
       padding: var(--bento-pad-lg);
     }
+
+    /* ── Modificador Canónico para Layouts Full-Screen (App-like) ── */
+    /* Resuelve pantallas con Hero + Card. 
+       En mobile permite scroll nativo. En desktop (lg+) asegura que la Card ocupe el resto del viewport. */
+    &.bento-grid--fill-screen {
+      @container layoutmain (min-width: #{$bp-lg}) {
+        height: calc(100vh - 120px);
+        grid-template-rows: auto minmax(0, 1fr);
+      }
+    }
+
+    /* Variante para Dashboards complejos (Hero + 2 filas de tarjetas abajo) */
+    &.bento-grid--fill-screen-2 {
+      @container layoutmain (min-width: #{$bp-lg}) {
+        height: calc(100vh - 120px);
+        grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
+      }
+    }
   }
 }
 

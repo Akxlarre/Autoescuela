@@ -171,7 +171,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory`, `InstructorHoraRow`, `InstructorHorarioSession` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
 | `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
-| `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification` | `ui` | `src/app/core/models/ui/notification.model.ts` |
+| `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |
 | `RentabilidadCurso`, `AlumnoDeudor`, `PagoReciente`, `MetodoPago`, `EstadoCuentaResumen`, `EstadoCuentaHistorialItem` | `ui` | `src/app/core/models/ui/pagos.model.ts` |
 | `PreInscritoStatusSeverity`, `PreInscritoTableRow`, `EvaluarTestPayload`, `CompletarMatriculaPayload`, `PromocionOption`, `PromocionCourseOption` | `ui` | `src/app/core/models/ui/pre-inscrito-table.model.ts` |
 | `PromocionCursoRow`, `PromocionCursoRelator`, `PromocionTableRow`, `PromocionStatus`, `RelatorOption`, `CrearPromocionCursoPayload`, `CrearPromocionPayload`, `PromocionAlumno`, `EditarPromocionPayload` | `ui` | `src/app/core/models/ui/promocion-table.model.ts` |

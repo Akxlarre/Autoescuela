@@ -76,6 +76,8 @@ background: var(--bg-surface);
 | `bento-feature` | 3x2 bloque grande |
 | `bento-hero` | Full width superior |
 | `bento-banner` | Full width cualquier posición |
+| `bento-grid--fill-screen` | Layout App (100vh lg+). 1 Hero auto + 1 fila 1fr (Ej: Tareas) |
+| `bento-grid--fill-screen-2`| Layout App (100vh lg+). 1 Hero auto + 2 filas 1fr (Ej: Dashboard) |
 
 **Regla**: Solo 1 `.card-accent` por sección bento.
 

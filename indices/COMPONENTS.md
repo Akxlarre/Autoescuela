@@ -51,7 +51,7 @@
 
 | Componente | Tipo/Categoría | Props principales | Ubicación | Estado |
 |------------|----------------|-------------------|-----------|--------|
-| `app-notifications-panel` | Dropdown / Panel | `notifications` (Notification[], req), `unreadCount` (number, 0) — outputs: `markRead` (string), `markAllRead` (void). Dumb: sin servicios. Entrada animada con `[appAnimateIn]` desde TopbarComponent. | `shared/components/notifications-panel/notifications-panel.component.ts` | ✅ Estable |
+| `app-notifications-panel` | Dropdown / Panel | `entries` (NotificationPanelEntry[], req — **Spec 0024**, single\|group agrupado AC8), `notifications` (Notification[], req — lookup para expandir grupos), `unreadCount` (number, 0) — outputs: `markRead` (string), `markReadMany` (string[], **Spec 0024**), `markAllRead` (void), `notifClicked` (Notification). Dumb: sin servicios, expand/collapse de grupos vía signal local. Entrada animada con `[appAnimateIn]` desde TopbarComponent. | `shared/components/notifications-panel/notifications-panel.component.ts` | ✅ Estable |
 | `app-search-panel` | Command Palette global | inputs: `groups` (SearchResultGroup[], req), `rightPx` (number, 24). outputs: `queryChange` (string), `closed` (void), `resultSelected` (SearchResult). Dumb puro sin inyección de facades. Chips rápidos en vacío, grupos Acciones/Alumnos con navegación ↑↓↵, footer de atajos. **Alumnos expandibles:** click en fila → menú contextual horizontal con 4 chips de acción rápida (ver ficha, pago, agenda, matrícula); Enter colapsado=expande / expandido=ver ficha; cambio de query colapsa automáticamente. Coordinado por `AppShellComponent` + `GlobalSearchFacade`. | `shared/components/search-panel/search-panel.component.ts` | ✅ Estable |
 | `app-user-panel` | Dropdown / Panel | `user` (User, req) — outputs: `action` (string), `logout` (void). Dumb: sin servicios ni lógica de confirmación. El segundo paso de logout (`ConfirmModalService.confirm()`) es responsabilidad del TopbarComponent (Smart parent). Menú desplegable para opciones de usuario desde TopbarComponent animado con `[appAnimateIn]`. | `shared/components/user-panel/user-panel.component.ts` | ✅ Estable |
 
@@ -355,6 +355,7 @@
 | `app-liquidaciones-content` | `liquidaciones`, `kpis`, `isLoading`, `isExporting`, `mesActual`, `anioActual`, `isDrawerOpen` | `mesAnterior`, `mesSiguiente`, `deshacer`, `pagar`, `exportRequested` | `src/app/shared/components/liquidaciones-content/liquidaciones-content.component.ts` |
 | `app-live-classes-panel` | `classes`, `loading` | `actionClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
 | `app-login-card` | `mode`, `loading`, `errorMsg`, `successMsg` | `modeChange`, `formSubmit` | `src/app/shared/components/login-card/login-card.component.ts` |
+| `app-logo` | — | — | `src/app/shared/components/logo/logo.component.ts` |
 | `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |
 | `app-confirmation-step` | `data` | `finish`, `downloadReceipt`, `downloadContract` | `src/app/shared/components/matricula-steps/confirmation/confirmation.component.ts` |
 | `app-contract-step` | `data`, `loading`, `stepNumber`, `isPublic`, `file` | `dataChange`, `generateContract`, `next`, `back` | `src/app/shared/components/matricula-steps/contract/contract.component.ts` |
@@ -365,7 +366,7 @@
 | `app-psych-test` | `answers`, `loading` | `answersChange`, `next`, `back` | `src/app/shared/components/matricula-steps/psych-test/psych-test.component.ts` |
 | `app-public-confirmation` | `type`, `enrollmentNumber`, `message` | — | `src/app/shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts` |
 | `app-media-upload-control` | `label`, `buttonLabel`, `buttonIcon`, `accept`, `isUploading`, `previewType`, `files` | `fileSelected` | `src/app/shared/components/media-upload-control/media-upload-control.component.ts` |
-| `app-notifications-panel` | `notifications`, `unreadCount` | `markRead`, `markAllRead`, `notifClicked` | `src/app/shared/components/notifications-panel/notifications-panel.component.ts` |
+| `app-notifications-panel` | `entries`, `notifications`, `unreadCount` | `markRead`, `markReadMany`, `markAllRead`, `notifClicked` | `src/app/shared/components/notifications-panel/notifications-panel.component.ts` |
 | `app-pago-instructor-drawer` | — | — | `src/app/shared/components/pago-instructor-modal/pago-instructor-modal.component.ts` |
 | `app-phone-input` | `value`, `id`, `label`, `required`, `forceDirty` | `valueChange` | `src/app/shared/components/phone-input/phone-input.component.ts` |
 | `app-public-context-banner` | `context` | `editRequested` | `src/app/shared/components/public-enrollment-steps/public-context-banner/public-context-banner.component.ts` |
@@ -383,7 +384,7 @@
 | `app-reportes-contables-content` | `kpis`, `ingresosCategoria`, `gastosCategoria`, `evolucionMensual`, `detalleDiario`, `diasConMovimientos`, `escuela`, `isLoading`, `isExporting`, `gastosFijos`, `filtros` | `aplicarFiltros`, `exportRequested`, `registrarGastoClick`, `verDetalle` | `src/app/shared/components/reportes-contables-content/reportes-contables-content.component.ts` |
 | `app-schedule-grid` | `scheduleGrid`, `slotSelection`, `scheduleLoading` | `slotsChange` | `src/app/shared/components/schedule-grid/schedule-grid.component.ts` |
 | `app-search-panel` | `groups`, `rightPx` | `queryChange`, `closed`, `resultSelected` | `src/app/shared/components/search-panel/search-panel.component.ts` |
-| `app-section-hero` | `title`, `contextLine`, `subtitle`, `icon`, `chips`, `actions`, `backRoute`, `backLabel`, `animateOnInit`, `backClickable`, `density`, `kpis`, `loading` | `actionClick`, `backClicked`, `kpiClick` | `src/app/shared/components/section-hero/section-hero.component.ts` |
+| `app-section-hero` | `title`, `contextLine`, `subtitle`, `icon`, `chips`, `actions`, `backRoute`, `backLabel`, `animateOnInit`, `backClickable`, `density`, `kpis`, `loading`, `loadingKpiCount` | `actionClick`, `backClicked`, `kpiClick` | `src/app/shared/components/section-hero/section-hero.component.ts` |
 | `app-agregar-servicio-drawer` | — | — | `src/app/shared/components/servicios-especiales-content/drawers/agregar-servicio-drawer.component.ts` |
 | `app-registrar-venta-drawer` | — | — | `src/app/shared/components/servicios-especiales-content/drawers/registrar-venta-drawer.component.ts` |
 | `app-servicios-especiales-content` | `catalogo`, `ventas`, `kpis`, `isLoading`, `isExporting`, `backRoute` | `requestRegistrarVenta`, `requestNuevoServicio`, `cobroRegistrado`, `exportarHistorial` | `src/app/shared/components/servicios-especiales-content/servicios-especiales-content.component.ts` |

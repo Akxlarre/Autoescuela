@@ -22,6 +22,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { ScrollContainerDirective } from '@core/directives/scroll-container.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
@@ -38,9 +39,14 @@ type TaskTab = 'sent' | 'received' | 'observations';
     BentoGridLayoutDirective,
     CardHoverDirective,
     TabsComponent,
+    ScrollContainerDirective,
   ],
   template: `
-    <div #bentoGrid class="bento-grid" appBentoGridLayout>
+    <div 
+      #bentoGrid 
+      class="bento-grid bento-grid--fill-screen" 
+      appBentoGridLayout
+    >
       <!-- Hero -->
       <app-section-hero
         density="slim"
@@ -55,17 +61,26 @@ type TaskTab = 'sent' | 'received' | 'observations';
       />
 
       <!-- Lista de tareas con tabs -->
-      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
+      <div class="bento-banner card p-0 overflow-hidden flex flex-col" appCardHover>
         <!-- Tabs -->
-        <app-tabs
+        <div class="shrink-0">
+          <app-tabs
           [tabs]="tabs()"
           [activeId]="activeTab()"
           variant="line"
           (activeIdChange)="activeTab.set($any($event))"
         />
 
+        </div>
+
         <!-- Contenido del tab activo -->
-        <div class="p-4 flex flex-col gap-3">
+        <div 
+          class="p-4 flex flex-col gap-3 flex-1" 
+          [class.justify-center]="!facade.isLoading() && activeTasks().length === 0"
+          appScrollContainer 
+          maxHeight="none" 
+          [scrollX]="false"
+        >
           @if (facade.isLoading()) {
             @for (sk of skeletons; track sk) {
               <app-task-card [task]="dummyTask" [loading]="true" />

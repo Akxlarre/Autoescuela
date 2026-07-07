@@ -553,39 +553,42 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 **Índices:** `idx_class_b_sessions_date_instructor`, `idx_class_b_sessions_date_vehicle`
 
-### `class_b_theory_attendance` — 🔒 RLS
+### `class_b_theory_cycles` — 🔒 RLS
 
-> Asistencia a clases teóricas grupales Clase B Zoom (RF-051, RF-052)
+> Ciclos teóricos Clase B (Spec 0001): cohorte de 2 semanas, 6 clases L/X/V. '
+  'start_date siempre Lunes, end_date = start_date + 11 (Viernes semana 2).
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
-| `theory_session_b_id` | INT | NO | — | → `class_b_theory_sessions.id` |
-| `student_id` | INT | NO | — | → `students.id` |
-| `status` | TEXT | sí | — | — |
-| `justification` | TEXT | sí | — | — |
-| `recorded_by` | INT | sí | — | → `users.id` |
-| `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `start_date` | DATE | NO | — | — |
+| `end_date` | DATE | NO | — | — |
+| `status` | TEXT | NO | `'active'` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 
 **Policies:**
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_class_b_theory_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor') OR (auth_user_role()…` | — |
-| insert_class_b_theory_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
-| update_class_b_theory_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| delete_class_b_theory_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_class_b_theory_cycles | SELECT | `auth_user_role() IN ('admin', 'instructor', 'student') OR (auth_user_role() =…` | — |
+| insert_class_b_theory_cycles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| update_class_b_theory_cycles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| delete_class_b_theory_cycles | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `idx_class_b_theory_cycles_branch_status`
 
 ### `class_b_theory_sessions` — 🔒 RLS
 
-> Sesiones teóricas grupales Zoom de Clase B (RF-016, RF-051)
+> Clases de un ciclo teórico Clase B (Spec 0001): 6 por ciclo (L/X/V × 2 semanas). '
+  'class_number 1-6, class_date, zoom_link + zoom_sent_at. Sin asistencia (irrelevante).
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
 | `branch_id` | INT | sí | — | → `branches.id` |
 | `instructor_id` | INT | sí | — | → `instructors.id` |
-| `scheduled_at` | TIMESTAMPTZ | NO | — | — |
+| `scheduled_at` | TIMESTAMPTZ | sí | — | — |
 | `start_time` | TIME | sí | — | — |
 | `end_time` | TIME | sí | — | — |
 | `duration_min` | SMALLINT | sí | `90` | — |
@@ -595,6 +598,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `notes` | TEXT | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
+| `class_number` | SMALLINT | sí | — | — |
+| `class_date` | DATE | sí | — | — |
+| `zoom_sent_at` | TIMESTAMPTZ | sí | — | — |
 
 **Policies:**
 
@@ -842,6 +849,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `license_pdf_url` | TEXT | sí | — | — |
 | `license_initial_url` | TEXT | sí | — | — |
 | `license_full_url` | TEXT | sí | — | — |
+| `theory_cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
 
 **Policies:**
 
@@ -2152,12 +2160,13 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
-| `v_student_progress_b` | `20260412000003_fix_v_student_progress_b_count.sql` |
+| `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
 
 ## Funciones (helpers RLS y lógica de BD)
 
 | Función | Argumentos |
 |---------|-----------|
+| `assign_theory_cycle` | `()` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
 | `auth_instructor_id` | `()` |
@@ -2167,6 +2176,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `auth_user_role` | `()` |
 | `auto_transition_promotion_status` | `()` |
 | `auto_transition_standalone_course_status` | `()` |
+| `auto_transition_theory_cycle_status` | `()` |
 | `branch_visible` | `(p_branch_id INT)` |
 | `calculate_vehicle_document_status` | `()` |
 | `cascade_promotion_status_to_courses` | `()` |
@@ -2176,6 +2186,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cleanup_public_enrollment_throttle` | `()` |
 | `confirm_enrollment_with_payment` | `(p_enrollment_id INTEGER, p_payment_method TEXT, p_total_amount INTEGER, p_discount_id INTEGER DEFAULT NULL, p_discount_amount INTEGER DEFAULT 0, p_registered_by INTEGER DEFAULT NULL, p_is_deposit BOOLEAN DEFAULT FALSE)` |
 | `decrement_batch_folio` | `()` |
+| `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
 | `generate_license_alert` | `()` |
 | `generate_sessions_from_promotion` | `()` |
 | `get_next_enrollment_number` | `(p_course_id INT)` |
