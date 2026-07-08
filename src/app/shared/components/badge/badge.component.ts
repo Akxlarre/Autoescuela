@@ -12,7 +12,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
   `,
 })
 export class BadgeComponent {
-  variant = input<'success' | 'warning' | 'error' | 'info' | 'neutral'>('neutral');
+  variant = input<'success' | 'warning' | 'error' | 'info' | 'neutral' | 'brand'>('neutral');
 
   // Clases literales completas a propósito (no `'badge-' + variant()`): Tailwind v4
   // poda las clases @utility por contenido escaneado igual que las utilidades
@@ -29,6 +29,8 @@ export class BadgeComponent {
         return 'badge-info';
       case 'neutral':
         return 'badge-neutral';
+      case 'brand':
+        return 'badge-brand';
     }
   });
 }

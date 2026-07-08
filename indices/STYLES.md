@@ -103,9 +103,10 @@ dark-mode aware. Radio/padding desde tokens de Capa 4 (fix-036): `var(--badge-ra
 | `badge-error` | `--state-error` (rojo) | Errores, rechazados, fallidos |
 | `badge-info` | `--state-info` (azul) | Información neutral, en progreso |
 | `badge-neutral` | `--bg-subtle`/`--text-secondary` (gris) | Sin estado particular — fallback |
+| `badge-brand` | `--ds-brand`/`--color-primary-muted`/`--accent-border` (marca) | Chips de rol/marca (ej. "Administrador"), NO es un estado — evitar como color de éxito/aprobado (fix-038) |
 
-**Componente `<app-badge [variant]="...">`** (fix-036) es la fuente única recomendada:
-variants `success\|warning\|error\|info\|neutral` mapean 1:1 a estas clases vía un
+**Componente `<app-badge [variant]="...">`** (fix-036/038) es la fuente única recomendada:
+variants `success\|warning\|error\|info\|neutral\|brand` mapean 1:1 a estas clases vía un
 `computed()` con `switch` que retorna **strings literales completos** — NUNCA
 concatenación dinámica (`'badge-' + variant()`). Tailwind v4 poda las clases `@utility`
 por contenido escaneado igual que cualquier utilidad: si el nombre completo de la clase
