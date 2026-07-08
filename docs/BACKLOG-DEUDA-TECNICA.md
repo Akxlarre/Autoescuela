@@ -25,11 +25,14 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
 - [x] **fix-039 (2026-07-08)** — Migrado `ajustes-drawer.component.ts` (4 pills, en
       realidad 1 badge de rol con 4 ramas mutuamente excluyentes → colapsado en un solo
       `<app-badge>` con variant/ícono/label derivados del rol; admin usa `variant="brand"`).
+- [x] **fix-040 (2026-07-08)** — Migrado `certificacion-clase-b-content.component.ts`
+      (4 pills: chip "curso" → `brand`, estado certificado → success/warning, log de
+      acción dinámico de 4 casos → success/**brand**/info/neutral. Confirmado en
+      producción: `email_sent` → `badge-brand`, el caso exacto que motivó fix-038).
 - [ ] Migrar los pills ad-hoc restantes del baseline ARCH-15 a `<app-badge [variant]="...">`
-      (**111 restantes de 122** — fix-037 migró 7, fix-039 migró 4, 2026-07-08). Ya no hay
-      bloqueo de decisión: los 6 variants (success/warning/error/info/neutral/brand) cubren
-      estado y rol/marca. Candidato conocido: acción `email_sent` en logs de certificación
-      (`certificacion-clase-b-content.component.ts`). Continuar progresivo por archivo/portal,
+      (**107 restantes de 122** — fix-037 migró 7, fix-039 migró 4, fix-040 migró 4,
+      2026-07-08). Los 6 variants (success/warning/error/info/neutral/brand) cubren estado
+      y rol/marca, sin bloqueos de decisión. Continuar progresivo por archivo/portal,
       re-baseline con `--update-ds-baseline` tras cada lote.
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
