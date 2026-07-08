@@ -353,7 +353,7 @@
 | `app-kpi-card-variant` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `trendSuffix`, `subValue`, `accent`, `icon`, `color`, `loading`, `progressPercent` | — | `src/app/shared/components/kpi-card/kpi-card-variant.component.ts` |
 | `app-kpi-card` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `accent`, `icon`, `size`, `color` | — | `src/app/shared/components/kpi-card/kpi-card.component.ts` |
 | `app-liquidaciones-content` | `liquidaciones`, `kpis`, `isLoading`, `isExporting`, `mesActual`, `anioActual`, `isDrawerOpen` | `mesAnterior`, `mesSiguiente`, `deshacer`, `pagar`, `exportRequested` | `src/app/shared/components/liquidaciones-content/liquidaciones-content.component.ts` |
-| `app-live-classes-panel` | `classes`, `loading` | `actionClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
+| `app-live-classes-panel` | `classes`, `loading` | `actionClick`, `viewAllClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
 | `app-login-card` | `mode`, `loading`, `errorMsg`, `successMsg` | `modeChange`, `formSubmit` | `src/app/shared/components/login-card/login-card.component.ts` |
 | `app-logo` | — | — | `src/app/shared/components/logo/logo.component.ts` |
 | `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |
@@ -395,7 +395,7 @@
 | `app-task-card` | `task`, `loading` | `cardClicked` | `src/app/shared/components/task-card/task-card.component.ts` |
 | `app-task-reply-thread` | `replies`, `taskStatus`, `currentUserId` | `replySent` | `src/app/shared/components/task-reply-thread/task-reply-thread.component.ts` |
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |
-| `app-user-panel` | `user` | `action`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
+| `app-user-panel` | `user`, `darkMode` | `action`, `toggleTheme`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `daySelect`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 
 <!-- AUTO-GENERATED:END -->

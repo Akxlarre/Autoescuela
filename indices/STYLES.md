@@ -236,6 +236,8 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | `.bento-card__body--spread` | — |
 | `.bento-feature` | 2/3 ancho × 2 filas |
 | `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
+| `.bento-grid--fill-screen` | — |
+| `.bento-grid--fill-screen-2` | — |
 | `.bento-grid--forms` | — |
 | `.bento-grid--four-equal` | — |
 | `.bento-grid--wizard` | — |
