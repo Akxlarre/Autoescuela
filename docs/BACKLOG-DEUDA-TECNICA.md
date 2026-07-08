@@ -19,9 +19,18 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       `badge-neutral`. Bug real encontrado y corregido: `'badge-' + variant()` no generaba
       CSS (Tailwind v4 poda `@utility` por contenido escaneado) — usar `computed()`+`switch`
       con strings literales, NUNCA concatenación dinámica. Ver `indices/STYLES.md`.
-- [ ] Migrar los ~122 pills ad-hoc del baseline ARCH-15 a `<app-badge [variant]="...">`,
-      progresivo por portal (admin → secretaría → instructor → alumno), re-baseline con
-      `--update-ds-baseline` al final de cada portal
+- [ ] Migrar los pills ad-hoc del baseline ARCH-15 a `<app-badge [variant]="...">`
+      (**115 restantes de 122** — fix-037 migró 7 en `certificacion-profesional-content.component.ts`,
+      2026-07-08). **Hallazgo de triage:** no todos son indicadores de estado — hay dos
+      categorías. (1) Estado (success/warning/error/info): mapean 1:1, son la mayoría.
+      (2) Chips de rol/marca (ej. "Administrador" en `ajustes-drawer.component.ts` con
+      `text-brand`/`bg-brand-muted`; acción `email_sent` en varios logs con
+      `var(--color-primary)`): NO tienen variant equivalente en `app-badge` (solo
+      success/warning/error/info/neutral, sin "brand") — **requiere decisión del usuario**:
+      ¿agregar 6º variant `brand` a `app-badge`, o dejarlos como chips separados
+      (¿nuevo componente `app-chip`?). Sin esa decisión, ~15-20 de los 115 no son migrables.
+      Continuar con los de categoría 1 primero, progresivo por archivo/portal, re-baseline
+      con `--update-ds-baseline` tras cada lote.
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
       (baseline ARCH-16, ~120 instancias)
