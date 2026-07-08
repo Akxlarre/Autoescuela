@@ -7,6 +7,7 @@ import { ThemeService } from '@core/services/ui/theme.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { FormsModule } from '@angular/forms';
 import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
 
@@ -14,7 +15,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
   selector: 'app-ajustes-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, StatBoxComponent, FormsModule],
+  imports: [IconComponent, StatBoxComponent, FormsModule, BadgeComponent],
   template: `
     <div class="ajustes-container flex h-full flex-col bg-surface text-text-primary">
       <!-- Tabs Navigation -->
@@ -83,33 +84,12 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
                 <h2 class="text-base font-bold text-text-primary leading-tight">
                   {{ currentUser()?.name }}
                 </h2>
-                @if (currentUser()?.role === 'admin') {
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-brand bg-brand-muted border-brand"
-                  >
-                    <app-icon name="shield" [size]="11" />Administrador
-                  </span>
-                }
-                @if (currentUser()?.role === 'secretaria') {
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-text-secondary bg-base border-border-default"
-                  >
-                    <app-icon name="briefcase" [size]="11" />Secretaria
-                  </span>
-                }
-                @if (currentUser()?.role === 'instructor') {
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-text-secondary bg-base border-border-default"
-                  >
-                    <app-icon name="car" [size]="11" />Instructor
-                  </span>
-                }
-                @if (currentUser()?.role === 'alumno') {
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold border text-text-secondary bg-base border-border-default"
-                  >
-                    <app-icon name="graduation-cap" [size]="11" />Alumno
-                  </span>
+                @if (roleBadgeLabel(); as label) {
+                  <app-badge [variant]="roleBadgeVariant()">
+                    <span class="inline-flex items-center gap-1.5">
+                      <app-icon [name]="roleBadgeIcon()" [size]="11" />{{ label }}
+                    </span>
+                  </app-badge>
                 }
               </div>
 
@@ -380,6 +360,40 @@ export class AjustesDrawerComponent {
 
   protected readonly currentUser = this.auth.currentUser;
   protected readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
+
+  protected readonly roleBadgeVariant = computed<'brand' | 'neutral'>(() =>
+    this.currentUser()?.role === 'admin' ? 'brand' : 'neutral',
+  );
+
+  protected readonly roleBadgeIcon = computed(() => {
+    switch (this.currentUser()?.role) {
+      case 'admin':
+        return 'shield';
+      case 'secretaria':
+        return 'briefcase';
+      case 'instructor':
+        return 'car';
+      case 'alumno':
+        return 'graduation-cap';
+      default:
+        return 'user';
+    }
+  });
+
+  protected readonly roleBadgeLabel = computed(() => {
+    switch (this.currentUser()?.role) {
+      case 'admin':
+        return 'Administrador';
+      case 'secretaria':
+        return 'Secretaria';
+      case 'instructor':
+        return 'Instructor';
+      case 'alumno':
+        return 'Alumno';
+      default:
+        return null;
+    }
+  });
 
   protected readonly newPassword = signal('');
   protected readonly confirmPassword = signal('');

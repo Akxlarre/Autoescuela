@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-07-08T21:12:43.584Z",
+  "generatedAt": "2026-07-08T21:38:01.938Z",
   "rules": {
     "ARCH-15": {
-      "total": 115,
+      "total": 111,
       "files": {
         "src/app/features/acceso-denegado/acceso-denegado.component.ts": 1,
         "src/app/features/admin/alumnos/ex-alumnos/components/comments/admin-ex-alumnos-comments.component.ts": 1,
@@ -50,7 +50,6 @@
         "src/app/features/secretaria/pagos/secretaria-pagos.component.ts": 2,
         "src/app/features/secretaria/profesional-notas/secretaria-profesional-notas.component.ts": 4,
         "src/app/layout/topbar.component.ts": 1,
-        "src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts": 4,
         "src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts": 2,
         "src/app/shared/components/alumnos-profesional-list-content/alumnos-profesional-list-content.component.ts": 1,
         "src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts": 2,
