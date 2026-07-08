@@ -27,7 +27,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
-import { parseThemeTokens, findDeadTokenClasses } from './lib/theme-tokens.js';
+import { parseThemeTokens, findDeadTokenClasses, findForbiddenThemeAliases } from './lib/theme-tokens.js';
 import { kebabToPascal, collectUsedIcons, parseRegisteredIcons } from './lib/icon-registry.js';
 import {
     findAdhocPills,
@@ -55,6 +55,25 @@ try {
     console.warn('\x1b[33m%s\x1b[0m', `⚠️  ARCH-11 deshabilitado: ${String(e?.message || e)}`);
 }
 let deadTokenTotal = 0;
+
+// ── ARCH-18 (fix-033): alias bare prohibidos en @theme — auditoría del bridge mismo,
+// no del uso. Corre UNA vez contra src/tailwind.css (no es un check por-archivo). ──
+function checkForbiddenThemeAliases() {
+    const tailwindPath = path.join(process.cwd(), 'src', 'tailwind.css');
+    let content;
+    try {
+        content = fs.readFileSync(tailwindPath, 'utf-8');
+    } catch {
+        return; // fail-open: si no existe el archivo, otro check ya lo habrá señalado
+    }
+    const violations = findForbiddenThemeAliases(content);
+    for (const { key } of violations) {
+        reportError(
+            'ARCH-18', tailwindPath,
+            `'${key}' definido en @theme — alias bare prohibido`,
+        );
+    }
+}
 
 function reportDeadTokenClasses(filePath, content) {
     if (!THEME) return;
@@ -177,6 +196,11 @@ const RULES = {
         name: 'Tamaño de fuente arbitrario text-[NNpx] (ratchet)',
         doc: 'indices/ANTI-PATTERNS.md (AP-014)',
         fix: 'Usa la escala tipográfica del DS: text-2xs (10px, piso absoluto — fix-032), text-xs (12px), text-sm (14px)… No inventes valores JIT ni tamaños menores a 10px.',
+    },
+    'ARCH-18': {
+        name: 'Alias bare prohibido en @theme',
+        doc: 'indices/ANTI-PATTERNS.md (AP-015)',
+        fix: 'Si una clase text-X no renderiza, migra los USOS a la forma canónica text-text-X (fix-030). NUNCA agregues un alias --color-X bare al @theme para resucitar la forma corta — eso vuelve a abrir la ambigüedad que fix-030/fix-033 cerraron y deja ciego a ARCH-11.',
     },
 };
 
@@ -678,6 +702,9 @@ function scanDirectory(dir) {
 for (const dir of targetDirs) {
     scanDirectory(dir);
 }
+
+// ── ARCH-18: auditoría del bridge @theme (una sola vez, no por-archivo) ──────
+checkForbiddenThemeAliases();
 
 // ── ARCH-14: diff íconos usados vs registrados (post-barrido) ────────────────
 checkIconRegistry();

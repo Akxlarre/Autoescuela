@@ -314,7 +314,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 }
               </div>
             } @else if (filteredPracticas().length === 0) {
-              <p class="text-sm text-secondary text-center py-6">
+              <p class="text-sm text-text-secondary text-center py-6">
                 No hay registros que coincidan con los filtros seleccionados.
               </p>
             } @else {
@@ -322,29 +322,29 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <table class="w-full text-sm">
                   <thead>
                     <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-20">
                         Agendada
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16">
                         Inicio
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16">
                         Fin
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">Sede</th>
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Instructor
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Alumno
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Vehículo
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Estado
                       </th>
-                      <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                      <th class="text-right text-xs font-semibold text-text-secondary pb-2">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -360,22 +360,22 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           @if (row.horaInicioReal) {
                             <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
                         <td class="py-3 pr-4 whitespace-nowrap">
                           @if (row.horaFinReal) {
                             <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
-                        <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
-                        <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
+                        <td class="py-3 pr-4 text-text-secondary text-xs">{{ row.branchName }}</td>
+                        <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
                         <td class="py-3 pr-4">
                           @if (row.alumnoName) {
                             <span
-                              class="text-secondary"
+                              class="text-text-secondary"
                               [style.color]="
                                 row.status === 'ausente' ? 'var(--color-primary)' : undefined
                               "
@@ -383,7 +383,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               {{ row.alumnoName }}
                             </span>
                           } @else {
-                            <span class="text-muted italic">Sin agendar</span>
+                            <span class="text-text-muted italic">Sin agendar</span>
                           }
                         </td>
                         <td class="py-3 pr-4">
@@ -393,13 +393,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                                 row.vehiclePlate
                               }}</span>
                               @if (row.vehicleBrand || row.vehicleModel) {
-                                <span class="text-xs text-muted">
+                                <span class="text-xs text-text-muted">
                                   {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
                                 </span>
                               }
                             </div>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
                         <td class="py-3 pr-4">
@@ -446,7 +446,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               }
                             }
                             @if (row.status === 'en_curso') {
-                              <span class="indicator-live text-xs text-secondary">En clase</span>
+                              <span class="indicator-live text-xs text-text-secondary">En clase</span>
                               <!-- Finalizar clase -->
                               <button
                                 class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"

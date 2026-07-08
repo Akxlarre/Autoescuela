@@ -76,3 +76,20 @@
 - **Sí** usa la escala completa: **`text-2xs` (10px, piso absoluto — fix-032)**, `text-xs` (12px), `text-sm` (14px)… El token `text-2xs` solo fija font-size (line-height se hereda), igual que hacía el valor arbitrario.
 - Migrado en fix-032: 252 instancias (`text-[10px]`/`text-[11px]` → `text-2xs`; `text-[12/14/16/18px]` → token exacto). Backlog residual (baseline ARCH-17: 66): tamaños 8/9/13/15/17/22px que requieren decisión de diseño — 8-9px es ilegible, subirlos a `text-2xs`; 13/15/17px deben encajarse en la escala.
 - Guardrail: **ARCH-17** (ratchet). Re-baselinear tras migraciones: `npm run lint:arch -- --update-ds-baseline`.
+
+## AP-015 — Alias bare en `@theme` para resucitar una clase muerta (evitar)
+- **NO** agregues un alias `--color-X: var(--...)` bare al `@theme` de `tailwind.css` para
+  hacer "funcionar" una clase corta (`text-secondary`, `text-muted`, `text-disabled`,
+  `text-primary`) que no renderiza. Historia real: `a4675ee` escribió 3 componentes con
+  `text-secondary`/`text-muted`, notó que no pintaban, y en vez de migrar esas 31 líneas al
+  canon `text-text-*` (fix-030), agregó los alias — reabriendo la ambigüedad que fix-030
+  había cerrado. Revertido en `fix-033`.
+- **Sí** si una clase `text-X` no renderiza, es una señal de que el código usa la forma NO
+  canónica — migra los **usos** a `text-text-X`, nunca cambies la **definición** del bridge.
+- **Por qué ARCH-11 no lo detectó a tiempo:** ARCH-11 solo marca clases que NO generan CSS.
+  En cuanto el alias existe en `@theme`, la clase deja de estar "muerta" y ARCH-11 queda
+  ciego — el mismo mecanismo que causó la regresión es invisible para ese guardrail.
+- Guardrail: **ARCH-18** — audita la *definición* del `@theme` (no el uso), y falla si
+  vuelve a aparecer `--color-secondary`, `--color-muted`, `--color-disabled` o
+  `--color-primary` bare (los sufijos como `--color-border-muted`/`--color-brand-muted` NO
+  están prohibidos, son formas canónicas legítimas).

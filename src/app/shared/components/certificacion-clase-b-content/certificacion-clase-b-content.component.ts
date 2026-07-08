@@ -326,7 +326,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                     Prácticas
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Fecha Término
                   </th>
@@ -373,7 +373,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
-                    <td class="px-4 py-3 text-muted">
+                    <td class="px-4 py-3 text-text-muted">
                       {{ alumno.fechaTermino ?? '—' }}
                     </td>
                     <td class="px-4 py-3 text-brand">
