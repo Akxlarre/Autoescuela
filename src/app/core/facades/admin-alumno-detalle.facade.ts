@@ -4,6 +4,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import type {
   AlumnoDetalleUI,
+  ClasePendienteReagendarUI,
   ClasePracticaUI,
   ElegibilidadProfUI,
   EnrollmentSummary,
@@ -33,6 +34,27 @@ export interface ReprogramarClasePayload {
   scheduledAt: string;
 }
 
+/**
+ * Clase pendiente que la secretaria marcó en el checklist del Paso 1 del drawer
+ * "Reagendar Clases" (`AdminReagendarClasesDrawerComponent`). Se guarda en el
+ * Facade para que el Paso 2 (`AdminReagendarHorariosDrawerComponent`, el mismo
+ * agendador masivo de la Matrícula) sepa cuántas clases exigir y cómo tratar
+ * cada una al guardar.
+ */
+export interface ClaseSeleccionadaReagendar {
+  sessionId: number;
+  claseNumero: number;
+  /** Origen de la clase: determina el trato en el backend (ver reagendarClasesPenalizadas). */
+  origen: 'no_show' | 'cancelled';
+}
+
+export interface ReagendarPenalizacionPayload {
+  enrollmentId: number;
+  instructorId: number;
+  /** IDs de slot (timestamptz como string) elegidos en app-schedule-grid. */
+  selectedSlotIds: string[];
+}
+
 /** Status de la BD que representa asistencia (ambos flujos escriben 'present' en inglés) */
 const STATUS_PRESENTE = 'present';
 
@@ -55,6 +77,19 @@ export class AdminAlumnoDetalleFacade {
   private readonly _inasistencias = signal<InasistenciaUI[]>([]);
   private readonly _inasistenciasClaseB = signal<InasistenciaClaseBUI[]>([]);
   private readonly _clasesPracticas = signal<ClasePracticaUI[]>([]);
+  /**
+   * Clases que el alumno debe reagendar para completar su curso de 12 (RF-053):
+   * sesiones `cancelled` (penalización) + sesiones `no_show` (inasistencias a recuperar).
+   * Alimenta el checklist del drawer "Reagendar Clases".
+   */
+  private readonly _clasesPendientesReagendar = signal<ClasePendienteReagendarUI[]>([]);
+  /**
+   * Subconjunto marcado por la secretaria en el Paso 1 (checklist) del drawer
+   * "Reagendar Clases" — puesto por `setReagendarSeleccion()`, leído por el
+   * Paso 2 (`AdminReagendarHorariosDrawerComponent`) para saber cuántos slots
+   * exigir y por `reagendarClasesPenalizadas()` para saber qué persistir.
+   */
+  private readonly _reagendarSeleccion = signal<ClaseSeleccionadaReagendar[]>([]);
   private readonly _historialPagos = signal<PagoUI[]>([]);
   private readonly _progresoPractico = signal<ProgresoUI>({
     completadas: 0,
@@ -123,6 +158,15 @@ export class AdminAlumnoDetalleFacade {
   readonly inasistencias = this._inasistencias.asReadonly();
   readonly inasistenciasClaseB = this._inasistenciasClaseB.asReadonly();
   readonly clasesPracticas = this._clasesPracticas.asReadonly();
+  readonly clasesPendientesReagendar = this._clasesPendientesReagendar.asReadonly();
+  readonly clasesPendientesReagendarCount = computed(
+    () => this._clasesPendientesReagendar().length,
+  );
+  readonly reagendarSeleccion = this._reagendarSeleccion.asReadonly();
+  /** RF-053: true si la matrícula tiene clases canceladas o inasistencias por recuperar — habilita "Reagendar Clases". */
+  readonly puedeReagendarPenalizacion = computed(
+    () => this._clasesPendientesReagendar().length > 0,
+  );
   readonly historialPagos = this._historialPagos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
   readonly progresoTeorico = this._progresoTeorico.asReadonly();
@@ -240,6 +284,7 @@ export class AdminAlumnoDetalleFacade {
     this._inasistencias.set([]);
     this._inasistenciasClaseB.set([]);
     this._clasesPracticas.set([]);
+    this._clasesPendientesReagendar.set([]);
     this._historialPagos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
     this._progresoTeorico.set({ completadas: 0, requeridas: TEORICAS_REQUERIDAS_B });
@@ -531,6 +576,42 @@ export class AdminAlumnoDetalleFacade {
         .map((r) => this.mapInasistenciaClaseB(r)),
     );
 
+    // RF-053 (justificación): mapa session_id → { status, justification } para que la
+    // grilla sepa si una inasistencia (ausente=true) ya fue perdonada por la secretaria.
+    const attendanceBySessionId = new Map<
+      number,
+      { status: string; justification: string | null }
+    >();
+    for (const r of attendanceRows) {
+      const sessionId = r.class_b_sessions?.id;
+      if (sessionId != null) {
+        attendanceBySessionId.set(sessionId, {
+          status: r.status,
+          justification: r.justification ?? null,
+        });
+      }
+    }
+
+    // RF-053: lista TODAS las sesiones canceladas (penalización) + no_show (inasistencias a
+    // recuperar) de la matrícula, no solo las 1..12 visibles en la grilla — el alumno debe
+    // reagendar ambas para completar su curso de 12. Alimenta el checklist del drawer y el
+    // conteo del botón "Reagendar Clases" (computed desde esta misma lista).
+    this._clasesPendientesReagendar.set(
+      (sessionResult.data ?? [])
+        .filter((s: any) => s.status === 'cancelled' || s.status === 'no_show')
+        .map((s: any) => ({
+          sessionId: s.id,
+          claseNumero: s.class_number,
+          origen: s.status as 'no_show' | 'cancelled',
+          fechaOriginal: s.scheduled_at ? this.formatClassDate(s.scheduled_at) : null,
+          justificada: attendanceBySessionId.get(s.id)?.status === 'excused',
+        }))
+        .sort(
+          (a: ClasePendienteReagendarUI, b: ClasePendienteReagendarUI) =>
+            a.claseNumero - b.claseNumero,
+        ),
+    );
+
     const sessionMap = new Map<number, any>(
       (sessionResult.data ?? []).map((s: any) => [Number(s.class_number), s]),
     );
@@ -552,6 +633,9 @@ export class AdminAlumnoDetalleFacade {
             observaciones: null,
             completada: false,
             ausente: false,
+            cancelada: false,
+            justificada: false,
+            justificacion: null,
             alumnoFirmo: false,
             instructorFirmo: false,
           };
@@ -561,6 +645,7 @@ export class AdminAlumnoDetalleFacade {
         const uRaw = inst?.users as any;
         const uInst = Array.isArray(uRaw) ? uRaw[0] : uRaw;
         const instructor = uInst ? `${uInst.first_names} ${uInst.paternal_last_name}`.trim() : null;
+        const attendance = ses.id != null ? attendanceBySessionId.get(ses.id) : undefined;
 
         return {
           numero: num,
@@ -577,6 +662,9 @@ export class AdminAlumnoDetalleFacade {
           observaciones: ses.performance_notes ?? ses.notes ?? null,
           completada: !!(ses.student_signature && ses.instructor_signature),
           ausente: ses.status === 'no_show',
+          cancelada: ses.status === 'cancelled',
+          justificada: attendance?.status === 'excused',
+          justificacion: attendance?.justification ?? null,
           alumnoFirmo: !!ses.student_signature,
           instructorFirmo: !!ses.instructor_signature,
         };
@@ -646,6 +734,7 @@ export class AdminAlumnoDetalleFacade {
       this._inasistencias.set([]);
       this._inasistenciasClaseB.set([]);
       this._clasesPracticas.set([]);
+      this._clasesPendientesReagendar.set([]);
       this._historialPagos.set([]);
       return;
     }
@@ -762,6 +851,7 @@ export class AdminAlumnoDetalleFacade {
     // Clase B específicos: vaciar para no mostrar datos obsoletos
     this._clasesPracticas.set([]);
     this._inasistenciasClaseB.set([]);
+    this._clasesPendientesReagendar.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: 0 });
     this._progresoTeorico.set({ completadas: 0, requeridas: 0 });
   }
@@ -988,6 +1078,18 @@ export class AdminAlumnoDetalleFacade {
     this._slotVehicleMap.clear();
   }
 
+  // ── Reagendar Clases Penalizadas (RF-053) — checklist → agendador masivo ─────
+
+  /**
+   * Guarda el subconjunto marcado por la secretaria en el Paso 1 (checklist) y
+   * limpia el grid previo — el Paso 2 arranca de cero eligiendo instructor.
+   */
+  setReagendarSeleccion(clases: ClaseSeleccionadaReagendar[]): void {
+    this._reagendarSeleccion.set(clases);
+    this._scheduleGrid.set(null);
+    this._slotVehicleMap.clear();
+  }
+
   /** Carga todos los instructores activos con vehículo asignado. */
   async loadInstructores(): Promise<void> {
     const { data } = await this.supabase.client
@@ -1066,6 +1168,109 @@ export class AdminAlumnoDetalleFacade {
     }
 
     this.toast.success('Clase reprogramada correctamente.');
+    await this.refreshSilently();
+  }
+
+  /**
+   * RF-053: reagenda el subconjunto marcado en el Paso 1 (`setReagendarSeleccion()`)
+   * usando los slots elegidos en el Paso 2 — el mismo agendador masivo
+   * (`app-assignment-step` + `app-schedule-grid`) que la Matrícula. Las clases
+   * pendientes que la secretaria NO marcó en el checklist ni se mencionan aquí:
+   * quedan intactas en la BD (siguen en rojo/ámbar).
+   *
+   * Trato distinto según el origen de cada clase de la selección:
+   * - **`no_show` (inasistencia a recuperar):** se RECICLA la misma fila — mismo
+   *   `class_number`/`id`, se actualiza `scheduled_at`/`instructor_id`/`vehicle_id`,
+   *   vuelve a `status='scheduled'` y se BORRA su fila en `class_b_practice_attendance`
+   *   para que quede "limpia" (vuelve a verse azul, no arrastra la inasistencia vieja).
+   * - **`cancelled` (evidencia de la penalización):** NUNCA se toca. Se INSERTA una
+   *   sesión nueva en `status='scheduled'`, continuando la numeración desde el
+   *   `class_number` más alto ya existente en la matrícula.
+   *
+   * Los slots elegidos (ordenados cronológicamente) se reparten: los primeros N
+   * reciclan las N sesiones `no_show` de la selección (ordenadas por `class_number`),
+   * el resto inserta sesiones nuevas para las `cancelled`. El vehículo se resuelve
+   * por slot (`_slotVehicleMap`, poblado por `loadScheduleGrid()`), igual que
+   * `reprogramarClase()`.
+   */
+  async reagendarClasesPenalizadas(payload: ReagendarPenalizacionPayload): Promise<void> {
+    const seleccion = this._reagendarSeleccion();
+    if (seleccion.length === 0) return;
+
+    const noShowSessions = seleccion
+      .filter((c) => c.origen === 'no_show')
+      .sort((a, b) => a.claseNumero - b.claseNumero);
+
+    const { data: maxRow } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('class_number')
+      .eq('enrollment_id', payload.enrollmentId)
+      .order('class_number', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let nextClassNumber = (maxRow?.class_number ?? 0) + 1;
+
+    const orderedSlotIds = [...payload.selectedSlotIds].sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
+    );
+
+    const slotsForNoShow = orderedSlotIds.slice(0, noShowSessions.length);
+    const slotsForNuevaSesion = orderedSlotIds.slice(noShowSessions.length);
+
+    const resolveVehicle = (slotId: string): number => {
+      const vehicleId = this._slotVehicleMap.get(slotId);
+      if (!vehicleId) {
+        throw new Error(`No se pudo determinar el vehículo para el horario ${slotId}.`);
+      }
+      return vehicleId;
+    };
+
+    // 1. Recicla las sesiones no_show seleccionadas: misma clase, nueva fecha, asistencia limpia.
+    for (let i = 0; i < slotsForNoShow.length; i++) {
+      const session = noShowSessions[i];
+      const slotId = slotsForNoShow[i];
+      const vehicleId = resolveVehicle(slotId);
+
+      const { error: updateError } = await this.supabase.client
+        .from('class_b_sessions')
+        .update({
+          instructor_id: payload.instructorId,
+          vehicle_id: vehicleId,
+          scheduled_at: slotId,
+          status: 'scheduled',
+          start_time: null,
+          end_time: null,
+        })
+        .eq('id', session.sessionId);
+      if (updateError) throw updateError;
+
+      const { error: deleteError } = await this.supabase.client
+        .from('class_b_practice_attendance')
+        .delete()
+        .eq('class_b_session_id', session.sessionId);
+      if (deleteError) throw deleteError;
+    }
+
+    // 2. Inserta sesiones nuevas para las canceladas seleccionadas (nunca se tocan).
+    if (slotsForNuevaSesion.length > 0) {
+      const rows = slotsForNuevaSesion.map((slotId) => ({
+        enrollment_id: payload.enrollmentId,
+        instructor_id: payload.instructorId,
+        vehicle_id: resolveVehicle(slotId),
+        class_number: nextClassNumber++,
+        scheduled_at: slotId,
+        status: 'scheduled',
+      }));
+
+      const { error: insertError } = await this.supabase.client
+        .from('class_b_sessions')
+        .insert(rows);
+      if (insertError) throw insertError;
+    }
+
+    this._reagendarSeleccion.set([]);
+    this.toast.success('Clases reagendadas correctamente.');
     await this.refreshSilently();
   }
 

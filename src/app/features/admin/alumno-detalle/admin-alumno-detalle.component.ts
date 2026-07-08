@@ -29,6 +29,7 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
 import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
 import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
+import { AdminReagendarClasesDrawerComponent } from './reagendar-clases-drawer/admin-reagendar-clases-drawer.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
@@ -334,10 +335,20 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   [class.border-success/20]="clase.completada"
                   [class.bg-error/5]="!clase.completada && clase.ausente"
                   [class.border-error/20]="!clase.completada && clase.ausente"
-                  [class.bg-brand/5]="!clase.completada && !clase.ausente && !!clase.fecha"
-                  [class.border-brand/20]="!clase.completada && !clase.ausente && !!clase.fecha"
-                  [class.bg-subtle]="!clase.completada && !clase.ausente && !clase.fecha"
-                  [class.border-border-subtle]="!clase.completada && !clase.ausente && !clase.fecha"
+                  [class.bg-warning/5]="!clase.completada && !clase.ausente && clase.cancelada"
+                  [class.border-warning/20]="!clase.completada && !clase.ausente && clase.cancelada"
+                  [class.bg-brand/5]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                  "
+                  [class.border-brand/20]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                  "
+                  [class.bg-subtle]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                  "
+                  [class.border-border-subtle]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                  "
                 >
                   @if (clase.completada) {
                     <span
@@ -350,6 +361,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       class="w-7 h-7 rounded-full bg-error/15 flex items-center justify-center shrink-0"
                     >
                       <app-icon name="x" [size]="13" class="text-error" />
+                    </span>
+                  } @else if (clase.cancelada) {
+                    <span
+                      class="w-7 h-7 rounded-full bg-warning/15 flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="ban" [size]="13" class="text-warning" />
                     </span>
                   } @else if (clase.fecha) {
                     <span
@@ -370,9 +387,14 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         class="text-xs font-bold shrink-0"
                         [class.text-success]="clase.completada"
                         [class.text-error]="!clase.completada && clase.ausente"
-                        [class.text-brand]="!clase.completada && !clase.ausente && !!clase.fecha"
+                        [class.text-warning]="
+                          !clase.completada && !clase.ausente && clase.cancelada
+                        "
+                        [class.text-brand]="
+                          !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                        "
                         [class.text-text-muted]="
-                          !clase.completada && !clase.ausente && !clase.fecha
+                          !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
                         "
                         >Clase #{{ clase.numero }}</span
                       >
@@ -386,7 +408,13 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       }
                     </div>
                     @if (clase.ausente) {
-                      <span class="text-[11px] text-error font-semibold">Inasistencia</span>
+                      <span class="text-[11px] text-error font-semibold">
+                        {{ clase.justificada ? 'Inasistencia — Justificada' : 'Inasistencia' }}
+                      </span>
+                    } @else if (clase.cancelada) {
+                      <span class="text-[11px] text-warning font-semibold"
+                        >Cancelada — pendiente reagendar</span
+                      >
                     } @else if (clase.instructor) {
                       <span class="text-[11px] text-text-muted truncate">{{
                         clase.instructor
@@ -687,15 +715,23 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         Clase #{{ item.claseNumero ?? '—' }}
                       </p>
                       <p class="text-[10px] text-text-muted truncate m-0 italic">
-                        {{
-                          item.justificada
-                            ? item.justificacion || 'Justificada'
-                            : (item.instructor ?? 'Sin instructor')
-                        }}
+                        {{ item.instructor ?? 'Sin instructor' }}
                       </p>
                     </div>
                     @if (item.justificada) {
-                      <span class="inas-status-badge" data-status="approved">Justificada</span>
+                      <div class="flex flex-col items-end gap-0.5 shrink-0">
+                        <span class="inas-status-badge" data-status="approved">Justificado</span>
+                        @if (item.justificacion) {
+                          <span
+                            class="text-[10px] text-text-muted italic truncate max-w-32 cursor-help"
+                            [pTooltip]="'Motivo: ' + item.justificacion"
+                            tooltipPosition="top"
+                            data-llm-description="motivo de la justificación de la inasistencia"
+                          >
+                            Motivo: {{ item.justificacion }}
+                          </span>
+                        }
+                      </div>
                     } @else {
                       <button
                         type="button"
@@ -1145,7 +1181,19 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       }
     }
 
+    // ── RF-053: Reagendar Clases (solo si hay agenda cancelada por penalización) ──
+    const reagendarActions: SectionHeroAction[] = [];
+    if (alumno.licenseGroup === 'class_b' && this.facade.puedeReagendarPenalizacion()) {
+      reagendarActions.push({
+        id: 'reagendar-clases',
+        label: `Reagendar Clases (${this.facade.clasesPendientesReagendarCount()})`,
+        icon: 'calendar-plus',
+        primary: false,
+      });
+    }
+
     return [
+      ...reagendarActions,
       ...contractActions,
       ...carnetActions,
       certAction,
@@ -1185,6 +1233,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     switch (actionId) {
       case 'editar-alumno':
         this.openEditDrawer();
+        break;
+      case 'reagendar-clases':
+        this.openReagendarClasesDrawer();
         break;
       case 'generar-carnet-6':
         void this.facade.generarCarnet(this.facade.alumno()!.enrollmentId!, 'initial');
@@ -1357,6 +1408,16 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       AdminReprogramarClaseDrawerComponent,
       'Reprogramar Clase',
       'calendar-clock',
+    );
+  }
+
+  /** RF-053: abre el agendador reutilizado del wizard para reponer clases penalizadas. */
+  protected openReagendarClasesDrawer(): void {
+    if (!this.facade.puedeReagendarPenalizacion()) return;
+    this.layoutDrawer.open(
+      AdminReagendarClasesDrawerComponent,
+      'Reagendar Clases',
+      'calendar-plus',
     );
   }
 

@@ -28,6 +28,8 @@ export class AssignmentComponent {
   stepNumber = input<number>(2);
   /** Oculta la sección de modalidad de pago (cuando ya fue elegida en un paso previo). */
   hidePaymentMode = input<boolean>(false);
+  /** Texto del botón de acción principal (default: flujo de matrícula). */
+  nextLabel = input<string>('Continuar a Documentos');
   dataChange = output<EnrollmentAssignmentData>();
   next = output<void>();
   back = output<void>();

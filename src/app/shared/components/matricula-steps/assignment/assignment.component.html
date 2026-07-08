@@ -353,7 +353,7 @@
         Volver
       </button>
       <app-async-btn
-        label="Continuar a Documentos"
+        [label]="nextLabel()"
         icon="arrow-right"
         [loading]="loading()"
         [disabled]="!canContinue()"
