@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 @Component({
   selector: 'app-badge',
@@ -6,35 +6,29 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   imports: [],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span
-      class="inline-flex items-center justify-center px-2.5 py-1 text-xs font-semibold rounded-full"
-      [class]="getClasses()"
-    >
+    <span [class]="badgeClass()">
       <ng-content></ng-content>
     </span>
   `,
 })
 export class BadgeComponent {
-  variant = input<'success' | 'warning' | 'error' | 'info' | 'default' | 'neutral' | string>(
-    'default',
-  );
+  variant = input<'success' | 'warning' | 'error' | 'info' | 'neutral'>('neutral');
 
-  getClasses() {
+  // Clases literales completas a propósito (no `'badge-' + variant()`): Tailwind v4
+  // poda las clases @utility por contenido escaneado igual que las utilidades
+  // normales — una concatenación dinámica no es detectable por el scanner.
+  protected readonly badgeClass = computed(() => {
     switch (this.variant()) {
       case 'success':
-        return 'bg-[var(--state-success-bg)] text-[var(--state-success)] dark:bg-[var(--state-success-bg)]/30 dark:text-[var(--state-success)]';
+        return 'badge-success';
       case 'warning':
-        return 'bg-[var(--state-warning-bg)] text-[var(--state-warning)] dark:bg-[var(--state-warning-bg)]/30 dark:text-[var(--state-warning)]';
+        return 'badge-warning';
       case 'error':
-        return 'bg-[var(--state-error-bg)] text-[var(--state-error)] dark:bg-[var(--state-error-bg)]/30';
+        return 'badge-error';
       case 'info':
-        return 'bg-brand-muted text-brand-primary dark:bg-brand-muted/30';
+        return 'badge-info';
       case 'neutral':
-        return 'bg-[var(--bg-subtle)] text-[var(--text-secondary)]';
-      default:
-        // Allows passing literal class strings
-        if (this.variant().includes('bg-')) return this.variant();
-        return 'bg-brand-muted text-brand-primary';
+        return 'badge-neutral';
     }
-  }
+  });
 }

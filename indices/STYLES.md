@@ -91,7 +91,10 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 
 ### Badge de estado (`badge-*`)
 
-Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS — dark-mode aware. Padding compacto `py-0.5 px-2`, `border-radius: var(--radius-md)`, `font-size: 0.75rem`.
+Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS —
+dark-mode aware. Radio/padding desde tokens de Capa 4 (fix-036): `var(--badge-radius)`
+(`radius-full`), `var(--badge-padding-y) var(--badge-padding-x)` (`space-1 space-3` =
+`4px 12px`), `font-size: 0.75rem`.
 
 | Clase | Color de estado | Cuándo usar |
 |-------|----------------|-------------|
@@ -99,6 +102,18 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | `badge-success` | `--state-success` (verde) | Aprobados, completados, activos |
 | `badge-error` | `--state-error` (rojo) | Errores, rechazados, fallidos |
 | `badge-info` | `--state-info` (azul) | Información neutral, en progreso |
+| `badge-neutral` | `--bg-subtle`/`--text-secondary` (gris) | Sin estado particular — fallback |
+
+**Componente `<app-badge [variant]="...">`** (fix-036) es la fuente única recomendada:
+variants `success\|warning\|error\|info\|neutral` mapean 1:1 a estas clases vía un
+`computed()` con `switch` que retorna **strings literales completos** — NUNCA
+concatenación dinámica (`'badge-' + variant()`). Tailwind v4 poda las clases `@utility`
+por contenido escaneado igual que cualquier utilidad: si el nombre completo de la clase
+no aparece como string literal en algún `.ts`/`.html` escaneado, **no se genera CSS**
+aunque la regla `@utility` exista en `tailwind.css` (gotcha real: `badge-neutral` no
+renderizaba hasta que se escribió el literal en el componente; antes solo sobrevivía por
+colisiones accidentales — `badge-success`/`badge-error` por un uso local en
+`vehicle-documents-drawer`, `badge-info` por el nombre de un ícono Lucide homónimo).
 
 > Preferir `[class.badge-success]="condition"` sobre `[style.background]="color-mix(...)"` para estado dinámico.
 
@@ -178,27 +193,27 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | `--text-muted` | 426 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 281 | `var(--color-primary-text)` |
 | `--border-subtle` | 241 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 237 | `#f87171` |
-| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
-| `--state-success` | 220 | `#4ade80` |
+| `--state-error` | 236 | `#f87171` |
+| `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
+| `--state-success` | 218 | `#4ade80` |
 | `--bg-surface` | 204 | `#18181b` |
 | `--color-primary` | 183 | `#38bdf8` |
-| `--state-warning` | 150 | `#fbbf24` |
 | `--border-default` | 149 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 148 | `#fbbf24` |
 | `--bg-elevated` | 91 | `#27272a` |
 | `--text-sm` | 77 | `0.875rem` |
 | `--duration-fast` | 74 | `200ms` |
-| `--bg-subtle` | 73 | `rgba(255, 255, 255, 0.1)` |
+| `--bg-subtle` | 72 | `rgba(255, 255, 255, 0.1)` |
 | `--radius-md` | 61 | `10px` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 54 | `var(--border-subtle)` |
 | `--bg-base` | 53 | `#09090b` |
-| `--state-success-bg` | 49 | `rgba(74, 222, 128, 0.1)` |
 | `--color-primary-text` | 48 | `#ffffff` |
+| `--state-success-bg` | 47 | `rgba(74, 222, 128, 0.1)` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--text-xs` | 44 | `0.75rem` |
 | `--color-success` | 43 | `—` |
-| `--state-warning-bg` | 40 | `rgba(251, 191, 36, 0.1)` |
+| `--state-warning-bg` | 38 | `rgba(251, 191, 36, 0.1)` |
 
 ## Clases semánticas del Design System
 
@@ -303,7 +318,7 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1259 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1258 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -316,8 +331,8 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 31 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |
 | 16 | `text-xs font-semibold text-text-primary` |
+| 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
-| 15 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |

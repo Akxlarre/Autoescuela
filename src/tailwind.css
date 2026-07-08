@@ -439,15 +439,18 @@
   }
 }
 
-/* Badges de estado — reemplazan color-mix() inline en componentes. Dark-mode aware vía tokens. */
+/* Badges de estado — fuente única (fix-036): consumidas por <app-badge>, reemplazan
+   color-mix() inline en componentes. Dark-mode aware vía tokens. Radio/padding desde
+   los tokens de Capa 4 (--badge-radius/--badge-padding-*), antes huérfanos. */
 @utility badge-warning {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-warning-bg);
   color: var(--state-warning);
   border: 1px solid var(--state-warning-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
@@ -456,11 +459,12 @@
 @utility badge-success {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-success-bg);
   color: var(--state-success);
   border: 1px solid var(--state-success-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
@@ -469,11 +473,12 @@
 @utility badge-error {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-error-bg);
   color: var(--state-error);
   border: 1px solid var(--state-error-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
@@ -482,11 +487,26 @@
 @utility badge-info {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-info-bg);
   color: var(--state-info);
   border: 1px solid var(--state-info-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@utility badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
