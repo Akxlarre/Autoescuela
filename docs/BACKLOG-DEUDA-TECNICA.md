@@ -12,14 +12,16 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
 (AP-012 a AP-015) y `scripts/lib/class-discipline.baseline.json`.
 
 ### Fase 4 — Consolidar `app-badge`
-- [ ] Auditar las variants `info`/`default` de `app-badge` (`bg-brand-muted`/`text-brand-primary`)
-      — verificar si son parte del backlog de clases muertas ARCH-11 antes de usarlas como base
-- [ ] Resolver el conflicto de fuente única: tokens `--badge-radius`/`--badge-padding-*`
-      (Capa 4, `radius-full`) vs utilidades `badge-*` de `tailwind.css` (`radius-md`, 0 usos
-      reales hoy) — elegir UNA y que la otra desaparezca o delegue en ella
-- [ ] Migrar los ~122 pills ad-hoc del baseline ARCH-15, progresivo por portal
-      (admin → secretaría → instructor → alumno), re-baseline con `--update-ds-baseline`
-      al final de cada portal
+- [x] **fix-036 (2026-07-08)** — Auditar variants `info`/`default` + resolver fuente única:
+      `app-badge` ahora consume `badge-*` (que a su vez consume los tokens `--badge-radius`/
+      `--badge-padding-*` de Capa 4, antes huérfanos). `info` = `--state-info` (azul, no
+      marca). `default`/`neutral` fusionados en un solo variant `neutral`; nueva utilidad
+      `badge-neutral`. Bug real encontrado y corregido: `'badge-' + variant()` no generaba
+      CSS (Tailwind v4 poda `@utility` por contenido escaneado) — usar `computed()`+`switch`
+      con strings literales, NUNCA concatenación dinámica. Ver `indices/STYLES.md`.
+- [ ] Migrar los ~122 pills ad-hoc del baseline ARCH-15 a `<app-badge [variant]="...">`,
+      progresivo por portal (admin → secretaría → instructor → alumno), re-baseline con
+      `--update-ds-baseline` al final de cada portal
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
       (baseline ARCH-16, ~120 instancias)
