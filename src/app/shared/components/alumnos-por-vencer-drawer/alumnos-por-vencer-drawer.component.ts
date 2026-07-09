@@ -49,7 +49,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     {{ item.nombre }} {{ item.apellido }}
                   </span>
                   <span class="text-xs text-text-muted font-mono">
-                    {{ item.cursos[0]?.nombre ?? '—' }} — {{ item.nroExpedientes[0] }}
+                    {{ item.cursos[0].nombre }} — {{ item.nroExpedientes[0] }}
                   </span>
                   <span class="text-xs text-error font-medium">Vence: {{ item.vencimiento }}</span>
                 </div>

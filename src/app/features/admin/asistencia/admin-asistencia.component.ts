@@ -3,10 +3,14 @@ import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade'
 import { CiclosTeoricosFacade } from '@core/facades/ciclos-teoricos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { AsistenciaClaseBContentComponent } from '@shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component';
 import { AdminIniciarClaseDrawerComponent } from './admin-iniciar-clase-drawer.component';
 import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-drawer.component';
-import type { ClasePracticaRow } from '@core/models/ui/asistencia-clase-b.model';
+import type {
+  ClasePracticaRow,
+  ClasePracticaStatus,
+} from '@core/models/ui/asistencia-clase-b.model';
 
 /**
  * AdminAsistenciaComponent — Smart component.
@@ -40,7 +44,7 @@ import type { ClasePracticaRow } from '@core/models/ui/asistencia-clase-b.model'
       [isLoadingCiclos]="ciclos.isLoading()"
       [isLoadingCycle]="ciclos.isLoadingCycle()"
       [sendingClassId]="ciclos.sendingClassId()"
-      (markAttendance)="facade.markAttendance($event.sessionId, $event.status)"
+      (markAttendance)="onMarkAttendance($event)"
       (justifyAbsence)="facade.justifyAbsence($event.sessionId, $event.reason)"
       (removeSchedule)="facade.removeSchedule($event)"
       (reactivateSchedule)="facade.reactivateSchedule($event)"
@@ -64,6 +68,7 @@ export class AdminAsistenciaComponent {
   protected readonly ciclos = inject(CiclosTeoricosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly confirmModal = inject(ConfirmModalService);
 
   constructor() {
     let previousBranchId: number | null | undefined = undefined;
@@ -95,6 +100,21 @@ export class AdminAsistenciaComponent {
 
   protected async onRefresh(): Promise<void> {
     await Promise.all([this.facade.reload(), this.ciclos.loadCycles()]);
+  }
+
+  protected async onMarkAttendance(event: {
+    sessionId: number;
+    status: ClasePracticaStatus;
+  }): Promise<void> {
+    const confirmed = await this.confirmModal.confirm({
+      title: 'Marcar inasistencia',
+      message:
+        '¿Confirmas que el alumno no asistió a esta clase? Esta acción queda registrada en su historial de asistencia.',
+      severity: 'danger',
+      confirmLabel: 'Marcar ausente',
+    });
+    if (!confirmed) return;
+    this.facade.markAttendance(event.sessionId, event.status);
   }
 
   protected openIniciarClaseDrawer(row: ClasePracticaRow): void {

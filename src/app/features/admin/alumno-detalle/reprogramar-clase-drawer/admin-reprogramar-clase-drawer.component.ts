@@ -180,22 +180,10 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                   }
                 </div>
 
-                <!-- Aviso de restricción cronológica -->
-                @if (minAllowedTimestamp()) {
-                  <div class="px-3 pt-2 pb-0">
-                    <p class="text-[11px] text-warning font-medium flex items-center gap-1.5">
-                      <app-icon name="clock-alert" [size]="12" />
-                      Clase anterior #{{ prevClaseNumero() }} está agendada el {{ prevClaseFecha()
-                      }}{{ prevClaseHora() ? ' a las ' + prevClaseHora() : '' }}. Solo se muestran
-                      disponibles horarios posteriores.
-                    </p>
-                  </div>
-                }
-
                 <!-- Grid de slots -->
                 <div class="p-3 grid grid-cols-2 gap-2">
                   @for (slot of slotsForDay(); track slot.id) {
-                    @if (slot.status === 'occupied' || isBeforePrevClass(slot.id)) {
+                    @if (slot.status === 'occupied') {
                       <div
                         class="p-2.5 border rounded-lg flex items-center justify-center gap-1 cursor-not-allowed opacity-50 bg-subtle border-border-default"
                       >
@@ -329,31 +317,9 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
     return grid.slots.filter((s) => s.date === day.date);
   });
 
-  /** Clase anterior a la que se está reprogramando (N-1), si existe y tiene horario. */
-  private readonly prevClase = computed(() => {
-    const target = this.facade.reprogramarTarget();
-    if (!target || target.claseNumero <= 1) return null;
-    const prevNum = target.claseNumero - 1;
-    return this.facade.clasesPracticas().find((c) => c.numero === prevNum) ?? null;
-  });
-
-  /** Timestamp ISO de la clase anterior — los slots ≤ este valor quedan bloqueados. */
-  protected readonly minAllowedTimestamp = computed(() => {
-    const prev = this.prevClase();
-    return prev?.scheduledAt ?? null;
-  });
-
-  /** Número de la clase anterior (para el aviso en UI). */
-  protected readonly prevClaseNumero = computed(() => this.prevClase()?.numero ?? null);
-
-  /** Fecha formateada de la clase anterior (para el aviso en UI). */
-  protected readonly prevClaseFecha = computed(() => this.prevClase()?.fecha ?? null);
-  protected readonly prevClaseHora = computed(() => this.prevClase()?.hora ?? null);
-
-  protected readonly canConfirm = computed(() => {
-    if (!this.selectedInstructorId() || !this.selectedSlotId() || this.isSaving()) return false;
-    return !this.isBeforePrevClass(this.selectedSlotId()!);
-  });
+  protected readonly canConfirm = computed(
+    () => !!this.selectedInstructorId() && !!this.selectedSlotId() && !this.isSaving(),
+  );
 
   ngOnInit(): void {
     void this.facade.loadInstructores();
@@ -368,15 +334,7 @@ export class AdminReprogramarClaseDrawerComponent implements OnInit {
     void this.facade.loadScheduleGrid(id);
   }
 
-  /** Devuelve true si el slot está antes o en el mismo momento que la clase anterior. */
-  protected isBeforePrevClass(slotId: string): boolean {
-    const min = this.minAllowedTimestamp();
-    if (!min) return false;
-    return new Date(slotId).getTime() <= new Date(min).getTime();
-  }
-
   protected selectSlot(slotId: string): void {
-    if (this.isBeforePrevClass(slotId)) return;
     this.selectedSlotId.set(this.selectedSlotId() === slotId ? null : slotId);
   }
 

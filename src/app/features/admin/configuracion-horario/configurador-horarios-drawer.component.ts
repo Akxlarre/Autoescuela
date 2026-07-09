@@ -167,7 +167,7 @@ interface HorarioBlock {
 
                   <div class="flex flex-col sm:flex-row gap-3 mb-3">
                     <!-- Start Time -->
-                    <div class="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+                    <div class="flex flex-col gap-1.5 flex-1 min-w-30">
                       <label
                         class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
                       >
@@ -198,7 +198,7 @@ interface HorarioBlock {
                       </div>
                     </div>
                     <!-- End Time -->
-                    <div class="flex flex-col gap-1.5 flex-1 min-w-[120px]">
+                    <div class="flex flex-col gap-1.5 flex-1 min-w-30">
                       <label
                         class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
                       >

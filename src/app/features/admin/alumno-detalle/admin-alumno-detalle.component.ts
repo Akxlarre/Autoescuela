@@ -19,6 +19,7 @@ import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.f
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { FichaTecnicaPrintService } from '@core/services/ui/ficha-tecnica-print.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -55,7 +56,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     TabsComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div
+      class="bento-grid"
+      appBentoReveal
+      appBentoGridLayout
+      [class.force-compact]="layoutDrawer.isOpen()"
+    >
       <!-- ── Hero Principal (Siempre visible) ── -->
       <app-section-hero
         density="slim"
@@ -655,6 +661,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           </div>
         }
 
+        <!-- Bento Item 3: Historial de Pagos (común) — colocado aquí (no al final del DOM)
+             para que en modo force-compact (flex-column) aparezca junto a Info Personal /
+             Clases Prácticas, igual que ya lo posiciona grid-auto-flow:dense en modo grid. -->
+        <app-admin-historial-pagos
+          class="bento-tall w-full h-full block"
+          [pagos]="facade.historialPagos()"
+          [totalPagado]="alumno.totalPagado"
+          [saldoPendiente]="alumno.saldoPendiente"
+        />
+
         <!-- Bento Item 4: Inasistencias (Banner, común) -->
         <div class="bento-card bento-banner bg-warning-subtle border-warning">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -787,14 +803,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             (reprogramarRequested)="openReprogramarDrawer($event)"
           />
         }
-
-        <!-- Bento Item 6: Historial de Pagos (común) -->
-        <app-admin-historial-pagos
-          class="bento-tall w-full h-full block"
-          [pagos]="facade.historialPagos()"
-          [totalPagado]="alumno.totalPagado"
-          [saldoPendiente]="alumno.saldoPendiente"
-        />
       }
     </div>
 
@@ -825,7 +833,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           aria-label="Justificar inasistencia"
         >
           <div class="flex items-center justify-between">
-            <h3 class="text-base font-semibold text-text-primary">Justificar Inasistencia</h3>
+            <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
             <button
               class="p-1 rounded-md text-text-muted hover:text-text-primary"
               aria-label="Cerrar"
@@ -978,6 +986,21 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       background: var(--state-error-bg);
       border-color: var(--state-error-border);
     }
+
+    /* Force Compact overrides (Drawer Open) — mismo patrón que
+       cuadratura-content.component.ts: colapsa el bento-grid a una sola
+       columna en vez de repartir columnas angostas entre celdas con
+       contenido de ancho fijo (RUT, email, montos). */
+    .force-compact.bento-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: var(--space-5) !important;
+    }
+
+    .force-compact.bento-grid > * {
+      width: 100% !important;
+    }
   `,
 })
 export class AdminAlumnoDetalleComponent implements OnInit {
@@ -988,7 +1011,8 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly fichaTecnicaPrint = inject(FichaTecnicaPrintService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -1349,7 +1373,11 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Helpers de template ─────────────────────────────────────────────────────
   protected imprimirFicha(): void {
-    window.print();
+    const alumno = this.facade.alumno();
+    this.fichaTecnicaPrint.printFichaTecnica(this.facade.clasesPracticas(), {
+      studentName: alumno?.nombre,
+      matricula: alumno?.matricula,
+    });
   }
 
   protected statusLabel(status: string): string {

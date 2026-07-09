@@ -344,7 +344,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                       <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
                         Estado
                       </th>
-                      <th class="text-right text-xs font-semibold text-secondary pb-2">Acciones</th>
+                      <th class="text-left text-xs font-semibold text-secondary pb-2 pl-4">
+                        Acciones
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -412,8 +414,8 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             {{ statusBadgeLabel(row) }}
                           </span>
                         </td>
-                        <td class="py-3 text-right">
-                          <div class="flex items-center justify-end gap-2">
+                        <td class="py-3 pl-4">
+                          <div class="flex items-center justify-start gap-2">
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
@@ -464,7 +466,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.status === 'ausente' && !row.justificacion) {
                               <button
-                                class="text-xs font-medium hover:underline"
+                                class="text-xs font-medium hover:underline cursor-pointer"
                                 [style.color]="'var(--color-primary)'"
                                 [disabled]="isSaving()"
                                 data-llm-action="justify-absence"
@@ -528,8 +530,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       <!-- ── Modal de justificación ─────────────────────────────────────────── -->
       @if (justifyModalOpen()) {
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          class="bg-black/40"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
           (click)="closeJustifyModal()"
         >
           <div

@@ -16,6 +16,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import type { VehicleOption } from '@core/models/ui/asistencia-clase-b.model';
 import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-drawer.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-admin-iniciar-clase-drawer',
@@ -28,130 +29,134 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
     SelectModule,
     IconComponent,
     AlertCardComponent,
+    DrawerFormComponent,
   ],
   template: `
     @if (facade.selectedPractica(); as cls) {
-      <!-- Ticket resumen -->
-      <div
-        class="relative overflow-hidden rounded-xl border border-border-default bg-surface p-5 mb-6"
-      >
+      <app-drawer-form>
+        <!-- Ticket resumen -->
         <div
-          class="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-bl-full pointer-events-none -mr-6 -mt-6"
-        ></div>
-        <div class="flex items-center gap-3 relative z-10">
-          <div
-            class="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0"
-          >
-            <span class="text-[9px] uppercase tracking-wider font-bold text-brand leading-tight"
-              >Clase</span
-            >
-            <span class="text-lg font-display font-bold text-brand leading-none">{{
-              cls.classNumber ?? '—'
-            }}</span>
-          </div>
-          <div class="flex-1 min-w-0">
-            <p
-              class="font-semibold text-text-primary truncate"
-              [pTooltip]="cls.alumnoName ?? 'Sin alumno'"
-              tooltipPosition="top"
-            >
-              {{ cls.alumnoName ?? 'Sin alumno' }}
-            </p>
-            <p class="text-xs text-text-muted mt-0.5">
-              {{ cls.horaInicio }} · {{ cls.instructorName }}
-              @if (selectedVehicle(); as v) {
-                · {{ v.plate }}
-                @if (v.brand || v.model) {
-                  ({{ v.brand ?? '' }} {{ v.model ?? '' }})
-                }
-              } @else if (cls.vehiclePlate) {
-                · {{ cls.vehiclePlate }}
-                @if (cls.vehicleBrand || cls.vehicleModel) {
-                  ({{ cls.vehicleBrand ?? '' }} {{ cls.vehicleModel ?? '' }})
-                }
-              }
-            </p>
-          </div>
-        </div>
-      </div>
-
-      @if (error()) {
-        <app-alert-card title="Error" severity="error" class="mb-4">
-          {{ error() }}
-        </app-alert-card>
-      }
-
-      <form [formGroup]="form" (ngSubmit)="onSubmit(cls)" class="flex flex-col gap-6">
-        <!-- Selector de vehículo -->
-        @if (facade.vehiclesPorSede().length > 0) {
-          <div class="flex flex-col gap-2">
-            <label class="text-xs font-bold text-text-secondary uppercase tracking-widest">
-              Vehículo
-            </label>
-            <p-select
-              [ngModel]="selectedVehicleId()"
-              (ngModelChange)="onVehicleSelectChange($event)"
-              [options]="vehicleOptions()"
-              optionLabel="label"
-              optionValue="id"
-              styleClass="w-full"
-              data-llm-description="Selector de vehículo para la clase práctica"
-            />
-          </div>
-        }
-
-        <!-- Formulario odómetro -->
-        <div
-          class="rounded-2xl border-2 p-8 flex flex-col items-center transition-colors"
-          [class.border-border-default]="
-            form.get('kmStart')?.valid || !form.get('kmStart')?.touched
-          "
-          [class.border-error]="form.get('kmStart')?.invalid && form.get('kmStart')?.touched"
+          class="relative overflow-hidden rounded-xl border border-border-default bg-surface p-5 mb-6"
         >
           <div
-            class="w-14 h-14 rounded-full bg-brand/10 text-brand flex items-center justify-center mb-5 ring-1 ring-brand/20"
-          >
-            <app-icon name="gauge" [size]="28" />
-          </div>
-          <label
-            class="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3"
-            for="kmStartAdmin"
-          >
-            Kilometraje Actual
-          </label>
-          <div
-            class="flex items-center gap-3 bg-subtle rounded-2xl border border-border-default/60 px-6 py-3"
-          >
-            <input
-              id="kmStartAdmin"
-              type="number"
-              formControlName="kmStart"
-              max="999999"
-              class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl font-display font-black text-text-primary text-center p-0 w-36 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
-              placeholder="0"
-              data-llm-description="Odómetro inicial del vehículo para iniciar clase práctica"
-            />
-            <span class="text-2xl font-bold text-text-muted select-none mt-1">km</span>
-          </div>
-          @if (form.get('kmStart')?.invalid && form.get('kmStart')?.touched) {
+            class="absolute top-0 right-0 w-24 h-24 bg-brand/5 rounded-bl-full pointer-events-none -mr-6 -mt-6"
+          ></div>
+          <div class="flex items-center gap-3 relative z-10">
             <div
-              class="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-error/10 text-error text-xs font-medium"
+              class="w-12 h-12 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0"
             >
-              <app-icon name="alert-circle" [size]="13" />
-              @if (form.get('kmStart')?.hasError('max')) {
-                <span>El valor máximo es 999.999 km</span>
-              } @else {
-                <span>Ingrese un valor válido (mayor a 0)</span>
-              }
+              <span class="text-[9px] uppercase tracking-wider font-bold text-brand leading-tight"
+                >Clase</span
+              >
+              <span class="text-lg font-display font-bold text-brand leading-none">{{
+                cls.classNumber ?? '—'
+              }}</span>
             </div>
-          } @else {
-            <p class="text-xs text-text-muted mt-3 opacity-70">
-              Verifique el panel del vehículo antes de arrancar.
-            </p>
-          }
+            <div class="flex-1 min-w-0">
+              <p
+                class="font-semibold text-text-primary truncate"
+                [pTooltip]="cls.alumnoName ?? 'Sin alumno'"
+                tooltipPosition="top"
+              >
+                {{ cls.alumnoName ?? 'Sin alumno' }}
+              </p>
+              <p class="text-xs text-text-muted mt-0.5">
+                {{ cls.horaInicio }} · {{ cls.instructorName }}
+                @if (selectedVehicle(); as v) {
+                  · {{ v.plate }}
+                  @if (v.brand || v.model) {
+                    ({{ v.brand ?? '' }} {{ v.model ?? '' }})
+                  }
+                } @else if (cls.vehiclePlate) {
+                  · {{ cls.vehiclePlate }}
+                  @if (cls.vehicleBrand || cls.vehicleModel) {
+                    ({{ cls.vehicleBrand ?? '' }} {{ cls.vehicleModel ?? '' }})
+                  }
+                }
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div class="flex gap-3 pt-2">
+        @if (error()) {
+          <app-alert-card title="Error" severity="error" class="mb-4">
+            {{ error() }}
+          </app-alert-card>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit(cls)" class="flex flex-col gap-6">
+          <!-- Selector de vehículo -->
+          @if (facade.vehiclesPorSede().length > 0) {
+            <div class="flex flex-col gap-2">
+              <label class="text-xs font-bold text-text-secondary uppercase tracking-widest">
+                Vehículo
+              </label>
+              <p-select
+                [ngModel]="selectedVehicleId()"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="onVehicleSelectChange($event)"
+                [options]="vehicleOptions()"
+                optionLabel="label"
+                optionValue="id"
+                styleClass="w-full"
+                data-llm-description="Selector de vehículo para la clase práctica"
+              />
+            </div>
+          }
+
+          <!-- Formulario odómetro -->
+          <div
+            class="rounded-2xl border-2 p-8 flex flex-col items-center transition-colors"
+            [class.border-border-default]="
+              form.get('kmStart')?.valid || !form.get('kmStart')?.touched
+            "
+            [class.border-error]="form.get('kmStart')?.invalid && form.get('kmStart')?.touched"
+          >
+            <div
+              class="w-14 h-14 rounded-full bg-brand/10 text-brand flex items-center justify-center mb-5 ring-1 ring-brand/20"
+            >
+              <app-icon name="gauge" [size]="28" />
+            </div>
+            <label
+              class="text-xs font-bold text-text-secondary uppercase tracking-widest mb-3"
+              for="kmStartAdmin"
+            >
+              Kilometraje Actual
+            </label>
+            <div
+              class="flex items-center gap-3 bg-subtle rounded-2xl border border-border-default/60 px-6 py-3"
+            >
+              <input
+                id="kmStartAdmin"
+                type="number"
+                formControlName="kmStart"
+                max="999999"
+                class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl font-display font-black text-text-primary text-center p-0 w-36 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
+                placeholder="0"
+                data-llm-description="Odómetro inicial del vehículo para iniciar clase práctica"
+              />
+              <span class="text-2xl font-bold text-text-muted select-none mt-1">km</span>
+            </div>
+            @if (form.get('kmStart')?.invalid && form.get('kmStart')?.touched) {
+              <div
+                class="mt-3 flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-error/10 text-error text-xs font-medium"
+              >
+                <app-icon name="alert-circle" [size]="13" />
+                @if (form.get('kmStart')?.hasError('max')) {
+                  <span>El valor máximo es 999.999 km</span>
+                } @else {
+                  <span>Ingrese un valor válido</span>
+                }
+              </div>
+            } @else {
+              <p class="text-xs text-text-muted mt-3 opacity-70">
+                Verifique el panel del vehículo antes de arrancar.
+              </p>
+            }
+          </div>
+        </form>
+
+        <ng-container ngProjectAs="[drawer-form-footer]">
           <button
             type="button"
             class="btn-secondary flex-1"
@@ -161,9 +166,10 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
             Cancelar
           </button>
           <button
-            type="submit"
+            type="button"
             class="btn-primary flex-1 flex items-center justify-center gap-2"
             [disabled]="form.invalid || isSubmitting()"
+            (click)="onSubmit(cls)"
             data-llm-action="admin-start-class"
           >
             @if (isSubmitting()) {
@@ -174,8 +180,8 @@ import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-draw
               <span>Comenzar Clase</span>
             }
           </button>
-        </div>
-      </form>
+        </ng-container>
+      </app-drawer-form>
     }
   `,
 })
@@ -211,7 +217,7 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     const cls = this.facade.selectedPractica();
     const currentKm = cls?.vehicleCurrentKm ?? null;
     this.form = this.fb.group({
-      kmStart: [currentKm, [Validators.required, Validators.min(1), Validators.max(999999)]],
+      kmStart: [currentKm, [Validators.required, Validators.min(0), Validators.max(999999)]],
     });
 
     if (cls?.branchId) {

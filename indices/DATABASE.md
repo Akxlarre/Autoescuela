@@ -34,7 +34,7 @@
 | `vehicle_assignments` | M4 - Acad. B | `id`, `vehicle_id` | `instructor_id`, `vehicle_id`, `assigned_by` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
 | `instructor_replacements` | M4 - Acad. B | `id`, `date` | `absent_instructor_id`, `replacement_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructor_monthly_hours` | M4 - Acad. B | `id`, `period` | `instructor_id` | Admin: CRUD, Sec: R, Inst: R (self) | ✅ Definida |
-| `class_b_sessions` | M4 - Acad. B | `id`, `scheduled_at`, `duration_min`, `evaluation_grade`, `evaluation_checklist` (JSONB) | `enrollment_id`, `instructor_id`, `vehicle_id`, `original_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida · Evaluación Checklist agregada (`20260401000100`) · **Realtime habilitado** |
+| `class_b_sessions` | M4 - Acad. B | `id`, `scheduled_at`, `duration_min`, `class_number` (SMALLINT, 1-12), `evaluation_grade`, `evaluation_checklist` (JSONB) | `enrollment_id`, `instructor_id`, `vehicle_id`, `original_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R (suyas) | ✅ Definida · Evaluación Checklist agregada (`20260401000100`) · **Realtime habilitado** · **`20260709120100` (fix-028):** `class_number` reforzado con `CHECK (class_number BETWEEN 1 AND 12)` (`chk_class_b_sessions_class_number_range`) y `UNIQUE (enrollment_id, class_number)` (`uq_class_b_sessions_enrollment_class_number`) — antes solo era un comentario de columna, sin protección real. Reagendar una sesión `cancelled`/`no_show` (RF-053, `AdminAlumnoDetalleFacade.reagendarClasesPenalizadas()`) siempre recicla in-place la misma fila; nunca inserta una fila nueva. |
 | `class_b_theory_cycles` | M4 - Acad. B | `id`, `branch_id`, `start_date` (lunes), `end_date` (=start+11, viernes semana 2), `status` ('active'\|'finished') · UNIQUE(`branch_id`,`start_date`) | `branch_id` | Admin: CRUD · Sec: CRUD por sede (`branch_visible`) · Inst/Stu: R | ✅ Definida · **`20260630000000` (Spec 0001):** Ciclos teóricos Clase B (cohorte 2 semanas, 6 clases L/X/V). Transición `active→finished` vía pg_cron `auto_transition_theory_cycle_status`. |
 | `class_b_theory_sessions` | M4 - Acad. B | `id`, `cycle_id`, `class_number` (1–6), `class_date`, `topic` (opcional), `zoom_link`, `zoom_sent_at` · UNIQUE(`cycle_id`,`class_number`) | `cycle_id`→class_b_theory_cycles (CASCADE), `branch_id`, `registered_by` | Admin: CRUD, Sec: CRUD, Inst: CRU, Stu: R | ✅ **Reutilizada `20260630000000` (Spec 0001):** ahora modela las **6 clases de un ciclo** (no sesiones sueltas). Datos legacy `TRUNCATE`; `scheduled_at` ahora nullable; sin asistencia. |
 | ~~`class_b_theory_attendance`~~ | M4 - Acad. B | — | — | — | ❌ Eliminada (`20260630000000`, Spec 0001) — la asistencia teórica es irrelevante por decisión de negocio. Purgada de facades/UI y de `v_student_progress_b`. |
@@ -113,10 +113,10 @@
 | Función | Migración | Programación | Descripción |
 |---------|-----------|--------------|-------------|
 | `auto_transition_promotion_status()` | `20260330100000` | pg_cron: `0 6 * * *` (diario 06:00 UTC ≈ 03:00 CLT) | Transiciona `professional_promotions`: `planned→in_progress` cuando `start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE`; `in_progress→finished` cuando `end_date < CURRENT_DATE`. Nunca toca `cancelled`. Procesa `finished` primero para cubrir el edge-case `start_date == end_date`. `SECURITY DEFINER`. |
-| `mark_end_of_day_class_b_absences()` | Definida en `20260705000000` (perdida, nunca versionada — ver nota abajo) → redefinida en `20260707000000_fix_class_b_absence_penalty_race_and_isolation.sql` | pg_cron: `0 1 * * *` (diario 01:00 UTC ≈ 21:00 CLT invierno, fin de jornada) | RF-053. Recorre `class_b_sessions` en `status='scheduled'` cuya fecha (America/Santiago) sea hoy o anterior (`ORDER BY enrollment_id, class_number` — determinismo, no afecta corrección) y las marca `status='no_show'`, insertando `class_b_practice_attendance(status='absent')` por alumno (`ON CONFLICT DO NOTHING`, idempotente). Por cada matrícula afectada invoca `apply_class_b_absence_penalty()`. **Fix `20260707000000`:** cada fila corre en su propio bloque `BEGIN/EXCEPTION` — antes, una excepción en CUALQUIER fila abortaba la transacción completa del cron, dejando sin procesar a alumnos sanos ya iterados en la misma corrida (síntoma en prod: alumnos con clases vencidas que nunca se marcaban `no_show`). `SECURITY DEFINER`. |
-| `apply_class_b_absence_penalty(p_enrollment_id INT)` | Definida en `20260705000000` → corregida en `20260706000000` (ambas perdidas, nunca versionadas) → **redefinida en `20260707000000_fix_class_b_absence_penalty_race_and_isolation.sql`** | Llamada por `mark_end_of_day_class_b_absences()` y por `AsistenciaClaseBFacade.markAttendance()` vía `supabase.rpc()` | RF-053: 2 inasistencias no justificadas **consecutivas** (class_number adyacente N, N+1) = pérdida de agenda. **Fix `20260707000000`:** la detección (`EXISTS`) y la cancelación (`UPDATE ... status='cancelled'`) ahora ocurren en **una sola sentencia atómica** (antes eran un `SELECT EXISTS` seguido de un `UPDATE` separado, dejando una ventana de carrera); además se eliminó el filtro `scheduled_at > NOW()` de la cancelación — cualquier sesión `'scheduled'` de la matrícula se cancela, sin importar si su fecha ya pasó (ese filtro causaba que sesiones vencidas-pero-no-procesadas quedaran sin cancelar y el cron las volviera a marcar `no_show` la noche siguiente, produciendo una cascada infinita de inasistencias que nunca se resolvía en penalización). Retorna `INT` con la cantidad cancelada (`0` si no aplica). `SECURITY DEFINER`. |
+| `mark_end_of_day_class_b_absences()` | Definida en `20260705000000` → redefinida en `20260707000000` (ambas perdidas, nunca versionadas) → **recuperada y corregida en `20260709120000_recover_class_b_absence_penalty_functions.sql`** | pg_cron: `0 1 * * *` (diario 01:00 UTC ≈ 21:00 CLT invierno, fin de jornada) | RF-053. Recorre `class_b_sessions` en `status='scheduled'` cuya fecha (America/Santiago) sea hoy o anterior (`ORDER BY enrollment_id, class_number` — determinismo, no afecta corrección) y las marca `status='no_show'`, insertando `class_b_practice_attendance(status='absent')` por alumno (`ON CONFLICT DO NOTHING`, idempotente). Por cada matrícula afectada invoca `apply_class_b_absence_penalty()`. Cada fila corre en su propio bloque `BEGIN/EXCEPTION` — una excepción en una fila no aborta el resto del batch. **Fix `20260709120000` (fix-028):** el `UPDATE ... status='no_show'` ahora exige `AND status='scheduled'` — el cursor del loop es un snapshot tomado al inicio; sin este guard, una fila cancelada por `apply_class_b_absence_penalty()` en una iteración anterior del mismo run quedaba sobreescrita de vuelta a `no_show` cuando el loop llegaba a su turno. `SECURITY DEFINER`. |
+| `apply_class_b_absence_penalty(p_enrollment_id INT)` | Definida en `20260705000000` → corregida en `20260706000000` → redefinida en `20260707000000` (todas perdidas, nunca versionadas) → **recuperada y corregida en `20260709120000_recover_class_b_absence_penalty_functions.sql`** | Llamada por `mark_end_of_day_class_b_absences()` y por `AsistenciaClaseBFacade.markAttendance()` vía `supabase.rpc()` | RF-053: 2 inasistencias no justificadas **consecutivas** (class_number adyacente N, N+1) = pérdida de agenda. La detección (`EXISTS`) y la cancelación (`UPDATE ... status='cancelled'`) ocurren en **una sola sentencia atómica**; sin filtro de fecha — cualquier sesión `'scheduled'` de la matrícula se cancela, sin importar si su fecha ya pasó. **Fix `20260709120000` (fix-028):** la cancelación ahora acota `AND class_number BETWEEN 1 AND 12` — nunca cancela (ni depende de) filas fuera del rango válido de una matrícula Clase B. Retorna `INT` con la cantidad cancelada (`0` si no aplica). `SECURITY DEFINER`. |
 
-> ⚠️ **Nota de gobernanza:** las migraciones `20260705000000` y `20260706000000` que originalmente crearon y corrigieron estas dos funciones se aplicaron directamente vía SQL Editor de Supabase y los archivos locales nunca llegaron a commitearse — se perdieron del repo sin dejar rastro en git. `20260707000000` redefine ambas funciones completas (`CREATE OR REPLACE`, idempotente) para que el estado de producción vuelva a estar reflejado en control de versiones. **Nunca alterar la BD desde el Dashboard sin además guardar el archivo de migración correspondiente en `supabase/migrations/` y comitearlo.**
+> ⚠️ **Nota de gobernanza (resuelta parcialmente en fix-028):** las migraciones `20260705000000`, `20260706000000` y `20260707000000` que originalmente crearon y corrigieron estas dos funciones se aplicaron directamente vía SQL Editor de Supabase y los archivos locales nunca llegaron a commitearse — se perdieron del repo sin dejar rastro en git. `20260709120000` recupera ambas funciones completas (`CREATE OR REPLACE`, idempotente) a partir del código real vigente en producción (confirmado por el dueño 2026-07-09) y corrige dos bugs adicionales encontrados en la revisión (ver descripciones arriba). **Nunca alterar la BD desde el Dashboard sin además guardar el archivo de migración correspondiente en `supabase/migrations/` y comitearlo.**
 | `cleanup_expired_public_enrollment()` | `20260317100000` + actualizada en `20260317120000` | Manual o pg_cron | Limpia `slot_holds` expirados, marca `payment_attempts` pendientes vencidos como `'failed'`, y cancela enrollments `pending_payment` cuya ventana de pago venció (`UPDATE enrollments SET status='cancelled' WHERE id IN (SELECT enrollment_id FROM payment_attempts WHERE status='failed')`). `SECURITY DEFINER`. |
 | `cleanup_public_enrollment_throttle()` | `20260603120000` | Manual o pg_cron | **Spec 0010 (S1).** Borra filas de `public_enrollment_throttle` con `created_at < now() - interval '1 day'` (fuera de cualquier ventana de rate-limit). `SECURITY DEFINER`. |
 | `cleanup_expired_drafts()` | `20260313140000` → `20260618120000` → `20260618140000` → **`20260622000001_drop_biometric_records.sql`** | pg_cron: `0 3 * * *` (diario 3AM UTC) | Limpia enrollments en `status='draft'` con `expires_at < NOW()`. Cascade: `route_incidents→NULL`, `class_b_practice_attendance→DELETE`, `class_b_sessions→DELETE`, `license_validations→DELETE`, `discount_applications→DELETE`, `payments→DELETE`, `student_documents→DELETE`, `digital_contracts→DELETE`, `enrollments→DELETE`. También elimina `students` (si no tienen otras matrículas) y `users` (si `supabase_uid IS NULL` Y no existen en `instructors`) creados durante el wizard que quedaron huérfanos. Guards: admins/secretarias siempre tienen `supabase_uid` activo → protegidos; instructores sin Auth → protegidos por NOT EXISTS en `instructors`. Por diseño, un draft nunca tiene `total_paid > 0`. Retorna conteo de enrollments eliminados. |
@@ -129,6 +129,7 @@
 | `log_change()` | `20260301000008` → `20260323100000` → `20260323120000` → **`20260323130000`** | Trigger AFTER INSERT/UPDATE/DELETE en 16 tablas (10 originales + 6 de `20260323110000`) | Registra operaciones en `audit_log`. **Evolución:** (1) Original: `user_id=NULL`, detalle genérico. (2) `20260323100000`: captura `user_id` via `auth.uid()` — no resuelve Edge Functions. (3) `20260323120000`: resuelve `user_id` desde header HTTP `x-audit-user-id` (Edge Functions service role) con fallback a `auth.uid()`. (4) `20260323130000`: **diff legible en español** — UPDATE muestra `[Nombre Entidad] Etiqueta: antes → después` con etiquetas en español (e.g. `phone→Teléfono`, `branch_id→Sede`; fallback `initcap(snake_case)`); nombre de entidad por tabla: `users`→nombre completo desde jsonb, `students`/`instructors`→SELECT en `users` por FK, `enrollments`→número matrícula, `vehicles`→patente, otros→`id=X`; INSERT/DELETE muestran `Creado:/Eliminado: Nombre`. Omite `id/created_at/updated_at/supabase_uid`. Trunca a 500 chars. `SECURITY DEFINER`. |
 | `recalc_instructor_monthly_hours(p_instructor_id, p_period)` | `20260509000001` | Llamada desde trigger `trg_class_b_sessions_monthly_hours` | Recuenta desde cero las `class_b_sessions` con `status='completed'` para el instructor+periodo dado (zona `America/Santiago`) y hace UPSERT en `instructor_monthly_hours`. Fórmula: `total_equivalent = practical_sessions × 0.75` (45 min/sesión). Si el recuento es 0, elimina la fila. `SECURITY DEFINER` para bypassear RLS de la tabla destino. |
 | `trg_class_b_sessions_update_monthly_hours()` | `20260509000001` | Trigger `trg_class_b_sessions_monthly_hours` — AFTER INSERT OR UPDATE OR DELETE en `class_b_sessions` (FOR EACH ROW) | Detecta transiciones de/hacia `status='completed'` y llama `recalc_instructor_monthly_hours()`. En UPDATE también recalcula el instructor/periodo anterior si cambiaron. En DELETE recalcula si la sesión eliminada era `completed`. |
+| `set_updated_at()` | `20260415000001` (creada) → reutilizada por `20260709003142` | Trigger `trg_class_b_sessions_updated_at` — BEFORE UPDATE en `class_b_sessions` (FOR EACH ROW) | Setea `NEW.updated_at = now()` en cada UPDATE. **Fix hotfix-012**: la tabla tenía `updated_at DEFAULT NOW()` pero ningún trigger la refrescaba — quedaba congelada en el valor del INSERT. Misma función ya usada por `professional_promotions` y `website_config`. |
 | `validate_website_config_courses_fk()` | `20260523000000` | Trigger `trg_validate_website_config_courses_fk` — BEFORE INSERT OR UPDATE en `website_config` (FOR EACH ROW) | **Spec 0004.** Itera `config->'courses'` y valida por cada card: (a) `course_id` no null, (b) existe en `courses`, (c) `courses.branch_id = website_config.branch_id`, (d) `course_id` único dentro del array. Lanza `RAISE EXCEPTION` con mensaje específico en cada violación. `SECURITY DEFINER`. |
 | `prevent_courses_delete_when_in_website_config()` | `20260523000000` | Trigger `trg_prevent_courses_delete_when_in_website_config` — BEFORE DELETE en `courses` (FOR EACH ROW) | **Spec 0004.** Cuenta refs a `OLD.id` en `website_config.config->'courses'`. Si hay ≥1, bloquea el DELETE con mensaje "No se puede eliminar: N card(s) de website_config referencian este curso. Quitá esas cards desde Configuración Web antes de eliminar el curso del catálogo." `SECURITY DEFINER`. |
 | `ensure_theory_cycle(p_branch_id INT, p_ref_date DATE)` | `20260630000000` | Llamada por el trigger `trg_assign_theory_cycle` y por el backfill | **Spec 0001.** Devuelve (creando si no existe) el ciclo teórico de la sede para la fecha dada: calcula el lunes objetivo (RF-04: Lun–Mié → semana en curso; RF-05: Jue–Dom → semana siguiente) y, al crear, genera las **6 clases** en `class_b_theory_sessions` (`class_number` 1–6, `class_date` = lunes + [0,2,4,7,9,11]). `SECURITY DEFINER`, TZ implícita por `p_ref_date`. |
@@ -486,7 +487,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `class_b_practice_attendance` — 🔒 RLS
 
-> Asistencia a clases prácticas individuales Clase B. RF-053: 2 inasistencias no justificadas **consecutivas** = pérdida de agenda futura. Estados: `present` | `absent` | `excused` (justificada, vía `AsistenciaClaseBFacade.justifyAbsence()`) | `no_show`. Ver `apply_class_b_absence_penalty()` y `mark_end_of_day_class_b_absences()` (`20260707000000`).
+> Asistencia a clases prácticas individuales Clase B. RF-053: 2 inasistencias = deserción
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -557,39 +558,42 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 **Índices:** `idx_class_b_sessions_date_instructor`, `idx_class_b_sessions_date_vehicle`
 
-### `class_b_theory_attendance` — 🔒 RLS
+### `class_b_theory_cycles` — 🔒 RLS
 
-> Asistencia a clases teóricas grupales Clase B Zoom (RF-051, RF-052)
+> Ciclos teóricos Clase B (Spec 0001): cohorte de 2 semanas, 6 clases L/X/V. '
+  'start_date siempre Lunes, end_date = start_date + 11 (Viernes semana 2).
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
-| `theory_session_b_id` | INT | NO | — | → `class_b_theory_sessions.id` |
-| `student_id` | INT | NO | — | → `students.id` |
-| `status` | TEXT | sí | — | — |
-| `justification` | TEXT | sí | — | — |
-| `recorded_by` | INT | sí | — | → `users.id` |
-| `recorded_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `branch_id` | INT | NO | — | → `branches.id` |
+| `start_date` | DATE | NO | — | — |
+| `end_date` | DATE | NO | — | — |
+| `status` | TEXT | NO | `'active'` | — |
+| `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
 
 **Policies:**
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| select_class_b_theory_attendance | SELECT | `auth_user_role() IN ('admin', 'secretary', 'instructor') OR (auth_user_role()…` | — |
-| insert_class_b_theory_attendance | INSERT | — | `auth_user_role() IN ('admin', 'secretary', 'instructor')` |
-| update_class_b_theory_attendance | UPDATE | `auth_user_role() IN ('admin', 'secretary', 'instructor')` | — |
-| delete_class_b_theory_attendance | DELETE | `auth_user_role() IN ('admin', 'secretary')` | — |
+| select_class_b_theory_cycles | SELECT | `auth_user_role() IN ('admin', 'instructor', 'student') OR (auth_user_role() =…` | — |
+| insert_class_b_theory_cycles | INSERT | — | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` |
+| update_class_b_theory_cycles | UPDATE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
+| delete_class_b_theory_cycles | DELETE | `auth_user_role() = 'admin'` | — |
+
+**Índices:** `idx_class_b_theory_cycles_branch_status`
 
 ### `class_b_theory_sessions` — 🔒 RLS
 
-> Sesiones teóricas grupales Zoom de Clase B (RF-016, RF-051)
+> Clases de un ciclo teórico Clase B (Spec 0001): 6 por ciclo (L/X/V × 2 semanas). '
+  'class_number 1-6, class_date, zoom_link + zoom_sent_at. Sin asistencia (irrelevante).
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
 | `id` PK | SERIAL | NO | — | — |
 | `branch_id` | INT | sí | — | → `branches.id` |
 | `instructor_id` | INT | sí | — | → `instructors.id` |
-| `scheduled_at` | TIMESTAMPTZ | NO | — | — |
+| `scheduled_at` | TIMESTAMPTZ | sí | — | — |
 | `start_time` | TIME | sí | — | — |
 | `end_time` | TIME | sí | — | — |
 | `duration_min` | SMALLINT | sí | `90` | — |
@@ -599,6 +603,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `notes` | TEXT | sí | — | — |
 | `registered_by` | INT | sí | — | → `users.id` |
 | `created_at` | TIMESTAMPTZ | sí | `NOW()` | — |
+| `cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
+| `class_number` | SMALLINT | sí | — | — |
+| `class_date` | DATE | sí | — | — |
+| `zoom_sent_at` | TIMESTAMPTZ | sí | — | — |
 
 **Policies:**
 
@@ -846,6 +854,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `license_pdf_url` | TEXT | sí | — | — |
 | `license_initial_url` | TEXT | sí | — | — |
 | `license_full_url` | TEXT | sí | — | — |
+| `theory_cycle_id` | INT | sí | — | → `class_b_theory_cycles.id` |
 
 **Policies:**
 
@@ -2156,12 +2165,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql` |
 | `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
-| `v_student_progress_b` | `20260412000003_fix_v_student_progress_b_count.sql` |
+| `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
 
 ## Funciones (helpers RLS y lógica de BD)
 
 | Función | Argumentos |
 |---------|-----------|
+| `apply_class_b_absence_penalty` | `(p_enrollment_id INT)` |
+| `assign_theory_cycle` | `()` |
 | `auth_can_access_both_branches` | `()` |
 | `auth_can_enroll_course_type` | `(p_course_id INT)` |
 | `auth_instructor_id` | `()` |
@@ -2171,6 +2182,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `auth_user_role` | `()` |
 | `auto_transition_promotion_status` | `()` |
 | `auto_transition_standalone_course_status` | `()` |
+| `auto_transition_theory_cycle_status` | `()` |
 | `branch_visible` | `(p_branch_id INT)` |
 | `calculate_vehicle_document_status` | `()` |
 | `cascade_promotion_status_to_courses` | `()` |
@@ -2180,12 +2192,14 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `cleanup_public_enrollment_throttle` | `()` |
 | `confirm_enrollment_with_payment` | `(p_enrollment_id INTEGER, p_payment_method TEXT, p_total_amount INTEGER, p_discount_id INTEGER DEFAULT NULL, p_discount_amount INTEGER DEFAULT 0, p_registered_by INTEGER DEFAULT NULL, p_is_deposit BOOLEAN DEFAULT FALSE)` |
 | `decrement_batch_folio` | `()` |
+| `ensure_theory_cycle` | `(p_branch_id INT, p_ref_date DATE)` |
 | `generate_license_alert` | `()` |
 | `generate_sessions_from_promotion` | `()` |
 | `get_next_enrollment_number` | `(p_course_id INT)` |
 | `get_student_payment_status` | `(p_supabase_uid TEXT)` |
 | `instructor_enrollment_ids` | `()` |
 | `log_change` | `()` |
+| `mark_end_of_day_class_b_absences` | `()` |
 | `prevent_courses_delete_when_in_website_config` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |

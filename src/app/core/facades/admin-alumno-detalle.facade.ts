@@ -1178,59 +1178,36 @@ export class AdminAlumnoDetalleFacade {
    * pendientes que la secretaria NO marcó en el checklist ni se mencionan aquí:
    * quedan intactas en la BD (siguen en rojo/ámbar).
    *
-   * Trato distinto según el origen de cada clase de la selección:
-   * - **`no_show` (inasistencia a recuperar):** se RECICLA la misma fila — mismo
-   *   `class_number`/`id`, se actualiza `scheduled_at`/`instructor_id`/`vehicle_id`,
-   *   vuelve a `status='scheduled'` y se BORRA su fila en `class_b_practice_attendance`
-   *   para que quede "limpia" (vuelve a verse azul, no arrastra la inasistencia vieja).
-   * - **`cancelled` (evidencia de la penalización):** NUNCA se toca. Se INSERTA una
-   *   sesión nueva en `status='scheduled'`, continuando la numeración desde el
-   *   `class_number` más alto ya existente en la matrícula.
+   * Tanto `no_show` (inasistencia a recuperar) como `cancelled` (evidencia de la
+   * penalización) se RECICLAN in-place: misma fila/`class_number`, se actualiza
+   * `scheduled_at`/`instructor_id`/`vehicle_id`, vuelve a `status='scheduled'` y
+   * se BORRA su fila en `class_b_practice_attendance` para que quede "limpia"
+   * (vuelve a verse azul, no arrastra la inasistencia vieja). Nunca se inserta
+   * una fila nueva: la matrícula siempre tiene exactamente `class_number` 1..12
+   * (`cancelled_at` en la fila ya deja registro de cuándo se penalizó, antes de
+   * reciclarla).
    *
-   * Los slots elegidos (ordenados cronológicamente) se reparten: los primeros N
-   * reciclan las N sesiones `no_show` de la selección (ordenadas por `class_number`),
-   * el resto inserta sesiones nuevas para las `cancelled`. El vehículo se resuelve
-   * por slot (`_slotVehicleMap`, poblado por `loadScheduleGrid()`), igual que
-   * `reprogramarClase()`.
+   * El vehículo se resuelve por slot (`_slotVehicleMap`, poblado por
+   * `loadScheduleGrid()`), igual que `reprogramarClase()`.
    */
   async reagendarClasesPenalizadas(payload: ReagendarPenalizacionPayload): Promise<void> {
-    const seleccion = this._reagendarSeleccion();
+    const seleccion = [...this._reagendarSeleccion()].sort((a, b) => a.claseNumero - b.claseNumero);
     if (seleccion.length === 0) return;
-
-    const noShowSessions = seleccion
-      .filter((c) => c.origen === 'no_show')
-      .sort((a, b) => a.claseNumero - b.claseNumero);
-
-    const { data: maxRow } = await this.supabase.client
-      .from('class_b_sessions')
-      .select('class_number')
-      .eq('enrollment_id', payload.enrollmentId)
-      .order('class_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    let nextClassNumber = (maxRow?.class_number ?? 0) + 1;
 
     const orderedSlotIds = [...payload.selectedSlotIds].sort(
       (a, b) => new Date(a).getTime() - new Date(b).getTime(),
     );
+    if (orderedSlotIds.length !== seleccion.length) {
+      throw new Error('La cantidad de horarios elegidos no coincide con la selección.');
+    }
 
-    const slotsForNoShow = orderedSlotIds.slice(0, noShowSessions.length);
-    const slotsForNuevaSesion = orderedSlotIds.slice(noShowSessions.length);
-
-    const resolveVehicle = (slotId: string): number => {
+    for (let i = 0; i < seleccion.length; i++) {
+      const session = seleccion[i];
+      const slotId = orderedSlotIds[i];
       const vehicleId = this._slotVehicleMap.get(slotId);
       if (!vehicleId) {
         throw new Error(`No se pudo determinar el vehículo para el horario ${slotId}.`);
       }
-      return vehicleId;
-    };
-
-    // 1. Recicla las sesiones no_show seleccionadas: misma clase, nueva fecha, asistencia limpia.
-    for (let i = 0; i < slotsForNoShow.length; i++) {
-      const session = noShowSessions[i];
-      const slotId = slotsForNoShow[i];
-      const vehicleId = resolveVehicle(slotId);
 
       const { error: updateError } = await this.supabase.client
         .from('class_b_sessions')
@@ -1250,23 +1227,6 @@ export class AdminAlumnoDetalleFacade {
         .delete()
         .eq('class_b_session_id', session.sessionId);
       if (deleteError) throw deleteError;
-    }
-
-    // 2. Inserta sesiones nuevas para las canceladas seleccionadas (nunca se tocan).
-    if (slotsForNuevaSesion.length > 0) {
-      const rows = slotsForNuevaSesion.map((slotId) => ({
-        enrollment_id: payload.enrollmentId,
-        instructor_id: payload.instructorId,
-        vehicle_id: resolveVehicle(slotId),
-        class_number: nextClassNumber++,
-        scheduled_at: slotId,
-        status: 'scheduled',
-      }));
-
-      const { error: insertError } = await this.supabase.client
-        .from('class_b_sessions')
-        .insert(rows);
-      if (insertError) throw insertError;
     }
 
     this._reagendarSeleccion.set([]);
