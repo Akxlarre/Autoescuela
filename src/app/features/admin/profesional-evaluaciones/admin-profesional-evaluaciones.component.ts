@@ -16,6 +16,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -33,6 +34,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BadgeComponent,
     StatBoxComponent,
     BentoGridLayoutDirective,
   ],
@@ -149,12 +151,9 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                 </div>
               </div>
               <div class="flex items-center gap-3 shrink-0">
-                <span
-                  class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-2xs"
-                  [class]="promoStatusClass(promo.status)"
-                >
+                <app-badge [variant]="promoStatusVariant(promo.status)">
                   {{ promoStatusLabel(promo.status) }}
-                </span>
+                </app-badge>
                 <span class="hidden sm:flex items-center gap-1 text-xs text-text-secondary">
                   <app-icon name="users" [size]="12" />
                   {{ promo.totalAlumnos }}
@@ -183,13 +182,12 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                   <!-- Código + estado -->
                   <div class="flex items-start justify-between gap-2">
                     <span class="kpi-value leading-none">{{ curso.courseCode }}</span>
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold shrink-0 border"
-                      [class]="estadoBadgeClass(curso.estado)"
-                    >
-                      <app-icon [name]="estadoBadgeIcon(curso.estado)" [size]="11" />
-                      {{ estadoBadgeLabel(curso.estado) }}
-                    </span>
+                    <app-badge [variant]="estadoBadgeVariant(curso.estado)">
+                      <span class="inline-flex items-center gap-1">
+                        <app-icon [name]="estadoBadgeIcon(curso.estado)" [size]="11" />
+                        {{ estadoBadgeLabel(curso.estado) }}
+                      </span>
+                    </app-badge>
                   </div>
 
                   <!-- Nombre del curso -->
@@ -681,14 +679,14 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
   }
 
   // ── Helpers de estilo — landing ───────────────────────────────────────────
-  protected estadoBadgeClass(estado: CursoEstado): string {
+  protected estadoBadgeVariant(estado: CursoEstado): 'success' | 'warning' | 'neutral' {
     switch (estado) {
       case 'confirmada':
-        return 'bg-success/10 text-success border-success/30';
+        return 'success';
       case 'en_edicion':
-        return 'bg-warning/10 text-warning-dark border-warning/30';
+        return 'warning';
       default:
-        return 'bg-subtle text-text-muted border-border';
+        return 'neutral';
     }
   }
 
@@ -714,10 +712,8 @@ export class AdminProfesionalEvaluacionesComponent implements OnInit, OnDestroy 
     }
   }
 
-  protected promoStatusClass(status: string): string {
-    return status === 'in_progress'
-      ? 'bg-brand/10 text-brand border border-brand/20 font-medium'
-      : 'bg-subtle text-text-muted border border-border';
+  protected promoStatusVariant(status: string): 'brand' | 'neutral' {
+    return status === 'in_progress' ? 'brand' : 'neutral';
   }
 
   protected promoStatusLabel(status: string): string {

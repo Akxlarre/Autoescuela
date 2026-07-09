@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, input, output, computed } from '@an
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { ScheduleGridComponent } from '@shared/components/schedule-grid/schedule-grid.component';
@@ -13,6 +14,7 @@ import { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assignment.
     FormsModule,
     SelectModule,
     IconComponent,
+    BadgeComponent,
     AsyncBtnComponent,
     SkeletonBlockComponent,
     ScheduleGridComponent,

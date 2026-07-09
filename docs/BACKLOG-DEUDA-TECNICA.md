@@ -37,13 +37,28 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       riesgo: harness CSS de los 4 variants + build + 1 página real, no Playwright completo
       por archivo (justificado porque `badge-*` ya está probado 3x y el riesgo aquí es solo
       "mapeo de clase→variant", verificable por lectura de código).
+- [x] **fix-043 (2026-07-09)** — Lote 2: 13 archivos migrados (22 pills dinámicos, vía
+      helpers `getXVariant()` reemplazando `getXBg()`/`getXColor()`), 3 archivos revisados y
+      excluidos con justificación documentada (`public-context-banner`, `tabs.component`,
+      `alumnos-list-content` sin tocar por sesión paralela activa). Hallazgos: (a) 3 falsos
+      positivos más del heurístico ARCH-15 (botones con `(click)` mal detectados como pills:
+      filtro en `asistencia-clase-b-content`, 2 en `public-context-banner`); (b) contador
+      "tab count" en `tabs.component.ts` no es semánticamente un badge de estado — requiere
+      decisión de diseño (ver ítem "Residual" abajo); (c) `admin-promocion-ver-drawer`
+      corrigió de paso un bug latente (`var(--state-brand)` inexistente, fallback silencioso
+      roto) al migrar a variant tipado; (d) `section-hero.component.ts` (chip modo slim,
+      ~50 páginas de blast radius) verificado con Playwright real además de harness — chip
+      modo full/hero queda fuera de scope (fondo fijo semi-transparente sobre `.surface-hero`,
+      no semántico por diseño). Baseline: 77→51 pills, 49→43 archivos.
 - [ ] Migrar los pills ad-hoc restantes del baseline ARCH-15 a `<app-badge [variant]="...">`
-      (**77 restantes de 122**). Quedan dos grupos: (a) ~11 pills estáticos que el matcher
-      del codemod no reconoció con confianza (variaciones de formato) — candidatos a un
-      lote 2 con matcher más flexible o edición manual puntual; (b) ~66 pills **dinámicos**
-      (helpers `getXColor()/getXBg()` o `[class]="metodo()"`) que requieren lectura manual
-      de la lógica de cada archivo — mismo esfuerzo que fix-037/039/040, hacer en lotes de
-      varios archivos por fix (no 1 a 1). Re-baseline con `--update-ds-baseline` tras cada lote.
+      (**51 restantes**, mayormente 1 pill por archivo — lote 3). Re-baseline con
+      `--update-ds-baseline` tras cada lote.
+- [ ] Decisión de diseño: el "tab count" (contador numérico dentro de `<app-tab>`, ver
+      `tabs.component.ts`) no es un badge de estado — ¿merece su propia utilidad `.tab-count`
+      o se dejan como excepción documentada del heurístico ARCH-15?
+- [ ] Refinar heurístico ARCH-15 para excluir `<button>` con `(click)` — van 5 falsos
+      positivos confirmados entre fix-043 y su análisis previo (filtros/acciones que
+      visualmente parecen pills pero son controles interactivos, no badges de estado)
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
       (baseline ARCH-16, ~120 instancias)

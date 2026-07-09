@@ -15,6 +15,7 @@ import { RouterLink } from '@angular/router';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { getSparklinePoints } from '@core/utils/sparkline.utils';
 import type {
@@ -178,6 +179,28 @@ import type {
         .flex-1[aria-hidden='true'] {
           display: none !important;
         }
+
+        /* ── SLIM MODE OVERRIDES ──
+           Cuando force-compact está activo, ignoramos los estilos "sm" de Tailwind 
+           que asumen que hay espacio por estar en desktop. Forzamos el layout móvil. */
+        .sm\:flex-row {
+          flex-direction: column !important;
+          align-items: stretch !important;
+        }
+        .sm\:items-center {
+          align-items: flex-start !important;
+        }
+        /* Top bar elements */
+        .sm\:gap-3 {
+          gap: 0.5rem !important;
+        }
+        /* KPIs - forzar 2 por fila (45%) y restaurar borde inferior */
+        .sm\:border-b-0 {
+          border-bottom-width: 1px !important;
+        }
+        .sm\:min-w-auto {
+          min-width: 45% !important;
+        }
       }
 
       /* ════════════════════════════════════════════════════════════
@@ -326,7 +349,7 @@ import type {
     // (incluido el panel) quede por encima de las cards siguientes.
     '[class.hero-menu-open]': 'openMenuId() !== null',
   },
-  imports: [IconComponent, RouterLink, AnimateInDirective, SkeletonBlockComponent],
+  imports: [IconComponent, BadgeComponent, RouterLink, AnimateInDirective, SkeletonBlockComponent],
   template: `
     @if (density() === 'slim') {
       <!-- ── SLIM MODE ─────────────────────────────────────────────
@@ -437,15 +460,12 @@ import type {
               @if (chips().length) {
                 <div class="flex items-center gap-1.5 flex-wrap">
                   @for (chip of chips(); track chip.label) {
-                    <span
-                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-medium border whitespace-nowrap"
-                      [attr.style]="getChipStyleSlim(chip)"
-                    >
+                    <app-badge [variant]="getChipVariant(chip)" class="whitespace-nowrap">
                       @if (chip.icon) {
                         <app-icon [name]="chip.icon" [size]="11" />
                       }
                       {{ chip.label }}
-                    </span>
+                    </app-badge>
                   }
                 </div>
               }
@@ -574,7 +594,10 @@ import type {
                           </span>
                         }
                         @if (kpi.subValue) {
-                          <span class="text-2xs font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
+                          <span
+                            class="text-2xs font-medium text-text-muted leading-none w-full mt-0.5"
+                            >{{ kpi.subValue }}</span
+                          >
                         }
                       </div>
                       <div
@@ -610,7 +633,10 @@ import type {
                           </span>
                         }
                         @if (kpi.subValue) {
-                          <span class="text-2xs font-medium text-text-muted leading-none w-full mt-0.5">{{ kpi.subValue }}</span>
+                          <span
+                            class="text-2xs font-medium text-text-muted leading-none w-full mt-0.5"
+                            >{{ kpi.subValue }}</span
+                          >
                         }
                       </div>
                     </div>
@@ -1055,16 +1081,16 @@ export class SectionHeroComponent implements AfterViewInit, OnDestroy {
 
   // ── Slim-mode helpers ──────────────────────────────────────────
 
-  getChipStyleSlim(chip: SectionHeroChip): string {
+  getChipVariant(chip: SectionHeroChip): 'success' | 'warning' | 'error' | 'neutral' {
     switch (chip.style) {
       case 'error':
-        return 'background:var(--state-error-bg);color:var(--state-error);border-color:var(--state-error-border)';
+        return 'error';
       case 'warning':
-        return 'background:var(--state-warning-bg);color:var(--state-warning);border-color:var(--state-warning-border)';
+        return 'warning';
       case 'success':
-        return 'background:var(--state-success-bg);color:var(--state-success);border-color:var(--state-success-border)';
+        return 'success';
       default:
-        return 'background:var(--bg-subtle);color:var(--text-secondary);border-color:var(--border-subtle)';
+        return 'neutral';
     }
   }
 

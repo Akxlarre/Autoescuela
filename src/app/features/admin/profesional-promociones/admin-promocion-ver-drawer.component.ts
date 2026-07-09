@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
@@ -25,7 +26,13 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
   selector: 'app-admin-promocion-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
+  imports: [
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+    StatBoxComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     @if (promo(); as p) {
       <app-drawer-content-loader>
@@ -51,13 +58,9 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
               <h2 class="text-lg font-semibold text-text-primary">
                 {{ p.name }}
               </h2>
-              <span
-                class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                [style.background]="statusPillStyle(p.status).bg"
-                [style.color]="statusPillStyle(p.status).color"
-              >
+              <app-badge [variant]="statusBadgeVariant(p.status)">
                 {{ statusCfg(p.status).label }}
-              </span>
+              </app-badge>
             </div>
             <div class="flex items-center gap-3 flex-wrap">
               <span
@@ -297,13 +300,12 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                     {{ alumno.rut }}
                                   </p>
                                 </div>
-                                <span
-                                  class="text-2xs px-1.5 py-0.5 rounded-full shrink-0"
-                                  [style.background]="enrollStatusBg(alumno.enrollmentStatus)"
-                                  [style.color]="enrollStatusColor(alumno.enrollmentStatus)"
+                                <app-badge
+                                  [variant]="enrollStatusVariant(alumno.enrollmentStatus)"
+                                  class="shrink-0"
                                 >
                                   {{ enrollStatusLabel(alumno.enrollmentStatus) }}
-                                </span>
+                                </app-badge>
                               </div>
                             }
                           }
@@ -391,22 +393,11 @@ export class AdminPromocionVerDrawerComponent {
     return STATUS_CONFIG[status] ?? STATUS_CONFIG['planned'];
   }
 
-  private readonly stateBgTokens: Record<string, string> = {
-    success: 'var(--state-success-bg)',
-    warning: 'var(--state-warning-bg)',
-    error: 'var(--state-error-bg)',
-    info: 'var(--state-info-bg)',
-  };
-
-  protected statusPillStyle(status: string): { bg: string; color: string } {
-    const cfg = this.statusCfg(status);
-    if (cfg.variant === 'surface') {
-      return { bg: 'var(--bg-elevated)', color: 'var(--text-muted)' };
-    }
-    return {
-      bg: this.stateBgTokens[cfg.variant] ?? 'var(--bg-elevated)',
-      color: `var(--state-${cfg.variant})`,
-    };
+  protected statusBadgeVariant(
+    status: string,
+  ): 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'brand' {
+    const variant = this.statusCfg(status).variant;
+    return variant === 'default' || variant === 'surface' ? 'neutral' : variant;
   }
 
   protected courseColor(code: string): string {
@@ -438,24 +429,14 @@ export class AdminPromocionVerDrawerComponent {
     return map[status] ?? status;
   }
 
-  protected enrollStatusBg(status: string): string {
-    const map: Record<string, string> = {
-      active: 'var(--state-success-bg)',
-      completed: 'var(--bg-elevated)',
-      inactive: 'var(--state-error-bg)',
-      pending_payment: 'var(--state-warning-bg)',
+  protected enrollStatusVariant(status: string): 'success' | 'warning' | 'error' | 'neutral' {
+    const map: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+      active: 'success',
+      completed: 'neutral',
+      inactive: 'error',
+      pending_payment: 'warning',
     };
-    return map[status] ?? 'var(--bg-elevated)';
-  }
-
-  protected enrollStatusColor(status: string): string {
-    const map: Record<string, string> = {
-      active: 'var(--state-success)',
-      completed: 'var(--text-muted)',
-      inactive: 'var(--state-error)',
-      pending_payment: 'var(--state-warning)',
-    };
-    return map[status] ?? 'var(--text-muted)';
+    return map[status] ?? 'neutral';
   }
 
   protected formatDate(iso: string): string {

@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { TaskStatusBadgeComponent } from '@shared/components/task-status-badge/task-status-badge.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -15,7 +16,13 @@ const TYPE_ICON: Record<string, string> = {
 @Component({
   selector: 'app-task-card',
   standalone: true,
-  imports: [IconComponent, TaskStatusBadgeComponent, CardHoverDirective, SkeletonBlockComponent],
+  imports: [
+    IconComponent,
+    BadgeComponent,
+    TaskStatusBadgeComponent,
+    CardHoverDirective,
+    SkeletonBlockComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (loading()) {
@@ -63,21 +70,16 @@ const TYPE_ICON: Record<string, string> = {
         <!-- Badges de alerta -->
         <div class="flex flex-wrap gap-1.5">
           @if (task().isOverdue) {
-            <span
-              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
-              style="color: var(--state-error, #dc2626); background-color: var(--state-error-bg, #fef2f2)"
-            >
+            <app-badge variant="error">
               <app-icon name="alert-triangle" [size]="11" [ariaHidden]="true" />
               Vencida
-            </span>
+            </app-badge>
           }
           @if (task().recipientInactive) {
-            <span
-              class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium text-text-muted bg-subtle"
-            >
+            <app-badge variant="neutral">
               <app-icon name="user-x" [size]="11" [ariaHidden]="true" />
               Destinatario inactivo
-            </span>
+            </app-badge>
           }
         </div>
 

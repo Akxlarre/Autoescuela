@@ -15,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { MenuModule } from 'primeng/menu';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -39,6 +40,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
   imports: [
     CommonModule,
     IconComponent,
+    BadgeComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
     FormsModule,
@@ -88,16 +90,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   >
                     <app-icon [name]="servicio.icono" [size]="18" />
                   </div>
-                  <span
-                    class="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full"
-                    [style]="
-                      servicio.activo
-                        ? 'background:var(--state-success-bg,rgba(34,197,94,.1));color:var(--state-success)'
-                        : 'background:var(--bg-subtle);color:var(--text-muted)'
-                    "
-                  >
+                  <app-badge [variant]="servicio.activo ? 'success' : 'neutral'">
                     {{ servicio.activo ? 'Activo' : 'Inactivo' }}
-                  </span>
+                  </app-badge>
                 </div>
                 <div class="flex-1">
                   <h3 class="font-semibold text-text-primary text-sm m-0 mb-1">
@@ -260,16 +255,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       \${{ venta.precio.toLocaleString('es-CL') }}
                     </td>
                     <td class="py-3 px-4 text-center">
-                      <span
-                        class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
-                        [style]="
-                          venta.estado === 'completado'
-                            ? 'background:var(--state-success-bg);color:var(--state-success)'
-                            : 'background:var(--state-warning-bg);color:var(--state-warning)'
-                        "
-                      >
+                      <app-badge [variant]="venta.estado === 'completado' ? 'success' : 'warning'">
                         {{ venta.estado === 'completado' ? 'Completado' : 'Pendiente' }}
-                      </span>
+                      </app-badge>
                     </td>
                     <td class="py-3 px-4 text-center">
                       @if (venta.cobrado) {
@@ -318,10 +306,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex flex-col gap-0.5">
                     <span class="font-bold text-text-primary">{{ venta.cliente }}</span>
-                    <span
-                      class="text-2xs text-text-muted font-mono uppercase tracking-tighter"
-                      >{{ venta.rut }}</span
-                    >
+                    <span class="text-2xs text-text-muted font-mono uppercase tracking-tighter">{{
+                      venta.rut
+                    }}</span>
                   </div>
                   <span class="text-sm font-black text-text-primary"
                     >\${{ venta.precio.toLocaleString('es-CL') }}</span

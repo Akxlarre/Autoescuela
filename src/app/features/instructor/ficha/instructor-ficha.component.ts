@@ -12,6 +12,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -31,6 +32,7 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
     DatePipe,
     DecimalPipe,
     IconComponent,
+    BadgeComponent,
     EmptyStateComponent,
     AlertCardComponent,
     SkeletonBlockComponent,
@@ -299,12 +301,9 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                             }
                           </td>
                           <td class="p-4 text-center w-28">
-                            <span
-                              class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold"
-                              [attr.style]="getStatusStyle(row.status)"
-                            >
+                            <app-badge [variant]="getStatusVariant(row.status)">
                               {{ getStatusLabel(row.status) }}
-                            </span>
+                            </app-badge>
                           </td>
                           <td class="p-4 text-center w-28">
                             @if (row.canEvaluate) {
@@ -386,12 +385,9 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
                               {{ row.grade }}
                             </div>
                           }
-                          <span
-                            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold"
-                            [attr.style]="getStatusStyle(row.status)"
-                          >
+                          <app-badge [variant]="getStatusVariant(row.status)">
                             {{ getStatusLabel(row.status) }}
-                          </span>
+                          </app-badge>
                         </div>
                       </div>
 
@@ -541,16 +537,16 @@ export class InstructorFichaComponent implements OnInit {
     }
   }
 
-  protected getStatusStyle(status: string): string {
+  protected getStatusVariant(status: string): 'success' | 'warning' | 'brand' | 'neutral' {
     switch (status) {
       case 'completed':
-        return 'background: var(--state-success-bg); color: var(--state-success)';
+        return 'success';
       case 'in_progress':
-        return 'background: var(--state-warning-bg); color: var(--state-warning)';
+        return 'warning';
       case 'scheduled':
-        return 'background: var(--color-primary-muted); color: var(--color-primary)';
+        return 'brand';
       default:
-        return 'background: var(--bg-subtle); color: var(--text-muted)';
+        return 'neutral';
     }
   }
 }
