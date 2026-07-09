@@ -8,6 +8,7 @@ import { DmsFacade } from '@core/facades/dms.facade';
 import type { TemplateCategory } from '@core/models/ui/dms.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
@@ -26,6 +27,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     FormsModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -38,127 +40,118 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         </div>
       </ng-template>
       <ng-template #content>
-        <div class="flex-1 flex flex-col gap-5">
-          <!-- Nombre -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-primary">Nombre *</label>
-            <input
-              type="text"
-              [ngModel]="name()"
-              (ngModelChange)="name.set($event)"
-              placeholder="Ej: Contrato Clase B"
-              class="w-full rounded-lg px-3 py-2 text-sm border bg-subtle border-border-subtle text-text-primary outline-none"
-              
-            />
-          </div>
-
-          <!-- Descripción -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-secondary">Descripción</label>
-            <textarea
-              [ngModel]="description()"
-              (ngModelChange)="description.set($event)"
-              rows="2"
-              placeholder="Descripción breve de la plantilla..."
-              class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
-              
-            ></textarea>
-          </div>
-
-          <!-- Categoría -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-primary">Categoría *</label>
-            <p-select
-              [ngModel]="category()"
-              (ngModelChange)="category.set($event)"
-              [options]="categoryOptions"
-              placeholder="Seleccionar categoría..."
-              styleClass="w-full"
-            />
-          </div>
-
-          <!-- Archivo -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-primary">Archivo *</label>
-            <div
-              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
-              [style]="
-                isDragOver()
-                  ? 'border-color: var(--color-primary); background: var(--color-primary-tint);'
-                  : 'border-color: var(--border-subtle); background: var(--bg-subtle);'
-              "
-              (dragover)="onDragOver($event)"
-              (dragleave)="isDragOver.set(false)"
-              (drop)="onDrop($event)"
-              (click)="fileInput.click()"
-            >
-              <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
-                <app-icon name="file-text" [size]="22" />
-              </div>
-
-              @if (selectedFile()) {
-                <div>
-                  <p class="font-semibold text-sm m-0 text-text-primary">
-                    {{ selectedFile()!.name }}
-                  </p>
-                  <p class="text-xs m-0 mt-1 text-text-secondary">
-                    {{ detectedFormat().toUpperCase() }} ·
-                    {{ formatFileSize(selectedFile()!.size) }}
-                  </p>
-                </div>
-              } @else {
-                <div>
-                  <p class="font-medium text-sm m-0 text-text-primary">
-                    Arrastra tu plantilla aquí
-                  </p>
-                  <p class="text-xs m-0 mt-1 text-text-secondary">PDF, DOCX, XLSX — máx. 10 MB</p>
-                </div>
-              }
+        <app-drawer-form>
+          <div class="flex-1 flex flex-col gap-5">
+            <!-- Nombre -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-primary">Nombre *</label>
+              <input
+                type="text"
+                [ngModel]="name()"
+                (ngModelChange)="name.set($event)"
+                placeholder="Ej: Contrato Clase B"
+                class="w-full rounded-lg px-3 py-2 text-sm border bg-subtle border-border-subtle text-text-primary outline-none"
+              />
             </div>
-            <input
-              #fileInput
-              type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx"
-              class="hidden"
-              (change)="onFileChange($event)"
-            />
+
+            <!-- Descripción -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-secondary">Descripción</label>
+              <textarea
+                [ngModel]="description()"
+                (ngModelChange)="description.set($event)"
+                rows="2"
+                placeholder="Descripción breve de la plantilla..."
+                class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
+              ></textarea>
+            </div>
+
+            <!-- Categoría -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-primary">Categoría *</label>
+              <p-select
+                [ngModel]="category()"
+                (ngModelChange)="category.set($event)"
+                [options]="categoryOptions"
+                placeholder="Seleccionar categoría..."
+                styleClass="w-full"
+              />
+            </div>
+
+            <!-- Archivo -->
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-primary">Archivo *</label>
+              <div
+                class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
+                [style]="
+                  isDragOver()
+                    ? 'border-color: var(--color-primary); background: var(--color-primary-tint);'
+                    : 'border-color: var(--border-subtle); background: var(--bg-subtle);'
+                "
+                (dragover)="onDragOver($event)"
+                (dragleave)="isDragOver.set(false)"
+                (drop)="onDrop($event)"
+                (click)="fileInput.click()"
+              >
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
+                  <app-icon name="file-text" [size]="22" />
+                </div>
+
+                @if (selectedFile()) {
+                  <div>
+                    <p class="font-semibold text-sm m-0 text-text-primary">
+                      {{ selectedFile()!.name }}
+                    </p>
+                    <p class="text-xs m-0 mt-1 text-text-secondary">
+                      {{ detectedFormat().toUpperCase() }} ·
+                      {{ formatFileSize(selectedFile()!.size) }}
+                    </p>
+                  </div>
+                } @else {
+                  <div>
+                    <p class="font-medium text-sm m-0 text-text-primary">
+                      Arrastra tu plantilla aquí
+                    </p>
+                    <p class="text-xs m-0 mt-1 text-text-secondary">PDF, DOCX, XLSX — máx. 10 MB</p>
+                  </div>
+                }
+              </div>
+              <input
+                #fileInput
+                type="file"
+                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                class="hidden"
+                (change)="onFileChange($event)"
+              />
+            </div>
+
+            <!-- Éxito -->
+            @if (savedOk()) {
+              <app-alert-card title="Plantilla creada" severity="success">
+                La plantilla se subió correctamente.
+              </app-alert-card>
+            }
           </div>
 
-          <!-- Éxito -->
-          @if (savedOk()) {
-            <app-alert-card title="Plantilla creada" severity="success">
-              La plantilla se subió correctamente.
-            </app-alert-card>
-          }
-        </div>
-
-        <!-- Footer -->
-        <div
-          class="flex items-center justify-end gap-3 pt-4 border-t shrink-0 border-border-subtle"
-        >
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer border-border-subtle bg-transparent text-text-primary"
-            
-            (click)="onClose()"
-          >
-            Cancelar
-          </button>
-          <app-async-btn
-            label="Guardar plantilla"
-            icon="folder"
-            [loading]="isSubmitting()"
-            [disabled]="!canSubmit()"
-            (click)="onSubmit()"
-          ></app-async-btn>
-        </div>
+          <!-- Footer -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
+            <app-async-btn
+              label="Guardar plantilla"
+              icon="folder"
+              [loading]="isSubmitting()"
+              [disabled]="!canSubmit()"
+              (click)="onSubmit()"
+            ></app-async-btn>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,
 })
 export class DmsTemplateDrawerComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly facade = inject(DmsFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly facade = inject(DmsFacade);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly name = signal('');
@@ -248,7 +241,9 @@ private readonly facade = inject(DmsFacade);
         this.onClose();
       }, 1200);
     } catch (err) {
-      this.validationError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir la plantilla');
+      this.validationError.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir la plantilla',
+      );
     } finally {
       this.isSubmitting.set(false);
     }

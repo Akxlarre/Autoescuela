@@ -6,6 +6,7 @@ import { SelectModule } from 'primeng/select';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -14,9 +15,15 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   selector: 'app-registrar-venta-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule, DateInputComponent],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    SelectModule,
+    DateInputComponent,
+    DrawerFormComponent,
+  ],
   template: `
-    <div class="flex flex-col gap-5 py-2">
+    <app-drawer-form>
       <form [formGroup]="ventaForm" (ngSubmit)="submitVenta()" class="flex flex-col gap-5">
         <!-- Servicio -->
         <div class="flex flex-col gap-1.5">
@@ -140,33 +147,26 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             >
           </div>
         </label>
-
-        <!-- Botones -->
-        <div class="flex flex-col sm:flex-row gap-3 pt-4">
-          <button
-            type="submit"
-            class="flex-1 h-11 rounded-xl text-sm font-bold bg-brand text-white hover:bg-brand-hover active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm"
-            [disabled]="ventaForm.invalid || isSaving()"
-          >
-            @if (isSaving()) {
-              <div class="flex items-center justify-center gap-2">
-                <app-icon name="loader-2" [size]="18" class="animate-spin" />
-                Registrando...
-              </div>
-            } @else {
-              Registrar Venta
-            }
-          </button>
-          <button
-            type="button"
-            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-subtle active:scale-95 transition-all"
-            (click)="drawer.close()"
-          >
-            Cancelar
-          </button>
-        </div>
       </form>
-    </div>
+
+      <!-- Botones -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2"
+          [disabled]="ventaForm.invalid || isSaving()"
+          (click)="submitVenta()"
+        >
+          @if (isSaving()) {
+            <app-icon name="loader-2" [size]="18" class="animate-spin" />
+            Registrando...
+          } @else {
+            Registrar Venta
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: [],
 })

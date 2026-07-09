@@ -22,7 +22,6 @@ import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 const ACTION_OPTIONS = [
-  { label: 'Todas las acciones', value: null },
   { label: 'Crear', value: 'Crear' },
   { label: 'Actualizar', value: 'Actualizar' },
   { label: 'Eliminar', value: 'Eliminar' },
@@ -87,7 +86,7 @@ const ACTION_OPTIONS = [
               [(ngModel)]="secretariaModel"
               optionLabel="label"
               optionValue="value"
-              placeholder="Todas"
+              placeholder="Todos los usuarios"
               styleClass="w-full"
               aria-label="Filtrar por secretaria"
               data-llm-description="Filtrar logs por secretaria específica"
@@ -501,17 +500,13 @@ export class AdminAuditoriaComponent {
 
   // ── Options ─────────────────────────────────────────────────────────────────
   protected readonly actionOptions = ACTION_OPTIONS;
-  protected readonly moduloOptions = [
-    { label: 'Todos los módulos', value: null },
-    ...MODULE_OPTIONS.map((m) => ({ label: m, value: m })),
-  ];
-  protected readonly secretariaOptions = computed(() => [
-    { label: 'Todos los usuarios', value: null },
-    ...this.facade.secretarias().map((s) => ({
+  protected readonly moduloOptions = MODULE_OPTIONS.map((m) => ({ label: m, value: m }));
+  protected readonly secretariaOptions = computed(() =>
+    this.facade.secretarias().map((s) => ({
       label: s.nombre,
       value: s.id,
     })),
-  ]);
+  );
 
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
 

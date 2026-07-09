@@ -19,6 +19,7 @@ import type { InstructorType } from '@core/models/ui/instructor-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-admin-instructor-editar-drawer',
@@ -33,6 +34,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     @if (facade.selectedInstructor(); as inst) {
@@ -46,423 +48,371 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
           </div>
         </ng-template>
         <ng-template #content>
-          <!-- ── Mini-header ─────────────────────────────────────────────────── -->
-          <div
-            class="flex items-center gap-3 rounded-lg p-3 mb-5 bg-elevated border border-border-subtle"
-            
-          >
+          <app-drawer-form>
+            <!-- ── Mini-header ─────────────────────────────────────────────────── -->
             <div
-              class="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-sm font-bold bg-brand-tint text-brand"
-              
+              class="flex items-center gap-3 rounded-lg p-3 mb-5 bg-elevated border border-border-subtle"
             >
-              {{ inst.initials }}
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold truncate text-text-primary">
-                {{ inst.nombre }}
-              </p>
-              <p
-                class="text-xs truncate text-text-muted"
-                [pTooltip]="inst.email"
-                tooltipPosition="top"
+              <div
+                class="flex items-center justify-center w-9 h-9 rounded-full shrink-0 text-sm font-bold bg-brand-tint text-brand"
               >
-                {{ inst.email }}
-              </p>
-            </div>
-          </div>
-
-          <!-- ── Información Personal ────────────────────────────────────────── -->
-          <h3 class="section-title">Información Personal</h3>
-          <div class="flex flex-col gap-4 mb-6">
-            <!-- Nombres -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-nombres">Nombres *</label>
-              <input
-                id="e-nombres"
-                type="text"
-                class="field-input"
-                [class.field-input--error]="nombresTouched() && !nombresValido()"
-                [ngModel]="nombres()"
-                (ngModelChange)="nombres.set($event)"
-                (blur)="nombresTouched.set(true)"
-                data-llm-description="Nombres del instructor"
-                aria-required="true"
-              />
-              @if (nombresTouched() && !nombresValido()) {
-                <span class="field-error">Ingresa el nombre (mínimo 2 caracteres)</span>
-              }
+                {{ inst.initials }}
+              </div>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold truncate text-text-primary">
+                  {{ inst.nombre }}
+                </p>
+                <p
+                  class="text-xs truncate text-text-muted"
+                  [pTooltip]="inst.email"
+                  tooltipPosition="top"
+                >
+                  {{ inst.email }}
+                </p>
+              </div>
             </div>
 
-            <!-- Apellido Paterno -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-paterno">Apellido Paterno *</label>
-              <input
-                id="e-paterno"
-                type="text"
-                class="field-input"
-                [class.field-input--error]="paternoTouched() && !paternoValido()"
-                [ngModel]="paterno()"
-                (ngModelChange)="paterno.set($event)"
-                (blur)="paternoTouched.set(true)"
-                data-llm-description="Apellido paterno del instructor"
-                aria-required="true"
-              />
-              @if (paternoTouched() && !paternoValido()) {
-                <span class="field-error">Ingresa el apellido paterno (mínimo 2 caracteres)</span>
-              }
-            </div>
-
-            <!-- Apellido Materno -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-materno">Apellido Materno *</label>
-              <input
-                id="e-materno"
-                type="text"
-                class="field-input"
-                [class.field-input--error]="maternoTouched() && !maternoValido()"
-                [ngModel]="materno()"
-                (ngModelChange)="materno.set($event)"
-                (blur)="maternoTouched.set(true)"
-                data-llm-description="Apellido materno del instructor"
-                aria-required="true"
-              />
-              @if (maternoTouched() && !maternoValido()) {
-                <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
-              }
-            </div>
-
-            <!-- RUT (readonly) -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-rut">RUT *</label>
-              <input
-                id="e-rut"
-                type="text"
-                class="field-input cursor-not-allowed"
-                [ngModel]="inst.rut"
-                [disabled]="true"
-                style="opacity: 0.6"
-                data-llm-description="RUT del instructor (no editable)"
-              />
-              <span class="text-xs text-text-muted"> El RUT no puede ser modificado </span>
-            </div>
-
-            <!-- Email -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-email">Correo electrónico *</label>
-              <input
-                id="e-email"
-                type="email"
-                class="field-input"
-                [class.field-input--error]="emailTouched() && !emailValido()"
-                [ngModel]="email()"
-                (ngModelChange)="email.set($event)"
-                (blur)="emailTouched.set(true)"
-                data-llm-description="Correo electrónico del instructor"
-                aria-required="true"
-              />
-              @if (emailTouched() && !emailValido()) {
-                <span class="field-error">Ingresa un correo electrónico válido.</span>
-              }
-              @if (email() !== currentEmail && emailValido()) {
-                <span class="text-xs text-warning" >
-                  Se actualizará el acceso. El cambio es inmediato.
-                </span>
-              }
-            </div>
-
-            <!-- Teléfono -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-telefono">Teléfono</label>
-              <input
-                id="e-telefono"
-                type="tel"
-                class="field-input"
-                placeholder="+56 9 8765 4321"
-                [ngModel]="telefono()"
-                (ngModelChange)="telefono.set($event)"
-                data-llm-description="Teléfono de contacto del instructor"
-              />
-            </div>
-
-            <!-- Sede -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-sede">Sede asignada *</label>
-              <p-select
-                inputId="e-sede"
-                [options]="sedeOptions()"
-                [(ngModel)]="sedeIdModel"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleccione sede"
-                styleClass="w-full"
-                aria-required="true"
-                data-llm-description="Sede de trabajo del instructor"
-              />
-            </div>
-          </div>
-
-          <!-- ── Información de Licencia ─────────────────────────────────────── -->
-          <h3 class="section-title">Información de Licencia</h3>
-          <div class="flex flex-col gap-4 mb-6">
-            <!-- Número de licencia -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-license-num">Número de licencia *</label>
-              <input
-                id="e-license-num"
-                type="text"
-                class="field-input"
-                placeholder="15234567"
-                [ngModel]="licenseNumber()"
-                (ngModelChange)="licenseNumber.set($event)"
-                data-llm-description="Número de licencia del instructor"
-              />
-            </div>
-
-            <!-- Clase de licencia -->
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-license-class">Clase de licencia *</label>
-              <p-select
-                inputId="e-license-class"
-                [options]="licenseClassOptions"
-                [(ngModel)]="licenseClassModel"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleccione clase"
-                styleClass="w-full"
-                aria-required="true"
-                data-llm-description="Clase de licencia del instructor"
-              />
-              @if (licenseClassTouched() && !licenseClassValido()) {
-                <span class="field-error">Selecciona la clase de licencia</span>
-              }
-            </div>
-
-            <!-- Fecha de vencimiento -->
-            <div class="flex flex-col gap-1.5">
-              <app-date-input
-                label="Fecha de vencimiento"
-                [required]="true"
-                [value]="licenseExpiryIso"
-                (valueChange)="setLicenseExpiryIso($event)"
-                data-llm-description="Fecha de vencimiento de la licencia"
-              />
-              @if (licenseExpiryTouched() && !licenseExpiryValido()) {
-                <span class="field-error">Selecciona la fecha de vencimiento</span>
-              }
-            </div>
-
-            <!-- Estado de validación (solo lectura) -->
-            @if (licenseStatusPreview()) {
+            <!-- ── Información Personal ────────────────────────────────────────── -->
+            <h3 class="section-title">Información Personal</h3>
+            <div class="flex flex-col gap-4 mb-6">
+              <!-- Nombres -->
               <div class="flex flex-col gap-1.5">
-                <span class="field-label">Estado de validación</span>
-                <span class="license-badge" [class]="'license-badge--' + licenseStatusPreview()">
-                  {{ licenseStatusLabel() }}
-                </span>
+                <label class="field-label" for="e-nombres">Nombres *</label>
+                <input
+                  id="e-nombres"
+                  type="text"
+                  class="field-input"
+                  [class.field-input--error]="nombresTouched() && !nombresValido()"
+                  [ngModel]="nombres()"
+                  (ngModelChange)="nombres.set($event)"
+                  (blur)="nombresTouched.set(true)"
+                  data-llm-description="Nombres del instructor"
+                  aria-required="true"
+                />
+                @if (nombresTouched() && !nombresValido()) {
+                  <span class="field-error">Ingresa el nombre (mínimo 2 caracteres)</span>
+                }
               </div>
-            }
-          </div>
 
-          <!-- ── Tipo de Instructor ──────────────────────────────────────────── -->
-          <h3 class="section-title">Tipo de Instructor</h3>
-          <div class="flex flex-col gap-4 mb-6">
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-type">Tipo de instructor *</label>
-              <p-select
-                inputId="e-type"
-                [options]="typeOptions"
-                [(ngModel)]="typeModel"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Seleccione tipo"
-                styleClass="w-full"
-                aria-required="true"
-                data-llm-description="Tipo de instructor"
-              />
-              @if (tipoTouched() && !tipoValido()) {
-                <span class="field-error">Selecciona el tipo de instructor</span>
-              }
-            </div>
-          </div>
-
-          <!-- ── Asignación de Vehículo ──────────────────────────────────────── -->
-          <h3 class="section-title">Asignación de Vehículo</h3>
-          <div class="flex flex-col gap-4 mb-6">
-            <div class="flex flex-col gap-1.5">
-              <label class="field-label" for="e-vehicle">Vehículo asignado</label>
-              <p-select
-                inputId="e-vehicle"
-                [options]="vehicleOptions()"
-                [(ngModel)]="vehicleIdModel"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Sin vehículo asignado"
-                [showClear]="true"
-                styleClass="w-full"
-                data-llm-description="Vehículo asignado al instructor"
-              />
-              <span class="text-xs text-text-muted">
-                Solo se muestran vehículos disponibles y el actualmente asignado
-              </span>
-              @if (vehicleId() !== currentVehicleId()) {
-                <span class="text-xs text-text-muted">
-                  Al cambiar el vehículo, se creará una nueva entrada en el historial de
-                  asignaciones.
-                </span>
-              }
-            </div>
-          </div>
-
-          <!-- ── Historial de Asignaciones ───────────────────────────────────── -->
-          <h3 class="section-title">Historial de Asignaciones</h3>
-          <div class="flex flex-col gap-2 mb-6">
-            @if (facade.assignmentHistory().length === 0) {
-              <div class="flex flex-col items-center gap-2 py-6">
-                <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
-                <p class="text-xs text-center text-text-muted">
-                  Sin historial de asignaciones de vehículos
-                </p>
-                <p class="text-xs text-center text-text-muted">
-                  Las asignaciones futuras aparecerán aquí
-                </p>
+              <!-- Apellido Paterno -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-paterno">Apellido Paterno *</label>
+                <input
+                  id="e-paterno"
+                  type="text"
+                  class="field-input"
+                  [class.field-input--error]="paternoTouched() && !paternoValido()"
+                  [ngModel]="paterno()"
+                  (ngModelChange)="paterno.set($event)"
+                  (blur)="paternoTouched.set(true)"
+                  data-llm-description="Apellido paterno del instructor"
+                  aria-required="true"
+                />
+                @if (paternoTouched() && !paternoValido()) {
+                  <span class="field-error">Ingresa el apellido paterno (mínimo 2 caracteres)</span>
+                }
               </div>
-            } @else {
-              @for (h of facade.assignmentHistory(); track h.id) {
-                <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
-                  <div>
-                    <p class="text-sm font-semibold text-text-primary">
-                      {{ h.vehiclePlate }}
-                    </p>
-                    <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>
-                  </div>
-                  <div class="text-right">
-                    <p class="text-xs text-text-secondary">
-                      {{ h.startDate }}
-                      @if (h.endDate) {
-                        → {{ h.endDate }}
-                      } @else {
-                        → Actual
-                      }
-                    </p>
-                  </div>
+
+              <!-- Apellido Materno -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-materno">Apellido Materno *</label>
+                <input
+                  id="e-materno"
+                  type="text"
+                  class="field-input"
+                  [class.field-input--error]="maternoTouched() && !maternoValido()"
+                  [ngModel]="materno()"
+                  (ngModelChange)="materno.set($event)"
+                  (blur)="maternoTouched.set(true)"
+                  data-llm-description="Apellido materno del instructor"
+                  aria-required="true"
+                />
+                @if (maternoTouched() && !maternoValido()) {
+                  <span class="field-error">Ingresa el apellido materno (mínimo 2 caracteres)</span>
+                }
+              </div>
+
+              <!-- RUT (readonly) -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-rut">RUT *</label>
+                <input
+                  id="e-rut"
+                  type="text"
+                  class="field-input cursor-not-allowed"
+                  [ngModel]="inst.rut"
+                  [disabled]="true"
+                  style="opacity: 0.6"
+                  data-llm-description="RUT del instructor (no editable)"
+                />
+                <span class="text-xs text-text-muted"> El RUT no puede ser modificado </span>
+              </div>
+
+              <!-- Email -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-email">Correo electrónico *</label>
+                <input
+                  id="e-email"
+                  type="email"
+                  class="field-input"
+                  [class.field-input--error]="emailTouched() && !emailValido()"
+                  [ngModel]="email()"
+                  (ngModelChange)="email.set($event)"
+                  (blur)="emailTouched.set(true)"
+                  data-llm-description="Correo electrónico del instructor"
+                  aria-required="true"
+                />
+                @if (emailTouched() && !emailValido()) {
+                  <span class="field-error">Ingresa un correo electrónico válido.</span>
+                }
+                @if (email() !== currentEmail && emailValido()) {
+                  <span class="text-xs text-warning">
+                    Se actualizará el acceso. El cambio es inmediato.
+                  </span>
+                }
+              </div>
+
+              <!-- Teléfono -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-telefono">Teléfono</label>
+                <input
+                  id="e-telefono"
+                  type="tel"
+                  class="field-input"
+                  placeholder="+56 9 8765 4321"
+                  [ngModel]="telefono()"
+                  (ngModelChange)="telefono.set($event)"
+                  data-llm-description="Teléfono de contacto del instructor"
+                />
+              </div>
+
+              <!-- Sede -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-sede">Sede asignada *</label>
+                <p-select
+                  inputId="e-sede"
+                  [options]="sedeOptions()"
+                  [(ngModel)]="sedeIdModel"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccione sede"
+                  styleClass="w-full"
+                  aria-required="true"
+                  data-llm-description="Sede de trabajo del instructor"
+                />
+              </div>
+            </div>
+
+            <!-- ── Información de Licencia ─────────────────────────────────────── -->
+            <h3 class="section-title">Información de Licencia</h3>
+            <div class="flex flex-col gap-4 mb-6">
+              <!-- Número de licencia -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-license-num">Número de licencia *</label>
+                <input
+                  id="e-license-num"
+                  type="text"
+                  class="field-input"
+                  placeholder="15234567"
+                  [ngModel]="licenseNumber()"
+                  (ngModelChange)="licenseNumber.set($event)"
+                  data-llm-description="Número de licencia del instructor"
+                />
+              </div>
+
+              <!-- Clase de licencia -->
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-license-class">Clase de licencia *</label>
+                <p-select
+                  inputId="e-license-class"
+                  [options]="licenseClassOptions"
+                  [(ngModel)]="licenseClassModel"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccione clase"
+                  styleClass="w-full"
+                  aria-required="true"
+                  data-llm-description="Clase de licencia del instructor"
+                />
+                @if (licenseClassTouched() && !licenseClassValido()) {
+                  <span class="field-error">Selecciona la clase de licencia</span>
+                }
+              </div>
+
+              <!-- Fecha de vencimiento -->
+              <div class="flex flex-col gap-1.5">
+                <app-date-input
+                  label="Fecha de vencimiento"
+                  [required]="true"
+                  [value]="licenseExpiryIso"
+                  (valueChange)="setLicenseExpiryIso($event)"
+                  data-llm-description="Fecha de vencimiento de la licencia"
+                />
+                @if (licenseExpiryTouched() && !licenseExpiryValido()) {
+                  <span class="field-error">Selecciona la fecha de vencimiento</span>
+                }
+              </div>
+
+              <!-- Estado de validación (solo lectura) -->
+              @if (licenseStatusPreview()) {
+                <div class="flex flex-col gap-1.5">
+                  <span class="field-label">Estado de validación</span>
+                  <span class="license-badge" [class]="'license-badge--' + licenseStatusPreview()">
+                    {{ licenseStatusLabel() }}
+                  </span>
                 </div>
               }
-            }
-          </div>
-
-          <!-- ── Estado activo/inactivo ──────────────────────────────────────── -->
-          <div class="flex flex-col gap-4 mb-6">
-            <h3 class="section-title">Estado de la cuenta</h3>
-            <div class="flex items-center gap-3">
-              <button
-                class="estado-btn"
-                [class.estado-btn--active]="activo()"
-                (click)="activo.set(true)"
-                data-llm-action="activar-instructor"
-              >
-                <app-icon name="check-circle" [size]="14" />
-                Activo
-              </button>
-              <button
-                class="estado-btn"
-                [class.estado-btn--inactive]="!activo()"
-                (click)="activo.set(false)"
-                data-llm-action="desactivar-instructor"
-              >
-                <app-icon name="circle" [size]="14" />
-                Inactivo
-              </button>
             </div>
-            @if (!activo()) {
-              <div
-                class="rounded-lg p-3 bg-error/6 border border-error/20"
-                
-              >
-                <p class="text-xs text-error" >
-                  Desactivar este instructor impedirá nuevas asignaciones de clases.
-                </p>
-              </div>
-            }
-          </div>
 
-          <!-- ── Acciones ────────────────────────────────────────────────────── -->
-          <div
-            class="flex items-center gap-3 pt-4"
-            style="border-top: 1px solid var(--border-subtle)"
-          >
-            <button
-              class="btn-secondary flex-1"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-editar-instructor"
-            >
-              Cancelar
-            </button>
-            <button
-              class="btn-primary flex-[2]"
-              [disabled]="facade.isSubmitting()"
-              (click)="submit(inst.id, inst.userId)"
-              data-llm-action="guardar-editar-instructor"
-              aria-label="Guardar cambios del instructor"
-            >
-              @if (facade.isSubmitting()) {
-                <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                Guardando...
+            <!-- ── Tipo de Instructor ──────────────────────────────────────────── -->
+            <h3 class="section-title">Tipo de Instructor</h3>
+            <div class="flex flex-col gap-4 mb-6">
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-type">Tipo de instructor *</label>
+                <p-select
+                  inputId="e-type"
+                  [options]="typeOptions"
+                  [(ngModel)]="typeModel"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Seleccione tipo"
+                  styleClass="w-full"
+                  aria-required="true"
+                  data-llm-description="Tipo de instructor"
+                />
+                @if (tipoTouched() && !tipoValido()) {
+                  <span class="field-error">Selecciona el tipo de instructor</span>
+                }
+              </div>
+            </div>
+
+            <!-- ── Asignación de Vehículo ──────────────────────────────────────── -->
+            <h3 class="section-title">Asignación de Vehículo</h3>
+            <div class="flex flex-col gap-4 mb-6">
+              <div class="flex flex-col gap-1.5">
+                <label class="field-label" for="e-vehicle">Vehículo asignado</label>
+                <p-select
+                  inputId="e-vehicle"
+                  [options]="vehicleOptions()"
+                  [(ngModel)]="vehicleIdModel"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Sin vehículo asignado"
+                  [showClear]="true"
+                  styleClass="w-full"
+                  data-llm-description="Vehículo asignado al instructor"
+                />
+                <span class="text-xs text-text-muted">
+                  Solo se muestran vehículos disponibles y el actualmente asignado
+                </span>
+                @if (vehicleId() !== currentVehicleId()) {
+                  <span class="text-xs text-text-muted">
+                    Al cambiar el vehículo, se creará una nueva entrada en el historial de
+                    asignaciones.
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- ── Historial de Asignaciones ───────────────────────────────────── -->
+            <h3 class="section-title">Historial de Asignaciones</h3>
+            <div class="flex flex-col gap-2 mb-6">
+              @if (facade.assignmentHistory().length === 0) {
+                <div class="flex flex-col items-center gap-2 py-6">
+                  <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
+                  <p class="text-xs text-center text-text-muted">
+                    Sin historial de asignaciones de vehículos
+                  </p>
+                  <p class="text-xs text-center text-text-muted">
+                    Las asignaciones futuras aparecerán aquí
+                  </p>
+                </div>
               } @else {
-                <app-icon name="check" [size]="15" />
-                Guardar cambios
+                @for (h of facade.assignmentHistory(); track h.id) {
+                  <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
+                    <div>
+                      <p class="text-sm font-semibold text-text-primary">
+                        {{ h.vehiclePlate }}
+                      </p>
+                      <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-xs text-text-secondary">
+                        {{ h.startDate }}
+                        @if (h.endDate) {
+                          → {{ h.endDate }}
+                        } @else {
+                          → Actual
+                        }
+                      </p>
+                    </div>
+                  </div>
+                }
               }
-            </button>
-          </div>
+            </div>
+
+            <!-- ── Estado activo/inactivo ──────────────────────────────────────── -->
+            <div class="flex flex-col gap-4 mb-6">
+              <h3 class="section-title">Estado de la cuenta</h3>
+              <div class="flex items-center gap-3">
+                <button
+                  class="estado-btn"
+                  [class.estado-btn--active]="activo()"
+                  (click)="activo.set(true)"
+                  data-llm-action="activar-instructor"
+                >
+                  <app-icon name="check-circle" [size]="14" />
+                  Activo
+                </button>
+                <button
+                  class="estado-btn"
+                  [class.estado-btn--inactive]="!activo()"
+                  (click)="activo.set(false)"
+                  data-llm-action="desactivar-instructor"
+                >
+                  <app-icon name="circle" [size]="14" />
+                  Inactivo
+                </button>
+              </div>
+              @if (!activo()) {
+                <div class="rounded-lg p-3 bg-error/6 border border-error/20">
+                  <p class="text-xs text-error">
+                    Desactivar este instructor impedirá nuevas asignaciones de clases.
+                  </p>
+                </div>
+              }
+            </div>
+
+            <ng-container ngProjectAs="[drawer-form-footer]">
+              <button
+                class="btn-secondary"
+                (click)="layoutDrawer.close()"
+                data-llm-action="cancelar-editar-instructor"
+              >
+                Cancelar
+              </button>
+              <button
+                class="btn-primary flex items-center gap-2"
+                [disabled]="facade.isSubmitting()"
+                (click)="submit(inst.id, inst.userId)"
+                data-llm-action="guardar-editar-instructor"
+                aria-label="Guardar cambios del instructor"
+              >
+                @if (facade.isSubmitting()) {
+                  <app-icon name="loader-2" [size]="15" class="animate-spin" />
+                  Guardando...
+                } @else {
+                  <app-icon name="check" [size]="15" />
+                  Guardar cambios
+                }
+              </button>
+            </ng-container>
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }
   `,
   styles: `
-    .section-title {
-      font-size: var(--text-sm);
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-
-    .field-label {
-      font-size: var(--text-sm);
-      font-weight: 500;
-      color: var(--text-primary);
-    }
-
-    .field-input {
-      width: 100%;
-      padding: 9px 12px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-primary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      outline: none;
-      transition:
-        border-color var(--duration-fast),
-        box-shadow var(--duration-fast);
-      box-sizing: border-box;
-    }
-    .field-input:focus {
-      border-color: var(--ds-brand);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
-    }
-    .field-input::placeholder {
-      color: var(--text-muted);
-    }
-    .field-input--error {
-      border-color: var(--state-error, #ef4444);
-    }
-
-    .field-error {
-      font-size: 12px;
-      color: var(--state-error, #ef4444);
-    }
-
+    /* .field-*, .section-title → globales en styles/components/_form-fields.scss */
     .license-badge {
       display: inline-block;
       font-size: 11px;
@@ -643,9 +593,11 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     } else {
       const parts = v.split('-');
       if (parts.length === 3) {
-         this.licenseExpiry.set(new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+        this.licenseExpiry.set(
+          new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])),
+        );
       } else {
-         this.licenseExpiry.set(new Date(v));
+        this.licenseExpiry.set(new Date(v));
       }
     }
     this.licenseExpiryTouched.set(true);

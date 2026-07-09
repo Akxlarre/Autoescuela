@@ -31,7 +31,7 @@ import type {
 } from '@core/models/ui/certificacion-profesional.model';
 import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.model';
 
-type EstadoFilter = 'todos' | 'generado' | 'pendiente';
+type EstadoFilter = 'generado' | 'pendiente' | null;
 
 const PAGE_SIZE = 10;
 
@@ -208,6 +208,7 @@ const PAGE_SIZE = 10;
               (ngModelChange)="setEstadoFilter($event)"
               optionLabel="label"
               optionValue="value"
+              placeholder="Todos"
               class="h-9"
               data-llm-description="Filter professional certificates by status"
             />
@@ -964,7 +965,7 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   readonly exportar = output<void>();
 
   // ── Local state ──
-  readonly estadoFilter = signal<EstadoFilter>('todos');
+  readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
   readonly currentPageLog = signal(0);
@@ -977,7 +978,6 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
   readonly heroActions: SectionHeroAction[] = [];
 
   readonly estadoOptions = [
-    { label: 'Todos', value: 'todos' },
     { label: 'Generados', value: 'generado' },
     { label: 'Pendientes', value: 'pendiente' },
   ];
@@ -990,7 +990,7 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
     const filter = this.estadoFilter();
     const query = this.searchQuery().trim();
     let result = this.alumnos();
-    if (filter !== 'todos') {
+    if (filter) {
       result = result.filter((a) => a.certificadoStatus === filter);
     }
     if (!query) return result;

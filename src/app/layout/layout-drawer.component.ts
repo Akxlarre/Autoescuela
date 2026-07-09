@@ -53,7 +53,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     <div
       #panelEl
       data-drawer-panel
-      class="relative z-10 flex flex-col w-full h-full bg-base lg:rounded-t-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle overflow-hidden"
+      class="relative z-10 flex flex-col w-full h-full bg-base lg:rounded-t-2xl lg:border-t lg:border-x border-border-subtle overflow-hidden"
       style="min-height: 0;"
     >
       <!-- Header -->

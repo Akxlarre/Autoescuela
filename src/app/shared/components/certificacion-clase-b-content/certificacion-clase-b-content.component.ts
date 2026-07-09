@@ -28,7 +28,7 @@ import type {
 } from '@core/models/ui/certificacion-clase-b.model';
 import { ACCION_LABELS } from '@core/models/ui/certificacion-clase-b.model';
 
-type EstadoFilter = 'todos' | 'generado' | 'pendiente';
+type EstadoFilter = 'generado' | 'pendiente' | null;
 
 /**
  * CertificacionClaseBContentComponent — Dumb component.
@@ -99,6 +99,7 @@ type EstadoFilter = 'todos' | 'generado' | 'pendiente';
             (ngModelChange)="setEstadoFilter($event)"
             optionLabel="label"
             optionValue="value"
+            placeholder="Todos"
             class="h-9"
             data-llm-description="Filter certificates by status"
           />
@@ -732,7 +733,7 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly exportar = output<void>();
 
   // ── Local state ──
-  readonly estadoFilter = signal<EstadoFilter>('todos');
+  readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
   readonly currentPageLog = signal(0);
@@ -775,7 +776,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   // ── Filter options ──
   readonly estadoOptions = [
-    { label: 'Todos', value: 'todos' },
     { label: 'Generados', value: 'generado' },
     { label: 'Pendientes', value: 'pendiente' },
   ];
@@ -791,7 +791,7 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     const query = this.searchQuery().trim().toLowerCase();
     const all = this.alumnos();
 
-    let result = filter === 'todos' ? all : all.filter((a) => a.certificadoStatus === filter);
+    let result = !filter ? all : all.filter((a) => a.certificadoStatus === filter);
 
     if (query) {
       // Normalize: strip diacritics so "Gonza" matches "González"

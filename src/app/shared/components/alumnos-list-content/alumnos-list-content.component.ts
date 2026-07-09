@@ -141,6 +141,7 @@ interface ExpedienteStatus {
             [(ngModel)]="selectedCurso"
             optionLabel="label"
             optionValue="value"
+            placeholder="Todos los cursos"
             class="h-9"
             data-llm-description="Filter students by course type"
           />
@@ -149,6 +150,7 @@ interface ExpedienteStatus {
             [(ngModel)]="selectedEstado"
             optionLabel="label"
             optionValue="value"
+            placeholder="Todos los estados"
             class="h-9"
             data-llm-description="Filter students by enrollment status"
           />
@@ -157,6 +159,7 @@ interface ExpedienteStatus {
             [(ngModel)]="selectedExpediente"
             optionLabel="label"
             optionValue="value"
+            placeholder="Expediente: Todos"
             class="h-9"
             data-llm-description="Filter students by file completion status"
           />
@@ -792,12 +795,10 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly exportMenuOpen = signal(false);
 
   readonly cursos = [
-    { label: 'Todos los cursos', value: '' },
     { label: 'Clase B', value: 'Clase B' },
     { label: 'Clase B SENCE', value: 'Clase B SENCE' },
   ];
   readonly estados = [
-    { label: 'Todos los estados', value: '' },
     { label: 'Activo', value: 'Activo' },
     { label: 'Finalizado', value: 'Finalizado' },
     { label: 'Retirado', value: 'Retirado' },
@@ -807,7 +808,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
     { label: 'Inactivo', value: 'Inactivo' },
   ];
   readonly expedienteOpciones = [
-    { label: 'Expediente: Todos', value: '' },
     { label: 'Completo', value: 'Completo' },
     { label: 'Parcial', value: 'Parcial' },
     { label: 'Pendiente', value: 'Pendiente' },

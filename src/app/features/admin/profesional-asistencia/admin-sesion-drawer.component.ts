@@ -18,6 +18,7 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { AsistenciaStatus } from '@core/models/ui/sesion-profesional.model';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
 @Component({
@@ -32,6 +33,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
     AsyncBtnComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
     DateInputComponent,
   ],
   template: `
@@ -50,292 +52,303 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
           </div>
         </ng-template>
         <ng-template #content>
-          <!-- ═══ Header de la sesión ═══ -->
-          <div class="mb-4 rounded-lg border border-border bg-surface p-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <app-icon [name]="sesion.tipo === 'theory' ? 'book-open' : 'wrench'" [size]="20" />
-                <span class="text-sm font-semibold text-text-primary">
-                  {{ sesion.tipo === 'theory' ? 'Sesión Teórica' : 'Sesión Práctica' }}
-                </span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span
-                  class="rounded-full px-2 py-0.5 text-xs font-medium"
-                  [style.background]="statusColor(sesion.status)"
-                  [style.color]="'white'"
-                >
-                  {{ sesion.statusLabel }}
-                </span>
-                @if (sesion.status !== 'cancelled') {
-                  <button
-                    class="cancel-btn flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors border-error text-error"
-                    (click)="cancelarSesion()"
-                    data-llm-action="cancel-session"
-                  >
-                    <app-icon name="ban" [size]="11" />
-                    Cancelar
-                  </button>
-                } @else {
-                  <button
-                    class="cancel-btn flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors border-success text-success"
-                    (click)="reactivarSesion()"
-                    data-llm-action="reactivate-session"
-                  >
-                    <app-icon name="rotate-ccw" [size]="11" />
-                    Reactivar
-                  </button>
-                }
-              </div>
-            </div>
-
-            <div class="mt-3 grid grid-cols-2 gap-3">
-              <app-stat-box
-                label="Curso"
-                [value]="sesion.courseCode"
-                variant="surface"
-                [compact]="true"
-              />
-              <app-stat-box
-                label="Asistencia"
-                [value]="sesion.attendanceCount + '/' + sesion.enrolledCount"
-                variant="surface"
-                [compact]="true"
-                [useMono]="true"
-              />
-            </div>
-
-            @if (sesion.zoomLink) {
-              <div class="mt-2">
-                <span class="text-xs text-text-muted">Zoom</span>
-                <p class="truncate text-xs text-text-primary">{{ sesion.zoomLink }}</p>
-              </div>
-            }
-          </div>
-
-          <!-- ═══ Toggle modo ═══ -->
-          <div class="mb-4 flex gap-2">
-            <button
-              class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
-              [class]="
-                mode() === 'attendance' && !isFuture()
-                  ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-surface border-border text-text-secondary hover:bg-elevated hover:text-text-primary'
-              "
-              [class.opacity-50]="isFuture()"
-              [disabled]="isFuture()"
-              (click)="!isFuture() && mode.set('attendance')"
-              data-llm-action="switch-to-attendance-mode"
-            >
-              <app-icon name="clipboard-check" [size]="14" />
-              Asistencia
-            </button>
-            <button
-              class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
-              [class]="
-                mode() === 'edit'
-                  ? 'bg-brand/10 border-brand text-brand'
-                  : 'bg-surface border-border text-text-secondary hover:bg-elevated hover:text-text-primary'
-              "
-              (click)="mode.set('edit')"
-              data-llm-action="switch-to-edit-mode"
-            >
-              <app-icon name="pencil" [size]="14" />
-              Editar sesión
-            </button>
-          </div>
-
-          <!-- ═══ Modo Asistencia ═══ -->
-          @if (mode() === 'attendance') {
-            @if (sesion.status === 'cancelled') {
-              <div class="py-10 text-center">
-                <app-icon name="ban" [size]="36" color="var(--state-error)" />
-                <p class="mt-3 text-sm font-medium text-text-primary">Sesión cancelada</p>
-                <p class="mt-1 text-xs text-text-muted">
-                  No se puede registrar asistencia en una sesión cancelada. Usa "Reactivar" para
-                  habilitarla.
-                </p>
-              </div>
-            } @else if (isFuture()) {
-              <div class="py-10 text-center">
-                <app-icon name="clock" [size]="36" color="var(--color-text-muted)" />
-                <p class="mt-3 text-sm font-medium text-text-primary">Sesión aún no disponible</p>
-                <p class="mt-1 text-xs text-text-muted">
-                  El registro de asistencia estará habilitado a partir del
-                  {{ formatDateDisplay(facade.selectedSesion()!.date) }}.
-                </p>
-              </div>
-            } @else if (facade.isLoadingAsistencia()) {
-              <div class="space-y-3">
-                @for (i of skeletonRows; track i) {
-                  <div
-                    class="flex items-center gap-3 rounded-lg border border-border bg-surface p-3"
-                  >
-                    <app-skeleton-block variant="circle" width="32px" height="32px" />
-                    <div class="flex-1">
-                      <app-skeleton-block variant="text" width="70%" height="14px" />
-                      <app-skeleton-block variant="text" width="40%" height="12px" />
-                    </div>
-                    <app-skeleton-block variant="rect" width="120px" height="28px" />
-                  </div>
-                }
-              </div>
-            } @else {
-              <!-- Bulk actions -->
-              @if (facade.asistenciaAlumnos().length > 0) {
-                <div class="mb-3 flex items-center justify-between rounded-lg bg-elevated p-2">
-                  <span class="text-xs text-text-secondary">
-                    {{ facade.asistenciaAlumnos().length }} alumnos
-                  </span>
-                  <div class="flex gap-2">
-                    <button
-                      class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-success hover:text-success"
-                      (click)="marcarTodos('present')"
-                      data-llm-action="mark-all-present"
-                    >
-                      <app-icon name="check" [size]="12" />
-                      Todos presentes
-                    </button>
-                    <button
-                      class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-error hover:text-error"
-                      (click)="marcarTodos('absent')"
-                      data-llm-action="mark-all-absent"
-                    >
-                      <app-icon name="x" [size]="12" />
-                      Todos ausentes
-                    </button>
-                  </div>
-                </div>
-              }
-
-              <!-- Student list -->
-              <div class="space-y-2">
-                @for (alumno of facade.asistenciaAlumnos(); track alumno.studentId) {
-                  <div class="rounded-lg border border-border bg-surface p-3 transition-colors">
-                    <!-- Fila superior: avatar + nombre -->
-                    <div class="flex items-center gap-3 mb-3">
-                      <div
-                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-brand bg-brand/15"
-                      >
-                        {{ alumno.initials }}
-                      </div>
-                      <div class="min-w-0">
-                        <p
-                          class="truncate text-sm font-medium text-text-primary"
-                          [pTooltip]="alumno.nombre"
-                          tooltipPosition="top"
-                        >
-                          {{ alumno.nombre }}
-                        </p>
-                        <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
-                      </div>
-                    </div>
-
-                    <!-- Fila inferior: botones de asistencia -->
-                    <div class="flex gap-2">
-                      <button
-                        class="status-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition-all"
-                        [class.border-success]="localStatus()[alumno.studentId] === 'present'"
-                        [class.bg-success]="localStatus()[alumno.studentId] === 'present'"
-                        [class.text-white]="localStatus()[alumno.studentId] === 'present'"
-                        [class.border-border]="localStatus()[alumno.studentId] !== 'present'"
-                        [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'present'"
-                        (click)="setStatus(alumno.studentId, 'present')"
-                        data-llm-action="mark-present"
-                      >
-                        <app-icon name="check" [size]="14" />
-                        Presente
-                      </button>
-                      <button
-                        class="status-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition-all"
-                        [class.border-error]="localStatus()[alumno.studentId] === 'absent'"
-                        [class.bg-error]="localStatus()[alumno.studentId] === 'absent'"
-                        [class.text-white]="localStatus()[alumno.studentId] === 'absent'"
-                        [class.border-border]="localStatus()[alumno.studentId] !== 'absent'"
-                        [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'absent'"
-                        (click)="setStatus(alumno.studentId, 'absent')"
-                        data-llm-action="mark-absent"
-                      >
-                        <app-icon name="x" [size]="14" />
-                        Ausente
-                      </button>
-                      <button
-                        class="status-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition-all"
-                        [class.border-warning]="localStatus()[alumno.studentId] === 'excused'"
-                        [class.bg-warning]="localStatus()[alumno.studentId] === 'excused'"
-                        [class.text-white]="localStatus()[alumno.studentId] === 'excused'"
-                        [class.border-border]="localStatus()[alumno.studentId] !== 'excused'"
-                        [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'excused'"
-                        (click)="setStatus(alumno.studentId, 'excused')"
-                        data-llm-action="mark-excused"
-                      >
-                        <app-icon name="file-check" [size]="14" />
-                        Justificado
-                      </button>
-                    </div>
-                  </div>
-                }
-              </div>
-
-              <!-- Save button -->
-              @if (facade.asistenciaAlumnos().length > 0) {
-                <div class="mt-4">
-                  <app-async-btn
-                    label="Guardar asistencia"
-                    icon="check"
-                    [loading]="facade.isSaving()"
-                    [disabled]="!hasChanges()"
-                    (click)="guardar()"
-                    data-llm-action="save-attendance"
+          <app-drawer-form [hasFooter]="false">
+            <!-- ═══ Header de la sesión ═══ -->
+            <div class="mb-4 rounded-lg border border-border bg-surface p-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <app-icon
+                    [name]="sesion.tipo === 'theory' ? 'book-open' : 'wrench'"
+                    [size]="20"
                   />
+                  <span class="text-sm font-semibold text-text-primary">
+                    {{ sesion.tipo === 'theory' ? 'Sesión Teórica' : 'Sesión Práctica' }}
+                  </span>
                 </div>
-              }
-
-              @if (facade.asistenciaAlumnos().length === 0) {
-                <div class="py-8 text-center">
-                  <app-icon name="users" [size]="32" color="var(--color-text-muted)" />
-                  <p class="mt-2 text-sm text-text-muted">No hay alumnos inscritos en este curso</p>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="rounded-full px-2 py-0.5 text-xs font-medium"
+                    [style.background]="statusColor(sesion.status)"
+                    [style.color]="'white'"
+                  >
+                    {{ sesion.statusLabel }}
+                  </span>
+                  @if (sesion.status !== 'cancelled') {
+                    <button
+                      class="cancel-btn flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors border-error text-error"
+                      (click)="cancelarSesion()"
+                      data-llm-action="cancel-session"
+                    >
+                      <app-icon name="ban" [size]="11" />
+                      Cancelar
+                    </button>
+                  } @else {
+                    <button
+                      class="cancel-btn flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition-colors border-success text-success"
+                      (click)="reactivarSesion()"
+                      data-llm-action="reactivate-session"
+                    >
+                      <app-icon name="rotate-ccw" [size]="11" />
+                      Reactivar
+                    </button>
+                  }
                 </div>
-              }
-            }
-          }
+              </div>
 
-          <!-- ═══ Modo Editar Sesión ═══ -->
-          @if (mode() === 'edit') {
-            <div class="space-y-4">
-              <!-- Fecha -->
-              <div>
-                <app-date-input
-                  label="Fecha"
-                  [value]="editDate()"
-                  (valueChange)="editDate.set($event)"
-                  data-llm-description="input for session date change"
+              <div class="mt-3 grid grid-cols-2 gap-3">
+                <app-stat-box
+                  label="Curso"
+                  [value]="sesion.courseCode"
+                  variant="surface"
+                  [compact]="true"
+                />
+                <app-stat-box
+                  label="Asistencia"
+                  [value]="sesion.attendanceCount + '/' + sesion.enrolledCount"
+                  variant="surface"
+                  [compact]="true"
+                  [useMono]="true"
                 />
               </div>
 
-              <!-- Notas -->
-              <div>
-                <label class="mb-1 block text-xs font-medium text-text-secondary">Notas</label>
-                <textarea
-                  class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary"
-                  rows="3"
-                  placeholder="Notas opcionales..."
-                  [ngModel]="editNotes()"
-                  (ngModelChange)="editNotes.set($event)"
-                  data-llm-description="input for session notes"
-                ></textarea>
-              </div>
-
-              <app-async-btn
-                label="Guardar cambios"
-                icon="check"
-                [loading]="facade.isSaving()"
-                [disabled]="!hasEditChanges()"
-                (click)="guardarEdicion()"
-                data-llm-action="save-session-edit"
-              />
+              @if (sesion.zoomLink) {
+                <div class="mt-2">
+                  <span class="text-xs text-text-muted">Zoom</span>
+                  <p class="truncate text-xs text-text-primary">{{ sesion.zoomLink }}</p>
+                </div>
+              }
             </div>
-          }
+
+            <!-- ═══ Toggle modo ═══ -->
+            <div class="mb-4 flex gap-2">
+              <button
+                class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+                [class]="
+                  mode() === 'attendance' && !isFuture()
+                    ? 'bg-brand/10 border-brand text-brand'
+                    : 'bg-surface border-border text-text-secondary hover:bg-elevated hover:text-text-primary'
+                "
+                [class.opacity-50]="isFuture()"
+                [disabled]="isFuture()"
+                (click)="!isFuture() && mode.set('attendance')"
+                data-llm-action="switch-to-attendance-mode"
+              >
+                <app-icon name="clipboard-check" [size]="14" />
+                Asistencia
+              </button>
+              <button
+                class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors border"
+                [class]="
+                  mode() === 'edit'
+                    ? 'bg-brand/10 border-brand text-brand'
+                    : 'bg-surface border-border text-text-secondary hover:bg-elevated hover:text-text-primary'
+                "
+                (click)="mode.set('edit')"
+                data-llm-action="switch-to-edit-mode"
+              >
+                <app-icon name="pencil" [size]="14" />
+                Editar sesión
+              </button>
+            </div>
+
+            <!-- ═══ Modo Asistencia ═══ -->
+            @if (mode() === 'attendance') {
+              @if (sesion.status === 'cancelled') {
+                <div class="py-10 text-center">
+                  <app-icon name="ban" [size]="36" color="var(--state-error)" />
+                  <p class="mt-3 text-sm font-medium text-text-primary">Sesión cancelada</p>
+                  <p class="mt-1 text-xs text-text-muted">
+                    No se puede registrar asistencia en una sesión cancelada. Usa "Reactivar" para
+                    habilitarla.
+                  </p>
+                </div>
+              } @else if (isFuture()) {
+                <div class="py-10 text-center">
+                  <app-icon name="clock" [size]="36" color="var(--color-text-muted)" />
+                  <p class="mt-3 text-sm font-medium text-text-primary">Sesión aún no disponible</p>
+                  <p class="mt-1 text-xs text-text-muted">
+                    El registro de asistencia estará habilitado a partir del
+                    {{ formatDateDisplay(facade.selectedSesion()!.date) }}.
+                  </p>
+                </div>
+              } @else if (facade.isLoadingAsistencia()) {
+                <div class="space-y-3">
+                  @for (i of skeletonRows; track i) {
+                    <div
+                      class="flex items-center gap-3 rounded-lg border border-border bg-surface p-3"
+                    >
+                      <app-skeleton-block variant="circle" width="32px" height="32px" />
+                      <div class="flex-1">
+                        <app-skeleton-block variant="text" width="70%" height="14px" />
+                        <app-skeleton-block variant="text" width="40%" height="12px" />
+                      </div>
+                      <app-skeleton-block variant="rect" width="120px" height="28px" />
+                    </div>
+                  }
+                </div>
+              } @else {
+                <!-- Bulk actions -->
+                @if (facade.asistenciaAlumnos().length > 0) {
+                  <div class="mb-3 flex items-center justify-between rounded-lg bg-elevated p-2">
+                    <span class="text-xs text-text-secondary">
+                      {{ facade.asistenciaAlumnos().length }} alumnos
+                    </span>
+                    <div class="flex gap-2">
+                      <button
+                        class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-success hover:text-success"
+                        (click)="marcarTodos('present')"
+                        data-llm-action="mark-all-present"
+                      >
+                        <app-icon name="check" [size]="12" />
+                        Todos presentes
+                      </button>
+                      <button
+                        class="bulk-btn flex items-center gap-1 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-error hover:text-error"
+                        (click)="marcarTodos('absent')"
+                        data-llm-action="mark-all-absent"
+                      >
+                        <app-icon name="x" [size]="12" />
+                        Todos ausentes
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Student list -->
+                <div class="space-y-2">
+                  @for (alumno of facade.asistenciaAlumnos(); track alumno.studentId) {
+                    <div class="rounded-lg border border-border bg-surface p-3 transition-colors">
+                      <!-- Fila superior: avatar + nombre -->
+                      <div class="flex items-center gap-3 mb-3">
+                        <div
+                          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-brand bg-brand/15"
+                        >
+                          {{ alumno.initials }}
+                        </div>
+                        <div class="min-w-0">
+                          <p
+                            class="truncate text-sm font-medium text-text-primary"
+                            [pTooltip]="alumno.nombre"
+                            tooltipPosition="top"
+                          >
+                            {{ alumno.nombre }}
+                          </p>
+                          <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
+                        </div>
+                      </div>
+
+                      <!-- Fila inferior: botones de asistencia -->
+                      <div class="flex gap-2">
+                        <button
+                          class="status-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition-all"
+                          [class.border-success]="localStatus()[alumno.studentId] === 'present'"
+                          [class.bg-success]="localStatus()[alumno.studentId] === 'present'"
+                          [class.text-white]="localStatus()[alumno.studentId] === 'present'"
+                          [class.border-border]="localStatus()[alumno.studentId] !== 'present'"
+                          [class.text-text-secondary]="
+                            localStatus()[alumno.studentId] !== 'present'
+                          "
+                          (click)="setStatus(alumno.studentId, 'present')"
+                          data-llm-action="mark-present"
+                        >
+                          <app-icon name="check" [size]="14" />
+                          Presente
+                        </button>
+                        <button
+                          class="status-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition-all"
+                          [class.border-error]="localStatus()[alumno.studentId] === 'absent'"
+                          [class.bg-error]="localStatus()[alumno.studentId] === 'absent'"
+                          [class.text-white]="localStatus()[alumno.studentId] === 'absent'"
+                          [class.border-border]="localStatus()[alumno.studentId] !== 'absent'"
+                          [class.text-text-secondary]="localStatus()[alumno.studentId] !== 'absent'"
+                          (click)="setStatus(alumno.studentId, 'absent')"
+                          data-llm-action="mark-absent"
+                        >
+                          <app-icon name="x" [size]="14" />
+                          Ausente
+                        </button>
+                        <button
+                          class="status-btn flex flex-1 items-center justify-center gap-1.5 rounded-md border py-2 text-xs font-semibold transition-all"
+                          [class.border-warning]="localStatus()[alumno.studentId] === 'excused'"
+                          [class.bg-warning]="localStatus()[alumno.studentId] === 'excused'"
+                          [class.text-white]="localStatus()[alumno.studentId] === 'excused'"
+                          [class.border-border]="localStatus()[alumno.studentId] !== 'excused'"
+                          [class.text-text-secondary]="
+                            localStatus()[alumno.studentId] !== 'excused'
+                          "
+                          (click)="setStatus(alumno.studentId, 'excused')"
+                          data-llm-action="mark-excused"
+                        >
+                          <app-icon name="file-check" [size]="14" />
+                          Justificado
+                        </button>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Save button -->
+                @if (facade.asistenciaAlumnos().length > 0) {
+                  <div class="mt-4">
+                    <app-async-btn
+                      label="Guardar asistencia"
+                      icon="check"
+                      [loading]="facade.isSaving()"
+                      [disabled]="!hasChanges()"
+                      (click)="guardar()"
+                      data-llm-action="save-attendance"
+                    />
+                  </div>
+                }
+
+                @if (facade.asistenciaAlumnos().length === 0) {
+                  <div class="py-8 text-center">
+                    <app-icon name="users" [size]="32" color="var(--color-text-muted)" />
+                    <p class="mt-2 text-sm text-text-muted">
+                      No hay alumnos inscritos en este curso
+                    </p>
+                  </div>
+                }
+              }
+            }
+
+            <!-- ═══ Modo Editar Sesión ═══ -->
+            @if (mode() === 'edit') {
+              <div class="space-y-4">
+                <!-- Fecha -->
+                <div>
+                  <app-date-input
+                    label="Fecha"
+                    [value]="editDate()"
+                    (valueChange)="editDate.set($event)"
+                    data-llm-description="input for session date change"
+                  />
+                </div>
+
+                <!-- Notas -->
+                <div>
+                  <label class="mb-1 block text-xs font-medium text-text-secondary">Notas</label>
+                  <textarea
+                    class="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text-primary"
+                    rows="3"
+                    placeholder="Notas opcionales..."
+                    [ngModel]="editNotes()"
+                    (ngModelChange)="editNotes.set($event)"
+                    data-llm-description="input for session notes"
+                  ></textarea>
+                </div>
+
+                <app-async-btn
+                  label="Guardar cambios"
+                  icon="check"
+                  [loading]="facade.isSaving()"
+                  [disabled]="!hasEditChanges()"
+                  (click)="guardarEdicion()"
+                  data-llm-action="save-session-edit"
+                />
+              </div>
+            }
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }

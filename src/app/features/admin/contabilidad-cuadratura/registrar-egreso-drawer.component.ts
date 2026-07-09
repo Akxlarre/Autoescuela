@@ -14,6 +14,7 @@ import { SelectModule } from 'primeng/select';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
@@ -32,6 +33,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -44,8 +46,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         </div>
       </ng-template>
       <ng-template #content>
-        <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
-        <div class="flex-1 overflow-y-auto p-5">
+        <app-drawer-form>
+          <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
             <!-- Tipo de egreso -->
             <div class="flex flex-col gap-1.5">
@@ -116,7 +118,6 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               <label class="field-label">FECHA</label>
               <div
                 class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-muted"
-                
               >
                 <app-icon name="calendar" [size]="14" />
                 {{ fechaHoy() }}
@@ -126,47 +127,41 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
             <!-- Error global -->
             @if (saveError()) {
-              <div
-                class="flex items-start gap-2 p-3 rounded-lg bg-error/8"
-                
-              >
+              <div class="flex items-start gap-2 p-3 rounded-lg bg-error/8">
                 <app-icon name="circle-alert" [size]="15" color="var(--state-error)" />
-                <p class="text-sm text-error" >{{ saveError() }}</p>
+                <p class="text-sm text-error">{{ saveError() }}</p>
               </div>
             }
           </form>
-        </div>
 
-        <!-- ── Footer fijo ─────────────────────────────────────────────── -->
-        <div
-          class="p-5 border-t bg-surface flex items-center justify-end gap-3 sticky bottom-0 z-20 border-border-muted"
-          
-        >
-          <button
-            type="button"
-            class="btn-secondary"
-            [disabled]="isSaving()"
-            data-llm-action="cancelar-egreso-cuadratura"
-            (click)="onCancel()"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="btn-primary"
-            [disabled]="form.invalid || isSaving()"
-            data-llm-action="guardar-egreso-cuadratura"
-            (click)="onSubmit()"
-          >
-            @if (isSaving()) {
-              <app-icon name="loader-2" [size]="14" class="animate-spin" />
-              Guardando...
-            } @else {
-              <app-icon name="check" [size]="14" />
-              Guardar Egreso
-            }
-          </button>
-        </div>
+          <!-- ── Footer fijo ─────────────────────────────────────────────── -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button
+              type="button"
+              class="btn-secondary"
+              [disabled]="isSaving()"
+              data-llm-action="cancelar-egreso-cuadratura"
+              (click)="onCancel()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn-primary flex items-center gap-2"
+              [disabled]="form.invalid || isSaving()"
+              data-llm-action="guardar-egreso-cuadratura"
+              (click)="onSubmit()"
+            >
+              @if (isSaving()) {
+                <app-icon name="loader-2" [size]="14" class="animate-spin" />
+                Guardando...
+              } @else {
+                <app-icon name="check" [size]="14" />
+                Guardar Egreso
+              }
+            </button>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,
@@ -233,8 +228,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
   `,
 })
 export class RegistrarEgresoDrawerComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-readonly tipoOptions = [
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  readonly tipoOptions = [
     { label: 'Gasto Varios', value: 'gasto' },
     { label: 'Anticipo a Instructor', value: 'anticipo' },
   ];
@@ -310,7 +305,9 @@ readonly tipoOptions = [
       }
     } catch (err) {
       this.saveError.set(
-        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar. Intenta de nuevo.',
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al guardar. Intenta de nuevo.',
       );
     } finally {
       this.isSaving.set(false);

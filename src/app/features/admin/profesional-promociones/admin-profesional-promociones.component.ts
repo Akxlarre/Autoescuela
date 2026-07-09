@@ -60,12 +60,12 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
 
       <!-- ── Content (Grillet) ─────────────────────────────────────────────── -->
       <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden" appCardHover>
+        <div class="card p-0 flex flex-col min-h-100 overflow-hidden" appCardHover>
           <div
             class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
           >
             <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold text-text-primary">Historial de Promociones</h2>
+              <h2 class="font-semibold text-text-primary">Historial de Promociones</h2>
               <span class="text-xs text-text-muted">
                 {{ filteredPromociones().length }} promociones encontradas
               </span>
@@ -384,7 +384,6 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected readonly currentPage = signal(1);
 
   readonly estadoOptions = [
-    { label: 'Todos los estados', value: null },
     { label: 'Planificada', value: 'planned' },
     { label: 'En curso', value: 'in_progress' },
     { label: 'Cancelada', value: 'cancelled' },

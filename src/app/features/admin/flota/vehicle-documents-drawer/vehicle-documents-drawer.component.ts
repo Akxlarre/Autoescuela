@@ -7,6 +7,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 /**
  * VehicleDocumentsDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -15,13 +16,21 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 @Component({
   selector: 'app-vehicle-documents-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    CommonModule,
+    IconComponent,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+    DrawerFormComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
         <!-- Skeleton Header -->
-        <div class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle">
+        <div
+          class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
+        >
           <app-skeleton-block variant="text" width="160px" height="20px" />
         </div>
         <!-- Skeleton Body -->
@@ -30,112 +39,140 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             @for (_ of [1, 2, 3]; track $index) {
               <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                  <app-skeleton-block variant="rect" width="48px" height="48px" borderRadius="0.75rem" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="48px"
+                    height="48px"
+                    borderRadius="0.75rem"
+                  />
                   <div class="flex flex-col gap-1.5">
                     <app-skeleton-block variant="text" width="140px" height="14px" />
                     <app-skeleton-block variant="text" width="90px" height="10px" />
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
-                  <app-skeleton-block variant="rect" width="64px" height="20px" borderRadius="999px" />
-                  <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="0.5rem" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="64px"
+                    height="20px"
+                    borderRadius="999px"
+                  />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="32px"
+                    height="32px"
+                    borderRadius="0.5rem"
+                  />
                 </div>
               </div>
             }
           </div>
         </div>
         <!-- Skeleton Footer -->
-        <div class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle">
+        <div
+          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
+        >
           <app-skeleton-block variant="rect" width="140px" height="44px" borderRadius="0.5rem" />
         </div>
       </ng-template>
       <ng-template #content>
-        <!-- Header Info -->
-        <div
-          class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
-        >
-          <h3 class="text-sm font-bold text-text-primary">Documentación Obligatoria</h3>
-        </div>
+        <app-drawer-form>
+          <!-- Header Info -->
+          <div class="pb-4 mb-4 border-b border-border-subtle">
+            <h3 class="text-sm font-bold text-text-primary">Documentación Obligatoria</h3>
+          </div>
 
-        <!-- Lista de Documentos -->
-        <div class="flex-1 overflow-y-auto px-6 py-6">
-          @if (isLoading()) {
-            <div class="grid grid-cols-1 gap-4">
-              @for (_ of [1, 2, 3]; track $index) {
-                <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
-                  <div class="flex items-center gap-4">
-                    <app-skeleton-block variant="rect" width="48px" height="48px" borderRadius="0.75rem" />
-                    <div class="flex flex-col gap-1.5">
-                      <app-skeleton-block variant="text" width="140px" height="14px" />
-                      <app-skeleton-block variant="text" width="90px" height="10px" />
+          <!-- Lista de Documentos -->
+          <div>
+            @if (isLoading()) {
+              <div class="grid grid-cols-1 gap-4">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                      <app-skeleton-block
+                        variant="rect"
+                        width="48px"
+                        height="48px"
+                        borderRadius="0.75rem"
+                      />
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="140px" height="14px" />
+                        <app-skeleton-block variant="text" width="90px" height="10px" />
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <app-skeleton-block
+                        variant="rect"
+                        width="64px"
+                        height="20px"
+                        borderRadius="999px"
+                      />
+                      <app-skeleton-block
+                        variant="rect"
+                        width="32px"
+                        height="32px"
+                        borderRadius="0.5rem"
+                      />
                     </div>
                   </div>
-                  <div class="flex items-center gap-2">
-                    <app-skeleton-block variant="rect" width="64px" height="20px" borderRadius="999px" />
-                    <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="0.5rem" />
-                  </div>
-                </div>
-              }
-            </div>
-          } @else if (documents().length === 0) {
-            <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
-              <div
-                class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center text-text-muted"
-              >
-                <app-icon name="file-question" [size]="32" />
+                }
               </div>
-              <p class="font-bold text-text-primary">Sin documentos registrados</p>
-            </div>
-          } @else {
-            <div class="grid grid-cols-1 gap-4">
-              @for (doc of documents(); track doc.type) {
+            } @else if (documents().length === 0) {
+              <div class="flex flex-col items-center justify-center py-20 gap-4 text-center">
                 <div
-                  class="p-5 rounded-2xl border bg-base flex items-center justify-between group hover:border-ds-brand hover:shadow-sm transition-all duration-300"
+                  class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center text-text-muted"
                 >
-                  <div class="flex items-center gap-4">
-                    <div
-                      class="w-12 h-12 rounded-xl bg-ds-brand-muted flex items-center justify-center text-ds-brand"
-                    >
-                      <app-icon [name]="docIcon(doc.type)" [size]="24" />
-                    </div>
-                    <div>
-                      <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">
-                        {{ docLabel(doc.type) }}
-                      </h4>
-                      <p class="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                        Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm border"
-                      [class.badge-success]="doc.status === 'valid'"
-                      [class.badge-error]="doc.status !== 'valid'"
-                    >
-                      {{ doc.status === 'valid' ? 'Vigente' : 'Vencido' }}
-                    </span>
-                    <button
-                      class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
-                    >
-                      <app-icon name="external-link" [size]="14" />
-                    </button>
-                  </div>
+                  <app-icon name="file-question" [size]="32" />
                 </div>
-              }
-            </div>
-          }
-        </div>
+                <p class="font-bold text-text-primary">Sin documentos registrados</p>
+              </div>
+            } @else {
+              <div class="grid grid-cols-1 gap-4">
+                @for (doc of documents(); track doc.type) {
+                  <div
+                    class="p-5 rounded-2xl border bg-base flex items-center justify-between group hover:border-ds-brand hover:shadow-sm transition-all duration-300"
+                  >
+                    <div class="flex items-center gap-4">
+                      <div
+                        class="w-12 h-12 rounded-xl bg-ds-brand-muted flex items-center justify-center text-ds-brand"
+                      >
+                        <app-icon [name]="docIcon(doc.type)" [size]="24" />
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">
+                          {{ docLabel(doc.type) }}
+                        </h4>
+                        <p class="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                          Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
+                        </p>
+                      </div>
+                    </div>
 
-        <!-- Footer -->
-        <div
-          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
-        >
-          <button type="button" class="btn-primary h-11 px-8" (click)="onClose()">
-            Cerrar Panel
-          </button>
-        </div>
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm border"
+                        [class.badge-success]="doc.status === 'valid'"
+                        [class.badge-error]="doc.status !== 'valid'"
+                      >
+                        {{ doc.status === 'valid' ? 'Vigente' : 'Vencido' }}
+                      </span>
+                      <button
+                        class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                      >
+                        <app-icon name="external-link" [size]="14" />
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Footer -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button type="button" class="btn-primary" (click)="onClose()">Cerrar Panel</button>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,

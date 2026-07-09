@@ -14,6 +14,7 @@ import { AlertCardComponent } from '@shared/components/alert-card/alert-card.com
 import { DmsFacade } from '@core/facades/dms.facade';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 type UploadMode = 'student' | 'school';
@@ -34,6 +35,7 @@ type UploadMode = 'student' | 'school';
     FormsModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -45,137 +47,131 @@ type UploadMode = 'student' | 'school';
         </div>
       </ng-template>
       <ng-template #content>
-        <div class="flex-1 flex flex-col gap-5">
-          <!-- ── Selector alumno (modo student) ── -->
-          @if (facade.currentUploadMode() === 'student') {
+        <app-drawer-form>
+          <div class="flex-1 flex flex-col gap-5">
+            <!-- ── Selector alumno (modo student) ── -->
+            @if (facade.currentUploadMode() === 'student') {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-text-primary">Alumno *</label>
+                <p-select
+                  [ngModel]="selectedStudentId()"
+                  (ngModelChange)="selectedStudentId.set($event)"
+                  [options]="studentOptions()"
+                  optionLabel="name"
+                  optionValue="studentId"
+                  placeholder="Seleccionar alumno..."
+                  [filter]="true"
+                  filterPlaceholder="Buscar alumno..."
+                  styleClass="w-full"
+                  appendTo="body"
+                ></p-select>
+              </div>
+            }
+
+            <!-- ── Selector tipo ── -->
             <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-medium text-text-primary">Alumno *</label>
+              <label class="text-sm font-medium text-text-primary">Tipo de documento *</label>
               <p-select
-                [ngModel]="selectedStudentId()"
-                (ngModelChange)="selectedStudentId.set($event)"
-                [options]="studentOptions()"
-                optionLabel="name"
-                optionValue="studentId"
-                placeholder="Seleccionar alumno..."
-                [filter]="true"
-                filterPlaceholder="Buscar alumno..."
+                [ngModel]="selectedType()"
+                (ngModelChange)="selectedType.set($event)"
+                [options]="
+                  facade.currentUploadMode() === 'student' ? studentDocTypes : schoolDocTypes
+                "
+                placeholder="Seleccionar tipo..."
                 styleClass="w-full"
                 appendTo="body"
               ></p-select>
             </div>
-          }
 
-          <!-- ── Selector tipo ── -->
-          <div class="flex flex-col gap-1.5">
-            <label class="text-sm font-medium text-text-primary">Tipo de documento *</label>
-            <p-select
-              [ngModel]="selectedType()"
-              (ngModelChange)="selectedType.set($event)"
-              [options]="
-                facade.currentUploadMode() === 'student' ? studentDocTypes : schoolDocTypes
-              "
-              placeholder="Seleccionar tipo..."
-              styleClass="w-full"
-              appendTo="body"
-            ></p-select>
-          </div>
-
-          <!-- ── Descripción (modo school) ── -->
-          @if (facade.currentUploadMode() === 'school') {
-            <div class="flex flex-col gap-1.5">
-              <label class="text-sm font-medium text-text-primary">Descripción</label>
-              <textarea
-                [ngModel]="description()"
-                (ngModelChange)="description.set($event)"
-                rows="2"
-                placeholder="Descripción opcional..."
-                class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
-                
-              ></textarea>
-            </div>
-          }
-
-          <!-- ── Drag & Drop ── -->
-          <div
-            class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
-            [style]="
-              isDragOver()
-                ? 'border-color: var(--color-primary); background: var(--color-primary-tint);'
-                : 'border-color: var(--border-subtle); background: var(--bg-subtle);'
-            "
-            (dragover)="onDragOver($event)"
-            (dragleave)="isDragOver.set(false)"
-            (drop)="onDrop($event)"
-            (click)="fileInput.click()"
-          >
-            <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
-              <app-icon name="upload" [size]="22"></app-icon>
-            </div>
-
-            @if (selectedFile()) {
-              <div>
-                <p class="font-semibold text-sm m-0 text-text-primary">
-                  {{ selectedFile()!.name }}
-                </p>
-                <p class="text-xs m-0 mt-1 text-text-secondary">
-                  {{ formatFileSize(selectedFile()!.size) }}
-                </p>
-              </div>
-            } @else {
-              <div>
-                <p class="font-medium text-sm m-0 text-text-primary">Arrastra tu archivo aquí</p>
-                <p class="text-xs m-0 mt-1 text-text-secondary">PDF, JPG, PNG — máx. 5 MB</p>
+            <!-- ── Descripción (modo school) ── -->
+            @if (facade.currentUploadMode() === 'school') {
+              <div class="flex flex-col gap-1.5">
+                <label class="text-sm font-medium text-text-primary">Descripción</label>
+                <textarea
+                  [ngModel]="description()"
+                  (ngModelChange)="description.set($event)"
+                  rows="2"
+                  placeholder="Descripción opcional..."
+                  class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
+                ></textarea>
               </div>
             }
+
+            <!-- ── Drag & Drop ── -->
+            <div
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 text-center transition-all duration-200 cursor-pointer"
+              [style]="
+                isDragOver()
+                  ? 'border-color: var(--color-primary); background: var(--color-primary-tint);'
+                  : 'border-color: var(--border-subtle); background: var(--bg-subtle);'
+              "
+              (dragover)="onDragOver($event)"
+              (dragleave)="isDragOver.set(false)"
+              (drop)="onDrop($event)"
+              (click)="fileInput.click()"
+            >
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
+                <app-icon name="upload" [size]="22"></app-icon>
+              </div>
+
+              @if (selectedFile()) {
+                <div>
+                  <p class="font-semibold text-sm m-0 text-text-primary">
+                    {{ selectedFile()!.name }}
+                  </p>
+                  <p class="text-xs m-0 mt-1 text-text-secondary">
+                    {{ formatFileSize(selectedFile()!.size) }}
+                  </p>
+                </div>
+              } @else {
+                <div>
+                  <p class="font-medium text-sm m-0 text-text-primary">Arrastra tu archivo aquí</p>
+                  <p class="text-xs m-0 mt-1 text-text-secondary">PDF, JPG, PNG — máx. 5 MB</p>
+                </div>
+              }
+            </div>
+            <input
+              #fileInput
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              class="hidden"
+              (change)="onFileChange($event)"
+            />
+
+            <!-- ── Error de validación ── -->
+            @if (validationError()) {
+              <app-alert-card title="Error de archivo" severity="error">
+                {{ validationError() }}
+              </app-alert-card>
+            }
+
+            <!-- ── Banner éxito ── -->
+            @if (savedOk()) {
+              <app-alert-card title="Documento subido" severity="success">
+                El documento se subió correctamente.
+              </app-alert-card>
+            }
           </div>
-          <input
-            #fileInput
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png,.webp"
-            class="hidden"
-            (change)="onFileChange($event)"
-          />
 
-          <!-- ── Error de validación ── -->
-          @if (validationError()) {
-            <app-alert-card title="Error de archivo" severity="error">
-              {{ validationError() }}
-            </app-alert-card>
-          }
-
-          <!-- ── Banner éxito ── -->
-          @if (savedOk()) {
-            <app-alert-card title="Documento subido" severity="success">
-              El documento se subió correctamente.
-            </app-alert-card>
-          }
-        </div>
-
-        <!-- Footer integrado en el contenido -->
-        <div class="flex items-center justify-end gap-3 pt-4 border-t border-border-subtle">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-lg text-sm font-medium border cursor-pointer border-border-subtle bg-transparent text-text-primary"
-            
-            (click)="onClose()"
-          >
-            Cancelar
-          </button>
-          <app-async-btn
-            label="Subir documento"
-            icon="upload"
-            [loading]="isSubmitting()"
-            [disabled]="!canSubmit()"
-            (click)="onSubmit()"
-          ></app-async-btn>
-        </div>
+          <!-- Footer integrado en el contenido -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
+            <app-async-btn
+              label="Subir documento"
+              icon="upload"
+              [loading]="isSubmitting()"
+              [disabled]="!canSubmit()"
+              (click)="onSubmit()"
+            ></app-async-btn>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,
 })
 export class DmsUploadDrawerComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-readonly facade = inject(DmsFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  readonly facade = inject(DmsFacade);
 
   // ── Estado local ─────────────────────────────────────────────────────────
   readonly selectedStudentId = signal<number | null>(null);
@@ -282,7 +278,9 @@ readonly facade = inject(DmsFacade);
         this.onClose();
       }, 1200);
     } catch (err) {
-      this.validationError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir el archivo');
+      this.validationError.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al subir el archivo',
+      );
     } finally {
       this.isSubmitting.set(false);
     }

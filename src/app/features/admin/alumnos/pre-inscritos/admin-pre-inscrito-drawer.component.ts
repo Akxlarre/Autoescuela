@@ -22,6 +22,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { PAYMENT_METHODS, type PaymentMethod } from '@core/models/ui/enrollment-payment.model';
 import { EPQ_QUESTIONS } from '@core/utils/epq-questions.const';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type {
@@ -46,6 +47,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
     DateInputComponent,
   ],
   template: `
@@ -137,7 +139,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
           </div>
         </ng-template>
         <ng-template #content>
-          <div class="flex flex-col h-full w-full">
+          <app-drawer-form [hasFooter]="false">
             <!-- ─── TAB: DATOS PERSONALES ──────────────────────────────────── -->
             @if (activeTab() === 'datos') {
               <div class="space-y-4" #tabContent>
@@ -1041,7 +1043,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 }
               </div>
             }
-          </div>
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }

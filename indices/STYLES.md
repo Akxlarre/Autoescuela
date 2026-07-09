@@ -10,6 +10,13 @@
 | `_scrollbar.scss` | Styling minimalista y dinámico para scrollbars. Integrado con tokens. Solo desktop. | `styles/tokens/_scrollbar.scss` | ✅ Estable |
 
 
+## Componentes (clases globales)
+
+| Archivo | Responsabilidad | Ubicación | Estado |
+|---------|----------------|-----------|--------|
+| `_form-fields.scss` | **Fuente única** de los tokens de campo de formulario (form-ux §2): `.field-label`, `.field-input` (+ `:focus`, `::placeholder`, `--error`, `--valid`), `.field-hint`, `.field-error`, `.field-success`, `.section-title`. Reemplaza las copias locales que estaban duplicadas en ~20 componentes (fix-025). Clases globales (sin `@layer`) para ganar sobre `input,textarea` de styles.scss y los `@layer` de PrimeNG/Tailwind. Consúmelas junto al shell `app-drawer-form`. | `styles/components/_form-fields.scss` | ✅ Estable |
+
+
 ## Themes (scoped por sede)
 
 Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`). Se montan en `styles.scss` vía `@use`.
@@ -138,6 +145,21 @@ Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del
 | `.badge-pulse` | Badge con pulso de atención | Conteos sin leer, alertas nuevas |
 
 > **⚠️ Distinción clave:** `.kpi-label` ≠ `.section-eyebrow`. La primera es para datos numéricos (uppercase + tracking agresivo). La segunda es para texto de contexto pre-título (natural, legible).
+
+## Campos de Formulario (`styles/components/_form-fields.scss`)
+
+Fuente única de verdad para los campos de formulario (drawers/modales/páginas). Definidas globalmente (fix-025 / form-ux §2). **PROHIBIDO** redefinirlas localmente en el `styles:` de un componente — antes estaban duplicadas en ~20 componentes.
+
+| Clase | Propósito |
+|-------|-----------|
+| `.section-title` | Título de sección de formulario — `text-sm`, weight 600, border-bottom |
+| `.field-label` | Etiqueta de campo — `text-sm`, weight 500, `text-primary` |
+| `.field-input` | Input/textarea/select base — `bg-base`, `radius-md`, focus ring `--ds-brand`. Usar `.resize-none` extra en textareas |
+| `.field-input--error` / `.field-input--valid` | Borde de estado (rojo / verde) según validación |
+| `.field-hint` | Texto de ayuda contextual — `12px`, muted |
+| `.field-error` / `.field-success` | Mensaje de validación — `12px`, color de estado |
+
+> Consumidas por el shell `app-drawer-form` y todos los drawers/formularios migrados. Un cambio aquí se propaga a toda la app.
 
 ## Token Cascade en `.surface-hero`
 

@@ -3,6 +3,7 @@ import { ReactiveFormsModule, FormControl, FormGroup, Validators } from '@angula
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 /**
  * AgregarServicioDrawerComponent — Formulario para crear un nuevo servicio en side-drawer (RF-037).
@@ -11,9 +12,9 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   selector: 'app-agregar-servicio-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent],
+  imports: [ReactiveFormsModule, IconComponent, DrawerFormComponent],
   template: `
-    <div class="flex flex-col gap-5 py-2">
+    <app-drawer-form>
       <form [formGroup]="servicioForm" (ngSubmit)="submitServicio()" class="flex flex-col gap-5">
         <div class="flex flex-col gap-1.5">
           <label
@@ -65,33 +66,26 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
             />
           </div>
         </div>
-
-        <!-- Botones -->
-        <div class="flex flex-col sm:flex-row gap-3 pt-4">
-          <button
-            type="submit"
-            class="flex-1 h-11 rounded-xl text-sm font-bold bg-brand text-white hover:bg-brand-hover active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm"
-            [disabled]="servicioForm.invalid || isSaving()"
-          >
-            @if (isSaving()) {
-              <div class="flex items-center justify-center gap-2">
-                <app-icon name="loader-2" [size]="18" class="animate-spin" />
-                Guardando...
-              </div>
-            } @else {
-              Agregar al Catálogo
-            }
-          </button>
-          <button
-            type="button"
-            class="h-11 px-6 text-sm font-semibold rounded-xl border border-border-default text-text-secondary hover:bg-subtle active:scale-95 transition-all"
-            (click)="drawer.close()"
-          >
-            Cancelar
-          </button>
-        </div>
       </form>
-    </div>
+
+      <!-- Botones -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2"
+          [disabled]="servicioForm.invalid || isSaving()"
+          (click)="submitServicio()"
+        >
+          @if (isSaving()) {
+            <app-icon name="loader-2" [size]="18" class="animate-spin" />
+            Guardando...
+          } @else {
+            Agregar al Catálogo
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class AgregarServicioDrawerComponent {

@@ -739,9 +739,11 @@ app-main-layout p-toast.p-toast-top-center,
   [data-pc-section='day'],
   .p-datepicker-day {
     font-size: 0.8125rem !important;
-    transition: background-color 0.2s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
     border-radius: 4px;
-    
+
     &:hover:not(.p-disabled):not(.p-highlight) {
       background-color: var(--p-content-hover-background, var(--bg-elevated)) !important;
       color: var(--ds-brand) !important;
@@ -753,7 +755,9 @@ app-main-layout p-toast.p-toast-top-center,
   [data-pc-section='year'],
   .p-monthpicker-month,
   .p-yearpicker-year {
-    transition: background-color 0.2s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
     border-radius: 4px;
 
     &:hover:not(.p-disabled):not(.p-highlight) {
@@ -770,7 +774,9 @@ app-main-layout p-toast.p-toast-top-center,
     font-size: 0.875rem !important;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
-    transition: background-color 0.2s, color 0.2s;
+    transition:
+      background-color 0.2s,
+      color 0.2s;
     cursor: pointer;
 
     &:hover {
@@ -1281,6 +1287,35 @@ i.pi {
   .page-header__description {
     color: var(--text-secondary) !important;
   }
+}
+
+/* p-dialog header/content/footer — separación clara del título/X respecto a
+   los bordes del modal (aplica en claro y oscuro, no solo dark mode). */
+.p-dialog-header {
+  padding: var(--space-4) var(--space-5) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  gap: var(--space-3) !important;
+}
+
+.p-dialog-title {
+  font-size: var(--text-lg) !important;
+}
+
+.p-dialog-header-actions {
+  gap: var(--space-2) !important;
+}
+
+.p-dialog-close-button {
+  width: 2rem !important;
+  height: 2rem !important;
+}
+
+.p-dialog-content {
+  padding: var(--space-4) var(--space-5) !important;
+}
+
+.p-dialog-footer {
+  padding: var(--space-3) var(--space-5) var(--space-4) !important;
 }
 
 /* ============================================
