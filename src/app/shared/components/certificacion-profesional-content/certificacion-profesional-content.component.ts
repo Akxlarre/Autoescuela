@@ -876,13 +876,9 @@ const PAGE_SIZE = 10;
                         {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
                       </td>
                       <td class="px-4 py-3">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                          [style.background]="getAccionBg(entry.accion)"
-                          [style.color]="getAccionColor(entry.accion)"
-                        >
+                        <app-badge [variant]="getAccionVariant(entry.accion)">
                           {{ getAccionLabel(entry.accion) }}
-                        </span>
+                        </app-badge>
                       </td>
                       <td class="px-4 py-3 text-text-primary">{{ entry.alumnoNombre }}</td>
                       <td class="px-4 py-3 text-text-muted">{{ entry.usuarioNombre }}</td>
@@ -1144,29 +1140,16 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
     return ACCION_LABELS_PROF[accion] ?? accion;
   }
 
-  getAccionColor(accion: string): string {
+  getAccionVariant(accion: string): 'success' | 'brand' | 'info' | 'neutral' {
     switch (accion) {
       case 'generated':
-        return 'var(--state-success)';
+        return 'success';
       case 'email_sent':
-        return 'var(--color-primary)';
+        return 'brand';
       case 'downloaded':
-        return 'var(--state-info, var(--color-primary))';
+        return 'info';
       default:
-        return 'var(--text-muted)';
-    }
-  }
-
-  getAccionBg(accion: string): string {
-    switch (accion) {
-      case 'generated':
-        return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-      case 'email_sent':
-        return 'var(--bg-brand-muted)';
-      case 'downloaded':
-        return 'var(--bg-info-muted, rgba(59,130,246,0.1))';
-      default:
-        return 'var(--bg-subtle)';
+        return 'neutral';
     }
   }
 }

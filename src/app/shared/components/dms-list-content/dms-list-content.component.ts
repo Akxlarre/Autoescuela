@@ -455,10 +455,9 @@ import type {
                             <p class="font-semibold text-sm leading-snug m-0 text-text-primary">
                               {{ tpl.name }}
                             </p>
-                            <span
-                              class="inline-block mt-1 text-xs px-2 py-0.5 rounded-full bg-subtle text-text-secondary"
-                              >{{ tpl.categoryLabel }}</span
-                            >
+                            <app-badge variant="neutral" class="mt-1">{{
+                              tpl.categoryLabel
+                            }}</app-badge>
                           </div>
                         </div>
 

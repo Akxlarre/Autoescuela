@@ -50,15 +50,39 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       ~50 páginas de blast radius) verificado con Playwright real además de harness — chip
       modo full/hero queda fuera de scope (fondo fijo semi-transparente sobre `.surface-hero`,
       no semántico por diseño). Baseline: 77→51 pills, 49→43 archivos.
-- [ ] Migrar los pills ad-hoc restantes del baseline ARCH-15 a `<app-badge [variant]="...">`
-      (**51 restantes**, mayormente 1 pill por archivo — lote 3). Re-baseline con
-      `--update-ds-baseline` tras cada lote.
+- [x] **fix-044 (2026-07-09)** — Lote 3: 15 archivos migrados (16 pills), 12 archivos
+      revisados y excluidos con justificación documentada. Hallazgos: (a) 2 bugs latentes
+      más corregidos como efecto colateral de la migración — `alumno-pagos.component.ts`
+      usaba `var(--color-success-muted)`/`var(--color-warning-muted)` (tokens inexistentes,
+      pill renderizaba sin fondo/color) y `certificacion-profesional-content.component.ts`
+      usaba `var(--bg-brand-muted)` sin fallback (declaración inválida para `email_sent`,
+      mismo patrón que motivó fix-038); (b) tercera ocurrencia del bug `--color-purple` del
+      pill "tipo" SENCE/Particular, ahora confirmado en 3 archivos de contabilidad-cursos
+      (`admin-contabilidad-cursos`, `admin-curso-singular-detalle-drawer`,
+      `admin-curso-singular-cobro-drawer`) — requiere decisión de diseño, no forzado; (c) 3
+      archivos tenían una migración a medias (rama `@if` "Activo" ya usaba `<app-badge>`,
+      rama `@else` "Inactivo" seguía con `<span>` suelto) — completados; (d)
+      `vehicle-documents-drawer.component.ts` era la fuente de la colisión accidental
+      documentada en fix-036 (`[class.badge-success]` ya funcionaba por casualidad) —
+      consolidado a `<app-badge>` limpio; (e) nueva categoría de exclusión encontrada:
+      `bg-brand-muted`/`bg-brand-tint` con texto/borde neutro (no `text-brand`), combinación
+      que `badge-brand` no puede replicar sin cambiar el color del texto (3 archivos:
+      `admin-alumno-docs-detalle`, `alumnos-profesional-list-content`,
+      `ex-alumnos-profesional-content`). Baseline: 51→36 pills, 43→28 archivos. De los 36
+      restantes, todos están ya revisados y documentados como exclusión legítima excepto
+      `alumnos-list-content.component.ts` (bloqueado por sesión paralela) — no queda
+      backlog "fresco" sin revisar.
+- [ ] `alumnos-list-content.component.ts` (2 pills) — pendiente de la sesión paralela que
+      tiene cambios sin commitear en este archivo; retomar cuando esté libre
+- [ ] Decisión de diseño: pill "tipo" SENCE/Particular usa `var(--color-purple)`, token
+      inexistente (3 archivos en contabilidad-cursos) — ¿agregar variant `purple` a
+      `app-badge` o resolver con los 6 variants existentes?
 - [ ] Decisión de diseño: el "tab count" (contador numérico dentro de `<app-tab>`, ver
       `tabs.component.ts`) no es un badge de estado — ¿merece su propia utilidad `.tab-count`
       o se dejan como excepción documentada del heurístico ARCH-15?
-- [ ] Refinar heurístico ARCH-15 para excluir `<button>` con `(click)` — van 5 falsos
-      positivos confirmados entre fix-043 y su análisis previo (filtros/acciones que
-      visualmente parecen pills pero son controles interactivos, no badges de estado)
+- [ ] Refinar heurístico ARCH-15 para excluir `<button>` con `(click)` — van 6 falsos
+      positivos confirmados entre fix-043/044 (filtros/acciones que visualmente parecen
+      pills pero son controles interactivos, no badges de estado)
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
       (baseline ARCH-16, ~120 instancias)

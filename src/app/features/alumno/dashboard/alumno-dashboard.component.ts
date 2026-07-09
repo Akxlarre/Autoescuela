@@ -16,6 +16,7 @@ import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive'
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -33,6 +34,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
     BentoRevealDirective,
     CardHoverDirective,
     IconComponent,
+    BadgeComponent,
     KpiCardVariantComponent,
     AlertCardComponent,
     SectionHeroComponent,
@@ -139,9 +141,7 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
                 (side()?.pendingBalance ?? 0) > 0 ? 'var(--state-warning)' : 'var(--state-success)'
               "
             />
-            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted"
-              >Saldo</span
-            >
+            <span class="text-2xs uppercase font-bold tracking-wider text-text-muted">Saldo</span>
           </div>
           @if (loading()) {
             <app-skeleton-block variant="text" width="60%" height="20px" />
@@ -432,13 +432,9 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
           <app-icon name="calendar-check" [size]="16" class="text-brand" />
           <h2 class="m-0 font-semibold text-text-primary text-sm">Asistencia reciente</h2>
           @if (!loading() && attendance()) {
-            <span
-              class="ml-auto inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full"
-              [style.background]="semaphoreChipBg()"
-              [style.color]="semaphoreChipColor()"
-            >
+            <app-badge [variant]="semaphoreVariant()" class="ml-auto">
               {{ semaphoreLabel() }}
-            </span>
+            </app-badge>
           }
         </div>
 
@@ -577,7 +573,7 @@ export class AlumnoDashboardComponent {
   readonly snapshot = computed(() => this.facade.snapshot());
   readonly hero = computed(() => this.facade.hero());
   readonly progress = computed(() => this.facade.progress());
-  
+
   readonly enrollmentTabs = computed(() => {
     return this.context.enrollments().map((enr) => ({
       id: String(enr.id),
@@ -722,17 +718,11 @@ export class AlumnoDashboardComponent {
     if (s === 'yellow') return 'Atención';
     return 'Al día';
   });
-  readonly semaphoreChipBg = computed(() => {
+  readonly semaphoreVariant = computed<'error' | 'warning' | 'success'>(() => {
     const s = this.attendance()?.semaphore;
-    if (s === 'red') return 'var(--state-error-bg)';
-    if (s === 'yellow') return 'var(--state-warning-bg, var(--bg-subtle))';
-    return 'var(--state-success-bg)';
-  });
-  readonly semaphoreChipColor = computed(() => {
-    const s = this.attendance()?.semaphore;
-    if (s === 'red') return 'var(--state-error)';
-    if (s === 'yellow') return 'var(--state-warning)';
-    return 'var(--state-success)';
+    if (s === 'red') return 'error';
+    if (s === 'yellow') return 'warning';
+    return 'success';
   });
 
   readonly recentSessions = computed(() => this.attendance()?.recentSessions ?? []);

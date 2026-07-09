@@ -76,11 +76,7 @@ const SPEC_LABELS: Record<string, string> = {
                     Activo
                   </app-badge>
                 } @else {
-                  <span
-                    class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-elevated text-text-muted"
-                  >
-                    Inactivo
-                  </span>
+                  <app-badge variant="neutral">Inactivo</app-badge>
                 }
               </div>
             </div>

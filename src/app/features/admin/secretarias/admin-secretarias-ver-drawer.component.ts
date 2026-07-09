@@ -60,12 +60,10 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                   Activa
                 </app-badge>
               } @else {
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
-                >
+                <app-badge variant="neutral">
                   <app-icon name="circle" [size]="12" />
                   Inactiva
-                </span>
+                </app-badge>
               }
             </div>
 

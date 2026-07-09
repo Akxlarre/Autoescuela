@@ -10,6 +10,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { groupCyclesByStatus } from '@core/utils/ciclo-select-groups.util';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
@@ -35,7 +36,7 @@ import type {
   selector: 'app-ciclos-teoricos-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, IconComponent, SkeletonBlockComponent],
+  imports: [FormsModule, SelectModule, IconComponent, BadgeComponent, SkeletonBlockComponent],
   styles: `
     .field-input {
       width: 100%;
@@ -134,14 +135,10 @@ import type {
                   <div class="flex items-center justify-between gap-2">
                     <p class="text-sm font-semibold text-text-primary">{{ clase.label }}</p>
                     @if (clase.zoomSentAt) {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                        [style.background]="'var(--state-success-bg)'"
-                        [style.color]="'var(--state-success)'"
-                      >
+                      <app-badge variant="success">
                         <app-icon name="mail-check" [size]="11" />
                         Enviado el {{ formatSentAt(clase.zoomSentAt) }}
-                      </span>
+                      </app-badge>
                     }
                   </div>
 
@@ -307,7 +304,9 @@ import type {
                   <div class="flex items-center gap-2 px-2 py-3 rounded-md hover:bg-elevated">
                     <div class="min-w-0 flex-1">
                       <p class="text-text-primary truncate">{{ alumno.nombre }}</p>
-                      <p class="text-sm text-text-muted truncate">{{ alumno.email || 'Sin correo' }}</p>
+                      <p class="text-sm text-text-muted truncate">
+                        {{ alumno.email || 'Sin correo' }}
+                      </p>
                     </div>
                     @if (movingEnrollmentId() === alumno.enrollmentId) {
                       <p-select

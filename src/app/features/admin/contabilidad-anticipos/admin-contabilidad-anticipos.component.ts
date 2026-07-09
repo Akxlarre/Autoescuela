@@ -145,11 +145,7 @@ function clp(n: number): string {
                     </td>
                     <!-- Tipo -->
                     <td class="px-4 py-3">
-                      <span
-                        class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-elevated text-text-secondary"
-                      >
-                        {{ row.tipoLabel }}
-                      </span>
+                      <app-badge variant="neutral">{{ row.tipoLabel }}</app-badge>
                     </td>
                     <!-- Anticipos Totales -->
                     <td class="px-4 py-3 text-right text-text-primary">

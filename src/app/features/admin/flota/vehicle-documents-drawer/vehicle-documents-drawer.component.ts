@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 
@@ -15,13 +16,21 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 @Component({
   selector: 'app-vehicle-documents-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent, SkeletonBlockComponent, DrawerContentLoaderComponent],
+  imports: [
+    CommonModule,
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+    DrawerContentLoaderComponent,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
         <!-- Skeleton Header -->
-        <div class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle">
+        <div
+          class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
+        >
           <app-skeleton-block variant="text" width="160px" height="20px" />
         </div>
         <!-- Skeleton Body -->
@@ -30,22 +39,39 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             @for (_ of [1, 2, 3]; track $index) {
               <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                  <app-skeleton-block variant="rect" width="48px" height="48px" borderRadius="0.75rem" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="48px"
+                    height="48px"
+                    borderRadius="0.75rem"
+                  />
                   <div class="flex flex-col gap-1.5">
                     <app-skeleton-block variant="text" width="140px" height="14px" />
                     <app-skeleton-block variant="text" width="90px" height="10px" />
                   </div>
                 </div>
                 <div class="flex items-center gap-2">
-                  <app-skeleton-block variant="rect" width="64px" height="20px" borderRadius="999px" />
-                  <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="0.5rem" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="64px"
+                    height="20px"
+                    borderRadius="999px"
+                  />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="32px"
+                    height="32px"
+                    borderRadius="0.5rem"
+                  />
                 </div>
               </div>
             }
           </div>
         </div>
         <!-- Skeleton Footer -->
-        <div class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle">
+        <div
+          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
+        >
           <app-skeleton-block variant="rect" width="140px" height="44px" borderRadius="0.5rem" />
         </div>
       </ng-template>
@@ -64,15 +90,30 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               @for (_ of [1, 2, 3]; track $index) {
                 <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
                   <div class="flex items-center gap-4">
-                    <app-skeleton-block variant="rect" width="48px" height="48px" borderRadius="0.75rem" />
+                    <app-skeleton-block
+                      variant="rect"
+                      width="48px"
+                      height="48px"
+                      borderRadius="0.75rem"
+                    />
                     <div class="flex flex-col gap-1.5">
                       <app-skeleton-block variant="text" width="140px" height="14px" />
                       <app-skeleton-block variant="text" width="90px" height="10px" />
                     </div>
                   </div>
                   <div class="flex items-center gap-2">
-                    <app-skeleton-block variant="rect" width="64px" height="20px" borderRadius="999px" />
-                    <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="0.5rem" />
+                    <app-skeleton-block
+                      variant="rect"
+                      width="64px"
+                      height="20px"
+                      borderRadius="999px"
+                    />
+                    <app-skeleton-block
+                      variant="rect"
+                      width="32px"
+                      height="32px"
+                      borderRadius="0.5rem"
+                    />
                   </div>
                 </div>
               }
@@ -109,13 +150,9 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   </div>
 
                   <div class="flex items-center gap-2">
-                    <span
-                      class="px-2.5 py-1 rounded-full text-2xs font-bold uppercase tracking-widest shadow-sm border"
-                      [class.badge-success]="doc.status === 'valid'"
-                      [class.badge-error]="doc.status !== 'valid'"
-                    >
+                    <app-badge [variant]="doc.status === 'valid' ? 'success' : 'error'">
                       {{ doc.status === 'valid' ? 'Vigente' : 'Vencido' }}
-                    </span>
+                    </app-badge>
                     <button
                       class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
                     >

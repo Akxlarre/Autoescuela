@@ -14,6 +14,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 interface ExamStat {
   icon: string;
@@ -28,16 +29,21 @@ interface SimulatorLink {
   url: string;
   icon: string;
   tag: string;
-  tagBg: string;
-  tagColor: string;
+  tagVariant: 'info' | 'warning';
 }
 
 @Component({
   selector: 'app-alumno-pruebas-online',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [BentoGridLayoutDirective,
-    BentoRevealDirective, CardHoverDirective, SectionHeroComponent, IconComponent],
+  imports: [
+    BentoGridLayoutDirective,
+    BentoRevealDirective,
+    CardHoverDirective,
+    SectionHeroComponent,
+    IconComponent,
+    BadgeComponent,
+  ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
@@ -112,13 +118,7 @@ interface SimulatorLink {
                   >
                     <app-icon [name]="sim.icon" [size]="18" />
                   </div>
-                  <span
-                    class="text-xs font-semibold px-2.5 py-0.5 rounded-full shrink-0"
-                    [style.background]="sim.tagBg"
-                    [style.color]="sim.tagColor"
-                  >
-                    {{ sim.tag }}
-                  </span>
+                  <app-badge [variant]="sim.tagVariant" class="shrink-0">{{ sim.tag }}</app-badge>
                 </div>
 
                 <div class="flex flex-col gap-1 flex-1">
@@ -140,7 +140,8 @@ interface SimulatorLink {
     </div>
   `,
 })
-export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {  private readonly homeFacade = inject(StudentHomeFacade);
+export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {
+  private readonly homeFacade = inject(StudentHomeFacade);
   readonly isProfessional = computed(() => this.homeFacade.licenseGroup() === 'professional');
 
   readonly activeSimulators = computed(() =>
@@ -172,8 +173,7 @@ export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {  pr
       url: 'https://practicatest.cl/examen-teorico/clase-B',
       icon: 'globe',
       tag: 'Gratuito',
-      tagBg: 'var(--state-info-bg, rgba(59,130,246,0.12))',
-      tagColor: 'var(--state-info)',
+      tagVariant: 'info',
     },
     {
       name: 'Educación Vial',
@@ -182,8 +182,7 @@ export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {  pr
       url: 'https://www.educacionvial.cl/examen/examen-municipal-clase-b',
       icon: 'book-open',
       tag: 'Popular',
-      tagBg: 'var(--state-warning-bg, rgba(234,179,8,0.12))',
-      tagColor: 'var(--state-warning)',
+      tagVariant: 'warning',
     },
   ];
 
@@ -195,8 +194,7 @@ export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {  pr
       url: 'https://practicatest.cl/examen-teorico',
       icon: 'globe',
       tag: 'Gratuito',
-      tagBg: 'var(--state-info-bg, rgba(59,130,246,0.12))',
-      tagColor: 'var(--state-info)',
+      tagVariant: 'info',
     },
   ];
 
@@ -204,5 +202,5 @@ export class AlumnoPruebasOnlineComponent implements OnInit, AfterViewInit {  pr
     await this.homeFacade.initialize();
   }
 
-  ngAfterViewInit(): void {  }
+  ngAfterViewInit(): void {}
 }

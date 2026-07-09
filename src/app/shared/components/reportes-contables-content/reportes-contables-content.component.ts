@@ -452,12 +452,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                           {{ formatDate(gasto.date) }}
                         </td>
                         <td class="report-td">
-                          <span
-                            class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
-                            style="background: color-mix(in srgb, var(--state-error) 10%, transparent); color: var(--state-error)"
-                          >
-                            {{ gasto.categoryLabel }}
-                          </span>
+                          <app-badge variant="error">{{ gasto.categoryLabel }}</app-badge>
                         </td>
                         <td class="report-td text-sm" style="color: var(--text-secondary)">
                           {{ gasto.description }}
