@@ -192,42 +192,42 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 474 | `#38bdf8` |
-| `--text-muted` | 429 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 286 | `var(--color-primary-text)` |
-| `--border-subtle` | 244 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 244 | `#f87171` |
-| `--text-secondary` | 231 | `rgba(255, 255, 255, 0.78)` |
-| `--state-success` | 230 | `#4ade80` |
-| `--bg-surface` | 200 | `#18181b` |
-| `--color-primary` | 190 | `#38bdf8` |
-| `--state-warning` | 168 | `#fbbf24` |
-| `--border-default` | 152 | `rgba(255, 255, 255, 0.28)` |
-| `--bg-elevated` | 90 | `#27272a` |
-| `--text-sm` | 81 | `0.875rem` |
-| `--duration-fast` | 74 | `200ms` |
-| `--bg-subtle` | 73 | `rgba(255, 255, 255, 0.1)` |
-| `--radius-md` | 65 | `10px` |
-| `--bg-base` | 56 | `#09090b` |
+| `--ds-brand` | 484 | `#38bdf8` |
+| `--text-muted` | 415 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 263 | `var(--color-primary-text)` |
+| `--state-error` | 231 | `#f87171` |
+| `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
+| `--state-success` | 222 | `#4ade80` |
+| `--border-subtle` | 215 | `rgba(255, 255, 255, 0.18)` |
+| `--bg-surface` | 197 | `#18181b` |
+| `--color-primary` | 183 | `#38bdf8` |
+| `--state-warning` | 154 | `#fbbf24` |
+| `--border-default` | 147 | `rgba(255, 255, 255, 0.28)` |
+| `--bg-elevated` | 92 | `#27272a` |
+| `--bg-subtle` | 67 | `rgba(255, 255, 255, 0.1)` |
+| `--duration-fast` | 66 | `200ms` |
+| `--text-sm` | 65 | `0.875rem` |
+| `--radius-md` | 57 | `10px` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
-| `--border-muted` | 54 | `var(--border-subtle)` |
-| `--state-success-bg` | 52 | `rgba(74, 222, 128, 0.1)` |
+| `--state-success-bg` | 49 | `rgba(74, 222, 128, 0.1)` |
+| `--bg-base` | 49 | `#09090b` |
 | `--color-primary-text` | 48 | `#ffffff` |
-| `--state-warning-bg` | 47 | `rgba(251, 191, 36, 0.1)` |
-| `--text-xs` | 46 | `0.75rem` |
-| `--color-success` | 45 | `—` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
+| `--text-xs` | 44 | `0.75rem` |
+| `--color-success` | 43 | `—` |
+| `--border-muted` | 42 | `var(--border-subtle)` |
+| `--state-warning-bg` | 41 | `rgba(251, 191, 36, 0.1)` |
 
 ## Clases semánticas del Design System
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 238 | `src/styles/tokens/_variables.scss` |
+| `.card` | 239 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
-| `.kpi-value` | 16 | `src/styles/tokens/_variables.scss` |
+| `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
+| `.surface-glass` | 10 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 10 | `src/styles/tokens/_variables.scss` |
-| `.surface-glass` | 9 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 6 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
 | `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
@@ -279,8 +279,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | **colorpicker** | `.p-colorpicker` · `.p-colorpicker-panel` |
 | **datatable** | `.p-datatable` · `.p-datatable-header` · `.p-datatable-sm` · `.p-datatable-table` · `.p-datatable-table-wrapper` +3 |
 | **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-next` +5 |
-| **dialog** | `.p-dialog` · `.p-dialog-content` · `.p-dialog-header` · `.p-dialog-mask` |
+| **dialog** | `.p-dialog` · `.p-dialog-close-button` · `.p-dialog-content` · `.p-dialog-footer` · `.p-dialog-header` +3 |
 | **disabled** | `.p-disabled` |
+| **dropdown** | `.p-dropdown-item` · `.p-dropdown-items` |
 | **focus** | `.p-focus` |
 | **highlight** | `.p-highlight` |
 | **ink** | `.p-ink` |
@@ -318,7 +319,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1270 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1247 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -326,21 +327,21 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 67 | `text-sm font-semibold text-text-primary` |
+| 64 | `text-sm font-semibold text-text-primary` |
 | 37 | `text-sm font-bold text-text-primary` |
-| 31 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
+| 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |
-| 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
+| 15 | `text-xs font-semibold text-text-primary` |
+| 15 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
 | 14 | `text-[10px] font-bold text-text-muted uppercase tracking-wider` |
-| 14 | `text-xs font-semibold text-text-primary` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
-| 13 | `text-base font-semibold text-text-primary` |
-| 12 | `text-base font-bold text-text-primary` |
 | 12 | `text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
+| 11 | `ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning` |
+| 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
 
 
 <!-- AUTO-GENERATED:END -->

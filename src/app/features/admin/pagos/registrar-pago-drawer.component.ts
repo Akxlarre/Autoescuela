@@ -125,7 +125,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                       <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                         Saldo Pendiente
                       </span>
-                      <span class="text-base font-bold text-warning">
+                      <span class="font-bold text-warning">
                         {{ clp(alumno.saldo) }}
                       </span>
                       <span class="text-xs text-text-muted">
@@ -152,7 +152,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Saldo Pendiente
                   </span>
-                  <span class="text-base font-bold text-warning">
+                  <span class="font-bold text-warning">
                     {{ clp(ctx.saldoPendiente) }}
                   </span>
                 </div>
@@ -171,7 +171,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     <span class="text-xs font-semibold uppercase tracking-wide text-text-muted"
                       >Saldo Pendiente</span
                     >
-                    <span class="text-base font-bold text-warning">{{ clp(alumno.saldo) }}</span>
+                    <span class="font-bold text-warning">{{ clp(alumno.saldo) }}</span>
                   </div>
                 </div>
               }

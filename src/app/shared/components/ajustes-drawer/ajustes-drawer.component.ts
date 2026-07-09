@@ -81,7 +81,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
               <!-- Name + Role badge -->
               <div class="text-center space-y-2">
-                <h2 class="text-base font-bold leading-tight text-text-primary">
+                <h2 class="font-bold leading-tight text-text-primary">
                   {{ currentUser()?.name }}
                 </h2>
                 @if (currentUser()?.role === 'admin') {

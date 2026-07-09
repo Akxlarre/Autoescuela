@@ -339,7 +339,8 @@ export class DashboardFacade {
       `,
       )
       .gte('scheduled_at', `${todayStr}T00:00:00`)
-      .lte('scheduled_at', `${todayStr}T23:59:59`);
+      .lte('scheduled_at', `${todayStr}T23:59:59`)
+      .neq('status', 'cancelled');
 
     if (branchId !== null) {
       practicasQuery = practicasQuery.eq('enrollments.branch_id', branchId);
@@ -357,8 +358,7 @@ export class DashboardFacade {
 
         let status = 'pending';
         if (row.status === 'in_progress') status = 'in_progress';
-        if (row.status === 'completed' || row.status === 'cancelled' || row.status === 'no_show')
-          status = 'completed';
+        if (row.status === 'completed' || row.status === 'no_show') status = 'completed';
 
         return {
           id: `prac-${row.id}`,

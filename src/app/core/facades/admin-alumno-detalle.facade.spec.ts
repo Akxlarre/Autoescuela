@@ -535,24 +535,16 @@ describe('AdminAlumnoDetalleFacade', () => {
   });
 
   describe('reagendarClasesPenalizadas — RF-053', () => {
-    it('recicla las sesiones no_show de la selección (misma clase, asistencia limpia) e inserta nuevas para las canceladas', async () => {
+    it('recicla in-place tanto las sesiones no_show como las cancelled de la selección (nunca inserta filas nuevas)', async () => {
       const updateEqSpy = vi.fn().mockResolvedValue({ error: null });
       const updateSpy = vi.fn().mockReturnValue({ eq: updateEqSpy });
       const deleteEqSpy = vi.fn().mockResolvedValue({ error: null });
       const deleteSpy = vi.fn().mockReturnValue({ eq: deleteEqSpy });
-      const insertSpy = vi.fn().mockResolvedValue({ error: null });
-
-      const maxRowChain: any = {
-        select: vi.fn(() => maxRowChain),
-        eq: vi.fn(() => maxRowChain),
-        order: vi.fn(() => maxRowChain),
-        limit: vi.fn(() => maxRowChain),
-        maybeSingle: vi.fn().mockResolvedValue({ data: { class_number: 12 }, error: null }),
-      };
+      const insertSpy = vi.fn();
 
       const fromSpy = vi.fn((table: string) => {
         if (table === 'class_b_practice_attendance') return { delete: deleteSpy };
-        return { ...maxRowChain, update: updateSpy, insert: insertSpy };
+        return { update: updateSpy, insert: insertSpy };
       });
       supabaseSpy.client.from = fromSpy;
 
@@ -574,7 +566,7 @@ describe('AdminAlumnoDetalleFacade', () => {
         selectedSlotIds: ['2026-07-13T10:00:00', '2026-07-10T09:00:00'],
       });
 
-      // 1. Recicla la sesión no_show #501 (clase #9): mismo id, nueva fecha, vuelve a scheduled.
+      // 1. Recicla la sesión no_show #501 (clase #9): mismo id, primer slot cronológico.
       expect(updateSpy).toHaveBeenCalledWith({
         instructor_id: 9,
         vehicle_id: 55,
@@ -585,23 +577,26 @@ describe('AdminAlumnoDetalleFacade', () => {
       });
       expect(updateEqSpy).toHaveBeenCalledWith('id', 501);
 
-      // 2. Limpia su asistencia previa para que quede "en blanco" (vuelve a verse azul).
+      // 2. Recicla la sesión cancelled #601 (clase #11): mismo id, segundo slot cronológico.
+      expect(updateSpy).toHaveBeenCalledWith({
+        instructor_id: 9,
+        vehicle_id: 55,
+        scheduled_at: '2026-07-13T10:00:00',
+        status: 'scheduled',
+        start_time: null,
+        end_time: null,
+      });
+      expect(updateEqSpy).toHaveBeenCalledWith('id', 601);
+
+      // 3. Limpia la asistencia previa de ambas para que queden "en blanco".
       expect(fromSpy).toHaveBeenCalledWith('class_b_practice_attendance');
       expect(deleteEqSpy).toHaveBeenCalledWith('class_b_session_id', 501);
+      expect(deleteEqSpy).toHaveBeenCalledWith('class_b_session_id', 601);
 
-      // 3. Inserta una sesión NUEVA para la cancelada (clase #11) — nunca la toca/borra.
-      expect(insertSpy).toHaveBeenCalledWith([
-        {
-          enrollment_id: 100,
-          instructor_id: 9,
-          vehicle_id: 55,
-          class_number: 13,
-          scheduled_at: '2026-07-13T10:00:00',
-          status: 'scheduled',
-        },
-      ]);
+      // 4. Nunca inserta una fila nueva — el class_number de la matrícula no cambia.
+      expect(insertSpy).not.toHaveBeenCalled();
 
-      // 4. Limpia la selección transitoria tras guardar.
+      // 5. Limpia la selección transitoria tras guardar.
       expect(facade.reagendarSeleccion()).toEqual([]);
     });
 
@@ -620,14 +615,7 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
 
     it('lanza un error si no encuentra el vehículo del slot en el mapa', async () => {
-      const maxRowChain: any = {
-        select: vi.fn(() => maxRowChain),
-        eq: vi.fn(() => maxRowChain),
-        order: vi.fn(() => maxRowChain),
-        limit: vi.fn(() => maxRowChain),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-      };
-      supabaseSpy.client.from = vi.fn(() => maxRowChain);
+      supabaseSpy.client.from = vi.fn();
       facade.setReagendarSeleccion([{ sessionId: 501, claseNumero: 9, origen: 'no_show' }]);
       (facade as any)._slotVehicleMap = new Map();
 
@@ -638,6 +626,23 @@ describe('AdminAlumnoDetalleFacade', () => {
           selectedSlotIds: ['2026-07-10T09:00:00'],
         }),
       ).rejects.toThrow('No se pudo determinar el vehículo');
+    });
+
+    it('lanza un error si la cantidad de horarios elegidos no coincide con la selección', async () => {
+      supabaseSpy.client.from = vi.fn();
+      facade.setReagendarSeleccion([
+        { sessionId: 501, claseNumero: 9, origen: 'no_show' },
+        { sessionId: 601, claseNumero: 11, origen: 'cancelled' },
+      ]);
+      (facade as any)._slotVehicleMap = new Map([['2026-07-10T09:00:00', 55]]);
+
+      await expect(
+        facade.reagendarClasesPenalizadas({
+          enrollmentId: 100,
+          instructorId: 9,
+          selectedSlotIds: ['2026-07-10T09:00:00'],
+        }),
+      ).rejects.toThrow('La cantidad de horarios elegidos no coincide con la selección.');
     });
   });
 });
