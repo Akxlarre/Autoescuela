@@ -80,25 +80,18 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 [options]="yearSelectOptions()"
                 optionLabel="label"
                 optionValue="value"
+                placeholder="Todos los años"
                 [ngModel]="filtroAnio()"
                 (ngModelChange)="filtroAnio.set($event)"
-                styleClass="w-32"
+                styleClass="w-44"
+                appendTo="body"
                 data-llm-description="filter ex-students by graduation year"
-              />
-              <p-select
-                [options]="licenciaSelectOptions()"
-                optionLabel="label"
-                optionValue="value"
-                [ngModel]="filtroLicencia()"
-                (ngModelChange)="filtroLicencia.set($event)"
-                styleClass="w-32"
-                data-llm-description="filter ex-students by license class"
               />
             </div>
             <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
             <button
               type="button"
-              class="p-2 rounded-lg text-text-muted hover:text-text-primary transition-colors flex items-center justify-center"
+              class="p-2 rounded-lg text-text-muted hover:text-text-primary transition-colors flex items-center justify-center cursor-pointer"
               style="--hover-color: var(--ds-brand)"
               (click)="clearFilters()"
               pTooltip="Limpiar Filtros"
@@ -374,7 +367,6 @@ export class AdminExAlumnosComponent {
   // ── Filtros locales ──────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
   protected readonly filtroAnio = signal('');
-  protected readonly filtroLicencia = signal('');
   protected readonly filtroEstado = signal('');
 
   // ── Lista filtrada (cliente) ─────────────────────────────────────────────────
@@ -393,22 +385,13 @@ export class AdminExAlumnosComponent {
     if (this.filtroAnio()) {
       results = results.filter((e: EgresadoTableRow) => String(e.anio) === this.filtroAnio());
     }
-    if (this.filtroLicencia()) {
-      results = results.filter((e: EgresadoTableRow) => e.licencia === this.filtroLicencia());
-    }
     return results;
   });
 
   // ── Opciones de filtros dinámicas ────────────────────────────────────────────
-  readonly yearSelectOptions = computed(() => [
-    { label: 'Todos los años', value: '' },
-    ...this.availableYears().map((y) => ({ label: y, value: y })),
-  ]);
-
-  readonly licenciaSelectOptions = computed(() => [
-    { label: 'Todas las licencias', value: '' },
-    ...this.availableLicencias().map((l) => ({ label: l, value: l })),
-  ]);
+  readonly yearSelectOptions = computed(() =>
+    this.availableYears().map((y) => ({ label: y, value: y })),
+  );
 
   protected readonly availableYears = computed<string[]>(() => {
     const years = this.facade
@@ -417,10 +400,6 @@ export class AdminExAlumnosComponent {
       .filter((y): y is number => y !== null);
     return [...new Set(years)].sort((a: number, b: number) => Number(b) - Number(a)).map(String);
   });
-
-  protected readonly availableLicencias = computed<string[]>(() =>
-    [...new Set(this.facade.egresadosClaseBList().map((e: EgresadoTableRow) => e.licencia))].sort(),
-  );
 
   constructor() {
     effect(() => {
@@ -469,7 +448,6 @@ export class AdminExAlumnosComponent {
   protected clearFilters(): void {
     this.searchTerm.set('');
     this.filtroAnio.set('');
-    this.filtroLicencia.set('');
     this.filtroEstado.set('');
   }
 }

@@ -5,18 +5,19 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import type { AlertModel } from '@core/models/ui/dashboard.model';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, success: 3 };
 
 @Component({
   selector: 'app-alerts-drawer',
   standalone: true,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, DrawerFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="flex flex-col h-full">
+    <app-drawer-form [hasFooter]="false">
       <!-- ── Header ─────────────────────────────────────────────────── -->
-      <div class="px-5 pt-5 pb-4 flex items-center gap-3 border-b border-border-subtle shrink-0">
+      <div class="flex items-center gap-3 pb-4 mb-2 border-b border-border-subtle">
         <div
           class="shrink-0 flex items-center justify-center w-9 h-9 rounded-full bg-warning-subtle text-warning"
         >
@@ -38,8 +39,8 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
         </div>
       </div>
 
-      <!-- ── Scrollable body ────────────────────────────────────────── -->
-      <div class="flex-1 overflow-y-auto alerts-scroll px-4 py-3 flex flex-col gap-2">
+      <!-- ── Lista de alertas ──────────────────────────────────────── -->
+      <div class="flex flex-col gap-2">
         <!-- Skeleton mientras carga las 17 promesas -->
         @if (isLoading()) {
           @for (i of SKELETON_ROWS; track i) {
@@ -150,7 +151,7 @@ const SEVERITY_ORDER: Record<string, number> = { error: 0, warning: 1, info: 2, 
           }
         }
       </div>
-    </div>
+    </app-drawer-form>
   `,
   styles: [
     `

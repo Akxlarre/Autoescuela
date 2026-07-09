@@ -12,13 +12,17 @@ import { BranchFacade } from '@core/facades/branch.facade';
 function makeSupabaseMock() {
   const results = new Map<string, { data: any; error: any }>();
   const updateCalls: { table: string; payload: any }[] = [];
+  const eqCalls: { table: string; column: string; value: any }[] = [];
   const invoke = vi.fn().mockResolvedValue({ data: { sent: 0, errors: [] }, error: null });
 
   function builder(table: string): any {
     let lastUpdatePayload: any = null;
     const b: any = {
       select: vi.fn(() => b),
-      eq: vi.fn(() => b),
+      eq: vi.fn((column: string, value: any) => {
+        eqCalls.push({ table, column, value });
+        return b;
+      }),
       neq: vi.fn(() => b),
       not: vi.fn(() => b),
       gte: vi.fn(() => b),
@@ -45,6 +49,7 @@ function makeSupabaseMock() {
     supabase,
     invoke,
     updateCalls,
+    eqCalls,
     setResult: (table: string, data: any, error: any = null) => results.set(table, { data, error }),
   };
 }
@@ -277,6 +282,27 @@ describe('CiclosTeoricosFacade', () => {
       await facade.saveZoomLink(11, '  https://zoom.us/j/9  ');
       expect(facade.clases()[0].zoomLink).toBe('https://zoom.us/j/9');
       expect(mock.updateCalls.some((c) => c.table === 'class_b_theory_sessions')).toBe(true);
+    });
+  });
+
+  describe('loadAddableStudents', () => {
+    it('filtra por la sede del ciclo seleccionado, no por el filtro global del dashboard', async () => {
+      // "Todas las escuelas" en el dashboard admin (branchFilter = null)
+      mock.setResult('class_b_theory_cycles', [
+        { id: 5, branch_id: 1, start_date: '2026-03-09', end_date: '2026-03-20', status: 'active' },
+      ]);
+      facade.setBranchFilter(null);
+      await facade.loadCycles();
+      expect(facade.selectedCycleId()).toBe(5);
+      expect(facade.selectedCycle()?.branchId).toBe(1);
+
+      mock.setResult('enrollments', []);
+      await facade.loadAddableStudents();
+
+      const branchEq = mock.eqCalls.find(
+        (c) => c.table === 'enrollments' && c.column === 'branch_id',
+      );
+      expect(branchEq?.value).toBe(1);
     });
   });
 

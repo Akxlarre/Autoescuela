@@ -134,7 +134,7 @@ import type {
                 pInputText
                 type="text"
                 placeholder="Buscar por patente, marca o modelo..."
-                class="w-full !pl-10 h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
+                class="w-full pl-10! h-10 rounded-lg border-border-subtle hover:border-border-strong focus:border-brand bg-base"
                 [(ngModel)]="searchTerm"
                 (ngModelChange)="onSearchChange($event)"
               />
@@ -528,12 +528,10 @@ export class FlotaListContentComponent {
   selectedStatus: VehicleStatus | null = null;
 
   readonly typeOptions = [
-    { label: 'Todos los tipos', value: null },
     { label: 'Clase B', value: 'class_b' as VehicleType },
     { label: 'Profesional', value: 'professional' as VehicleType },
   ];
   readonly statusOptions = [
-    { label: 'Todos los estados', value: null },
     { label: 'Disponible', value: 'available' as VehicleStatus },
     { label: 'En Clase', value: 'in_class' as VehicleStatus },
     { label: 'Mantenimiento', value: 'maintenance' as VehicleStatus },

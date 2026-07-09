@@ -76,18 +76,22 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
           [options]="statusOptions"
           optionLabel="label"
           optionValue="value"
+          placeholder="Todos los estados"
           [ngModel]="filterStatus()"
           (ngModelChange)="filterStatus.set($event)"
           styleClass="w-full sm:w-48"
+          appendTo="body"
           data-llm-description="filter pre-inscribed students by status"
         />
         <p-select
           [options]="licenciaOptions"
           optionLabel="label"
           optionValue="value"
+          placeholder="Todas las clases"
           [ngModel]="filterLicencia()"
           (ngModelChange)="filterLicencia.set($event)"
           styleClass="w-full sm:w-36"
+          appendTo="body"
           data-llm-description="filter pre-inscribed students by license class"
         />
 
@@ -192,13 +196,13 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 <td class="text-sm text-text-secondary">{{ row.fechaPreInscripcion }}</td>
                 <td>
                   @if (row.isVencido) {
-                    <span class="text-xs text-danger font-medium">Vencido</span>
+                    <span class="text-sm text-danger font-medium">Vencido</span>
                   } @else if (row.diasParaVencer !== null && row.diasParaVencer <= 5) {
-                    <span class="text-xs text-warning font-medium">
+                    <span class="text-sm text-warning font-medium">
                       {{ row.diasParaVencer }}d
                     </span>
                   } @else {
-                    <span class="text-xs text-text-secondary">{{ row.fechaVencimiento }}</span>
+                    <span class="text-sm text-text-secondary">{{ row.fechaVencimiento }}</span>
                   }
                 </td>
                 <td>
@@ -234,7 +238,6 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy, AfterViewI
   protected readonly filterLicencia = signal('');
 
   readonly statusOptions = [
-    { label: 'Todos los estados', value: '' },
     { label: 'Sin evaluar', value: 'pending_review' },
     { label: 'Aptos', value: 'approved' },
     { label: 'Rechazados', value: 'rejected' },
@@ -243,7 +246,6 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy, AfterViewI
   ];
 
   readonly licenciaOptions = [
-    { label: 'Todas las clases', value: '' },
     { label: 'A2', value: 'A2' },
     { label: 'A3', value: 'A3' },
     { label: 'A4', value: 'A4' },

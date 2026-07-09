@@ -32,6 +32,7 @@ import { FlotaDetalleFacade } from '@core/facades/flota-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 /**
@@ -55,6 +56,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -72,10 +74,9 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         </div>
       </ng-template>
       <ng-template #content>
-        <form [formGroup]="form" class="flex-1 flex flex-col min-h-0" (ngSubmit)="onSubmit()">
-          <!-- Body Scrolleable -->
-          <div class="flex-1 overflow-y-auto px-6 py-8">
-            <div class="grid grid-cols-1 gap-6 max-w-xl mx-auto">
+        <app-drawer-form>
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="grid grid-cols-1 gap-6">
               <!-- Tipo de Mantenimiento -->
               <div class="flex flex-col gap-1.5">
                 <label
@@ -184,34 +185,31 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 <p-message severity="error" [text]="errorMsg()!" class="w-full"></p-message>
               }
             </div>
-          </div>
+          </form>
 
-          <!-- Footer Fixed -->
-          <div
-            class="shrink-0 p-6 border-t bg-surface flex items-center justify-end gap-3 border-border-subtle"
-          >
-            <button type="button" class="btn-secondary h-11 px-6" (click)="onCancel()">
-              Cancelar
-            </button>
+          <!-- Footer — acciones canónicas -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
             <button
-              type="submit"
-              class="btn-primary h-11 px-8 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              class="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               [disabled]="form.invalid || isSaving()"
+              (click)="onSubmit()"
             >
               @if (isSaving()) {
                 <app-icon name="loader-2" [size]="18" class="animate-spin" />
               }
               {{ isEdit() ? 'Guardar Cambios' : 'Registrar Mantenimiento' }}
             </button>
-          </div>
-        </form>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,
 })
 export class MaintenanceFormDrawerComponent {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly fb = inject(NonNullableFormBuilder);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly fb = inject(NonNullableFormBuilder);
   private readonly flotaFacade = inject(FlotaFacade);
   private readonly detalleFacade = inject(FlotaDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -290,7 +288,9 @@ private readonly fb = inject(NonNullableFormBuilder);
       this.layoutDrawer.close();
     } catch (error) {
       this.errorMsg.set(
-        error instanceof Error ? this.sanitizer.sanitize(error).message : 'Error al guardar el mantenimiento',
+        error instanceof Error
+          ? this.sanitizer.sanitize(error).message
+          : 'Error al guardar el mantenimiento',
       );
     } finally {
       this.isSaving.set(false);

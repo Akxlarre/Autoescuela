@@ -65,7 +65,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
-    CardHoverDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
   ],
@@ -298,6 +297,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   [options]="instructorSelectOptions()"
                   optionLabel="label"
                   optionValue="value"
+                  placeholder="Todos los instructores"
                   [ngModel]="selectedInstructorId()"
                   (ngModelChange)="selectedInstructorId.set($event)"
                   styleClass="w-auto"
@@ -540,7 +540,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             aria-label="Justificar inasistencia"
           >
             <div class="flex items-center justify-between">
-              <h3 class="text-base font-semibold text-text-primary">Justificar Inasistencia</h3>
+              <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
               <button
                 class="p-1 rounded-md text-text-muted hover:text-text-primary"
                 aria-label="Cerrar"
@@ -645,10 +645,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly activeStatusFilter = signal<StatusFilter>('todos');
   protected readonly selectedInstructorId = signal<number | null>(null);
 
-  readonly instructorSelectOptions = computed(() => [
-    { label: 'Todos los instructores', value: null },
-    ...this.instructores().map((i) => ({ label: i.name, value: i.id })),
-  ]);
+  readonly instructorSelectOptions = computed(() =>
+    this.instructores().map((i) => ({ label: i.name, value: i.id })),
+  );
 
   // Justify modal
   protected readonly justifyModalOpen = signal(false);

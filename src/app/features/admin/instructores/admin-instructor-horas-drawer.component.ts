@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@a
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 const MONTH_NAMES = [
   'Enero',
@@ -23,128 +24,132 @@ const MONTH_NAMES = [
   selector: 'app-admin-instructor-horas-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DecimalPipe, IconComponent, SkeletonBlockComponent],
+  imports: [DecimalPipe, IconComponent, SkeletonBlockComponent, DrawerFormComponent],
   template: `
-    <div class="flex flex-col gap-6">
-      <!-- ── Navegación de mes ───────────────────────────────────────────────── -->
-      <div class="flex items-center justify-between">
-        <button
-          class="nav-btn"
-          (click)="facade.navHorasAnterior()"
-          data-llm-action="mes-anterior"
-          title="Mes anterior"
-        >
-          <app-icon name="chevron-left" [size]="18" />
-        </button>
+    <app-drawer-form [hasFooter]="false">
+      <div class="flex flex-col gap-6">
+        <!-- ── Navegación de mes ───────────────────────────────────────────────── -->
+        <div class="flex items-center justify-between">
+          <button
+            class="nav-btn"
+            (click)="facade.navHorasAnterior()"
+            data-llm-action="mes-anterior"
+            title="Mes anterior"
+          >
+            <app-icon name="chevron-left" [size]="18" />
+          </button>
 
-        <div class="flex flex-col items-center gap-0.5">
-          <span class="text-base font-semibold text-text-primary">
-            {{ periodoLabel() }}
-          </span>
-          @if (facade.isHorasCurrentMonth()) {
-            <span class="text-xs font-medium text-brand" >Mes actual</span>
-          }
+          <div class="flex flex-col items-center gap-0.5">
+            <span class="text-base font-semibold text-text-primary">
+              {{ periodoLabel() }}
+            </span>
+            @if (facade.isHorasCurrentMonth()) {
+              <span class="text-xs font-medium text-brand">Mes actual</span>
+            }
+          </div>
+
+          <button
+            class="nav-btn"
+            [class.nav-btn--disabled]="facade.isHorasCurrentMonth()"
+            [disabled]="facade.isHorasCurrentMonth()"
+            (click)="facade.navHorasSiguiente()"
+            data-llm-action="mes-siguiente"
+            title="Mes siguiente"
+          >
+            <app-icon name="chevron-right" [size]="18" />
+          </button>
         </div>
 
-        <button
-          class="nav-btn"
-          [class.nav-btn--disabled]="facade.isHorasCurrentMonth()"
-          [disabled]="facade.isHorasCurrentMonth()"
-          (click)="facade.navHorasSiguiente()"
-          data-llm-action="mes-siguiente"
-          title="Mes siguiente"
-        >
-          <app-icon name="chevron-right" [size]="18" />
-        </button>
-      </div>
-
-      <!-- ── Tabla de horas ─────────────────────────────────────────────────── -->
-      <div class="horas-table-wrap">
-        <table class="horas-table">
-          <thead>
-            <tr>
-              <th>Instructor</th>
-              <th class="text-right">Clases</th>
-              <th class="text-right">Horas equiv.</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (facade.isLoadingHoras()) {
-              @for (_ of skeletonRows; track $index) {
+        <!-- ── Tabla de horas ─────────────────────────────────────────────────── -->
+        <div class="horas-table-wrap">
+          <table class="horas-table">
+            <thead>
+              <tr>
+                <th>Instructor</th>
+                <th class="text-right">Clases</th>
+                <th class="text-right">Horas equiv.</th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (facade.isLoadingHoras()) {
+                @for (_ of skeletonRows; track $index) {
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <app-skeleton-block variant="circle" width="32px" height="32px" />
+                        <app-skeleton-block variant="text" width="120px" height="14px" />
+                      </div>
+                    </td>
+                    <td class="text-right">
+                      <app-skeleton-block variant="text" width="40px" height="14px" />
+                    </td>
+                    <td class="text-right">
+                      <app-skeleton-block variant="text" width="50px" height="14px" />
+                    </td>
+                  </tr>
+                }
+              } @else if (facade.horasMensuales().length === 0) {
                 <tr>
-                  <td>
-                    <div class="flex items-center gap-3">
-                      <app-skeleton-block variant="circle" width="32px" height="32px" />
-                      <app-skeleton-block variant="text" width="120px" height="14px" />
+                  <td colspan="3">
+                    <div class="py-10 flex flex-col items-center gap-2">
+                      <app-icon name="calendar-x" [size]="32" color="var(--text-muted)" />
+                      <p class="text-sm text-text-muted">
+                        Sin clases registradas para este período.
+                      </p>
                     </div>
-                  </td>
-                  <td class="text-right">
-                    <app-skeleton-block variant="text" width="40px" height="14px" />
-                  </td>
-                  <td class="text-right">
-                    <app-skeleton-block variant="text" width="50px" height="14px" />
                   </td>
                 </tr>
+              } @else {
+                @for (row of facade.horasMensuales(); track row.instructorId) {
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="avatar">{{ row.initials }}</div>
+                        <span class="text-sm font-medium text-text-primary">
+                          {{ row.nombre }}
+                        </span>
+                      </div>
+                    </td>
+                    <td class="text-right">
+                      <span class="text-sm text-text-secondary">
+                        {{ row.practicalSessions }}
+                        {{ row.practicalSessions === 1 ? 'clase' : 'clases' }}
+                      </span>
+                    </td>
+                    <td class="text-right">
+                      <span class="hours-chip">{{ row.totalEquivalent | number: '1.1-1' }} h</span>
+                    </td>
+                  </tr>
+                }
               }
-            } @else if (facade.horasMensuales().length === 0) {
-              <tr>
-                <td colspan="3">
-                  <div class="py-10 flex flex-col items-center gap-2">
-                    <app-icon name="calendar-x" [size]="32" color="var(--text-muted)" />
-                    <p class="text-sm text-text-muted">Sin clases registradas para este período.</p>
-                  </div>
-                </td>
-              </tr>
-            } @else {
-              @for (row of facade.horasMensuales(); track row.instructorId) {
+            </tbody>
+            @if (!facade.isLoadingHoras() && facade.horasMensuales().length > 0) {
+              <tfoot>
                 <tr>
                   <td>
-                    <div class="flex items-center gap-3">
-                      <div class="avatar">{{ row.initials }}</div>
-                      <span class="text-sm font-medium text-text-primary">
-                        {{ row.nombre }}
-                      </span>
-                    </div>
-                  </td>
-                  <td class="text-right">
-                    <span class="text-sm text-text-secondary">
-                      {{ row.practicalSessions }}
-                      {{ row.practicalSessions === 1 ? 'clase' : 'clases' }}
+                    <span class="text-xs font-semibold uppercase text-text-muted">
+                      Total — {{ facade.horasMensuales().length }}
+                      {{ facade.horasMensuales().length === 1 ? 'instructor' : 'instructores' }}
                     </span>
                   </td>
                   <td class="text-right">
-                    <span class="hours-chip">{{ row.totalEquivalent | number: '1.1-1' }} h</span>
+                    <span class="text-sm font-semibold text-text-primary">
+                      {{ totales().clases }}
+                      {{ totales().clases === 1 ? 'clase' : 'clases' }}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <span class="text-sm font-bold text-brand">
+                      {{ totales().horas | number: '1.1-1' }} h
+                    </span>
                   </td>
                 </tr>
-              }
+              </tfoot>
             }
-          </tbody>
-          @if (!facade.isLoadingHoras() && facade.horasMensuales().length > 0) {
-            <tfoot>
-              <tr>
-                <td>
-                  <span class="text-xs font-semibold uppercase text-text-muted">
-                    Total — {{ facade.horasMensuales().length }}
-                    {{ facade.horasMensuales().length === 1 ? 'instructor' : 'instructores' }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <span class="text-sm font-semibold text-text-primary">
-                    {{ totales().clases }}
-                    {{ totales().clases === 1 ? 'clase' : 'clases' }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <span class="text-sm font-bold text-brand" >
-                    {{ totales().horas | number: '1.1-1' }} h
-                  </span>
-                </td>
-              </tr>
-            </tfoot>
-          }
-        </table>
+          </table>
+        </div>
       </div>
-    </div>
+    </app-drawer-form>
   `,
   styles: `
     .nav-btn {

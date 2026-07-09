@@ -289,12 +289,15 @@ export class CiclosTeoricosFacade {
   }
 
   /**
-   * Carga alumnos Clase B activos de la sede que pertenecen a OTRO ciclo,
-   * candidatos a ser traídos al ciclo en curso (override).
+   * Carga alumnos Clase B activos de la MISMA sede del ciclo en curso que
+   * pertenecen a OTRO ciclo, candidatos a ser traídos (override). Se filtra
+   * por la sede del ciclo seleccionado, no por el filtro global del
+   * dashboard — un alumno nunca debe poder incorporarse a un ciclo de otra
+   * sede.
    */
   async loadAddableStudents(): Promise<void> {
     const currentCycleId = this._selectedCycleId();
-    const branchId = this._branchFilter();
+    const branchId = this.selectedCycle()?.branchId ?? null;
     if (currentCycleId === null) return;
 
     try {

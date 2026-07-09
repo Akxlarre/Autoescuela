@@ -57,12 +57,12 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
       <!-- ── Main Content ───────────────────────────────────────────────────── -->
       <!-- ── Main Content ───────────────────────────────────────────────────── -->
       <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col min-h-[400px] overflow-hidden" appCardHover>
+        <div class="card p-0 flex flex-col min-h-100 overflow-hidden" appCardHover>
           <div
             class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
           >
             <div class="flex items-center justify-between">
-              <h2 class="text-base font-semibold text-text-primary">Lista de Relatores</h2>
+              <h2 class="font-semibold text-text-primary">Lista de Relatores</h2>
               <span class="text-xs text-text-muted">
                 {{ filteredRelatores().length }} relatores encontrados
               </span>
@@ -90,6 +90,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                   [options]="especialidadOptions"
                   optionLabel="label"
                   optionValue="value"
+                  placeholder="Todas las especialidades"
                   [ngModel]="filtroEspecialidad()"
                   (ngModelChange)="filtroEspecialidad.set($event); currentPage.set(1)"
                   styleClass="w-full sm:w-56"
@@ -99,6 +100,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                   [options]="estadoOptions"
                   optionLabel="label"
                   optionValue="value"
+                  placeholder="Todos los estados"
                   [ngModel]="filtroEstado()"
                   (ngModelChange)="filtroEstado.set($event); currentPage.set(1)"
                   styleClass="w-full sm:w-44"
@@ -113,7 +115,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
               <div class="bento-grid">
                 @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
                   <div
-                    class="p-4 rounded-xl border border-[var(--border-subtle)] bento-wide"
+                    class="p-4 rounded-xl border border-(--border-subtle) bento-wide"
                     data-col-span="4"
                   >
                     <div class="flex items-center gap-3 mb-4">
@@ -150,7 +152,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
               <div class="bento-grid">
                 @for (rel of paginatedRelatores(); track rel.id) {
                   <div
-                    class="relator-card p-4 rounded-xl border border-[var(--border-subtle)] relative bento-wide"
+                    class="relator-card p-4 rounded-xl border border-(--border-subtle) relative bento-wide"
                     data-col-span="4"
                   >
                     <!-- Status Badge -->
@@ -182,7 +184,7 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
                     </div>
 
                     <!-- Especialidades -->
-                    <div class="flex flex-wrap gap-1.5 mb-4 max-h-[50px] overflow-hidden">
+                    <div class="flex flex-wrap gap-1.5 mb-4 max-h-12.5 overflow-hidden">
                       @for (spec of rel.specializations; track spec) {
                         <span class="spec-badge" [style.background]="getSpecColor(spec)">
                           {{ spec }}
@@ -376,11 +378,10 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
 
   // ── Filtros locales ────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
-  protected readonly filtroEspecialidad = signal('todas');
-  protected readonly filtroEstado = signal('todos');
+  protected readonly filtroEspecialidad = signal<string | null>(null);
+  protected readonly filtroEstado = signal<string | null>(null);
 
   readonly especialidadOptions = [
-    { label: 'Todas las especialidades', value: 'todas' },
     { label: 'Clase A2 (Taxis y colectivos)', value: 'A2' },
     { label: 'Clase A3 (Buses)', value: 'A3' },
     { label: 'Clase A4 (Carga simple)', value: 'A4' },
@@ -388,7 +389,6 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
   ];
 
   readonly estadoOptions = [
-    { label: 'Todos los estados', value: 'todos' },
     { label: 'Activo', value: 'activo' },
     { label: 'Inactivo', value: 'inactivo' },
   ];
@@ -409,11 +409,11 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
       );
     }
     const especialidad = this.filtroEspecialidad();
-    if (especialidad !== 'todas') {
+    if (especialidad) {
       results = results.filter((r) => r.specializations.includes(especialidad));
     }
     const estado = this.filtroEstado();
-    if (estado !== 'todos') {
+    if (estado) {
       results = results.filter((r) => r.estado === estado);
     }
     return results;
@@ -421,8 +421,8 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
 
   protected limpiarFiltros(): void {
     this.searchTerm.set('');
-    this.filtroEspecialidad.set('todas');
-    this.filtroEstado.set('todos');
+    this.filtroEspecialidad.set(null);
+    this.filtroEstado.set(null);
     this.currentPage.set(1);
   }
 
