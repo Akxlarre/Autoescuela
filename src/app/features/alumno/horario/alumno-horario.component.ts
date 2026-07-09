@@ -22,11 +22,13 @@ import type {
   StudentHorarioSessionItem,
 } from '@core/models/ui/student-horario.model';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-alumno-horario',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
     ScrollRevealDirective,
@@ -94,11 +96,9 @@ import { TabsComponent } from '@shared/components/tabs/tabs.component';
               }
             </div>
 
-            <span
-              class="shrink-0 text-xs font-bold px-3 py-1.5 rounded-full bg-brand-tint text-brand"
-            >
+            <app-badge variant="brand">
               {{ daysUntil(nextSession()!.date) }}
-            </span>
+            </app-badge>
           </div>
         </div>
       }

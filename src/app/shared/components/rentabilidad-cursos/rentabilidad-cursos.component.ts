@@ -3,12 +3,13 @@ import type { RentabilidadCurso } from '@core/models/ui/pagos.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { formatCLP } from '@core/utils/date.utils';
 import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-rentabilidad-cursos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, ShortCurrencyPipe],
+  imports: [BadgeComponent, IconComponent, ShortCurrencyPipe],
   styles: `
     .rows-divider > * + * {
       border-top: 1px solid var(--border-muted);
@@ -94,9 +95,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 <span class="text-2xs lg:hidden uppercase font-bold text-text-muted"
                   >Rentabilidad</span
                 >
-                <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
-                  {{ item.rentabilidadPorcentaje }}%
-                </span>
+                <app-badge variant="success"> {{ item.rentabilidadPorcentaje }}% </app-badge>
               </div>
 
               <!-- Visual: barra de progreso -->
@@ -132,11 +131,9 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             <span class="text-sm font-bold uppercase tracking-wider text-text-primary"
               >Total Mensual</span
             >
-            <span
-              class="text-xs font-bold px-2.5 py-1 rounded-full lg:hidden text-success bg-success/15"
-            >
+            <app-badge variant="success">
               {{ totales().rentabilidadPorcentaje }}% Rentabilidad
-            </span>
+            </app-badge>
           </div>
 
           <div
@@ -171,9 +168,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
           </div>
 
           <div class="hidden lg:flex justify-end">
-            <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
-              {{ totales().rentabilidadPorcentaje }}%
-            </span>
+            <app-badge variant="success"> {{ totales().rentabilidadPorcentaje }}% </app-badge>
           </div>
 
           <div class="hidden lg:block"></div>

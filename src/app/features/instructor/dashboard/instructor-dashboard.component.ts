@@ -24,12 +24,14 @@ import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive'
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-instructor-dashboard',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     RouterLink,
     TagModule,
     SectionHeroComponent,
@@ -137,16 +139,34 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
               @if (isDataLoading()) {
                 <div class="divide-y divide-border-default">
                   @for (_ of [1, 2, 3]; track $index) {
-                    <div class="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4">
+                    <div
+                      class="p-4 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 sm:gap-4"
+                    >
                       <!-- Hora + Info -->
                       <div class="flex items-start gap-4 flex-1">
                         <!-- Hora Box -->
-                        <app-skeleton-block variant="rect" width="56px" height="56px" borderRadius="0.5rem" class="shrink-0" />
+                        <app-skeleton-block
+                          variant="rect"
+                          width="56px"
+                          height="56px"
+                          borderRadius="0.5rem"
+                          class="shrink-0"
+                        />
                         <!-- Detalle -->
                         <div class="flex-1 min-w-0 flex flex-col gap-2">
                           <div class="flex gap-2 mb-1">
-                            <app-skeleton-block variant="rect" width="60px" height="20px" borderRadius="999px" />
-                            <app-skeleton-block variant="rect" width="80px" height="20px" borderRadius="999px" />
+                            <app-skeleton-block
+                              variant="rect"
+                              width="60px"
+                              height="20px"
+                              borderRadius="999px"
+                            />
+                            <app-skeleton-block
+                              variant="rect"
+                              width="80px"
+                              height="20px"
+                              borderRadius="999px"
+                            />
                           </div>
                           <app-skeleton-block variant="text" width="60%" height="20px" />
                           <app-skeleton-block variant="text" width="40%" height="14px" />
@@ -154,7 +174,13 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                       </div>
                       <!-- Acciones -->
                       <div class="w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
-                        <app-skeleton-block variant="rect" width="100px" height="40px" borderRadius="0.5rem" class="w-full sm:w-[100px]" />
+                        <app-skeleton-block
+                          variant="rect"
+                          width="100px"
+                          height="40px"
+                          borderRadius="0.5rem"
+                          class="w-full sm:w-[100px]"
+                        />
                       </div>
                     </div>
                   }
@@ -194,11 +220,7 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                         <!-- Detalle Alumno -->
                         <div class="flex-1">
                           <div class="flex items-center gap-2 mb-1.5">
-                            <span
-                              class="text-xs px-2.5 py-0.5 rounded-full font-semibold tracking-wide uppercase text-success bg-success/15"
-                            >
-                              Práctica
-                            </span>
+                            <app-badge variant="success"> Práctica </app-badge>
                             <p-tag [value]="cls.statusLabel" [severity]="$any(cls.statusColor)" />
                           </div>
                           <h3 class="font-bold text-base text-text-primary">
@@ -278,9 +300,16 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
               @if (isDataLoading()) {
                 <div class="space-y-3">
                   @for (_ of [1, 2, 3]; track $index) {
-                    <div class="flex items-center justify-between p-3 bg-surface rounded border border-border-default">
+                    <div
+                      class="flex items-center justify-between p-3 bg-surface rounded border border-border-default"
+                    >
                       <app-skeleton-block variant="text" width="60%" height="14px" />
-                      <app-skeleton-block variant="rect" width="20px" height="24px" borderRadius="0.25rem" />
+                      <app-skeleton-block
+                        variant="rect"
+                        width="20px"
+                        height="24px"
+                        borderRadius="0.25rem"
+                      />
                     </div>
                   }
                 </div>
@@ -315,7 +344,8 @@ export class InstructorDashboardComponent implements OnInit {
   private readonly _localLoading = signal(true);
   readonly isDataLoading = computed(() => {
     // Si ya hay clases cacheadas hoy o proximas, evitamos el flash de carga inicial (SWR)
-    if (this.clasesFacade.todayClasses().length > 0 || this.clasesFacade.upcomingDays().length > 0) return false;
+    if (this.clasesFacade.todayClasses().length > 0 || this.clasesFacade.upcomingDays().length > 0)
+      return false;
     return this._localLoading() || this.clasesFacade.isLoading() || this.horasFacade.isLoading();
   });
   public profile = inject(InstructorProfileFacade);

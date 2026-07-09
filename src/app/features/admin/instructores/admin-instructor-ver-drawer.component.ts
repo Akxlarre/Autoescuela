@@ -8,12 +8,14 @@ import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-
 import { AdminInstructorHorarioDrawerComponent } from './admin-instructor-horario-drawer.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-admin-instructor-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     LowerCasePipe,
     IconComponent,
     StatBoxComponent,
@@ -44,7 +46,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
           >
             <div
               class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
-              
             >
               {{ inst.initials }}
             </div>
@@ -52,24 +53,18 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               <p class="text-base font-semibold text-text-primary">
                 {{ inst.nombre }}
               </p>
-              <p class="text-sm text-brand" >
-                Instructor {{ inst.tipoLabel | lowercase }}
-              </p>
+              <p class="text-sm text-brand">Instructor {{ inst.tipoLabel | lowercase }}</p>
             </div>
 
             <!-- Badge estado -->
             @if (inst.estado === 'activo') {
-              <span
-                class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
-                
-              >
+              <app-badge variant="success">
                 <app-icon name="check-circle" [size]="12" />
                 Activo
-              </span>
+              </app-badge>
             } @else {
               <span
                 class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
-                
               >
                 <app-icon name="circle" [size]="12" />
                 Inactivo
@@ -115,11 +110,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
               <app-icon name="mail" [size]="15" />
               <div>
                 <p class="detail-label">Email</p>
-                <a
-                  class="detail-value text-brand no-underline"
-                  [href]="'mailto:' + inst.email"
-                  
-                >
+                <a class="detail-value text-brand no-underline" [href]="'mailto:' + inst.email">
                   {{ inst.email }}
                 </a>
               </div>
@@ -278,7 +269,6 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             </button>
             <button
               class="quick-action-btn border-brand text-brand"
-              
               data-llm-action="ver-clases-activas-instructor"
             >
               <app-icon name="clipboard-list" [size]="16" />

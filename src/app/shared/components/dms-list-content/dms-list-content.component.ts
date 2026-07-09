@@ -23,6 +23,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import type {
   DmsTab,
   StudentWithDocsRow,
@@ -42,6 +43,7 @@ import type {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     TooltipModule,
     SlicePipe,
     TableModule,
@@ -213,11 +215,9 @@ import type {
                           </td>
                           <td class="text-text-secondary text-sm">{{ row.rut }}</td>
                           <td class="text-center">
-                            <span
-                              class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-tint text-brand"
-                            >
+                            <app-badge variant="brand">
                               {{ row.docCount }} doc{{ row.docCount !== 1 ? 's' : '' }}
-                            </span>
+                            </app-badge>
                           </td>
                           <td class="text-right">
                             <button

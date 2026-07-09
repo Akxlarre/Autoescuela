@@ -7,12 +7,14 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-admin-secretarias-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     DatePipe,
     IconComponent,
     StatBoxComponent,
@@ -53,12 +55,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 
               <!-- Badge estado -->
               @if (sec.estado === 'activa') {
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
-                >
+                <app-badge variant="success">
                   <app-icon name="check-circle" [size]="12" />
                   Activa
-                </span>
+                </app-badge>
               } @else {
                 <span
                   class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"

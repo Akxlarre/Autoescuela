@@ -6,6 +6,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 const SPEC_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -25,7 +26,13 @@ const SPEC_LABELS: Record<string, string> = {
   selector: 'app-admin-relator-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
+  imports: [
+    BadgeComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    StatBoxComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     @if (facade.selectedRelator(); as rel) {
       <app-drawer-content-loader>
@@ -51,7 +58,6 @@ const SPEC_LABELS: Record<string, string> = {
           <div class="flex items-center gap-4 mb-6">
             <div
               class="flex items-center justify-center w-14 h-14 rounded-full shrink-0 text-base font-bold bg-brand-tint text-brand"
-              
             >
               {{ rel.initials }}
             </div>
@@ -65,17 +71,13 @@ const SPEC_LABELS: Record<string, string> = {
                   <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
                 }
                 @if (rel.estado === 'activo') {
-                  <span
-                    class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full text-success bg-success/12"
-                    
-                  >
+                  <app-badge variant="success">
                     <app-icon name="check-circle" [size]="10" />
                     Activo
-                  </span>
+                  </app-badge>
                 } @else {
                   <span
                     class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-elevated text-text-muted"
-                    
                   >
                     Inactivo
                   </span>
@@ -117,7 +119,6 @@ const SPEC_LABELS: Record<string, string> = {
             @for (spec of rel.specializations; track spec) {
               <div
                 class="flex items-center gap-3 p-3 rounded-lg bg-elevated border border-border-subtle"
-                
               >
                 <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
                 <span class="text-sm text-text-primary">{{ specLabel(spec) }}</span>
@@ -131,7 +132,6 @@ const SPEC_LABELS: Record<string, string> = {
           @if (rel.registrationDate) {
             <div
               class="flex items-center gap-2 p-3 rounded-lg mb-6 bg-elevated border border-border-subtle"
-              
             >
               <app-icon name="calendar" [size]="14" color="var(--text-muted)" />
               <span class="text-xs text-text-muted">
@@ -144,22 +144,16 @@ const SPEC_LABELS: Record<string, string> = {
           <h3 class="section-title">
             Cursos asignados
             @if (!facade.isLoadingCursos() && facade.cursosAsignados().length > 0) {
-              <span
-                class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full text-brand bg-brand/10"
-                
-              >
+              <app-badge variant="brand">
                 {{ facade.cursosAsignados().length }}
-              </span>
+              </app-badge>
             }
           </h3>
 
           @if (facade.isLoadingCursos()) {
             <div class="flex flex-col gap-3 mb-6">
               @for (_ of [1, 2]; track $index) {
-                <div
-                  class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle"
-                  
-                >
+                <div class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle">
                   <app-skeleton-block variant="rect" width="28px" height="22px" />
                   <div class="flex-1 flex flex-col gap-1.5">
                     <app-skeleton-block variant="text" width="160px" height="13px" />
@@ -172,7 +166,6 @@ const SPEC_LABELS: Record<string, string> = {
           } @else if (facade.cursosAsignados().length === 0) {
             <div
               class="flex items-center gap-2 p-4 rounded-lg mb-6 bg-elevated border border-border-subtle"
-              
             >
               <app-icon name="calendar-x" [size]="15" color="var(--text-muted)" />
               <span class="text-sm text-text-muted"> Sin cursos asignados actualmente. </span>

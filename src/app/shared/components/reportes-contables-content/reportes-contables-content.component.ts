@@ -33,11 +33,13 @@ import {
   type ReporteKpis,
 } from '@core/models/ui/reportes-contables.model';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-reportes-contables-content',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     IconComponent,
     SectionHeroComponent,
     FormsModule,
@@ -280,16 +282,11 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
               <span class="text-xs text-text-muted font-medium">
                 {{ formatDate(filtros().desde) }} – {{ formatDate(filtros().hasta) }}
               </span>
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-success-subtle text-success border border-success/20"
-              >
-                {{ pct(kpis()!.margenGanancia) }} margen
-              </span>
+              <app-badge variant="success"> {{ pct(kpis()!.margenGanancia) }} margen </app-badge>
             </div>
           }
         </div>
       </div>
-
 
       <!-- ── Categorías (Ingresos + Gastos) ────────────────────────────────── -->
       @if (!isLoading()) {
@@ -670,7 +667,7 @@ export class ReportesContablesContentComponent {
   protected readonly heroKpis = computed<SectionHeroKpi[]>(() => {
     const data = this.kpis();
     if (!data) return [];
-    
+
     return [
       {
         id: 'ingresos',
@@ -679,7 +676,7 @@ export class ReportesContablesContentComponent {
         prefix: '$ ',
         icon: 'trending-up',
         color: 'success',
-        subValue: `${data.operacionesIngresos} operaciones en período`
+        subValue: `${data.operacionesIngresos} operaciones en período`,
       },
       {
         id: 'gastos',
@@ -688,7 +685,7 @@ export class ReportesContablesContentComponent {
         prefix: '$ ',
         icon: 'trending-down',
         color: 'error',
-        subValue: `${data.operacionesGastos} egresos en período`
+        subValue: `${data.operacionesGastos} egresos en período`,
       },
       {
         id: 'neto',
@@ -697,8 +694,8 @@ export class ReportesContablesContentComponent {
         prefix: '$ ',
         icon: 'coins',
         color: 'default',
-        subValue: 'Ingresos Totales – Gastos Totales'
-      }
+        subValue: 'Ingresos Totales – Gastos Totales',
+      },
     ];
   });
 

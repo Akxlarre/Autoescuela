@@ -6,6 +6,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { formatCLP } from '@core/utils/date.utils';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 /**
  * AdminCursoSingularCobroDrawerComponent — Registro de cobro (RF-035).
@@ -20,7 +21,13 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
   selector: 'app-admin-curso-singular-cobro-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
+  imports: [
+    BadgeComponent,
+    IconComponent,
+    SkeletonBlockComponent,
+    StatBoxComponent,
+    DrawerContentLoaderComponent,
+  ],
   template: `
     <app-drawer-content-loader>
       <ng-template #skeletons>
@@ -146,12 +153,10 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   <!-- Estado + acción -->
                   <div class="shrink-0 flex items-center gap-2">
                     @if (alumno.paymentStatus === 'paid') {
-                      <span
-                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-success bg-success/12"
-                      >
+                      <app-badge variant="success">
                         <app-icon name="check-circle" [size]="12" />
                         Cobrado
-                      </span>
+                      </app-badge>
                     } @else {
                       <button
                         class="btn-primary text-xs"

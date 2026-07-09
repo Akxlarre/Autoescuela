@@ -29,11 +29,21 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       (4 pills: chip "curso" → `brand`, estado certificado → success/warning, log de
       acción dinámico de 4 casos → success/**brand**/info/neutral. Confirmado en
       producción: `email_sent` → `badge-brand`, el caso exacto que motivó fix-038).
+- [x] **fix-042 (2026-07-08)** — Lote 1 semi-automatizado: 30 pills **estáticos**
+      (sin lógica dinámica, clase `text-{variant}` literal) migrados en 24 archivos vía
+      codemod ad-hoc (matcher de spans + inserción de import/registro, `--dry` antes de
+      aplicar, Prettier después). Cambio de ritmo tras detectar que 1-fix-por-archivo era
+      insostenible (66 archivos restantes, 85% con 1-2 pills). Verificación proporcional al
+      riesgo: harness CSS de los 4 variants + build + 1 página real, no Playwright completo
+      por archivo (justificado porque `badge-*` ya está probado 3x y el riesgo aquí es solo
+      "mapeo de clase→variant", verificable por lectura de código).
 - [ ] Migrar los pills ad-hoc restantes del baseline ARCH-15 a `<app-badge [variant]="...">`
-      (**107 restantes de 122** — fix-037 migró 7, fix-039 migró 4, fix-040 migró 4,
-      2026-07-08). Los 6 variants (success/warning/error/info/neutral/brand) cubren estado
-      y rol/marca, sin bloqueos de decisión. Continuar progresivo por archivo/portal,
-      re-baseline con `--update-ds-baseline` tras cada lote.
+      (**77 restantes de 122**). Quedan dos grupos: (a) ~11 pills estáticos que el matcher
+      del codemod no reconoció con confianza (variaciones de formato) — candidatos a un
+      lote 2 con matcher más flexible o edición manual puntual; (b) ~66 pills **dinámicos**
+      (helpers `getXColor()/getXBg()` o `[class]="metodo()"`) que requieren lectura manual
+      de la lógica de cada archivo — mismo esfuerzo que fix-037/039/040, hacer en lotes de
+      varios archivos por fix (no 1 a 1). Re-baseline con `--update-ds-baseline` tras cada lote.
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
       (baseline ARCH-16, ~120 instancias)

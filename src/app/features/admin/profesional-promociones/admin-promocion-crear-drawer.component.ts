@@ -15,6 +15,7 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import type { RelatorOption } from '@core/models/ui/promocion-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 const COURSE_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -103,6 +104,7 @@ function generatePromoName(startIso: string): string {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     FormsModule,
     SelectModule,
     IconComponent,
@@ -156,10 +158,10 @@ function generatePromoName(startIso: string): string {
               <label class="text-xs font-medium mb-1 block text-text-secondary">
                 Fecha de término
               </label>
-              <div class="form-input bg-elevated cursor-default" >
+              <div class="form-input bg-elevated cursor-default">
                 {{ formatMonday(endDate()) }}
               </div>
-              <p class="text-2xs mt-1 text-brand" >
+              <p class="text-2xs mt-1 text-brand">
                 Calculada automáticamente: sábado de la 5ta semana (30 días de clase, lun-sáb)
               </p>
             </div>
@@ -177,7 +179,7 @@ function generatePromoName(startIso: string): string {
                 <label class="text-xs font-medium mb-1 block text-text-secondary">
                   Nombre (automático)
                 </label>
-                <div class="form-input bg-elevated cursor-default" >
+                <div class="form-input bg-elevated cursor-default">
                   {{ nombre() }}
                 </div>
               </div>
@@ -185,7 +187,7 @@ function generatePromoName(startIso: string): string {
                 <label class="text-xs font-medium mb-1 block text-text-secondary">
                   Código (automático)
                 </label>
-                <div class="form-input bg-elevated cursor-default" >
+                <div class="form-input bg-elevated cursor-default">
                   {{ codigo() }}
                 </div>
               </div>
@@ -203,7 +205,7 @@ function generatePromoName(startIso: string): string {
           <h3 class="text-sm font-semibold mb-1 text-text-primary">
             Cursos y asignación de relatores
           </h3>
-          <p class="text-xs mb-4 text-brand" >
+          <p class="text-xs mb-4 text-brand">
             Cada curso admite máximo 25 alumnos. Capacidad total: 100 alumnos.
           </p>
 
@@ -224,7 +226,7 @@ function generatePromoName(startIso: string): string {
                   <span class="text-sm font-medium text-text-primary">
                     {{ curso.name }}
                   </span>
-                  <span class="ml-auto text-xs text-brand" > Capacidad </span>
+                  <span class="ml-auto text-xs text-brand"> Capacidad </span>
                   <span class="text-sm font-semibold text-text-primary"> 25 alumnos </span>
                 </div>
 
@@ -236,10 +238,7 @@ function generatePromoName(startIso: string): string {
                 @if (curso.selectedRelatores.length > 0) {
                   <div class="flex flex-wrap gap-2 mb-2">
                     @for (rel of curso.selectedRelatores; track rel.id) {
-                      <span
-                        class="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full bg-brand-tint text-brand"
-                        
-                      >
+                      <app-badge variant="brand">
                         {{ rel.nombre }}
                         <button
                           class="inline-flex items-center justify-center w-4 h-4 rounded-full hover:opacity-70 bg-transparent border-none cursor-pointer"
@@ -249,7 +248,7 @@ function generatePromoName(startIso: string): string {
                         >
                           <app-icon name="x" [size]="10" />
                         </button>
-                      </span>
+                      </app-badge>
                     }
                   </div>
                 }
@@ -270,10 +269,7 @@ function generatePromoName(startIso: string): string {
         </section>
 
         <!-- ── Reglas de negocio (sidebar info) ──────────────────────────── -->
-        <section
-          class="rounded-lg p-4 bg-elevated border border-border-subtle"
-          
-        >
+        <section class="rounded-lg p-4 bg-elevated border border-border-subtle">
           <h4 class="text-xs font-semibold mb-2 text-text-primary">
             <app-icon name="info" [size]="12" />
             Reglas de negocio

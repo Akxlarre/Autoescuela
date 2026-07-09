@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-alumno-ayuda',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CardHoverDirective],
+  imports: [BadgeComponent, CardHoverDirective],
   template: `
     <div class="p-6">
       <div class="flex items-center gap-3 mb-6">
@@ -12,11 +13,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           <h1 class="text-2xl font-semibold text-text-primary">Ayuda</h1>
           <p class="text-sm text-text-muted mt-0.5">Mockup: /alumno/ayuda</p>
         </div>
-        <span
-          class="ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning"
-        >
-          PLANO
-        </span>
+        <app-badge variant="warning"> PLANO </app-badge>
       </div>
       <div
         class="card p-8 flex flex-col items-center justify-center gap-2 text-center border-dashed"
