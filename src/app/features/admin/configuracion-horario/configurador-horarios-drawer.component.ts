@@ -13,6 +13,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SelectModule } from 'primeng/select';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 interface Turno {
   id: string;
@@ -33,7 +34,7 @@ interface HorarioBlock {
 @Component({
   selector: 'app-configurador-horarios-drawer',
   standalone: true,
-  imports: [FormsModule, IconComponent, SkeletonBlockComponent, SelectModule],
+  imports: [FormsModule, IconComponent, SkeletonBlockComponent, SelectModule, DrawerFormComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .field-input {
@@ -49,11 +50,14 @@ interface HorarioBlock {
     .field-input:focus {
       border-color: var(--ds-brand);
     }
+    .turno-name-input {
+      background: transparent;
+    }
   `,
   template: `
-    <div class="flex h-full flex-col bg-surface text-text-primary overflow-hidden">
+    <div class="flex h-full flex-col overflow-hidden">
       <!-- Header -->
-      <div class="shrink-0 border-b border-border-subtle p-5">
+      <div class="shrink-0 border-b border-border-subtle p-5 mb-4">
         <h2 class="text-lg font-bold text-text-primary">Configuración de Grilla Horaria</h2>
         <p class="mt-1 text-sm text-text-muted">
           Define las reglas base para la disponibilidad de clases prácticas.
@@ -61,306 +65,313 @@ interface HorarioBlock {
       </div>
 
       <!-- Scrollable content -->
-      <div class="flex-1 overflow-y-auto p-5 space-y-6">
-        <!-- Warning Alert -->
-        <div class="rounded-lg border border-warning/30 bg-warning/10 p-3 flex gap-3 items-start">
-          <app-icon name="alert-triangle" [size]="16" class="text-warning mt-0.5 shrink-0" />
-          <div class="text-xs text-text-secondary leading-relaxed">
-            <strong class="text-text-primary block mb-1">Cuidado con cambios radicales</strong>
-            Cambiar la grilla base afectará de inmediato la disponibilidad para
-            <strong>nuevas matrículas</strong>. Las clases agendadas previamente mantendrán su hora
-            real en base de datos, pero podrían verse descuadradas en la vista semanal de la agenda
-            si ya no encajan en los nuevos bloques.
-          </div>
-        </div>
-
-        <!-- Courses Selection -->
-        <section class="space-y-3">
-          <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
-            <app-icon name="book-open" [size]="16" class="text-brand" />
-            1. Selecciona los Cursos a afectar
-          </h3>
-          <p class="text-xs text-text-muted">
-            Los cambios se aplicarán solo a los cursos seleccionados de la sede que elijas.
-          </p>
-
-          @if (branchFacade.selectedBranchId() === null) {
-            <div class="mb-4 p-3 rounded-lg border border-border-default bg-surface/50 space-y-2">
-              <label class="block text-xs font-bold text-text-secondary">Sede a Configurar</label>
-              <p-select
-                styleClass="w-full"
-                [ngModel]="localBranchId()"
-                (ngModelChange)="localBranchId.set($event)"
-                [options]="branchFacade.branches()"
-                optionLabel="name"
-                optionValue="id"
-                placeholder="Selecciona una sede..."
-              ></p-select>
+      <app-drawer-form>
+        <div class="space-y-6">
+          <!-- Warning Alert -->
+          <div class="rounded-lg border border-warning/30 bg-warning/10 p-3 flex gap-3 items-start">
+            <app-icon name="alert-triangle" [size]="16" class="text-warning mt-0.5 shrink-0" />
+            <div class="text-xs text-text-secondary leading-relaxed">
+              <strong class="text-text-primary block mb-1">Cuidado con cambios radicales</strong>
+              Cambiar la grilla base afectará de inmediato la disponibilidad para
+              <strong>nuevas matrículas</strong>. Las clases agendadas previamente mantendrán su
+              hora real en base de datos, pero podrían verse descuadradas en la vista semanal de la
+              agenda si ya no encajan en los nuevos bloques.
             </div>
-          }
+          </div>
 
-          <div class="space-y-2">
-            @if (facade.isLoading()) {
-              <app-skeleton-block height="40px" />
-              <app-skeleton-block height="40px" />
-            } @else if (localBranchId() === null) {
-              <div
-                class="p-3 border border-border-default rounded-lg bg-base text-sm text-text-muted text-center"
-              >
-                Selecciona una sede arriba para cargar sus cursos.
+          <!-- Courses Selection -->
+          <section class="space-y-3">
+            <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
+              <app-icon name="book-open" [size]="16" class="text-brand" />
+              1. Selecciona los Cursos a afectar
+            </h3>
+            <p class="text-xs text-text-muted">
+              Los cambios se aplicarán solo a los cursos seleccionados de la sede que elijas.
+            </p>
+
+            @if (branchFacade.selectedBranchId() === null) {
+              <div class="mb-4 p-3 rounded-lg border border-border-default bg-surface/50 space-y-2">
+                <label class="block text-xs font-bold text-text-secondary">Sede a Configurar</label>
+                <p-select
+                  styleClass="w-full"
+                  [ngModel]="localBranchId()"
+                  (ngModelChange)="localBranchId.set($event)"
+                  [options]="branchFacade.branches()"
+                  optionLabel="name"
+                  optionValue="id"
+                  placeholder="Selecciona una sede..."
+                ></p-select>
               </div>
-            } @else if (facade.courses().length === 0) {
-              <div
-                class="p-3 border border-border-default rounded-lg bg-base text-sm text-text-muted text-center"
-              >
-                No hay cursos disponibles para esta sede.
-              </div>
-            } @else {
-              @for (course of facade.courses(); track course.id) {
-                <label
-                  class="flex items-center gap-3 p-3 rounded-lg border border-border-default bg-base cursor-pointer hover:border-brand transition-colors"
+            }
+
+            <div class="space-y-2">
+              @if (facade.isLoading()) {
+                <app-skeleton-block height="40px" />
+                <app-skeleton-block height="40px" />
+              } @else if (localBranchId() === null) {
+                <div
+                  class="p-3 border border-border-default rounded-lg bg-base text-sm text-text-muted text-center"
                 >
-                  <input
-                    type="checkbox"
-                    class="h-4 w-4 rounded border-border-default text-brand focus:ring-brand focus:ring-offset-base bg-surface"
-                    [checked]="selectedCourseIds().includes(course.id)"
-                    (change)="toggleCourseSelection(course.id)"
-                  />
-                  <div class="flex-1">
-                    <div class="text-sm font-semibold text-text-primary">{{ course.name }}</div>
-                  </div>
-                </label>
+                  Selecciona una sede arriba para cargar sus cursos.
+                </div>
+              } @else if (facade.courses().length === 0) {
+                <div
+                  class="p-3 border border-border-default rounded-lg bg-base text-sm text-text-muted text-center"
+                >
+                  No hay cursos disponibles para esta sede.
+                </div>
+              } @else {
+                @for (course of facade.courses(); track course.id) {
+                  <label
+                    class="flex items-center gap-3 p-3 rounded-lg border border-border-default bg-base cursor-pointer hover:border-brand transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      class="h-4 w-4 rounded border-border-default text-brand focus:ring-brand focus:ring-offset-base bg-surface"
+                      [checked]="selectedCourseIds().includes(course.id)"
+                      (change)="toggleCourseSelection(course.id)"
+                    />
+                    <div class="flex-1">
+                      <div class="text-sm font-semibold text-text-primary">{{ course.name }}</div>
+                    </div>
+                  </label>
+                }
               }
-            }
-          </div>
-        </section>
-
-        <!-- Turnos Builder -->
-        <section class="space-y-3">
-          <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
-            <app-icon name="clock" [size]="16" class="text-brand" />
-            2. Define los Turnos
-          </h3>
-
-          <div class="space-y-4">
-            @for (turno of turnos(); track turno.id; let i = $index) {
-              <div class="p-4 rounded-xl border border-border-default bg-base relative group">
-                <button
-                  type="button"
-                  class="absolute top-3 right-3 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                  (click)="removeTurno(turno.id)"
-                >
-                  <app-icon name="trash-2" [size]="14" />
-                </button>
-
-                <input
-                  type="text"
-                  [(ngModel)]="turno.name"
-                  class="text-sm font-bold bg-transparent border-none outline-none focus:ring-0 p-0 text-text-primary w-full sm:w-48 mb-3"
-                  placeholder="Nombre del Turno"
-                />
-
-                <div class="flex flex-col sm:flex-row gap-3 mb-3">
-                  <!-- Start Time -->
-                  <div class="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-                    <label
-                      class="text-2xs font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
-                    >
-                      Hora Inicio
-                    </label>
-                    <div class="flex items-center gap-1.5">
-                      <p-select
-                        class="flex-1"
-                        [options]="hoursOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        [ngModel]="getHour(turno.startTime)"
-                        (ngModelChange)="setStartTimeHour(turno, $event)"
-                        styleClass="w-full"
-                        placeholder="HH"
-                      ></p-select>
-                      <span class="text-text-muted font-bold">:</span>
-                      <p-select
-                        class="flex-1"
-                        [options]="minutesOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        [ngModel]="getMinute(turno.startTime)"
-                        (ngModelChange)="setStartTimeMinute(turno, $event)"
-                        styleClass="w-full"
-                        placeholder="MM"
-                      ></p-select>
-                    </div>
-                  </div>
-                  <!-- End Time -->
-                  <div class="flex flex-col gap-1.5 flex-1 min-w-[120px]">
-                    <label
-                      class="text-2xs font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
-                    >
-                      <span>Hora Fin</span>
-                      <app-icon name="clock" [size]="12" class="text-text-muted" />
-                    </label>
-                    <div class="flex items-center gap-1.5">
-                      <p-select
-                        class="flex-1"
-                        [options]="hoursOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        [ngModel]="getHour(turno.endTime)"
-                        (ngModelChange)="setEndTimeHour(turno, $event)"
-                        styleClass="w-full"
-                        placeholder="HH"
-                      ></p-select>
-                      <span class="text-text-muted font-bold">:</span>
-                      <p-select
-                        class="flex-1"
-                        [options]="minutesOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        [ngModel]="getMinute(turno.endTime)"
-                        (ngModelChange)="setEndTimeMinute(turno, $event)"
-                        styleClass="w-full"
-                        placeholder="MM"
-                      ></p-select>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-2xs font-semibold text-text-muted mb-1"
-                      >Duración Bloque (min)</label
-                    >
-                    <input type="number" [(ngModel)]="turno.blockDuration" class="field-input" />
-                  </div>
-                  <div>
-                    <label class="block text-2xs font-semibold text-text-muted mb-1"
-                      >Descanso (min)</label
-                    >
-                    <input type="number" [(ngModel)]="turno.breakDuration" class="field-input" />
-                  </div>
-                </div>
-              </div>
-            }
-
-            <button
-              type="button"
-              class="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-brand/50 rounded-lg text-brand text-xs font-semibold hover:bg-brand-muted transition-colors cursor-pointer"
-              (click)="addTurno()"
-            >
-              <app-icon name="plus" [size]="14" />
-              Añadir Turno
-            </button>
-          </div>
-
-          <button type="button" class="btn-primary w-full py-2.5 mt-2" (click)="generateGrid()">
-            <app-icon name="zap" [size]="14" />
-            Generar Grilla
-          </button>
-        </section>
-
-        <!-- Preview -->
-        @if (generatedBlocks().length > 0) {
-          <section class="space-y-4 pt-4 border-t border-border-subtle">
-            <div class="flex items-center justify-between pb-1">
-              <div class="space-y-0.5">
-                <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
-                  <app-icon name="layout-list" [size]="16" class="text-success" />
-                  3. Vista Previa de la Grilla
-                </h3>
-                <p class="text-2xs text-text-muted">
-                  Bloques resultantes: <strong>{{ activeBlocksCount() }} activos</strong>.
-                  Deshabilita las excepciones (ej. bloque de colación largo).
-                </p>
-              </div>
             </div>
+          </section>
+
+          <!-- Turnos Builder -->
+          <section class="space-y-3">
+            <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
+              <app-icon name="clock" [size]="16" class="text-brand" />
+              2. Define los Turnos
+            </h3>
 
             <div class="space-y-4">
-              @for (group of groupedBlocks(); track group.turnoName) {
-                <div class="space-y-2">
-                  <!-- Cabecera del Turno -->
-                  <div class="flex items-center gap-2">
-                    <span
-                      class="text-2xs font-bold uppercase tracking-wider text-text-secondary"
-                    >
-                      {{ group.turnoName }}
-                    </span>
-                    <div class="h-px flex-1 bg-border-subtle"></div>
+              @for (turno of turnos(); track turno.id; let i = $index) {
+                <div class="p-4 rounded-xl border border-border-default bg-base relative group">
+                  <button
+                    type="button"
+                    class="absolute top-3 right-3 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                    (click)="removeTurno(turno.id)"
+                  >
+                    <app-icon name="trash-2" [size]="14" />
+                  </button>
+
+                  <input
+                    type="text"
+                    [(ngModel)]="turno.name"
+                    class="turno-name-input text-sm font-bold border-none outline-none focus:ring-0 p-0 text-text-primary w-full sm:w-48 mb-3"
+                    placeholder="Nombre del Turno"
+                  />
+
+                  <div class="flex flex-col sm:flex-row gap-3 mb-3">
+                    <!-- Start Time -->
+                    <div class="flex flex-col gap-1.5 flex-1 min-w-30">
+                      <label
+                        class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center h-4"
+                      >
+                        Hora Inicio
+                      </label>
+                      <div class="flex items-center gap-1.5">
+                        <p-select
+                          class="flex-1"
+                          [options]="hoursOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="getHour(turno.startTime)"
+                          (ngModelChange)="setStartTimeHour(turno, $event)"
+                          styleClass="w-full"
+                          placeholder="HH"
+                        ></p-select>
+                        <span class="text-text-muted font-bold">:</span>
+                        <p-select
+                          class="flex-1"
+                          [options]="minutesOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="getMinute(turno.startTime)"
+                          (ngModelChange)="setStartTimeMinute(turno, $event)"
+                          styleClass="w-full"
+                          placeholder="MM"
+                        ></p-select>
+                      </div>
+                    </div>
+                    <!-- End Time -->
+                    <div class="flex flex-col gap-1.5 flex-1 min-w-30">
+                      <label
+                        class="text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center justify-between h-4"
+                      >
+                        <span>Hora Fin</span>
+                        <app-icon name="clock" [size]="12" class="text-text-muted" />
+                      </label>
+                      <div class="flex items-center gap-1.5">
+                        <p-select
+                          class="flex-1"
+                          [options]="hoursOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="getHour(turno.endTime)"
+                          (ngModelChange)="setEndTimeHour(turno, $event)"
+                          styleClass="w-full"
+                          placeholder="HH"
+                        ></p-select>
+                        <span class="text-text-muted font-bold">:</span>
+                        <p-select
+                          class="flex-1"
+                          [options]="minutesOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          [ngModel]="getMinute(turno.endTime)"
+                          (ngModelChange)="setEndTimeMinute(turno, $event)"
+                          styleClass="w-full"
+                          placeholder="MM"
+                        ></p-select>
+                      </div>
+                    </div>
                   </div>
 
-                  <!-- Cuadrícula Compacta de Bloques -->
-                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    @for (block of group.blocks; track block.from) {
-                      <div
-                        class="flex flex-col items-center justify-center p-2 rounded border transition-all cursor-pointer relative group overflow-hidden"
-                        [class.border-success]="block.active"
-                        [class.bg-success/10]="block.active"
-                        [class.text-success]="block.active"
-                        [class.hover:bg-error/10]="block.active"
-                        [class.hover:border-error/30]="block.active"
-                        [class.hover:text-error]="block.active"
-                        [class.border-dashed]="!block.active"
-                        [class.border-border-default]="!block.active"
-                        [class.bg-base]="!block.active"
-                        [class.text-text-muted]="!block.active"
-                        [class.hover:bg-brand-muted]="!block.active"
-                        [class.hover:border-brand]="!block.active"
-                        [class.hover:text-brand]="!block.active"
-                        (click)="toggleBlock(block)"
-                        [title]="block.active ? 'Deshabilitar bloque' : 'Restaurar bloque'"
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-[11px] font-semibold text-text-muted mb-1"
+                        >Duración Bloque (min)</label
                       >
-                        <span
-                          class="text-xs font-bold font-mono transition-all"
-                          [class.line-through]="!block.active"
-                        >
-                          {{ block.from }} - {{ block.to }}
-                        </span>
-
-                        <!-- Mini status overlay for disabled items -->
-                        @if (!block.active) {
-                          <span
-                            class="text-[8px] uppercase font-bold text-error mt-0.5 tracking-widest opacity-80"
-                            >Omitido</span
-                          >
-                        }
-                      </div>
-                    }
+                      <input type="number" [(ngModel)]="turno.blockDuration" class="field-input" />
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-semibold text-text-muted mb-1"
+                        >Descanso (min)</label
+                      >
+                      <input type="number" [(ngModel)]="turno.breakDuration" class="field-input" />
+                    </div>
                   </div>
                 </div>
               }
+
+              <button
+                type="button"
+                class="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-brand/50 rounded-lg text-brand text-xs font-semibold hover:bg-brand-muted transition-colors cursor-pointer"
+                (click)="addTurno()"
+              >
+                <app-icon name="plus" [size]="14" />
+                Añadir Turno
+              </button>
             </div>
 
-            @if (generatedBlocks().length === 0) {
-              <div
-                class="text-center py-6 border border-dashed border-border-default rounded-xl bg-base"
-              >
-                <app-icon
-                  name="calendar-x"
-                  [size]="24"
-                  class="text-text-muted mx-auto mb-2 opacity-50"
-                />
-                <p class="text-sm text-text-muted">No hay bloques generados.</p>
-              </div>
-            }
+            <button type="button" class="btn-primary w-full py-2.5 mt-2" (click)="generateGrid()">
+              <app-icon name="zap" [size]="14" />
+              Generar Grilla
+            </button>
           </section>
-        }
-      </div>
 
-      <!-- Footer -->
-      <div class="shrink-0 border-t border-border-subtle p-4 flex justify-end gap-3 bg-surface">
-        <button
-          type="button"
-          class="btn-secondary"
-          (click)="close()"
-          [disabled]="facade.isSaving()"
-        >
-          Cancelar
-        </button>
-        <button type="button" class="btn-primary" [disabled]="!canSave()" (click)="save()">
-          <app-icon name="save" [size]="14" />
-          {{ facade.isSaving() ? 'Guardando...' : 'Aplicar Cambios' }}
-        </button>
-      </div>
+          <!-- Preview -->
+          @if (generatedBlocks().length > 0) {
+            <section class="space-y-4 pt-4 border-t border-border-subtle">
+              <div class="flex items-center justify-between pb-1">
+                <div class="space-y-0.5">
+                  <h3 class="text-sm font-bold text-text-primary flex items-center gap-2">
+                    <app-icon name="layout-list" [size]="16" class="text-success" />
+                    3. Vista Previa de la Grilla
+                  </h3>
+                  <p class="text-[11px] text-text-muted">
+                    Bloques resultantes: <strong>{{ activeBlocksCount() }} activos</strong>.
+                    Deshabilita las excepciones (ej. bloque de colación largo).
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                @for (group of groupedBlocks(); track group.turnoName) {
+                  <div class="space-y-2">
+                    <!-- Cabecera del Turno -->
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="text-[10px] font-bold uppercase tracking-wider text-text-secondary"
+                      >
+                        {{ group.turnoName }}
+                      </span>
+                      <div class="h-px flex-1 bg-border-subtle"></div>
+                    </div>
+
+                    <!-- Cuadrícula Compacta de Bloques -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      @for (block of group.blocks; track block.from) {
+                        <div
+                          class="flex flex-col items-center justify-center p-2 rounded border transition-all cursor-pointer relative group overflow-hidden"
+                          [class.border-success]="block.active"
+                          [class.bg-success/10]="block.active"
+                          [class.text-success]="block.active"
+                          [class.hover:bg-error/10]="block.active"
+                          [class.hover:border-error/30]="block.active"
+                          [class.hover:text-error]="block.active"
+                          [class.border-dashed]="!block.active"
+                          [class.border-border-default]="!block.active"
+                          [class.bg-base]="!block.active"
+                          [class.text-text-muted]="!block.active"
+                          [class.hover:bg-brand-muted]="!block.active"
+                          [class.hover:border-brand]="!block.active"
+                          [class.hover:text-brand]="!block.active"
+                          (click)="toggleBlock(block)"
+                          [title]="block.active ? 'Deshabilitar bloque' : 'Restaurar bloque'"
+                        >
+                          <span
+                            class="text-xs font-bold font-mono transition-all"
+                            [class.line-through]="!block.active"
+                          >
+                            {{ block.from }} - {{ block.to }}
+                          </span>
+
+                          <!-- Mini status overlay for disabled items -->
+                          @if (!block.active) {
+                            <span
+                              class="text-[8px] uppercase font-bold text-error mt-0.5 tracking-widest opacity-80"
+                              >Omitido</span
+                            >
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+
+              @if (generatedBlocks().length === 0) {
+                <div
+                  class="text-center py-6 border border-dashed border-border-default rounded-xl bg-base"
+                >
+                  <app-icon
+                    name="calendar-x"
+                    [size]="24"
+                    class="text-text-muted mx-auto mb-2 opacity-50"
+                  />
+                  <p class="text-sm text-text-muted">No hay bloques generados.</p>
+                </div>
+              }
+            </section>
+          }
+        </div>
+
+        <!-- Footer -->
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button
+            type="button"
+            class="btn-secondary"
+            (click)="close()"
+            [disabled]="facade.isSaving()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="btn-primary flex items-center gap-2"
+            [disabled]="!canSave()"
+            (click)="save()"
+          >
+            <app-icon name="save" [size]="14" />
+            {{ facade.isSaving() ? 'Guardando...' : 'Aplicar Cambios' }}
+          </button>
+        </ng-container>
+      </app-drawer-form>
     </div>
   `,
 })

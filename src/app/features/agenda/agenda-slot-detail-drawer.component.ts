@@ -6,6 +6,7 @@ import { AgendaFacade } from '@core/facades/agenda.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 type StatusConfig = {
   label: string;
@@ -25,7 +26,13 @@ type StatusConfig = {
   selector: 'app-agenda-slot-detail-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerContentLoaderComponent],
+  imports: [
+    IconComponent,
+    SkeletonBlockComponent,
+    StatBoxComponent,
+    DrawerContentLoaderComponent,
+    DrawerFormComponent,
+  ],
   host: {
     class: 'flex flex-col h-full',
   },
@@ -43,9 +50,8 @@ type StatusConfig = {
           </div>
         </ng-template>
         <ng-template #content>
-          <div class="flex flex-col h-full w-full">
-            <!-- Contenido -->
-            <div class="flex-1 flex flex-col gap-5 py-2">
+          <app-drawer-form>
+            <div class="flex flex-col gap-5">
               <!-- ── Estado ─────────────────────────────────────────── -->
               <div
                 class="status-pill"
@@ -104,15 +110,13 @@ type StatusConfig = {
               }
             </div>
 
-            <!-- ── Acción (Sticky Footer) ────────────────────────── -->
-            <div
-              class="flex justify-end pt-6 pb-4 border-t mt-auto sticky bottom-0 bg-surface z-10 border-border-subtle"
-            >
-              <button class="btn-ghost" (click)="close()" data-llm-action="close-slot-detail">
+            <!-- ── Acción ────────────────────────────────────────── -->
+            <ng-container ngProjectAs="[drawer-form-footer]">
+              <button class="btn-secondary" (click)="close()" data-llm-action="close-slot-detail">
                 Cerrar detalle
               </button>
-            </div>
-          </div>
+            </ng-container>
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }

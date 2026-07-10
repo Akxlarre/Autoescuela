@@ -1,0 +1,65 @@
+/* ── Form Fields — tokens canónicos de campos de formulario ───────────────────
+   Fuente única de verdad para los campos de todo drawer/modal/página de
+   formulario (ver skill form-ux §2). Antes estas clases estaban duplicadas en
+   ~20 componentes vía `styles:`; se centralizan aquí (fix-025 / fase 2).
+
+   Estas clases son globales (sin @layer) para ganar sobre las reglas de
+   `input, textarea` de styles.scss y los @layer de PrimeNG/Tailwind. */
+
+.section-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.field-label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.field-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast);
+  box-sizing: border-box;
+}
+.field-input:focus {
+  border-color: var(--ds-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
+}
+.field-input::placeholder {
+  color: var(--text-muted);
+}
+.field-input--error {
+  border-color: var(--state-error);
+}
+.field-input--valid {
+  border-color: var(--state-success);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.field-error {
+  font-size: 12px;
+  color: var(--state-error);
+}
+.field-success {
+  font-size: 12px;
+  color: var(--state-success);
+}

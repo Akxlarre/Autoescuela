@@ -106,7 +106,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   class="flex items-center justify-between pt-3"
                   style="border-top:1px solid var(--border-subtle)"
                 >
-                  <span class="text-base font-bold text-text-primary"
+                  <span class="font-bold text-text-primary"
                     >\${{ servicio.precio.toLocaleString('es-CL') }}</span
                   >
                   <button
@@ -124,7 +124,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
             <!-- Tarjeta agregar nuevo servicio -->
             <button
               type="button"
-              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-[180px] text-text-muted transition-colors hover:bg-subtle/50 border-2 border-dashed border-border-default"
+              class="cursor-pointer flex flex-col items-center justify-center gap-2 rounded-xl min-h-45 text-text-muted transition-colors hover:bg-subtle/50 border-2 border-dashed border-border-default"
               data-llm-action="open-nuevo-servicio-drawer-card"
               (click)="requestNuevoServicio.emit()"
             >
@@ -148,6 +148,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                 [options]="filtroOptions()"
                 optionLabel="label"
                 optionValue="value"
+                placeholder="Todos los servicios"
                 styleClass="w-full h-10"
               />
               <div class="relative">
@@ -219,11 +220,6 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                   >
                     Fecha
                   </th>
-                  <th
-                    class="text-center py-3 px-4 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                  >
-                    Acción
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -277,18 +273,10 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
                       }
                     </td>
                     <td class="py-3 px-4 text-text-muted">{{ venta.fecha }}</td>
-                    <td class="py-3 px-4 text-center">
-                      <button
-                        type="button"
-                        class="text-xs font-medium text-text-muted hover:text-text-primary transition-colors"
-                      >
-                        Ver
-                      </button>
-                    </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="7" class="py-10 text-center text-text-muted text-sm">
+                    <td colspan="6" class="py-10 text-center text-text-muted text-sm">
                       No hay ventas registradas.
                     </td>
                   </tr>
@@ -425,19 +413,18 @@ export class ServiciosEspecialesContentComponent implements AfterViewInit {
   readonly exportarHistorial = output<'excel' | 'pdf'>();
 
   // ── Estado interno ──────────────────────────────────────────────────────────
-  protected readonly filtroServicio = signal('todos');
+  protected readonly filtroServicio = signal<string | null>(null);
   protected readonly exportMenuOpen = signal(false);
 
   // ── Computed ────────────────────────────────────────────────────────────────
-  protected readonly filtroOptions = computed(() => [
-    { label: 'Todos los servicios', value: 'todos' },
-    ...this.catalogo().map((s) => ({ label: s.nombre, value: String(s.id) })),
-  ]);
+  protected readonly filtroOptions = computed(() =>
+    this.catalogo().map((s) => ({ label: s.nombre, value: String(s.id) })),
+  );
 
   protected readonly ventasFiltradas = computed(() => {
     const filtro = this.filtroServicio();
     const all = this.ventas();
-    return filtro === 'todos' ? all : all.filter((v) => String(v.servicioId) === filtro);
+    return !filtro ? all : all.filter((v) => String(v.servicioId) === filtro);
   });
 
   protected readonly mesActualLabel = computed(() => {

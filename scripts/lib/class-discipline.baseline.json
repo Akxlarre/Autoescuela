@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-09T20:33:47.408Z",
+  "generatedAt": "2026-07-10T00:39:06.225Z",
   "rules": {
     "ARCH-15": {
       "total": 36,
@@ -35,8 +35,9 @@
       }
     },
     "ARCH-16": {
-      "total": 120,
+      "total": 113,
       "files": {
+        "src/app/features/admin/alumno-detalle/admin-alumno-detalle.component.ts": 2,
         "src/app/features/admin/alumnos/pre-inscritos/admin-pre-inscrito-drawer.component.ts": 6,
         "src/app/features/admin/auditoria/admin-auditoria.component.ts": 1,
         "src/app/features/admin/configuracion-horario/configurador-horarios-drawer.component.ts": 1,
@@ -47,10 +48,6 @@
         "src/app/features/admin/contabilidad-anticipos/admin-contabilidad-anticipos.component.ts": 2,
         "src/app/features/admin/contabilidad-cursos/admin-curso-singular-cobro-drawer.component.ts": 1,
         "src/app/features/admin/contabilidad-cursos/admin-curso-singular-detalle-drawer.component.ts": 4,
-        "src/app/features/admin/flota/maintenance-form-drawer/maintenance-form-drawer.component.ts": 2,
-        "src/app/features/admin/flota/vehicle-agenda-drawer/vehicle-agenda-drawer.component.ts": 1,
-        "src/app/features/admin/flota/vehicle-documents-drawer/vehicle-documents-drawer.component.ts": 1,
-        "src/app/features/admin/flota/vehicle-form-drawer/vehicle-form-drawer.component.ts": 2,
         "src/app/features/admin/pagos/admin-pagos.component.ts": 4,
         "src/app/features/alumno/dashboard/alumno-dashboard.component.ts": 2,
         "src/app/features/dashboard/alerts-drawer/alerts-drawer.component.ts": 1,
@@ -61,7 +58,7 @@
         "src/app/features/public-enrollment/retorno/public-enrollment-retorno.component.ts": 6,
         "src/app/features/secretaria/pagos/secretaria-pagos.component.ts": 4,
         "src/app/features/tareas/task-detail-modal.component.ts": 5,
-        "src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts": 2,
+        "src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts": 1,
         "src/app/shared/components/alumnos-list-content/alumnos-list-content.component.ts": 1,
         "src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts": 6,
         "src/app/shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component.ts": 10,
@@ -69,7 +66,6 @@
         "src/app/shared/components/ciclos-teoricos-content/ciclos-teoricos-content.component.ts": 6,
         "src/app/shared/components/cuadratura-content/cuadratura-content.component.ts": 2,
         "src/app/shared/components/dms-list-content/dms-list-content.component.ts": 3,
-        "src/app/shared/components/drawer/drawer.component.ts": 1,
         "src/app/shared/components/egreso-modal/egreso-modal.component.ts": 1,
         "src/app/shared/components/matricula-steps/psych-test/psych-test.component.ts": 2,
         "src/app/shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts": 1,
@@ -81,22 +77,26 @@
         "src/app/shared/components/public-enrollment-steps/public-payment/public-payment.component.ts": 1,
         "src/app/shared/components/public-enrollment-steps/public-personal-data/public-personal-data.component.ts": 1,
         "src/app/shared/components/public-enrollment-steps/public-schedule/public-schedule.component.ts": 1,
-        "src/app/shared/components/registrar-gasto-fijo-drawer/registrar-gasto-fijo-drawer.component.ts": 1,
         "src/app/shared/components/reportes-contables-content/reportes-contables-content.component.ts": 2,
         "src/app/shared/components/servicios-especiales-content/servicios-especiales-content.component.ts": 1,
         "src/app/shared/components/task-reply-thread/task-reply-thread.component.ts": 1
       }
     },
     "ARCH-17": {
-      "total": 66,
+      "total": 86,
       "files": {
+        "src/app/features/admin/alumno-detalle/admin-alumno-detalle.component.ts": 8,
+        "src/app/features/admin/alumno-detalle/components/ficha-tecnica/admin-ficha-tecnica.component.ts": 2,
         "src/app/features/admin/alumno-detalle/components/historial-pagos/admin-historial-pagos.component.ts": 1,
+        "src/app/features/admin/alumno-detalle/reagendar-clases-drawer/admin-reagendar-clases-drawer.component.ts": 1,
         "src/app/features/admin/alumnos/ex-alumnos/components/stats/admin-ex-alumnos-stats.component.ts": 2,
         "src/app/features/admin/asistencia/admin-finalizar-clase-drawer.component.ts": 1,
         "src/app/features/admin/asistencia/admin-iniciar-clase-drawer.component.ts": 1,
-        "src/app/features/admin/configuracion-horario/configurador-horarios-drawer.component.ts": 1,
+        "src/app/features/admin/configuracion-horario/configurador-horarios-drawer.component.ts": 7,
         "src/app/features/admin/configuracion-web/tabs/hero-tab.component.ts": 2,
+        "src/app/features/admin/flota/vehicle-agenda-drawer/vehicle-agenda-drawer.component.ts": 2,
         "src/app/features/admin/profesional-archivo/admin-profesional-archivo.component.ts": 2,
+        "src/app/features/admin/profesional-promociones/admin-promocion-editar-drawer.component.ts": 1,
         "src/app/features/alumno/dashboard/alumno-dashboard.component.ts": 2,
         "src/app/features/alumno/horario/alumno-horario.component.ts": 3,
         "src/app/features/instructor/clase-detail/instructor-clase-detail.component.ts": 3,

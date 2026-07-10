@@ -23,6 +23,7 @@ import type { AlumnoDeudor } from '@core/models/ui/pagos.model';
 import { SelectModule } from 'primeng/select';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
@@ -61,6 +62,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
     AsyncBtnComponent,
     AnimateInDirective,
     DateInputComponent,
@@ -76,7 +78,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
         </div>
       </ng-template>
       <ng-template #content>
-        <div class="flex-1 overflow-y-auto p-5">
+        <app-drawer-form>
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
             <!-- ── MODO GLOBAL: selector de alumno ────────────────────────────── -->
             @if (facade.enrollmentSeleccionado() === null) {
@@ -123,7 +125,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                       <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                         Saldo Pendiente
                       </span>
-                      <span class="text-base font-bold text-warning">
+                      <span class="font-bold text-warning">
                         {{ clp(alumno.saldo) }}
                       </span>
                       <span class="text-xs text-text-muted">
@@ -150,7 +152,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                   <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">
                     Saldo Pendiente
                   </span>
-                  <span class="text-base font-bold text-warning">
+                  <span class="font-bold text-warning">
                     {{ clp(ctx.saldoPendiente) }}
                   </span>
                 </div>
@@ -169,7 +171,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     <span class="text-xs font-semibold uppercase tracking-wide text-text-muted"
                       >Saldo Pendiente</span
                     >
-                    <span class="text-base font-bold text-warning">{{ clp(alumno.saldo) }}</span>
+                    <span class="font-bold text-warning">{{ clp(alumno.saldo) }}</span>
                   </div>
                 </div>
               }
@@ -382,9 +384,7 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           </form>
 
           <!-- ── Footer ──────────────────────────────────────────────────────────── -->
-          <div
-            class="p-5 border-t bg-surface flex items-center justify-end gap-3 sticky bottom-0 z-20"
-          >
+          <ng-container ngProjectAs="[drawer-form-footer]">
             <button
               type="button"
               class="btn-secondary"
@@ -403,8 +403,8 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
               [disabled]="form.invalid"
               (clicked)="onSubmit()"
             />
-          </div>
-        </div>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,

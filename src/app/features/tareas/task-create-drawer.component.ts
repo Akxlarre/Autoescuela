@@ -8,6 +8,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { TaskCreateContextService } from '@core/services/ui/task-create-context.service';
 import type { TaskType } from '@core/models/ui/task.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 const TYPE_OPTIONS: { label: string; value: TaskType }[] = [
   { label: 'Tarea', value: 'task' },
@@ -25,15 +26,24 @@ const ROLE_LABEL: Record<string, string> = {
   selector: 'app-task-create-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule, DateInputComponent],
+  imports: [
+    ReactiveFormsModule,
+    IconComponent,
+    SelectModule,
+    DateInputComponent,
+    DrawerFormComponent,
+  ],
   template: `
-    <div class="flex flex-col gap-5 py-2">
-      <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-5">
+    <app-drawer-form>
+      <form
+        [formGroup]="form"
+        (ngSubmit)="submit()"
+        class="flex flex-col gap-5"
+        data-llm-form="create-task"
+      >
         <!-- Tipo -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="t-type">
-            Tipo <span class="text-error">*</span>
-          </label>
+          <label class="field-label" for="t-type">Tipo <span class="text-error">*</span></label>
           <p-select
             id="t-type"
             formControlName="type"
@@ -47,14 +57,11 @@ const ROLE_LABEL: Record<string, string> = {
 
         <!-- Destinatario -->
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-            for="t-recipient"
-          >
+          <label class="field-label" for="t-recipient">
             Destinatario <span class="text-error">*</span>
           </label>
           @if (recipientOptions().length === 0) {
-            <p class="text-xs py-1 text-text-muted">No hay destinatarios disponibles.</p>
+            <p class="field-hint">No hay destinatarios disponibles.</p>
           } @else {
             <p-select
               id="t-recipient"
@@ -71,35 +78,30 @@ const ROLE_LABEL: Record<string, string> = {
 
         <!-- Asunto -->
         <div class="flex flex-col gap-1.5">
-          <label
-            class="text-xs font-semibold uppercase tracking-wide text-text-muted"
-            for="t-subject"
+          <label class="field-label" for="t-subject"
+            >Asunto <span class="text-error">*</span></label
           >
-            Asunto <span class="text-error">*</span>
-          </label>
           <input
             id="t-subject"
             type="text"
             formControlName="subject"
             placeholder="Ej. Revisar documentación del alumno"
             maxlength="200"
-            class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
+            class="field-input"
             data-llm-description="task subject input - concise title for the task"
           />
         </div>
 
         <!-- Descripción -->
         <div class="flex flex-col gap-1.5">
-          <label class="text-xs font-semibold uppercase tracking-wide text-text-muted" for="t-body">
-            Descripción
-          </label>
+          <label class="field-label" for="t-body">Descripción</label>
           <textarea
             id="t-body"
             formControlName="body"
             placeholder="Detalle opcional de la tarea…"
             rows="3"
             maxlength="2000"
-            class="w-full px-3 py-2 text-sm rounded-xl border border-border-default bg-surface text-text-primary resize-none focus:ring-2 focus:outline-none transition-all"
+            class="field-input resize-none"
             data-llm-description="task body description - optional detailed content"
           ></textarea>
         </div>
@@ -118,32 +120,38 @@ const ROLE_LABEL: Record<string, string> = {
 
         <!-- Error del facade -->
         @if (tasksFacade.error()) {
-          <p class="text-xs rounded-lg px-3 py-2 text-error bg-error-subtle">
-            <app-icon name="alert-circle" [size]="12" [ariaHidden]="true" class="inline mr-1" />
-            {{ tasksFacade.error() }}
-          </p>
+          <div class="flex items-center gap-2 rounded-lg px-3 py-2 bg-error-subtle">
+            <app-icon
+              name="alert-circle"
+              [size]="14"
+              color="var(--state-error)"
+              [ariaHidden]="true"
+            />
+            <span class="text-xs text-error">{{ tasksFacade.error() }}</span>
+          </div>
         }
-
-        <!-- Botones -->
-        <div class="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            type="submit"
-            class="btn-primary flex-1"
-            [disabled]="form.invalid || isSaving()"
-            data-llm-action="submit-create-task"
-          >
-            @if (isSaving()) {
-              <app-icon name="loader-2" [size]="16" [ariaHidden]="true" class="animate-spin" />
-              Enviando…
-            } @else {
-              <app-icon name="send" [size]="16" [ariaHidden]="true" />
-              Enviar tarea
-            }
-          </button>
-          <button type="button" class="btn-ghost" (click)="drawer.close()">Cancelar</button>
-        </div>
       </form>
-    </div>
+
+      <!-- Footer canónico -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2"
+          [disabled]="form.invalid || isSaving()"
+          (click)="submit()"
+          data-llm-action="submit-create-task"
+        >
+          @if (isSaving()) {
+            <app-icon name="loader-2" [size]="16" [ariaHidden]="true" class="animate-spin" />
+            Enviando…
+          } @else {
+            <app-icon name="send" [size]="16" [ariaHidden]="true" />
+            Enviar tarea
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class TaskCreateDrawerComponent {

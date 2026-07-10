@@ -79,6 +79,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 [options]="yearSelectOptions()"
                 optionLabel="label"
                 optionValue="value"
+                placeholder="Todos los años"
                 [ngModel]="filtroAnio()"
                 (ngModelChange)="filtroAnio.set($event)"
                 styleClass="w-32"
@@ -88,6 +89,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 [options]="licenciaSelectOptions()"
                 optionLabel="label"
                 optionValue="value"
+                placeholder="Todas las licencias"
                 [ngModel]="filtroLicencia()"
                 (ngModelChange)="filtroLicencia.set($event)"
                 styleClass="w-32"
@@ -383,15 +385,13 @@ export class SecretariaExAlumnosComponent implements OnInit {
     return results;
   });
 
-  readonly yearSelectOptions = computed(() => [
-    { label: 'Todos los años', value: '' },
-    ...this.availableYears().map((y) => ({ label: y, value: y })),
-  ]);
+  readonly yearSelectOptions = computed(() =>
+    this.availableYears().map((y) => ({ label: y, value: y })),
+  );
 
-  readonly licenciaSelectOptions = computed(() => [
-    { label: 'Todas las licencias', value: '' },
-    ...this.availableLicencias().map((l) => ({ label: l, value: l })),
-  ]);
+  readonly licenciaSelectOptions = computed(() =>
+    this.availableLicencias().map((l) => ({ label: l, value: l })),
+  );
 
   protected readonly availableYears = computed<string[]>(() => {
     const years = this.facade

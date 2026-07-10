@@ -15,6 +15,7 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import type { PromocionStatus } from '@core/models/ui/promocion-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-admin-promocion-editar-drawer',
@@ -27,6 +28,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     AsyncBtnComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -38,130 +40,121 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
         </div>
       </ng-template>
       <ng-template #content>
-        <!-- ── Información general ───────────────────────────────────── -->
-        <section>
-          <h3 class="text-sm font-semibold mb-4 text-text-primary">Información general</h3>
+        <app-drawer-form>
+          <!-- ── Información general ───────────────────────────────────── -->
+          <section>
+            <h3 class="text-sm font-semibold mb-4 text-text-primary">Información general</h3>
 
-          <!-- Nombre (editable) -->
-          <div class="mb-4">
-            <label class="text-xs font-medium mb-1 block text-text-secondary">
-              Nombre de la promoción
-            </label>
-            <input
-              class="form-input"
-              type="text"
-              [(ngModel)]="nameModel"
-              placeholder="Ej: Promoción 30 de Marzo 2026"
-              data-llm-description="Nombre editable de la promoción"
-            />
-          </div>
-
-          <!-- Código (editable) -->
-          <div class="mb-4">
-            <label class="text-xs font-medium mb-1 block text-text-secondary"> Código </label>
-            <input
-              class="form-input"
-              type="text"
-              [(ngModel)]="codeModel"
-              placeholder="Ej: PROM-2026-03"
-              data-llm-description="Código editable de la promoción"
-            />
-          </div>
-
-          <!-- Fechas (readonly) -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
+            <!-- Nombre (editable) -->
+            <div class="mb-4">
               <label class="text-xs font-medium mb-1 block text-text-secondary">
-                Fecha inicio
+                Nombre de la promoción
               </label>
-              <div
-                class="form-input bg-elevated cursor-default text-text-muted"
-                
-              >
-                {{ formatDate(facade.selectedPromocion()?.startDate ?? '') }}
+              <input
+                class="form-input"
+                type="text"
+                [(ngModel)]="nameModel"
+                placeholder="Ej: Promoción 30 de Marzo 2026"
+                data-llm-description="Nombre editable de la promoción"
+              />
+            </div>
+
+            <!-- Código (editable) -->
+            <div class="mb-4">
+              <label class="text-xs font-medium mb-1 block text-text-secondary"> Código </label>
+              <input
+                class="form-input"
+                type="text"
+                [(ngModel)]="codeModel"
+                placeholder="Ej: PROM-2026-03"
+                data-llm-description="Código editable de la promoción"
+              />
+            </div>
+
+            <!-- Fechas (readonly) -->
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div>
+                <label class="text-xs font-medium mb-1 block text-text-secondary">
+                  Fecha inicio
+                </label>
+                <div class="form-input bg-elevated cursor-default text-text-muted">
+                  {{ formatDate(facade.selectedPromocion()?.startDate ?? '') }}
+                </div>
+              </div>
+              <div>
+                <label class="text-xs font-medium mb-1 block text-text-secondary">
+                  Fecha término
+                </label>
+                <div class="form-input bg-elevated cursor-default text-text-muted">
+                  {{ formatDate(facade.selectedPromocion()?.endDate ?? '') }}
+                </div>
               </div>
             </div>
-            <div>
-              <label class="text-xs font-medium mb-1 block text-text-secondary">
-                Fecha término
-              </label>
+            <p class="text-[10px] text-text-muted">
+              <app-icon name="info" [size]="10" />
+              Las fechas de inicio y término no son modificables una vez creada la promoción.
+            </p>
+          </section>
+
+          <!-- ── Estado ────────────────────────────────────────────────── -->
+          <section>
+            <h3 class="text-sm font-semibold mb-3 text-text-primary">Estado de la promoción</h3>
+
+            <p-select
+              [options]="availableStatusOptions()"
+              [(ngModel)]="statusModel"
+              optionLabel="label"
+              optionValue="value"
+              [style]="{ width: '100%' }"
+              data-llm-description="Cambiar estado de la promoción"
+            />
+
+            @if (plannedButNotStarted()) {
               <div
-                class="form-input bg-elevated cursor-default text-text-muted"
-                
+                class="mt-3 rounded-lg p-3 flex items-start gap-2 bg-warning/8 border border-warning/20"
               >
-                {{ formatDate(facade.selectedPromocion()?.endDate ?? '') }}
+                <app-icon name="clock" [size]="14" color="var(--state-warning)" />
+                <p class="text-xs text-text-secondary">
+                  La promoción aún no ha comenzado. Podrás cambiarla a
+                  <strong>En curso</strong> a partir del
+                  <strong>{{ formatDate(facade.selectedPromocion()?.startDate ?? '') }}</strong
+                  >.
+                </p>
               </div>
-            </div>
-          </div>
-          <p class="text-2xs text-text-muted">
-            <app-icon name="info" [size]="10" />
-            Las fechas de inicio y término no son modificables una vez creada la promoción.
-          </p>
-        </section>
+            }
 
-        <!-- ── Estado ────────────────────────────────────────────────── -->
-        <section>
-          <h3 class="text-sm font-semibold mb-3 text-text-primary">Estado de la promoción</h3>
+            @if (status() === 'cancelled') {
+              <div
+                class="mt-3 rounded-lg p-3 flex items-start gap-2 bg-error/6 border border-error/20"
+              >
+                <app-icon name="circle-alert" [size]="14" color="var(--state-error)" />
+                <p class="text-xs text-text-secondary">
+                  Cancelar una promoción es una acción irreversible. Los alumnos inscritos deberán
+                  ser reasignados manualmente.
+                </p>
+              </div>
+            }
+          </section>
 
-          <p-select
-            [options]="availableStatusOptions()"
-            [(ngModel)]="statusModel"
-            optionLabel="label"
-            optionValue="value"
-            [style]="{ width: '100%' }"
-            data-llm-description="Cambiar estado de la promoción"
-          />
-
-          @if (plannedButNotStarted()) {
-            <div
-              class="mt-3 rounded-lg p-3 flex items-start gap-2 bg-warning/8 border border-warning/20"
-              
+          <!-- ── Acciones ──────────────────────────────────────────────── -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button
+              class="btn-secondary"
+              (click)="layoutDrawer.close()"
+              data-llm-action="cancelar-editar-promocion"
             >
-              <app-icon name="clock" [size]="14" color="var(--state-warning)" />
-              <p class="text-xs text-text-secondary">
-                La promoción aún no ha comenzado. Podrás cambiarla a
-                <strong>En curso</strong> a partir del
-                <strong>{{ formatDate(facade.selectedPromocion()?.startDate ?? '') }}</strong
-                >.
-              </p>
-            </div>
-          }
-
-          @if (status() === 'cancelled') {
-            <div
-              class="mt-3 rounded-lg p-3 flex items-start gap-2 bg-error/6 border border-error/20"
-              
-            >
-              <app-icon name="circle-alert" [size]="14" color="var(--state-error)" />
-              <p class="text-xs text-text-secondary">
-                Cancelar una promoción es una acción irreversible. Los alumnos inscritos deberán ser
-                reasignados manualmente.
-              </p>
-            </div>
-          }
-        </section>
-
-        <!-- ── Acciones ──────────────────────────────────────────────── -->
-        <div
-          class="flex items-center gap-3 pt-4"
-          style="border-top: 1px solid var(--border-subtle);"
-        >
-          <button
-            class="btn-secondary"
-            (click)="layoutDrawer.close()"
-            data-llm-action="cancelar-editar-promocion"
-          >
-            Cancelar
-          </button>
-          <app-async-btn
-            label="Guardar cambios"
-            icon="save"
-            [loading]="facade.isSubmitting()"
-            [disabled]="!canSave()"
-            (click)="submit()"
-            data-llm-action="submit-editar-promocion"
-          />
-        </div>
+              Cancelar
+            </button>
+            <app-async-btn
+              label="Guardar cambios"
+              icon="save"
+              [loading]="facade.isSubmitting()"
+              [disabled]="!canSave()"
+              (click)="submit()"
+              data-llm-action="submit-editar-promocion"
+            />
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,

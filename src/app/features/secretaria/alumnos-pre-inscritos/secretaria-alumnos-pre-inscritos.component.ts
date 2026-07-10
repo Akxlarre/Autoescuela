@@ -75,6 +75,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
           [options]="statusOptions"
           optionLabel="label"
           optionValue="value"
+          placeholder="Todos los estados"
           [ngModel]="filterStatus()"
           (ngModelChange)="filterStatus.set($event)"
           styleClass="w-full sm:w-48"
@@ -84,6 +85,7 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
           [options]="licenciaOptions"
           optionLabel="label"
           optionValue="value"
+          placeholder="Todas las clases"
           [ngModel]="filterLicencia()"
           (ngModelChange)="filterLicencia.set($event)"
           styleClass="w-full sm:w-36"
@@ -231,7 +233,6 @@ export class SecretariaAlumnosPreInscritosComponent implements OnInit, AfterView
   protected readonly filterLicencia = signal('');
 
   readonly statusOptions = [
-    { label: 'Todos los estados', value: '' },
     { label: 'Sin evaluar', value: 'pending_review' },
     { label: 'Aptos', value: 'approved' },
     { label: 'Rechazados', value: 'rejected' },
@@ -240,7 +241,6 @@ export class SecretariaAlumnosPreInscritosComponent implements OnInit, AfterView
   ];
 
   readonly licenciaOptions = [
-    { label: 'Todas las clases', value: '' },
     { label: 'A2', value: 'A2' },
     { label: 'A3', value: 'A3' },
     { label: 'A4', value: 'A4' },

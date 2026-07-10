@@ -30,7 +30,13 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
 @Component({
   selector: 'app-layout-drawer',
   standalone: true,
-  imports: [CommonModule, IconComponent, PressFeedbackDirective, CardHoverDirective, NgComponentOutlet],
+  imports: [
+    CommonModule,
+    IconComponent,
+    PressFeedbackDirective,
+    CardHoverDirective,
+    NgComponentOutlet,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     // En desktop: hermano flex que empuja el contenido (layout-shift)
@@ -53,7 +59,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
     <div
       #panelEl
       data-drawer-panel
-      class="relative z-10 flex flex-col w-full h-full bg-base rounded-tl-[var(--radius-2xl)] lg:rounded-tr-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle overflow-hidden"
+      class="relative z-10 flex flex-col w-full h-full bg-base rounded-tl-2xl lg:rounded-tr-2xl lg:border-t lg:border-x border-border-subtle overflow-hidden"
       style="min-height: 0; will-change: transform;"
     >
       <!-- Header -->
@@ -75,7 +81,10 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
               <app-icon name="arrow-left" [size]="16" />
               <span class="hidden md:inline">Volver</span>
             </button>
-            <div class="w-px h-5 mr-3 shrink-0" style="background-color: var(--border-subtle);"></div>
+            <div
+              class="w-px h-5 mr-3 shrink-0"
+              style="background-color: var(--border-subtle);"
+            ></div>
           }
 
           @if (icon()) {
@@ -108,9 +117,12 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
                 </button>
               }
             </div>
-            
+
             <!-- Separador visual antes de cerrar -->
-            <div class="w-px h-5 mr-3 shrink-0" style="background-color: var(--border-subtle);"></div>
+            <div
+              class="w-px h-5 mr-3 shrink-0"
+              style="background-color: var(--border-subtle);"
+            ></div>
           }
 
           <!-- Botón Cerrar -->
@@ -126,7 +138,9 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
       </header>
 
       <!-- Body Dinámico -->
-      <div class="flex-1 overflow-y-auto mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pr-2 py-2 box-border flex flex-col">
+      <div
+        class="flex-1 overflow-y-auto mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pr-2 py-2 box-border flex flex-col"
+      >
         @if (component()) {
           <ng-container *ngComponentOutlet="component()!" />
         }

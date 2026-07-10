@@ -10,16 +10,17 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { FormsModule } from '@angular/forms';
 import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuracion-horario/configurador-horarios-drawer.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-ajustes-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, StatBoxComponent, FormsModule, BadgeComponent],
+  imports: [IconComponent, StatBoxComponent, FormsModule, BadgeComponent, DrawerFormComponent],
   template: `
-    <div class="ajustes-container flex h-full flex-col bg-surface text-text-primary">
+    <div class="ajustes-container flex h-full flex-col">
       <!-- Tabs Navigation -->
-      <div class="flex border-b border-border-subtle shrink-0">
+      <div class="flex border-b border-border-subtle shrink-0 mb-4">
         <button
           type="button"
           class="flex-1 py-3 text-sm font-semibold border-b-2 transition-all cursor-pointer"
@@ -58,7 +59,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
       </div>
 
       <!-- Tab Content Area -->
-      <div class="flex-1 overflow-y-auto p-5 space-y-6 min-h-0">
+      <app-drawer-form>
         <!-- ── TAB: PERFIL ────────────────────────────────────────── -->
         @if (activeTab() === 'perfil') {
           <div class="space-y-5">
@@ -81,7 +82,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
 
               <!-- Name + Role badge -->
               <div class="text-center space-y-2">
-                <h2 class="text-base font-bold text-text-primary leading-tight">
+                <h2 class="font-bold leading-tight text-text-primary">
                   {{ currentUser()?.name }}
                 </h2>
                 @if (roleBadgeLabel(); as label) {
@@ -182,7 +183,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
         <!-- ── TAB: CONFIGURACIONES ──────────────────────────────── -->
         @if (activeTab() === 'config') {
           <div class="space-y-5">
-            <h3 class="text-base font-bold text-text-primary">Apariencia y Visualización</h3>
+            <h3 class="font-bold text-text-primary">Apariencia y Visualización</h3>
 
             <!-- Theme cycle -->
             <div
@@ -298,7 +299,7 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
         @if (activeTab() === 'seguridad' && isAdmin()) {
           <div class="space-y-4">
             <div class="flex items-center justify-between">
-              <h3 class="text-base font-bold text-text-primary">Historial de Auditoría</h3>
+              <h3 class="font-bold text-text-primary">Historial de Auditoría</h3>
               <button
                 type="button"
                 class="cursor-pointer flex items-center gap-1 rounded-lg border border-border-default bg-surface hover:bg-subtle px-3 py-1.5 text-xs font-semibold text-text-secondary"
@@ -325,14 +326,12 @@ import { ConfiguradorHorariosDrawerComponent } from '@features/admin/configuraci
             </div>
           </div>
         }
-      </div>
 
-      <!-- Footer action -->
-      <div class="border-t border-border-subtle p-4 shrink-0 flex items-center justify-end gap-2">
-        <button type="button" class="btn-secondary px-4 py-2 text-xs" (click)="closeDrawer()">
-          Cerrar
-        </button>
-      </div>
+        <!-- Footer action -->
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button type="button" class="btn-secondary" (click)="closeDrawer()">Cerrar</button>
+        </ng-container>
+      </app-drawer-form>
     </div>
   `,
   styles: [

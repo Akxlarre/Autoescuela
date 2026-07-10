@@ -141,7 +141,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `Vehicle` | `dto` | `src/app/core/models/dto/vehicle.model.ts` |
 | `BrandConfig`, `HeroMediaConfig`, `HeroBackgroundConfig`, `HeroConfig`, `CourseConfig`, `WhyUsConfig`, `FAQConfig`, `ContactConfig`, `HourConfig`, `PromoConfig`, `TestimonialConfig`, `SocialConfig`, `PricingFooterItem`, `PricingFooterConfig`, `SiteData`, `WebsiteConfig` | `dto` | `src/app/core/models/dto/website-config.model.ts` |
 | `AgendaWeekKpis`, `AgendaSlotStatus`, `AgendaSlot`, `AgendaDayColumn`, `AgendaWeekData`, `AgendaInstructorFilter` | `ui` | `src/app/core/models/ui/agenda.model.ts` |
-| `EnrollmentSummary`, `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
+| `EnrollmentSummary`, `AlumnoDetalleUI`, `ProgresoAsistenciaProf`, `ElegibilidadProfUI`, `PagoUI`, `InasistenciaUI`, `InasistenciaClaseBUI`, `ClasePendienteReagendarUI`, `ClasePracticaUI`, `ProgresoUI` | `ui` | `src/app/core/models/ui/alumno-detalle.model.ts` |
 | `SemaforoAsistencia`, `AlumnoProfesionalTableRow` | `ui` | `src/app/core/models/ui/alumno-profesional-table-row.model.ts` |
 | `EnrollmentCurso`, `AlumnoStatus`, `AlumnoExpediente`, `AlumnoTableRow` | `ui` | `src/app/core/models/ui/alumno-table-row.model.ts` |
 | `InstructorTipo`, `AdvanceStatus`, `AnticipoCuentaCorriente`, `AnticipoHistorial`, `AnticiposKpis`, `RegistrarAnticipoPayload`, `InstructorOption` | `ui` | `src/app/core/models/ui/anticipos.model.ts` |

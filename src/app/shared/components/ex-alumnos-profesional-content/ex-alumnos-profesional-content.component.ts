@@ -79,6 +79,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
             [(ngModel)]="selectedClase"
             optionLabel="label"
             optionValue="value"
+            placeholder="Todas las clases"
             class="h-9"
             data-llm-description="Filter professional graduates by license class"
           />
@@ -205,12 +206,11 @@ export class ExAlumnosProfesionalContentComponent implements AfterViewInit {
   searchTerm = '';
   selectedClase = '';
 
-  readonly claseOptions = computed(() => [
-    { label: 'Todas las clases', value: '' },
-    ...[...new Set(this.egresados().map((e) => e.licencia))]
+  readonly claseOptions = computed(() =>
+    [...new Set(this.egresados().map((e) => e.licencia))]
       .sort()
       .map((l) => ({ label: l, value: l })),
-  ]);
+  );
 
   readonly heroKpis = computed((): SectionHeroKpi[] => [
     {

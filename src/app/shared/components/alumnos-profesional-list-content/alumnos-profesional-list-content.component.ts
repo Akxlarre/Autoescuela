@@ -95,7 +95,6 @@ interface SemaforoInfo {
         (actionClick)="handleHeroAction($event)"
       />
 
-
       <!-- Filtros + Tabla -->
       <div class="bento-banner card p-0 overflow-hidden shadow-sm" appCardHover>
         <!-- Toolbar -->
@@ -120,6 +119,7 @@ interface SemaforoInfo {
             [(ngModel)]="selectedClase"
             optionLabel="label"
             optionValue="value"
+            placeholder="Todas las clases"
             class="h-9"
             data-llm-description="Filter professional students by license class"
           />
@@ -128,6 +128,7 @@ interface SemaforoInfo {
             [(ngModel)]="selectedEstado"
             optionLabel="label"
             optionValue="value"
+            placeholder="Todos los estados"
             class="h-9"
             data-llm-description="Filter professional students by enrollment status"
           />
@@ -397,14 +398,12 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   selectedEstado = '';
 
   readonly claseOptions = [
-    { label: 'Todas las clases', value: '' },
     { label: 'A2', value: 'A2' },
     { label: 'A3', value: 'A3' },
     { label: 'A4', value: 'A4' },
     { label: 'A5', value: 'A5' },
   ];
   readonly estadoOptions = [
-    { label: 'Todos los estados', value: '' },
     { label: 'Activo', value: 'Activo' },
     { label: 'Finalizado', value: 'Finalizado' },
     { label: 'Inactivo', value: 'Inactivo' },

@@ -3,24 +3,26 @@ import { LowerCasePipe } from '@angular/common';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
 import { AdminInstructorHorarioDrawerComponent } from './admin-instructor-horario-drawer.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
-import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-admin-instructor-ver-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    BadgeComponent,
     LowerCasePipe,
     IconComponent,
+    BadgeComponent,
     StatBoxComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     @if (facade.selectedInstructor(); as inst) {
@@ -39,240 +41,242 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
           </div>
         </ng-template>
         <ng-template #content>
-          <!-- ── Header con nombre y tipo ────────────────────────────────────── -->
-          <div
-            class="flex flex-col items-center gap-3 pb-6 mb-6"
-            style="border-bottom: 1px solid var(--border-subtle)"
-          >
+          <app-drawer-form [hasFooter]="false">
+            <!-- ── Header con nombre y tipo ────────────────────────────────────── -->
             <div
-              class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
+              class="flex flex-col items-center gap-3 pb-6 mb-6"
+              style="border-bottom: 1px solid var(--border-subtle)"
             >
-              {{ inst.initials }}
-            </div>
-            <div class="text-center">
-              <p class="text-base font-semibold text-text-primary">
-                {{ inst.nombre }}
-              </p>
-              <p class="text-sm text-brand">Instructor {{ inst.tipoLabel | lowercase }}</p>
-            </div>
-
-            <!-- Badge estado -->
-            @if (inst.estado === 'activo') {
-              <app-badge variant="success">
-                <app-icon name="check-circle" [size]="12" />
-                Activo
-              </app-badge>
-            } @else {
-              <app-badge variant="neutral">
-                <app-icon name="circle" [size]="12" />
-                Inactivo
-              </app-badge>
-            }
-          </div>
-
-          <!-- ── KPI summary cards ───────────────────────────────────────────── -->
-          <div class="grid grid-cols-2 gap-3 mb-6">
-            <app-stat-box
-              label="Clases activas"
-              [value]="inst.activeClassesCount"
-              variant="brand"
-              [compact]="true"
-            />
-            <app-stat-box
-              label="Licencia"
-              [value]="inst.licenseStatusLabel"
-              [variant]="
-                inst.licenseStatus === 'valid'
-                  ? 'success'
-                  : inst.licenseStatus === 'expiring_soon'
-                    ? 'warning'
-                    : 'error'
-              "
-              [compact]="true"
-            />
-          </div>
-
-          <!-- ── Información Personal ────────────────────────────────────────── -->
-          <div class="flex flex-col gap-4 mb-6">
-            <h3 class="section-header">Información Personal</h3>
-
-            <div class="detail-row">
-              <app-icon name="id-card" [size]="15" />
-              <div>
-                <p class="detail-label">RUT</p>
-                <p class="detail-value">{{ inst.rut }}</p>
+              <div
+                class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
+              >
+                {{ inst.initials }}
               </div>
-            </div>
-
-            <div class="detail-row">
-              <app-icon name="mail" [size]="15" />
-              <div>
-                <p class="detail-label">Email</p>
-                <a class="detail-value text-brand no-underline" [href]="'mailto:' + inst.email">
-                  {{ inst.email }}
-                </a>
+              <div class="text-center">
+                <p class="text-base font-semibold text-text-primary">
+                  {{ inst.nombre }}
+                </p>
+                <p class="text-sm text-brand">Instructor {{ inst.tipoLabel | lowercase }}</p>
               </div>
+
+              <!-- Badge estado -->
+              @if (inst.estado === 'activo') {
+                <app-badge variant="success">
+                  <app-icon name="check-circle" [size]="12" />
+                  Activo
+                </app-badge>
+              } @else {
+                <app-badge variant="neutral">
+                  <app-icon name="circle" [size]="12" />
+                  Inactivo
+                </app-badge>
+              }
             </div>
 
-            @if (inst.phone) {
+            <!-- ── KPI summary cards ───────────────────────────────────────────── -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+              <app-stat-box
+                label="Clases activas"
+                [value]="inst.activeClassesCount"
+                variant="brand"
+                [compact]="true"
+              />
+              <app-stat-box
+                label="Licencia"
+                [value]="inst.licenseStatusLabel"
+                [variant]="
+                  inst.licenseStatus === 'valid'
+                    ? 'success'
+                    : inst.licenseStatus === 'expiring_soon'
+                      ? 'warning'
+                      : 'error'
+                "
+                [compact]="true"
+              />
+            </div>
+
+            <!-- ── Información Personal ────────────────────────────────────────── -->
+            <div class="flex flex-col gap-4 mb-6">
+              <h3 class="section-header">Información Personal</h3>
+
               <div class="detail-row">
-                <app-icon name="phone" [size]="15" />
+                <app-icon name="id-card" [size]="15" />
                 <div>
-                  <p class="detail-label">Teléfono</p>
-                  <p class="detail-value">{{ inst.phone }}</p>
+                  <p class="detail-label">RUT</p>
+                  <p class="detail-value">{{ inst.rut }}</p>
                 </div>
               </div>
-            }
 
-            <div class="detail-row">
-              <app-icon name="user-check" [size]="15" />
-              <div>
-                <p class="detail-label">Tipo</p>
-                <p class="detail-value">{{ inst.tipoLabel }}</p>
-              </div>
-            </div>
-
-            @if (inst.registrationDate) {
               <div class="detail-row">
-                <app-icon name="calendar" [size]="15" />
+                <app-icon name="mail" [size]="15" />
                 <div>
-                  <p class="detail-label">Fecha de registro</p>
-                  <p class="detail-value">{{ inst.registrationDate }}</p>
+                  <p class="detail-label">Email</p>
+                  <a class="detail-value text-brand no-underline" [href]="'mailto:' + inst.email">
+                    {{ inst.email }}
+                  </a>
                 </div>
               </div>
-            }
-          </div>
 
-          <!-- ── Información de Licencia ─────────────────────────────────────── -->
-          <div class="flex flex-col gap-4 mb-6">
-            <h3 class="section-header">Información de Licencia</h3>
-
-            @if (inst.licenseNumber) {
-              <div class="detail-row">
-                <app-icon name="file-check" [size]="15" />
-                <div>
-                  <p class="detail-label">Número de licencia</p>
-                  <p class="detail-value">{{ inst.licenseNumber }}</p>
-                </div>
-              </div>
-            }
-
-            <div class="detail-row">
-              <app-icon name="award" [size]="15" />
-              <div>
-                <p class="detail-label">Clase</p>
-                <p class="detail-value">{{ inst.licenseClass }}</p>
-              </div>
-            </div>
-
-            @if (inst.licenseExpiry) {
-              <div class="detail-row">
-                <app-icon name="calendar-x" [size]="15" />
-                <div>
-                  <p class="detail-label">Fecha de vencimiento</p>
-                  <p class="detail-value">{{ inst.licenseExpiry }}</p>
-                </div>
-              </div>
-            }
-
-            <div class="detail-row">
-              <app-icon name="shield-check" [size]="15" />
-              <div>
-                <p class="detail-label">Estado de validación</p>
-                <span [class]="'license-badge license-badge--' + inst.licenseStatus">
-                  {{ inst.licenseStatusLabel }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- ── Asignación Actual ────────────────────────────────────────────── -->
-          <div class="flex flex-col gap-4 mb-6">
-            <h3 class="section-header">Asignación Actual</h3>
-
-            @if (inst.vehiclePlate) {
-              <div class="detail-row">
-                <app-icon name="car" [size]="15" />
-                <div>
-                  <p class="detail-label">Vehículo</p>
-                  <p class="detail-value font-semibold">{{ inst.vehiclePlate }}</p>
-                  <p class="text-xs text-text-muted">{{ inst.vehicleModel }}</p>
-                </div>
-              </div>
-              @if (inst.vehicleAssignmentDate) {
+              @if (inst.phone) {
                 <div class="detail-row">
-                  <app-icon name="calendar-check" [size]="15" />
+                  <app-icon name="phone" [size]="15" />
                   <div>
-                    <p class="detail-label">Fecha de asignación</p>
-                    <p class="detail-value">{{ inst.vehicleAssignmentDate }}</p>
+                    <p class="detail-label">Teléfono</p>
+                    <p class="detail-value">{{ inst.phone }}</p>
                   </div>
                 </div>
               }
-            } @else {
-              <p class="text-sm italic text-text-muted">Sin vehículo asignado</p>
-            }
-          </div>
 
-          <!-- ── Historial de Vehículos ──────────────────────────────────────── -->
-          <div class="flex flex-col gap-3 mb-6">
-            <h3 class="section-header">Historial de Vehículos Asignados</h3>
-
-            @if (facade.assignmentHistory().length === 0) {
-              <div class="flex flex-col items-center gap-2 py-6">
-                <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
-                <p class="text-xs text-text-muted">Sin historial de asignaciones de vehículos</p>
+              <div class="detail-row">
+                <app-icon name="user-check" [size]="15" />
+                <div>
+                  <p class="detail-label">Tipo</p>
+                  <p class="detail-value">{{ inst.tipoLabel }}</p>
+                </div>
               </div>
-            } @else {
-              @for (h of facade.assignmentHistory(); track h.id) {
-                <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
+
+              @if (inst.registrationDate) {
+                <div class="detail-row">
+                  <app-icon name="calendar" [size]="15" />
                   <div>
-                    <p class="text-sm font-semibold text-text-primary">
-                      {{ h.vehiclePlate }}
-                    </p>
-                    <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>
-                  </div>
-                  <div class="text-right">
-                    <p class="text-xs text-text-secondary">
-                      {{ h.startDate }}
-                      @if (h.endDate) {
-                        → {{ h.endDate }}
-                      } @else {
-                        → Actual
-                      }
-                    </p>
+                    <p class="detail-label">Fecha de registro</p>
+                    <p class="detail-value">{{ inst.registrationDate }}</p>
                   </div>
                 </div>
               }
-            }
-          </div>
+            </div>
 
-          <!-- ── Acciones rápidas ────────────────────────────────────────────── -->
-          <div class="flex flex-col gap-2 mb-6">
-            <h3 class="section-header">Acciones rápidas</h3>
-            <button
-              class="quick-action-btn"
-              (click)="editar()"
-              data-llm-action="editar-instructor-desde-ver"
-            >
-              <app-icon name="edit" [size]="16" />
-              Editar perfil
-            </button>
-            <button
-              class="quick-action-btn"
-              (click)="verHorario()"
-              data-llm-action="ver-horario-instructor"
-            >
-              <app-icon name="calendar" [size]="16" />
-              Ver horario
-            </button>
-            <button
-              class="quick-action-btn border-brand text-brand"
-              data-llm-action="ver-clases-activas-instructor"
-            >
-              <app-icon name="clipboard-list" [size]="16" />
-              Ver clases activas ({{ inst.activeClassesCount }})
-            </button>
-          </div>
+            <!-- ── Información de Licencia ─────────────────────────────────────── -->
+            <div class="flex flex-col gap-4 mb-6">
+              <h3 class="section-header">Información de Licencia</h3>
+
+              @if (inst.licenseNumber) {
+                <div class="detail-row">
+                  <app-icon name="file-check" [size]="15" />
+                  <div>
+                    <p class="detail-label">Número de licencia</p>
+                    <p class="detail-value">{{ inst.licenseNumber }}</p>
+                  </div>
+                </div>
+              }
+
+              <div class="detail-row">
+                <app-icon name="award" [size]="15" />
+                <div>
+                  <p class="detail-label">Clase</p>
+                  <p class="detail-value">{{ inst.licenseClass }}</p>
+                </div>
+              </div>
+
+              @if (inst.licenseExpiry) {
+                <div class="detail-row">
+                  <app-icon name="calendar-x" [size]="15" />
+                  <div>
+                    <p class="detail-label">Fecha de vencimiento</p>
+                    <p class="detail-value">{{ inst.licenseExpiry }}</p>
+                  </div>
+                </div>
+              }
+
+              <div class="detail-row">
+                <app-icon name="shield-check" [size]="15" />
+                <div>
+                  <p class="detail-label">Estado de validación</p>
+                  <span [class]="'license-badge license-badge--' + inst.licenseStatus">
+                    {{ inst.licenseStatusLabel }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ── Asignación Actual ────────────────────────────────────────────── -->
+            <div class="flex flex-col gap-4 mb-6">
+              <h3 class="section-header">Asignación Actual</h3>
+
+              @if (inst.vehiclePlate) {
+                <div class="detail-row">
+                  <app-icon name="car" [size]="15" />
+                  <div>
+                    <p class="detail-label">Vehículo</p>
+                    <p class="detail-value font-semibold">{{ inst.vehiclePlate }}</p>
+                    <p class="text-xs text-text-muted">{{ inst.vehicleModel }}</p>
+                  </div>
+                </div>
+                @if (inst.vehicleAssignmentDate) {
+                  <div class="detail-row">
+                    <app-icon name="calendar-check" [size]="15" />
+                    <div>
+                      <p class="detail-label">Fecha de asignación</p>
+                      <p class="detail-value">{{ inst.vehicleAssignmentDate }}</p>
+                    </div>
+                  </div>
+                }
+              } @else {
+                <p class="text-sm italic text-text-muted">Sin vehículo asignado</p>
+              }
+            </div>
+
+            <!-- ── Historial de Vehículos ──────────────────────────────────────── -->
+            <div class="flex flex-col gap-3 mb-6">
+              <h3 class="section-header">Historial de Vehículos Asignados</h3>
+
+              @if (facade.assignmentHistory().length === 0) {
+                <div class="flex flex-col items-center gap-2 py-6">
+                  <app-icon name="file-text" [size]="28" color="var(--text-muted)" />
+                  <p class="text-xs text-text-muted">Sin historial de asignaciones de vehículos</p>
+                </div>
+              } @else {
+                @for (h of facade.assignmentHistory(); track h.id) {
+                  <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
+                    <div>
+                      <p class="text-sm font-semibold text-text-primary">
+                        {{ h.vehiclePlate }}
+                      </p>
+                      <p class="text-xs text-text-muted">{{ h.vehicleModel }}</p>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-xs text-text-secondary">
+                        {{ h.startDate }}
+                        @if (h.endDate) {
+                          → {{ h.endDate }}
+                        } @else {
+                          → Actual
+                        }
+                      </p>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+
+            <!-- ── Acciones rápidas ────────────────────────────────────────────── -->
+            <div class="flex flex-col gap-2 mb-6">
+              <h3 class="section-header">Acciones rápidas</h3>
+              <button
+                class="quick-action-btn"
+                (click)="editar()"
+                data-llm-action="editar-instructor-desde-ver"
+              >
+                <app-icon name="edit" [size]="16" />
+                Editar perfil
+              </button>
+              <button
+                class="quick-action-btn"
+                (click)="verHorario()"
+                data-llm-action="ver-horario-instructor"
+              >
+                <app-icon name="calendar" [size]="16" />
+                Ver horario
+              </button>
+              <button
+                class="quick-action-btn border-brand text-brand"
+                data-llm-action="ver-clases-activas-instructor"
+              >
+                <app-icon name="clipboard-list" [size]="16" />
+                Ver clases activas ({{ inst.activeClassesCount }})
+              </button>
+            </div>
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }

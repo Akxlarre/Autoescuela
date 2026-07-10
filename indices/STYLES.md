@@ -10,6 +10,13 @@
 | `_scrollbar.scss` | Styling minimalista y dinámico para scrollbars. Integrado con tokens. Solo desktop. | `styles/tokens/_scrollbar.scss` | ✅ Estable |
 
 
+## Componentes (clases globales)
+
+| Archivo | Responsabilidad | Ubicación | Estado |
+|---------|----------------|-----------|--------|
+| `_form-fields.scss` | **Fuente única** de los tokens de campo de formulario (form-ux §2): `.field-label`, `.field-input` (+ `:focus`, `::placeholder`, `--error`, `--valid`), `.field-hint`, `.field-error`, `.field-success`, `.section-title`. Reemplaza las copias locales que estaban duplicadas en ~20 componentes (fix-025). Clases globales (sin `@layer`) para ganar sobre `input,textarea` de styles.scss y los `@layer` de PrimeNG/Tailwind. Consúmelas junto al shell `app-drawer-form`. | `styles/components/_form-fields.scss` | ✅ Estable |
+
+
 ## Themes (scoped por sede)
 
 Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`). Se montan en `styles.scss` vía `@use`.
@@ -59,8 +66,6 @@ Overrides de tokens que aplican SOLO bajo un selector de scope (nunca en `:root`
 
 > **Patrón `/N` (opacity modifier):** En Tailwind v4, todos los colores en `@theme` soportan `bg-TOKEN/N` y `border-TOKEN/N` donde N es el porcentaje de opacidad (1–100). Equivale a `color-mix(in oklch, var(--color-TOKEN) N%, transparent)`. Reemplaza los `style="background: color-mix(...)"` inline.
 
-> **Tipografía (fix-032):** la escala incluye **`text-2xs` (10px)** como piso absoluto para micro-labels (bridge `--text-2xs` en `@theme` → `--text-2xs` de `_variables.scss`). Solo fija font-size (line-height se hereda). **PROHIBIDO `text-[NNpx]` arbitrario** (AP-014, guardrail ARCH-17) y prohibido crear tamaños menores a 10px.
-
 ### Utilities `@utility` en `tailwind.css`
 
 | Clase | CSS generado | Cuándo usar |
@@ -80,21 +85,16 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 | `btn-ghost` | Sin borde, fondo transparente. Hover: `bg-subtle` + texto sube a `text-primary`. Tokens `--btn-ghost-*`. | Acción terciaria discreta (filas de tabla, listas) |
 | `btn-warning-soft` | Fondo `--state-warning-bg`, texto `--state-warning`, borde `--state-warning-border`. Dark-mode aware vía tokens. | Acción de transición de estado warning (ej: "Iniciar") |
 | `btn-success-soft` | Fondo `--state-success-bg`, texto `--state-success`, borde `--state-success-border`. Dark-mode aware vía tokens. | Acción de confirmación positiva (ej: "Completar") |
-| `btn-danger-ghost` | Fondo `--btn-danger-ghost-bg` (→ `--bg-surface`), borde/texto `--state-error-border`/`--state-error`. Dark-mode aware (fix-031). Hover: `--state-error-bg`. | Acción destructiva en heroes/cabeceras |
-| `btn-danger-solid` | Fondo `--btn-danger-solid-bg` (→ `--state-error-strong`, rojo medio con texto blanco AA en ambos modos, sin override dark). Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
-| `btn-neutral` | Fondo `--btn-neutral-bg` (→ `--bg-subtle`), texto `--text-primary`. Hover: `brightness(0.96)` (patrón soft). Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales |
-| `btn-outline` | Borde `--border-muted`, fondo `--bg-surface`, texto `--text-primary`. Hover: `--bg-elevated`. Dark-mode aware vía tokens. | Botones secundarios de paginación, acciones de peso medio |
+| `btn-danger-ghost` | **Fondo blanco puro, borde rojo-300, texto rojo-600**. Usa `theme()` — **inmune a cascade** de `surface-hero`. Hover: rojo-50. | Acción destructiva en heroes/cabeceras |
+| `btn-danger-solid` | **Fondo rojo-600, texto blanco**. Hover: rojo-700. Padding ligeramente mayor (`py-2.5 px-5`). | Confirmación de acción destructiva (modales) |
+| `btn-neutral` | **Fondo gris-100, texto gris-700**. Hover: gris-200. Padding igual que `btn-danger-solid`. | Cancelar/cerrar en modales (sin dependencia de cascade) |
+| `btn-outline` | Borde `--border-muted`, fondo `--bg-surface`, texto `--text-primary`. Hover: `--bg-elevated`. `:disabled` → opacity 0.4 + cursor not-allowed via CSS. Dark-mode aware vía tokens. | Botones secundarios de paginación, acciones de peso medio |
 
-> **Nota cascade (fix-031):** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan tokens de Capa 4 propios (`--btn-danger-*`, `--btn-neutral-*`) que `.surface-hero` **no reescribe** → siguen siendo cascade-immune (la acción destructiva mantiene su identidad roja en cualquier contexto), pero ahora **sí responden a dark mode** porque esos tokens referencian tokens de estado/superficie. Ya no queda ningún `theme(colors.*)` en `tailwind.css`.
-
-> **Disabled unificado (fix-031):** todas las utilidades `btn-*` con `:disabled` por opacidad usan `var(--btn-disabled-opacity)` (0.5). Excepción canónica: `btn-primary` usa disabled semántico (`bg-subtle` + `text-muted`, opacity 1).
+> **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
 
 ### Badge de estado (`badge-*`)
 
-Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS —
-dark-mode aware. Radio/padding desde tokens de Capa 4 (fix-036): `var(--badge-radius)`
-(`radius-full`), `var(--badge-padding-y) var(--badge-padding-x)` (`space-1 space-3` =
-`4px 12px`), `font-size: 0.75rem`.
+Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS — dark-mode aware. Padding compacto `py-0.5 px-2`, `border-radius: var(--radius-md)`, `font-size: 0.75rem`.
 
 | Clase | Color de estado | Cuándo usar |
 |-------|----------------|-------------|
@@ -102,19 +102,6 @@ dark-mode aware. Radio/padding desde tokens de Capa 4 (fix-036): `var(--badge-ra
 | `badge-success` | `--state-success` (verde) | Aprobados, completados, activos |
 | `badge-error` | `--state-error` (rojo) | Errores, rechazados, fallidos |
 | `badge-info` | `--state-info` (azul) | Información neutral, en progreso |
-| `badge-neutral` | `--bg-subtle`/`--text-secondary` (gris) | Sin estado particular — fallback |
-| `badge-brand` | `--ds-brand`/`--color-primary-muted`/`--accent-border` (marca) | Chips de rol/marca (ej. "Administrador"), NO es un estado — evitar como color de éxito/aprobado (fix-038) |
-
-**Componente `<app-badge [variant]="...">`** (fix-036/038) es la fuente única recomendada:
-variants `success\|warning\|error\|info\|neutral\|brand` mapean 1:1 a estas clases vía un
-`computed()` con `switch` que retorna **strings literales completos** — NUNCA
-concatenación dinámica (`'badge-' + variant()`). Tailwind v4 poda las clases `@utility`
-por contenido escaneado igual que cualquier utilidad: si el nombre completo de la clase
-no aparece como string literal en algún `.ts`/`.html` escaneado, **no se genera CSS**
-aunque la regla `@utility` exista en `tailwind.css` (gotcha real: `badge-neutral` no
-renderizaba hasta que se escribió el literal en el componente; antes solo sobrevivía por
-colisiones accidentales — `badge-success`/`badge-error` por un uso local en
-`vehicle-documents-drawer`, `badge-info` por el nombre de un ícono Lucide homónimo).
 
 > Preferir `[class.badge-success]="condition"` sobre `[style.background]="color-mix(...)"` para estado dinámico.
 
@@ -159,6 +146,21 @@ colisiones accidentales — `badge-success`/`badge-error` por un uso local en
 
 > **⚠️ Distinción clave:** `.kpi-label` ≠ `.section-eyebrow`. La primera es para datos numéricos (uppercase + tracking agresivo). La segunda es para texto de contexto pre-título (natural, legible).
 
+## Campos de Formulario (`styles/components/_form-fields.scss`)
+
+Fuente única de verdad para los campos de formulario (drawers/modales/páginas). Definidas globalmente (fix-025 / form-ux §2). **PROHIBIDO** redefinirlas localmente en el `styles:` de un componente — antes estaban duplicadas en ~20 componentes.
+
+| Clase | Propósito |
+|-------|-----------|
+| `.section-title` | Título de sección de formulario — `text-sm`, weight 600, border-bottom |
+| `.field-label` | Etiqueta de campo — `text-sm`, weight 500, `text-primary` |
+| `.field-input` | Input/textarea/select base — `bg-base`, `radius-md`, focus ring `--ds-brand`. Usar `.resize-none` extra en textareas |
+| `.field-input--error` / `.field-input--valid` | Borde de estado (rojo / verde) según validación |
+| `.field-hint` | Texto de ayuda contextual — `12px`, muted |
+| `.field-error` / `.field-success` | Mensaje de validación — `12px`, color de estado |
+
+> Consumidas por el shell `app-drawer-form` y todos los drawers/formularios migrados. Un cambio aquí se propaga a toda la app.
+
 ## Token Cascade en `.surface-hero`
 
 `.surface-hero` incluye **15 overrides de tokens CSS** que cascadean automáticamente a todos los hijos. Usar `surface-hero` en un contenedor adapta colores sin ningún cambio en el HTML hijo:
@@ -190,31 +192,31 @@ colisiones accidentales — `badge-success`/`badge-error` por un uso local en
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 482 | `#38bdf8` |
-| `--text-muted` | 426 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 281 | `var(--color-primary-text)` |
-| `--border-subtle` | 241 | `rgba(255, 255, 255, 0.18)` |
-| `--state-error` | 236 | `#f87171` |
-| `--text-secondary` | 230 | `rgba(255, 255, 255, 0.78)` |
-| `--state-success` | 218 | `#4ade80` |
-| `--bg-surface` | 204 | `#18181b` |
+| `--ds-brand` | 484 | `#38bdf8` |
+| `--text-muted` | 415 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 263 | `var(--color-primary-text)` |
+| `--state-error` | 231 | `#f87171` |
+| `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
+| `--state-success` | 222 | `#4ade80` |
+| `--border-subtle` | 215 | `rgba(255, 255, 255, 0.18)` |
+| `--bg-surface` | 197 | `#18181b` |
 | `--color-primary` | 183 | `#38bdf8` |
-| `--border-default` | 149 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 148 | `#fbbf24` |
-| `--bg-elevated` | 91 | `#27272a` |
-| `--text-sm` | 77 | `0.875rem` |
-| `--duration-fast` | 74 | `200ms` |
-| `--bg-subtle` | 72 | `rgba(255, 255, 255, 0.1)` |
-| `--radius-md` | 61 | `10px` |
+| `--state-warning` | 154 | `#fbbf24` |
+| `--border-default` | 147 | `rgba(255, 255, 255, 0.28)` |
+| `--bg-elevated` | 92 | `#27272a` |
+| `--bg-subtle` | 67 | `rgba(255, 255, 255, 0.1)` |
+| `--duration-fast` | 66 | `200ms` |
+| `--text-sm` | 65 | `0.875rem` |
+| `--radius-md` | 57 | `10px` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
-| `--border-muted` | 54 | `var(--border-subtle)` |
-| `--bg-base` | 53 | `#09090b` |
+| `--state-success-bg` | 49 | `rgba(74, 222, 128, 0.1)` |
+| `--bg-base` | 49 | `#09090b` |
 | `--color-primary-text` | 48 | `#ffffff` |
-| `--state-success-bg` | 47 | `rgba(74, 222, 128, 0.1)` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--text-xs` | 44 | `0.75rem` |
 | `--color-success` | 43 | `—` |
-| `--state-warning-bg` | 38 | `rgba(251, 191, 36, 0.1)` |
+| `--border-muted` | 42 | `var(--border-subtle)` |
+| `--state-warning-bg` | 41 | `rgba(251, 191, 36, 0.1)` |
 
 ## Clases semánticas del Design System
 
@@ -224,8 +226,8 @@ colisiones accidentales — `badge-success`/`badge-error` por un uso local en
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
+| `.surface-glass` | 10 | `src/styles/tokens/_variables.scss` |
 | `.card-tinted` | 10 | `src/styles/tokens/_variables.scss` |
-| `.surface-glass` | 9 | `src/styles/tokens/_variables.scss` |
 | `.surface-hero` | 6 | `src/styles/tokens/_variables.scss` |
 | `.indicator-live` | 5 | `src/styles/tokens/_variables.scss` |
 | `.section-eyebrow` | 1 | `src/styles/tokens/_variables.scss` |
@@ -252,8 +254,6 @@ colisiones accidentales — `badge-success`/`badge-error` por un uso local en
 | `.bento-card__body--spread` | — |
 | `.bento-feature` | 2/3 ancho × 2 filas |
 | `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
-| `.bento-grid--fill-screen` | — |
-| `.bento-grid--fill-screen-2` | — |
 | `.bento-grid--forms` | — |
 | `.bento-grid--four-equal` | — |
 | `.bento-grid--wizard` | — |
@@ -279,7 +279,7 @@ colisiones accidentales — `badge-success`/`badge-error` por un uso local en
 | **colorpicker** | `.p-colorpicker` · `.p-colorpicker-panel` |
 | **datatable** | `.p-datatable` · `.p-datatable-header` · `.p-datatable-sm` · `.p-datatable-table` · `.p-datatable-table-wrapper` +3 |
 | **datepicker** | `.p-datepicker` · `.p-datepicker-day` · `.p-datepicker-dropdown` · `.p-datepicker-header` · `.p-datepicker-next` +5 |
-| **dialog** | `.p-dialog` · `.p-dialog-content` · `.p-dialog-header` · `.p-dialog-mask` |
+| **dialog** | `.p-dialog` · `.p-dialog-close-button` · `.p-dialog-content` · `.p-dialog-footer` · `.p-dialog-header` +3 |
 | **disabled** | `.p-disabled` |
 | **dropdown** | `.p-dropdown-item` · `.p-dropdown-items` |
 | **focus** | `.p-focus` |
@@ -319,7 +319,7 @@ colisiones accidentales — `badge-success`/`badge-error` por un uso local en
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1258 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1247 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -328,20 +328,20 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | Repeticiones | Cluster |
 |--------------|---------|
 | 64 | `text-sm font-semibold text-text-primary` |
-| 38 | `text-sm font-bold text-text-primary` |
-| 31 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
+| 37 | `text-sm font-bold text-text-primary` |
+| 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |
-| 16 | `text-xs font-semibold text-text-primary` |
-| 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
-| 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
+| 15 | `text-xs font-semibold text-text-primary` |
+| 15 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
+| 14 | `text-[10px] font-bold text-text-muted uppercase tracking-wider` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
-| 13 | `text-base font-semibold text-text-primary` |
-| 12 | `text-base font-bold text-text-primary` |
-| 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
+| 12 | `text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
+| 11 | `ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning` |
+| 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
 
 
 <!-- AUTO-GENERATED:END -->

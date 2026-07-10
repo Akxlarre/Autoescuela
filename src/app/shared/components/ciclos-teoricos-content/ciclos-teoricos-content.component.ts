@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { DialogModule } from 'primeng/dialog';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -36,7 +37,14 @@ import type {
   selector: 'app-ciclos-teoricos-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, IconComponent, BadgeComponent, SkeletonBlockComponent],
+  imports: [
+    FormsModule,
+    SelectModule,
+    DialogModule,
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+  ],
   styles: `
     .field-input {
       width: 100%;
@@ -352,51 +360,54 @@ import type {
                 }
               </div>
             }
-
-            <!-- Panel: traer alumno de otro ciclo -->
-            @if (addPanelOpen()) {
-              <div
-                class="rounded-lg border p-3 flex flex-col gap-2"
-                [style.border-color]="'var(--border-subtle)'"
-              >
-                <p class="text-xs font-semibold text-text-primary">
-                  Incorporar alumno de otro ciclo
-                </p>
-                @if (addableStudents().length === 0) {
-                  <p class="text-xs text-text-muted py-2">
-                    No hay alumnos en otros ciclos de esta sede.
-                  </p>
-                } @else {
-                  <div class="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                    @for (a of addableStudents(); track a.enrollmentId) {
-                      <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-elevated">
-                        <div class="min-w-0 flex-1">
-                          <p class="text-sm text-text-primary truncate">{{ a.nombre }}</p>
-                          <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>
-                        </div>
-                        <button
-                          class="text-xs font-medium text-brand hover:underline cursor-pointer"
-                          [disabled]="isSaving()"
-                          data-llm-action="incorporar-alumno"
-                          (click)="addStudent.emit(a.enrollmentId)"
-                        >
-                          Agregar
-                        </button>
-                      </div>
-                    }
-                  </div>
-                }
-                <div class="flex justify-end">
-                  <button class="btn-secondary text-xs px-3 py-1.5" (click)="closeAddPanel()">
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-            }
           </section>
         </div>
       }
     </div>
+
+    <!-- Modal: traer alumno de otro ciclo -->
+    <p-dialog
+      header="Incorporar alumno de otro ciclo"
+      [visible]="addPanelOpen()"
+      (visibleChange)="onAddPanelVisibleChange($event)"
+      [modal]="true"
+      [closable]="true"
+      [dismissableMask]="true"
+      [style]="{ width: '480px' }"
+    >
+      @if (addableStudents().length === 0) {
+        <p class="text-sm text-text-muted py-2">No hay alumnos en otros ciclos de esta sede.</p>
+      } @else {
+        <div class="flex flex-col gap-1 max-h-96 overflow-y-auto">
+          @for (a of addableStudents(); track a.enrollmentId) {
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-elevated">
+              <div class="min-w-0 flex-1">
+                <p class="text-sm text-text-primary truncate">{{ a.nombre }}</p>
+                <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>
+              </div>
+              <button
+                class="text-xs font-medium text-brand hover:underline cursor-pointer flex items-center gap-1"
+                [disabled]="isSaving()"
+                data-llm-action="incorporar-alumno"
+                (click)="onAddStudent(a.enrollmentId)"
+              >
+                @if (addingEnrollmentId() === a.enrollmentId) {
+                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                  Agregando...
+                } @else {
+                  Agregar
+                }
+              </button>
+            </div>
+          }
+        </div>
+      }
+      <ng-template pTemplate="footer">
+        <div class="flex justify-end px-2 py-2">
+          <button class="btn-secondary text-sm px-4 py-2" (click)="closeAddPanel()">Cerrar</button>
+        </div>
+      </ng-template>
+    </p-dialog>
   `,
 })
 export class CiclosTeoricosContentComponent {
@@ -431,7 +442,9 @@ export class CiclosTeoricosContentComponent {
   protected readonly movingEnrollmentId = signal<number | null>(null);
   protected readonly moveTargetCycleId = signal<number | null>(null);
   protected readonly addPanelOpen = signal(false);
+  protected readonly addingEnrollmentId = signal<number | null>(null);
   private previousSendingClassId: number | null = null;
+  private previousIsSaving = false;
 
   constructor() {
     // Cierra el panel de destinatarios solo cuando el envío en curso (facade) termina,
@@ -447,6 +460,15 @@ export class CiclosTeoricosContentComponent {
         this.closeSendPanel();
       }
       this.previousSendingClassId = sendingClassId;
+    });
+
+    // Limpia el spinner de "Agregando..." solo cuando el guardado en curso (facade) termina.
+    effect(() => {
+      const isSaving = this.isSaving();
+      if (!isSaving && this.previousIsSaving) {
+        this.addingEnrollmentId.set(null);
+      }
+      this.previousIsSaving = isSaving;
     });
   }
 
@@ -566,5 +588,14 @@ export class CiclosTeoricosContentComponent {
 
   protected closeAddPanel(): void {
     this.addPanelOpen.set(false);
+  }
+
+  protected onAddPanelVisibleChange(visible: boolean): void {
+    this.addPanelOpen.set(visible);
+  }
+
+  protected onAddStudent(enrollmentId: number): void {
+    this.addingEnrollmentId.set(enrollmentId);
+    this.addStudent.emit(enrollmentId);
   }
 }

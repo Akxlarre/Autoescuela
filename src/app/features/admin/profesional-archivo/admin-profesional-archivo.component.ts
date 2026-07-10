@@ -456,7 +456,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <div class="flex flex-wrap gap-1.5">
                       @for (nota of alumno.notas; track nota.moduleNumber) {
                         <div
-                          class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-[36px]"
+                          class="flex flex-col items-center justify-center border border-border-subtle rounded-md p-1.5 flex-1 min-w-9"
                         >
                           <span class="text-[9px] text-text-muted mb-1 font-medium"
                             >M{{ nota.moduleNumber }}</span

@@ -3,6 +3,7 @@ import { InstructoresFacade } from '@core/facades/instructores.facade';
 import type { InstructorHorarioSession } from '@core/models/ui/instructor-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 // ── Helpers de fecha ──────────────────────────────────────────────────────────
 
@@ -63,116 +64,118 @@ interface DayGroup {
   selector: 'app-admin-instructor-horario-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent],
+  imports: [IconComponent, SkeletonBlockComponent, DrawerFormComponent],
   template: `
-    <div class="flex flex-col gap-5">
-      <!-- ── Cabecera con nombre del instructor ─────────────────────────────── -->
-      @if (facade.selectedInstructor(); as inst) {
-        <div
-          class="flex items-center gap-3 pb-4"
-          style="border-bottom: 1px solid var(--border-subtle)"
-        >
-          <div class="avatar-sm">{{ inst.initials }}</div>
-          <div>
-            <p class="text-sm font-semibold text-text-primary">
-              {{ inst.nombre }}
-            </p>
-            <p class="text-xs text-text-muted">
-              Próximas {{ totalSessions() }}
-              {{ totalSessions() === 1 ? 'clase' : 'clases' }} agendadas
-            </p>
-          </div>
-        </div>
-      }
-
-      <!-- ── Skeleton ───────────────────────────────────────────────────────── -->
-      @if (facade.isLoadingHorario()) {
-        <div class="flex flex-col gap-5">
-          @for (_ of [1, 2]; track $index) {
-            <div class="flex flex-col gap-3">
-              <app-skeleton-block variant="text" width="120px" height="13px" />
-              @for (__ of [1, 2, 3]; track $index) {
-                <div class="session-card-skeleton">
-                  <app-skeleton-block variant="text" width="48px" height="22px" />
-                  <div class="flex flex-col gap-1.5 flex-1">
-                    <app-skeleton-block variant="text" width="60%" height="14px" />
-                    <app-skeleton-block variant="text" width="40%" height="11px" />
-                  </div>
-                  <app-skeleton-block variant="rect" width="54px" height="20px" />
-                </div>
-              }
+    <app-drawer-form [hasFooter]="false">
+      <div class="flex flex-col gap-5">
+        <!-- ── Cabecera con nombre del instructor ─────────────────────────────── -->
+        @if (facade.selectedInstructor(); as inst) {
+          <div
+            class="flex items-center gap-3 pb-4"
+            style="border-bottom: 1px solid var(--border-subtle)"
+          >
+            <div class="avatar-sm">{{ inst.initials }}</div>
+            <div>
+              <p class="text-sm font-semibold text-text-primary">
+                {{ inst.nombre }}
+              </p>
+              <p class="text-xs text-text-muted">
+                Próximas {{ totalSessions() }}
+                {{ totalSessions() === 1 ? 'clase' : 'clases' }} agendadas
+              </p>
             </div>
-          }
-        </div>
-
-        <!-- ── Estado vacío ───────────────────────────────────────────────────── -->
-      } @else if (dayGroups().length === 0) {
-        <div class="flex flex-col items-center gap-3 py-10">
-          <div class="empty-icon-wrap">
-            <app-icon name="calendar-check" [size]="28" color="var(--text-muted)" />
           </div>
-          <div class="text-center">
-            <p class="text-sm font-medium text-text-secondary">Sin clases agendadas</p>
-            <p class="text-xs mt-1 text-text-muted">
-              No hay clases pendientes para este instructor.
-            </p>
-          </div>
-        </div>
+        }
 
-        <!-- ── Grupos por día ─────────────────────────────────────────────────── -->
-      } @else {
-        @for (group of dayGroups(); track group.dateKey) {
-          <div class="flex flex-col gap-2">
-            <!-- Encabezado del día -->
-            <div class="flex items-center gap-2">
-              <span
-                class="day-pill"
-                [class.day-pill--today]="group.isToday"
-                [class.day-pill--tomorrow]="group.isTomorrow"
-              >
-                {{ group.label }}
-              </span>
-              <span class="text-xs text-text-muted">
-                {{ group.sessions.length }}
-                {{ group.sessions.length === 1 ? 'clase' : 'clases' }}
-              </span>
-            </div>
-
-            <!-- Sesiones del día -->
-            @for (session of group.sessions; track session.id) {
-              <div class="session-card">
-                <!-- Hora -->
-                <div class="time-block" [class.time-block--today]="group.isToday">
-                  <span class="time-label">{{ timeLabel(session.scheduledAt) }}</span>
-                  <span class="duration-label">{{ session.durationMin }} min</span>
-                </div>
-
-                <!-- Info alumno -->
-                <div class="flex items-center gap-3 flex-1 min-w-0">
-                  <div class="student-avatar">{{ session.studentInitials }}</div>
-                  <div class="flex flex-col min-w-0">
-                    <span class="text-sm font-medium truncate text-text-primary">
-                      {{ session.studentName }}
-                    </span>
-                    @if (session.vehiclePlate) {
-                      <span class="text-xs truncate text-text-muted">
-                        <app-icon name="car" [size]="11" />
-                        {{ session.vehiclePlate }}
-                      </span>
-                    }
+        <!-- ── Skeleton ───────────────────────────────────────────────────────── -->
+        @if (facade.isLoadingHorario()) {
+          <div class="flex flex-col gap-5">
+            @for (_ of [1, 2]; track $index) {
+              <div class="flex flex-col gap-3">
+                <app-skeleton-block variant="text" width="120px" height="13px" />
+                @for (__ of [1, 2, 3]; track $index) {
+                  <div class="session-card-skeleton">
+                    <app-skeleton-block variant="text" width="48px" height="22px" />
+                    <div class="flex flex-col gap-1.5 flex-1">
+                      <app-skeleton-block variant="text" width="60%" height="14px" />
+                      <app-skeleton-block variant="text" width="40%" height="11px" />
+                    </div>
+                    <app-skeleton-block variant="rect" width="54px" height="20px" />
                   </div>
-                </div>
-
-                <!-- Badge clase N° -->
-                @if (session.classNumber !== null) {
-                  <span class="class-badge">Clase {{ session.classNumber }}</span>
                 }
               </div>
             }
           </div>
+
+          <!-- ── Estado vacío ───────────────────────────────────────────────────── -->
+        } @else if (dayGroups().length === 0) {
+          <div class="flex flex-col items-center gap-3 py-10">
+            <div class="empty-icon-wrap">
+              <app-icon name="calendar-check" [size]="28" color="var(--text-muted)" />
+            </div>
+            <div class="text-center">
+              <p class="text-sm font-medium text-text-secondary">Sin clases agendadas</p>
+              <p class="text-xs mt-1 text-text-muted">
+                No hay clases pendientes para este instructor.
+              </p>
+            </div>
+          </div>
+
+          <!-- ── Grupos por día ─────────────────────────────────────────────────── -->
+        } @else {
+          @for (group of dayGroups(); track group.dateKey) {
+            <div class="flex flex-col gap-2">
+              <!-- Encabezado del día -->
+              <div class="flex items-center gap-2">
+                <span
+                  class="day-pill"
+                  [class.day-pill--today]="group.isToday"
+                  [class.day-pill--tomorrow]="group.isTomorrow"
+                >
+                  {{ group.label }}
+                </span>
+                <span class="text-xs text-text-muted">
+                  {{ group.sessions.length }}
+                  {{ group.sessions.length === 1 ? 'clase' : 'clases' }}
+                </span>
+              </div>
+
+              <!-- Sesiones del día -->
+              @for (session of group.sessions; track session.id) {
+                <div class="session-card">
+                  <!-- Hora -->
+                  <div class="time-block" [class.time-block--today]="group.isToday">
+                    <span class="time-label">{{ timeLabel(session.scheduledAt) }}</span>
+                    <span class="duration-label">{{ session.durationMin }} min</span>
+                  </div>
+
+                  <!-- Info alumno -->
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <div class="student-avatar">{{ session.studentInitials }}</div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-sm font-medium truncate text-text-primary">
+                        {{ session.studentName }}
+                      </span>
+                      @if (session.vehiclePlate) {
+                        <span class="text-xs truncate text-text-muted">
+                          <app-icon name="car" [size]="11" />
+                          {{ session.vehiclePlate }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+
+                  <!-- Badge clase N° -->
+                  @if (session.classNumber !== null) {
+                    <span class="class-badge">Clase {{ session.classNumber }}</span>
+                  }
+                </div>
+              }
+            </div>
+          }
         }
-      }
-    </div>
+      </div>
+    </app-drawer-form>
   `,
   styles: `
     .avatar-sm {

@@ -165,6 +165,10 @@ export class AsistenciaClaseBFacade {
       );
       const label = status === 'presente' ? 'Presente' : 'Ausente';
       this.toast.success(`Asistencia marcada como ${label}`);
+
+      if (dbStatus === 'absent' && row.enrollmentId) {
+        await this.applyAbsencePenalty(row.enrollmentId, row.alumnoName);
+      }
     } catch {
       this.toast.error('Error al registrar la asistencia');
     } finally {
@@ -395,11 +399,51 @@ export class AsistenciaClaseBFacade {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
+  /**
+   * RF-053: tras registrar una inasistencia, verifica si el alumno acumuló
+   * 2+ inasistencias no justificadas y — de ser así — la BD ya canceló sus
+   * agendamientos futuros (`apply_class_b_absence_penalty`). Refresca las
+   * alertas y avisa a la secretaria vía toast si se liberó agenda.
+   */
+  private async applyAbsencePenalty(
+    enrollmentId: number,
+    alumnoName: string | null,
+  ): Promise<void> {
+    const { data: cancelledCount } = await this.supabase.client.rpc(
+      'apply_class_b_absence_penalty',
+      { p_enrollment_id: enrollmentId },
+    );
+
+    await this.refreshAlertasSilently();
+
+    if ((cancelledCount ?? 0) > 0) {
+      this.toast.warning(
+        'Agenda liberada por inasistencias',
+        `${alumnoName ?? 'El alumno'} acumuló 2 inasistencias no justificadas: se cancelaron ${cancelledCount} clase(s) futura(s).`,
+      );
+    }
+  }
+
   private async refreshSilently(): Promise<void> {
     try {
       await this.fetchData();
     } catch {
       // Datos stale siguen visibles — fallo silencioso
+    }
+  }
+
+  /** Re-consulta solo las alertas de faltas (y recalcula KPIs), sin refetch de la tabla del día. */
+  private async refreshAlertasSilently(): Promise<void> {
+    try {
+      const branchMap = new Map<number, string>();
+      for (const b of this.branchFacade.branches()) {
+        branchMap.set(b.id, b.name);
+      }
+      const alertas = await this.fetchAlertas(this._branchFilter(), branchMap);
+      this._alertas.set(alertas);
+      this.computeKpis(this._clasesPracticas(), alertas);
+    } catch {
+      // Alertas stale siguen visibles — fallo silencioso
     }
   }
 

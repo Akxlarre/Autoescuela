@@ -6,6 +6,7 @@ import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.fac
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SelectModule } from 'primeng/select';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
@@ -19,12 +20,13 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     SelectModule,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
     DateInputComponent,
   ],
   template: `
-    <div class="flex flex-col h-full bg-surface">
+    <app-drawer-form>
       <!-- ── Body ── -->
-      <app-drawer-content-loader class="flex-1 overflow-y-auto p-5">
+      <app-drawer-content-loader>
         <ng-template #skeletons>
           <div class="flex flex-col gap-6 w-full">
             <app-skeleton-block variant="text" width="100%" height="80px" />
@@ -154,7 +156,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       </app-drawer-content-loader>
 
       <!-- ── Footer ── -->
-      <div class="p-4 border-t border-border-subtle flex items-center justify-end gap-2">
+      <ng-container ngProjectAs="[drawer-form-footer]">
         <button
           type="button"
           class="btn-secondary"
@@ -165,7 +167,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         </button>
         <button
           type="button"
-          class="btn-primary"
+          class="btn-primary flex items-center gap-2"
           [disabled]="form.invalid || isSaving()"
           (click)="onSubmit()"
           data-llm-action="guardar-inasistencia"
@@ -177,8 +179,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             Guardar
           }
         </button>
-      </div>
-    </div>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     .field-label {

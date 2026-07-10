@@ -57,7 +57,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
       @if (facade.isLoading()) {
         <!-- Content Skeleton -->
-        <div class="bento-wide" data-col-span="9">
+        <div class="bento-wide" data-col-span="9" data-col-span-md="8">
           <div class="card p-6 h-full">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
               <app-skeleton-block variant="text" width="180px" height="20px" />
@@ -66,19 +66,19 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                   variant="rect"
                   width="100%"
                   height="36px"
-                  class="md:w-[200px]"
+                  class="md:w-50"
                 />
                 <app-skeleton-block
                   variant="rect"
                   width="100%"
                   height="36px"
-                  class="sm:w-[120px]"
+                  class="sm:w-30"
                 />
                 <app-skeleton-block
                   variant="rect"
                   width="100%"
                   height="36px"
-                  class="sm:w-[120px]"
+                  class="sm:w-30"
                 />
               </div>
             </div>
@@ -99,7 +99,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
           </div>
         </div>
 
-        <div class="bento-tall" data-col-span="3">
+        <div class="bento-tall" data-col-span="3" data-col-span-md="8">
           <div class="card p-6 h-full">
             <app-skeleton-block variant="text" width="150px" height="18px" class="mb-4" />
             <app-skeleton-block variant="rect" width="100%" height="80px" class="mb-4" />
@@ -112,10 +112,10 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         <!-- ── Active View ──────────────────────────────────────────────────── -->
 
         <!-- Lista de Secretarias -->
-        <div class="bento-wide" data-col-span="9">
+        <div class="bento-wide" data-col-span="9" data-col-span-md="8">
           <div class="card p-6 flex flex-col h-full" appCardHover>
             <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-5 mb-6">
-              <h2 class="text-base font-bold whitespace-nowrap text-text-primary">
+              <h2 class="font-bold whitespace-nowrap text-text-primary">
                 Lista de Personal
               </h2>
 
@@ -123,7 +123,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
               <div
                 class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full xl:w-auto"
               >
-                <div class="relative flex-1 min-w-[200px]">
+                <div class="relative flex-1 min-w-50">
                   <span
                     class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
                   >
@@ -268,7 +268,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
         </div>
 
         <!-- Sidebar (Panel de Control) -->
-        <div class="bento-tall" data-col-span="3">
+        <div class="bento-tall" data-col-span="3" data-col-span-md="8">
           <div class="card p-6 h-full flex flex-col" appCardHover>
             <h3 class="text-sm font-bold uppercase tracking-widest mb-6 text-text-secondary">
               Panel de Control
@@ -277,7 +277,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             <div class="flex-1">
               <div class="rounded-xl p-5 mb-8 bg-subtle border border-border-subtle">
                 <div class="flex items-center gap-3 mb-3">
-                  <div class="p-2.5 rounded-xl bg-brand/10 bg-brand/10">
+                  <div class="p-2.5 rounded-xl bg-brand/10">
                     <app-icon name="shield-check" [size]="20" color="var(--ds-brand)" />
                   </div>
                   <span class="text-sm font-bold text-brand"> Rol Secretaria </span>
@@ -513,16 +513,14 @@ export class AdminSecretariasComponent {
   );
 
   // ── Opciones para p-select ────────────────────────────────────────────────
-  protected readonly sedeOptions = computed(() => [
-    { label: 'Todas las sedes', value: null },
-    ...[...new Set(this.facade.secretarias().map((s) => s.sede))]
+  protected readonly sedeOptions = computed(() =>
+    [...new Set(this.facade.secretarias().map((s) => s.sede))]
       .filter((s) => s !== '—')
       .sort()
       .map((s) => ({ label: s, value: s })),
-  ]);
+  );
 
   protected readonly estadoOptions = [
-    { label: 'Todos los estados', value: null },
     { label: 'Activa', value: 'activa' },
     { label: 'Inactiva', value: 'inactiva' },
   ];

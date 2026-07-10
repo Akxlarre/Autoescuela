@@ -98,6 +98,43 @@ export interface InasistenciaUI {
   status: string;
 }
 
+/**
+ * Inasistencia de clase práctica Clase B (RF-053), derivada de
+ * `class_b_practice_attendance` — incluye tanto las marcadas automáticamente
+ * (fin de jornada / secretaria) como las justificadas.
+ */
+export interface InasistenciaClaseBUI {
+  /** PK de la fila en class_b_practice_attendance */
+  id: number;
+  /** PK de la fila en class_b_sessions asociada */
+  sessionId: number | null;
+  claseNumero: number | null;
+  /** Fecha formateada para mostrar (ej: "20 ene. 2026") */
+  fecha: string;
+  /** true si status='excused' */
+  justificada: boolean;
+  /** Motivo de justificación, si ya fue justificada */
+  justificacion: string | null;
+  instructor: string | null;
+}
+
+/**
+ * Clase práctica pendiente de reagendar (RF-053): sesión en `cancelled`
+ * (penalización) o `no_show` (inasistencia a recuperar). Alimenta el checklist
+ * del drawer "Reagendar Clases".
+ */
+export interface ClasePendienteReagendarUI {
+  /** PK de la fila en class_b_sessions */
+  sessionId: number;
+  claseNumero: number;
+  /** Origen: determina el trato en el backend (reciclar in-place vs insertar nueva) */
+  origen: 'no_show' | 'cancelled';
+  /** Fecha originalmente agendada, formateada "DD-MM" — solo contexto informativo */
+  fechaOriginal: string | null;
+  /** true si origen='no_show' y su class_b_practice_attendance.status='excused' (ya justificada) */
+  justificada: boolean;
+}
+
 export interface ClasePracticaUI {
   numero: number;
   /** PK de la fila en class_b_sessions — null si la clase aún no tiene sesión agendada */
@@ -118,6 +155,14 @@ export interface ClasePracticaUI {
   observaciones: string | null;
   /** true si ambas firmas están presentes */
   completada: boolean;
+  /** true si class_b_sessions.status = 'no_show' (inasistencia, con o sin justificar) */
+  ausente: boolean;
+  /** true si class_b_sessions.status = 'cancelled' (RF-053: liberada por penalización, pendiente de reagendar) */
+  cancelada: boolean;
+  /** true si la inasistencia de esta clase ya fue justificada (class_b_practice_attendance.status='excused') */
+  justificada: boolean;
+  /** Motivo guardado por la secretaria al justificar, si existe */
+  justificacion: string | null;
   alumnoFirmo: boolean;
   instructorFirmo: boolean;
 }

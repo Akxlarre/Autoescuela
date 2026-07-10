@@ -27,9 +27,15 @@ function makeSupabaseMock() {
     return b;
   }
 
+  const rpcResults = new Map<string, { data: any; error: any }>();
+
   return {
-    client: { from: vi.fn((t: string) => builder(t)) },
+    client: {
+      from: vi.fn((t: string) => builder(t)),
+      rpc: vi.fn((fn: string) => Promise.resolve(rpcResults.get(fn) ?? { data: 0, error: null })),
+    },
     setResult: (table: string, data: any, error: any = null) => results.set(table, { data, error }),
+    setRpcResult: (fn: string, data: any, error: any = null) => rpcResults.set(fn, { data, error }),
   };
 }
 
@@ -106,6 +112,41 @@ describe('AsistenciaClaseBFacade', () => {
 
     expect(facade.clasesPracticas()[0].status).toBe('ausente');
     expect(toast.success).toHaveBeenCalled();
+  });
+
+  it('markAttendance invoca la penalización RF-053 al marcar ausente', async () => {
+    (facade as any)._clasesPracticas.set([makeRow()]);
+    mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setRpcResult('apply_class_b_absence_penalty', 0);
+
+    await facade.markAttendance(1, 'ausente');
+
+    expect(mock.client.rpc).toHaveBeenCalledWith('apply_class_b_absence_penalty', {
+      p_enrollment_id: 10,
+    });
+    expect(toast.warning).not.toHaveBeenCalled();
+  });
+
+  it('markAttendance avisa por toast cuando la penalización cancela clases futuras', async () => {
+    (facade as any)._clasesPracticas.set([makeRow()]);
+    mock.setResult('enrollments:single', { student_id: 5 });
+    mock.setRpcResult('apply_class_b_absence_penalty', 3);
+
+    await facade.markAttendance(1, 'ausente');
+
+    expect(toast.warning).toHaveBeenCalledWith(
+      'Agenda liberada por inasistencias',
+      expect.stringContaining('3 clase(s) futura(s)'),
+    );
+  });
+
+  it('markAttendance no invoca la penalización al marcar presente', async () => {
+    (facade as any)._clasesPracticas.set([makeRow()]);
+    mock.setResult('enrollments:single', { student_id: 5 });
+
+    await facade.markAttendance(1, 'presente');
+
+    expect(mock.client.rpc).not.toHaveBeenCalled();
   });
 
   it('selectPractica expone la fila seleccionada', () => {

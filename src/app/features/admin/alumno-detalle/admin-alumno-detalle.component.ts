@@ -19,6 +19,7 @@ import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.f
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { FichaTecnicaPrintService } from '@core/services/ui/ficha-tecnica-print.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -29,6 +30,7 @@ import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-e
 import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
 import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
+import { AdminReagendarClasesDrawerComponent } from './reagendar-clases-drawer/admin-reagendar-clases-drawer.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
@@ -54,7 +56,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     TabsComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div
+      class="bento-grid"
+      appBentoReveal
+      appBentoGridLayout
+      [class.force-compact]="layoutDrawer.isOpen()"
+    >
       <!-- ── Hero Principal (Siempre visible) ── -->
       <app-section-hero
         density="slim"
@@ -332,16 +339,40 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   class="flex items-center gap-3 px-3 py-3 rounded-xl border min-w-0"
                   [class.bg-success/5]="clase.completada"
                   [class.border-success/20]="clase.completada"
-                  [class.bg-brand/5]="!clase.completada && !!clase.fecha"
-                  [class.border-brand/20]="!clase.completada && !!clase.fecha"
-                  [class.bg-subtle]="!clase.completada && !clase.fecha"
-                  [class.border-border-subtle]="!clase.completada && !clase.fecha"
+                  [class.bg-error/5]="!clase.completada && clase.ausente"
+                  [class.border-error/20]="!clase.completada && clase.ausente"
+                  [class.bg-warning/5]="!clase.completada && !clase.ausente && clase.cancelada"
+                  [class.border-warning/20]="!clase.completada && !clase.ausente && clase.cancelada"
+                  [class.bg-brand/5]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                  "
+                  [class.border-brand/20]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                  "
+                  [class.bg-subtle]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                  "
+                  [class.border-border-subtle]="
+                    !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                  "
                 >
                   @if (clase.completada) {
                     <span
                       class="w-7 h-7 rounded-full bg-success/15 flex items-center justify-center shrink-0"
                     >
                       <app-icon name="check" [size]="13" class="text-success" />
+                    </span>
+                  } @else if (clase.ausente) {
+                    <span
+                      class="w-7 h-7 rounded-full bg-error/15 flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="x" [size]="13" class="text-error" />
+                    </span>
+                  } @else if (clase.cancelada) {
+                    <span
+                      class="w-7 h-7 rounded-full bg-warning/15 flex items-center justify-center shrink-0"
+                    >
+                      <app-icon name="ban" [size]="13" class="text-warning" />
                     </span>
                   } @else if (clase.fecha) {
                     <span
@@ -361,8 +392,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       <span
                         class="text-xs font-bold shrink-0"
                         [class.text-success]="clase.completada"
-                        [class.text-brand]="!clase.completada && !!clase.fecha"
-                        [class.text-text-muted]="!clase.completada && !clase.fecha"
+                        [class.text-error]="!clase.completada && clase.ausente"
+                        [class.text-warning]="
+                          !clase.completada && !clase.ausente && clase.cancelada
+                        "
+                        [class.text-brand]="
+                          !clase.completada && !clase.ausente && !clase.cancelada && !!clase.fecha
+                        "
+                        [class.text-text-muted]="
+                          !clase.completada && !clase.ausente && !clase.cancelada && !clase.fecha
+                        "
                         >Clase #{{ clase.numero }}</span
                       >
                       @if (clase.fecha) {
@@ -374,8 +413,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         }
                       }
                     </div>
-                    @if (clase.instructor) {
-                      <span class="text-2xs text-text-muted truncate">{{
+                    @if (clase.ausente) {
+                      <span class="text-[11px] text-error font-semibold">
+                        {{ clase.justificada ? 'Inasistencia — Justificada' : 'Inasistencia' }}
+                      </span>
+                    } @else if (clase.cancelada) {
+                      <span class="text-[11px] text-warning font-semibold"
+                        >Cancelada — pendiente reagendar</span
+                      >
+                    } @else if (clase.instructor) {
+                      <span class="text-[11px] text-text-muted truncate">{{
                         clase.instructor
                       }}</span>
                     } @else {
@@ -614,6 +661,16 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           </div>
         }
 
+        <!-- Bento Item 3: Historial de Pagos (común) — colocado aquí (no al final del DOM)
+             para que en modo force-compact (flex-column) aparezca junto a Info Personal /
+             Clases Prácticas, igual que ya lo posiciona grid-auto-flow:dense en modo grid. -->
+        <app-admin-historial-pagos
+          class="bento-tall w-full h-full block"
+          [pagos]="facade.historialPagos()"
+          [totalPagado]="alumno.totalPagado"
+          [saldoPendiente]="alumno.saldoPendiente"
+        />
+
         <!-- Bento Item 4: Inasistencias (Banner, común) -->
         <div class="bento-card bento-banner bg-warning-subtle border-warning">
           <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -626,49 +683,114 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
               <div class="flex flex-col">
                 <span class="font-bold text-text-primary">Inasistencias Registradas</span>
                 <span class="text-xs text-text-secondary">
-                  @if (facade.inasistencias().length > 0) {
-                    Se han detectado {{ facade.inasistencias().length }} registros que requieren
-                    seguimiento.
+                  @if (alumno.licenseGroup === 'class_b') {
+                    @if (facade.inasistenciasClaseB().length > 0) {
+                      Se han detectado {{ facade.inasistenciasClaseB().length }} inasistencias en
+                      clases prácticas.
+                    } @else {
+                      No hay inasistencias registradas hasta la fecha.
+                    }
                   } @else {
-                    No hay inasistencias registradas hasta la fecha.
+                    @if (facade.inasistencias().length > 0) {
+                      Se han detectado {{ facade.inasistencias().length }} registros que requieren
+                      seguimiento.
+                    } @else {
+                      No hay inasistencias registradas hasta la fecha.
+                    }
                   }
                 </span>
               </div>
             </div>
-            <p-button
-              label="Registrar Nueva"
-              icon="pi pi-plus"
-              size="small"
-              severity="warn"
-              (onClick)="openInasistenciaDrawer()"
-            />
+            @if (alumno.licenseGroup !== 'class_b') {
+              <p-button
+                label="Registrar Nueva"
+                icon="pi pi-plus"
+                size="small"
+                severity="warn"
+                (onClick)="openInasistenciaDrawer()"
+              />
+            }
           </div>
 
-          @if (facade.inasistencias().length > 0) {
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-              @for (item of facade.inasistencias().slice(0, 3); track item.id) {
-                <div
-                  class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
-                >
-                  <div class="inas-date-pill border-none! bg-elevated!">
-                    <span class="text-2xs font-bold text-text-secondary">{{ item.fecha }}</span>
+          @if (alumno.licenseGroup === 'class_b') {
+            @if (facade.inasistenciasClaseB().length > 0) {
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                @for (item of facade.inasistenciasClaseB(); track item.id) {
+                  <div
+                    class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
+                  >
+                    <div class="inas-date-pill border-none! bg-elevated!">
+                      <span class="text-[10px] font-bold text-text-secondary">{{
+                        item.fecha
+                      }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p
+                        class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
+                      >
+                        Clase #{{ item.claseNumero ?? '—' }}
+                      </p>
+                      <p class="text-[10px] text-text-muted truncate m-0 italic">
+                        {{ item.instructor ?? 'Sin instructor' }}
+                      </p>
+                    </div>
+                    @if (item.justificada) {
+                      <div class="flex flex-col items-end gap-0.5 shrink-0">
+                        <span class="inas-status-badge" data-status="approved">Justificado</span>
+                        @if (item.justificacion) {
+                          <span
+                            class="text-[10px] text-text-muted italic truncate max-w-32 cursor-help"
+                            [pTooltip]="'Motivo: ' + item.justificacion"
+                            tooltipPosition="top"
+                            data-llm-description="motivo de la justificación de la inasistencia"
+                          >
+                            Motivo: {{ item.justificacion }}
+                          </span>
+                        }
+                      </div>
+                    } @else {
+                      <button
+                        type="button"
+                        class="text-xs font-semibold text-brand hover:underline shrink-0"
+                        data-llm-action="justificar-inasistencia-clase-b"
+                        (click)="openJustificarClaseB(item.id)"
+                      >
+                        Justificar
+                      </button>
+                    }
                   </div>
-                  <div class="flex-1 min-w-0">
-                    <p
-                      class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
-                    >
-                      {{ item.documentType }}
-                    </p>
-                    <p class="text-2xs text-text-muted truncate m-0 italic">
-                      {{ item.description || 'Sin descripción' }}
-                    </p>
+                }
+              </div>
+            }
+          } @else {
+            @if (facade.inasistencias().length > 0) {
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
+                @for (item of facade.inasistencias().slice(0, 3); track item.id) {
+                  <div
+                    class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
+                  >
+                    <div class="inas-date-pill border-none! bg-elevated!">
+                      <span class="text-[10px] font-bold text-text-secondary">{{
+                        item.fecha
+                      }}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p
+                        class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
+                      >
+                        {{ item.documentType }}
+                      </p>
+                      <p class="text-[10px] text-text-muted truncate m-0 italic">
+                        {{ item.description || 'Sin descripción' }}
+                      </p>
+                    </div>
+                    <span class="inas-status-badge" [attr.data-status]="item.status">
+                      {{ statusLabel(item.status) }}
+                    </span>
                   </div>
-                  <span class="inas-status-badge" [attr.data-status]="item.status">
-                    {{ statusLabel(item.status) }}
-                  </span>
-                </div>
-              }
-            </div>
+                }
+              </div>
+            }
           }
         </div>
 
@@ -681,14 +803,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             (reprogramarRequested)="openReprogramarDrawer($event)"
           />
         }
-
-        <!-- Bento Item 6: Historial de Pagos (común) -->
-        <app-admin-historial-pagos
-          class="bento-tall w-full h-full block"
-          [pagos]="facade.historialPagos()"
-          [totalPagado]="alumno.totalPagado"
-          [saldoPendiente]="alumno.saldoPendiente"
-        />
       }
     </div>
 
@@ -701,6 +815,61 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       (confirmado)="onConfirmArchivar()"
       (cancelado)="onCancelArchivar()"
     />
+
+    <!-- Modal de justificación de inasistencia Clase B (RF-053) -->
+    <!-- Fuera de .bento-grid a propósito: ese contenedor recibe transform CSS de
+         GsapAnimationsService.animateBentoGrid(), lo que crea un containing
+         block para position: fixed y rompe el overlay centrado en viewport. -->
+    @if (justificarClaseBOpen()) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+        (click)="closeJustificarClaseB()"
+      >
+        <div
+          class="surface-glass rounded-2xl p-6 w-full max-w-md flex flex-col gap-4"
+          (click)="$event.stopPropagation()"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Justificar inasistencia"
+        >
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
+            <button
+              class="p-1 rounded-md text-text-muted hover:text-text-primary"
+              aria-label="Cerrar"
+              (click)="closeJustificarClaseB()"
+            >
+              <app-icon name="x" [size]="18" />
+            </button>
+          </div>
+          <p class="text-sm text-text-secondary">
+            Ingresa el motivo de la justificación para registrar en el historial del alumno.
+          </p>
+          <textarea
+            class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
+            style="border-color: var(--border-subtle)"
+            rows="3"
+            placeholder="Ej: Certificado médico presentado..."
+            data-llm-description="textarea for absence justification reason"
+            [value]="justificarClaseBReason()"
+            (input)="justificarClaseBReason.set($any($event.target).value)"
+          ></textarea>
+          <div class="flex justify-end gap-2">
+            <button class="btn-secondary text-sm px-4 py-2" (click)="closeJustificarClaseB()">
+              Cancelar
+            </button>
+            <button
+              class="btn-primary text-sm px-4 py-2"
+              [disabled]="!justificarClaseBReason().trim()"
+              data-llm-action="submit-justificacion-clase-b"
+              (click)="submitJustificarClaseB()"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
 
     <!-- Input oculto para subir contrato firmado (flujo online) -->
     <input
@@ -817,6 +986,21 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       background: var(--state-error-bg);
       border-color: var(--state-error-border);
     }
+
+    /* Force Compact overrides (Drawer Open) — mismo patrón que
+       cuadratura-content.component.ts: colapsa el bento-grid a una sola
+       columna en vez de repartir columnas angostas entre celdas con
+       contenido de ancho fijo (RUT, email, montos). */
+    .force-compact.bento-grid {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: var(--space-5) !important;
+    }
+
+    .force-compact.bento-grid > * {
+      width: 100% !important;
+    }
   `,
 })
 export class AdminAlumnoDetalleComponent implements OnInit {
@@ -827,7 +1011,8 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly fichaTecnicaPrint = inject(FichaTecnicaPrintService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -851,6 +1036,11 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly deleteModalVisible = signal(false);
   protected readonly deleteHasHistory = signal(false);
 
+  // ── Estado del modal de justificación (Inasistencias Clase B, RF-053) ───────
+  protected readonly justificarClaseBOpen = signal(false);
+  protected readonly justificarClaseBId = signal<number | null>(null);
+  protected readonly justificarClaseBReason = signal('');
+
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
     () => this.facade.progresoPractico().requeridas - this.facade.progresoPractico().completadas,
@@ -865,7 +1055,7 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     return this.facade.enrollmentSummaries().map((enr) => ({
       id: String(enr.id),
       label: enr.courseName + (enr.number ? ` · #${enr.number}` : ''),
-      icon: 'car'
+      icon: 'car',
     }));
   });
 
@@ -1015,7 +1205,19 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       }
     }
 
+    // ── RF-053: Reagendar Clases (solo si hay agenda cancelada por penalización) ──
+    const reagendarActions: SectionHeroAction[] = [];
+    if (alumno.licenseGroup === 'class_b' && this.facade.puedeReagendarPenalizacion()) {
+      reagendarActions.push({
+        id: 'reagendar-clases',
+        label: `Reagendar Clases (${this.facade.clasesPendientesReagendarCount()})`,
+        icon: 'calendar-plus',
+        primary: false,
+      });
+    }
+
     return [
+      ...reagendarActions,
       ...contractActions,
       ...carnetActions,
       certAction,
@@ -1055,6 +1257,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     switch (actionId) {
       case 'editar-alumno':
         this.openEditDrawer();
+        break;
+      case 'reagendar-clases':
+        this.openReagendarClasesDrawer();
         break;
       case 'generar-carnet-6':
         void this.facade.generarCarnet(this.facade.alumno()!.enrollmentId!, 'initial');
@@ -1168,7 +1373,11 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Helpers de template ─────────────────────────────────────────────────────
   protected imprimirFicha(): void {
-    window.print();
+    const alumno = this.facade.alumno();
+    this.fichaTecnicaPrint.printFichaTecnica(this.facade.clasesPracticas(), {
+      studentName: alumno?.nombre,
+      matricula: alumno?.matricula,
+    });
   }
 
   protected statusLabel(status: string): string {
@@ -1190,6 +1399,27 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     );
   }
 
+  // ── Justificación de inasistencias Clase B (RF-053) ─────────────────────────
+  protected openJustificarClaseB(attendanceId: number): void {
+    this.justificarClaseBId.set(attendanceId);
+    this.justificarClaseBReason.set('');
+    this.justificarClaseBOpen.set(true);
+  }
+
+  protected closeJustificarClaseB(): void {
+    this.justificarClaseBOpen.set(false);
+    this.justificarClaseBId.set(null);
+    this.justificarClaseBReason.set('');
+  }
+
+  protected submitJustificarClaseB(): void {
+    const id = this.justificarClaseBId();
+    const reason = this.justificarClaseBReason().trim();
+    if (id === null || !reason) return;
+    void this.facade.justificarInasistenciaClaseB(id, reason);
+    this.closeJustificarClaseB();
+  }
+
   protected openEditDrawer(): void {
     this.layoutDrawer.open(
       AdminEditarPerfilDrawerComponent,
@@ -1206,6 +1436,16 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       AdminReprogramarClaseDrawerComponent,
       'Reprogramar Clase',
       'calendar-clock',
+    );
+  }
+
+  /** RF-053: abre el agendador reutilizado del wizard para reponer clases penalizadas. */
+  protected openReagendarClasesDrawer(): void {
+    if (!this.facade.puedeReagendarPenalizacion()) return;
+    this.layoutDrawer.open(
+      AdminReagendarClasesDrawerComponent,
+      'Reagendar Clases',
+      'calendar-plus',
     );
   }
 

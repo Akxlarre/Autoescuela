@@ -7,6 +7,7 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { RegistrarPagoDrawerComponent } from './registrar-pago-drawer.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 /**
  * AdminPagoDetalleDrawerComponent — Estado de cuenta de una matrícula.
@@ -24,222 +25,230 @@ import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
   selector: 'app-admin-pago-detalle-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, BadgeComponent, SkeletonBlockComponent, StatBoxComponent],
+  imports: [
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+    StatBoxComponent,
+    DrawerFormComponent,
+  ],
   template: `
-    <div class="flex flex-col gap-5 p-1">
-      <!-- ── Skeleton ──────────────────────────────────────────────────────────── -->
-      @if (facade.isLoadingDetalle()) {
-        <div class="flex flex-col gap-4">
-          <!-- Ficha alumno skeleton -->
-          <div class="card p-4 flex flex-col gap-3">
-            <app-skeleton-block variant="text" width="60%" height="20px" />
-            <app-skeleton-block variant="text" width="40%" height="14px" />
-            <app-skeleton-block variant="text" width="50%" height="14px" />
-          </div>
-          <!-- KPIs skeleton -->
-          <div class="grid grid-cols-3 gap-3">
-            @for (i of [1, 2, 3]; track i) {
-              <div class="card p-3 flex flex-col gap-2">
-                <app-skeleton-block variant="text" width="70%" height="11px" />
-                <app-skeleton-block variant="text" width="80%" height="20px" />
-              </div>
-            }
-          </div>
-          <!-- Historial skeleton -->
-          <div class="card p-0 overflow-hidden">
-            @for (i of [1, 2, 3, 4]; track i) {
-              <div class="px-4 py-3 flex gap-3 items-center border-b border-border-muted">
-                <app-skeleton-block variant="text" width="20%" height="12px" />
-                <app-skeleton-block variant="text" width="30%" height="12px" />
-                <app-skeleton-block variant="text" width="20%" height="12px" />
-                <app-skeleton-block variant="text" width="25%" height="12px" />
-              </div>
-            }
-          </div>
-        </div>
-      }
-
-      <!-- ── Sin datos ─────────────────────────────────────────────────────────── -->
-      @if (!facade.isLoadingDetalle() && !facade.estadoCuentaResumen()) {
-        <div class="flex flex-col items-center gap-3 py-12 text-center">
-          <app-icon name="file-x" [size]="36" color="var(--text-muted)" />
-          <p class="text-sm font-medium text-text-primary">No se encontró la matrícula</p>
-          <p class="text-xs text-text-muted">
-            Es posible que haya sido eliminada o que no tengas permisos para verla.
-          </p>
-        </div>
-      }
-
-      <!-- ── Contenido ─────────────────────────────────────────────────────────── -->
-      @if (!facade.isLoadingDetalle() && facade.estadoCuentaResumen(); as resumen) {
-        <!-- 1. Ficha del alumno -->
-        <div class="card p-4 flex flex-col gap-3">
-          <div class="flex items-start justify-between gap-3">
-            <div class="flex flex-col gap-0.5">
-              <h2 class="text-base font-bold text-text-primary">
-                {{ resumen.alumno }}
-              </h2>
-              <span class="text-xs font-mono text-text-muted">
-                {{ resumen.rut }}
-              </span>
+    <app-drawer-form [hasFooter]="false">
+      <div class="flex flex-col gap-5">
+        <!-- ── Skeleton ──────────────────────────────────────────────────────────── -->
+        @if (facade.isLoadingDetalle()) {
+          <div class="flex flex-col gap-4">
+            <!-- Ficha alumno skeleton -->
+            <div class="card p-4 flex flex-col gap-3">
+              <app-skeleton-block variant="text" width="60%" height="20px" />
+              <app-skeleton-block variant="text" width="40%" height="14px" />
+              <app-skeleton-block variant="text" width="50%" height="14px" />
             </div>
-            <app-badge [variant]="paymentStatusVariant(resumen.paymentStatus)" class="shrink-0">
-              {{ paymentStatusLabel(resumen.paymentStatus) }}
-            </app-badge>
-          </div>
-
-          <div class="border-t pt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs border-border-muted">
-            <div class="flex items-center gap-1.5">
-              <app-icon name="book-open" [size]="13" color="var(--text-muted)" />
-              <span class="text-text-secondary">{{ resumen.curso }}</span>
-            </div>
-            @if (resumen.email) {
-              <div class="flex items-center gap-1.5">
-                <app-icon name="mail" [size]="13" color="var(--text-muted)" />
-                <span class="text-text-secondary">{{ resumen.email }}</span>
-              </div>
-            }
-            @if (resumen.telefono) {
-              <div class="flex items-center gap-1.5">
-                <app-icon name="phone" [size]="13" color="var(--text-muted)" />
-                <span class="text-text-secondary">{{ resumen.telefono }}</span>
-              </div>
-            }
-            @if (resumen.descuento > 0) {
-              <div class="flex items-center gap-1.5">
-                <app-icon name="tag" [size]="13" color="var(--state-success)" />
-                <span class="text-success"> Descuento: {{ clp(resumen.descuento) }} </span>
-              </div>
-            }
-          </div>
-        </div>
-
-        <!-- 2. KPI mini-cards -->
-        <div class="grid grid-cols-3 gap-3">
-          <app-stat-box
-            label="Total Curso"
-            [value]="clp(resumen.totalACurso)"
-            variant="surface"
-            [compact]="true"
-            [useMono]="true"
-          />
-
-          <app-stat-box
-            label="Pagado"
-            [value]="clp(resumen.totalPagado)"
-            variant="success"
-            [compact]="true"
-            [useMono]="true"
-            [suffix]="porcentajePagado(resumen) + '%'"
-          />
-
-          <app-stat-box
-            label="Saldo"
-            [value]="resumen.saldoPendiente > 0 ? clp(resumen.saldoPendiente) : 'Al día'"
-            [variant]="resumen.saldoPendiente > 0 ? 'warning' : 'success'"
-            [compact]="true"
-            [useMono]="true"
-          />
-        </div>
-
-        <!-- 3. Botón Registrar Pago -->
-        @if (resumen.saldoPendiente > 0) {
-          <button
-            class="btn-primary w-full flex items-center justify-center gap-2"
-            data-llm-action="register-payment-from-detail"
-            (click)="openPagoDrawer()"
-          >
-            <app-icon name="plus" [size]="15" />
-            Registrar Pago
-          </button>
-        }
-
-        <!-- 4. Historial de pagos -->
-        <div class="card p-0 overflow-hidden">
-          <div class="px-4 py-3 border-b border-border-muted">
-            <h3 class="text-sm font-semibold text-text-primary">Historial de Pagos</h3>
-          </div>
-
-          @if (facade.estadoCuentaHistorial().length === 0) {
-            <div class="px-4 py-8 flex flex-col items-center gap-2 text-center">
-              <app-icon name="inbox" [size]="28" color="var(--text-muted)" />
-              <p class="text-xs text-text-muted">Sin pagos registrados aún.</p>
-            </div>
-          } @else {
-            <!-- Header columnas -->
-            <div
-              class="px-4 py-2 grid text-xs font-semibold tracking-wide uppercase text-text-muted bg-surface"
-              style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
-            >
-              <span>Fecha</span>
-              <span>Concepto</span>
-              <span>Método</span>
-              <span>N° Doc.</span>
-              <span class="text-right">Monto</span>
-              <span class="text-center">Estado</span>
-            </div>
-
-            <div class="rows-divider">
-              @for (pago of facade.estadoCuentaHistorial(); track pago.id) {
-                <div
-                  class="px-4 py-3 grid items-center gap-2 text-xs"
-                  style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
-                >
-                  <!-- Fecha -->
-                  <span class="font-medium text-brand">
-                    {{ fechaCorta(pago.fecha) }}
-                  </span>
-
-                  <!-- Concepto -->
-                  <span class="font-semibold truncate text-text-primary">
-                    {{ pago.concepto ?? '—' }}
-                  </span>
-
-                  <!-- Método -->
-                  <span class="flex items-center gap-1 text-text-secondary">
-                    <app-icon [name]="pago.metodoIcono" [size]="11" />
-                    {{ pago.metodo }}
-                  </span>
-
-                  <!-- N° Documento -->
-                  <span
-                    class="font-mono px-1 py-0.5 rounded truncate text-text-muted bg-surface border border-border-muted"
-                  >
-                    {{ pago.nroDocumento ?? '—' }}
-                  </span>
-
-                  <!-- Monto -->
-                  <span class="font-bold text-right text-text-primary">
-                    {{ clp(pago.monto) }}
-                  </span>
-
-                  <!-- Estado badge -->
-                  <span
-                    class="inline-flex items-center justify-center gap-0.5 font-semibold px-1.5 py-0.5 rounded-full text-center"
-                    [style.background]="estadoBg(pago.estado)"
-                    [style.color]="estadoColor(pago.estado)"
-                  >
-                    {{ estadoLabel(pago.estado) }}
-                  </span>
+            <!-- KPIs skeleton -->
+            <div class="grid grid-cols-3 gap-3">
+              @for (i of [1, 2, 3]; track i) {
+                <div class="card p-3 flex flex-col gap-2">
+                  <app-skeleton-block variant="text" width="70%" height="11px" />
+                  <app-skeleton-block variant="text" width="80%" height="20px" />
                 </div>
               }
             </div>
-
-            <!-- Total del historial -->
-            <div
-              class="px-4 py-3 flex items-center justify-between border-t border-border-muted bg-surface"
-            >
-              <span class="text-xs text-text-muted">
-                {{ facade.estadoCuentaHistorial().length }} pago(s) registrado(s)
-              </span>
-              <span class="text-sm font-bold text-text-primary">
-                Total: {{ clp(totalHistorial()) }}
-              </span>
+            <!-- Historial skeleton -->
+            <div class="card p-0 overflow-hidden">
+              @for (i of [1, 2, 3, 4]; track i) {
+                <div class="px-4 py-3 flex gap-3 items-center border-b border-border-muted">
+                  <app-skeleton-block variant="text" width="20%" height="12px" />
+                  <app-skeleton-block variant="text" width="30%" height="12px" />
+                  <app-skeleton-block variant="text" width="20%" height="12px" />
+                  <app-skeleton-block variant="text" width="25%" height="12px" />
+                </div>
+              }
             </div>
+          </div>
+        }
+
+        <!-- ── Sin datos ─────────────────────────────────────────────────────────── -->
+        @if (!facade.isLoadingDetalle() && !facade.estadoCuentaResumen()) {
+          <div class="flex flex-col items-center gap-3 py-12 text-center">
+            <app-icon name="file-x" [size]="36" color="var(--text-muted)" />
+            <p class="text-sm font-medium text-text-primary">No se encontró la matrícula</p>
+            <p class="text-xs text-text-muted">
+              Es posible que haya sido eliminada o que no tengas permisos para verla.
+            </p>
+          </div>
+        }
+
+        <!-- ── Contenido ─────────────────────────────────────────────────────────── -->
+        @if (!facade.isLoadingDetalle() && facade.estadoCuentaResumen(); as resumen) {
+          <!-- 1. Ficha del alumno -->
+          <div class="card p-4 flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex flex-col gap-0.5">
+                <h2 class="font-bold text-text-primary">
+                  {{ resumen.alumno }}
+                </h2>
+                <span class="text-xs font-mono text-text-muted">
+                  {{ resumen.rut }}
+                </span>
+              </div>
+              <app-badge [variant]="paymentStatusVariant(resumen.paymentStatus)" class="shrink-0">
+                {{ paymentStatusLabel(resumen.paymentStatus) }}
+              </app-badge>
+            </div>
+
+            <div class="border-t pt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs border-border-muted">
+              <div class="flex items-center gap-1.5">
+                <app-icon name="book-open" [size]="13" color="var(--text-muted)" />
+                <span class="text-text-secondary">{{ resumen.curso }}</span>
+              </div>
+              @if (resumen.email) {
+                <div class="flex items-center gap-1.5">
+                  <app-icon name="mail" [size]="13" color="var(--text-muted)" />
+                  <span class="text-text-secondary">{{ resumen.email }}</span>
+                </div>
+              }
+              @if (resumen.telefono) {
+                <div class="flex items-center gap-1.5">
+                  <app-icon name="phone" [size]="13" color="var(--text-muted)" />
+                  <span class="text-text-secondary">{{ resumen.telefono }}</span>
+                </div>
+              }
+              @if (resumen.descuento > 0) {
+                <div class="flex items-center gap-1.5">
+                  <app-icon name="tag" [size]="13" color="var(--state-success)" />
+                  <span class="text-success"> Descuento: {{ clp(resumen.descuento) }} </span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- 2. KPI mini-cards -->
+          <div class="grid grid-cols-3 gap-3">
+            <app-stat-box
+              label="Total Curso"
+              [value]="clp(resumen.totalACurso)"
+              variant="surface"
+              [compact]="true"
+              [useMono]="true"
+            />
+
+            <app-stat-box
+              label="Pagado"
+              [value]="clp(resumen.totalPagado)"
+              variant="success"
+              [compact]="true"
+              [useMono]="true"
+              [suffix]="porcentajePagado(resumen) + '%'"
+            />
+
+            <app-stat-box
+              label="Saldo"
+              [value]="resumen.saldoPendiente > 0 ? clp(resumen.saldoPendiente) : 'Al día'"
+              [variant]="resumen.saldoPendiente > 0 ? 'warning' : 'success'"
+              [compact]="true"
+              [useMono]="true"
+            />
+          </div>
+
+          <!-- 3. Botón Registrar Pago -->
+          @if (resumen.saldoPendiente > 0) {
+            <button
+              class="btn-primary w-full flex items-center justify-center gap-2"
+              data-llm-action="register-payment-from-detail"
+              (click)="openPagoDrawer()"
+            >
+              <app-icon name="plus" [size]="15" />
+              Registrar Pago
+            </button>
           }
-        </div>
-      }
-    </div>
+
+          <!-- 4. Historial de pagos -->
+          <div class="card p-0 overflow-hidden">
+            <div class="px-4 py-3 border-b border-border-muted">
+              <h3 class="text-sm font-semibold text-text-primary">Historial de Pagos</h3>
+            </div>
+
+            @if (facade.estadoCuentaHistorial().length === 0) {
+              <div class="px-4 py-8 flex flex-col items-center gap-2 text-center">
+                <app-icon name="inbox" [size]="28" color="var(--text-muted)" />
+                <p class="text-xs text-text-muted">Sin pagos registrados aún.</p>
+              </div>
+            } @else {
+              <!-- Header columnas -->
+              <div
+                class="px-4 py-2 grid text-xs font-semibold tracking-wide uppercase text-text-muted bg-surface"
+                style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
+              >
+                <span>Fecha</span>
+                <span>Concepto</span>
+                <span>Método</span>
+                <span>N° Doc.</span>
+                <span class="text-right">Monto</span>
+                <span class="text-center">Estado</span>
+              </div>
+
+              <div class="rows-divider">
+                @for (pago of facade.estadoCuentaHistorial(); track pago.id) {
+                  <div
+                    class="px-4 py-3 grid items-center gap-2 text-xs"
+                    style="grid-template-columns: 80px 1fr 90px 80px 90px 70px"
+                  >
+                    <!-- Fecha -->
+                    <span class="font-medium text-brand">
+                      {{ fechaCorta(pago.fecha) }}
+                    </span>
+
+                    <!-- Concepto -->
+                    <span class="font-semibold truncate text-text-primary">
+                      {{ pago.concepto ?? '—' }}
+                    </span>
+
+                    <!-- Método -->
+                    <span class="flex items-center gap-1 text-text-secondary">
+                      <app-icon [name]="pago.metodoIcono" [size]="11" />
+                      {{ pago.metodo }}
+                    </span>
+
+                    <!-- N° Documento -->
+                    <span
+                      class="font-mono px-1 py-0.5 rounded truncate text-text-muted bg-surface border border-border-muted"
+                    >
+                      {{ pago.nroDocumento ?? '—' }}
+                    </span>
+
+                    <!-- Monto -->
+                    <span class="font-bold text-right text-text-primary">
+                      {{ clp(pago.monto) }}
+                    </span>
+
+                    <!-- Estado badge -->
+                    <span
+                      class="inline-flex items-center justify-center gap-0.5 font-semibold px-1.5 py-0.5 rounded-full text-center"
+                      [style.background]="estadoBg(pago.estado)"
+                      [style.color]="estadoColor(pago.estado)"
+                    >
+                      {{ estadoLabel(pago.estado) }}
+                    </span>
+                  </div>
+                }
+              </div>
+
+              <!-- Total del historial -->
+              <div
+                class="px-4 py-3 flex items-center justify-between border-t border-border-muted bg-surface"
+              >
+                <span class="text-xs text-text-muted">
+                  {{ facade.estadoCuentaHistorial().length }} pago(s) registrado(s)
+                </span>
+                <span class="text-sm font-bold text-text-primary">
+                  Total: {{ clp(totalHistorial()) }}
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </app-drawer-form>
   `,
   styles: `
     .rows-divider > * + * {

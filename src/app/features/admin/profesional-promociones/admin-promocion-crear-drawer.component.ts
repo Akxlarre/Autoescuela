@@ -11,11 +11,12 @@ import { SelectModule } from 'primeng/select';
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { RelatorOption } from '@core/models/ui/promocion-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
-import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 const COURSE_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -104,13 +105,14 @@ function generatePromoName(startIso: string): string {
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    BadgeComponent,
     FormsModule,
     SelectModule,
     IconComponent,
+    BadgeComponent,
     AsyncBtnComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     <app-drawer-content-loader>
@@ -122,189 +124,188 @@ function generatePromoName(startIso: string): string {
         </div>
       </ng-template>
       <ng-template #content>
-        <!-- ── Fecha de inicio (primero — determina nombre y código) ───── -->
-        <section>
-          <h3 class="text-base font-semibold mb-3 text-text-primary">
-            <app-icon name="calendar" [size]="16" color="var(--ds-brand)" />
-            Fecha de inicio *
-          </h3>
-
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
-            @for (monday of availableMondays; track monday.date) {
-              <button
-                class="monday-btn"
-                [class.selected]="selectedStartDate() === monday.date"
-                [class.suggested]="monday.suggested && selectedStartDate() !== monday.date"
-                (click)="selectStartDate(monday.date)"
-                data-llm-action="seleccionar-fecha-inicio"
-              >
-                {{ formatMonday(monday.date) }}
-                @if (monday.suggested) {
-                  <span class="suggested-dot"></span>
-                }
-              </button>
-            }
-          </div>
-
-          <p class="text-xs mb-4 text-text-muted">
-            <app-icon name="info" [size]="12" />
-            Los lunes marcados con punto son las fechas sugeridas (cada 2 semanas). Puede
-            seleccionar cualquier lunes si necesita flexibilidad.
-          </p>
-
-          <!-- Fecha de término -->
-          @if (selectedStartDate()) {
-            <div class="mb-1">
-              <label class="text-xs font-medium mb-1 block text-text-secondary">
-                Fecha de término
-              </label>
-              <div class="form-input bg-elevated cursor-default">
-                {{ formatMonday(endDate()) }}
-              </div>
-              <p class="text-2xs mt-1 text-brand">
-                Calculada automáticamente: sábado de la 5ta semana (30 días de clase, lun-sáb)
-              </p>
-            </div>
-          }
-        </section>
-
-        <!-- ── Nombre y código (auto-generados) ──────────────────────────── -->
-        @if (selectedStartDate()) {
+        <app-drawer-form>
+          <!-- ── Fecha de inicio (primero — determina nombre y código) ───── -->
           <section>
-            <h3 class="text-sm font-semibold mb-3 text-text-primary">
-              Información de la promoción
+            <h3 class="text-base font-semibold mb-3 text-text-primary">
+              <app-icon name="calendar" [size]="16" color="var(--ds-brand)" />
+              Fecha de inicio *
             </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="text-xs font-medium mb-1 block text-text-secondary">
-                  Nombre (automático)
-                </label>
-                <div class="form-input bg-elevated cursor-default">
-                  {{ nombre() }}
-                </div>
-              </div>
-              <div>
-                <label class="text-xs font-medium mb-1 block text-text-secondary">
-                  Código (automático)
-                </label>
-                <div class="form-input bg-elevated cursor-default">
-                  {{ codigo() }}
-                </div>
-              </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-3">
+              @for (monday of availableMondays; track monday.date) {
+                <button
+                  class="monday-btn"
+                  [class.selected]="selectedStartDate() === monday.date"
+                  [class.suggested]="monday.suggested && selectedStartDate() !== monday.date"
+                  (click)="selectStartDate(monday.date)"
+                  data-llm-action="seleccionar-fecha-inicio"
+                >
+                  {{ formatMonday(monday.date) }}
+                  @if (monday.suggested) {
+                    <span class="suggested-dot"></span>
+                  }
+                </button>
+              }
             </div>
-            <p class="text-2xs mt-1.5 text-text-muted">
-              <app-icon name="info" [size]="10" />
-              El nombre y código se generan automáticamente a partir de la fecha de inicio
-              seleccionada.
+
+            <p class="text-xs mb-4 text-text-muted">
+              <app-icon name="info" [size]="12" />
+              Los lunes marcados con punto son las fechas sugeridas (cada 2 semanas). Puede
+              seleccionar cualquier lunes si necesita flexibilidad.
             </p>
-          </section>
-        }
 
-        <!-- ── Cursos y asignación de relatores ──────────────────────────── -->
-        <section>
-          <h3 class="text-sm font-semibold mb-1 text-text-primary">
-            Cursos y asignación de relatores
-          </h3>
-          <p class="text-xs mb-4 text-brand">
-            Cada curso admite máximo 25 alumnos. Capacidad total: 100 alumnos.
-          </p>
-
-          <div class="flex flex-col gap-3">
-            @for (curso of cursoSlots(); track curso.courseId) {
-              <div
-                class="rounded-lg p-4"
-                [style.border]="'1px solid ' + courseColor(curso.code)"
-                [style.borderLeftWidth]="'3px'"
-              >
-                <div class="flex items-center gap-3 mb-3">
-                  <span
-                    class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-2xs font-bold text-white"
-                    [style.background]="courseColor(curso.code)"
-                  >
-                    {{ curso.code }}
-                  </span>
-                  <span class="text-sm font-medium text-text-primary">
-                    {{ curso.name }}
-                  </span>
-                  <span class="ml-auto text-xs text-brand"> Capacidad </span>
-                  <span class="text-sm font-semibold text-text-primary"> 25 alumnos </span>
-                </div>
-
-                <!-- Relatores asignados -->
-                <label class="text-xs font-medium mb-1.5 block text-text-secondary">
-                  Relatores asignados
+            <!-- Fecha de término -->
+            @if (selectedStartDate()) {
+              <div class="mb-1">
+                <label class="text-xs font-medium mb-1 block text-text-secondary">
+                  Fecha de término
                 </label>
-
-                @if (curso.selectedRelatores.length > 0) {
-                  <div class="flex flex-wrap gap-2 mb-2">
-                    @for (rel of curso.selectedRelatores; track rel.id) {
-                      <app-badge variant="brand">
-                        {{ rel.nombre }}
-                        <button
-                          class="inline-flex items-center justify-center w-4 h-4 rounded-full hover:opacity-70 bg-transparent border-none cursor-pointer"
-                          style="color: inherit"
-                          (click)="removeRelator(curso.courseId, rel.id)"
-                          [attr.aria-label]="'Quitar relator ' + rel.nombre"
-                        >
-                          <app-icon name="x" [size]="10" />
-                        </button>
-                      </app-badge>
-                    }
-                  </div>
-                }
-
-                <p-select
-                  [options]="getFilteredRelatores(curso.code, curso.courseId)"
-                  optionLabel="nombre"
-                  optionValue="id"
-                  placeholder="Seleccionar relator..."
-                  [style]="{ width: '100%' }"
-                  (onChange)="addRelator(curso.courseId, $event.value)"
-                  [ngModel]="null"
-                  data-llm-description="Seleccionar relator para curso"
-                />
+                <div class="form-input bg-elevated cursor-default">
+                  {{ formatMonday(endDate()) }}
+                </div>
+                <p class="text-2xs mt-1 text-brand">
+                  Calculada automáticamente: sábado de la 5ta semana (30 días de clase, lun-sáb)
+                </p>
               </div>
             }
-          </div>
-        </section>
+          </section>
 
-        <!-- ── Reglas de negocio (sidebar info) ──────────────────────────── -->
-        <section class="rounded-lg p-4 bg-elevated border border-border-subtle">
-          <h4 class="text-xs font-semibold mb-2 text-text-primary">
-            <app-icon name="info" [size]="12" />
-            Reglas de negocio
-          </h4>
-          <ul class="text-2xs flex flex-col gap-1 text-text-muted">
-            <li>Duración fija: <strong>30 días de clase</strong> (lun-sáb = 5 semanas)</li>
-            <li>Inicio solo en <strong>lunes</strong>, cada 2 semanas</li>
-            <li>Máximo <strong>100 alumnos</strong> por promoción (25 por curso)</li>
-            <li>4 cursos: A2, A3, A4, A5</li>
-            <li>Un curso puede tener múltiples relatores</li>
-            <li>Si un feriado cae en inicio, la promoción se marca como iniciada igualmente</li>
-          </ul>
-        </section>
+          <!-- ── Nombre y código (auto-generados) ──────────────────────────── -->
+          @if (selectedStartDate()) {
+            <section>
+              <h3 class="text-sm font-semibold mb-3 text-text-primary">
+                Información de la promoción
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="text-xs font-medium mb-1 block text-text-secondary">
+                    Nombre (automático)
+                  </label>
+                  <div class="form-input bg-elevated cursor-default">
+                    {{ nombre() }}
+                  </div>
+                </div>
+                <div>
+                  <label class="text-xs font-medium mb-1 block text-text-secondary">
+                    Código (automático)
+                  </label>
+                  <div class="form-input bg-elevated cursor-default">
+                    {{ codigo() }}
+                  </div>
+                </div>
+              </div>
+              <p class="text-2xs mt-1.5 text-text-muted">
+                <app-icon name="info" [size]="10" />
+                El nombre y código se generan automáticamente a partir de la fecha de inicio
+                seleccionada.
+              </p>
+            </section>
+          }
 
-        <!-- ── Acciones ──────────────────────────────────────────────────── -->
-        <div
-          class="flex items-center gap-3 pt-2"
-          style="border-top: 1px solid var(--border-subtle);"
-        >
-          <button
-            class="btn-secondary"
-            (click)="layoutDrawer.close()"
-            data-llm-action="cancelar-crear-promocion"
-          >
-            Cancelar
-          </button>
-          <app-async-btn
-            label="Crear promoción"
-            icon="plus"
-            [loading]="facade.isSubmitting()"
-            [disabled]="!canSubmit()"
-            (click)="submit()"
-            data-llm-action="submit-crear-promocion"
-          />
-        </div>
+          <!-- ── Cursos y asignación de relatores ──────────────────────────── -->
+          <section>
+            <h3 class="text-sm font-semibold mb-1 text-text-primary">
+              Cursos y asignación de relatores
+            </h3>
+            <p class="text-xs mb-4 text-brand">
+              Cada curso admite máximo 25 alumnos. Capacidad total: 100 alumnos.
+            </p>
+
+            <div class="flex flex-col gap-3">
+              @for (curso of cursoSlots(); track curso.courseId) {
+                <div
+                  class="rounded-lg p-4"
+                  [style.border]="'1px solid ' + courseColor(curso.code)"
+                  [style.borderLeftWidth]="'3px'"
+                >
+                  <div class="flex items-center gap-3 mb-3">
+                    <span
+                      class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-2xs font-bold text-white"
+                      [style.background]="courseColor(curso.code)"
+                    >
+                      {{ curso.code }}
+                    </span>
+                    <span class="text-sm font-medium text-text-primary">
+                      {{ curso.name }}
+                    </span>
+                    <span class="ml-auto text-xs text-brand"> Capacidad </span>
+                    <span class="text-sm font-semibold text-text-primary"> 25 alumnos </span>
+                  </div>
+
+                  <!-- Relatores asignados -->
+                  <label class="text-xs font-medium mb-1.5 block text-text-secondary">
+                    Relatores asignados
+                  </label>
+
+                  @if (curso.selectedRelatores.length > 0) {
+                    <div class="flex flex-wrap gap-2 mb-2">
+                      @for (rel of curso.selectedRelatores; track rel.id) {
+                        <app-badge variant="brand">
+                          {{ rel.nombre }}
+                          <button
+                            class="inline-flex items-center justify-center w-4 h-4 rounded-full hover:opacity-70 bg-transparent border-none cursor-pointer"
+                            style="color: inherit"
+                            (click)="removeRelator(curso.courseId, rel.id)"
+                            [attr.aria-label]="'Quitar relator ' + rel.nombre"
+                          >
+                            <app-icon name="x" [size]="10" />
+                          </button>
+                        </app-badge>
+                      }
+                    </div>
+                  }
+
+                  <p-select
+                    [options]="getFilteredRelatores(curso.code, curso.courseId)"
+                    optionLabel="nombre"
+                    optionValue="id"
+                    placeholder="Seleccionar relator..."
+                    [style]="{ width: '100%' }"
+                    (onChange)="addRelator(curso.courseId, $event.value)"
+                    [ngModel]="null"
+                    data-llm-description="Seleccionar relator para curso"
+                  />
+                </div>
+              }
+            </div>
+          </section>
+
+          <!-- ── Reglas de negocio (sidebar info) ──────────────────────────── -->
+          <section class="rounded-lg p-4 bg-elevated border border-border-subtle">
+            <h4 class="text-xs font-semibold mb-2 text-text-primary">
+              <app-icon name="info" [size]="12" />
+              Reglas de negocio
+            </h4>
+            <ul class="text-2xs flex flex-col gap-1 text-text-muted">
+              <li>Duración fija: <strong>30 días de clase</strong> (lun-sáb = 5 semanas)</li>
+              <li>Inicio solo en <strong>lunes</strong>, cada 2 semanas</li>
+              <li>Máximo <strong>100 alumnos</strong> por promoción (25 por curso)</li>
+              <li>4 cursos: A2, A3, A4, A5</li>
+              <li>Un curso puede tener múltiples relatores</li>
+              <li>Si un feriado cae en inicio, la promoción se marca como iniciada igualmente</li>
+            </ul>
+          </section>
+
+          <!-- ── Acciones ──────────────────────────────────────────────────── -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button
+              class="btn-secondary"
+              (click)="layoutDrawer.close()"
+              data-llm-action="cancelar-crear-promocion"
+            >
+              Cancelar
+            </button>
+            <app-async-btn
+              label="Crear promoción"
+              icon="plus"
+              [loading]="facade.isSubmitting()"
+              [disabled]="!canSubmit()"
+              (click)="submit()"
+              data-llm-action="submit-crear-promocion"
+            />
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,

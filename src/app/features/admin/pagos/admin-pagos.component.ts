@@ -89,7 +89,7 @@ const POR_PAGINA = 5;
           >
             <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
               <div>
-                <h2 class="text-base font-semibold text-text-primary">
+                <h2 class="font-semibold text-text-primary">
                   Alumnos con saldo pendiente
                 </h2>
                 <p class="text-xs mt-0.5 text-text-muted">
@@ -267,7 +267,7 @@ const POR_PAGINA = 5;
               <div
                 class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
               >
-                <h2 class="text-base font-semibold text-text-primary">Pagos Recientes</h2>
+                <h2 class="font-semibold text-text-primary">Pagos Recientes</h2>
 
                 <!-- ── Barra de búsqueda + filtros (Integrada como Toolbar) ── -->
                 <div class="flex flex-col xl:flex-row gap-3 w-full">
@@ -291,6 +291,7 @@ const POR_PAGINA = 5;
                       [options]="estadoOptions"
                       optionLabel="label"
                       optionValue="value"
+                      placeholder="Todos los estados"
                       [ngModel]="filtroEstado()"
                       (ngModelChange)="filtroEstado.set($event)"
                       styleClass="w-full sm:w-44"
@@ -300,6 +301,7 @@ const POR_PAGINA = 5;
                       [options]="metodoOptions"
                       optionLabel="label"
                       optionValue="value"
+                      placeholder="Todos los métodos"
                       [ngModel]="filtroMetodo()"
                       (ngModelChange)="filtroMetodo.set($event)"
                       styleClass="w-full sm:w-48"
@@ -779,17 +781,15 @@ export class AdminPagosComponent implements AfterViewInit {
 
   // ── Estado local: búsqueda / filtros / paginación ────────────────────────────
   protected readonly searchQuery = signal('');
-  protected readonly filtroEstado = signal('todos');
-  protected readonly filtroMetodo = signal('todos');
+  protected readonly filtroEstado = signal<string | null>(null);
+  protected readonly filtroMetodo = signal<string | null>(null);
 
   readonly estadoOptions = [
-    { label: 'Todos los estados', value: 'todos' },
     { label: 'Completado', value: 'completado' },
     { label: 'Pendiente', value: 'pendiente' },
   ];
 
   readonly metodoOptions = [
-    { label: 'Todos los métodos', value: 'todos' },
     { label: 'Transferencia', value: 'Transferencia' },
     { label: 'Efectivo', value: 'Efectivo' },
     { label: 'Débito/Crédito', value: 'Débito/Crédito' },
@@ -828,8 +828,8 @@ export class AdminPagosComponent implements AfterViewInit {
         !q ||
         p.alumno.toLowerCase().includes(q) ||
         (p.nroDocumento ?? '').toLowerCase().includes(q);
-      const matchEstado = estado === 'todos' || p.estado === estado;
-      const matchMetodo = metodo === 'todos' || p.metodo === metodo;
+      const matchEstado = !estado || p.estado === estado;
+      const matchMetodo = !metodo || p.metodo === metodo;
       return matchSearch && matchEstado && matchMetodo;
     });
   });

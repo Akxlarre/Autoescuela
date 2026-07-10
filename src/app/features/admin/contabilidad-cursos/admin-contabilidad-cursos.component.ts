@@ -119,6 +119,7 @@ const BILLING_LABEL: Record<string, string> = {
                 [options]="tipoOptions"
                 optionLabel="label"
                 optionValue="value"
+                placeholder="Todos los tipos"
                 [ngModel]="_filtroTipo()"
                 (ngModelChange)="_filtroTipo.set($event)"
                 styleClass="flex-1 min-w-36"
@@ -128,6 +129,7 @@ const BILLING_LABEL: Record<string, string> = {
                 [options]="estadoOptions"
                 optionLabel="label"
                 optionValue="value"
+                placeholder="Todos los estados"
                 [ngModel]="_filtroEstado()"
                 (ngModelChange)="_filtroEstado.set($event)"
                 styleClass="flex-1 min-w-36"
@@ -478,13 +480,11 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   protected readonly _filtroTipo = signal<string>('');
 
   readonly tipoOptions = [
-    { label: 'Todos los tipos', value: '' },
     { label: 'SENCE', value: 'sence' },
     { label: 'Particular', value: 'particular' },
   ];
 
   readonly estadoOptions = [
-    { label: 'Todos los estados', value: '' },
     { label: 'Activo', value: 'active' },
     { label: 'Próximo', value: 'upcoming' },
     { label: 'Finalizado', value: 'completed' },

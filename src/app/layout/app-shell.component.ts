@@ -173,12 +173,15 @@ import type { SearchResult } from '@core/models/ui/global-search.model';
         <div class="flex flex-1 min-w-0 w-full overflow-hidden relative bg-surface gap-2 lg:pr-2">
           <main
             #mainContent
-            class="flex-1 flex flex-col overflow-hidden w-full max-w-full bg-base rounded-t-[var(--radius-2xl)] lg:border-t lg:border-x border-border-subtle focus:outline-none"
+            class="flex-1 flex flex-col overflow-hidden w-full max-w-full bg-base rounded-t-2xl lg:border-t lg:border-x border-border-subtle focus:outline-none"
             style="container-type: inline-size; container-name: layoutmain;"
             role="main"
             tabindex="-1"
           >
-            <div class="shell-content flex-1 overflow-y-auto overflow-x-hidden mt-3 mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pl-6 lg:pr-4 pb-4 lg:pb-4" style="scrollbar-gutter: stable;">
+            <div
+              class="shell-content flex-1 overflow-y-auto overflow-x-hidden mt-3 mr-1 lg:mr-2 mb-2 pl-4 pr-3 lg:pl-6 lg:pr-4 pb-4 lg:pb-4"
+              style="scrollbar-gutter: stable;"
+            >
               <router-outlet (activate)="onRouteActivate()" />
             </div>
           </main>

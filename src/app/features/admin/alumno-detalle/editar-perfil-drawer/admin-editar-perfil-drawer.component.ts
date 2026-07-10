@@ -5,6 +5,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 
 @Component({
@@ -16,11 +17,12 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
-    <div class="flex flex-col h-full bg-surface">
+    <app-drawer-form>
       <!-- ── Body ── -->
-      <app-drawer-content-loader class="flex-1 overflow-y-auto p-5">
+      <app-drawer-content-loader>
         <ng-template #skeletons>
           <div class="flex flex-col gap-5 w-full">
             <app-skeleton-block variant="text" width="100%" height="70px" />
@@ -121,7 +123,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
             <!-- Feedback de error -->
             @if (saveError()) {
-              <p class="text-sm text-error" >
+              <p class="text-sm text-error">
                 {{ saveError() }}
               </p>
             }
@@ -141,7 +143,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       </app-drawer-content-loader>
 
       <!-- ── Footer ── -->
-      <div class="p-4 border-t border-border-subtle flex items-center justify-end gap-2">
+      <ng-container ngProjectAs="[drawer-form-footer]">
         <button
           type="button"
           class="btn-secondary"
@@ -152,7 +154,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         </button>
         <button
           type="button"
-          class="btn-primary"
+          class="btn-primary flex items-center gap-2"
           [disabled]="form.invalid || isSaving()"
           (click)="onSubmit()"
           data-llm-action="guardar-perfil-alumno"
@@ -164,8 +166,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
             Guardar Cambios
           }
         </button>
-      </div>
-    </div>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     .field-label {
@@ -198,8 +200,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
   `,
 })
 export class AdminEditarPerfilDrawerComponent implements OnInit {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-protected readonly facade = inject(AdminAlumnoDetalleFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  protected readonly facade = inject(AdminAlumnoDetalleFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
 
@@ -280,7 +282,9 @@ protected readonly facade = inject(AdminAlumnoDetalleFacade);
         this.layoutDrawer.close();
       }, 1200);
     } catch (err) {
-      this.saveError.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.');
+      this.saveError.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al guardar.',
+      );
     } finally {
       this.isSaving.set(false);
     }

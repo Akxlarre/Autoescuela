@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Button } from 'primeng/button';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
@@ -8,11 +7,11 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
   selector: 'app-admin-ficha-tecnica',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, Button, IconComponent],
+  imports: [CommonModule, IconComponent],
   template: `
     <div
       id="ficha-tecnica-container"
-      class="bento-card overflow-hidden !p-0 flex flex-col h-full w-full"
+      class="bento-card overflow-hidden p-0! flex flex-col h-full w-full"
     >
       <!-- Header -->
       <div
@@ -25,19 +24,19 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             <app-icon name="clipboard-check" [size]="18" />
           </div>
           <div class="flex flex-col">
-            <span class="text-base font-bold text-text-primary">Ficha Técnica</span>
+            <span class="font-bold text-text-primary">Ficha Técnica</span>
             <span class="text-xs text-text-muted">Desempeño en clases prácticas</span>
           </div>
         </div>
-        <p-button
-          label="Imprimir Informe"
-          icon="pi pi-print"
-          size="small"
-          [text]="true"
-          severity="secondary"
-          class="no-print"
-          (onClick)="imprimirFicha.emit()"
-        />
+        <button
+          type="button"
+          class="btn-secondary"
+          data-llm-action="imprimir-ficha-tecnica"
+          (click)="imprimirFicha.emit()"
+        >
+          <app-icon name="printer" [size]="14" />
+          Imprimir Informe
+        </button>
       </div>
 
       <!-- Desktop Table View (Hidden on mobile) -->
@@ -58,6 +57,8 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             @for (clase of clases(); track clase.numero) {
               <tr
                 [class.fila-pendiente]="!clase.completada"
+                [class.fila-ausente]="clase.ausente"
+                [class.fila-cancelada]="!clase.ausente && clase.cancelada"
                 class="group transition-colors hover:bg-elevated/50"
               >
                 <td class="font-bold text-text-primary">#{{ clase.numero }}</td>
@@ -90,13 +91,31 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                     <span class="dato-vacio">-</span>
                   }
                 </td>
-                <td class="max-w-[200px]">
-                  <span
-                    class="text-xs text-text-secondary line-clamp-2"
-                    [title]="clase.observaciones"
-                  >
-                    {{ clase.observaciones || 'Pendiente de sesión' }}
-                  </span>
+                <td class="max-w-50">
+                  <div class="flex flex-col gap-1">
+                    @if (clase.ausente) {
+                      <span
+                        class="badge-estado-clase"
+                        [class.badge-estado-clase--ok]="clase.justificada"
+                      >
+                        {{ clase.justificada ? 'Inasistencia justificada' : 'Inasistencia' }}
+                      </span>
+                    } @else if (clase.cancelada) {
+                      <span class="badge-estado-clase badge-estado-clase--warning">
+                        Cancelada — pendiente reagendar
+                      </span>
+                    }
+                    <span
+                      class="text-xs text-text-secondary line-clamp-2"
+                      [title]="clase.observaciones || clase.justificacion || ''"
+                    >
+                      {{
+                        clase.observaciones ||
+                          clase.justificacion ||
+                          (clase.ausente || clase.cancelada ? '' : 'Pendiente de sesión')
+                      }}
+                    </span>
+                  </div>
                 </td>
                 <td>
                   <div class="flex items-center justify-center gap-2">
@@ -144,11 +163,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
         @for (clase of clases(); track clase.numero) {
           <div
             class="p-4 rounded-xl border border-border-subtle bg-surface shadow-sm flex flex-col gap-3"
-            [class.opacity-60]="!clase.completada"
           >
             <div class="flex items-center justify-between">
-              <span
-                class="px-2 py-0.5 rounded bg-elevated text-2xs font-bold text-text-primary"
+              <span class="px-2 py-0.5 rounded bg-elevated text-[10px] font-bold text-text-primary"
                 >SESIÓN #{{ clase.numero }}</span
               >
               <div class="flex items-center gap-2">
@@ -199,13 +216,26 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
               </div>
             </div>
 
-            @if (clase.observaciones) {
+            @if (clase.ausente) {
+              <span
+                class="badge-estado-clase self-start"
+                [class.badge-estado-clase--ok]="clase.justificada"
+              >
+                {{ clase.justificada ? 'Inasistencia justificada' : 'Inasistencia' }}
+              </span>
+            } @else if (clase.cancelada) {
+              <span class="badge-estado-clase badge-estado-clase--warning self-start">
+                Cancelada — pendiente reagendar
+              </span>
+            }
+
+            @if (clase.observaciones || clase.justificacion) {
               <div class="p-2 rounded bg-elevated/50 border-l-2 border-brand/30">
-                <p class="text-2xs text-text-secondary m-0 line-clamp-2 italic">
-                  "{{ clase.observaciones }}"
+                <p class="text-[11px] text-text-secondary m-0 line-clamp-2 italic">
+                  "{{ clase.observaciones || clase.justificacion }}"
                 </p>
               </div>
-            } @else {
+            } @else if (!clase.ausente && !clase.cancelada) {
               <div class="h-px bg-border-subtle w-full"></div>
               <span class="text-2xs text-text-muted italic text-center"
                 >Sesión aún no realizada</span
@@ -217,6 +247,18 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     </div>
   `,
   styles: `
+    /* Force Compact (drawer abierto): "md:" es un breakpoint de viewport,
+       no reacciona al layout-shift del drawer. Forzamos la vista mobile
+       (tarjetas) cuando el ancestro .bento-grid tiene .force-compact. */
+    :host-context(.force-compact) {
+      .hidden.md\\:block {
+        display: none !important;
+      }
+      .md\\:hidden {
+        display: block !important;
+      }
+    }
+
     .tabla-ficha {
       border-collapse: collapse;
       font-size: var(--text-sm);
@@ -240,8 +282,35 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     .fila-pendiente td {
       color: var(--text-muted);
     }
+    .fila-ausente {
+      background: color-mix(in srgb, var(--state-error) 5%, transparent);
+    }
+    .fila-cancelada {
+      background: color-mix(in srgb, var(--state-warning) 5%, transparent);
+    }
     .dato-vacio {
       color: var(--text-muted);
+    }
+
+    .badge-estado-clase {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: var(--font-semibold);
+      white-space: nowrap;
+      color: var(--state-error);
+      background: color-mix(in srgb, var(--state-error) 12%, transparent);
+    }
+    .badge-estado-clase--warning {
+      color: var(--state-warning);
+      background: color-mix(in srgb, var(--state-warning) 12%, transparent);
+    }
+    .badge-estado-clase--ok {
+      color: var(--state-success);
+      background: color-mix(in srgb, var(--state-success) 12%, transparent);
     }
 
     .firma-dot {
@@ -286,32 +355,6 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
       border-color: var(--ds-brand);
       color: var(--ds-brand);
       background: var(--bg-brand-muted, color-mix(in srgb, var(--ds-brand) 8%, transparent));
-    }
-
-    @media print {
-      :host {
-        visibility: hidden;
-      }
-      #ficha-tecnica-container,
-      #ficha-tecnica-container * {
-        visibility: visible;
-      }
-      #ficha-tecnica-container {
-        position: fixed;
-        inset: 0;
-        border: none !important;
-        box-shadow: none !important;
-        background: #fff !important;
-      }
-      .no-print {
-        display: none !important;
-      }
-      .md-hidden {
-        display: none !important;
-      } /* Siempre usar tabla para imprimir */
-      .hidden {
-        display: block !important;
-      }
     }
   `,
 })

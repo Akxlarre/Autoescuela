@@ -15,6 +15,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-admin-secretarias-editar-drawer',
@@ -27,6 +28,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
     IconComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
@@ -41,7 +43,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
           </div>
         </ng-template>
         <ng-template #content>
-          <div class="flex flex-col h-full w-full">
+          <app-drawer-form>
             <!-- Mini-header con la secretaria que se está editando -->
             <div
               class="flex items-center gap-3 rounded-lg p-3 mb-5 bg-elevated border border-border-subtle"
@@ -249,19 +251,16 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
             </div>
 
             <!-- Acciones -->
-            <div
-              class="flex items-center gap-3 mt-6 pt-4"
-              style="border-top: 1px solid var(--border-subtle);"
-            >
+            <ng-container ngProjectAs="[drawer-form-footer]">
               <button
-                class="btn-secondary flex-1"
+                class="btn-secondary"
                 (click)="layoutDrawer.close()"
                 data-llm-action="cancelar-editar-secretaria"
               >
                 Cancelar
               </button>
               <button
-                class="btn-primary flex-[2]"
+                class="btn-primary flex items-center gap-2"
                 [disabled]="facade.isSubmitting()"
                 (click)="submit(sec.id)"
                 data-llm-action="guardar-editar-secretaria"
@@ -275,8 +274,8 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
                   Guardar cambios
                 }
               </button>
-            </div>
-          </div>
+            </ng-container>
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }

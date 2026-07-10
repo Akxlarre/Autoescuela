@@ -8,6 +8,7 @@ import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-edita
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
   selector: 'app-admin-secretarias-ver-drawer',
@@ -20,6 +21,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     StatBoxComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
   ],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
@@ -35,7 +37,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
           </div>
         </ng-template>
         <ng-template #content>
-          <div class="flex flex-col h-full w-full">
+          <app-drawer-form [hasFooter]="false">
             <!-- Avatar + nombre -->
             <div
               class="flex flex-col items-center gap-3 pb-6 mb-6"
@@ -159,7 +161,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
                 Editar secretaria
               </button>
             </div>
-          </div>
+          </app-drawer-form>
         </ng-template>
       </app-drawer-content-loader>
     }

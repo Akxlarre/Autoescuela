@@ -387,9 +387,11 @@ import type {
             </div>
           }
         } @else {
-          <!-- Fila 1: columna en <sm (LEFT luego RIGHT), fila en sm+ -->
+          <!-- Fila 1: columna en <sm (LEFT luego RIGHT), fila en sm+.
+               flex-wrap: si LEFT + RIGHT no caben en una fila (muchas acciones/chips),
+               bajan a una segunda línea en vez de aplastarse/superponerse. -->
           <div
-            class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-4 py-3 sm:py-2.5 sm:min-h-15"
+            class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 px-4 py-3 sm:py-2.5 sm:min-h-15"
           >
             <!-- LEFT: back | icon | title -->
             <div class="flex items-center gap-3 min-w-0 flex-1">

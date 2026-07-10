@@ -67,7 +67,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     IconComponent,
     BadgeComponent,
     BentoGridLayoutDirective,
-    CardHoverDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
   ],
@@ -240,7 +239,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   [size]="18"
                   [style.color]="'var(--color-primary)'"
                 />
-                <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
+                <h2 class="text-sm font-semibold text-text-primary">
+                  Asistencia del Día — Prácticas
+                </h2>
               </div>
               <div class="flex items-center gap-2">
                 <!-- Selector de fecha -->
@@ -300,6 +301,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   [options]="instructorSelectOptions()"
                   optionLabel="label"
                   optionValue="value"
+                  placeholder="Todos los instructores"
                   [ngModel]="selectedInstructorId()"
                   (ngModelChange)="selectedInstructorId.set($event)"
                   styleClass="w-auto"
@@ -354,7 +356,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                       <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Estado
                       </th>
-                      <th class="text-right text-xs font-semibold text-text-secondary pb-2">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pl-4">
                         Acciones
                       </th>
                     </tr>
@@ -365,19 +367,21 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         class="border-b transition-colors hover:bg-elevated"
                         [style.border-color]="'var(--border-subtle)'"
                       >
-                        <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                        <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
                           {{ row.horaInicio }}
                         </td>
                         <td class="py-3 pr-4 whitespace-nowrap">
                           @if (row.horaInicioReal) {
-                            <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
+                            <span class="font-medium text-text-primary">{{
+                              row.horaInicioReal
+                            }}</span>
                           } @else {
                             <span class="text-text-muted">—</span>
                           }
                         </td>
                         <td class="py-3 pr-4 whitespace-nowrap">
                           @if (row.horaFinReal) {
-                            <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
+                            <span class="font-medium text-text-primary">{{ row.horaFinReal }}</span>
                           } @else {
                             <span class="text-text-muted">—</span>
                           }
@@ -401,7 +405,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         <td class="py-3 pr-4">
                           @if (row.vehiclePlate) {
                             <div class="flex flex-col">
-                              <span class="text-xs font-medium text-primary">{{
+                              <span class="text-xs font-medium text-text-primary">{{
                                 row.vehiclePlate
                               }}</span>
                               @if (row.vehicleBrand || row.vehicleModel) {
@@ -415,13 +419,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           }
                         </td>
                         <td class="py-3 pr-4">
-                          <app-badge [variant]="statusBadgeVariant(row.status)">
-                            <app-icon [name]="statusBadgeIcon(row.status)" [size]="11" />
-                            {{ statusBadgeLabel(row.status) }}
+                          <app-badge [variant]="statusBadgeVariant(row)">
+                            <app-icon [name]="statusBadgeIcon(row)" [size]="11" />
+                            {{ statusBadgeLabel(row) }}
                           </app-badge>
                         </td>
-                        <td class="py-3 text-right">
-                          <div class="flex items-center justify-end gap-2">
+                        <td class="py-3 pl-4">
+                          <div class="flex items-center justify-start gap-2">
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
@@ -474,7 +478,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.status === 'ausente' && !row.justificacion) {
                               <button
-                                class="text-xs font-medium hover:underline"
+                                class="text-xs font-medium hover:underline cursor-pointer"
                                 [style.color]="'var(--color-primary)'"
                                 [disabled]="isSaving()"
                                 data-llm-action="justify-absence"
@@ -538,8 +542,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       <!-- ── Modal de justificación ─────────────────────────────────────────── -->
       @if (justifyModalOpen()) {
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4"
-          class="bg-black/40"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
           (click)="closeJustifyModal()"
         >
           <div
@@ -550,7 +553,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             aria-label="Justificar inasistencia"
           >
             <div class="flex items-center justify-between">
-              <h3 class="text-base font-semibold text-text-primary">Justificar Inasistencia</h3>
+              <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
               <button
                 class="p-1 rounded-md text-text-muted hover:text-text-primary"
                 aria-label="Cerrar"
@@ -655,10 +658,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly activeStatusFilter = signal<StatusFilter>('todos');
   protected readonly selectedInstructorId = signal<number | null>(null);
 
-  readonly instructorSelectOptions = computed(() => [
-    { label: 'Todos los instructores', value: null },
-    ...this.instructores().map((i) => ({ label: i.name, value: i.id })),
-  ]);
+  readonly instructorSelectOptions = computed(() =>
+    this.instructores().map((i) => ({ label: i.name, value: i.id })),
+  );
 
   // Justify modal
   protected readonly justifyModalOpen = signal(false);
@@ -763,8 +765,14 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   // ── Status badge helpers ──────────────────────────────────────────────────────
 
-  protected statusBadgeLabel(status: ClasePracticaStatus): string {
-    switch (status) {
+  /** true cuando la inasistencia ya fue justificada por la secretaria. */
+  protected isJustificada(row: ClasePracticaRow): boolean {
+    return row.status === 'ausente' && !!row.justificacion;
+  }
+
+  protected statusBadgeLabel(row: ClasePracticaRow): string {
+    if (this.isJustificada(row)) return 'Justificada';
+    switch (row.status) {
       case 'presente':
         return 'Presente';
       case 'ausente':
@@ -776,8 +784,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  protected statusBadgeIcon(status: ClasePracticaStatus): string {
-    switch (status) {
+  protected statusBadgeIcon(row: ClasePracticaRow): string {
+    if (this.isJustificada(row)) return 'shield-check';
+    switch (row.status) {
       case 'presente':
         return 'check-circle';
       case 'ausente':
@@ -789,10 +798,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  protected statusBadgeVariant(
-    status: ClasePracticaStatus,
-  ): 'success' | 'error' | 'brand' | 'neutral' {
-    switch (status) {
+  protected statusBadgeVariant(row: ClasePracticaRow): 'success' | 'error' | 'brand' | 'neutral' {
+    if (this.isJustificada(row)) return 'neutral';
+    switch (row.status) {
       case 'presente':
         return 'success';
       case 'ausente':

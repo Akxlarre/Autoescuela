@@ -4,6 +4,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { ReportesContablesFacade } from '@core/facades/reportes-contables.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -27,6 +28,7 @@ import {
     SelectModule,
     DateInputComponent,
     DrawerContentLoaderComponent,
+    DrawerFormComponent,
     SkeletonBlockComponent,
   ],
   template: `
@@ -41,8 +43,8 @@ import {
       </ng-template>
 
       <ng-template #content>
-        <!-- Cuerpo del formulario -->
-        <div class="flex-1 overflow-y-auto p-5">
+        <app-drawer-form>
+          <!-- Cuerpo del formulario -->
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onGuardar()">
             <!-- Categoría -->
             <div class="flex flex-col gap-1.5">
@@ -121,7 +123,9 @@ import {
                 label="Fecha"
                 [required]="true"
                 [value]="form.get('date')?.value ?? ''"
-                (valueChange)="form.get('date')?.setValue($event); form.get('date')?.markAsTouched()"
+                (valueChange)="
+                  form.get('date')?.setValue($event); form.get('date')?.markAsTouched()
+                "
                 data-llm-description="fecha en que ocurrió o se registra el gasto fijo"
               />
               @if (form.get('date')?.invalid && form.get('date')?.touched) {
@@ -141,38 +145,35 @@ import {
               </div>
             }
           </form>
-        </div>
 
-        <!-- Footer fijo -->
-        <div
-          class="p-5 border-t flex items-center justify-end gap-3 sticky bottom-0 z-20"
-          style="background: var(--bg-surface); border-color: var(--border-muted)"
-        >
-          <button
-            type="button"
-            class="btn-secondary cursor-pointer"
-            [disabled]="isSaving()"
-            data-llm-action="cancelar-gasto-fijo"
-            (click)="onCerrar()"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="btn-primary flex items-center gap-2 cursor-pointer"
-            [disabled]="form.invalid || isSaving()"
-            data-llm-action="guardar-gasto-fijo"
-            (click)="onGuardar()"
-          >
-            @if (isSaving()) {
-              <app-icon name="loader" [size]="16" class="animate-spin" />
-              Guardando...
-            } @else {
-              <app-icon name="save" [size]="16" />
-              Guardar Gasto
-            }
-          </button>
-        </div>
+          <!-- Footer fijo -->
+          <ng-container ngProjectAs="[drawer-form-footer]">
+            <button
+              type="button"
+              class="btn-secondary cursor-pointer"
+              [disabled]="isSaving()"
+              data-llm-action="cancelar-gasto-fijo"
+              (click)="onCerrar()"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              class="btn-primary flex items-center gap-2 cursor-pointer"
+              [disabled]="form.invalid || isSaving()"
+              data-llm-action="guardar-gasto-fijo"
+              (click)="onGuardar()"
+            >
+              @if (isSaving()) {
+                <app-icon name="loader" [size]="16" class="animate-spin" />
+                Guardando...
+              } @else {
+                <app-icon name="save" [size]="16" />
+                Guardar Gasto
+              }
+            </button>
+          </ng-container>
+        </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
   `,
