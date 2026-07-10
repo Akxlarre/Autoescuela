@@ -1,5 +1,6 @@
 ﻿import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { ProfessionalModuleGrade } from '@core/models/dto/professional-module-grade.model';
@@ -41,10 +42,11 @@ interface EnrollmentRow {
 
 @Injectable({ providedIn: 'root' })
 export class EvaluacionesProfesionalFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly auth = inject(AuthFacade);
+  private readonly notifications = inject(NotificationsFacade);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _promociones = signal<PromocionOption[]>([]);
@@ -196,7 +198,9 @@ private readonly supabase = inject(SupabaseService);
       // 5. Ensamblaje puro (testeable)
       this._landing.set(buildLanding(promotions, courses, enrollments, grades));
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error cargando el panorama');
+      this._error.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error cargando el panorama',
+      );
       this._landing.set([]);
     } finally {
       this._landingLoaded.set(true);
@@ -359,7 +363,9 @@ private readonly supabase = inject(SupabaseService);
         confirmed: hasConfirmed,
       });
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error desconocido');
+      this._error.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error desconocido',
+      );
     } finally {
       this._isLoading.set(false);
     }
@@ -490,8 +496,68 @@ private readonly supabase = inject(SupabaseService);
         : 'Borrador guardado correctamente.';
     this.toast.success(msg);
 
+    if (targetStatus === 'confirmed') {
+      this.notifyGradesConfirmed(g);
+    }
+
     // Recargar la grilla para reflejar IDs generados y limpiar dirty flags
     await this.loadGrilla(g.promotionCourseId);
     return true;
+  }
+
+  /**
+   * Notifica a cada alumno del curso que sus notas fueron confirmadas (spec 0025, AC3).
+   * Mensaje distinto si `promedioAprobado === false` (reprobado, < 75).
+   * Fire-and-forget: un fallo nunca revierte la confirmación ya guardada (AC-E1).
+   */
+  private notifyGradesConfirmed(g: GrillaEvaluacion): void {
+    const enrollmentIds = g.filas.map((f) => f.enrollmentId);
+    if (enrollmentIds.length === 0) return;
+
+    this.resolveStudentUserIds(enrollmentIds)
+      .then((userIdByEnrollment) => {
+        for (const fila of g.filas) {
+          const userId = userIdByEnrollment.get(fila.enrollmentId);
+          if (!userId) continue;
+
+          const message =
+            fila.promedioAprobado === false
+              ? `Promedio final: ${fila.promedio} — no alcanzó el mínimo de aprobación (75).`
+              : `Promedio final: ${fila.promedio}, aprobado.`;
+
+          this.notifications
+            .notifyUsers([userId], {
+              subject: 'Tus notas fueron confirmadas',
+              message,
+              referenceType: 'professional_session',
+            })
+            .catch(() => this.toast.warning('No se pudo notificar a un alumno'));
+        }
+      })
+      .catch(() => {
+        // Resolución de destinatarios falló (red/RLS) — no rompe la confirmación (AC-E1).
+      });
+  }
+
+  /** Resuelve en batch `enrollments.id → students.user_id` para notificar a los alumnos. */
+  private async resolveStudentUserIds(enrollmentIds: number[]): Promise<Map<number, number>> {
+    const uniqueIds = [...new Set(enrollmentIds)];
+    const map = new Map<number, number>();
+
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select('id, students!inner(user_id)')
+      .in('id', uniqueIds);
+    if (error || !data) return map;
+
+    for (const row of data as {
+      id: number;
+      students: { user_id: number } | { user_id: number }[];
+    }[]) {
+      const students = row.students;
+      const student = Array.isArray(students) ? students[0] : students;
+      if (student?.user_id) map.set(row.id, student.user_id);
+    }
+    return map;
   }
 }

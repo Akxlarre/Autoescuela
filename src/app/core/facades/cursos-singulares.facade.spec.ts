@@ -4,6 +4,7 @@ import { CursosSingularesFacade, mapCursoDto } from './cursos-singulares.facade'
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import type {
   SingularPaymentForm,
@@ -20,6 +21,7 @@ describe('CursosSingularesFacade', () => {
   let facade: CursosSingularesFacade;
   let supabaseSpy: any;
   let toastSpy: any;
+  let notificationsSpy: any;
 
   /** Cola FIFO de respuestas `{ data, error, count }` — cada query terminal consume una. */
   let queue: Array<{ data?: any; error?: any; count?: number }>;
@@ -73,7 +75,8 @@ describe('CursosSingularesFacade', () => {
         }),
       },
     };
-    toastSpy = { success: vi.fn(), error: vi.fn() };
+    toastSpy = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
+    notificationsSpy = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -82,6 +85,7 @@ describe('CursosSingularesFacade', () => {
         { provide: BranchFacade, useValue: { selectedBranchId: signal<number | null>(1) } },
         { provide: AuthFacade, useValue: { currentUser: signal({ dbId: 9, role: 'admin' }) } },
         { provide: ToastService, useValue: toastSpy },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
       ],
     });
 
@@ -355,6 +359,54 @@ describe('CursosSingularesFacade', () => {
       const payload = insert!.chain.insert.mock.calls[0][0];
       expect(payload['branch_id']).toBe(2);
       expect(payload['registered_by']).toBe(9);
+    });
+  });
+
+  // ── spec 0025 (T2.3): notificación al alumno tras marcar el curso pagado ──
+  describe('marcarEnrollmentPagado — notificación al alumno (spec 0025, AC1, AC-E1)', () => {
+    beforeEach(() => {
+      (facade as any)._selectedCurso.set({ id: 1, precio: 100000 } as any);
+    });
+
+    it('notifica al alumno resolviendo standalone_course_enrollments → students.user_id', async () => {
+      queue.push({ data: { discount_amount: 0 }, error: null }); // select discount_amount
+      queue.push({ data: null, error: null }); // update payment_status
+      queue.push({ data: { students: { user_id: 88 } }, error: null }); // resolver student user_id
+      queue.push({ data: [], error: null }); // loadInscriptos
+      queue.push({ data: [], error: null }); // refreshSilently
+
+      const ok = await facade.marcarEnrollmentPagado(10);
+
+      expect(ok).toBe(true);
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [88],
+        expect.objectContaining({ referenceType: 'payment' }),
+      );
+    });
+
+    it('monto $0 (descuento total) no dispara notificación (AC-E1)', async () => {
+      queue.push({ data: { discount_amount: 100000 }, error: null }); // descuento = precio completo
+      queue.push({ data: null, error: null }); // update payment_status
+      queue.push({ data: [], error: null }); // loadInscriptos
+      queue.push({ data: [], error: null }); // refreshSilently
+
+      const ok = await facade.marcarEnrollmentPagado(10);
+
+      expect(ok).toBe(true);
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
+    it('un fallo en notifyUsers no revierte el registro del pago', async () => {
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
+      queue.push({ data: { discount_amount: 0 }, error: null });
+      queue.push({ data: null, error: null });
+      queue.push({ data: { students: { user_id: 88 } }, error: null });
+      queue.push({ data: [], error: null });
+      queue.push({ data: [], error: null });
+
+      const ok = await facade.marcarEnrollmentPagado(10);
+
+      expect(ok).toBe(true);
     });
   });
 

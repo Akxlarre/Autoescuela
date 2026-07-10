@@ -4,6 +4,8 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import type { LiquidacionRow } from '@core/models/ui/liquidaciones.model';
 
 describe('LiquidacionesFacade', () => {
   let facade: LiquidacionesFacade;
@@ -11,12 +13,14 @@ describe('LiquidacionesFacade', () => {
   let authFacadeSpy: any;
   let branchFacadeSpy: any;
   let toastSpy: any;
+  let notificationsSpy: any;
 
   beforeEach(() => {
     supabaseSpy = { client: vi.fn() };
     authFacadeSpy = { currentUser: vi.fn() };
     branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
-    toastSpy = { error: vi.fn(), success: vi.fn() };
+    toastSpy = { error: vi.fn(), success: vi.fn(), warning: vi.fn() };
+    notificationsSpy = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
 
     const mockChannel = {
       on: vi.fn().mockReturnThis(),
@@ -59,6 +63,7 @@ describe('LiquidacionesFacade', () => {
         { provide: AuthFacade, useValue: authFacadeSpy },
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: ToastService, useValue: toastSpy },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
       ],
     });
 
@@ -130,6 +135,57 @@ describe('LiquidacionesFacade', () => {
       branchFacadeSpy.selectedBranchId.mockReturnValue(2);
 
       expect((facade as any).getActiveBranchId()).toBe(1);
+    });
+  });
+
+  // ─── spec 0025 (T1.1): notificar liquidación pagada al instructor ──────────
+  describe('registrarPago — notificación al instructor (spec 0025, AC5)', () => {
+    const row: LiquidacionRow = {
+      instructorId: 7,
+      userId: 42,
+      nombre: 'Juan Pérez',
+      rut: '11.111.111-1',
+      initials: 'JP',
+      avatarColor: '#000',
+      practicalSessions: 10,
+      totalHours: 15,
+      amountPerHour: 5000,
+      totalBaseAmount: 75000,
+      totalAdvances: 10000,
+      finalPaymentAmount: 65000,
+      status: 'pending',
+    };
+
+    beforeEach(() => {
+      authFacadeSpy.currentUser.mockReturnValue({ dbId: 1, role: 'admin' });
+    });
+
+    it('notifica al instructor usando row.userId directamente', async () => {
+      const ok = await facade.registrarPago(row, { amountPerHour: 5000 } as any);
+
+      expect(ok).toBe(true);
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(1);
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [42],
+        expect.objectContaining({ referenceType: 'payment' }),
+      );
+    });
+
+    it('no notifica si row.userId es falsy (guard)', async () => {
+      const rowSinUserId: LiquidacionRow = { ...row, userId: 0 };
+
+      const ok = await facade.registrarPago(rowSinUserId, { amountPerHour: 5000 } as any);
+
+      expect(ok).toBe(true);
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
+    it('un fallo en notifyUsers no revierte el registro del pago', async () => {
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
+
+      const ok = await facade.registrarPago(row, { amountPerHour: 5000 } as any);
+
+      expect(ok).toBe(true);
     });
   });
 });

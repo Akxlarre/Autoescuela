@@ -201,6 +201,26 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Notificar bienvenida al alumno (Spec 0025, AC6). Solo en la PRIMERA invitación
+      // — el reenvío (rama de abajo) no debe duplicar esta notificación.
+      // Try/catch propio: un fallo del INSERT jamás afecta la respuesta de la invitación.
+      try {
+        const { error: notifyError } = await supabaseAdmin.from('notifications').insert({
+          recipient_id: userId,
+          type: 'system',
+          subject: 'Bienvenido al portal',
+          message: 'Tu cuenta ya está lista. Revisa tu correo para activar tu contraseña.',
+          reference_type: null, // sin subtipo — mapea a severidad 'info' por defecto en el panel
+          read: false,
+          sent_ok: true,
+        });
+        if (notifyError) {
+          console.error('[activate-student-account] notification insert error:', notifyError);
+        }
+      } catch (notifyErr) {
+        console.error('[activate-student-account] notification dispatch error:', notifyErr);
+      }
+
       return jsonResponse({ success: true, status: 'invited' }, 201);
     }
 

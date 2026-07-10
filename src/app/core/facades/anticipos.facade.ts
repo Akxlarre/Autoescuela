@@ -1,6 +1,7 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import type {
@@ -34,9 +35,10 @@ export function mapStatus(raw: string | null): AdvanceStatus {
 
 @Injectable({ providedIn: 'root' })
 export class AnticiosFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly notifications = inject(NotificationsFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
@@ -227,17 +229,55 @@ private readonly supabase = inject(SupabaseService);
         registered_by: user.dbId ?? null,
       });
       if (error) throw error;
+      this.notifyAnticipoRegistrado(payload.instructorId, payload.amount);
       this.toast.success('Anticipo registrado correctamente.');
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar el anticipo.';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al registrar el anticipo.';
       this._error.set(msg);
       this.toast.error(msg);
       return false;
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /**
+   * Notifica al instructor que se le registró un anticipo (spec 0025, AC4).
+   * Fire-and-forget: un fallo nunca revierte el registro ya confirmado.
+   */
+  private notifyAnticipoRegistrado(instructorId: number, amount: number): void {
+    if (amount <= 0) return;
+
+    this.resolveInstructorUserId(instructorId)
+      .then((userId) => {
+        if (!userId) return;
+        this.notifications
+          .notifyUsers([userId], {
+            subject: 'Anticipo registrado',
+            message: `Se registró un anticipo de $${amount}.`,
+            referenceType: 'payment',
+          })
+          .catch(() => this.toast.warning('No se pudo notificar al instructor'));
+      })
+      .catch(() => {
+        // Resolución de destinatario falló (red/RLS) — no rompe el registro (AC-E1).
+      });
+  }
+
+  /** Resuelve `instructors.id → users.id` para poder notificar al instructor. */
+  private async resolveInstructorUserId(instructorId: number): Promise<number | null> {
+    const { data, error } = await this.supabase.client
+      .from('instructors')
+      .select('user_id')
+      .eq('id', instructorId)
+      .single();
+    if (error || !data) return null;
+    return (data as { user_id: number }).user_id;
   }
 }
 

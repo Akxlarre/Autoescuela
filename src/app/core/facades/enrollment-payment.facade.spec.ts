@@ -2,8 +2,12 @@ import { vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { EnrollmentPaymentFacade } from './enrollment-payment.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 // ── Mock Supabase client ──
+
+const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 function createMockQueryBuilder(responseData: any = null, responseError: any = null) {
   const builder: any = {
@@ -37,12 +41,21 @@ function createMockSupabaseService() {
 describe('EnrollmentPaymentFacade', () => {
   let facade: EnrollmentPaymentFacade;
   let mockSupabase: ReturnType<typeof createMockSupabaseService>;
+  let notificationsSpy: any;
+  let toastSpy: any;
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseService();
+    notificationsSpy = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
+    toastSpy = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
 
     TestBed.configureTestingModule({
-      providers: [EnrollmentPaymentFacade, { provide: SupabaseService, useValue: mockSupabase }],
+      providers: [
+        EnrollmentPaymentFacade,
+        { provide: SupabaseService, useValue: mockSupabase },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
+        { provide: ToastService, useValue: toastSpy },
+      ],
     });
 
     facade = TestBed.inject(EnrollmentPaymentFacade);
@@ -243,6 +256,69 @@ describe('EnrollmentPaymentFacade', () => {
     it('should return false without enrollmentId', async () => {
       const result = await facade.recordPayment(null, null);
       expect(result).toBe(false);
+    });
+
+    // ── spec 0025 (T2.1): notificación al alumno tras registrar el pago ──
+    describe('notificación al alumno (spec 0025, AC1, AC7, AC-E1)', () => {
+      beforeEach(() => {
+        facade.computePricing({
+          courseLabel: 'Clase B',
+          basePrice: 300000,
+          practicalClassesIncluded: 12,
+          isDeposit: false,
+        });
+        facade.setPaymentMethod('efectivo');
+      });
+
+      it('notifica solo al alumno resolviendo enrollments → students.user_id', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+        expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(1);
+        expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+          [55],
+          expect.objectContaining({ referenceType: 'payment' }),
+        );
+      });
+
+      it('NO notifica al admin en ningún caso (sin ruido, AC7)', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        // Un solo destinatario: el alumno (id 55). Nunca se agrega al admin/secretaria.
+        expect(notificationsSpy.notifyUsers).toHaveBeenCalledTimes(1);
+        expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([55], expect.anything());
+      });
+
+      it('monto $0 no dispara notificación (AC-E1)', async () => {
+        facade.setDiscount({ enabled: true, amount: 300000, reason: 'Beca 100%' });
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+        expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+      });
+
+      it('un fallo en notifyUsers no revierte el pago', async () => {
+        const builder = createMockQueryBuilder({ students: { user_id: 55 } }, null);
+        mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+        notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
+
+        const ok = await facade.recordPayment(10, 1);
+        await flushMicrotasks();
+
+        expect(ok).toBe(true);
+      });
     });
   });
 

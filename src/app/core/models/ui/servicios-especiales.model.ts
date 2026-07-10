@@ -30,6 +30,8 @@ export interface VentaServicio {
   estado: 'completado' | 'pendiente';
   resultado: string | null;
   cobrado: boolean;
+  /** `users.id` del alumno (vía `students.user_id`), null si es cliente externo */
+  studentUserId: number | null;
 }
 
 export interface VentaFormData {

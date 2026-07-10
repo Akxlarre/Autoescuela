@@ -6,6 +6,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { ServiceCatalog } from '@core/models/dto/service-catalog.model';
@@ -58,9 +59,14 @@ function mapCatalogDto(dto: ServiceCatalog): ServicioEspecial {
 }
 
 function mapVentaDto(
-  dto: SpecialServiceSale & { service_catalog: { name: string } | null },
+  dto: SpecialServiceSale & {
+    service_catalog: { name: string } | null;
+    students: { user_id: number } | { user_id: number }[] | null;
+  },
 ): VentaServicio {
   const resultado = (dto.metadata?.['resultado'] as string | undefined) ?? null;
+  const students = dto.students;
+  const student = Array.isArray(students) ? students[0] : students;
   return {
     id: dto.id,
     cliente: dto.client_name ?? '—',
@@ -73,16 +79,18 @@ function mapVentaDto(
     estado: dto.status === 'completed' ? 'completado' : 'pendiente',
     resultado,
     cobrado: dto.paid,
+    studentUserId: student?.user_id ?? null,
   };
 }
 
 @Injectable({ providedIn: 'root' })
 export class ServiciosEspecialesFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly notifications = inject(NotificationsFacade);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
   private readonly _catalogo = signal<ServicioEspecial[]>([]);
@@ -164,7 +172,7 @@ private readonly supabase = inject(SupabaseService);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let ventasQuery: any = this.supabase.client
       .from('special_service_sales')
-      .select('*, service_catalog(name)')
+      .select('*, service_catalog(name), students(user_id)')
       .order('sale_date', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(200);
@@ -189,6 +197,7 @@ private readonly supabase = inject(SupabaseService);
       (
         ventasResult.data as (SpecialServiceSale & {
           service_catalog: { name: string } | null;
+          students: { user_id: number } | { user_id: number }[] | null;
         })[]
       ).map(mapVentaDto),
     );
@@ -273,6 +282,29 @@ private readonly supabase = inject(SupabaseService);
 
     // Optimistic update
     this._ventas.update((prev) => prev.map((v) => (v.id === id ? { ...v, cobrado: true } : v)));
+
+    this.notifyPaymentRegistered(id);
+  }
+
+  /**
+   * Notifica al alumno que se registró el cobro de su servicio (spec 0025, AC1, AC-E1).
+   * `studentUserId` ya viene resuelto desde `fetchData()` — sin query extra.
+   * Solo notifica si la venta es de un alumno (`studentUserId` no null); ventas a
+   * clientes externos no tienen destinatario. Fire-and-forget.
+   */
+  private notifyPaymentRegistered(id: number): void {
+    const venta = this._ventas().find((v) => v.id === id);
+    if (!venta?.studentUserId) return;
+
+    this.notifications
+      .notifyUsers([venta.studentUserId], {
+        subject: 'Pago registrado',
+        message: `Se registró el cobro de tu servicio (${venta.servicio}).`,
+        referenceType: 'payment',
+      })
+      .catch(() => {
+        // Fallo de notificación no revierte el cobro ya registrado (AC-E1).
+      });
   }
 
   async exportarHistorial(format: 'excel' | 'pdf'): Promise<void> {

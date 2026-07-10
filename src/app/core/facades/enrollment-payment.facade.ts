@@ -1,6 +1,8 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 import type { Discount } from '@core/models/dto/discount.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
@@ -39,8 +41,10 @@ interface AvailableDiscount {
  */
 @Injectable({ providedIn: 'root' })
 export class EnrollmentPaymentFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
+  private readonly notifications = inject(NotificationsFacade);
+  private readonly toast = inject(ToastService);
 
   // ══════════════════════════════════════════════════════════════════════════════
   // 1. ESTADO REACTIVO (Privado)
@@ -235,7 +239,9 @@ private readonly supabase = inject(SupabaseService);
         .insert(paymentRecord);
 
       if (paymentError) {
-        this._error.set('Error al registrar pago: ' + this.sanitizer.sanitize(paymentError).message);
+        this._error.set(
+          'Error al registrar pago: ' + this.sanitizer.sanitize(paymentError).message,
+        );
         return false;
       }
 
@@ -253,7 +259,9 @@ private readonly supabase = inject(SupabaseService);
           });
 
         if (discountError) {
-          this._error.set('Error al aplicar descuento: ' + this.sanitizer.sanitize(discountError).message);
+          this._error.set(
+            'Error al aplicar descuento: ' + this.sanitizer.sanitize(discountError).message,
+          );
           return false;
         }
       }
@@ -282,9 +290,13 @@ private readonly supabase = inject(SupabaseService);
         .eq('id', enrollmentId);
 
       if (updateError) {
-        this._error.set('Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message);
+        this._error.set(
+          'Error al actualizar matrícula: ' + this.sanitizer.sanitize(updateError).message,
+        );
         return false;
       }
+
+      this.notifyPaymentRegistered(enrollmentId, total);
 
       return true;
     } catch {
@@ -293,6 +305,43 @@ private readonly supabase = inject(SupabaseService);
     } finally {
       this._isProcessing.set(false);
     }
+  }
+
+  /**
+   * Notifica al alumno que se registró su pago presencial (spec 0025, AC1, AC7).
+   * NUNCA notifica al admin/secretaria (el dashboard ya cubre esa métrica).
+   * Fire-and-forget: un fallo nunca revierte el pago ya registrado.
+   */
+  private notifyPaymentRegistered(enrollmentId: number, amount: number): void {
+    if (amount <= 0) return;
+
+    this.resolveStudentUserIdByEnrollment(enrollmentId)
+      .then((userId) => {
+        if (!userId) return;
+        this.notifications
+          .notifyUsers([userId], {
+            subject: 'Pago registrado',
+            message: `Se registró un pago de $${amount} en tu matrícula.`,
+            referenceType: 'payment',
+          })
+          .catch(() => this.toast.warning('No se pudo notificar al alumno'));
+      })
+      .catch(() => {
+        // Resolución de destinatario falló (red/RLS) — no rompe el registro (AC-E1).
+      });
+  }
+
+  /** Resuelve `enrollments.student_id → students.user_id` para poder notificar al alumno. */
+  private async resolveStudentUserIdByEnrollment(enrollmentId: number): Promise<number | null> {
+    const { data, error } = await this.supabase.client
+      .from('enrollments')
+      .select('students!inner(user_id)')
+      .eq('id', enrollmentId)
+      .single();
+    if (error || !data) return null;
+    const students = (data as any).students;
+    const student = Array.isArray(students) ? students[0] : students;
+    return student?.user_id ?? null;
   }
 
   // ══════════════════════════════════════════════════════════════════════════════

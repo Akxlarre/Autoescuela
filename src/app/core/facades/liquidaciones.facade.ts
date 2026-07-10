@@ -2,6 +2,7 @@
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
@@ -45,10 +46,11 @@ function getAvatarColor(name: string): string {
 
 @Injectable({ providedIn: 'root' })
 export class LiquidacionesFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly notifications = inject(NotificationsFacade);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ────────────────────────────────────────────────────────
@@ -327,7 +329,10 @@ private readonly supabase = inject(SupabaseService);
 
       this._liquidaciones.set(rows);
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar liquidaciones.';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar liquidaciones.';
       this._error.set(msg);
       this.toast.error(msg);
       throw err;
@@ -376,11 +381,14 @@ private readonly supabase = inject(SupabaseService);
         .gte('date', `${anio}-${mm}-01`)
         .lte('date', `${anio}-${mm}-${String(lastDay).padStart(2, '0')}`);
 
+      this.notifyLiquidacionPagada(row);
+
       this.toast.success(`Liquidación de ${row.nombre} registrada correctamente.`);
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar el pago.';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar el pago.';
       this._error.set(msg);
       this.toast.error(msg);
       return false;
@@ -459,12 +467,34 @@ private readonly supabase = inject(SupabaseService);
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al revertir el pago.';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al revertir el pago.';
       this._error.set(msg);
       this.toast.error(msg);
       return false;
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /**
+   * Notifica al instructor que su liquidación fue pagada (spec 0025, AC5).
+   * `row.userId` ya viene resuelto desde `fetchLiquidacionesData()` — sin query extra.
+   * Fire-and-forget: un fallo nunca revierte el pago ya registrado.
+   */
+  private notifyLiquidacionPagada(row: LiquidacionRow): void {
+    if (!row.userId) return;
+
+    const mes = this._mesActual();
+    const anio = this._anioActual();
+    const periodo = `${mes}/${anio}`;
+
+    this.notifications
+      .notifyUsers([row.userId], {
+        subject: 'Liquidación pagada',
+        message: `Tu liquidación de ${periodo} fue pagada (líquido $${row.finalPaymentAmount}).`,
+        referenceType: 'payment',
+      })
+      .catch(() => this.toast.warning('No se pudo notificar al instructor'));
   }
 }
