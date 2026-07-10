@@ -655,13 +655,75 @@ async function handleConfirmPayment(supabase: any, body: any) {
       .from('enrollments')
       .select(
         `
-        number, total_paid, pending_balance,
+        number, total_paid, pending_balance, branch_id,
         courses!inner(name),
-        branches!inner(name)
+        branches!inner(name),
+        students!inner(user_id)
       `,
       )
       .eq('id', attempt.enrollment_id)
       .maybeSingle();
+
+    // 7. Notificar al alumno + secretarias de la sede + admins (Spec 0025, AC2).
+    // Try/catch propio: un fallo del INSERT jamás afecta la respuesta del pago (AC-E4).
+    try {
+      const studentUserId = (enrollment as any)?.students?.user_id ?? null;
+      const branchId = enrollment?.branch_id ?? null;
+      const enrollmentNumber = enrollment?.number ?? null;
+      const rows: Record<string, unknown>[] = [];
+
+      if (studentUserId) {
+        rows.push({
+          recipient_id: studentUserId,
+          type: 'system',
+          subject: 'Pago confirmado',
+          message: `Tu pago de $${amountPaid} fue confirmado.`,
+          reference_type: 'payment',
+          reference_id: attempt.enrollment_id,
+          read: false,
+          sent_ok: true,
+        });
+      }
+
+      const { data: recipients, error: recipientsError } = await supabase
+        .from('users')
+        .select('id, branch_id, roles!role_id(name)')
+        .eq('active', true);
+
+      if (recipientsError) {
+        console.error('[student-payment] notification recipients query error:', recipientsError);
+      } else {
+        const staffIds = (recipients ?? [])
+          .filter((u: any) => {
+            const roleName = Array.isArray(u.roles) ? u.roles[0]?.name : u.roles?.name;
+            if (roleName === 'admin') return true;
+            return roleName === 'secretary' && u.branch_id === branchId;
+          })
+          .map((u: any) => u.id as number);
+
+        for (const recipientId of staffIds) {
+          rows.push({
+            recipient_id: recipientId,
+            type: 'system',
+            subject: 'Pago online recibido',
+            message: `Se recibió un pago de $${amountPaid} — matrícula ${enrollmentNumber ?? attempt.enrollment_id}.`,
+            reference_type: 'payment',
+            reference_id: attempt.enrollment_id,
+            read: false,
+            sent_ok: true,
+          });
+        }
+      }
+
+      if (rows.length > 0) {
+        const { error: notifyError } = await supabase.from('notifications').insert(rows);
+        if (notifyError) {
+          console.error('[student-payment] notification insert error:', notifyError);
+        }
+      }
+    } catch (notifyErr) {
+      console.error('[student-payment] notification dispatch error:', notifyErr);
+    }
 
     return jsonResponse({
       success: true,

@@ -6,6 +6,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 
 type TableResponse = { data: unknown; error: unknown };
 
@@ -40,6 +41,7 @@ interface SetupOpts {
   tables?: Record<string, TableResponse>;
   user?: Record<string, unknown>;
   selectedBranchId?: number | null;
+  notificationsSpy?: { notifyUsers: ReturnType<typeof vi.fn> };
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -49,6 +51,9 @@ function setup(opts: SetupOpts = {}) {
     dbId: 9,
     branchId: 3,
     canAccessBothBranches: false,
+  };
+  const notificationsSpy = opts.notificationsSpy ?? {
+    notifyUsers: vi.fn().mockResolvedValue(undefined),
   };
   TestBed.configureTestingModule({
     providers: [
@@ -60,9 +65,10 @@ function setup(opts: SetupOpts = {}) {
       },
       { provide: LayoutDrawerFacadeService, useValue: { open: vi.fn() } },
       { provide: ErrorSanitizerService, useValue: { sanitize: vi.fn((e: Error) => e) } },
+      { provide: NotificationsFacade, useValue: notificationsSpy },
     ],
   });
-  return { facade: TestBed.inject(ServiciosEspecialesFacade), mockSupabase };
+  return { facade: TestBed.inject(ServiciosEspecialesFacade), mockSupabase, notificationsSpy };
 }
 
 function venta(overrides: Record<string, unknown> = {}) {
@@ -223,6 +229,59 @@ describe('ServiciosEspecialesFacade', () => {
       expect(facade.ventas()[0].cobrado).toBe(true);
       // Solo la llamada del UPDATE — sin re-fetch de la lista
       expect(mockSupabase.client.from.mock.calls.length).toBe(fromCallsBefore + 1);
+    });
+
+    // ── spec 0025 (T2.4): notificación al alumno (studentUserId ya resuelto) ──
+    it('notifica al alumno usando studentUserId ya resuelto (spec 0025, AC1)', async () => {
+      const { facade, notificationsSpy } = setup({
+        tables: {
+          special_service_sales: {
+            data: [venta({ id: 7, paid: false, students: { user_id: 55 } })],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+
+      await facade.registrarCobro(7);
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [55],
+        expect.objectContaining({ referenceType: 'payment' }),
+      );
+    });
+
+    it('venta a cliente externo (student_id null) NO notifica ni lanza error (AC-E1)', async () => {
+      const { facade, notificationsSpy } = setup({
+        tables: {
+          special_service_sales: {
+            data: [venta({ id: 7, paid: false, is_student: false, students: null })],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+
+      await expect(facade.registrarCobro(7)).resolves.toBeUndefined();
+
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
+    it('un fallo en notifyUsers no revierte el cobro ya registrado', async () => {
+      const { facade, notificationsSpy } = setup({
+        tables: {
+          special_service_sales: {
+            data: [venta({ id: 7, paid: false, students: { user_id: 55 } })],
+            error: null,
+          },
+        },
+      });
+      await facade.initialize();
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
+
+      await facade.registrarCobro(7);
+
+      expect(facade.ventas()[0].cobrado).toBe(true);
     });
   });
 });

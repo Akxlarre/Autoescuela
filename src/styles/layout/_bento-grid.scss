@@ -487,3 +487,21 @@ $bp-lg: 1024px;
     --bento-pad-lg: 0;
   }
 }
+
+/* ── DRAWER MODE (force-compact) FIXES ──────────────────────
+   Cuando el drawer lateral se abre, la directiva [appBentoGridLayout] añade 
+   la clase .force-compact al bento-grid. 
+   Esto fuerza a todas las tarjetas a ocupar el 100% (1/-1) para que no se queden "squished".
+   ─────────────────────────────────────────────────────────── */
+.bento-grid.force-compact > * {
+  grid-column: 1 / -1 !important;
+}
+
+/* Fix específico para los KPIs internos del app-section-hero en modo compacto.
+   Tailwind aplica sm:min-w-auto, lo que estruja los KPIs en 4 columnas.
+   Usamos un selector seguro para forzar el 45% (2x2) y recuperar el borde inferior. */
+.bento-grid.force-compact app-section-hero .border-t.border-border-subtle.flex.flex-wrap > div {
+  min-width: 45% !important;
+  border-bottom-width: 1px !important;
+}
+

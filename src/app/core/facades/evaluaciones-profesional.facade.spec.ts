@@ -3,6 +3,9 @@ import { EvaluacionesProfesionalFacade } from './evaluaciones-profesional.facade
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+
+const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 /**
  * Cobertura de la lógica de edición local del gradebook (fix-024).
@@ -15,6 +18,7 @@ describe('EvaluacionesProfesionalFacade', () => {
   let supabaseSpy: any;
   let toastSpy: any;
   let authSpy: any;
+  let notificationsSpy: any;
 
   const pcQuery = {
     select: vi.fn().mockReturnThis(),
@@ -70,8 +74,9 @@ describe('EvaluacionesProfesionalFacade', () => {
         }),
       },
     };
-    toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
     authSpy = { currentUser: vi.fn().mockReturnValue({ dbId: 1 }) };
+    notificationsSpy = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
 
     TestBed.configureTestingModule({
       providers: [
@@ -79,6 +84,7 @@ describe('EvaluacionesProfesionalFacade', () => {
         { provide: SupabaseService, useValue: supabaseSpy },
         { provide: ToastService, useValue: toastSpy },
         { provide: AuthFacade, useValue: authSpy },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
       ],
     });
 
@@ -125,6 +131,103 @@ describe('EvaluacionesProfesionalFacade', () => {
       expect(facade.hayDirty()).toBe(false);
       facade.setNota(105, 0, 88);
       expect(facade.hayDirty()).toBe(true);
+    });
+  });
+
+  // ── spec 0025 (T3.1): notificar notas confirmadas ──────────────────────────
+  describe('confirmarNotas — notificación al alumno (spec 0025, AC3)', () => {
+    beforeEach(() => {
+      // Sobreescribe 'enrollments' para distinguir el resolver (in('id',...)) del
+      // fetch de loadGrilla (in('status',...) → order('id')) sin tocar los mocks
+      // compartidos por el resto de la suite.
+      const enrollmentsMock: any = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        in: vi.fn((col: string) => {
+          if (col === 'id') {
+            return Promise.resolve({
+              data: [{ id: 105, students: { user_id: 200 } }],
+              error: null,
+            });
+          }
+          return enrollmentsMock;
+        }),
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 105,
+              students: {
+                users: {
+                  first_names: 'Benjamín',
+                  paternal_last_name: 'Rebolledo',
+                  maternal_last_name: 'Soto',
+                  rut: '13.201.368-3',
+                },
+              },
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'promotion_courses') return pcQuery;
+        if (table === 'enrollments') return enrollmentsMock;
+        if (table === 'professional_module_grades') {
+          return {
+            upsert: vi.fn().mockResolvedValue({ error: null }),
+            select: vi.fn().mockReturnThis(),
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        };
+      });
+    });
+
+    it('notifica al alumno con mensaje de aprobado (promedio >= 75)', async () => {
+      facade.setNota(105, 0, 90);
+
+      const ok = await facade.confirmarNotas();
+      await flushMicrotasks();
+
+      expect(ok).toBe(true);
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [200],
+        expect.objectContaining({ referenceType: 'professional_session' }),
+      );
+      const message = notificationsSpy.notifyUsers.mock.calls[0][1].message as string;
+      expect(message).not.toContain('no alcanzó');
+    });
+
+    it('notifica al alumno con mensaje de reprobado (promedio < 75)', async () => {
+      facade.setNota(105, 0, 60);
+
+      await facade.confirmarNotas();
+      await flushMicrotasks();
+
+      const message = notificationsSpy.notifyUsers.mock.calls[0][1].message as string;
+      expect(message).toContain('no alcanzó');
+    });
+
+    it('no notifica si no hay notas nuevas que confirmar', async () => {
+      const ok = await facade.confirmarNotas();
+      await flushMicrotasks();
+
+      expect(ok).toBe(true);
+      expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+    });
+
+    it('un fallo en notifyUsers no revierte la confirmación de notas', async () => {
+      facade.setNota(105, 0, 90);
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
+
+      const ok = await facade.confirmarNotas();
+      await flushMicrotasks();
+
+      expect(ok).toBe(true);
     });
   });
 });

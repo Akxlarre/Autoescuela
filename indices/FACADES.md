@@ -70,7 +70,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `AdminHorariosFacade` | `SupabaseService`, `ToastService` | — | `src/app/core/facades/admin-horarios.facade.ts` |
 | `AdminPreInscritosFacade` | `ErrorSanitizerService`, `SupabaseService`, `BranchFacade`, `AuthFacade`, `EpqPrintService` | — | `src/app/core/facades/admin-pre-inscritos.facade.ts` |
 | `AgendaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/agenda.facade.ts` |
-| `AnticiosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/anticipos.facade.ts` |
+| `AnticiosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/anticipos.facade.ts` |
 | `ArchivoFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | `promociones`, `cursos`, `selectedPromocionId`, `selectedCursoId`, `alumnos`, `isLoading`, `isLoadingAlumnos`, `error`, `kpis`, `moduleNames` | `src/app/core/facades/archivo-profesional.facade.ts` |
 | `AsistenciaClaseBFacade` | `SupabaseService`, `ToastService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/asistencia-clase-b.facade.ts` |
 | `AsistenciaProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade`, `ConfirmModalService` | — | `src/app/core/facades/asistencia-profesional.facade.ts` |
@@ -82,14 +82,14 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `CiclosTeoricosFacade` | `SupabaseService`, `ToastService`, `BranchFacade` | — | `src/app/core/facades/ciclos-teoricos.facade.ts` |
 | `CoursesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/courses.facade.ts` |
 | `CuadraturaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/cuadratura.facade.ts` |
-| `CursosSingularesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/cursos-singulares.facade.ts` |
+| `CursosSingularesFacade` | `SupabaseService`, `BranchFacade`, `AuthFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/cursos-singulares.facade.ts` |
 | `DashboardAlertsFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/dashboard-alerts.facade.ts` |
 | `DashboardFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/dashboard.facade.ts` |
 | `DmsFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerService`, `ConfirmModalService`, `ToastService`, `DmsViewerService` | — | `src/app/core/facades/dms.facade.ts` |
 | `EnrollmentDocumentsFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/enrollment-documents.facade.ts` |
-| `EnrollmentPaymentFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/enrollment-payment.facade.ts` |
+| `EnrollmentPaymentFacade` | `ErrorSanitizerService`, `SupabaseService`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/enrollment-payment.facade.ts` |
 | `EnrollmentFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `EnrollmentDocumentsFacade`, `EnrollmentPaymentFacade`, `ConfirmModalService`, `DmsViewerService`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/enrollment.facade.ts` |
-| `EvaluacionesProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade` | — | `src/app/core/facades/evaluaciones-profesional.facade.ts` |
+| `EvaluacionesProfesionalFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `AuthFacade`, `NotificationsFacade` | — | `src/app/core/facades/evaluaciones-profesional.facade.ts` |
 | `ExAlumnosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/ex-alumnos.facade.ts` |
 | `FlotaDetalleFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/flota-detalle.facade.ts` |
 | `FlotaFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade` | — | `src/app/core/facades/flota.facade.ts` |
@@ -101,15 +101,15 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `InstructorProfileFacade` | `AuthFacade`, `SupabaseService` | — | `src/app/core/facades/instructor-profile.facade.ts` |
 | `InstructoresFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `BranchFacade`, `AuthFacade` | — | `src/app/core/facades/instructores.facade.ts` |
 | `LibroDeClasesFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `BranchFacade`, `AuthFacade` | — | `src/app/core/facades/libro-de-clases.facade.ts` |
-| `LiquidacionesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/liquidaciones.facade.ts` |
+| `LiquidacionesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/liquidaciones.facade.ts` |
 | `NotificationsFacade` | `SupabaseService`, `AuthFacade`, `ToastService` | — | `src/app/core/facades/notifications.facade.ts` |
-| `PagosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | — | `src/app/core/facades/pagos.facade.ts` |
+| `PagosFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/pagos.facade.ts` |
 | `PromocionesFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService` | — | `src/app/core/facades/promociones.facade.ts` |
 | `PublicEnrollmentFacade` | `ErrorSanitizerService`, `SupabaseService` | — | `src/app/core/facades/public-enrollment.facade.ts` |
 | `RelatoresFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService` | — | `src/app/core/facades/relatores.facade.ts` |
 | `ReportesContablesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `ToastService` | `isLoading`, `isExporting`, `isRegistrando`, `error`, `filtros`, `gastosFijos`, `kpis`, `ingresosCategoria`, `gastosCategoria`, `evolucionMensual`, `detalleDiario`, `diasConMovimientos`, `escuela` | `src/app/core/facades/reportes-contables.facade.ts` |
 | `SecretariasFacade` | `ErrorSanitizerService`, `SupabaseService`, `ToastService`, `BranchFacade` | — | `src/app/core/facades/secretarias.facade.ts` |
-| `ServiciosEspecialesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerFacadeService` | `catalogo`, `ventas`, `selectedServicio`, `isLoading`, `isExporting`, `error`, `kpis` | `src/app/core/facades/servicios-especiales.facade.ts` |
+| `ServiciosEspecialesFacade` | `ErrorSanitizerService`, `SupabaseService`, `AuthFacade`, `BranchFacade`, `LayoutDrawerFacadeService`, `NotificationsFacade` | `catalogo`, `ventas`, `selectedServicio`, `isLoading`, `isExporting`, `error`, `kpis` | `src/app/core/facades/servicios-especiales.facade.ts` |
 | `StudentClasesFacade` | `SupabaseService`, `AuthFacade`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-clases.facade.ts` |
 | `StudentEnrollmentContextFacade` | `SupabaseService` | — | `src/app/core/facades/student-enrollment-context.facade.ts` |
 | `StudentHomeFacade` | `SupabaseService`, `AuthFacade`, `ToastService`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-home.facade.ts` |

@@ -7,6 +7,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { ToastService } from '@core/services/ui/toast.service';
 import type { StandaloneCourse } from '@core/models/dto/standalone-course.model';
@@ -87,6 +88,7 @@ export class CursosSingularesFacade {
   private readonly supabase = inject(SupabaseService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly auth = inject(AuthFacade);
+  private readonly notifications = inject(NotificationsFacade);
   private readonly toast = inject(ToastService);
 
   // ── 1. Estado privado ──────────────────────────────────────────────────────
@@ -337,6 +339,9 @@ export class CursosSingularesFacade {
         .eq('id', enrollmentId);
 
       if (error) throw error;
+
+      this.notifyPaymentRegistered(enrollmentId, montoACobrar);
+
       if (cursoId) await this.loadInscriptos(cursoId);
       await this.refreshSilently();
       return true;
@@ -346,6 +351,42 @@ export class CursosSingularesFacade {
     } finally {
       this._isSaving.set(false);
     }
+  }
+
+  /**
+   * Notifica al alumno que se registró su pago del curso singular (spec 0025, AC1).
+   * Fire-and-forget: un fallo nunca revierte el registro ya confirmado.
+   */
+  private notifyPaymentRegistered(enrollmentId: number, amount: number): void {
+    if (amount <= 0) return;
+
+    this.resolveStudentUserId(enrollmentId)
+      .then((userId) => {
+        if (!userId) return;
+        this.notifications
+          .notifyUsers([userId], {
+            subject: 'Pago registrado',
+            message: `Se registró el cobro de tu curso ($${amount}).`,
+            referenceType: 'payment',
+          })
+          .catch(() => this.toast.warning('No se pudo notificar al alumno'));
+      })
+      .catch(() => {
+        // Resolución de destinatario falló (red/RLS) — no rompe el registro (AC-E1).
+      });
+  }
+
+  /** Resuelve `standalone_course_enrollments.student_id → students.user_id`. */
+  private async resolveStudentUserId(enrollmentId: number): Promise<number | null> {
+    const { data, error } = await this.supabase.client
+      .from('standalone_course_enrollments')
+      .select('students!inner(user_id)')
+      .eq('id', enrollmentId)
+      .single();
+    if (error || !data) return null;
+    const students = (data as any).students;
+    const student = Array.isArray(students) ? students[0] : students;
+    return student?.user_id ?? null;
   }
 
   // ── 5. Métodos del wizard de inscripción ───────────────────────────────────

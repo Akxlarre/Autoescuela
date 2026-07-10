@@ -6,9 +6,14 @@ import {
   input,
   output,
   signal,
+  viewChild,
+  ElementRef,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../icon/icon.component';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
 
 /**
  * Modal de confirmación para archivar un alumno (soft-delete).
@@ -22,7 +27,13 @@ import { IconComponent } from '../icon/icon.component';
   selector: 'app-eliminar-alumno-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent],
+  imports: [FormsModule, IconComponent, AnimateInDirective],
+  hostDirectives: [
+    {
+      directive: ModalOverlayDirective,
+      inputs: ['appModalOverlay: visible'],
+    },
+  ],
   styles: [
     `
       .confirm-input {
@@ -55,15 +66,18 @@ import { IconComponent } from '../icon/icon.component';
     @if (visible()) {
       <!-- Backdrop -->
       <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4"
-        class="bg-black/[0.55] backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
         role="dialog"
         aria-modal="true"
         [attr.aria-label]="'Confirmar archivado de ' + alumnoNombre()"
+        (click)="onCancelar()"
+        (document:keydown.escape)="onCancelar()"
       >
         <!-- Card -->
         <div
-          class="relative w-full max-w-md rounded-2xl shadow-2xl flex flex-col gap-0 overflow-hidden bg-white"
+          class="relative w-full max-w-md rounded-2xl shadow-2xl flex flex-col gap-0 overflow-hidden bg-surface"
+          (click)="$event.stopPropagation()"
+          appAnimateIn
         >
           <!-- Header -->
           <div class="flex items-center gap-3 px-6 py-5 border-b border-border-subtle">
@@ -125,6 +139,7 @@ import { IconComponent } from '../icon/icon.component';
                   en el campo:
                 </label>
                 <input
+                  #confirmInput
                   id="confirm-text"
                   type="text"
                   [ngModel]="confirmTextValue()"
@@ -192,6 +207,7 @@ export class EliminarAlumnoModalComponent {
   readonly cancelado = output<void>();
 
   protected readonly confirmTextValue = signal('');
+  private readonly confirmInput = viewChild<ElementRef<HTMLInputElement>>('confirmInput');
 
   protected readonly canConfirm = computed(
     () =>
@@ -201,7 +217,15 @@ export class EliminarAlumnoModalComponent {
 
   constructor() {
     effect(() => {
-      if (this.visible()) this.confirmTextValue.set('');
+      const isVisible = this.visible();
+      if (isVisible) {
+        untracked(() => {
+          this.confirmTextValue.set('');
+        });
+        setTimeout(() => {
+          this.confirmInput()?.nativeElement.focus();
+        }, 50);
+      }
     });
   }
 

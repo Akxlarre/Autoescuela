@@ -4,6 +4,7 @@ import { AnticiosFacade, tipoLabel, mapStatus } from './anticipos.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
@@ -135,5 +136,91 @@ describe('AnticiosFacade.registrarAnticipo()', () => {
     });
     expect(result).toBe(false);
     expect(mockToast.error).toHaveBeenCalledWith('No hay sesión activa.');
+  });
+});
+
+// ─── registrarAnticipo — notificación al instructor (spec 0025, AC4) ─────────
+
+describe('AnticiosFacade.registrarAnticipo() — notifica al instructor (spec 0025, AC4)', () => {
+  let facade: AnticiosFacade;
+  let notificationsSpy: any;
+  let toastSpy: any;
+  let singleMock: any;
+
+  const payload = {
+    instructorId: 7,
+    date: '2026-04-01',
+    amount: 50000,
+    reason: 'salary',
+    description: '',
+  };
+
+  beforeEach(() => {
+    notificationsSpy = { notifyUsers: vi.fn().mockResolvedValue(undefined) };
+    toastSpy = { success: vi.fn(), error: vi.fn(), warning: vi.fn() };
+    singleMock = vi.fn().mockResolvedValue({ data: { user_id: 99 }, error: null });
+
+    const instructorsChain = {
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: singleMock,
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+    };
+    const advancesChain = {
+      insert: vi.fn().mockResolvedValue({ error: null }),
+      select: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      }),
+    };
+
+    const supabaseSpy = {
+      client: {
+        from: vi.fn((table: string) => {
+          if (table === 'instructor_advances') return advancesChain;
+          if (table === 'instructors') return instructorsChain;
+          return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+        }),
+      },
+    };
+
+    TestBed.configureTestingModule({
+      providers: [
+        AnticiosFacade,
+        { provide: SupabaseService, useValue: supabaseSpy },
+        { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue({ dbId: 1 }) } },
+        { provide: ToastService, useValue: toastSpy },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
+      ],
+    });
+    facade = TestBed.inject(AnticiosFacade);
+  });
+
+  it('resuelve instructors.id → users.id y notifica al instructor', async () => {
+    const ok = await facade.registrarAnticipo(payload);
+
+    expect(ok).toBe(true);
+    expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+      [99],
+      expect.objectContaining({ referenceType: 'payment' }),
+    );
+  });
+
+  it('no notifica si no se pudo resolver el userId del instructor', async () => {
+    singleMock.mockResolvedValue({ data: null, error: { message: 'not found' } });
+
+    const ok = await facade.registrarAnticipo(payload);
+
+    expect(ok).toBe(true);
+    expect(notificationsSpy.notifyUsers).not.toHaveBeenCalled();
+  });
+
+  it('un fallo en notifyUsers no revierte el registro del anticipo', async () => {
+    notificationsSpy.notifyUsers.mockRejectedValue(new Error('network error'));
+
+    const ok = await facade.registrarAnticipo(payload);
+
+    expect(ok).toBe(true);
   });
 });
