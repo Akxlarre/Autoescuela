@@ -113,7 +113,8 @@ interface ExpedienteStatus {
 
       <!-- Filtros y Tabla (Dual-Viewport) -->
       <div
-        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container"
+        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
+        style="contain: size; min-height: 600px;"
         appCardHover
         #tableCard
       >
@@ -209,9 +210,14 @@ interface ExpedienteStatus {
 
         <!-- Tabla -->
         @if (isLoading()) {
-          <div class="viewport-content bg-surface" appAnimateIn>
+          <div
+            class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full"
+            appAnimateIn
+          >
             <!-- VISTA 1: TABLA SKELETON (Oculta cuando se comprime) -->
-            <div class="desktop-view hide-on-squeeze p-4 space-y-0">
+            <div
+              class="desktop-view hide-on-squeeze p-4 space-y-0 flex flex-col flex-1 min-h-0 h-full w-full"
+            >
               <!-- Header skeleton -->
               <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
                 <app-skeleton-block variant="text" width="15%" height="11px" />
@@ -323,15 +329,20 @@ interface ExpedienteStatus {
           </div>
         } @else {
           <!-- Contenido principal interactivo -->
-          <div class="viewport-content bg-surface" appAnimateIn>
+          <div
+            class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full"
+            appAnimateIn
+          >
             <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
-            <div class="desktop-view hide-on-squeeze">
+            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
               <p-table
                 [value]="filteredAlumnos()"
                 [rows]="10"
                 [paginator]="true"
+                [scrollable]="true"
+                scrollHeight="flex"
                 responsiveLayout="scroll"
-                styleClass="p-datatable-sm p-datatable-striped"
+                styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
                 [showCurrentPageReport]="true"
                 currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
               >

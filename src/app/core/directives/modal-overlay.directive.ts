@@ -26,7 +26,7 @@ export class ModalOverlayDirective {
   constructor() {
     effect(() => {
       const open = this.appModalOverlay();
-      const container = this.overlay.container();
+      const container = this.overlay.container() || this.doc.body;
 
       if (open && container) {
         setTimeout(() => this.moveToOverlay(container), 0);

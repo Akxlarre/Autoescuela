@@ -54,7 +54,10 @@ body.modal-open {
 
 /* Modal overlay wrapper — estilos globales.
    El div se crea via document.createElement (fuera de encapsulación Angular),
-   por lo que necesita !important para garantizar posicionamiento. */
+   por lo que necesita !important para garantizar posicionamiento.
+   z-index explícito obligatorio: el topbar usa `sticky z-40` y, sin un
+   z-index propio, este wrapper cae en el nivel "auto" y pierde el stacking
+   contra el topbar, dejándolo visible por encima del backdrop. */
 .modal-overlay__wrapper {
   position: fixed !important;
   inset: 0 !important;
@@ -62,6 +65,7 @@ body.modal-open {
   height: 100% !important;
   pointer-events: auto !important;
   overflow: auto;
+  z-index: 70;
 }
 
 .modal-overlay__wrapper > * {

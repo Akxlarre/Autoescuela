@@ -30,8 +30,13 @@ import { TooltipModule } from 'primeng/tooltip';
     TooltipModule,
   ],
   host: {
-    // max-h-[750px] approx limits it to 10 classes
-    class: 'flex flex-col gap-3 h-full overflow-hidden',
+    // contain: 'size' oculta el tamaño intrínseco del contenido al Bento Grid.
+    // min-height asegura un tamaño base, pero al no tener contenido intrínseco visible para el grid,
+    // NO estirará las filas automáticas, sino que se adaptará perfectamente al alto de la celda.
+    // El fallback se neutraliza vía @container (ver `styles`), no con `lg:` de Tailwind:
+    // el layout-drawer angosta <main> sin cambiar el viewport.
+    class: 'flex flex-col gap-3 h-full overflow-hidden w-full min-h-[450px]',
+    style: 'contain: size;',
   },
   template: `
     <!-- Header de sección estandarizado -->
@@ -150,15 +155,18 @@ import { TooltipModule } from 'primeng/tooltip';
                 <div
                   class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
-                  <span class="text-sm font-semibold text-text-primary truncate"
-                        [pTooltip]="cls.studentName"
-                        tooltipPosition="top"
-                  >{{
-                    cls.studentName.split(' ')[0]
-                  }}</span>
-                  <span class="text-2xs text-text-muted truncate uppercase tracking-wider"
-                        [pTooltip]="cls.type === 'practical' ? (cls.vehicle || 'Sin auto') : 'Clase Teórica'"
-                        tooltipPosition="bottom"
+                  <span
+                    class="text-sm font-semibold text-text-primary truncate"
+                    [pTooltip]="cls.studentName"
+                    tooltipPosition="top"
+                    >{{ cls.studentName.split(' ')[0] }}</span
+                  >
+                  <span
+                    class="text-2xs text-text-muted truncate uppercase tracking-wider"
+                    [pTooltip]="
+                      cls.type === 'practical' ? cls.vehicle || 'Sin auto' : 'Clase Teórica'
+                    "
+                    tooltipPosition="bottom"
                   >
                     {{ cls.type === 'practical' ? cls.vehicle || 'Sin auto' : 'Teórica' }}
                   </span>
@@ -231,9 +239,28 @@ import { TooltipModule } from 'primeng/tooltip';
         background-color: var(--text-muted);
       }
 
+      /* El piso de min-height debe neutralizarse según el ancho del *contenedor*
+         layoutmain, no del viewport: al abrir el layout-drawer, <main> se angosta
+         sin que cambie el viewport (ver dashboard.component.ts, mismo patrón).
+         Breakpoint 768px asegura que se active incluso cuando el drawer reduce <main>
+         a ~800px en viewports como 1280x720. */
+      @container layoutmain (min-width: 768px) {
+        :host {
+          min-height: 0;
+        }
+      }
+
       /* Forzar color blanco en el icono cuando la fila (group) está en hover */
       .group:hover .hover-icon-container {
         color: #ffffff !important;
+      }
+
+      /* Cuando el contenedor está en modo compacto (drawer abierto),
+         ocultamos los elementos marcados con "sm:flex" que asumen espacio de sobra. */
+      :host-context(.force-compact) {
+        .hidden.sm\:flex {
+          display: none !important;
+        }
       }
     `,
   ],

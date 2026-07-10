@@ -87,7 +87,13 @@ import { to24hTime } from '@core/utils/date.utils';
          BENTO GRID — contenedor principal del dashboard
          [appBentoGridLayout] habilita FLIP animation en reflows
     ════════════════════════════════════════════════════════════════ -->
-    <section class="bento-grid bento-grid--fill-screen-2 w-full" appBentoGridLayout #bentoGrid aria-label="Panel de control">
+    <section
+      class="bento-grid bento-grid--fill-screen-2 w-full"
+      [class.force-compact]="isDrawerOpen()"
+      appBentoGridLayout
+      #bentoGrid
+      aria-label="Panel de control"
+    >
       <!-- ── HERO slim — título + KPIs en una sola barra ────────────────── -->
       <app-section-hero
         [title]="heroSectionTitle()"
@@ -115,7 +121,8 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Arriba: Actividad reciente ─── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-full"
+        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-[300px] dashboard-panel"
+        style="contain: size;"
         appCardHover
       >
         <!-- Header de sección -->
@@ -124,13 +131,6 @@ import { to24hTime } from '@core/utils/date.utils';
             <app-icon name="activity" [size]="16" class="text-brand" />
             <h2 class="m-0 font-semibold text-text-primary">Actividad reciente</h2>
           </div>
-          <button
-            class="text-xs font-medium cursor-pointer border-none bg-transparent p-0 text-brand transition-colors hover:text-brand-hover"
-            (click)="openRecentActivity()"
-            data-llm-action="view-all-activity"
-          >
-            Ver todo
-          </button>
         </div>
 
         <!-- Lista de actividad con stagger -->
@@ -155,7 +155,7 @@ import { to24hTime } from '@core/utils/date.utils';
             #activityList
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (item of activities().slice(0, 3); track item.id; let i = $index) {
+            @for (item of activities(); track item.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
               >
@@ -198,13 +198,23 @@ import { to24hTime } from '@core/utils/date.utils';
                 />
               </li>
             }
+            <!-- Footer: Ver todas al final del scroll -->
+            <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+              <button
+                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+                (click)="openRecentActivity()"
+              >
+                Ver toda la actividad
+              </button>
+            </li>
           </ul>
         }
       </div>
 
       <!-- ── Derecha Abajo: Alertas Importantes ───── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-full"
+        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-[250px] dashboard-panel"
+        style="contain: size;"
         appCardHover
       >
         <!-- Header de sección -->
@@ -213,13 +223,6 @@ import { to24hTime } from '@core/utils/date.utils';
             <app-icon name="bell" [size]="16" class="text-warning" />
             <h2 class="m-0 font-semibold text-text-primary">Alertas Importantes</h2>
           </div>
-          <button
-            class="text-xs font-medium cursor-pointer border-none bg-transparent p-0 text-brand transition-colors hover:text-brand-hover"
-            (click)="openAlerts()"
-            data-llm-action="view-all-alerts"
-          >
-            Ver todo
-          </button>
         </div>
 
         @if (loading()) {
@@ -242,7 +245,7 @@ import { to24hTime } from '@core/utils/date.utils';
           <ul
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (alert of alerts().slice(0, 2); track alert.id; let i = $index) {
+            @for (alert of alerts(); track alert.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
               >
@@ -291,6 +294,15 @@ import { to24hTime } from '@core/utils/date.utils';
                 />
               </li>
             }
+            <!-- Footer: Ver todas al final del scroll -->
+            <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+              <button
+                class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+                (click)="openAlerts()"
+              >
+                Ver todas las alertas
+              </button>
+            </li>
           </ul>
         }
       </div>
@@ -312,6 +324,17 @@ import { to24hTime } from '@core/utils/date.utils';
       .custom-scrollbar:hover::-webkit-scrollbar-thumb {
         background-color: var(--text-muted);
       }
+
+      /* El piso de min-height (fallback antes de que el grid pueda estirar la fila)
+         debe neutralizarse según el ancho del *contenedor* layoutmain, no del viewport:
+         al abrir el layout-drawer, <main> se angosta sin que cambie el viewport.
+         Breakpoint 768px asegura que se active incluso cuando el drawer reduce <main>
+         a ~800px en viewports como 1280x720. */
+      @container layoutmain (min-width: 768px) {
+        .dashboard-panel {
+          min-height: 0;
+        }
+      }
     `,
   ],
 })
@@ -331,6 +354,7 @@ export class DashboardComponent {
   // ── Estado ────────────────────────────────────────────────────────────────
 
   readonly loading = computed(() => this.dashboardFacade.loading());
+  protected readonly isDrawerOpen = computed(() => this.layoutDrawer.isOpen());
   protected readonly fallbackName = computed(
     () => this.auth.currentUser()?.name || 'Administrador',
   );
@@ -342,21 +366,7 @@ export class DashboardComponent {
   readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
   readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
-  readonly liveClasses = computed(() => {
-    const baseTime = new Date();
-    return [
-      { id: '1', originalId: 1, scheduledAt: baseTime.toISOString(), status: 'in_progress', studentName: 'Juan Perez', instructorName: 'Carlos', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '10:00 - 10:45', classNumber: 1 },
-      { id: '2', originalId: 2, scheduledAt: new Date(baseTime.getTime() + 1000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Maria Silva', instructorName: 'Pedro', type: 'practical', vehicle: 'Kia Rio', timeLabel: '11:00 - 11:45', classNumber: 2 },
-      { id: '3', originalId: 3, scheduledAt: new Date(baseTime.getTime() + 2000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Luis Gomez', instructorName: 'Carlos', type: 'theory', vehicle: null, timeLabel: '12:00 - 12:45', classNumber: 3 },
-      { id: '4', originalId: 4, scheduledAt: new Date(baseTime.getTime() + 3000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Ana Rojas', instructorName: 'Pedro', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '13:00 - 13:45', classNumber: 4 },
-      { id: '5', originalId: 5, scheduledAt: new Date(baseTime.getTime() + 4000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Jose Soto', instructorName: 'Carlos', type: 'practical', vehicle: 'Kia Rio', timeLabel: '14:00 - 14:45', classNumber: 5 },
-      { id: '6', originalId: 6, scheduledAt: new Date(baseTime.getTime() + 5000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Camila Toro', instructorName: 'Pedro', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '15:00 - 15:45', classNumber: 6 },
-      { id: '7', originalId: 7, scheduledAt: new Date(baseTime.getTime() + 6000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Diego Paz', instructorName: 'Carlos', type: 'theory', vehicle: null, timeLabel: '16:00 - 16:45', classNumber: 7 },
-      { id: '8', originalId: 8, scheduledAt: new Date(baseTime.getTime() + 7000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Sofia Ruiz', instructorName: 'Pedro', type: 'practical', vehicle: 'Kia Rio', timeLabel: '17:00 - 17:45', classNumber: 8 },
-      { id: '9', originalId: 9, scheduledAt: new Date(baseTime.getTime() + 8000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Lucas Vega', instructorName: 'Carlos', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '18:00 - 18:45', classNumber: 9 },
-      { id: '10', originalId: 10, scheduledAt: new Date(baseTime.getTime() + 9000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Valentina O.', instructorName: 'Pedro', type: 'practical', vehicle: 'Kia Rio', timeLabel: '19:00 - 19:45', classNumber: 10 }
-    ] as unknown as LiveClassModel[];
-  });
+  readonly liveClasses = computed(() => this.dashboardFacade.data()?.liveClasses ?? []);
 
   readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
   readonly heroContextLine = computed(() => this.hero()?.date ?? '');
