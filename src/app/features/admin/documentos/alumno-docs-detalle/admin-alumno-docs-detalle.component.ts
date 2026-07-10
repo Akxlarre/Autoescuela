@@ -150,7 +150,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             {{ doc.typeLabel }} · {{ doc.documentAt | slice: 0 : 10 }}
                           </p>
                         </div>
-                        @if (isAdmin()) {
+                        @if (isAdmin() && doc.source !== 'enrollment_license') {
                           <button
                             type="button"
                             class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-error hover:bg-error/10"
