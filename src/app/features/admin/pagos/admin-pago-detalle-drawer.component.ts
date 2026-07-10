@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { PagosFacade } from '@core/facades/pagos.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -24,7 +25,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   selector: 'app-admin-pago-detalle-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, SkeletonBlockComponent, StatBoxComponent, DrawerFormComponent],
+  imports: [
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+    StatBoxComponent,
+    DrawerFormComponent,
+  ],
   template: `
     <app-drawer-form [hasFooter]="false">
       <div class="flex flex-col gap-5">
@@ -84,13 +91,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   {{ resumen.rut }}
                 </span>
               </div>
-              <span
-                class="text-xs font-semibold px-2.5 py-1 rounded-full shrink-0"
-                [style.background]="paymentStatusBg(resumen.paymentStatus)"
-                [style.color]="paymentStatusColor(resumen.paymentStatus)"
-              >
+              <app-badge [variant]="paymentStatusVariant(resumen.paymentStatus)" class="shrink-0">
                 {{ paymentStatusLabel(resumen.paymentStatus) }}
-              </span>
+              </app-badge>
             </div>
 
             <div class="border-t pt-3 grid grid-cols-2 gap-y-2 gap-x-4 text-xs border-border-muted">
@@ -311,25 +314,14 @@ export class AdminPagoDetalleDrawerComponent implements OnInit {
     }
   }
 
-  protected paymentStatusBg(status: string | null): string {
+  protected paymentStatusVariant(status: string | null): 'success' | 'warning' | 'neutral' {
     switch (status) {
       case 'paid':
-        return 'var(--state-success-bg)';
+        return 'success';
       case 'partial':
-        return 'var(--state-warning-bg)';
+        return 'warning';
       default:
-        return 'var(--bg-elevated)';
-    }
-  }
-
-  protected paymentStatusColor(status: string | null): string {
-    switch (status) {
-      case 'paid':
-        return 'var(--state-success)';
-      case 'partial':
-        return 'var(--state-warning)';
-      default:
-        return 'var(--text-muted)';
+        return 'neutral';
     }
   }
 

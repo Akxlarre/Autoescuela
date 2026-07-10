@@ -3,6 +3,7 @@ import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminCursoSingularInscribirDrawerComponent } from './admin-curso-singular-inscribir-drawer.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
@@ -45,6 +46,7 @@ const PAYMENT_LABEL: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
@@ -262,13 +264,9 @@ const PAYMENT_LABEL: Record<string, string> = {
                         <p class="text-xs text-text-muted">{{ alumno.rutAlumno }}</p>
                       </div>
                       <div class="flex flex-col items-end gap-1">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                          [style.background]="getPaymentBg(alumno.paymentStatus)"
-                          [style.color]="getPaymentColor(alumno.paymentStatus)"
-                        >
+                        <app-badge [variant]="getPaymentVariant(alumno.paymentStatus)">
                           {{ paymentLabel(alumno.paymentStatus) }}
-                        </span>
+                        </app-badge>
                         <p class="text-xs text-text-muted">
                           {{ formatCLP(alumno.montoPagado) }}
                         </p>
@@ -327,16 +325,10 @@ export class AdminCursoSingularDetalleDrawerComponent {
     ];
   }
 
-  protected getPaymentBg(status: string): string {
-    if (status === 'paid') return 'var(--state-success-bg)';
-    if (status === 'partial') return 'var(--state-warning-bg)';
-    return 'var(--bg-elevated)';
-  }
-
-  protected getPaymentColor(status: string): string {
-    if (status === 'paid') return 'var(--state-success)';
-    if (status === 'partial') return 'var(--state-warning)';
-    return 'var(--text-muted)';
+  protected getPaymentVariant(status: string): 'success' | 'warning' | 'neutral' {
+    if (status === 'paid') return 'success';
+    if (status === 'partial') return 'warning';
+    return 'neutral';
   }
 
   protected paymentLabel(status: string): string {

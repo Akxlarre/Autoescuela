@@ -196,14 +196,14 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                           <!-- Badge estado -->
                           @if (sec.estado === 'activa') {
                             <span
-                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md text-success bg-success/10"
+                              class="inline-flex items-center gap-1 text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md text-success bg-success/10"
                             >
                               <app-icon name="check" [size]="8" />
                               Activa
                             </span>
                           } @else {
                             <span
-                              class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-text-muted"
+                              class="inline-flex items-center gap-1 text-2xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-subtle text-text-muted"
                             >
                               Inactiva
                             </span>
@@ -287,7 +287,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
                 </p>
               </div>
 
-              <h4 class="text-[11px] font-bold uppercase tracking-widest mb-4 text-text-muted">
+              <h4 class="text-2xs font-bold uppercase tracking-widest mb-4 text-text-muted">
                 Permisos del Sistema
               </h4>
               <ul class="flex flex-col gap-4 mb-8">
@@ -302,7 +302,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
             <div style="border-top: 1px solid var(--border-subtle);" class="pt-6">
               <h4 class="text-sm font-bold mb-2 text-text-primary">Auditoría de Acciones</h4>
-              <p class="text-[11px] mb-5 leading-relaxed text-text-muted">
+              <p class="text-2xs mb-5 leading-relaxed text-text-muted">
                 Historial de movimientos realizados por el personal administrativo.
               </p>
               <button class="quick-action-btn-primary" (click)="goToAuditoria()">

@@ -132,7 +132,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             <div class="hidden sm:block" [class.!hidden]="isDrawerOpen()">
               <!-- Header Columnas -->
               <div
-                class="px-6 py-3 grid items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
+                class="px-6 py-3 grid items-center gap-2 text-2xs font-bold uppercase tracking-widest text-text-muted bg-subtle border-y border-border-muted/50"
                 style="grid-template-columns: 80px 1fr 85px 85px 85px 85px 100px 36px"
               >
                 <span>N° Boleta</span>
@@ -227,7 +227,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         {{ fila.otros > 0 ? fila.otros.toLocaleString('es-CL') : '—' }}
                       </span>
                       <span
-                        class="text-[14px] text-right font-black text-text-primary tabular-nums tracking-tight"
+                        class="text-sm text-right font-black text-text-primary tabular-nums tracking-tight"
                       >
                         {{ clp(fila.total) }}
                       </span>
@@ -262,10 +262,10 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                   <div class="card-mobile-ingreso">
                     <div class="flex justify-between items-start mb-2">
                       <div class="flex flex-col">
-                        <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider"
+                        <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
                           >Boleta {{ fila.nBoleta ?? 'S/N' }}</span
                         >
-                        <span class="text-[14px] font-bold text-text-primary">{{
+                        <span class="text-sm font-bold text-text-primary">{{
                           fila.glosa
                         }}</span>
                       </div>
@@ -279,7 +279,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                     </div>
                     <div class="grid grid-cols-2 gap-y-2 mt-2 pt-2 border-t border-border-muted/30">
                       <div class="flex flex-col">
-                        <span class="text-[10px] text-text-muted uppercase">Conceptos</span>
+                        <span class="text-2xs text-text-muted uppercase">Conceptos</span>
                         <div class="flex flex-wrap gap-1 mt-0.5">
                           @if (fila.claseB > 0) {
                             <span class="badge-mini">B</span>
@@ -296,8 +296,8 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         </div>
                       </div>
                       <div class="flex flex-col items-end">
-                        <span class="text-[10px] text-text-muted uppercase">Total</span>
-                        <span class="text-[16px] font-black text-text-primary">{{
+                        <span class="text-2xs text-text-muted uppercase">Total</span>
+                        <span class="text-base font-black text-text-primary">{{
                           clp(fila.total)
                         }}</span>
                       </div>
@@ -312,13 +312,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div
             class="px-6 py-5 flex items-center justify-between border-t border-border-muted/50 bg-surface mt-auto"
           >
-            <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted">
+            <span class="text-2xs font-bold uppercase tracking-widest text-text-muted">
               Mostrando {{ pagosHoy().length }} ingresos
             </span>
             <div
               class="flex items-center gap-4 bg-brand/5 px-4 py-2 rounded-xl border border-brand/10"
             >
-              <span class="text-[11px] font-black uppercase tracking-widest opacity-80 text-brand">
+              <span class="text-2xs font-black uppercase tracking-widest opacity-80 text-brand">
                 Total Día
               </span>
               <span class="text-[22px] font-black tabular-nums tracking-tight text-brand">
@@ -352,7 +352,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           </div>
 
           <div
-            class="px-6 py-2 grid grid-cols-[1fr_80px_24px] gap-3 text-[11px] font-bold uppercase tracking-widest text-text-muted bg-subtle border-b border-border-muted/50"
+            class="px-6 py-2 grid grid-cols-[1fr_80px_24px] gap-3 text-2xs font-bold uppercase tracking-widest text-text-muted bg-subtle border-b border-border-muted/50"
           >
             <span>Motivo</span>
             <span class="text-right">Monto</span>
@@ -400,7 +400,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
           <div
             class="px-6 py-4 flex items-center justify-between border-t border-border-muted/50 bg-surface mt-auto"
           >
-            <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
+            <span class="text-2xs font-bold uppercase tracking-widest text-text-muted"
               >Total Egresos</span
             >
             <span class="text-[17px] font-black tabular-nums tracking-tight text-warning">
@@ -441,7 +441,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               >
               <div class="relative">
                 <span
-                  class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] font-bold pointer-events-none"
+                  class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold pointer-events-none"
                   style="color: var(--text-muted)"
                   >$</span
                 >
@@ -475,7 +475,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               <span class="tabular-nums text-warning">{{ clp(totalEgresosHoy()) }}</span>
             </div>
             <div class="mt-1 pt-3 border-t border-brand/10 flex items-center justify-between">
-              <span class="text-[11px] font-black uppercase tracking-widest text-brand"
+              <span class="text-2xs font-black uppercase tracking-widest text-brand"
                 >Debe Haber en Caja</span
               >
               <span class="text-[17px] font-black text-text-primary tabular-nums tracking-tight">{{
@@ -492,7 +492,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               <span class="text-[13px] font-semibold text-text-primary"
                 >Realizar arqueo de efectivo físico</span
               >
-              <span class="text-[11px] text-text-muted"
+              <span class="text-2xs text-text-muted"
                 >Contar billetes y monedas para cierre presencial</span
               >
             </div>
@@ -521,7 +521,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                 <div
                   class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1"
                 >
-                  <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted"
+                  <span class="text-2xs font-bold uppercase tracking-widest text-text-muted"
                     >Billetes</span
                   >
                   <app-icon
@@ -539,13 +539,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       {{ billete.label.replace('Billetes de ', '') }}
                     </span>
                     <div class="flex items-center gap-2.5">
-                      <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
+                      <span class="text-2xs text-text-muted font-bold opacity-50">×</span>
                       <input
                         type="text"
                         inputmode="numeric"
                         pattern="[0-9]*"
                         autocomplete="off"
-                        class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                        class="w-19 h-9 text-sm font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                         [value]="cantidades()[billete.key] || ''"
                         placeholder="0"
                         [disabled]="cajaYaCerrada()"
@@ -562,7 +562,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                 <div
                   class="flex items-center justify-between border-b border-border-muted/50 pb-2 mb-1"
                 >
-                  <span class="text-[10px] font-bold uppercase tracking-widest text-text-muted"
+                  <span class="text-2xs font-bold uppercase tracking-widest text-text-muted"
                     >Monedas</span
                   >
                   <app-icon
@@ -580,13 +580,13 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       {{ moneda.label.replace('Monedas de ', '') }}
                     </span>
                     <div class="flex items-center gap-2.5">
-                      <span class="text-[11px] text-text-muted font-bold opacity-50">×</span>
+                      <span class="text-2xs text-text-muted font-bold opacity-50">×</span>
                       <input
                         type="text"
                         inputmode="numeric"
                         pattern="[0-9]*"
                         autocomplete="off"
-                        class="w-19 h-9 text-[14px] font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
+                        class="w-19 h-9 text-sm font-black text-right px-3 py-1 rounded-xl bg-subtle border border-border-muted focus:bg-surface focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all tabular-nums hover:border-text-muted"
                         [value]="cantidades()[moneda.key] || ''"
                         placeholder="0"
                         [disabled]="cajaYaCerrada()"
@@ -606,11 +606,11 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               aria-live="polite"
             >
               <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-widest text-text-muted"
+                <span class="text-2xs font-bold uppercase tracking-widest text-text-muted"
                   >Total Físico Arqueado</span
                 >
                 <span
-                  class="text-[16px] font-black tabular-nums"
+                  class="text-base font-black tabular-nums"
                   [style.color]="totalArqueo() > 0 ? 'var(--text-primary)' : 'var(--text-muted)'"
                 >
                   {{ clp(totalArqueo()) }}
@@ -640,7 +640,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               <div class="flex flex-col gap-2.5">
                 <div class="flex items-center justify-between">
                   <label
-                    class="text-[12px] font-bold uppercase tracking-widest"
+                    class="text-xs font-bold uppercase tracking-widest"
                     [style.color]="
                       diferencia() !== 0 ? 'var(--state-warning)' : 'var(--text-muted)'
                     "
@@ -668,7 +668,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
             }
 
             <button
-              class="w-full flex items-center justify-center gap-2.5 font-bold text-[14px] py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
+              class="w-full flex items-center justify-center gap-2.5 font-bold text-sm py-4 rounded-xl transition-all duration-300 shadow-sm active:scale-[0.98] outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
               [class.btn-primary]="!cajaYaCerrada()"
               [style.background]="cajaYaCerrada() ? 'var(--bg-surface)' : ''"
               [style.border]="cajaYaCerrada() ? '1px solid var(--border-muted)' : ''"

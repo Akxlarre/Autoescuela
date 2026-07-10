@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RelatoresFacade } from '@core/facades/relatores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
@@ -28,6 +29,7 @@ const SPEC_LABELS: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
@@ -72,18 +74,12 @@ const SPEC_LABELS: Record<string, string> = {
                     <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
                   }
                   @if (rel.estado === 'activo') {
-                    <span
-                      class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full text-success bg-success/12"
-                    >
+                    <app-badge variant="success">
                       <app-icon name="check-circle" [size]="10" />
                       Activo
-                    </span>
+                    </app-badge>
                   } @else {
-                    <span
-                      class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-elevated text-text-muted"
-                    >
-                      Inactivo
-                    </span>
+                    <app-badge variant="neutral">Inactivo</app-badge>
                   }
                 </div>
               </div>
@@ -147,11 +143,9 @@ const SPEC_LABELS: Record<string, string> = {
             <h3 class="section-title">
               Cursos asignados
               @if (!facade.isLoadingCursos() && facade.cursosAsignados().length > 0) {
-                <span
-                  class="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full text-brand bg-brand/10"
-                >
-                  {{ facade.cursosAsignados().length }}
-                </span>
+                <app-badge variant="brand" class="ml-2">{{
+                  facade.cursosAsignados().length
+                }}</app-badge>
               }
             </h3>
 

@@ -55,6 +55,12 @@ export interface User {
             <span>Ajustes</span>
           </button>
         </li>
+        <li role="none" class="sm:hidden">
+          <button class="user-panel__item" role="menuitem" (click)="toggleTheme.emit($event)">
+            <app-icon [name]="darkMode() ? 'sun' : 'moon'" class="text-text-muted" [size]="16" />
+            <span>{{ darkMode() ? 'Modo Claro' : 'Modo Oscuro' }}</span>
+          </button>
+        </li>
       </ul>
 
       <div class="my-1 border-t border-border-subtle" role="separator"></div>
@@ -78,7 +84,9 @@ export interface User {
 })
 export class UserPanelComponent {
   readonly user = input.required<User | null>();
+  readonly darkMode = input<boolean>(false);
 
   readonly action = output<'profile' | 'settings'>();
+  readonly toggleTheme = output<MouseEvent>();
   readonly logout = output<void>();
 }

@@ -3,12 +3,13 @@ import type { RentabilidadCurso } from '@core/models/ui/pagos.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { formatCLP } from '@core/utils/date.utils';
 import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-rentabilidad-cursos',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, ShortCurrencyPipe],
+  imports: [BadgeComponent, IconComponent, ShortCurrencyPipe],
   styles: `
     .rows-divider > * + * {
       border-top: 1px solid var(--border-muted);
@@ -60,7 +61,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
               class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
             >
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Ingresos</span
                 >
                 <span class="text-sm font-semibold lg:font-normal text-text-primary">
@@ -68,7 +69,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 </span>
               </div>
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Gastos</span
                 >
                 <span class="text-sm font-medium text-error">
@@ -76,7 +77,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
                 </span>
               </div>
               <div class="flex flex-col lg:block text-center lg:text-right">
-                <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                   >Margen</span
                 >
                 <span class="text-sm font-semibold text-success">
@@ -91,12 +92,10 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             >
               <!-- Rentabilidad badge -->
               <div class="flex items-center gap-2 lg:justify-end">
-                <span class="text-[10px] lg:hidden uppercase font-bold text-text-muted"
+                <span class="text-2xs lg:hidden uppercase font-bold text-text-muted"
                   >Rentabilidad</span
                 >
-                <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
-                  {{ item.rentabilidadPorcentaje }}%
-                </span>
+                <app-badge variant="success"> {{ item.rentabilidadPorcentaje }}% </app-badge>
               </div>
 
               <!-- Visual: barra de progreso -->
@@ -132,18 +131,16 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             <span class="text-sm font-bold uppercase tracking-wider text-text-primary"
               >Total Mensual</span
             >
-            <span
-              class="text-xs font-bold px-2.5 py-1 rounded-full lg:hidden text-success bg-success/15"
-            >
+            <app-badge variant="success">
               {{ totales().rentabilidadPorcentaje }}% Rentabilidad
-            </span>
+            </app-badge>
           </div>
 
           <div
             class="grid grid-cols-3 gap-2 lg:contents mt-2 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none bg-surface/60"
           >
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+              <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Ingresos</span
               >
               <span class="text-sm font-bold text-center lg:text-right text-text-primary">
@@ -152,7 +149,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             </div>
 
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+              <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Gastos</span
               >
               <span class="text-sm font-bold text-center lg:text-right text-error">
@@ -161,7 +158,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
             </div>
 
             <div class="flex flex-col lg:block text-center lg:text-right">
-              <span class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+              <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                 >Margen</span
               >
               <span class="text-sm font-bold text-center lg:text-right text-success">
@@ -171,9 +168,7 @@ import { ShortCurrencyPipe } from '@shared/pipes/short-currency.pipe';
           </div>
 
           <div class="hidden lg:flex justify-end">
-            <span class="text-xs font-bold px-2.5 py-1 rounded-full text-success bg-success/15">
-              {{ totales().rentabilidadPorcentaje }}%
-            </span>
+            <app-badge variant="success"> {{ totales().rentabilidadPorcentaje }}% </app-badge>
           </div>
 
           <div class="hidden lg:block"></div>

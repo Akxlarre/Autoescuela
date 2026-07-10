@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { PromocionesFacade } from '@core/facades/promociones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent, StatBoxVariant } from '@shared/components/stat-box/stat-box.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
@@ -28,6 +29,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
@@ -60,13 +62,9 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                   <h2 class="text-lg font-semibold text-text-primary">
                     {{ p.name }}
                   </h2>
-                  <span
-                    class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                    [style.background]="statusPillStyle(p.status).bg"
-                    [style.color]="statusPillStyle(p.status).color"
-                  >
+                  <app-badge [variant]="statusBadgeVariant(p.status)">
                     {{ statusCfg(p.status).label }}
-                  </span>
+                  </app-badge>
                 </div>
                 <div class="flex items-center gap-3 flex-wrap">
                   <span
@@ -195,7 +193,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                       <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-2">
                           <span
-                            class="inline-flex items-center justify-center min-w-6.5 px-1.5 py-0.5 rounded text-[11px] font-bold text-white"
+                            class="inline-flex items-center justify-center min-w-6.5 px-1.5 py-0.5 rounded text-2xs font-bold text-white"
                             [style.background]="courseColor(curso.courseCode)"
                           >
                             {{ curso.courseCode }}
@@ -208,12 +206,12 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
 
                       <!-- Relatores -->
                       <div class="mb-3">
-                        <p class="text-[10px] font-semibold mb-1.5 text-brand">Relatores</p>
+                        <p class="text-2xs font-semibold mb-1.5 text-brand">Relatores</p>
                         @if (curso.relatores.length > 0) {
                           @for (rel of curso.relatores; track rel.id) {
                             <div class="flex items-center gap-2 mb-1.5">
                               <div
-                                class="flex items-center justify-center w-7 h-7 rounded-full text-[11px] font-bold shrink-0 bg-brand-tint text-brand"
+                                class="flex items-center justify-center w-7 h-7 rounded-full text-2xs font-bold shrink-0 bg-brand-tint text-brand"
                               >
                                 {{ rel.initials }}
                               </div>
@@ -223,7 +221,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                 </span>
                                 @if (rel.role) {
                                   <span
-                                    class="text-[10px] ml-1 px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+                                    class="text-2xs ml-1 px-1.5 py-0.5 rounded bg-elevated text-text-muted"
                                   >
                                     {{ roleLabel(rel.role) }}
                                   </span>
@@ -245,7 +243,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                         >
                           <div class="flex items-center gap-1.5">
                             <app-icon name="users" [size]="12" color="var(--ds-brand)" />
-                            <span class="text-[11px] font-semibold text-brand"> Alumnos </span>
+                            <span class="text-2xs font-semibold text-brand"> Alumnos </span>
                           </div>
                           <div class="flex items-center gap-2">
                             <span class="text-xs text-text-secondary">
@@ -299,7 +297,7 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                     style="border-bottom: 1px solid var(--border-subtle);"
                                   >
                                     <div
-                                      class="flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-bold shrink-0 bg-elevated text-text-secondary"
+                                      class="flex items-center justify-center w-7 h-7 rounded-full text-2xs font-bold shrink-0 bg-elevated text-text-secondary"
                                     >
                                       {{ alumno.initials }}
                                     </div>
@@ -307,17 +305,16 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                                       <p class="text-xs font-medium truncate text-text-primary">
                                         {{ alumno.nombre }}
                                       </p>
-                                      <p class="text-[10px] font-mono text-text-muted">
+                                      <p class="text-2xs font-mono text-text-muted">
                                         {{ alumno.rut }}
                                       </p>
                                     </div>
-                                    <span
-                                      class="text-[10px] px-1.5 py-0.5 rounded-full shrink-0"
-                                      [style.background]="enrollStatusBg(alumno.enrollmentStatus)"
-                                      [style.color]="enrollStatusColor(alumno.enrollmentStatus)"
+                                    <app-badge
+                                      [variant]="enrollStatusVariant(alumno.enrollmentStatus)"
+                                      class="shrink-0"
                                     >
                                       {{ enrollStatusLabel(alumno.enrollmentStatus) }}
-                                    </span>
+                                    </app-badge>
                                   </div>
                                 }
                               }
@@ -408,22 +405,11 @@ export class AdminPromocionVerDrawerComponent {
     return STATUS_CONFIG[status] ?? STATUS_CONFIG['planned'];
   }
 
-  private readonly stateBgTokens: Record<string, string> = {
-    success: 'var(--state-success-bg)',
-    warning: 'var(--state-warning-bg)',
-    error: 'var(--state-error-bg)',
-    info: 'var(--state-info-bg)',
-  };
-
-  protected statusPillStyle(status: string): { bg: string; color: string } {
-    const cfg = this.statusCfg(status);
-    if (cfg.variant === 'surface') {
-      return { bg: 'var(--bg-elevated)', color: 'var(--text-muted)' };
-    }
-    return {
-      bg: this.stateBgTokens[cfg.variant] ?? 'var(--bg-elevated)',
-      color: `var(--state-${cfg.variant})`,
-    };
+  protected statusBadgeVariant(
+    status: string,
+  ): 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'brand' {
+    const variant = this.statusCfg(status).variant;
+    return variant === 'default' || variant === 'surface' ? 'neutral' : variant;
   }
 
   protected courseColor(code: string): string {
@@ -455,24 +441,14 @@ export class AdminPromocionVerDrawerComponent {
     return map[status] ?? status;
   }
 
-  protected enrollStatusBg(status: string): string {
-    const map: Record<string, string> = {
-      active: 'var(--state-success-bg)',
-      completed: 'var(--bg-elevated)',
-      inactive: 'var(--state-error-bg)',
-      pending_payment: 'var(--state-warning-bg)',
+  protected enrollStatusVariant(status: string): 'success' | 'warning' | 'error' | 'neutral' {
+    const map: Record<string, 'success' | 'warning' | 'error' | 'neutral'> = {
+      active: 'success',
+      completed: 'neutral',
+      inactive: 'error',
+      pending_payment: 'warning',
     };
-    return map[status] ?? 'var(--bg-elevated)';
-  }
-
-  protected enrollStatusColor(status: string): string {
-    const map: Record<string, string> = {
-      active: 'var(--state-success)',
-      completed: 'var(--text-muted)',
-      inactive: 'var(--state-error)',
-      pending_payment: 'var(--state-warning)',
-    };
-    return map[status] ?? 'var(--text-muted)';
+    return map[status] ?? 'neutral';
   }
 
   protected formatDate(iso: string): string {

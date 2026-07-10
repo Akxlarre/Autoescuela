@@ -110,6 +110,7 @@ El proyecto utiliza un patrón estricto de **Single-Component Skeleton** para ev
     - `.bento-hero` → Para el `app-section-hero`.
     - `.bento-square` (o `.bento-1x1`) → Para `app-kpi-card` o mini-widgets.
     - `.bento-banner` (o `.bento-wide`) → Para tablas, listados o bloques de ancho completo.
+- **Modificadores App-like (Desktop 100vh):** Usar `.bento-grid--fill-screen` o `--fill-screen-2` en el contenedor `.bento-grid` para layouts que ocupan toda la pantalla en Desktop (lg+) y hacen scroll interno. En Mobile permiten scroll nativo.
 - **GSAP:** El método `animateBentoGrid()` del `GsapAnimationsService` requiere que los hijos sean directos para que el stagger funcione correctamente.
 
 ```html

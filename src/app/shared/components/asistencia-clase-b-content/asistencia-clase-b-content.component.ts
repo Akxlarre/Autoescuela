@@ -15,6 +15,7 @@ import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { todayIso } from '@core/utils/date.utils';
@@ -64,6 +65,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
@@ -237,7 +239,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   [size]="18"
                   [style.color]="'var(--color-primary)'"
                 />
-                <h2 class="text-sm font-semibold text-primary">Asistencia del Día — Prácticas</h2>
+                <h2 class="text-sm font-semibold text-text-primary">
+                  Asistencia del Día — Prácticas
+                </h2>
               </div>
               <div class="flex items-center gap-2">
                 <!-- Selector de fecha -->
@@ -314,7 +318,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 }
               </div>
             } @else if (filteredPracticas().length === 0) {
-              <p class="text-sm text-secondary text-center py-6">
+              <p class="text-sm text-text-secondary text-center py-6">
                 No hay registros que coincidan con los filtros seleccionados.
               </p>
             } @else {
@@ -322,29 +326,37 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <table class="w-full text-sm">
                   <thead>
                     <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-20">
+                      <th
+                        class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-20"
+                      >
                         Agendada
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                      <th
+                        class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16"
+                      >
                         Inicio
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4 w-16">
+                      <th
+                        class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-16"
+                      >
                         Fin
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">Sede</th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
+                        Sede
+                      </th>
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Instructor
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Alumno
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Vehículo
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pr-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4">
                         Estado
                       </th>
-                      <th class="text-left text-xs font-semibold text-secondary pb-2 pl-4">
+                      <th class="text-left text-xs font-semibold text-text-secondary pb-2 pl-4">
                         Acciones
                       </th>
                     </tr>
@@ -355,29 +367,31 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         class="border-b transition-colors hover:bg-elevated"
                         [style.border-color]="'var(--border-subtle)'"
                       >
-                        <td class="py-3 pr-4 font-medium text-primary whitespace-nowrap">
+                        <td class="py-3 pr-4 font-medium text-text-primary whitespace-nowrap">
                           {{ row.horaInicio }}
                         </td>
                         <td class="py-3 pr-4 whitespace-nowrap">
                           @if (row.horaInicioReal) {
-                            <span class="font-medium text-primary">{{ row.horaInicioReal }}</span>
+                            <span class="font-medium text-text-primary">{{
+                              row.horaInicioReal
+                            }}</span>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
                         <td class="py-3 pr-4 whitespace-nowrap">
                           @if (row.horaFinReal) {
-                            <span class="font-medium text-primary">{{ row.horaFinReal }}</span>
+                            <span class="font-medium text-text-primary">{{ row.horaFinReal }}</span>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
-                        <td class="py-3 pr-4 text-secondary text-xs">{{ row.branchName }}</td>
-                        <td class="py-3 pr-4 text-secondary">{{ row.instructorName }}</td>
+                        <td class="py-3 pr-4 text-text-secondary text-xs">{{ row.branchName }}</td>
+                        <td class="py-3 pr-4 text-text-secondary">{{ row.instructorName }}</td>
                         <td class="py-3 pr-4">
                           @if (row.alumnoName) {
                             <span
-                              class="text-secondary"
+                              class="text-text-secondary"
                               [style.color]="
                                 row.status === 'ausente' ? 'var(--color-primary)' : undefined
                               "
@@ -385,34 +399,30 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               {{ row.alumnoName }}
                             </span>
                           } @else {
-                            <span class="text-muted italic">Sin agendar</span>
+                            <span class="text-text-muted italic">Sin agendar</span>
                           }
                         </td>
                         <td class="py-3 pr-4">
                           @if (row.vehiclePlate) {
                             <div class="flex flex-col">
-                              <span class="text-xs font-medium text-primary">{{
+                              <span class="text-xs font-medium text-text-primary">{{
                                 row.vehiclePlate
                               }}</span>
                               @if (row.vehicleBrand || row.vehicleModel) {
-                                <span class="text-xs text-muted">
+                                <span class="text-xs text-text-muted">
                                   {{ row.vehicleBrand ?? '' }} {{ row.vehicleModel ?? '' }}
                                 </span>
                               }
                             </div>
                           } @else {
-                            <span class="text-muted">—</span>
+                            <span class="text-text-muted">—</span>
                           }
                         </td>
                         <td class="py-3 pr-4">
-                          <span
-                            class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full"
-                            [style.background]="statusBadgeBg(row)"
-                            [style.color]="statusBadgeColor(row)"
-                          >
+                          <app-badge [variant]="statusBadgeVariant(row)">
                             <app-icon [name]="statusBadgeIcon(row)" [size]="11" />
                             {{ statusBadgeLabel(row) }}
-                          </span>
+                          </app-badge>
                         </td>
                         <td class="py-3 pl-4">
                           <div class="flex items-center justify-start gap-2">
@@ -448,7 +458,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               }
                             }
                             @if (row.status === 'en_curso') {
-                              <span class="indicator-live text-xs text-secondary">En clase</span>
+                              <span class="indicator-live text-xs text-text-secondary"
+                                >En clase</span
+                              >
                               <!-- Finalizar clase -->
                               <button
                                 class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
@@ -786,31 +798,17 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     }
   }
 
-  protected statusBadgeBg(row: ClasePracticaRow): string {
-    if (this.isJustificada(row)) return 'var(--bg-elevated)';
+  protected statusBadgeVariant(row: ClasePracticaRow): 'success' | 'error' | 'brand' | 'neutral' {
+    if (this.isJustificada(row)) return 'neutral';
     switch (row.status) {
       case 'presente':
-        return 'var(--state-success-bg)';
+        return 'success';
       case 'ausente':
-        return 'var(--state-error-bg)';
+        return 'error';
       case 'en_curso':
-        return 'color-mix(in srgb, var(--color-primary) 12%, transparent)';
+        return 'brand';
       case 'pendiente':
-        return 'var(--bg-elevated)';
-    }
-  }
-
-  protected statusBadgeColor(row: ClasePracticaRow): string {
-    if (this.isJustificada(row)) return 'var(--text-muted)';
-    switch (row.status) {
-      case 'presente':
-        return 'var(--state-success)';
-      case 'ausente':
-        return 'var(--state-error)';
-      case 'en_curso':
-        return 'var(--color-primary)';
-      case 'pendiente':
-        return 'var(--text-muted)';
+        return 'neutral';
     }
   }
 

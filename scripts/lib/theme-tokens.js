@@ -85,3 +85,35 @@ export function findDeadTokenClasses(content, theme) {
   }
   return [...found.values()];
 }
+
+/**
+ * ARCH-18 (fix-033) — Alias "bare" prohibidos en @theme.
+ *
+ * ARCH-11 solo detecta clases que NO generan CSS. Ese guardrail queda ciego en
+ * cuanto alguien agrega un alias como `--color-secondary: var(--text-secondary)`
+ * al @theme: la clase "muerta" pasa a ser válida y ARCH-11 deja de marcarla —
+ * exactamente el mecanismo que resucitó `text-secondary`/`text-muted` en a4675ee
+ * (ver AP-015). Esta función audita la DEFINICIÓN del bridge, no el uso.
+ *
+ * Prohibidos: alias bare que colisionan con la forma corta ya establecida como
+ * muerta por el canon `text-text-*` (fix-030). Los sufijos (--color-border-muted,
+ * --color-brand-muted…) NO están prohibidos — son formas canónicas legítimas.
+ */
+const FORBIDDEN_THEME_ALIASES = ['--color-secondary', '--color-muted', '--color-disabled', '--color-primary'];
+
+/**
+ * Busca definiciones de alias prohibidos dentro del bloque @theme de un CSS.
+ * Devuelve [{ key }] — vacío si no hay violaciones.
+ */
+export function findForbiddenThemeAliases(cssContent) {
+  const themeMatch = cssContent.match(/@theme\s*\{([\s\S]*?)\n\}/);
+  if (!themeMatch) return [];
+  const body = themeMatch[1];
+  const found = [];
+  for (const key of FORBIDDEN_THEME_ALIASES) {
+    // Match exacto de la propiedad (no --color-secondary-foo, no --color-brand-muted).
+    const re = new RegExp(`(?:^|\\n)\\s*${key}\\s*:`);
+    if (re.test(body)) found.push({ key });
+  }
+  return found;
+}

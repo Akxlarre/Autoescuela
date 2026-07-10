@@ -3,6 +3,7 @@ import { LowerCasePipe } from '@angular/common';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { AdminInstructorEditarDrawerComponent } from './admin-instructor-editar-drawer.component';
 import { AdminInstructorHorarioDrawerComponent } from './admin-instructor-horario-drawer.component';
@@ -17,6 +18,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   imports: [
     LowerCasePipe,
     IconComponent,
+    BadgeComponent,
     StatBoxComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
@@ -59,19 +61,15 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
               <!-- Badge estado -->
               @if (inst.estado === 'activo') {
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
-                >
+                <app-badge variant="success">
                   <app-icon name="check-circle" [size]="12" />
                   Activo
-                </span>
+                </app-badge>
               } @else {
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
-                >
+                <app-badge variant="neutral">
                   <app-icon name="circle" [size]="12" />
                   Inactivo
-                </span>
+                </app-badge>
               }
             </div>
 

@@ -20,6 +20,7 @@ import type { AnticipoCuentaCorriente, AnticipoHistorial } from '@core/models/ui
 import { RegistrarAnticipoDrawerComponent } from './registrar-anticipo-drawer.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 // ─── Formatter ───────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ function clp(n: number): string {
   selector: 'app-admin-contabilidad-anticipos',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     SectionHeroComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -143,11 +145,7 @@ function clp(n: number): string {
                     </td>
                     <!-- Tipo -->
                     <td class="px-4 py-3">
-                      <span
-                        class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-elevated text-text-secondary"
-                      >
-                        {{ row.tipoLabel }}
-                      </span>
+                      <app-badge variant="neutral">{{ row.tipoLabel }}</app-badge>
                     </td>
                     <!-- Anticipos Totales -->
                     <td class="px-4 py-3 text-right text-text-primary">
@@ -172,20 +170,12 @@ function clp(n: number): string {
                     <!-- Estado -->
                     <td class="px-4 py-3 text-center">
                       @if (row.estado === 'pendiente') {
-                        <span
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-warning"
-                          class="bg-warning-subtle"
-                        >
-                          Saldo pendiente
-                        </span>
+                        <app-badge variant="warning"> Saldo pendiente </app-badge>
                       } @else {
-                        <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-success"
-                          class="bg-success-subtle"
-                        >
+                        <app-badge variant="success">
                           <app-icon name="check" [size]="10" />
                           Al día
-                        </span>
+                        </app-badge>
                       }
                     </td>
                     <!-- Acciones -->

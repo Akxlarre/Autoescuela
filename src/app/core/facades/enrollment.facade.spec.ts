@@ -7,6 +7,8 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.facade';
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { ToastService } from '@core/services/ui/toast.service';
 
 // ── Mock Supabase client ──
 
@@ -65,6 +67,7 @@ function createMockSupabaseService() {
       },
       channel: vi.fn().mockReturnValue(mockChannel),
       removeChannel: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
     },
     _mockBuilder: mockBuilder,
     _mockChannel: mockChannel,
@@ -86,6 +89,8 @@ describe('EnrollmentFacade', () => {
   let mockAuth: any;
   let mockDocs: any;
   let mockPayment: any;
+  let mockNotifications: any;
+  let mockToast: any;
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseService();
@@ -94,6 +99,11 @@ describe('EnrollmentFacade', () => {
     mockAuth = { whenReady: Promise.resolve(), currentUser: vi.fn() };
     mockDocs = createMockService(['reset']);
     mockPayment = createMockService(['reset']);
+    mockNotifications = {
+      notifyUsers: vi.fn().mockResolvedValue(undefined),
+      notifyRole: vi.fn().mockResolvedValue(undefined),
+    };
+    mockToast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -104,6 +114,8 @@ describe('EnrollmentFacade', () => {
         { provide: AuthFacade, useValue: mockAuth },
         { provide: EnrollmentDocumentsFacade, useValue: mockDocs },
         { provide: EnrollmentPaymentFacade, useValue: mockPayment },
+        { provide: NotificationsFacade, useValue: mockNotifications },
+        { provide: ToastService, useValue: mockToast },
       ],
     });
 
@@ -491,6 +503,91 @@ describe('EnrollmentFacade', () => {
     it('should return null when no draft enrollment', async () => {
       const result = await facade.confirmEnrollment();
       expect(result).toBeNull();
+    });
+
+    it('notifies the student and the admins after a successful confirmation (AC6)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+
+      const result = await facade.confirmEnrollment();
+
+      expect(result).toBe('2026-0001');
+      expect(mockNotifications.notifyUsers).toHaveBeenCalledWith(
+        [30],
+        expect.objectContaining({ referenceType: 'enrollment', referenceId: 20 }),
+      );
+      expect(mockNotifications.notifyRole).toHaveBeenCalledWith(
+        'admin',
+        null,
+        expect.objectContaining({ referenceType: 'enrollment', referenceId: 20 }),
+      );
+    });
+
+    it('does not break the confirmation flow when the notification insert fails (AC-E1)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+      mockNotifications.notifyUsers.mockRejectedValue(new Error('insert failed'));
+      mockNotifications.notifyRole.mockRejectedValue(new Error('insert failed'));
+
+      const result = await facade.confirmEnrollment();
+
+      expect(result).toBe('2026-0001');
+    });
+
+    it('does not notify when the draft has no userId', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: null });
+      (facade as any)._enrollment.set({ course_id: 1 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0001', error: null });
+
+      await facade.confirmEnrollment();
+
+      expect(mockNotifications.notifyUsers).not.toHaveBeenCalled();
+      expect(mockNotifications.notifyRole).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('confirmWithPayment', () => {
+    beforeEach(() => {
+      mockPayment.pricing = vi.fn().mockReturnValue({ isDeposit: false });
+      mockPayment.paymentMethod = vi.fn().mockReturnValue('cash');
+      mockPayment.totalToPay = vi.fn().mockReturnValue(100000);
+      mockPayment.selectedDiscountId = vi.fn().mockReturnValue(null);
+      mockPayment.discount = vi.fn().mockReturnValue({ amount: 0 });
+    });
+
+    it('should return null when no draft enrollment', async () => {
+      const result = await facade.confirmWithPayment();
+      expect(result).toBeNull();
+    });
+
+    it('notifies the student and the admins after a successful confirmation (AC6)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0002', error: null });
+
+      const result = await facade.confirmWithPayment();
+
+      expect(result).toBe('2026-0002');
+      expect(mockNotifications.notifyUsers).toHaveBeenCalledWith(
+        [30],
+        expect.objectContaining({ referenceType: 'enrollment', referenceId: 20 }),
+      );
+      expect(mockNotifications.notifyRole).toHaveBeenCalledWith(
+        'admin',
+        null,
+        expect.objectContaining({ referenceType: 'enrollment', referenceId: 20 }),
+      );
+    });
+
+    it('does not break the confirmation flow when the notification insert fails (AC-E1)', async () => {
+      (facade as any)._draft.set({ enrollmentId: 10, studentId: 20, userId: 30 });
+      mockSupabase.client.rpc = vi.fn().mockResolvedValue({ data: '2026-0002', error: null });
+      mockNotifications.notifyUsers.mockRejectedValue(new Error('insert failed'));
+
+      const result = await facade.confirmWithPayment();
+
+      expect(result).toBe('2026-0002');
     });
   });
 

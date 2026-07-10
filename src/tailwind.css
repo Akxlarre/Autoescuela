@@ -52,9 +52,6 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
   --color-text-disabled: var(--text-disabled);
-  --color-secondary: var(--text-secondary);
-  --color-muted: var(--text-muted);
-  --color-disabled: var(--text-disabled);
 
   /* ── Bordes ── */
   --color-border: var(--border-default); /* Fix: default color for 'border' class */
@@ -87,6 +84,11 @@
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
+
+  /* ── Tipografía extra-escala ── */
+  /* Genera la utilidad text-2xs (10px). Sin par --line-height a propósito:
+     igual que text-[10px], solo fija font-size (el line-height se hereda). */
+  --text-2xs: var(--text-2xs);
 
   /* ── Radios ── */
   --radius-sm: var(--radius-sm);
@@ -212,7 +214,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -243,7 +245,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -273,7 +275,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -303,30 +305,32 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Botón peligro outline — hero/cabecera. Fondo blanco, borde y texto rojo vibrante. */
+/* Botón peligro outline — hero/cabecera. Superficie del tema, borde y texto rojo de estado.
+   Tokens --btn-danger-* propios: .surface-hero no los reescribe (cascade-immune),
+   pero sí responden a dark mode. */
 @utility btn-danger-ghost {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   cursor: pointer;
-  border: 1px solid theme(colors.red.300);
+  border: 1px solid var(--btn-danger-ghost-border);
   border-radius: var(--btn-primary-radius);
-  background: theme(colors.white);
+  background: var(--btn-danger-ghost-bg);
   padding: var(--btn-primary-padding-y) var(--btn-primary-padding-x);
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: theme(colors.red.600);
-  box-shadow: 0 1px 2px theme(colors.black / 5%);
+  color: var(--btn-danger-ghost-text);
+  box-shadow: var(--shadow-sm);
   transition: var(--transition-btn);
 
   &:hover:not(:disabled) {
-    background: theme(colors.red.50);
+    background: var(--btn-danger-ghost-bg-hover);
   }
 
   &:active:not(:disabled) {
@@ -335,11 +339,12 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Botón peligro sólido — acción destructiva principal (ej: confirmar archivado). */
+/* Botón peligro sólido — acción destructiva principal (ej: confirmar archivado).
+   Fondo --state-error-strong: rojo medio con texto blanco AA en ambos modos. */
 @utility btn-danger-solid {
   display: inline-flex;
   align-items: center;
@@ -348,17 +353,17 @@
   cursor: pointer;
   border: none;
   border-radius: var(--btn-primary-radius);
-  background: theme(colors.red.600);
+  background: var(--btn-danger-solid-bg);
   padding: 0.625rem 1.25rem;
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: theme(colors.white);
-  box-shadow: 0 1px 2px theme(colors.black / 5%);
+  color: var(--btn-danger-solid-text);
+  box-shadow: var(--shadow-sm);
   transition: var(--transition-btn);
 
   &:hover:not(:disabled) {
-    background: theme(colors.red.700);
+    background: var(--btn-danger-solid-bg-hover);
   }
 
   &:active:not(:disabled) {
@@ -367,7 +372,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.5;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
@@ -398,11 +403,12 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.4;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Botón neutro — cancelar/cerrar sin dependencia de tokens de superficie. */
+/* Botón neutro — cancelar/cerrar en modales. Superficie sutil del tema,
+   hover por brightness (mismo patrón que btn-warning-soft/btn-success-soft). */
 @utility btn-neutral {
   display: inline-flex;
   align-items: center;
@@ -411,16 +417,16 @@
   cursor: pointer;
   border: none;
   border-radius: var(--btn-primary-radius);
-  background: theme(colors.gray.100);
+  background: var(--btn-neutral-bg);
   padding: 0.625rem 1.25rem;
   font-family: var(--font-body);
   font-size: 0.875rem;
   font-weight: 500;
-  color: theme(colors.gray.700);
+  color: var(--btn-neutral-text);
   transition: var(--transition-btn);
 
   &:hover:not(:disabled) {
-    background: theme(colors.gray.200);
+    filter: brightness(0.96);
   }
 
   &:active:not(:disabled) {
@@ -429,19 +435,22 @@
 
   &:disabled {
     cursor: not-allowed;
-    opacity: 0.7;
+    opacity: var(--btn-disabled-opacity);
   }
 }
 
-/* Badges de estado — reemplazan color-mix() inline en componentes. Dark-mode aware vía tokens. */
+/* Badges de estado — fuente única (fix-036): consumidas por <app-badge>, reemplazan
+   color-mix() inline en componentes. Dark-mode aware vía tokens. Radio/padding desde
+   los tokens de Capa 4 (--badge-radius/--badge-padding-*), antes huérfanos. */
 @utility badge-warning {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-warning-bg);
   color: var(--state-warning);
   border: 1px solid var(--state-warning-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
@@ -450,11 +459,12 @@
 @utility badge-success {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-success-bg);
   color: var(--state-success);
   border: 1px solid var(--state-success-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
@@ -463,11 +473,12 @@
 @utility badge-error {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-error-bg);
   color: var(--state-error);
   border: 1px solid var(--state-error-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;
@@ -476,11 +487,40 @@
 @utility badge-info {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--state-info-bg);
   color: var(--state-info);
   border: 1px solid var(--state-info-border);
-  border-radius: var(--radius-md);
-  padding: 0.125rem 0.5rem;
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@utility badge-neutral {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+@utility badge-brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-muted);
+  color: var(--ds-brand);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--badge-radius);
+  padding: var(--badge-padding-y) var(--badge-padding-x);
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1.5;

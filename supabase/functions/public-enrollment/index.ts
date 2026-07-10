@@ -840,6 +840,51 @@ async function handleSubmitPreInscription(supabase: any, body: any) {
       return errorResponse('Error al crear pre-inscripción: ' + preRegError.message, 500);
     }
 
+    // 3. Notificar a secretarias de la sede + todos los admins (Spec 0024, AC4).
+    // Try/catch propio: un fallo del INSERT de notificaciones jamás afecta la
+    // respuesta de la pre-inscripción (AC-E1). Sede sin secretarias → solo admins,
+    // sin destinatarios → no-op (AC-E3).
+    try {
+      const { data: recipients, error: recipientsError } = await supabase
+        .from('users')
+        .select('id, branch_id, roles!role_id(name)')
+        .eq('active', true);
+
+      if (recipientsError) {
+        console.error('[public-enrollment] notification recipients query error:', recipientsError);
+      } else {
+        const notifyIds = (recipients ?? [])
+          .filter((u: any) => {
+            const roleName = Array.isArray(u.roles) ? u.roles[0]?.name : u.roles?.name;
+            if (roleName === 'admin') return true;
+            return roleName === 'secretary' && u.branch_id === branchId;
+          })
+          .map((u: any) => u.id as number);
+
+        if (notifyIds.length > 0) {
+          const nombre =
+            `${personalData.firstNames ?? ''} ${personalData.paternalLastName ?? ''}`.trim() ||
+            'Un visitante';
+          const rows = notifyIds.map((recipientId: number) => ({
+            recipient_id: recipientId,
+            type: 'system',
+            subject: 'Nueva pre-inscripción',
+            message: `${nombre} — ${licenseClassLabel(licenseClass)}`,
+            reference_type: 'preinscription',
+            reference_id: preReg.id,
+            read: false,
+            sent_ok: true,
+          }));
+          const { error: notifyError } = await supabase.from('notifications').insert(rows);
+          if (notifyError) {
+            console.error('[public-enrollment] notification insert error:', notifyError);
+          }
+        }
+      }
+    } catch (notifyErr) {
+      console.error('[public-enrollment] notification dispatch error:', notifyErr);
+    }
+
     return jsonResponse({
       success: true,
       preRegistrationId: preReg.id,

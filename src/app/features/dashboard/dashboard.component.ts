@@ -87,7 +87,7 @@ import { to24hTime } from '@core/utils/date.utils';
          BENTO GRID — contenedor principal del dashboard
          [appBentoGridLayout] habilita FLIP animation en reflows
     ════════════════════════════════════════════════════════════════ -->
-    <section class="bento-grid w-full" appBentoGridLayout #bentoGrid aria-label="Panel de control">
+    <section class="bento-grid bento-grid--fill-screen-2 w-full" appBentoGridLayout #bentoGrid aria-label="Panel de control">
       <!-- ── HERO slim — título + KPIs en una sola barra ────────────────── -->
       <app-section-hero
         [title]="heroSectionTitle()"
@@ -110,11 +110,12 @@ import { to24hTime } from '@core/utils/date.utils';
         [classes]="liveClasses()"
         [loading]="loading()"
         (actionClick)="handleLiveClassAction($event)"
+        (viewAllClick)="openAgenda()"
       />
 
       <!-- ── Derecha Arriba: Actividad reciente ─── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-[280px]"
+        class="bento-wide bento-card flex flex-col w-full h-full"
         appCardHover
       >
         <!-- Header de sección -->
@@ -203,7 +204,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Abajo: Alertas Importantes ───── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-[280px]"
+        class="bento-wide bento-card flex flex-col w-full h-full"
         appCardHover
       >
         <!-- Header de sección -->
@@ -341,7 +342,21 @@ export class DashboardComponent {
   readonly activities = computed(() => this.dashboardFacade.data()?.activities ?? []);
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
   readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
-  readonly liveClasses = computed(() => this.dashboardFacade.data()?.liveClasses ?? []);
+  readonly liveClasses = computed(() => {
+    const baseTime = new Date();
+    return [
+      { id: '1', originalId: 1, scheduledAt: baseTime.toISOString(), status: 'in_progress', studentName: 'Juan Perez', instructorName: 'Carlos', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '10:00 - 10:45', classNumber: 1 },
+      { id: '2', originalId: 2, scheduledAt: new Date(baseTime.getTime() + 1000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Maria Silva', instructorName: 'Pedro', type: 'practical', vehicle: 'Kia Rio', timeLabel: '11:00 - 11:45', classNumber: 2 },
+      { id: '3', originalId: 3, scheduledAt: new Date(baseTime.getTime() + 2000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Luis Gomez', instructorName: 'Carlos', type: 'theory', vehicle: null, timeLabel: '12:00 - 12:45', classNumber: 3 },
+      { id: '4', originalId: 4, scheduledAt: new Date(baseTime.getTime() + 3000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Ana Rojas', instructorName: 'Pedro', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '13:00 - 13:45', classNumber: 4 },
+      { id: '5', originalId: 5, scheduledAt: new Date(baseTime.getTime() + 4000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Jose Soto', instructorName: 'Carlos', type: 'practical', vehicle: 'Kia Rio', timeLabel: '14:00 - 14:45', classNumber: 5 },
+      { id: '6', originalId: 6, scheduledAt: new Date(baseTime.getTime() + 5000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Camila Toro', instructorName: 'Pedro', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '15:00 - 15:45', classNumber: 6 },
+      { id: '7', originalId: 7, scheduledAt: new Date(baseTime.getTime() + 6000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Diego Paz', instructorName: 'Carlos', type: 'theory', vehicle: null, timeLabel: '16:00 - 16:45', classNumber: 7 },
+      { id: '8', originalId: 8, scheduledAt: new Date(baseTime.getTime() + 7000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Sofia Ruiz', instructorName: 'Pedro', type: 'practical', vehicle: 'Kia Rio', timeLabel: '17:00 - 17:45', classNumber: 8 },
+      { id: '9', originalId: 9, scheduledAt: new Date(baseTime.getTime() + 8000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Lucas Vega', instructorName: 'Carlos', type: 'practical', vehicle: 'Toyota Yaris', timeLabel: '18:00 - 18:45', classNumber: 9 },
+      { id: '10', originalId: 10, scheduledAt: new Date(baseTime.getTime() + 9000 * 60 * 60).toISOString(), status: 'pending', studentName: 'Valentina O.', instructorName: 'Pedro', type: 'practical', vehicle: 'Kia Rio', timeLabel: '19:00 - 19:45', classNumber: 10 }
+    ] as unknown as LiveClassModel[];
+  });
 
   readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
   readonly heroContextLine = computed(() => this.hero()?.date ?? '');
@@ -468,6 +483,10 @@ export class DashboardComponent {
 
   openAlerts() {
     this.layoutDrawer.open(AlertsDrawerComponent, 'Todas las Alertas', 'bell');
+  }
+
+  openAgenda() {
+    this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
   }
 
   getAlertIcon(severity: string): string {

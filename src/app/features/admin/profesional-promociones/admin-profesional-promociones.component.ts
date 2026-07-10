@@ -20,6 +20,7 @@ import type { PromocionTableRow } from '@core/models/ui/promocion-table.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -40,6 +41,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     SelectModule,
     SectionHeroComponent,
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -150,16 +152,13 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                           {{ promo.name }}
                         </span>
                         <span
-                          class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
+                          class="text-2xs font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
                         >
                           {{ promo.code }}
                         </span>
-                        <span
-                          class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                          [class]="'status-badge--' + promo.status"
-                        >
+                        <app-badge [variant]="statusVariant(promo.status)">
                           {{ statusLabel(promo.status) }}
-                        </span>
+                        </app-badge>
                       </div>
 
                       <div class="flex items-center gap-4 flex-wrap">
@@ -179,7 +178,7 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                     <div class="hidden md:flex items-center gap-1 shrink-0">
                       @for (curso of promo.cursos; track curso.id) {
                         <span
-                          class="w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold text-white"
+                          class="w-6 h-6 flex items-center justify-center rounded text-2xs font-bold text-white"
                           [style.background]="getCourseColor(curso.courseCode)"
                           [title]="curso.courseName + ': ' + curso.enrolledStudents + ' alumnos'"
                         >
@@ -253,23 +252,6 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     }
     .promo-row:hover {
       background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
-    }
-
-    .status-badge--planned {
-      background: color-mix(in srgb, var(--ds-brand) 10%, transparent);
-      color: var(--ds-brand);
-    }
-    .status-badge--in_progress {
-      background: color-mix(in srgb, var(--state-success) 12%, transparent);
-      color: var(--state-success);
-    }
-    .status-badge--finished {
-      background: var(--bg-elevated);
-      color: var(--text-muted);
-    }
-    .status-badge--cancelled {
-      background: color-mix(in srgb, var(--state-error) 10%, transparent);
-      color: var(--state-error);
     }
 
     .action-btn {
@@ -429,6 +411,19 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
       cancelled: 'Cancelada',
     };
     return map[status] ?? status;
+  }
+
+  protected statusVariant(status: string): 'brand' | 'success' | 'neutral' | 'error' {
+    switch (status) {
+      case 'planned':
+        return 'brand';
+      case 'in_progress':
+        return 'success';
+      case 'cancelled':
+        return 'error';
+      default:
+        return 'neutral';
+    }
   }
 
   protected getCourseColor(code: string): string {

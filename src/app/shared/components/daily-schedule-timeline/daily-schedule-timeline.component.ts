@@ -33,7 +33,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             (click)="daySelect.emit(day.date)"
           >
             <span
-              class="text-[10px] font-bold uppercase tracking-widest mb-1"
+              class="text-2xs font-bold uppercase tracking-widest mb-1"
               [style.color]="getDayPillTextColor(day, 'label')"
             >
               {{ day.name.slice(0, 3) }}
@@ -93,7 +93,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             <div class="relative z-10 flex flex-col h-full">
               <div class="flex justify-between items-center mb-4">
                 <div
-                  class="rounded-full px-3 py-1 font-bold text-[11px] tracking-wider"
+                  class="rounded-full px-3 py-1 font-bold text-2xs tracking-wider"
                   class="bg-white/20 text-brand-text"
                 >
                   PRÓXIMA CLASE • {{ nextBlock.startTime }}
@@ -116,7 +116,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               </p>
 
               <div
-                class="flex items-center gap-2 text-[11px] font-bold mt-auto"
+                class="flex items-center gap-2 text-2xs font-bold mt-auto"
                 [style.color]="'var(--color-primary-text)'"
               >
                 <app-icon name="arrow-right" [size]="14" />
@@ -153,7 +153,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               <!-- Time label -->
               <div class="w-[45px] shrink-0 pt-4 flex justify-end">
                 <span
-                  class="font-black text-[10px] tracking-tighter"
+                  class="font-black text-2xs tracking-tighter"
                   [style.color]="
                     block.status === 'in_progress' ? 'var(--color-primary)' : 'var(--text-muted)'
                   "
@@ -207,14 +207,14 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
                   </div>
 
                   <h5
-                    class="text-[16px] font-bold mb-1 truncate"
+                    class="text-base font-bold mb-1 truncate"
                     [style.color]="getStatusVisual(block.status).textColor"
                   >
                     {{ block.studentName }}
                   </h5>
 
                   <div
-                    class="flex items-center gap-2 text-[10px] font-bold opacity-70"
+                    class="flex items-center gap-2 text-2xs font-bold opacity-70"
                     [style.color]="getStatusVisual(block.status).textColor"
                   >
                     <span>#{{ block.classNumber }}</span>

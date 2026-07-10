@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
@@ -19,6 +20,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   imports: [
     CommonModule,
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
@@ -142,20 +144,16 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                         <h4 class="font-bold text-text-primary text-sm leading-tight mb-0.5">
                           {{ docLabel(doc.type) }}
                         </h4>
-                        <p class="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                        <p class="text-2xs font-medium text-text-muted uppercase tracking-wider">
                           Vence: {{ doc.expiryDate | date: 'dd MMM yyyy' }}
                         </p>
                       </div>
                     </div>
 
                     <div class="flex items-center gap-2">
-                      <span
-                        class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm border"
-                        [class.badge-success]="doc.status === 'valid'"
-                        [class.badge-error]="doc.status !== 'valid'"
-                      >
+                      <app-badge [variant]="doc.status === 'valid' ? 'success' : 'error'">
                         {{ doc.status === 'valid' ? 'Vigente' : 'Vencido' }}
-                      </span>
+                      </app-badge>
                       <button
                         class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
                       >
@@ -175,18 +173,6 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         </app-drawer-form>
       </ng-template>
     </app-drawer-content-loader>
-  `,
-  styles: `
-    .badge-success {
-      background: var(--state-success-bg, rgba(34, 197, 94, 0.1));
-      color: var(--state-success, rgb(34, 197, 94));
-      border-color: var(--state-success-border, rgba(34, 197, 94, 0.2));
-    }
-    .badge-error {
-      background: var(--state-error-bg, rgba(239, 68, 68, 0.1));
-      color: var(--state-error, rgb(239, 68, 68));
-      border-color: var(--state-error-border, rgba(239, 68, 68, 0.2));
-    }
   `,
 })
 export class VehicleDocumentsDrawerComponent {

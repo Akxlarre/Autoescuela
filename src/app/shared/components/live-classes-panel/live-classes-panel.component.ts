@@ -31,7 +31,7 @@ import { TooltipModule } from 'primeng/tooltip';
   ],
   host: {
     // max-h-[750px] approx limits it to 10 classes
-    class: 'flex flex-col gap-3 h-full max-h-[750px] overflow-hidden',
+    class: 'flex flex-col gap-3 h-full overflow-hidden',
   },
   template: `
     <!-- Header de sección estandarizado -->
@@ -150,10 +150,16 @@ import { TooltipModule } from 'primeng/tooltip';
                 <div
                   class="flex flex-col min-w-0 transition-transform duration-300 group-hover:translate-x-1"
                 >
-                  <span class="text-sm font-semibold text-text-primary truncate">{{
+                  <span class="text-sm font-semibold text-text-primary truncate"
+                        [pTooltip]="cls.studentName"
+                        tooltipPosition="top"
+                  >{{
                     cls.studentName.split(' ')[0]
                   }}</span>
-                  <span class="text-[10px] text-text-muted truncate uppercase tracking-wider">
+                  <span class="text-2xs text-text-muted truncate uppercase tracking-wider"
+                        [pTooltip]="cls.type === 'practical' ? (cls.vehicle || 'Sin auto') : 'Clase Teórica'"
+                        tooltipPosition="bottom"
+                  >
                     {{ cls.type === 'practical' ? cls.vehicle || 'Sin auto' : 'Teórica' }}
                   </span>
                 </div>
@@ -190,6 +196,17 @@ import { TooltipModule } from 'primeng/tooltip';
             </div>
           </li>
         }
+
+        <!-- Footer: Ver todas al final del scroll -->
+        <li class="pt-2 mt-1 border-t border-border-subtle shrink-0">
+          <button
+            class="btn-ghost w-full flex items-center justify-center font-medium transition-colors cursor-pointer"
+            (click)="viewAllClick.emit()"
+            data-llm-action="view-all-classes"
+          >
+            Ver toda la agenda
+          </button>
+        </li>
       </ul>
     }
   `,
@@ -225,6 +242,7 @@ export class LiveClassesPanelComponent {
   readonly classes = input<LiveClassModel[]>([]);
   readonly loading = input<boolean>(false);
   readonly actionClick = output<LiveClassModel>();
+  readonly viewAllClick = output<void>();
   private scrollContainer = viewChild<ElementRef<HTMLUListElement>>('scrollContainer');
 
   constructor() {

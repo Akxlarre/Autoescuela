@@ -33,15 +33,13 @@ import { Button } from 'primeng/button';
  * TopbarComponent — barra superior de la aplicación.
  *
  * Smart component: inyecta LayoutService, AuthFacade, NotificationsFacade,
- * SearchPanelFacadeService, ThemeService, GsapAnimationsService y RoleService.
+ * SearchPanelFacadeService, ThemeService y GsapAnimationsService.
  *
  * Responsabilidades de animación:
  * - animateBell() → oscilación pendular (estilo Aladino) al abrir panel de notificaciones
  * - [appAnimateIn] en ambos paneles → fade+slide de entrada
  * - [appClickOutside] en los wrappers → cierre al clic exterior
  * - [appSearchShortcut] en el <header> → Ctrl+K / Cmd+K abre el buscador
- *
- * Selector de rol: visible solo en desarrollo. Se eliminará cuando el login sea real.
  */
 @Component({
   selector: 'app-topbar',
@@ -60,7 +58,7 @@ import { Button } from 'primeng/button';
   template: `
     <header
       appSearchShortcut
-      class="sticky top-0 z-40 flex h-14 items-center gap-1 px-3 lg:gap-4 lg:px-6 max-lg:border-b border-border-subtle bg-surface max-lg:shadow-(--shadow-layout-topbar) shrink-0"
+      class="sticky top-0 z-40 flex h-14 items-center gap-1 px-3 lg:gap-4 lg:px-6 border-border-subtle bg-surface shrink-0"
       role="banner"
     >
       <!-- Hamburger — solo visible en mobile -->
@@ -80,7 +78,7 @@ import { Button } from 'primeng/button';
 
       <!-- Selector de sede (solo admin) / breadcrumb -->
       <div
-        class="shrink-0 flex items-center overflow-visible sm:flex-1 sm:min-w-0"
+        class="flex-1 flex items-center overflow-visible min-w-0"
         aria-label="Contexto de sede activa"
       >
         @if (canSeeBranchSelector()) {
@@ -129,6 +127,7 @@ import { Button } from 'primeng/button';
 
         <!-- Cambio de tema -->
         <p-button
+          class="hidden sm:inline-flex"
           [text]="true"
           [rounded]="true"
           severity="secondary"
@@ -165,7 +164,7 @@ import { Button } from 'primeng/button';
 
           @if (notifications.unreadCount() > 0) {
             <span
-              class="pointer-events-none absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-error px-1 text-center text-[10px] font-bold text-brand-text"
+              class="pointer-events-none absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-error px-1 text-center text-2xs font-bold text-brand-text"
               aria-hidden="true"
             >
               {{ notifications.unreadCount() }}
@@ -175,9 +174,11 @@ import { Button } from 'primeng/button';
           @if (panelOpen()) {
             <app-notifications-panel
               appAnimateIn
-              [notifications]="notifications.panelNotifications()"
+              [entries]="notifications.panelEntries()"
+              [notifications]="notifications.notifications()"
               [unreadCount]="notifications.unreadCount()"
               (markRead)="notifications.markAsRead($event)"
+              (markReadMany)="notifications.markManyAsRead($event)"
               (markAllRead)="notifications.markAllAsRead()"
               (notifClicked)="onNotifClicked($event)"
             />
@@ -210,7 +211,9 @@ import { Button } from 'primeng/button';
               <app-user-panel
                 appAnimateIn
                 [user]="user"
+                [darkMode]="theme.darkMode()"
                 (action)="onUserAction($event)"
+                (toggleTheme)="cycleTheme($event)"
                 (logout)="onLogout()"
               />
             }
@@ -275,18 +278,46 @@ export class TopbarComponent {
     if (opening) this.userPanelOpen.set(false); // Close user panel if notifications open
   }
 
+  /**
+   * Tabla de deep-links por `referenceType` × rol (Spec 0024, AC3).
+   * Un tipo sin ruta para el rol actual solo cierra el panel, sin navegar ni error.
+   */
   onNotifClicked(n: Notification): void {
     this.panelOpen.set(false);
-    if (n.referenceType !== 'task') return;
 
     const role = this.auth.currentUser()?.role as string | undefined;
-    const route =
-      role === 'admin'
-        ? '/app/admin/tareas'
-        : role === 'secretary' || role === 'secretaria'
-          ? '/app/secretaria/observaciones'
-          : '/app/instructor/tareas';
+    const isSecretaria = role === 'secretary' || role === 'secretaria';
+    const refId = n.referenceId;
 
+    const route: string | null = (() => {
+      switch (n.referenceType) {
+        case 'task':
+          if (role === 'admin') return '/app/admin/tareas';
+          if (isSecretaria) return '/app/secretaria/observaciones';
+          if (role === 'instructor') return '/app/instructor/tareas';
+          return null;
+        case 'preinscription':
+          if (role === 'admin') return '/app/admin/clase-profesional/pre-inscritos';
+          if (isSecretaria) return '/app/secretaria/profesional/pre-inscritos';
+          return null;
+        case 'enrollment':
+          if (role === 'admin') return refId ? `/app/admin/alumnos/${refId}` : null;
+          if (isSecretaria) return refId ? `/app/secretaria/alumnos/${refId}` : null;
+          if (role === 'alumno') return '/app/alumno/dashboard';
+          return null;
+        case 'class_b':
+          if (role === 'instructor') return '/app/instructor/horario';
+          if (role === 'alumno') return '/app/alumno/horario';
+          return null;
+        case 'certificate':
+          if (role === 'alumno') return '/app/alumno/dashboard';
+          return null;
+        default:
+          return null;
+      }
+    })();
+
+    if (!route) return;
     void this.router.navigateByUrl(route);
   }
 

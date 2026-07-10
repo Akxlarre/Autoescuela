@@ -4,7 +4,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
-import { mapNotificationDtoToUi } from '@core/utils/notification.utils';
+import { mapNotificationDtoToUi, groupNotifications } from '@core/utils/notification.utils';
 import type { Notification as NotificationDto } from '@core/models/dto/notification.model';
 import type {
   Notification as NotificationUi,
@@ -18,6 +18,20 @@ export interface CreateNotificationPayload {
   message: string;
   referenceType?: string;
   referenceId?: number;
+}
+
+/** Payload sin destinatario — el destinatario lo resuelve `notifyUsers`/`notifyRole`. */
+export interface NotifyPayload {
+  subject?: string;
+  message: string;
+  referenceType?: string;
+  referenceId?: number;
+}
+
+interface UserRoleRow {
+  id: number;
+  branch_id: number | null;
+  roles: { name: string } | Array<{ name: string }> | null;
 }
 
 /**
@@ -64,7 +78,10 @@ export class NotificationsFacade {
     return list.filter((n) => (n.type ?? 'info') === f);
   });
 
-  readonly panelNotifications = computed(() => this.filteredNotifications().slice(0, 15));
+  /** Entradas del panel: agrupa 3+ no leídas del mismo tipo/día (AC8) y corta a 15. */
+  readonly panelEntries = computed(() =>
+    groupNotifications(this.filteredNotifications()).slice(0, 15),
+  );
 
   // ── 3. MÉTODOS DE ACCIÓN ───────────────────────────────────────────────────
 
@@ -179,6 +196,96 @@ export class NotificationsFacade {
     if (error) {
       console.error('[NotificationsFacade] createNotification error:', error);
     }
+  }
+
+  /**
+   * Marca varias notificaciones como leídas en un solo UPDATE (optimistic + rollback).
+   * Usado por el panel al marcar como leída una fila agrupada (AC8).
+   */
+  async markManyAsRead(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const idSet = new Set(ids);
+    const prev = this._notifications();
+
+    this._notifications.update((list) =>
+      list.map((n) => (idSet.has(n.id) ? { ...n, read: true } : n)),
+    );
+
+    const { error } = await this.supabase.client
+      .from('notifications')
+      .update({ read: true })
+      .in('id', ids.map(Number));
+
+    if (error) {
+      console.error('[NotificationsFacade] markManyAsRead error:', error);
+      this._notifications.set(prev);
+    }
+  }
+
+  /**
+   * Inserta una notificación por cada `recipientId` en un solo INSERT batch.
+   * Fire-and-forget: un fallo se loguea y jamás rompe al productor (AC-E1).
+   */
+  async notifyUsers(recipientIds: number[], payload: NotifyPayload): Promise<void> {
+    if (recipientIds.length === 0) return;
+
+    const rows = recipientIds.map((recipientId) => ({
+      recipient_id: recipientId,
+      type: 'system' as const,
+      subject: payload.subject,
+      message: payload.message,
+      reference_type: payload.referenceType,
+      reference_id: payload.referenceId,
+      read: false,
+      sent_ok: true,
+    }));
+
+    const { error } = await this.supabase.client.from('notifications').insert(rows);
+
+    if (error) {
+      console.error('[NotificationsFacade] notifyUsers error:', error);
+    }
+  }
+
+  /**
+   * Notifica a todos los usuarios activos de un rol (BD: 'admin' | 'secretary'), excluyendo
+   * al actor. Para 'secretary' aplica filtro de sede; para 'admin' (branch NULL) no aplica.
+   * Sin destinatarios → no-op silencioso (AC-E3).
+   */
+  async notifyRole(
+    role: 'admin' | 'secretary',
+    branchId: number | null,
+    payload: NotifyPayload,
+  ): Promise<void> {
+    const actorDbId = this.auth.currentUser()?.dbId ?? null;
+
+    let query = this.supabase.client
+      .from('users')
+      .select('id, branch_id, roles!role_id(name)')
+      .eq('active', true);
+
+    if (actorDbId !== null) {
+      query = query.neq('id', actorDbId);
+    }
+    if (role === 'secretary' && branchId !== null) {
+      query = query.eq('branch_id', branchId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('[NotificationsFacade] notifyRole query error:', error);
+      return;
+    }
+
+    const recipientIds = ((data ?? []) as unknown as UserRoleRow[])
+      .filter((u) => {
+        const roleRow = Array.isArray(u.roles) ? u.roles[0] : u.roles;
+        return roleRow?.name === role;
+      })
+      .map((u) => u.id);
+
+    await this.notifyUsers(recipientIds, payload);
   }
 
   setFilter(filter: NotificationFilter): void {

@@ -12,12 +12,6 @@
 | `BentoRevealDirective` | `[appBentoReveal]` | **Patrón canónico** de entrada premium del bento-grid (sin flash). Acopla pre-hide pre-paint (`.is-reveal-pending`) + reveal en `afterNextRender` vía `animateBentoGrid`. Reemplaza el patrón manual `#bentoGrid viewChild + ngAfterViewInit`. Para grids con contenido presente en el 1er paint. SWR con swap `@if/@else` siguen usando `effect()`. | `skipOpacity: boolean` (true si una View Transition ya hace el fade) | ✅ Estable |
 | `ScrollRevealDirective` | `[appScrollReveal]` | ScrollTrigger reveal (fade+slide) al entrar al viewport. Acepta `{ y, delay, threshold }`. Auto-cleanup vía `DestroyRef`. Respeta `prefers-reduced-motion`. | `appScrollReveal: { y?, delay?, threshold? } \| ''` | ✅ Estable |
 
-## Directivas de Auth / RBAC
-
-| Directiva | Selector | Propósito | Inputs | Estado |
-|-----------|----------|-----------|--------|--------|
-| `HasRoleDirective` | `*appHasRole` | Renderizado condicional por rol (estructural) | `appHasRole: UserRole\|UserRole[]` | ✅ Estable |
-
 ## Directivas de UX Interactiva
 
 | Directiva | Selector | Propósito | Inputs | Estado |
@@ -43,7 +37,6 @@
 | `BentoRevealDirective` | `[appBentoReveal]` | `skipOpacity` | — | `src/app/core/directives/bento-reveal.directive.ts` |
 | `CardHoverDirective` | `[appCardHover]` | — | — | `src/app/core/directives/card-hover.directive.ts` |
 | `ClickOutsideDirective` | `[appClickOutside]` | `clickOutsideEnabled`, `clickOutsideExclude` | `clickOutside` | `src/app/core/directives/click-outside.directive.ts` |
-| `HasRoleDirective` | `[appHasRole]` | `appHasRole` | — | `src/app/core/directives/has-role.directive.ts` |
 | `ModalOverlayDirective` | `[appModalOverlay]` | `appModalOverlay` | — | `src/app/core/directives/modal-overlay.directive.ts` |
 | `PressFeedbackDirective` | `[appPressFeedback]` | `appPressFeedback` | — | `src/app/core/directives/press-feedback.directive.ts` |
 | `ScrollContainerDirective` | `[appScrollContainer]` | `maxHeight`, `scrollX` | — | `src/app/core/directives/scroll-container.directive.ts` |

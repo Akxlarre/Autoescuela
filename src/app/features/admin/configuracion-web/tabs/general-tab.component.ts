@@ -95,7 +95,7 @@ const CDN_URL =
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Logo de la Escuela</span
               >
-              <span class="text-[11px] text-text-muted"
+              <span class="text-2xs text-text-muted"
                 >Se muestra en el menú y pie de página. Soporta formatos SVG, PNG y WebP.</span
               >
             </div>
@@ -114,7 +114,7 @@ const CDN_URL =
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Imagen Open Graph (SEO / Redes)</span
               >
-              <span class="text-[11px] text-text-muted"
+              <span class="text-2xs text-text-muted"
                 >Vista previa compartida en WhatsApp/Facebook. Medida ideal: 1200x630px.</span
               >
             </div>
@@ -133,7 +133,7 @@ const CDN_URL =
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Favicon (Pestaña del Navegador)</span
               >
-              <span class="text-[11px] text-text-muted"
+              <span class="text-2xs text-text-muted"
                 >Icono pequeño para la pestaña del navegador. Soporta .ico, .png, .svg.</span
               >
             </div>

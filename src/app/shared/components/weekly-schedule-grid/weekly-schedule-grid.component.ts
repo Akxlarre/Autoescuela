@@ -125,7 +125,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                   >
                     <!-- Nombre del día -->
                     <span
-                      class="text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                      class="text-2xs font-bold uppercase tracking-widest mb-1.5"
                       [style.color]="getDayHeaderTextColor(day, 'label')"
                     >
                       {{ day.name }}
@@ -155,7 +155,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
               @for (hour of hours; track hour; let isFirst = $first) {
                 <div class="hour-cell relative">
                   <span
-                    class="text-[10px] font-bold tracking-widest absolute right-4 whitespace-nowrap"
+                    class="text-2xs font-bold tracking-widest absolute right-4 whitespace-nowrap"
                     [style.top]="isFirst ? '2px' : '-6px'"
                     [style.color]="'var(--text-muted)'"
                   >
@@ -304,7 +304,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
                           {{ block.startTime }}
                         </span>
                         <div
-                          class="text-[11px] font-bold truncate flex-1"
+                          class="text-2xs font-bold truncate flex-1"
                           [style.color]="
                             block.status === 'in_progress'
                               ? 'var(--color-primary-text)'
@@ -329,7 +329,7 @@ import type { ScheduleBlock, WeekSchedule } from '@core/models/ui/instructor-por
         style="border-top: 1px solid var(--border-subtle)"
       >
         <span
-          class="text-[10px] font-bold uppercase tracking-widest mr-1"
+          class="text-2xs font-bold uppercase tracking-widest mr-1"
           [style.color]="'var(--text-muted)'"
         >
           Leyenda

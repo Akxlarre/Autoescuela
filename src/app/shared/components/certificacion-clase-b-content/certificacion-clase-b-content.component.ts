@@ -17,6 +17,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -52,6 +53,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
     SkeletonBlockComponent,
     IconComponent,
     EmptyStateComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -327,7 +329,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     Prácticas
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted"
+                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Fecha Término
                   </th>
@@ -362,11 +364,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                       {{ alumno.rut }}
                     </td>
                     <td class="px-4 py-3">
-                      <span
-                        class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-brand-muted text-brand"
-                      >
-                        {{ alumno.curso }}
-                      </span>
+                      <app-badge variant="brand">{{ alumno.curso }}</app-badge>
                     </td>
                     <!-- Prácticas: siempre 12/12 si aparece en esta lista -->
                     <td class="px-4 py-3 text-center">
@@ -374,7 +372,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
-                    <td class="px-4 py-3 text-muted">
+                    <td class="px-4 py-3 text-text-muted">
                       {{ alumno.fechaTermino ?? '—' }}
                     </td>
                     <td class="px-4 py-3 text-brand">
@@ -382,20 +380,14 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     </td>
                     <td class="px-4 py-3 text-center">
                       @if (alumno.certificadoStatus === 'generado') {
-                        <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-success"
-                          class="bg-success-subtle"
-                        >
-                          <app-icon name="check" [size]="12" />
-                          Generado
-                        </span>
+                        <app-badge variant="success">
+                          <span class="inline-flex items-center gap-1">
+                            <app-icon name="check" [size]="12" />
+                            Generado
+                          </span>
+                        </app-badge>
                       } @else {
-                        <span
-                          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-warning"
-                          class="bg-warning-subtle"
-                        >
-                          Pendiente
-                        </span>
+                        <app-badge variant="warning">Pendiente</app-badge>
                       }
                     </td>
                     <td class="px-4 py-3 text-right">
@@ -646,13 +638,9 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                         {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
                       </td>
                       <td class="px-4 py-3">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                          [style.background]="getAccionBg(entry.accion)"
-                          [style.color]="getAccionColor(entry.accion)"
-                        >
+                        <app-badge [variant]="getAccionVariant(entry.accion)">
                           {{ getAccionLabel(entry.accion) }}
-                        </span>
+                        </app-badge>
                       </td>
                       <td class="px-4 py-3 text-text-primary">
                         {{ entry.alumnoNombre }}
@@ -961,33 +949,16 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     return ACCION_LABELS[accion] ?? accion;
   }
 
-  getAccionColor(accion: string): string {
+  getAccionVariant(accion: string): 'success' | 'brand' | 'info' | 'neutral' {
     switch (accion) {
       case 'generated':
-        return 'var(--state-success)';
+        return 'success';
       case 'email_sent':
-        return 'var(--color-primary)';
+        return 'brand';
       case 'downloaded':
-        return 'var(--state-info, var(--color-primary))';
-      case 'printed':
-        return 'var(--text-secondary)';
+        return 'info';
       default:
-        return 'var(--text-muted)';
-    }
-  }
-
-  getAccionBg(accion: string): string {
-    switch (accion) {
-      case 'generated':
-        return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-      case 'email_sent':
-        return 'var(--bg-brand-muted)';
-      case 'downloaded':
-        return 'var(--bg-info-muted, rgba(59,130,246,0.1))';
-      case 'printed':
-        return 'var(--bg-subtle)';
-      default:
-        return 'var(--bg-subtle)';
+        return 'neutral';
     }
   }
 }

@@ -223,4 +223,222 @@ describe('NotificationsFacade', () => {
       expect(filtered[0].title).toBe('Warning');
     });
   });
+
+  describe('notifyUsers', () => {
+    it('performs a single batch insert for all recipient ids', async () => {
+      const insertChain = { insert: vi.fn().mockResolvedValue({ error: null }) };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(insertChain);
+
+      await facade.notifyUsers([10, 20, 30], {
+        message: 'Hola',
+        subject: 'Aviso',
+        referenceType: 'enrollment',
+        referenceId: 1,
+      });
+
+      expect(supabaseSpy.client.from).toHaveBeenCalledWith('notifications');
+      expect(insertChain.insert).toHaveBeenCalledTimes(1);
+      const rows = insertChain.insert.mock.calls[0][0];
+      expect(rows).toHaveLength(3);
+      expect(rows.map((r: { recipient_id: number }) => r.recipient_id)).toEqual([10, 20, 30]);
+      expect(rows[0].reference_type).toBe('enrollment');
+    });
+
+    it('does nothing when recipientIds is empty', async () => {
+      const insertChain = { insert: vi.fn().mockResolvedValue({ error: null }) };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(insertChain);
+
+      await facade.notifyUsers([], { message: 'Hola' });
+
+      expect(insertChain.insert).not.toHaveBeenCalled();
+    });
+
+    it('does not throw when the insert fails (fire-and-forget)', async () => {
+      const insertChain = {
+        insert: vi.fn().mockResolvedValue({ error: { message: 'fail' } }),
+      };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(insertChain);
+
+      await expect(facade.notifyUsers([1], { message: 'Hola' })).resolves.toBeUndefined();
+    });
+  });
+
+  describe('notifyRole', () => {
+    const makeUsersQueryBuilder = (rows: unknown[], error: unknown = null) => {
+      const builder: Record<string, any> = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        neq: vi.fn().mockReturnThis(),
+        then: (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
+          Promise.resolve({ data: rows, error }).then(resolve, reject),
+      };
+      return builder;
+    };
+
+    it('notifies only active users with the given role, excluding the actor', async () => {
+      const rows = [
+        { id: 2, branch_id: 1, roles: { name: 'secretary' } },
+        { id: 3, branch_id: 1, roles: { name: 'admin' } },
+      ];
+      const usersBuilder = makeUsersQueryBuilder(rows);
+      const insertChain = { insert: vi.fn().mockResolvedValue({ error: null }) };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(usersBuilder)
+        .mockReturnValueOnce(insertChain);
+
+      // authSpy.currentUser().dbId === 1 (actor)
+      await facade.notifyRole('secretary', 1, { message: 'Nueva pre-inscripción' });
+
+      expect(usersBuilder.eq).toHaveBeenCalledWith('active', true);
+      expect(usersBuilder.neq).toHaveBeenCalledWith('id', 1);
+      const insertedRows = insertChain.insert.mock.calls[0][0];
+      expect(insertedRows).toHaveLength(1);
+      expect(insertedRows[0].recipient_id).toBe(2);
+    });
+
+    it('applies the branch filter for role "secretary"', async () => {
+      const usersBuilder = makeUsersQueryBuilder([
+        { id: 5, branch_id: 2, roles: { name: 'secretary' } },
+      ]);
+      const insertChain = { insert: vi.fn().mockResolvedValue({ error: null }) };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(usersBuilder)
+        .mockReturnValueOnce(insertChain);
+
+      await facade.notifyRole('secretary', 2, { message: 'x' });
+
+      expect(usersBuilder.eq).toHaveBeenCalledWith('branch_id', 2);
+    });
+
+    it('does not apply a branch filter for role "admin" (branch is always null)', async () => {
+      const usersBuilder = makeUsersQueryBuilder([
+        { id: 9, branch_id: null, roles: { name: 'admin' } },
+      ]);
+      const insertChain = { insert: vi.fn().mockResolvedValue({ error: null }) };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(usersBuilder)
+        .mockReturnValueOnce(insertChain);
+
+      await facade.notifyRole('admin', null, { message: 'x' });
+
+      expect(usersBuilder.eq).not.toHaveBeenCalledWith('branch_id', expect.anything());
+    });
+
+    it('does not insert and does not throw when there are no matching recipients', async () => {
+      const usersBuilder = makeUsersQueryBuilder([]);
+      const insertChain = { insert: vi.fn().mockResolvedValue({ error: null }) };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(usersBuilder)
+        .mockReturnValueOnce(insertChain);
+
+      await expect(facade.notifyRole('secretary', 5, { message: 'x' })).resolves.toBeUndefined();
+      expect(insertChain.insert).not.toHaveBeenCalled();
+    });
+
+    it('does not throw when the users query fails', async () => {
+      const usersBuilder = makeUsersQueryBuilder(null as unknown as unknown[], {
+        message: 'DB error',
+      });
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(usersBuilder);
+
+      await expect(facade.notifyRole('admin', null, { message: 'x' })).resolves.toBeUndefined();
+    });
+  });
+
+  describe('markManyAsRead', () => {
+    const seed3Unread = async () => {
+      const mockData = [1, 2, 3].map((id) => ({
+        id,
+        recipient_id: 1,
+        type: 'system',
+        subject: `N${id}`,
+        message: 'm',
+        read: false,
+        sent_at: null,
+        sent_ok: true,
+        send_error: null,
+        reference_type: null,
+        reference_id: null,
+        created_at: '2026-07-06T10:00:00Z',
+      }));
+      const chain = mockSelectChain(mockData);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+      await facade.loadNotifications();
+    };
+
+    it('optimistically marks multiple notifications as read via a single .in() update', async () => {
+      await seed3Unread();
+
+      const updateChain = {
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ error: null }),
+      };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.markManyAsRead(['1', '2']);
+
+      expect(facade.notifications().find((n) => n.id === '1')?.read).toBe(true);
+      expect(facade.notifications().find((n) => n.id === '2')?.read).toBe(true);
+      expect(facade.notifications().find((n) => n.id === '3')?.read).toBe(false);
+      expect(updateChain.in).toHaveBeenCalledWith('id', [1, 2]);
+    });
+
+    it('rolls back the optimistic update when the update fails', async () => {
+      await seed3Unread();
+
+      const updateChain = {
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ error: { message: 'fail' } }),
+      };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.markManyAsRead(['1']);
+
+      expect(facade.notifications().find((n) => n.id === '1')?.read).toBe(false);
+    });
+
+    it('does nothing for an empty id list', async () => {
+      await seed3Unread();
+      const updateChain = {
+        update: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({ error: null }),
+      };
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(updateChain);
+
+      await facade.markManyAsRead([]);
+
+      expect(updateChain.in).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('panelEntries', () => {
+    it('groups 3+ unread notifications of the same referenceType/day and caps the result at 15', async () => {
+      const mockData = Array.from({ length: 20 }, (_, i) => ({
+        id: i + 1,
+        recipient_id: 1,
+        type: 'system',
+        subject: `N${i}`,
+        message: 'm',
+        read: false,
+        sent_at: null,
+        sent_ok: true,
+        send_error: null,
+        reference_type: i < 5 ? 'enrollment' : null,
+        reference_id: null,
+        created_at: '2026-07-06T10:00:00Z',
+      }));
+      const chain = mockSelectChain(mockData);
+      (supabaseSpy.client.from as ReturnType<typeof vi.fn>).mockReturnValue(chain);
+      await facade.loadNotifications();
+
+      const entries = facade.panelEntries();
+
+      expect(entries.length).toBeLessThanOrEqual(15);
+      const group = entries.find((e) => e.kind === 'group');
+      expect(group).toBeDefined();
+      if (group?.kind === 'group') {
+        expect(group.count).toBe(5);
+      }
+    });
+  });
 });

@@ -8,12 +8,16 @@ describe('AuthFacade', () => {
   let service: AuthFacade;
   let router: Router;
   let supabaseSpy: any;
+  let authCallback: ((event: string, session: unknown) => void) | null;
 
   beforeEach(() => {
+    authCallback = null;
     const mockSupabaseClient = {
       auth: {
-        onAuthStateChange: vi.fn().mockReturnValue({
-          data: { subscription: { unsubscribe: () => {} } },
+        // Captura el callback para poder disparar INITIAL_SESSION desde los tests
+        onAuthStateChange: vi.fn().mockImplementation((cb: any) => {
+          authCallback = cb;
+          return { data: { subscription: { unsubscribe: () => {} } } };
         }),
       },
       from: () => ({
@@ -151,7 +155,11 @@ describe('AuthFacade', () => {
     expect(supabaseSpy.resetPasswordForEmail).toHaveBeenCalledWith('user@example.com');
   });
 
-  it('whenReady should resolve after getUser() completes', async () => {
+  it('whenReady se resuelve al llegar INITIAL_SESSION sin sesión', async () => {
+    // La carga inicial se resuelve vía INITIAL_SESSION (no getUser()) — ver
+    // constructor de AuthFacade. Sin este evento, solo el safety-timeout de 5s
+    // resolvería whenReady, empatando con el timeout de vitest (test flaky).
+    authCallback!('INITIAL_SESSION', null);
     await expect(service.whenReady).resolves.toBeUndefined();
   });
 });

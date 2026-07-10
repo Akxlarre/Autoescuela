@@ -642,7 +642,7 @@ export class DashboardAlertsFacade {
     const { count, error } = await this.supabase.client
       .from('v_professional_attendance')
       .select('enrollment_id', { count: 'exact', head: true })
-      .eq('status', 'red');
+      .eq('attendance_flag', 'red');
 
     if (error || !count || count === 0) return [];
 
@@ -665,7 +665,7 @@ export class DashboardAlertsFacade {
     const { count, error } = await this.supabase.client
       .from('v_professional_attendance')
       .select('enrollment_id', { count: 'exact', head: true })
-      .eq('status', 'yellow');
+      .eq('attendance_flag', 'yellow');
 
     if (error || !count || count === 0) return [];
 

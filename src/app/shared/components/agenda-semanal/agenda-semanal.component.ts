@@ -76,7 +76,12 @@ interface CellSummary {
   ],
   host: { class: 'block' },
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Agenda semanal">
+    <div 
+      class="bento-grid bento-grid--fill-screen" 
+      appBentoGridLayout 
+      #bentoGrid 
+      aria-label="Agenda semanal"
+    >
       <!-- ── Hero + KPIs inline ───────────────────────────────────────────── -->
       @if (showHero()) {
         <app-section-hero
@@ -94,13 +99,13 @@ interface CellSummary {
       <!-- ── Calendario ─────────────────────────────────────────────────────── -->
       <div
         #calendarCard
-        class="bento-banner card p-0 overflow-hidden"
+        class="bento-banner card p-0 overflow-hidden flex flex-col"
         appCardHover
         aria-label="Calendario semanal"
       >
         <!-- Mobile day tabs — solo visibles debajo de 640px -->
         @if (filteredDays().length > 0) {
-          <div class="agenda-mobile-tabs" role="tablist" aria-label="Seleccionar día">
+          <div class="agenda-mobile-tabs shrink-0" role="tablist" aria-label="Seleccionar día">
             @for (day of filteredDays(); track day.date; let i = $index) {
               <button
                 class="agenda-mobile-tab"
@@ -121,7 +126,7 @@ interface CellSummary {
         }
 
         <!-- Toolbar de navegación + filtro -->
-        <div class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b">
+        <div class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b shrink-0">
           <!-- Navegación de semana -->
           <div class="flex items-center gap-1">
             <button
@@ -181,9 +186,9 @@ interface CellSummary {
         <!-- Grid del calendario -->
         @if (isLoading()) {
           <div
-            class="agenda-grid"
+            class="agenda-grid flex-1"
             appScrollContainer
-            maxHeight="65vh"
+            maxHeight="none"
             [scrollX]="true"
             style="grid-template-columns: 64px repeat(5, minmax(100px, 1fr))"
             aria-hidden="true"
@@ -211,17 +216,19 @@ interface CellSummary {
             }
           </div>
         } @else if (!weekData() || timeRows().length === 0) {
-          <app-empty-state
-            icon="calendar"
-            message="No hay clases en esta semana"
-            subtitle="Navega a otra semana o agrega instructores con disponibilidad."
-          />
+          <div class="flex flex-1 items-center justify-center border-t border-[var(--color-border)]">
+            <app-empty-state
+              icon="calendar"
+              message="No hay clases en esta semana"
+              subtitle="Navega a otra semana o agrega instructores con disponibilidad."
+            />
+          </div>
         } @else {
           <div
             #calendarGrid
-            class="agenda-grid"
+            class="agenda-grid flex-1"
             appScrollContainer
-            maxHeight="65vh"
+            maxHeight="none"
             [scrollX]="true"
             [style]="gridTemplateStyle()"
             role="grid"

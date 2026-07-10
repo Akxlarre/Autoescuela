@@ -70,7 +70,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       <!-- ── Recordatorio de credenciales de prueba ─────────────────── -->
       @if (devMode) {
         <div
-          class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-[11px] text-text-muted shadow-sm"
+          class="w-full max-w-110 rounded-xl border border-border-subtle bg-surface px-4 py-3 font-body text-2xs text-text-muted shadow-sm"
           aria-label="Credenciales de prueba disponibles"
         >
           <p class="m-0 mb-1 flex items-center gap-1 font-semibold text-text-secondary">

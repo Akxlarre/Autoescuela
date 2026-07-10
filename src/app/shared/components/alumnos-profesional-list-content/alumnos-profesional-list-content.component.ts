@@ -298,29 +298,29 @@ interface SemaforoInfo {
                   <p-tag
                     [value]="alumno.estado"
                     [severity]="getStatusSeverity(alumno.estado)"
-                    styleClass="text-[10px] font-bold px-2 py-0.5 shrink-0"
+                    styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
                   ></p-tag>
                 </div>
                 <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
                   <div class="flex flex-col">
-                    <span class="text-[11px] text-text-muted mb-0.5">Módulos</span>
+                    <span class="text-2xs text-text-muted mb-0.5">Módulos</span>
                     <span class="font-medium text-text-secondary text-xs font-mono"
                       >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
                     >
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-[11px] text-text-muted mb-0.5">Asistencia</span>
+                    <span class="text-2xs text-text-muted mb-0.5">Asistencia</span>
                     @let semM = getSemaforo(alumno.semaforo);
                     <div>
                       <p-tag
                         [value]="semM.label"
                         [severity]="semM.severity"
-                        styleClass="text-[10px] font-bold px-1.5 py-0.5"
+                        styleClass="text-2xs font-bold px-1.5 py-0.5"
                       ></p-tag>
                     </div>
                   </div>
                   <div class="flex flex-col">
-                    <span class="text-[11px] text-text-muted mb-0.5">Saldo</span>
+                    <span class="text-2xs text-text-muted mb-0.5">Saldo</span>
                     <span class="font-medium text-text-secondary text-xs">{{
                       alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0'
                     }}</span>

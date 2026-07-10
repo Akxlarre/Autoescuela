@@ -11,6 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { groupCyclesByStatus } from '@core/utils/ciclo-select-groups.util';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
@@ -36,7 +37,14 @@ import type {
   selector: 'app-ciclos-teoricos-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, SelectModule, DialogModule, IconComponent, SkeletonBlockComponent],
+  imports: [
+    FormsModule,
+    SelectModule,
+    DialogModule,
+    IconComponent,
+    BadgeComponent,
+    SkeletonBlockComponent,
+  ],
   styles: `
     .field-input {
       width: 100%;
@@ -68,7 +76,7 @@ import type {
         <div class="flex flex-col gap-1.5 min-w-72">
           <label class="field-label">Ciclo Teórico</label>
           @if (cycles().length === 0) {
-            <p class="text-sm text-secondary">No hay ciclos en esta sede todavía.</p>
+            <p class="text-sm text-text-secondary">No hay ciclos en esta sede todavía.</p>
           } @else {
             <p-select
               [options]="cycleSelectGroups()"
@@ -100,7 +108,7 @@ import type {
               />
               {{ c.status === 'active' ? 'Activo' : 'Finalizado' }}
             </span>
-            <span class="text-sm text-muted">{{ roster().length }} alumnos</span>
+            <span class="text-sm text-text-muted">{{ roster().length }} alumnos</span>
           </div>
         }
       </section>
@@ -135,14 +143,10 @@ import type {
                   <div class="flex items-center justify-between gap-2">
                     <p class="text-sm font-semibold text-text-primary">{{ clase.label }}</p>
                     @if (clase.zoomSentAt) {
-                      <span
-                        class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                        [style.background]="'var(--state-success-bg)'"
-                        [style.color]="'var(--state-success)'"
-                      >
+                      <app-badge variant="success">
                         <app-icon name="mail-check" [size]="11" />
                         Enviado el {{ formatSentAt(clase.zoomSentAt) }}
-                      </span>
+                      </app-badge>
                     }
                   </div>
 
@@ -215,7 +219,7 @@ import type {
                         </button>
                       </div>
                       @if (roster().length === 0) {
-                        <p class="text-xs text-muted py-2">El ciclo no tiene alumnos.</p>
+                        <p class="text-xs text-text-muted py-2">El ciclo no tiene alumnos.</p>
                       } @else {
                         <div class="flex flex-col gap-1 max-h-48 overflow-y-auto">
                           @for (alumno of roster(); track alumno.enrollmentId) {
@@ -232,7 +236,7 @@ import type {
                                 <span class="text-sm text-text-primary block truncate">{{
                                   alumno.nombre
                                 }}</span>
-                                <span class="text-xs text-muted block truncate">{{
+                                <span class="text-xs text-text-muted block truncate">{{
                                   alumno.email || 'Sin correo'
                                 }}</span>
                               </span>
@@ -270,7 +274,7 @@ import type {
                   }
                 </div>
               } @empty {
-                <p class="text-sm text-secondary text-center py-4">
+                <p class="text-sm text-text-secondary text-center py-4">
                   Este ciclo aún no tiene clases generadas.
                 </p>
               }
@@ -301,14 +305,16 @@ import type {
                 }
               </div>
             } @else if (roster().length === 0) {
-              <p class="text-sm text-secondary text-center py-4">Sin alumnos en este ciclo.</p>
+              <p class="text-sm text-text-secondary text-center py-4">Sin alumnos en este ciclo.</p>
             } @else {
               <div class="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
                 @for (alumno of roster(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-2 px-2 py-3 rounded-md hover:bg-elevated">
                     <div class="min-w-0 flex-1">
                       <p class="text-text-primary truncate">{{ alumno.nombre }}</p>
-                      <p class="text-sm text-muted truncate">{{ alumno.email || 'Sin correo' }}</p>
+                      <p class="text-sm text-text-muted truncate">
+                        {{ alumno.email || 'Sin correo' }}
+                      </p>
                     </div>
                     @if (movingEnrollmentId() === alumno.enrollmentId) {
                       <p-select
@@ -332,7 +338,7 @@ import type {
                         <app-icon name="check" [size]="16" />
                       </button>
                       <button
-                        class="p-1.5 rounded-md cursor-pointer text-muted"
+                        class="p-1.5 rounded-md cursor-pointer text-text-muted"
                         title="Cancelar"
                         (click)="cancelMove()"
                       >
@@ -370,14 +376,14 @@ import type {
       [style]="{ width: '480px' }"
     >
       @if (addableStudents().length === 0) {
-        <p class="text-sm text-muted py-2">No hay alumnos en otros ciclos de esta sede.</p>
+        <p class="text-sm text-text-muted py-2">No hay alumnos en otros ciclos de esta sede.</p>
       } @else {
         <div class="flex flex-col gap-1 max-h-96 overflow-y-auto">
           @for (a of addableStudents(); track a.enrollmentId) {
             <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-elevated">
               <div class="min-w-0 flex-1">
                 <p class="text-sm text-text-primary truncate">{{ a.nombre }}</p>
-                <p class="text-xs text-muted truncate">{{ a.cicloActualLabel }}</p>
+                <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>
               </div>
               <button
                 class="text-xs font-medium text-brand hover:underline cursor-pointer flex items-center gap-1"

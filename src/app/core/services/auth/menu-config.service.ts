@@ -20,7 +20,7 @@ export interface NavGroup {
 /**
  * MenuConfigService - Configuración del menú de navegación lateral por rol.
  *
- * `menuItems()` es un computed que reacciona al rol activo en RoleService.
+ * `menuItems()` es un computed que reacciona al rol del usuario autenticado (AuthFacade).
  * Para añadir rutas: agrega un NavItem al grupo correspondiente.
  * Íconos: usa el nombre kebab-case de lucide.dev — registrar en app.config.ts.
  */

@@ -250,7 +250,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   >{{ alumno.nombre }}</span
                 >
                 <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
-                <span class="text-[10px] font-bold text-brand uppercase tracking-wider mt-0.5"
+                <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
                   >ESTADO: {{ alumno.estado }}</span
                 >
               </div>
@@ -426,7 +426,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         clase.instructor
                       }}</span>
                     } @else {
-                      <span class="text-[11px] text-text-muted italic">Sin agendar</span>
+                      <span class="text-2xs text-text-muted italic">Sin agendar</span>
                     }
                   </div>
                 </div>

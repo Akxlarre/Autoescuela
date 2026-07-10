@@ -7,6 +7,7 @@ import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component
 import { AdminSecretariasEditarDrawerComponent } from './admin-secretarias-editar-drawer.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
@@ -14,6 +15,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     DatePipe,
     IconComponent,
     StatBoxComponent,
@@ -55,19 +57,15 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 
               <!-- Badge estado -->
               @if (sec.estado === 'activa') {
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full text-success bg-success/12"
-                >
+                <app-badge variant="success">
                   <app-icon name="check-circle" [size]="12" />
                   Activa
-                </span>
+                </app-badge>
               } @else {
-                <span
-                  class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-elevated text-text-muted"
-                >
+                <app-badge variant="neutral">
                   <app-icon name="circle" [size]="12" />
                   Inactiva
-                </span>
+                </app-badge>
               }
             </div>
 
@@ -124,7 +122,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               >
                 <app-icon name="clock" [size]="15" color="var(--text-muted)" />
                 <div class="flex flex-col">
-                  <p class="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+                  <p class="text-2xs font-bold uppercase tracking-wider text-text-muted">
                     Último acceso
                   </p>
                   <p class="text-sm font-medium text-text-primary">

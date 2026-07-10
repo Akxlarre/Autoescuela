@@ -43,7 +43,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         <!-- Modo Contenido Real -->
         <div class="flex items-start justify-between gap-3 mb-1">
           <span
-            class="text-[10px] uppercase font-bold tracking-wider"
+            class="text-2xs uppercase font-bold tracking-wider"
             [style.color]="labelColor()"
             >{{ label() }}</span
           >
@@ -94,7 +94,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 ></div>
               </div>
               <div
-                class="flex justify-between items-center text-[10px] font-bold uppercase tracking-tight text-text-muted"
+                class="flex justify-between items-center text-2xs font-bold uppercase tracking-tight text-text-muted"
               >
                 <span>Progreso</span>
                 <span>{{ progressPercent() }}%</span>

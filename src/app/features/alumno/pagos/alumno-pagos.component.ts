@@ -6,6 +6,7 @@ import type { StudentPaymentHistoryItem } from '@core/models/ui/student-payment.
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { formatCLP } from '@core/utils/date.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -41,6 +42,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
     SectionHeroComponent,
     KpiCardVariantComponent,
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
@@ -180,19 +182,9 @@ function toCompact(amount: number): { value: number; suffix: string } {
                     <span class="text-sm font-semibold text-success">
                       {{ clp(payment.amount) }}
                     </span>
-                    <span
-                      class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-                      [style.background]="
-                        payment.status === 'paid'
-                          ? 'var(--color-success-muted)'
-                          : 'var(--color-warning-muted)'
-                      "
-                      [style.color]="
-                        payment.status === 'paid' ? 'var(--color-success)' : 'var(--color-warning)'
-                      "
-                    >
+                    <app-badge [variant]="payment.status === 'paid' ? 'success' : 'warning'">
                       {{ payment.status === 'paid' ? 'Pagado' : 'Pendiente' }}
-                    </span>
+                    </app-badge>
                   </div>
                 </div>
               }

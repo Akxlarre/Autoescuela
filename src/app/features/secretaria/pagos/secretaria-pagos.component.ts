@@ -15,6 +15,7 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -53,6 +54,7 @@ const POR_PAGINA = 5;
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -159,8 +161,7 @@ const POR_PAGINA = 5;
                         class="finance-mobile-bg grid grid-cols-3 gap-2 lg:contents mt-3 lg:mt-0 p-3 lg:p-0 rounded-lg lg:rounded-none"
                       >
                         <div class="flex flex-col lg:block text-center lg:text-right">
-                          <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                          <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Total</span
                           >
                           <span class="text-sm text-text-primary">{{
@@ -168,8 +169,7 @@ const POR_PAGINA = 5;
                           }}</span>
                         </div>
                         <div class="flex flex-col lg:block text-center lg:text-right">
-                          <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                          <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Pagado</span
                           >
                           <span
@@ -181,8 +181,7 @@ const POR_PAGINA = 5;
                           >
                         </div>
                         <div class="flex flex-col lg:block text-center lg:text-right">
-                          <span
-                            class="text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted"
+                          <span class="text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted"
                             >Saldo</span
                           >
                           <span class="text-sm font-bold text-warning">{{
@@ -351,16 +350,12 @@ const POR_PAGINA = 5;
                         <span class="text-xs font-medium text-brand">{{
                           fechaCorta(pago.fecha)
                         }}</span>
-                        <span
-                          class="lg:hidden inline-flex items-center justify-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                          [style.background]="estadoBg(pago.estado)"
-                          [style.color]="estadoColor(pago.estado)"
-                        >
+                        <app-badge [variant]="estadoVariant(pago.estado)" class="lg:hidden">
                           @if (pago.estado === 'completado') {
                             <app-icon name="check" [size]="10" />
                           }
                           {{ estadoLabel(pago.estado) }}
-                        </span>
+                        </app-badge>
                       </div>
                       <div class="flex flex-col lg:contents min-w-0">
                         <span class="text-sm font-semibold truncate text-text-primary">{{
@@ -387,22 +382,18 @@ const POR_PAGINA = 5;
                             {{ pago.metodo }}
                           </span>
                           <span
-                            class="text-[10px] lg:text-xs font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
+                            class="text-2xs lg:text-xs font-mono px-1.5 py-0.5 rounded text-text-muted bg-surface border border-border-muted"
                             >{{ pago.nroDocumento ?? '—' }}</span
                           >
                         </div>
                       </div>
                       <div class="hidden lg:flex justify-center">
-                        <span
-                          class="inline-flex items-center justify-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                          [style.background]="estadoBg(pago.estado)"
-                          [style.color]="estadoColor(pago.estado)"
-                        >
+                        <app-badge [variant]="estadoVariant(pago.estado)">
                           @if (pago.estado === 'completado') {
                             <app-icon name="check" [size]="10" />
                           }
                           {{ estadoLabel(pago.estado) }}
-                        </span>
+                        </app-badge>
                       </div>
                     </div>
                   }
@@ -825,25 +816,14 @@ export class SecretariaPagosComponent implements OnInit, AfterViewInit {
     return formatChileanDate(fecha, { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
-  protected estadoBg(estado: string | null): string {
+  protected estadoVariant(estado: string | null): 'success' | 'warning' | 'neutral' {
     switch (estado) {
       case 'completado':
-        return 'var(--state-success-bg)';
+        return 'success';
       case 'pendiente':
-        return 'var(--state-warning-bg)';
+        return 'warning';
       default:
-        return 'var(--bg-elevated)';
-    }
-  }
-
-  protected estadoColor(estado: string | null): string {
-    switch (estado) {
-      case 'completado':
-        return 'var(--state-success)';
-      case 'pendiente':
-        return 'var(--state-warning)';
-      default:
-        return 'var(--text-muted)';
+        return 'neutral';
     }
   }
 

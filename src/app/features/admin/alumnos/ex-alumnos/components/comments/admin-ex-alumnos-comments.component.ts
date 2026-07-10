@@ -2,6 +2,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { Button } from 'primeng/button';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
@@ -16,7 +17,7 @@ export interface ComentarioMock {
   selector: 'app-admin-ex-alumnos-comments',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TooltipModule, CommonModule, IconComponent, Button, CardHoverDirective],
+  imports: [TooltipModule, CommonModule, IconComponent, BadgeComponent, Button, CardHoverDirective],
   template: `
     <div
       class="bento-card bento-tall p-6 flex flex-col h-full bg-surface overflow-hidden"
@@ -26,16 +27,14 @@ export interface ComentarioMock {
       <div class="flex items-center justify-between mb-6">
         <div class="flex flex-col">
           <h3 class="text-base font-bold text-text-primary m-0">Opiniones de Egresados</h3>
-          <span class="text-[10px] text-text-muted font-bold uppercase tracking-widest mt-0.5"
+          <span class="text-2xs text-text-muted font-bold uppercase tracking-widest mt-0.5"
             >Encuestas de Satisfacción</span
           >
         </div>
-        <div
-          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 text-warning text-xs font-bold shadow-sm"
-        >
+        <app-badge variant="warning">
           <app-icon name="star" [size]="14" />
           <span>{{ avgRate() }}</span>
-        </div>
+        </app-badge>
       </div>
 
       <!-- Content -->

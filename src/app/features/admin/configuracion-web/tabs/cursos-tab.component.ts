@@ -11,12 +11,19 @@ import { CoursesFacade } from '@core/facades/courses.facade';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SelectModule } from 'primeng/select';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-cursos-tab',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, SelectModule, IconComponent, SkeletonBlockComponent],
+  imports: [
+    BadgeComponent,
+    ReactiveFormsModule,
+    SelectModule,
+    IconComponent,
+    SkeletonBlockComponent,
+  ],
   template: `
     <div class="flex flex-col gap-6 animate-fade-in">
       <div class="flex items-center justify-between border-b pb-2 mb-2 border-border-subtle">
@@ -93,19 +100,15 @@ import { SelectModule } from 'primeng/select';
                 </span>
                 <div class="flex items-center gap-2">
                   @if (isOrphan) {
-                    <span
-                      class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-error bg-error/12"
-                    >
+                    <app-badge variant="error">
                       <app-icon name="x-circle" [size]="11" />
                       Curso no existe
-                    </span>
+                    </app-badge>
                   } @else if (isInactive) {
-                    <span
-                      class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-warning bg-warning/12"
-                    >
+                    <app-badge variant="warning">
                       <app-icon name="alert-triangle" [size]="11" />
                       Curso inactivo — no visible en web
-                    </span>
+                    </app-badge>
                   }
                   <button
                     type="button"
@@ -173,12 +176,10 @@ import { SelectModule } from 'primeng/select';
                     >Personalizar precio para promo</span
                   >
                   @if (courseCtrl.get('priceOverride')?.value != null) {
-                    <span
-                      class="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 text-brand bg-brand/12"
-                    >
+                    <app-badge variant="brand">
                       <app-icon name="tag" [size]="10" />
                       Override activo
-                    </span>
+                    </app-badge>
                   }
                 </label>
                 @if (courseCtrl.get('priceOverride')?.value != null) {
@@ -245,7 +246,11 @@ import { SelectModule } from 'primeng/select';
               </div>
 
               <div class="bento-grid bento-grid--forms bento-grid--forms">
-                <div class="flex flex-col gap-3 justify-center" data-col-span-md="4" data-col-span="4">
+                <div
+                  class="flex flex-col gap-3 justify-center"
+                  data-col-span-md="4"
+                  data-col-span="4"
+                >
                   <label class="flex items-center gap-2 cursor-pointer py-1">
                     <input
                       type="checkbox"

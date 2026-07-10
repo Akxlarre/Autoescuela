@@ -174,7 +174,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                       [class.border-transparent]="selectedDayIndex() !== i"
                       [class.text-text-secondary]="selectedDayIndex() !== i"
                     >
-                      <p class="text-[10px] font-bold uppercase">{{ day.dayOfWeek }}</p>
+                      <p class="text-2xs font-bold uppercase">{{ day.dayOfWeek }}</p>
                       <p class="text-sm font-black">{{ day.label }}</p>
                     </button>
                   }

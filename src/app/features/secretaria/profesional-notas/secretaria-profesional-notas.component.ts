@@ -19,6 +19,7 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { GRADE_PASS, MODULE_COUNT } from '@core/utils/professional-modules';
 import { computeGradebookStats, countModulosCompletos } from '@core/utils/gradebook-stats';
 import type { CursoEstado, FilaEvaluacion } from '@core/models/ui/evaluaciones-profesional.model';
@@ -35,6 +36,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
     IconComponent,
     StatBoxComponent,
     BentoGridLayoutDirective,
+    BadgeComponent,
   ],
   styles: `
     .gradebook-scroll {
@@ -126,12 +128,9 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                 </div>
               </div>
               <div class="flex items-center gap-3 shrink-0">
-                <span
-                  class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px]"
-                  [class]="promoStatusClass(promo.status)"
-                >
+                <app-badge [variant]="promoStatusVariant(promo.status)">
                   {{ promoStatusLabel(promo.status) }}
-                </span>
+                </app-badge>
                 <span class="hidden sm:flex items-center gap-1 text-xs text-text-secondary">
                   <app-icon name="users" [size]="12" />
                   {{ promo.totalAlumnos }}
@@ -158,13 +157,10 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                 >
                   <div class="flex items-start justify-between gap-2">
                     <span class="kpi-value leading-none">{{ curso.courseCode }}</span>
-                    <span
-                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold shrink-0 border"
-                      [class]="estadoBadgeClass(curso.estado)"
-                    >
+                    <app-badge [variant]="estadoBadgeVariant(curso.estado)" class="shrink-0">
                       <app-icon [name]="estadoBadgeIcon(curso.estado)" [size]="11" />
                       {{ estadoBadgeLabel(curso.estado) }}
-                    </span>
+                    </app-badge>
                   </div>
                   <p class="text-xs text-text-secondary line-clamp-2 leading-relaxed">
                     {{ curso.courseName }}
@@ -178,7 +174,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                         [style.width.%]="pct"
                       ></div>
                     </div>
-                    <div class="flex items-center justify-between text-[11px] text-text-muted">
+                    <div class="flex items-center justify-between text-2xs text-text-muted">
                       <span>{{ curso.alumnosConNotas }}/{{ curso.totalAlumnos }} alumnos</span>
                       @if (curso.promedio !== null) {
                         <span
@@ -280,7 +276,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
               <thead>
                 <tr>
                   <th
-                    class="col-alumno px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-text-secondary border-b border-border"
+                    class="col-alumno px-4 py-3 text-left text-2xs font-bold uppercase tracking-wider text-text-secondary border-b border-border"
                     style="min-width:220px"
                   >
                     Alumno
@@ -292,23 +288,23 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       [title]="name"
                     >
                       <span
-                        class="block text-[11px] font-bold uppercase tracking-wider text-text-secondary"
+                        class="block text-2xs font-bold uppercase tracking-wider text-text-secondary"
                         >Mod {{ $index + 1 }}</span
                       >
                       <span
-                        class="block text-[10px] font-medium text-text-muted truncate max-w-24 mx-auto mt-0.5 normal-case"
+                        class="block text-2xs font-medium text-text-muted truncate max-w-24 mx-auto mt-0.5 normal-case"
                         >{{ name }}</span
                       >
                     </th>
                   }
                   <th
-                    class="px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-text-secondary border-b border-border"
+                    class="px-3 py-3 text-center text-2xs font-bold uppercase tracking-wider text-text-secondary border-b border-border"
                     style="min-width:80px"
                   >
                     Progreso
                   </th>
                   <th
-                    class="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-text-secondary border-b border-border"
+                    class="px-4 py-3 text-right text-2xs font-bold uppercase tracking-wider text-text-secondary border-b border-border"
                     style="min-width:90px"
                   >
                     Promedio
@@ -329,7 +325,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                           <p class="font-bold text-text-primary text-xs truncate">
                             {{ fila.nombre }}
                           </p>
-                          <p class="text-[11px] text-text-muted">{{ fila.rut }}</p>
+                          <p class="text-2xs text-text-muted">{{ fila.rut }}</p>
                         </div>
                       </div>
                     </td>
@@ -370,7 +366,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                     }
                     <td class="px-3 py-2 text-center">
                       <span
-                        class="text-[11px] font-semibold"
+                        class="text-2xs font-semibold"
                         [class.text-success]="modulosCompletos(fila) === moduleCount"
                         [class.text-text-muted]="modulosCompletos(fila) !== moduleCount"
                         >{{ modulosCompletos(fila) }}/{{ moduleCount }}</span
@@ -406,7 +402,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                     </div>
                     <div class="min-w-0">
                       <p class="font-bold text-text-primary text-sm truncate">{{ fila.nombre }}</p>
-                      <p class="text-[11px] text-text-muted">{{ fila.rut }}</p>
+                      <p class="text-2xs text-text-muted">{{ fila.rut }}</p>
                     </div>
                   </div>
                   @if (fila.promedio !== null) {
@@ -419,7 +415,7 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                     <span class="text-text-muted text-xs shrink-0">Sin promedio</span>
                   }
                 </div>
-                <div class="flex items-center gap-2 text-[11px] text-text-muted">
+                <div class="flex items-center gap-2 text-2xs text-text-muted">
                   <app-icon name="list-checks" [size]="13" />
                   <span
                     [class.text-success]="modulosCompletos(fila) === moduleCount"
@@ -433,8 +429,8 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
                       class="flex items-center justify-between gap-2 rounded-lg border border-border bg-elevated px-3 py-2"
                     >
                       <div class="min-w-0">
-                        <p class="text-[11px] font-bold text-text-secondary">Mod {{ m + 1 }}</p>
-                        <p class="text-[10px] text-text-muted truncate">{{ g.moduleNames[m] }}</p>
+                        <p class="text-2xs font-bold text-text-secondary">Mod {{ m + 1 }}</p>
+                        <p class="text-2xs text-text-muted truncate">{{ g.moduleNames[m] }}</p>
                       </div>
                       @if (g.confirmed) {
                         <span
@@ -625,14 +621,14 @@ export class SecretariaProfesionalNotasComponent implements OnInit, OnDestroy {
     return countModulosCompletos(fila);
   }
 
-  protected estadoBadgeClass(estado: CursoEstado): string {
+  protected estadoBadgeVariant(estado: CursoEstado): 'success' | 'warning' | 'neutral' {
     switch (estado) {
       case 'confirmada':
-        return 'bg-success/10 text-success border-success/30';
+        return 'success';
       case 'en_edicion':
-        return 'bg-warning/10 text-warning-dark border-warning/30';
+        return 'warning';
       default:
-        return 'bg-subtle text-text-muted border-border';
+        return 'neutral';
     }
   }
 
@@ -658,10 +654,8 @@ export class SecretariaProfesionalNotasComponent implements OnInit, OnDestroy {
     }
   }
 
-  protected promoStatusClass(status: string): string {
-    return status === 'in_progress'
-      ? 'bg-brand/10 text-brand border border-brand/20 font-medium'
-      : 'bg-subtle text-text-muted border border-border';
+  protected promoStatusVariant(status: string): 'brand' | 'neutral' {
+    return status === 'in_progress' ? 'brand' : 'neutral';
   }
 
   protected promoStatusLabel(status: string): string {

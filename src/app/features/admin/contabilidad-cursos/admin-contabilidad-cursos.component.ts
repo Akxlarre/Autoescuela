@@ -19,6 +19,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { formatCLP, formatChileanDate } from '@core/utils/date.utils';
 import { AdminCursoSingularDetalleDrawerComponent } from './admin-curso-singular-detalle-drawer.component';
@@ -43,29 +44,17 @@ function getTipoStyle(tipo: 'sence' | 'particular'): { bg: string; color: string
   };
 }
 
-/** Devuelve estilos semánticos CSS para el badge de estado. */
-function getEstadoStyle(estado: string): { bg: string; color: string } {
+/** Variant de app-badge para el estado del curso. */
+function getEstadoVariant(estado: string): 'success' | 'warning' | 'error' | 'neutral' {
   switch (estado) {
     case 'active':
-      return {
-        bg: 'var(--state-success-bg)',
-        color: 'var(--state-success)',
-      };
+      return 'success';
     case 'upcoming':
-      return {
-        bg: 'var(--state-warning-bg)',
-        color: 'var(--state-warning)',
-      };
+      return 'warning';
     case 'cancelled':
-      return {
-        bg: 'var(--state-error-bg)',
-        color: 'var(--state-error)',
-      };
+      return 'error';
     default: // completed
-      return {
-        bg: 'var(--bg-elevated)',
-        color: 'var(--text-muted)',
-      };
+      return 'neutral';
   }
 }
 
@@ -91,6 +80,7 @@ const BILLING_LABEL: Record<string, string> = {
     SelectModule,
     SectionHeroComponent,
     IconComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -187,13 +177,9 @@ const BILLING_LABEL: Record<string, string> = {
                         {{ curso.tipo === 'sence' ? 'SENCE' : 'Part.' }}
                       </span>
                       <!-- Badge estado -->
-                      <span
-                        class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
-                        [style.background]="getEstadoStyle(curso.estado).bg"
-                        [style.color]="getEstadoStyle(curso.estado).color"
-                      >
+                      <app-badge [variant]="getEstadoVariant(curso.estado)">
                         {{ estadoLabel(curso.estado) }}
-                      </span>
+                      </app-badge>
                     </div>
                   </div>
 
@@ -362,12 +348,9 @@ const BILLING_LABEL: Record<string, string> = {
                         <span class="text-xs text-text-muted">/{{ curso.cupos }}</span>
                       </td>
                       <td class="py-3 px-4 text-center">
-                        <span
-                          class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
-                          [style.background]="getEstadoStyle(curso.estado).bg"
-                          [style.color]="getEstadoStyle(curso.estado).color"
-                          >{{ estadoLabel(curso.estado) }}</span
-                        >
+                        <app-badge [variant]="getEstadoVariant(curso.estado)">{{
+                          estadoLabel(curso.estado)
+                        }}</app-badge>
                       </td>
                       <td class="py-3 px-4 text-center">
                         <span
@@ -476,7 +459,7 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
   protected readonly formatCLP = formatCLP;
   protected readonly formatChileanDate = formatChileanDate;
   protected readonly getTipoStyle = getTipoStyle;
-  protected readonly getEstadoStyle = getEstadoStyle;
+  protected readonly getEstadoVariant = getEstadoVariant;
 
   // ── Columnas de tabla ──────────────────────────────────────────────────────
   protected readonly columnas = [

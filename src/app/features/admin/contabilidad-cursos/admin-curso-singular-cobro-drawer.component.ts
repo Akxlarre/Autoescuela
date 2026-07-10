@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { CursosSingularesFacade } from '@core/facades/cursos-singulares.facade';
 import type { InscriptoCursoSingular } from '@core/models/ui/cursos-singulares.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
 import { formatCLP } from '@core/utils/date.utils';
@@ -23,6 +24,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     IconComponent,
+    BadgeComponent,
     SkeletonBlockComponent,
     StatBoxComponent,
     DrawerContentLoaderComponent,
@@ -154,12 +156,10 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     <!-- Estado + acción -->
                     <div class="shrink-0 flex items-center gap-2">
                       @if (alumno.paymentStatus === 'paid') {
-                        <span
-                          class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-success bg-success/12"
-                        >
+                        <app-badge variant="success">
                           <app-icon name="check-circle" [size]="12" />
                           Cobrado
-                        </span>
+                        </app-badge>
                       } @else {
                         <button
                           class="btn-primary text-xs"

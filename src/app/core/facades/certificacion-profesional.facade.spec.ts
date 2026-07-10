@@ -5,6 +5,8 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { NotificationsFacade } from '@core/facades/notifications.facade';
+import type { CertificacionProfesionalAlumnoRow } from '@core/models/ui/certificacion-profesional.model';
 
 describe('CertificacionProfesionalFacade', () => {
   let facade: CertificacionProfesionalFacade;
@@ -13,6 +15,38 @@ describe('CertificacionProfesionalFacade', () => {
   let dmsViewerSpy: any;
   let branchFacadeSpy: any;
   let authFacadeSpy: any;
+  let notificationsSpy: any;
+
+  const flushMicrotasks = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  function makeAlumnoRow(
+    overrides: Partial<CertificacionProfesionalAlumnoRow> = {},
+  ): CertificacionProfesionalAlumnoRow {
+    return {
+      enrollmentId: 42,
+      studentId: 5,
+      nombre: 'Juan López',
+      rut: '11.111.111-1',
+      curso: 'Clase Profesional A4',
+      licenseClass: 'A4',
+      promocion: 'PROM-1',
+      fechaInicio: null,
+      fechaTermino: null,
+      pctAsistenciaTeoria: 100,
+      pctAsistenciaPractica: 100,
+      pagoCorrecto: true,
+      notaPromedio: 80,
+      elegibilidad: { promocion: true, teoria: true, practica: true, pago: true, nota: true },
+      elegible: true,
+      certificadoId: null,
+      certificadoFolio: null,
+      storagePath: null,
+      certificadoStatus: 'pendiente',
+      emailEnviado: false,
+      email: 'juan@test.com',
+      ...overrides,
+    };
+  }
 
   const makeQuery = (resolvedValue: any) => ({
     select: vi.fn().mockReturnThis(),
@@ -41,10 +75,14 @@ describe('CertificacionProfesionalFacade', () => {
         },
       },
     };
-    toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn() };
+    toastSpy = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() };
     dmsViewerSpy = { openByUrl: vi.fn() };
     branchFacadeSpy = { selectedBranchId: vi.fn().mockReturnValue(null) };
     authFacadeSpy = { currentUser: vi.fn().mockReturnValue({ role: 'admin', branchId: null }) };
+    notificationsSpy = {
+      notifyUsers: vi.fn().mockResolvedValue(undefined),
+      notifyRole: vi.fn().mockResolvedValue(undefined),
+    };
 
     TestBed.configureTestingModule({
       providers: [
@@ -54,6 +92,7 @@ describe('CertificacionProfesionalFacade', () => {
         { provide: DmsViewerService, useValue: dmsViewerSpy },
         { provide: BranchFacade, useValue: branchFacadeSpy },
         { provide: AuthFacade, useValue: authFacadeSpy },
+        { provide: NotificationsFacade, useValue: notificationsSpy },
       ],
     });
 
@@ -208,6 +247,77 @@ describe('CertificacionProfesionalFacade', () => {
     it('exportar siempre restablece isExporting al terminar', async () => {
       await facade.exportar();
       expect(facade.isExporting()).toBe(false);
+    });
+  });
+
+  describe('notificaciones de certificado (Spec 0024, AC7)', () => {
+    function mockFromByTable(handlers: Record<string, any>) {
+      return vi.fn().mockImplementation((table: string) => {
+        if (handlers[table]) return handlers[table];
+        return makeQuery({ data: [], error: null });
+      });
+    }
+
+    it('notifica al alumno tras generar un certificado individual', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42, studentId: 5, curso: 'Clase Profesional A4' }),
+      ]);
+      const studentsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { user_id: 900 }, error: null }),
+          }),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({ students: studentsHandler });
+
+      await facade.generarCertificado(42);
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith(
+        [900],
+        expect.objectContaining({ referenceType: 'certificate', referenceId: 42 }),
+      );
+    });
+
+    it('no rompe la generación si falla la notificación (AC-E1)', async () => {
+      (facade as any)._alumnos.set([makeAlumnoRow({ enrollmentId: 42, studentId: 5 })]);
+      const studentsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: { user_id: 900 }, error: null }),
+          }),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({ students: studentsHandler });
+      notificationsSpy.notifyUsers.mockRejectedValue(new Error('insert failed'));
+
+      await expect(facade.generarCertificado(42)).resolves.toBeUndefined();
+      await flushMicrotasks();
+    });
+
+    it('generarPendientes notifica por cada certificado generado exitosamente', async () => {
+      (facade as any)._alumnos.set([
+        makeAlumnoRow({ enrollmentId: 42, studentId: 5, nombre: 'Alumno Uno' }),
+        makeAlumnoRow({ enrollmentId: 43, studentId: 6, nombre: 'Alumno Dos' }),
+      ]);
+      const studentsHandler = {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockImplementation((_col: string, id: number) => ({
+            single: vi.fn().mockResolvedValue({
+              data: { user_id: id === 5 ? 900 : 901 },
+              error: null,
+            }),
+          })),
+        }),
+      };
+      supabaseSpy.client.from = mockFromByTable({ students: studentsHandler });
+
+      await facade.generarPendientes();
+      await flushMicrotasks();
+
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([900], expect.any(Object));
+      expect(notificationsSpy.notifyUsers).toHaveBeenCalledWith([901], expect.any(Object));
     });
   });
 });

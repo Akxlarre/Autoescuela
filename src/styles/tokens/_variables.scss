@@ -62,6 +62,10 @@
   --space-16: 64px;
 
   /* Escala tipográfica */
+  --text-2xs: 0.625rem;
+  /* 10px — piso absoluto para micro-labels (tablas densas, hints).
+     Formalizado en fix-032: reemplaza los text-[10px]/text-[11px] JIT.
+     NO crear tamaños menores: 8-9px es ilegible (backlog AP-014). */
   --text-xs: 0.75rem;
   /* 12px */
   --text-sm: 0.875rem;
@@ -198,6 +202,13 @@
   --state-info-bg: #f0f9ff;
   --state-info-border: #bae6fd;
 
+  /* Fondo de acción destructiva (botón sólido). Tono medio saturado que
+     mantiene contraste AA con texto blanco en AMBOS modos — por eso no
+     tiene override en dark. NO usar --state-error aquí: en dark es un
+     rojo claro (#f87171) ilegible con texto blanco. */
+  --state-error-strong: #dc2626;
+  --state-error-strong-hover: #b91c1c;
+
   /* ──────────────────────────────────────────
      CAPA 3 — MARCA Y COLOR PRIMARIO
      --color-primary SIEMPRE es el azul de marca.
@@ -260,6 +271,29 @@
   --btn-ghost-text: var(--text-secondary);
   --btn-ghost-text-hover: var(--text-primary);
   --btn-ghost-radius: var(--radius-md);
+
+  /* ── Botón peligro (ghost + sólido) ──
+     Tokens propios que .surface-hero NO reescribe: la acción destructiva
+     mantiene su identidad roja en cualquier contexto (cascade-immune),
+     pero sí responde a dark mode porque referencia tokens de estado. */
+  --btn-danger-ghost-bg: var(--bg-surface);
+  --btn-danger-ghost-bg-hover: var(--state-error-bg);
+  --btn-danger-ghost-border: var(--state-error-border);
+  --btn-danger-ghost-text: var(--state-error);
+
+  --btn-danger-solid-bg: var(--state-error-strong);
+  --btn-danger-solid-bg-hover: var(--state-error-strong-hover);
+  --btn-danger-solid-text: var(--color-primary-text);
+
+  /* ── Botón neutro (cancelar/cerrar en modales) ── */
+  --btn-neutral-bg: var(--bg-subtle);
+  --btn-neutral-text: var(--text-primary);
+
+  /* ── Disabled unificado ──
+     Única opacidad de :disabled para todos los btn-*.
+     Excepción canónica: btn-primary usa disabled semántico
+     (bg-subtle + text-muted, opacity 1) — ver tailwind.css. */
+  --btn-disabled-opacity: 0.5;
 
   /* ── Input ──
      --input-bg referencia --bg-subtle (visible sobre --bg-elevated

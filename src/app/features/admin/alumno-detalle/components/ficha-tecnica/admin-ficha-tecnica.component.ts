@@ -65,7 +65,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <td>
                   <div class="flex flex-col gap-0.5">
                     <span class="text-xs font-semibold">{{ clase.fecha || '-' }}</span>
-                    <span class="text-[10px] text-text-muted italic">{{ clase.hora || '-' }}</span>
+                    <span class="text-2xs text-text-muted italic">{{ clase.hora || '-' }}</span>
                   </div>
                 </td>
                 <td>
@@ -83,7 +83,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                       <span class="text-xs font-medium"
                         >{{ clase.kmInicio.toLocaleString('es-CL') }} km</span
                       >
-                      <span class="text-[10px] text-text-muted"
+                      <span class="text-2xs text-text-muted"
                         >Fin: {{ clase.kmFin?.toLocaleString('es-CL') || '?' }} km</span
                       >
                     </div>
@@ -199,7 +199,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 
             <div class="grid grid-cols-2 gap-3">
               <div class="flex flex-col gap-0.5">
-                <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
+                <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
                   >Fecha / Hora</span
                 >
                 <span class="text-xs font-semibold text-text-primary"
@@ -207,7 +207,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 >
               </div>
               <div class="flex flex-col gap-0.5">
-                <span class="text-[10px] font-bold text-text-muted uppercase tracking-wider"
+                <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
                   >Instructor</span
                 >
                 <span class="text-xs font-bold text-brand truncate">{{
@@ -237,7 +237,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
               </div>
             } @else if (!clase.ausente && !clase.cancelada) {
               <div class="h-px bg-border-subtle w-full"></div>
-              <span class="text-[10px] text-text-muted italic text-center"
+              <span class="text-2xs text-text-muted italic text-center"
                 >Sesión aún no realizada</span
               >
             }

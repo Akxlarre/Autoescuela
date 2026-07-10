@@ -13,12 +13,14 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
   selector: 'app-instructor-liquidacion',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BadgeComponent,
     DatePipe,
     SectionHeroComponent,
     KpiCardVariantComponent,
@@ -154,11 +156,9 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
                             </div>
                           </td>
                           <td class="p-4 text-center">
-                            <span
-                              class="text-xs font-semibold px-2 py-0.5 rounded-full text-brand bg-brand/10"
-                            >
+                            <app-badge variant="brand">
                               {{ log.quantity }} {{ log.quantity === 1 ? 'sesión' : 'sesiones' }}
-                            </span>
+                            </app-badge>
                           </td>
                           <td class="p-4 text-right">
                             <span class="font-medium text-text-primary">{{ log.hours }} hrs</span>

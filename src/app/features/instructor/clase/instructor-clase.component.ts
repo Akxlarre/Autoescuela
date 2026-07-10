@@ -153,7 +153,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                 <div
                   class="w-14 h-14 rounded-2xl bg-brand/10 border border-brand/20 flex flex-col items-center justify-center shrink-0"
                 >
-                  <span class="text-[10px] uppercase tracking-wider font-bold text-brand"
+                  <span class="text-2xs uppercase tracking-wider font-bold text-brand"
                     >Ruta</span
                   >
                   <span class="text-xl font-display font-bold text-brand leading-none mt-0.5">{{
@@ -188,7 +188,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <app-icon name="clock" [size]="16" class="text-text-secondary" />
                   </div>
                   <div>
-                    <p class="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                    <p class="text-2xs font-bold text-text-muted uppercase tracking-wider">
                       Horario
                     </p>
                     <p class="text-sm text-text-primary font-medium">{{ cls.timeLabel }}</p>
@@ -201,7 +201,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <app-icon name="car" [size]="16" class="text-text-secondary" />
                   </div>
                   <div class="min-w-0">
-                    <p class="text-[10px] font-bold text-text-muted uppercase tracking-wider">
+                    <p class="text-2xs font-bold text-text-muted uppercase tracking-wider">
                       Vehículo
                     </p>
                     <p class="text-sm text-text-primary font-medium truncate">

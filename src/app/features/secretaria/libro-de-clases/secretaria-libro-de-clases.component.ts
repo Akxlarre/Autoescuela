@@ -390,7 +390,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                         @for (dia of semana.dias; track dia.date) {
                           <th class="w-20 text-center">
                             <div class="text-xs">{{ dia.dayLabel }}</div>
-                            <div class="text-[10px] text-text-muted">
+                            <div class="text-2xs text-text-muted">
                               {{ formatShortDate(dia.date) }}
                             </div>
                           </th>
@@ -514,7 +514,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                     <th class="w-12">N°</th>
                     <th class="min-w-45">Apellido, Nombre</th>
                     @for (modName of moduleHeaders(); track $index) {
-                      <th class="w-20 text-center text-[10px]">{{ modName }}</th>
+                      <th class="w-20 text-center text-2xs">{{ modName }}</th>
                     }
                     <th class="w-20 text-center font-bold">Nota Final</th>
                   </tr>

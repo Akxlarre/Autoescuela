@@ -18,6 +18,7 @@ import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-va
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -59,6 +60,7 @@ const PAGE_SIZE = 10;
     SkeletonBlockComponent,
     IconComponent,
     EmptyStateComponent,
+    BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -538,16 +540,16 @@ const PAGE_SIZE = 10;
                         @if (alumno.pctAsistenciaTeoria === null) {
                           <span class="text-xs text-text-muted">Sin registro</span>
                         } @else {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                            [style.background]="getTeoriaBg(alumno.pctAsistenciaTeoria)"
-                            [style.color]="getTeoriaColor(alumno.pctAsistenciaTeoria)"
+                          <app-badge
+                            [variant]="alumno.pctAsistenciaTeoria >= 75 ? 'success' : 'warning'"
                           >
-                            @if (!alumno.elegibilidad.teoria) {
-                              <app-icon name="alert-triangle" [size]="11" />
-                            }
-                            {{ alumno.pctAsistenciaTeoria }}%
-                          </span>
+                            <span class="inline-flex items-center gap-1">
+                              @if (!alumno.elegibilidad.teoria) {
+                                <app-icon name="alert-triangle" [size]="11" />
+                              }
+                              {{ alumno.pctAsistenciaTeoria }}%
+                            </span>
+                          </app-badge>
                         }
                       </td>
                       <!-- Práctica -->
@@ -555,16 +557,22 @@ const PAGE_SIZE = 10;
                         @if (alumno.pctAsistenciaPractica === null) {
                           <span class="text-xs text-text-muted">Sin registro</span>
                         } @else {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                            [style.background]="getPracticaBg(alumno.pctAsistenciaPractica)"
-                            [style.color]="getPracticaColor(alumno.pctAsistenciaPractica)"
+                          <app-badge
+                            [variant]="
+                              alumno.pctAsistenciaPractica >= 100
+                                ? 'success'
+                                : alumno.pctAsistenciaPractica >= 75
+                                  ? 'info'
+                                  : 'warning'
+                            "
                           >
-                            @if (alumno.pctAsistenciaPractica < 100) {
-                              <app-icon name="alert-circle" [size]="11" />
-                            }
-                            {{ alumno.pctAsistenciaPractica }}%
-                          </span>
+                            <span class="inline-flex items-center gap-1">
+                              @if (alumno.pctAsistenciaPractica < 100) {
+                                <app-icon name="alert-circle" [size]="11" />
+                              }
+                              {{ alumno.pctAsistenciaPractica }}%
+                            </span>
+                          </app-badge>
                         }
                       </td>
                       <!-- Nota promedio -->
@@ -572,55 +580,45 @@ const PAGE_SIZE = 10;
                         @if (alumno.notaPromedio === null) {
                           <span class="text-xs text-text-muted">Sin notas</span>
                         } @else {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
-                            [style.background]="getNotaBg(alumno.notaPromedio)"
-                            [style.color]="getNotaColor(alumno.notaPromedio)"
-                          >
-                            @if (!alumno.elegibilidad.nota) {
-                              <app-icon name="x-circle" [size]="11" />
-                            }
-                            {{ alumno.notaPromedio | number: '1.1-1' }}
-                          </span>
+                          <app-badge [variant]="alumno.notaPromedio >= 75 ? 'success' : 'warning'">
+                            <span class="inline-flex items-center gap-1">
+                              @if (!alumno.elegibilidad.nota) {
+                                <app-icon name="x-circle" [size]="11" />
+                              }
+                              {{ alumno.notaPromedio | number: '1.1-1' }}
+                            </span>
+                          </app-badge>
                         }
                       </td>
                       <!-- Pago -->
                       <td class="px-4 py-3 text-center">
                         @if (alumno.pagoCorrecto) {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-success"
-                            class="bg-success-subtle"
-                          >
-                            <app-icon name="check" [size]="11" />
-                            Al día
-                          </span>
+                          <app-badge variant="success">
+                            <span class="inline-flex items-center gap-1">
+                              <app-icon name="check" [size]="11" />
+                              Al día
+                            </span>
+                          </app-badge>
                         } @else {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold text-warning"
-                            class="bg-warning-subtle"
-                          >
-                            <app-icon name="alert-triangle" [size]="11" />
-                            Pendiente
-                          </span>
+                          <app-badge variant="warning">
+                            <span class="inline-flex items-center gap-1">
+                              <app-icon name="alert-triangle" [size]="11" />
+                              Pendiente
+                            </span>
+                          </app-badge>
                         }
                       </td>
                       <!-- Estado certificado -->
                       <td class="px-4 py-3 text-center">
                         @if (alumno.certificadoStatus === 'generado') {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-success"
-                            class="bg-success-subtle"
-                          >
-                            <app-icon name="check" [size]="12" />
-                            Generado
-                          </span>
+                          <app-badge variant="success">
+                            <span class="inline-flex items-center gap-1">
+                              <app-icon name="check" [size]="12" />
+                              Generado
+                            </span>
+                          </app-badge>
                         } @else {
-                          <span
-                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-warning"
-                            class="bg-warning-subtle"
-                          >
-                            Pendiente
-                          </span>
+                          <app-badge variant="warning">Pendiente</app-badge>
                         }
                       </td>
                       <!-- Acciones -->
@@ -879,13 +877,9 @@ const PAGE_SIZE = 10;
                         {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
                       </td>
                       <td class="px-4 py-3">
-                        <span
-                          class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-                          [style.background]="getAccionBg(entry.accion)"
-                          [style.color]="getAccionColor(entry.accion)"
-                        >
+                        <app-badge [variant]="getAccionVariant(entry.accion)">
                           {{ getAccionLabel(entry.accion) }}
-                        </span>
+                        </app-badge>
                       </td>
                       <td class="px-4 py-3 text-text-primary">{{ entry.alumnoNombre }}</td>
                       <td class="px-4 py-3 text-text-muted">{{ entry.usuarioNombre }}</td>
@@ -1142,65 +1136,20 @@ export class CertificacionProfesionalContentComponent implements AfterViewInit {
 
   // ── Helpers de color ──
 
-  getTeoriaColor(pct: number): string {
-    if (pct >= 75) return 'var(--state-success)';
-    return 'var(--state-warning)';
-  }
-
-  getTeoriaBg(pct: number): string {
-    if (pct >= 75) return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-    return 'var(--bg-warning-muted, rgba(234,179,8,0.1))';
-  }
-
-  getPracticaColor(pct: number): string {
-    if (pct >= 100) return 'var(--state-success)';
-    if (pct >= 75) return 'var(--state-info, var(--color-primary))';
-    return 'var(--state-warning)';
-  }
-
-  getPracticaBg(pct: number): string {
-    if (pct >= 100) return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-    if (pct >= 75) return 'var(--bg-info-muted, rgba(59,130,246,0.1))';
-    return 'var(--bg-warning-muted, rgba(234,179,8,0.1))';
-  }
-
-  getNotaColor(nota: number): string {
-    if (nota >= 75) return 'var(--state-success)';
-    return 'var(--state-warning)';
-  }
-
-  getNotaBg(nota: number): string {
-    if (nota >= 75) return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-    return 'var(--bg-warning-muted, rgba(234,179,8,0.1))';
-  }
-
   getAccionLabel(accion: string): string {
     return ACCION_LABELS_PROF[accion] ?? accion;
   }
 
-  getAccionColor(accion: string): string {
+  getAccionVariant(accion: string): 'success' | 'brand' | 'info' | 'neutral' {
     switch (accion) {
       case 'generated':
-        return 'var(--state-success)';
+        return 'success';
       case 'email_sent':
-        return 'var(--color-primary)';
+        return 'brand';
       case 'downloaded':
-        return 'var(--state-info, var(--color-primary))';
+        return 'info';
       default:
-        return 'var(--text-muted)';
-    }
-  }
-
-  getAccionBg(accion: string): string {
-    switch (accion) {
-      case 'generated':
-        return 'var(--bg-success-muted, rgba(34,197,94,0.1))';
-      case 'email_sent':
-        return 'var(--bg-brand-muted)';
-      case 'downloaded':
-        return 'var(--bg-info-muted, rgba(59,130,246,0.1))';
-      default:
-        return 'var(--bg-subtle)';
+        return 'neutral';
     }
   }
 }

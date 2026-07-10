@@ -27,8 +27,17 @@
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
-import { parseThemeTokens, findDeadTokenClasses } from './lib/theme-tokens.js';
+import { parseThemeTokens, findDeadTokenClasses, findForbiddenThemeAliases } from './lib/theme-tokens.js';
 import { kebabToPascal, collectUsedIcons, parseRegisteredIcons } from './lib/icon-registry.js';
+import {
+    findAdhocPills,
+    findButtonSizeOverrides,
+    findArbitraryTextSizes,
+    isPillWhitelisted,
+    buildBaseline,
+    compareWithBaseline,
+    DS_RULES,
+} from './lib/class-discipline.js';
 
 // TypeScript es una dependencia de Angular. Usamos createRequire para importar
 // el paquete CJS de TypeScript desde un contexto ESM de forma segura.
@@ -46,6 +55,25 @@ try {
     console.warn('\x1b[33m%s\x1b[0m', `⚠️  ARCH-11 deshabilitado: ${String(e?.message || e)}`);
 }
 let deadTokenTotal = 0;
+
+// ── ARCH-18 (fix-033): alias bare prohibidos en @theme — auditoría del bridge mismo,
+// no del uso. Corre UNA vez contra src/tailwind.css (no es un check por-archivo). ──
+function checkForbiddenThemeAliases() {
+    const tailwindPath = path.join(process.cwd(), 'src', 'tailwind.css');
+    let content;
+    try {
+        content = fs.readFileSync(tailwindPath, 'utf-8');
+    } catch {
+        return; // fail-open: si no existe el archivo, otro check ya lo habrá señalado
+    }
+    const violations = findForbiddenThemeAliases(content);
+    for (const { key } of violations) {
+        reportError(
+            'ARCH-18', tailwindPath,
+            `'${key}' definido en @theme — alias bare prohibido`,
+        );
+    }
+}
 
 function reportDeadTokenClasses(filePath, content) {
     if (!THEME) return;
@@ -92,7 +120,7 @@ const RULES = {
     'ARCH-02': {
         name: 'Facade-only injection',
         doc: 'docs/TECH-STACK-RULES.md#arch-02',
-        fix: 'Los componentes vista solo deben inyectar clases tipo Facade (*FacadeService).',
+        fix: 'Los componentes vista solo inyectan Facades (*FacadeService) o servicios UI transversales de core/services/ui/ (Toast, ConfirmModal, Theme…). Servicios de dominio/datos van detrás de una Facade; SupabaseService jamás en componentes.',
     },
     'ARCH-03': {
         name: 'TDD required for core logic',
@@ -154,6 +182,26 @@ const RULES = {
         doc: 'CLAUDE.md (Íconos Lucide) + specs/0020',
         fix: 'Importa el ícono de lucide-angular y agrégalo al LucideAngularModule.pick({...}) de app.config.ts.',
     },
+    'ARCH-15': {
+        name: 'Pill/badge ad-hoc (ratchet)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-012)',
+        fix: 'Usa <app-badge [variant]="..."> (shared/components/badge/) o las utilidades badge-* de tailwind.css en vez de componer rounded-full + micro-texto + px- a mano.',
+    },
+    'ARCH-16': {
+        name: 'Utilities de tamaño sobre btn-* (ratchet)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-013)',
+        fix: 'No mutiles el padding/font-size/radius de una utilidad btn-*. Layout (w-, flex, gap-) sí está permitido. Si necesitas un botón más chico, pide la variante de tamaño al DS.',
+    },
+    'ARCH-17': {
+        name: 'Tamaño de fuente arbitrario text-[NNpx] (ratchet)',
+        doc: 'indices/ANTI-PATTERNS.md (AP-014)',
+        fix: 'Usa la escala tipográfica del DS: text-2xs (10px, piso absoluto — fix-032), text-xs (12px), text-sm (14px)… No inventes valores JIT ni tamaños menores a 10px.',
+    },
+    'ARCH-18': {
+        name: 'Alias bare prohibido en @theme',
+        doc: 'indices/ANTI-PATTERNS.md (AP-015)',
+        fix: 'Si una clase text-X no renderiza, migra los USOS a la forma canónica text-text-X (fix-030). NUNCA agregues un alias --color-X bare al @theme para resucitar la forma corta — eso vuelve a abrir la ambigüedad que fix-030/fix-033 cerraron y deja ciego a ARCH-11.',
+    },
 };
 
 // ── ARCH-14: acumuladores de íconos usados durante el barrido (spec 0020) ────
@@ -202,6 +250,66 @@ function checkIconRegistry() {
     }
     if (iconDynamicFiles.size > 0) {
         console.log(`   ℹ ARCH-14: ${iconDynamicFiles.size} archivo(s) con [name] dinámico no verificable estáticamente.`);
+        console.log('');
+    }
+}
+
+// ── ARCH-15/16/17: disciplina de clases del DS con ratchet (fase 2 roadmap botones) ──
+// El backlog pre-existente vive en scripts/lib/class-discipline.baseline.json.
+// Solo se reportan REGRESIONES (un archivo supera su cuota). Mejoras → re-baselinear
+// con `npm run lint:arch -- --update-ds-baseline`.
+const DS_BASELINE_PATH = path.join(process.cwd(), 'scripts', 'lib', 'class-discipline.baseline.json');
+const UPDATE_DS_BASELINE = process.argv.includes('--update-ds-baseline');
+const dsCounts = {
+    'ARCH-15': new Map(),
+    'ARCH-16': new Map(),
+    'ARCH-17': new Map(),
+};
+
+function trackClassDiscipline(filePath, content) {
+    const rel = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
+    const add = (rule, count, sample) => {
+        if (count === 0) return;
+        dsCounts[rule].set(rel, { count, sample });
+    };
+    if (!isPillWhitelisted(rel)) {
+        const pills = findAdhocPills(content);
+        add('ARCH-15', pills.length, pills[0]);
+    }
+    const overrides = findButtonSizeOverrides(content);
+    add('ARCH-16', overrides.length, overrides[0] ? `${overrides[0].attr} (→ ${overrides[0].offenders.join(', ')})` : undefined);
+    const sizes = findArbitraryTextSizes(content);
+    add('ARCH-17', sizes.length, [...new Set(sizes)].join(', '));
+}
+
+/** Post-barrido: ratchet contra el baseline (crea/actualiza según flags). */
+function checkClassDiscipline() {
+    if (UPDATE_DS_BASELINE || !fs.existsSync(DS_BASELINE_PATH)) {
+        const baseline = buildBaseline(dsCounts);
+        fs.writeFileSync(DS_BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n');
+        const totals = DS_RULES.map(r => `${r}: ${baseline.rules[r].total}`).join(' | ');
+        console.log(cyan, `   ℹ ARCH-15/16/17: baseline ${UPDATE_DS_BASELINE ? 'actualizado' : 'creado'} (${totals}).`);
+        console.log('');
+        return;
+    }
+    let baseline = null;
+    try {
+        baseline = JSON.parse(fs.readFileSync(DS_BASELINE_PATH, 'utf-8'));
+    } catch (e) {
+        console.warn(yellow, `⚠️  ARCH-15/16/17 deshabilitado: baseline ilegible (${String(e?.message || e)}). Regenera con --update-ds-baseline.`);
+        return;
+    }
+    const { regressions, currentTotal, baselineTotal, improved } = compareWithBaseline(dsCounts, baseline);
+    const report = STRICT ? reportError : reportWarning;
+    for (const r of regressions) {
+        report(
+            r.rule,
+            path.join(process.cwd(), r.file),
+            `Regresión de disciplina DS: ${r.now} caso(s) (cuota baseline: ${r.was}). Ejemplo: ${r.sample || '—'}`,
+        );
+    }
+    if (improved && regressions.length === 0) {
+        console.log(cyan, `   ℹ ARCH-15/16/17: el backlog bajó (${baselineTotal} → ${currentTotal}). Corre 'npm run lint:arch -- --update-ds-baseline' para consolidar la mejora.`);
         console.log('');
     }
 }
@@ -282,11 +390,21 @@ function analyzeTypeScript(filePath) {
     const isViewComponent = isComponent && (isInFeatures || isInShared);
 
     // ── Regla 1: Sin importación directa de Supabase en la capa UI ──────────
+    // Mapa identificador importado → module specifier (lo usa la Regla 2 para
+    // distinguir servicios UI transversales de servicios de dominio/datos).
+    const importSpecifiers = new Map();
     for (const statement of sourceFile.statements) {
         if (ts.isImportDeclaration(statement)) {
             const specifier = statement.moduleSpecifier
                 .getText(sourceFile)
                 .replace(/['"]/g, '');
+
+            const bindings = statement.importClause?.namedBindings;
+            if (bindings && ts.isNamedImports(bindings)) {
+                for (const el of bindings.elements) {
+                    importSpecifiers.set(el.name.text, specifier);
+                }
+            }
 
             // Regla 1: Supabase directo en UI (skip si stack.supabase === false)
             if (STACK.supabase && specifier === '@supabase/supabase-js' && (isInFeatures || isInShared)) {
@@ -315,9 +433,15 @@ function analyzeTypeScript(filePath) {
     }
 
     // ── Regla 2: Sin inject(*Service) en componentes vista ──────────────────
-    // Servicios de infraestructura permitidos en componentes (no son Facades pero
-    // son parte del design system y no acceden a datos externos directamente).
+    // Whitelist por PATH de import (facades.md §2): los .service.ts de
+    // core/services/ui/ son utilitarios transversales sin estado de dominio
+    // (Toast, ConfirmModal, Theme, DmsViewer…) y los componentes pueden
+    // inyectarlos. ErrorSanitizerService (infrastructure) es formateo puro.
+    // Los servicios de dominio/datos siguen prohibidos — SupabaseService SIEMPRE.
     const ALLOWED_SERVICES_IN_COMPONENTS = ['GsapAnimationsService'];
+    const NEVER_IN_COMPONENTS = ['SupabaseService'];
+    const UI_SERVICE_PATH_RE = /services\/ui\//;
+    const INFRA_ALLOWED_PATH_RE = /error-sanitizer\.service/;
 
     if (isViewComponent) {
         walkAst(sourceFile, node => {
@@ -330,12 +454,17 @@ function analyzeTypeScript(filePath) {
             const argText = node.arguments[0].getText(sourceFile);
 
             // Dispara si el argumento termina en 'Service' pero NO en 'FacadeService'
-            // y no está en la whitelist de servicios de infraestructura permitidos.
-            if (
-                argText.endsWith('Service') &&
-                !argText.endsWith('FacadeService') &&
-                !ALLOWED_SERVICES_IN_COMPONENTS.includes(argText)
-            ) {
+            // y no proviene de core/services/ui/ ni está en la whitelist explícita.
+            if (!argText.endsWith('Service') || argText.endsWith('FacadeService')) return;
+
+            const spec = importSpecifiers.get(argText) ?? '';
+            const isUiTransversal =
+                UI_SERVICE_PATH_RE.test(spec) || INFRA_ALLOWED_PATH_RE.test(spec);
+            const allowed =
+                !NEVER_IN_COMPONENTS.includes(argText) &&
+                (isUiTransversal || ALLOWED_SERVICES_IN_COMPONENTS.includes(argText));
+
+            if (!allowed) {
                 reportError(
                     'ARCH-02', filePath,
                     `Inyección directa de '${argText}' en componente vista`,
@@ -454,6 +583,9 @@ function analyzeTypeScript(filePath) {
 
     // ── Regla 14: acumular íconos usados (template inline + configs icon:) ───
     trackIconUsage(filePath, content);
+
+    // ── Reglas 15/16/17: disciplina de clases del DS (ratchet) ───────────────
+    trackClassDiscipline(filePath, content);
 }
 
 // ─── Análisis de Templates HTML ─────────────────────────────────────────────
@@ -500,6 +632,9 @@ function analyzeTemplate(filePath) {
 
     // ── Regla 14: acumular íconos usados en templates externos ──────────────
     trackIconUsage(filePath, content);
+
+    // ── Reglas 15/16/17: disciplina de clases del DS (ratchet) ───────────────
+    trackClassDiscipline(filePath, content);
 }
 
 // ─── Análisis de Estilos SCSS ───────────────────────────────────────────────
@@ -568,8 +703,14 @@ for (const dir of targetDirs) {
     scanDirectory(dir);
 }
 
+// ── ARCH-18: auditoría del bridge @theme (una sola vez, no por-archivo) ──────
+checkForbiddenThemeAliases();
+
 // ── ARCH-14: diff íconos usados vs registrados (post-barrido) ────────────────
 checkIconRegistry();
+
+// ── ARCH-15/16/17: ratchet de disciplina DS (post-barrido) ────────────────────
+checkClassDiscipline();
 
 console.log('');
 

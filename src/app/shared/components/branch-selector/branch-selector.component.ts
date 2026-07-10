@@ -47,7 +47,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
           [attr.aria-label]="'Sede activa: ' + selectedLabel()"
           data-llm-action="toggle-branch-dropdown"
         >
-          <!-- Mobile: ícono building-2 con affordance clara -->
+          <!-- Mobile: ícono building-2 -->
           <app-icon name="building-2" [size]="15" class="branch-trigger__icon-mobile" />
           <!-- Desktop: dot de color semántico -->
           <span
@@ -186,18 +186,18 @@ import type { BranchOption } from '@core/models/ui/branch.model';
   styles: [
     `
       /* ── Trigger pill ───────────────────────────────────────────
-       Mobile: ícono building-2 + chevron (affordance clara, ~36px).
-       Desktop (md+): dot de color + label + chevron.
+       Mobile: botón ghost transparente (sin bordes ni fondo).
+       Desktop (md+): pill con dot de color + label + chevron.
     ─────────────────────────────────────────────────────────── */
       .branch-trigger {
         display: flex;
         align-items: center;
-        gap: 4px;
-        /* Mobile: solo dot + chevron */
-        padding: 6px 7px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border-default);
-        background: var(--bg-surface);
+        justify-content: center;
+        gap: 6px;
+        padding: 5px 10px 5px 8px;
+        border-radius: var(--radius-full);
+        border: 1px solid transparent;
+        background: transparent;
         color: var(--text-secondary);
         font-size: var(--text-sm);
         font-weight: var(--font-medium);
@@ -205,44 +205,58 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         cursor: pointer;
         transition: var(--transition-btn);
         white-space: nowrap;
-        box-shadow: var(--shadow-sm);
-      }
-
-      @media (min-width: 768px) {
-        .branch-trigger {
-          gap: 6px;
-          padding: 5px 10px 5px 8px;
-          max-width: 220px;
-        }
+        max-width: 100%;
+        min-width: 0;
       }
 
       .branch-trigger:hover {
-        border-color: var(--border-strong);
-        color: var(--text-primary);
-        background: var(--bg-elevated);
+        color: var(--text-color, var(--text-primary));
+        background: var(--surface-hover, rgba(0, 0, 0, 0.04));
       }
 
       .branch-trigger--active {
-        border-color: var(--accent-border);
-        background: var(--color-primary-muted);
         color: var(--color-primary);
-        box-shadow: var(--shadow-focus);
+        background: var(--color-primary-muted);
       }
 
-      /* Ícono mobile: visible en mobile, oculto en desktop */
+      @media (min-width: 640px) {
+        .branch-trigger {
+          width: auto;
+          height: auto;
+          gap: 6px;
+          padding: 5px 10px 5px 8px;
+          max-width: 220px;
+          border-radius: var(--radius-md);
+          border-color: var(--border-default);
+          background: var(--bg-surface);
+          box-shadow: var(--shadow-sm);
+        }
+        
+        .branch-trigger:hover {
+          border-color: var(--border-strong);
+          background: var(--bg-elevated);
+        }
+
+        .branch-trigger--active {
+          border-color: var(--accent-border);
+          box-shadow: var(--shadow-focus);
+        }
+      }
+
+      /* Ícono mobile */
       .branch-trigger__icon-mobile {
         display: inline-flex;
         flex-shrink: 0;
-        color: var(--ds-brand);
+        color: inherit;
       }
 
-      @media (min-width: 768px) {
+      @media (min-width: 480px) {
         .branch-trigger__icon-mobile {
           display: none;
         }
       }
 
-      /* Dot de estado: oculto en mobile, visible en desktop */
+      /* Dot de estado */
       .branch-trigger__dot {
         display: none;
         width: 7px;
@@ -252,7 +266,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         flex-shrink: 0;
       }
 
-      @media (min-width: 768px) {
+      @media (min-width: 480px) {
         .branch-trigger__dot {
           display: inline-block;
         }
@@ -263,7 +277,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         box-shadow: 0 0 0 3px var(--state-success-border);
       }
 
-      /* ── Label: oculto en mobile, visible en desktop ── */
+      /* ── Label ── */
       .branch-trigger__label {
         flex: 1;
         overflow: hidden;
@@ -271,7 +285,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
         display: none;
       }
 
-      @media (min-width: 768px) {
+      @media (min-width: 480px) {
         .branch-trigger__label {
           display: block;
         }
@@ -279,6 +293,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
 
       /* Chevron con rotación animada */
       .branch-trigger__chevron {
+        display: inline-block;
         flex-shrink: 0;
         opacity: 0.5;
         transition:

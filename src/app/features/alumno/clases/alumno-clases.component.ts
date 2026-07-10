@@ -17,6 +17,7 @@ import { StudentClasesFacade } from '@core/facades/student-clases.facade';
 import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -38,6 +39,7 @@ type TabId = 'practice' | 'theory';
     KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
+    BadgeComponent,
     AlertCardComponent,
     TabsComponent,
   ],
@@ -180,13 +182,9 @@ type TabId = 'practice' | 'theory';
                     </div>
 
                     <!-- Estado -->
-                    <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      [style.background]="statusBg(session.status)"
-                      [style.color]="statusColor(session.status)"
-                    >
+                    <app-badge [variant]="statusVariant(session.status)" class="shrink-0">
                       {{ statusLabel(session.status) }}
-                    </span>
+                    </app-badge>
                   </div>
                 }
               </div>
@@ -215,13 +213,9 @@ type TabId = 'practice' | 'theory';
                       </span>
                       <span class="text-xs text-text-muted">Sesión práctica</span>
                     </div>
-                    <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      [style.background]="attBg(s.attendanceStatus)"
-                      [style.color]="attColor(s.attendanceStatus)"
-                    >
+                    <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
                       {{ attLabel(s.attendanceStatus) }}
-                    </span>
+                    </app-badge>
                   </div>
                 }
               </div>
@@ -256,13 +250,9 @@ type TabId = 'practice' | 'theory';
                       </span>
                       <span class="text-xs text-text-muted">Sesión de teoría</span>
                     </div>
-                    <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      [style.background]="attBg(s.attendanceStatus)"
-                      [style.color]="attColor(s.attendanceStatus)"
-                    >
+                    <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
                       {{ attLabel(s.attendanceStatus) }}
-                    </span>
+                    </app-badge>
                   </div>
                 }
               </div>
@@ -291,13 +281,9 @@ type TabId = 'practice' | 'theory';
                       </span>
                       <span class="text-xs text-text-muted">Sesión de teoría</span>
                     </div>
-                    <span
-                      class="shrink-0 text-[10px] font-bold px-2.5 py-1 rounded-full"
-                      [style.background]="attBg(s.attendanceStatus)"
-                      [style.color]="attColor(s.attendanceStatus)"
-                    >
+                    <app-badge [variant]="attVariant(s.attendanceStatus)" class="shrink-0">
                       {{ attLabel(s.attendanceStatus) }}
-                    </span>
+                    </app-badge>
                   </div>
                 }
               </div>
@@ -418,6 +404,20 @@ export class AlumnoClasesComponent {
     return map[status] ?? 'var(--text-muted)';
   }
 
+  /** Variant de app-badge para el pill de estado (el círculo del número de clase
+   *  sigue usando statusBg/statusColor — solo el pill de texto migra a app-badge). */
+  statusVariant(status: string): 'success' | 'warning' | 'error' | 'brand' | 'neutral' {
+    const map: Record<string, 'success' | 'warning' | 'error' | 'brand' | 'neutral'> = {
+      completed: 'success',
+      absent: 'error',
+      no_show: 'warning',
+      cancelled: 'neutral',
+      in_progress: 'brand',
+      scheduled: 'brand',
+    };
+    return map[status] ?? 'neutral';
+  }
+
   statusBg(status: string): string {
     const map: Record<string, string> = {
       completed: 'var(--state-success-bg)',
@@ -440,6 +440,16 @@ export class AlumnoClasesComponent {
       scheduled: 'Agendada',
     };
     return map[status] ?? status;
+  }
+
+  /** Variant de app-badge para el pill de asistencia (el círculo de ícono sigue
+   *  usando attBg/attColor — solo el pill de texto migra a app-badge). */
+  attVariant(status: string | null): 'success' | 'warning' | 'error' | 'brand' | 'neutral' {
+    if (status === 'present') return 'success';
+    if (status === 'late') return 'warning';
+    if (status === 'absent') return 'error';
+    if (status === 'justified') return 'brand';
+    return 'neutral';
   }
 
   attColor(status: string | null): string {

@@ -56,7 +56,7 @@ function formatCLP(value: number): string {
           <div class="flex flex-col gap-6">
             <!-- Resumen de liquidación -->
             <section>
-              <h3 class="text-[11px] font-bold text-text-secondary uppercase tracking-widest mb-3">
+              <h3 class="text-2xs font-bold text-text-secondary uppercase tracking-widest mb-3">
                 Resumen Financiero
               </h3>
               <div class="grid grid-cols-2 gap-3">
@@ -99,7 +99,7 @@ function formatCLP(value: number): string {
 
             <!-- Método de pago -->
             <section>
-              <h3 class="text-[11px] font-bold text-text-secondary uppercase tracking-widest mb-3">
+              <h3 class="text-2xs font-bold text-text-secondary uppercase tracking-widest mb-3">
                 Método de Pago
               </h3>
 

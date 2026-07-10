@@ -5,7 +5,11 @@ export type NotificationReferenceType =
   | 'professional_session'
   | 'document_expiry'
   | 'payment'
-  | 'task';
+  | 'task'
+  | 'enrollment'
+  | 'certificate'
+  | 'preinscription'
+  | 'document';
 
 export interface Notification {
   id: string;
@@ -17,3 +21,19 @@ export interface Notification {
   referenceType?: NotificationReferenceType | null;
   referenceId?: number | null;
 }
+
+/**
+ * Entrada del panel de notificaciones: una notificación individual, o un grupo
+ * colapsado de 3+ no leídas del mismo `referenceType` generadas el mismo día (AC8).
+ */
+export type NotificationPanelEntry =
+  | { kind: 'single'; notification: Notification }
+  | {
+      kind: 'group';
+      referenceType: NotificationReferenceType;
+      type: NotificationType;
+      count: number;
+      ids: string[];
+      title: string;
+      latestAt: Date;
+    };
