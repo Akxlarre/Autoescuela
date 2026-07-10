@@ -128,6 +128,72 @@ describe('AdminAlumnoDetalleFacade', () => {
     });
   });
 
+  describe('actualizarPerfilAlumno', () => {
+    it('invoca la Edge Function update-student-profile con el email actual y el nuevo', async () => {
+      (facade as any)._alumno.set({
+        id: 1,
+        userId: 55,
+        enrollmentId: null,
+        enrollments: [],
+        nombre: 'Juan Pérez',
+        firstName: 'Juan',
+        paternalLastName: 'Pérez',
+        maternalLastName: 'Soto',
+        rut: '11.111.111-1',
+        matricula: '',
+        curso: '',
+        email: 'viejo@example.com',
+        telefono: '',
+        fechaIngreso: '',
+        estado: '',
+        licenseGroup: 'class_b',
+        totalPagado: 0,
+        saldoPendiente: 0,
+      });
+
+      const invokeFn = vi.fn().mockResolvedValue({ data: { success: true }, error: null });
+      supabaseSpy.client.functions = { invoke: invokeFn };
+
+      await facade.actualizarPerfilAlumno(55, {
+        first_names: 'Juan',
+        paternal_last_name: 'Pérez',
+        maternal_last_name: 'Soto',
+        email: 'Nuevo@Example.com',
+        phone: '+56911111111',
+      });
+
+      expect(invokeFn).toHaveBeenCalledWith('update-student-profile', {
+        body: {
+          userId: 55,
+          firstNames: 'Juan',
+          paternalLastName: 'Pérez',
+          maternalLastName: 'Soto',
+          phone: '+56911111111',
+          email: 'nuevo@example.com',
+          currentEmail: 'viejo@example.com',
+        },
+      });
+    });
+
+    it('propaga el error (ej. email duplicado en Auth) sin tragárselo', async () => {
+      const invokeFn = vi.fn().mockResolvedValue({
+        data: null,
+        error: new Error('Ya existe un usuario con ese correo electrónico'),
+      });
+      supabaseSpy.client.functions = { invoke: invokeFn };
+
+      await expect(
+        facade.actualizarPerfilAlumno(55, {
+          first_names: 'Juan',
+          paternal_last_name: 'Pérez',
+          maternal_last_name: 'Soto',
+          email: 'duplicado@example.com',
+          phone: '',
+        }),
+      ).rejects.toThrow('Ya existe un usuario con ese correo electrónico');
+    });
+  });
+
   describe('fetchClassBProgress (vía initialize) — RF-053', () => {
     /** Builder Supabase encadenable y awaitable, con resultado configurable por tabla. */
     function makeFlexibleSupabaseMock() {
@@ -320,10 +386,109 @@ describe('AdminAlumnoDetalleFacade', () => {
       const noJustificada = inasistencias.find((i) => i.id === 2);
       expect(noJustificada?.justificada).toBe(false);
       expect(noJustificada?.instructor).toBe('Ana López');
+      // Ambas sesiones (502, 503) siguen en 'no_show' → ninguna fue reagendada aún.
+      expect(noJustificada?.reagendada).toBe(false);
 
       const justificada = inasistencias.find((i) => i.id === 3);
       expect(justificada?.justificada).toBe(true);
       expect(justificada?.justificacion).toBe('Certificado médico');
+      expect(justificada?.reagendada).toBe(false);
+    });
+
+    it('soft archive (RF-053): marca reagendada=true cuando la sesión ya no está en no_show, sin perder el historial de inasistencia', async () => {
+      const mock = makeFlexibleSupabaseMock();
+
+      mock.setSingleResult('students', {
+        id: 42,
+        status: 'active',
+        created_at: '2026-01-01',
+        users: {
+          id: 7,
+          rut: '11.111.111-1',
+          first_names: 'Juan',
+          paternal_last_name: 'Pérez',
+          maternal_last_name: 'Soto',
+          email: 'juan@example.com',
+          phone: '123456789',
+        },
+        enrollments: [
+          {
+            id: 100,
+            number: '2026-0001',
+            created_at: '2026-01-02',
+            total_paid: 0,
+            pending_balance: 0,
+            license_group: 'class_b',
+            promotion_course_id: null,
+            registration_channel: 'in_person',
+            certificate_b_pdf_url: null,
+            certificate_professional_pdf_url: null,
+            license_initial_url: null,
+            license_full_url: null,
+            courses: { name: 'Clase B' },
+            digital_contracts: null,
+            status: 'active',
+          },
+        ],
+      });
+
+      // La sesión 502 fue reciclada por el flujo de reagendar: su class_b_sessions.status
+      // ya no es 'no_show' (volvió a 'scheduled' con nueva fecha), pero el registro de
+      // asistencia original (id 2, status 'absent') se conserva — ya no se borra.
+      mock.setResult('class_b_practice_attendance', [
+        {
+          id: 2,
+          status: 'absent',
+          justification: null,
+          recorded_at: '2026-06-02',
+          class_b_sessions: {
+            id: 502,
+            enrollment_id: 100,
+            class_number: 2,
+            scheduled_at: '2026-07-10T09:00:00',
+            status: 'scheduled',
+            instructors: null,
+          },
+        },
+      ]);
+
+      mock.setResult('class_b_sessions', [
+        {
+          id: 502,
+          class_number: 2,
+          scheduled_at: '2026-07-10T09:00:00',
+          status: 'scheduled',
+          student_signature: false,
+          instructor_signature: false,
+          km_start: null,
+          km_end: null,
+          instructors: null,
+        },
+      ]);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: ToastService, useValue: { error: vi.fn(), success: vi.fn() } },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      await facade.initialize(42);
+
+      // Vista principal: la grilla ya la muestra "limpia" (no ausente) porque
+      // class_b_sessions.status volvió a 'scheduled'.
+      const clase2 = facade.clasesPracticas().find((c) => c.numero === 2);
+      expect(clase2?.ausente).toBe(false);
+
+      // Vista de historial: el registro sigue apareciendo, ahora con reagendada=true.
+      const inasistencias = facade.inasistenciasClaseB();
+      expect(inasistencias).toHaveLength(1);
+      expect(inasistencias[0].reagendada).toBe(true);
+      expect(inasistencias[0].justificada).toBe(false);
     });
 
     it('cuenta canceladas + no_show y habilita puedeReagendarPenalizacion', async () => {
@@ -535,11 +700,9 @@ describe('AdminAlumnoDetalleFacade', () => {
   });
 
   describe('reagendarClasesPenalizadas — RF-053', () => {
-    it('recicla las sesiones no_show de la selección (misma clase, asistencia limpia) e inserta nuevas para las canceladas', async () => {
+    it('recicla las sesiones no_show de la selección (misma clase, sin borrar su historial de asistencia) e inserta nuevas para las canceladas', async () => {
       const updateEqSpy = vi.fn().mockResolvedValue({ error: null });
       const updateSpy = vi.fn().mockReturnValue({ eq: updateEqSpy });
-      const deleteEqSpy = vi.fn().mockResolvedValue({ error: null });
-      const deleteSpy = vi.fn().mockReturnValue({ eq: deleteEqSpy });
       const insertSpy = vi.fn().mockResolvedValue({ error: null });
 
       const maxRowChain: any = {
@@ -550,10 +713,11 @@ describe('AdminAlumnoDetalleFacade', () => {
         maybeSingle: vi.fn().mockResolvedValue({ data: { class_number: 12 }, error: null }),
       };
 
-      const fromSpy = vi.fn((table: string) => {
-        if (table === 'class_b_practice_attendance') return { delete: deleteSpy };
-        return { ...maxRowChain, update: updateSpy, insert: insertSpy };
-      });
+      const fromSpy = vi.fn((table: string) => ({
+        ...maxRowChain,
+        update: updateSpy,
+        insert: insertSpy,
+      }));
       supabaseSpy.client.from = fromSpy;
 
       // El Paso 1 marcó 1 no_show (clase #9) + 1 cancelled (clase #11).
@@ -585,9 +749,10 @@ describe('AdminAlumnoDetalleFacade', () => {
       });
       expect(updateEqSpy).toHaveBeenCalledWith('id', 501);
 
-      // 2. Limpia su asistencia previa para que quede "en blanco" (vuelve a verse azul).
-      expect(fromSpy).toHaveBeenCalledWith('class_b_practice_attendance');
-      expect(deleteEqSpy).toHaveBeenCalledWith('class_b_session_id', 501);
+      // 2. Soft archive (RF-053): NUNCA se borra class_b_practice_attendance — el
+      // historial de la inasistencia original se conserva para auditoría. La grilla
+      // se ve "limpia" (azul) porque deriva su color de class_b_sessions.status.
+      expect(fromSpy).not.toHaveBeenCalledWith('class_b_practice_attendance');
 
       // 3. Inserta una sesión NUEVA para la cancelada (clase #11) — nunca la toca/borra.
       expect(insertSpy).toHaveBeenCalledWith([
