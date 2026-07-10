@@ -2207,6 +2207,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `instructor_enrollment_ids` | `()` |
 | `log_change` | `()` |
 | `mark_end_of_day_class_b_absences` | `()` |
+| `notify_class_b_completed` | `()` |
+| `notify_deposit_reminder` | `()` |
+| `notify_task_completed` | `()` |
+| `notify_task_reply` | `()` |
+| `notify_vehicle_document_expiry` | `()` |
 | `prevent_courses_delete_when_in_website_config` | `()` |
 | `recalc_instructor_monthly_hours` | `(p_instructor_id INT, p_period TEXT)` |
 | `recalculate_enrollment_balance` | `()` |

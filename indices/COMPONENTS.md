@@ -338,6 +338,7 @@
 | `app-detalle-cuadratura-modal` | — | — | `src/app/shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component.ts` |
 | `app-dms-list-content` | `basePath`, `studentsWithDocs`, `recentDocs`, `schoolDocs`, `templates`, `isLoading`, `isAdmin` | `uploadStudentDoc`, `uploadSchoolDoc`, `uploadTemplate`, `viewStudentDocs`, `viewDocument`, `deleteStudentDoc`, `deleteSchoolDoc`, `deleteTemplate`, `downloadTemplate` | `src/app/shared/components/dms-list-content/dms-list-content.component.ts` |
 | `app-dms-viewer-modal` | — | `closed` | `src/app/shared/components/dms-viewer-modal/dms-viewer-modal.component.ts` |
+| `app-drawer` | `isOpen`, `title`, `icon`, `hasFooter` | `closed` | `src/app/shared/components/drawer/drawer.component.ts` |
 | `app-drawer-content-loader` | — | — | `src/app/shared/components/drawer-content-loader/drawer-content-loader.component.ts` |
 | `app-drawer-form` | `hasFooter`, `maxWidthRem` | — | `src/app/shared/components/drawer-form/drawer-form.component.ts` |
 | `app-egreso-modal` | `isOpen`, `isSaving` | `guardar`, `cerrado` | `src/app/shared/components/egreso-modal/egreso-modal.component.ts` |
@@ -354,7 +355,7 @@
 | `app-kpi-card-variant` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `trendSuffix`, `subValue`, `accent`, `icon`, `color`, `loading`, `progressPercent` | — | `src/app/shared/components/kpi-card/kpi-card-variant.component.ts` |
 | `app-kpi-card` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `accent`, `icon`, `size`, `color` | — | `src/app/shared/components/kpi-card/kpi-card.component.ts` |
 | `app-liquidaciones-content` | `liquidaciones`, `kpis`, `isLoading`, `isExporting`, `mesActual`, `anioActual`, `isDrawerOpen` | `mesAnterior`, `mesSiguiente`, `deshacer`, `pagar`, `exportRequested` | `src/app/shared/components/liquidaciones-content/liquidaciones-content.component.ts` |
-| `app-live-classes-panel` | `classes`, `loading` | `actionClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
+| `app-live-classes-panel` | `classes`, `loading` | `actionClick`, `viewAllClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
 | `app-login-card` | `mode`, `loading`, `errorMsg`, `successMsg` | `modeChange`, `formSubmit` | `src/app/shared/components/login-card/login-card.component.ts` |
 | `app-logo` | — | — | `src/app/shared/components/logo/logo.component.ts` |
 | `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode`, `nextLabel` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |
@@ -367,7 +368,7 @@
 | `app-psych-test` | `answers`, `loading` | `answersChange`, `next`, `back` | `src/app/shared/components/matricula-steps/psych-test/psych-test.component.ts` |
 | `app-public-confirmation` | `type`, `enrollmentNumber`, `message` | — | `src/app/shared/components/matricula-steps/public-confirmation/public-confirmation.component.ts` |
 | `app-media-upload-control` | `label`, `buttonLabel`, `buttonIcon`, `accept`, `isUploading`, `previewType`, `files` | `fileSelected` | `src/app/shared/components/media-upload-control/media-upload-control.component.ts` |
-| `app-notifications-panel` | `notifications`, `unreadCount` | `markRead`, `markAllRead`, `notifClicked` | `src/app/shared/components/notifications-panel/notifications-panel.component.ts` |
+| `app-notifications-panel` | `entries`, `notifications`, `unreadCount` | `markRead`, `markReadMany`, `markAllRead`, `notifClicked` | `src/app/shared/components/notifications-panel/notifications-panel.component.ts` |
 | `app-pago-instructor-drawer` | — | — | `src/app/shared/components/pago-instructor-modal/pago-instructor-modal.component.ts` |
 | `app-phone-input` | `value`, `id`, `label`, `required`, `forceDirty` | `valueChange` | `src/app/shared/components/phone-input/phone-input.component.ts` |
 | `app-public-context-banner` | `context` | `editRequested` | `src/app/shared/components/public-enrollment-steps/public-context-banner/public-context-banner.component.ts` |
@@ -380,6 +381,7 @@
 | `app-public-personal-data` | `data`, `context`, `loading` | `dataChange`, `next`, `back` | `src/app/shared/components/public-enrollment-steps/public-personal-data/public-personal-data.component.ts` |
 | `app-public-schedule` | `data`, `loading` | `dataChange`, `next`, `back` | `src/app/shared/components/public-enrollment-steps/public-schedule/public-schedule.component.ts` |
 | `app-public-wizard-shell` | `steps`, `currentStep`, `title`, `subtitle`, `brandName`, `whatsappUrl` | `helpClick` | `src/app/shared/components/public-enrollment-steps/public-wizard-shell/public-wizard-shell.component.ts` |
+| `app-registrar-gasto-fijo-drawer` | `visible`, `isSaving` | `guardar`, `cerrar` | `src/app/shared/components/registrar-gasto-fijo-drawer/registrar-gasto-fijo-drawer.component.ts` |
 | `app-rentabilidad-cursos` | — | — | `src/app/shared/components/rentabilidad-cursos/rentabilidad-cursos.component.ts` |
 | `app-reportes-contables-content` | `kpis`, `ingresosCategoria`, `gastosCategoria`, `evolucionMensual`, `detalleDiario`, `diasConMovimientos`, `escuela`, `isLoading`, `isExporting`, `gastosFijos`, `filtros` | `aplicarFiltros`, `exportRequested`, `registrarGastoClick`, `verDetalle` | `src/app/shared/components/reportes-contables-content/reportes-contables-content.component.ts` |
 | `app-schedule-grid` | `scheduleGrid`, `slotSelection`, `scheduleLoading` | `slotsChange` | `src/app/shared/components/schedule-grid/schedule-grid.component.ts` |
@@ -395,7 +397,7 @@
 | `app-task-card` | `task`, `loading` | `cardClicked` | `src/app/shared/components/task-card/task-card.component.ts` |
 | `app-task-reply-thread` | `replies`, `taskStatus`, `currentUserId` | `replySent` | `src/app/shared/components/task-reply-thread/task-reply-thread.component.ts` |
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |
-| `app-user-panel` | `user` | `action`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
+| `app-user-panel` | `user`, `darkMode` | `action`, `toggleTheme`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
 | `app-weekly-schedule-grid` | `schedule`, `isLoading`, `selectedDate` | `prevWeek`, `nextWeek`, `today`, `daySelect`, `blockClick` | `src/app/shared/components/weekly-schedule-grid/weekly-schedule-grid.component.ts` |
 
 <!-- AUTO-GENERATED:END -->

@@ -192,31 +192,31 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 484 | `#38bdf8` |
-| `--text-muted` | 415 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 263 | `var(--color-primary-text)` |
+| `--ds-brand` | 481 | `#38bdf8` |
+| `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 269 | `var(--color-primary-text)` |
 | `--state-error` | 231 | `#f87171` |
-| `--text-secondary` | 229 | `rgba(255, 255, 255, 0.78)` |
-| `--state-success` | 222 | `#4ade80` |
-| `--border-subtle` | 215 | `rgba(255, 255, 255, 0.18)` |
-| `--bg-surface` | 197 | `#18181b` |
-| `--color-primary` | 183 | `#38bdf8` |
-| `--state-warning` | 154 | `#fbbf24` |
+| `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
+| `--border-subtle` | 214 | `rgba(255, 255, 255, 0.18)` |
+| `--bg-surface` | 202 | `#18181b` |
+| `--state-success` | 197 | `#4ade80` |
+| `--color-primary` | 175 | `#38bdf8` |
 | `--border-default` | 147 | `rgba(255, 255, 255, 0.28)` |
-| `--bg-elevated` | 92 | `#27272a` |
-| `--bg-subtle` | 67 | `rgba(255, 255, 255, 0.1)` |
+| `--state-warning` | 137 | `#fbbf24` |
+| `--bg-elevated` | 80 | `#27272a` |
 | `--duration-fast` | 66 | `200ms` |
 | `--text-sm` | 65 | `0.875rem` |
+| `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
 | `--radius-md` | 57 | `10px` |
 | `--font-display` | 55 | `'Bricolage Grotesque', system-ui, sans-serif` |
-| `--state-success-bg` | 49 | `rgba(74, 222, 128, 0.1)` |
+| `--border-muted` | 52 | `var(--border-subtle)` |
 | `--bg-base` | 49 | `#09090b` |
 | `--color-primary-text` | 48 | `#ffffff` |
-| `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--text-xs` | 44 | `0.75rem` |
-| `--color-success` | 43 | `—` |
-| `--border-muted` | 42 | `var(--border-subtle)` |
-| `--state-warning-bg` | 41 | `rgba(251, 191, 36, 0.1)` |
+| `--color-primary-muted` | 43 | `rgba(56, 189, 248, 0.15)` |
+| `--color-success` | 41 | `—` |
+| `--state-success-bg` | 32 | `rgba(74, 222, 128, 0.1)` |
+| `--radius-full` | 31 | `9999px` |
 
 ## Clases semánticas del Design System
 
@@ -254,6 +254,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.bento-card__body--spread` | — |
 | `.bento-feature` | 2/3 ancho × 2 filas |
 | `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
+| `.bento-grid--fill-screen` | — |
+| `.bento-grid--fill-screen-2` | — |
 | `.bento-grid--forms` | — |
 | `.bento-grid--four-equal` | — |
 | `.bento-grid--wizard` | — |
@@ -319,7 +321,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1247 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1193 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -327,21 +329,21 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 64 | `text-sm font-semibold text-text-primary` |
-| 37 | `text-sm font-bold text-text-primary` |
+| 65 | `text-sm font-semibold text-text-primary` |
+| 38 | `text-sm font-bold text-text-primary` |
 | 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |
+| 16 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
+| 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
 | 15 | `text-xs font-semibold text-text-primary` |
-| 15 | `text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted` |
-| 14 | `text-[10px] font-bold text-text-muted uppercase tracking-wider` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
 | 13 | `font-bold text-lg text-text-primary` |
-| 12 | `text-[10px] uppercase font-bold lg:hidden mb-1 text-text-muted` |
+| 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
-| 11 | `ml-auto text-xs font-semibold px-2 py-1 rounded-full bg-surface text-warning outline outline-warning` |
 | 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
+| 9 | `font-semibold text-sm m-0 text-text-primary` |
 
 
 <!-- AUTO-GENERATED:END -->
