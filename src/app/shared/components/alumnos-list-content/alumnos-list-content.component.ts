@@ -740,16 +740,8 @@ export class AlumnosListContentComponent implements AfterViewInit {
   ]);
 
   readonly heroActions = computed((): SectionHeroAction[] => {
-    const path = this.basePath();
     const isTrash = this.trashView();
     return [
-      {
-        id: 'historial',
-        label: 'Ex-Alumnos B',
-        icon: 'archive',
-        primary: false,
-        route: `${path}/ex-alumnos`,
-      },
       {
         id: 'papelera',
         label: 'Papelera',
