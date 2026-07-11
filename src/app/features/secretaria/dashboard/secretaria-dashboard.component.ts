@@ -81,6 +81,7 @@ import { to24hTime } from '@core/utils/date.utils';
         class="bento-wide bento-card w-full"
         appCardHover
         appScrollReveal
+        data-row-span-md="2"
         data-row-span="2"
         [classes]="liveClasses()"
         [loading]="loading()"

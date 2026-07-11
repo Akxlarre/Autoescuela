@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { buildStudentDisplayName } from '@core/utils/student-name.util';
 
 // ── Tipos internos (DTO de Supabase) ──────────────────────────────────────────
 
@@ -170,9 +171,11 @@ export class ExAlumnosFacade {
     const u = r.students?.users;
 
     const nombre: string = u
-      ? [u.first_names, u.paternal_last_name, u.maternal_last_name ?? '']
-          .filter((s: string) => s.trim().length > 0)
-          .join(' ')
+      ? buildStudentDisplayName({
+          firstNames: u.first_names,
+          paternalLastName: u.paternal_last_name,
+          maternalLastName: u.maternal_last_name,
+        })
       : '—';
 
     const rut: string = u?.rut ?? '—';

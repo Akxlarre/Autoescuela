@@ -112,6 +112,7 @@ import { to24hTime } from '@core/utils/date.utils';
       <app-live-classes-panel
         class="bento-wide bento-card w-full"
         appCardHover
+        data-row-span-md="2"
         data-row-span="2"
         [classes]="liveClasses()"
         [loading]="loading()"
@@ -121,7 +122,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Arriba: Actividad reciente ─── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-[300px] dashboard-panel"
+        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-75 dashboard-panel"
         style="contain: size;"
         appCardHover
       >
@@ -213,7 +214,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Abajo: Alertas Importantes ───── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-[250px] dashboard-panel"
+        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-62.5 dashboard-panel"
         style="contain: size;"
         appCardHover
       >
@@ -334,6 +335,15 @@ import { to24hTime } from '@core/utils/date.utils';
         .dashboard-panel {
           min-height: 0;
         }
+      }
+
+      /* Con un drawer abierto, .dashboard-panel usa "contain: size" y queda
+         fuera del cálculo "auto" del grid, cayendo al piso mínimo de fila
+         (120px) — insuficiente para header + lista. Restauramos el mismo
+         piso que tienen sin drawer (300px) para no perder ítems visibles
+         (con 220px solo entraban 2 de los 3 ítems esperados). */
+      .force-compact .dashboard-panel {
+        min-height: 300px !important;
       }
     `,
   ],

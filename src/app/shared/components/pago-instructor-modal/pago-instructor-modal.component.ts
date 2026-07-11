@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
+import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { LiquidacionesFacade } from '@core/facades/liquidaciones.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { PagoInstructorPayload } from '@core/models/ui/liquidaciones.model';
@@ -30,163 +31,158 @@ function formatCLP(value: number): string {
   selector: 'app-pago-instructor-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, StatBoxComponent],
+  imports: [IconComponent, StatBoxComponent, DrawerFormComponent],
   template: `
-    <div class="flex flex-col h-full">
-      <div class="flex-1">
-        @if (row()) {
-          <!-- ── Subtítulo Contextual ── -->
-          <div class="mb-5 pb-5 border-b border-border-muted">
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
-                [style.background]="row()!.avatarColor"
-              >
-                {{ row()!.initials }}
-              </div>
-              <div>
-                <h3 class="text-base font-bold text-text-primary leading-tight">
-                  {{ row()!.nombre }}
-                </h3>
-                <p class="text-xs text-text-muted mt-0.5">{{ row()!.rut }}</p>
-              </div>
+    <app-drawer-form>
+      @if (row(); as r) {
+        <!-- ── Subtítulo Contextual ── -->
+        <div class="mb-5 pb-5 border-b border-border-muted">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
+              [style.background]="r.avatarColor"
+            >
+              {{ r.initials }}
+            </div>
+            <div>
+              <h3 class="font-bold text-text-primary leading-tight">
+                {{ r.nombre }}
+              </h3>
+              <p class="text-xs text-text-muted mt-0.5">{{ r.rut }}</p>
             </div>
           </div>
+        </div>
 
-          <div class="flex flex-col gap-6">
-            <!-- Resumen de liquidación -->
-            <section>
-              <h3 class="text-2xs font-bold text-text-secondary uppercase tracking-widest mb-3">
-                Resumen Financiero
-              </h3>
-              <div class="grid grid-cols-2 gap-3">
-                <app-stat-box
-                  label="Horas trabajadas"
-                  [value]="row()!.totalHours + ' hrs'"
-                  variant="surface"
-                  [compact]="true"
-                  [useMono]="true"
+        <div class="flex flex-col gap-6">
+          <!-- Resumen de liquidación -->
+          <section>
+            <h3 class="text-2xs font-bold text-text-secondary uppercase tracking-widest mb-3">
+              Resumen Financiero
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+              <app-stat-box
+                label="Horas trabajadas"
+                [value]="r.totalHours + ' hrs'"
+                variant="surface"
+                [compact]="true"
+                [useMono]="true"
+              />
+              <app-stat-box
+                label="Valor / hora"
+                [value]="formatCLP(r.amountPerHour)"
+                variant="surface"
+                [compact]="true"
+                [useMono]="true"
+              />
+              <app-stat-box
+                label="Base ganado"
+                [value]="formatCLP(r.totalBaseAmount)"
+                variant="surface"
+                [compact]="true"
+                [useMono]="true"
+              />
+              <app-stat-box
+                label="Descuentos"
+                [value]="'- ' + formatCLP(r.totalAdvances)"
+                variant="error"
+                [compact]="true"
+                [useMono]="true"
+              />
+              <app-stat-box
+                label="Total a pagar"
+                [value]="formatCLP(r.finalPaymentAmount)"
+                variant="brand"
+                class="col-span-2"
+              />
+            </div>
+          </section>
+
+          <!-- Método de pago -->
+          <section>
+            <h3 class="text-2xs font-bold text-text-secondary uppercase tracking-widest mb-3">
+              Método de Pago
+            </h3>
+
+            <!-- Selector método -->
+            <div class="flex gap-2 mb-4">
+              <button
+                class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer text-sm font-bold"
+                [style.border-color]="
+                  paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'transparent'
+                "
+                [style.background]="
+                  paymentMethod() === 'cash'
+                    ? 'color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface))'
+                    : 'var(--bg-elevated)'
+                "
+                [style.color]="
+                  paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'var(--text-secondary)'
+                "
+                (click)="paymentMethod.set('cash')"
+                data-llm-action="select-payment-method-cash"
+                aria-label="Pago en efectivo"
+              >
+                <app-icon name="banknote" [size]="16" />
+                Efectivo
+              </button>
+              <button
+                class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer text-sm font-bold"
+                [style.border-color]="
+                  paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'transparent'
+                "
+                [style.background]="
+                  paymentMethod() === 'transfer'
+                    ? 'color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface))'
+                    : 'var(--bg-elevated)'
+                "
+                [style.color]="
+                  paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'var(--text-secondary)'
+                "
+                (click)="paymentMethod.set('transfer')"
+                data-llm-action="select-payment-method-transfer"
+                aria-label="Pago por transferencia"
+              >
+                <app-icon name="arrow-right-left" [size]="16" />
+                Transferencia
+              </button>
+            </div>
+
+            <!-- Código de transferencia (condicional) -->
+            @if (paymentMethod() === 'transfer') {
+              <div class="mt-2">
+                <label class="block text-xs font-bold text-text-secondary mb-2" for="transfer-code">
+                  Código / N° de transferencia
+                </label>
+                <input
+                  id="transfer-code"
+                  type="text"
+                  class="w-full px-4 py-3 text-sm rounded-xl font-mono bg-elevated border border-border-muted text-text-primary outline-none"
+                  style="transition: border-color 0.2s"
+                  onfocus="this.style.borderColor='var(--ds-brand)'"
+                  onblur="this.style.borderColor='var(--border-muted)'"
+                  placeholder="Ej: 123456789"
+                  [value]="transferCode()"
+                  (input)="transferCode.set($any($event.target).value)"
+                  data-llm-description="Transfer code or reference number for instructor payment"
+                  aria-label="Código o número de transferencia"
                 />
-                <app-stat-box
-                  label="Valor / hora"
-                  [value]="formatCLP(row()!.amountPerHour)"
-                  variant="surface"
-                  [compact]="true"
-                  [useMono]="true"
-                />
-                <app-stat-box
-                  label="Base ganado"
-                  [value]="formatCLP(row()!.totalBaseAmount)"
-                  variant="surface"
-                  [compact]="true"
-                  [useMono]="true"
-                />
-                <app-stat-box
-                  label="Descuentos"
-                  [value]="'- ' + formatCLP(row()!.totalAdvances)"
-                  variant="error"
-                  [compact]="true"
-                  [useMono]="true"
-                />
-                <app-stat-box
-                  label="Total a pagar"
-                  [value]="formatCLP(row()!.finalPaymentAmount)"
-                  variant="brand"
-                  class="col-span-2"
-                />
+                @if (showTransferError()) {
+                  <p class="text-xs font-medium mt-2 flex items-center gap-1.5 text-error">
+                    <app-icon name="alert-circle" [size]="14" />
+                    Ingresa el código de la transferencia para continuar.
+                  </p>
+                }
               </div>
-            </section>
+            }
+          </section>
+        </div>
+      }
 
-            <!-- Método de pago -->
-            <section>
-              <h3 class="text-2xs font-bold text-text-secondary uppercase tracking-widest mb-3">
-                Método de Pago
-              </h3>
-
-              <!-- Selector método -->
-              <div class="flex gap-2 mb-4">
-                <button
-                  class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer text-sm font-bold"
-                  [style.border-color]="
-                    paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'transparent'
-                  "
-                  [style.background]="
-                    paymentMethod() === 'cash'
-                      ? 'color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface))'
-                      : 'var(--bg-elevated)'
-                  "
-                  [style.color]="
-                    paymentMethod() === 'cash' ? 'var(--ds-brand)' : 'var(--text-secondary)'
-                  "
-                  (click)="paymentMethod.set('cash')"
-                  data-llm-action="select-payment-method-cash"
-                  aria-label="Pago en efectivo"
-                >
-                  <app-icon name="banknote" [size]="16" />
-                  Efectivo
-                </button>
-                <button
-                  class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 transition-all cursor-pointer text-sm font-bold"
-                  [style.border-color]="
-                    paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'transparent'
-                  "
-                  [style.background]="
-                    paymentMethod() === 'transfer'
-                      ? 'color-mix(in srgb, var(--ds-brand) 8%, var(--bg-surface))'
-                      : 'var(--bg-elevated)'
-                  "
-                  [style.color]="
-                    paymentMethod() === 'transfer' ? 'var(--ds-brand)' : 'var(--text-secondary)'
-                  "
-                  (click)="paymentMethod.set('transfer')"
-                  data-llm-action="select-payment-method-transfer"
-                  aria-label="Pago por transferencia"
-                >
-                  <app-icon name="arrow-right-left" [size]="16" />
-                  Transferencia
-                </button>
-              </div>
-
-              <!-- Código de transferencia (condicional) -->
-              @if (paymentMethod() === 'transfer') {
-                <div class="mt-2">
-                  <label
-                    class="block text-xs font-bold text-text-secondary mb-2"
-                    for="transfer-code"
-                  >
-                    Código / N° de transferencia
-                  </label>
-                  <input
-                    id="transfer-code"
-                    type="text"
-                    class="w-full px-4 py-3 text-sm rounded-xl font-mono bg-elevated border border-border-muted text-text-primary outline-none"
-                    style="transition: border-color 0.2s"
-                    onfocus="this.style.borderColor='var(--ds-brand)'"
-                    onblur="this.style.borderColor='var(--border-muted)'"
-                    placeholder="Ej: 123456789"
-                    [value]="transferCode()"
-                    (input)="transferCode.set($any($event.target).value)"
-                    data-llm-description="Transfer code or reference number for instructor payment"
-                    aria-label="Código o número de transferencia"
-                  />
-                  @if (showTransferError()) {
-                    <p class="text-xs font-medium mt-2 flex items-center gap-1.5 text-error">
-                      <app-icon name="alert-circle" [size]="14" />
-                      Ingresa el código de la transferencia para continuar.
-                    </p>
-                  }
-                </div>
-              }
-            </section>
-          </div>
-        }
-      </div>
-
-      <div
-        class="flex items-center justify-end gap-3 w-full pt-6 mt-6 border-t sticky bottom-0 bg-surface pb-4 border-border-muted"
-      >
+      <!-- ── Footer ──────────────────────────────────────────────────────── -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
         <button
-          class="flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl cursor-pointer transition-colors hover:opacity-80 bg-transparent text-text-secondary"
+          type="button"
+          class="btn-secondary"
           (click)="cerrar()"
           data-llm-action="cancelar-pago-instructor"
           aria-label="Cancelar"
@@ -194,7 +190,8 @@ function formatCLP(value: number): string {
           Cancelar
         </button>
         <button
-          class="btn-primary flex items-center justify-center gap-2 text-sm px-6 py-2.5 rounded-xl cursor-pointer shadow-sm font-bold"
+          type="button"
+          class="btn-primary flex items-center gap-2"
           (click)="confirmar()"
           data-llm-action="confirmar-pago-instructor"
           aria-label="Confirmar pago"
@@ -202,8 +199,8 @@ function formatCLP(value: number): string {
           <app-icon name="check" [size]="16" />
           Confirmar Pago
         </button>
-      </div>
-    </div>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class PagoInstructorModalComponent {

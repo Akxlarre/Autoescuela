@@ -40,6 +40,12 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
   ],
   styles: [
     `
+      .bento-grid {
+        /* Permite que cada fila mida según su contenido real (ej. el banner
+           "Volver al panorama") en vez de imponer un piso de 120px por fila. */
+        --bento-row-min: auto;
+      }
+
       /* ── Gradebook ────────────────────────────────────────────────
          Patrón reutilizable (candidato a Asistencia / Libro de Clases):
          scroll bidireccional con header + columna de alumno sticky y

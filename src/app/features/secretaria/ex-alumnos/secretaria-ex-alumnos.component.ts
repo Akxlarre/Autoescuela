@@ -52,12 +52,9 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         title="Ex-Alumnos B"
         subtitle="Archivo histórico de egresados de Clase B"
         icon="graduation-cap"
-        backRoute="/app/secretaria/alumnos"
-        backLabel="Alumnos"
         [actions]="heroActions"
         [chips]="heroChips()"
         [kpis]="heroKpis()"
-        (actionClick)="handleHeroAction($event)"
       />
 
       <!-- Archivo Histórico — full width, 1 row -->
@@ -343,7 +340,6 @@ export class SecretariaExAlumnosComponent implements OnInit {
 
   // ── Hero Config ─────────────────────────────────────────────────────────────
   protected readonly heroActions: SectionHeroAction[] = [
-    { id: 'exportar', label: 'Exportar Archivo', icon: 'download', primary: false },
     {
       id: 'activos',
       label: 'Ver Alumnos Activos',
@@ -438,13 +434,6 @@ export class SecretariaExAlumnosComponent implements OnInit {
     void this.router.navigate(['/app/secretaria/matricula'], {
       queryParams: { rut: egresado.rut },
     });
-  }
-
-  protected handleHeroAction(actionId: string): void {
-    if (actionId === 'exportar') {
-      // eslint-disable-next-line no-console
-      console.log('[ExAlumnos] Exportando archivo histórico...');
-    }
   }
 
   protected clearFilters(): void {
