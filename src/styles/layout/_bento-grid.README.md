@@ -190,6 +190,20 @@ Reglas:
    ese ancho las utilities `min-h-*` vuelven a funcionar (evitar usarlas
    para layout de celdas — preferir altura natural).
 
+### Qué variante fill-screen usar
+
+| Composición de la página | Modificador | Filas (lg+) | Ejemplo |
+|---|---|---|---|
+| Hero (con KPIs embebidos) + 1 card protagonista | `--fill-screen` | `auto minmax(0,1fr)` | Base Alumnos B, Comunicación Admin |
+| Hero + 2 cards protagonistas lado a lado | `--fill-screen-2` | `auto minmax(0,1fr) minmax(0,1fr)` | Dashboard (Actividad + Alertas) |
+| Hero + fila de KPIs **separada** (`.bento-square` × N) + 1 card protagonista | `--fill-screen-kpi` | `auto auto minmax(0,1fr)` | Comunicación Secretaria/Instructor (spec 0029) |
+
+`--fill-screen-kpi` no necesita `data-row-start` ni wrapper divs: el hero
+full-width agota la fila 1 (dense auto-flow empuja todo lo demás a la fila
+2), las `.bento-square` no llenan las 12 columnas de la fila 2 pero tampoco
+dejan hueco para una celda full-width, así que la card `.bento-fill` cae
+sola a la fila 3.
+
 ### Checklist para migrar una página existente al modo dual
 
 Receta completa, en orden. Referencias reales ya migradas (spec 0028):

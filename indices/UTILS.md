@@ -31,7 +31,7 @@
 | `src/app/core/utils/image-optimizer.ts` | `OptimizeOptions`, `optimizeImage` |
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
-| `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget` |
+| `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
