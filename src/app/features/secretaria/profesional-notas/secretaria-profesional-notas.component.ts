@@ -39,6 +39,12 @@ import type { SectionHeroChip } from '@core/models/ui/section-hero.model';
     BadgeComponent,
   ],
   styles: `
+    .bento-grid {
+      /* Permite que cada fila mida según su contenido real (ej. el banner
+         "Volver al panorama") en vez de imponer un piso de 120px por fila. */
+      --bento-row-min: auto;
+    }
+
     .gradebook-scroll {
       max-height: 62vh;
       overflow: auto;

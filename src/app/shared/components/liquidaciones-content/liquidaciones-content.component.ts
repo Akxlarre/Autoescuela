@@ -303,7 +303,7 @@ function formatCLP(value: number): string {
 
       <!-- ── Filtros y Mes ───────────────────────────────────────────────────────── -->
       <div
-        class="bento-banner flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 py-3 shadow-sm bg-surface"
+        class="bento-banner flex flex-col md:flex-row md:flex-wrap md:items-center justify-between gap-4 px-4 py-3 shadow-sm bg-surface"
         style="border:1px solid var(--border-color); border-radius:var(--radius-lg,10px)"
       >
         <div class="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
@@ -578,7 +578,7 @@ function formatCLP(value: number): string {
                       }
                     </td>
                     <td class="text-right tabular-nums">
-                      <span class="text-base font-bold text-brand">{{
+                      <span class="font-bold text-brand">{{
                         formatCLP(totales().total)
                       }}</span>
                     </td>
@@ -652,9 +652,7 @@ function formatCLP(value: number): string {
                 <!-- Content Card (Metrics) -->
                 <div class="grid grid-cols-2 gap-3 mb-4 p-3 rounded-lg bg-elevated">
                   <div class="flex flex-col gap-1">
-                    <span class="text-2xs uppercase font-bold text-text-muted"
-                      >Base (Ganado)</span
-                    >
+                    <span class="text-2xs uppercase font-bold text-text-muted">Base (Ganado)</span>
                     <span class="text-[13px] font-bold text-success">
                       {{ formatCLP(row.totalBaseAmount) }}
                     </span>
@@ -686,9 +684,7 @@ function formatCLP(value: number): string {
                   </div>
                   <div class="flex flex-col gap-1 col-span-2 border-t pt-2 border-border-muted">
                     <div class="flex justify-between items-center w-full">
-                      <span class="text-2xs uppercase font-black text-text-primary"
-                        >A Pagar</span
-                      >
+                      <span class="text-2xs uppercase font-black text-text-primary">A Pagar</span>
                       <span class="text-lg font-black tracking-tight text-brand">
                         {{ formatCLP(row.finalPaymentAmount) }}
                       </span>

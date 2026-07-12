@@ -79,9 +79,7 @@ const POR_PAGINA = 5;
           <div class="card p-0 overflow-hidden" appCardHover>
             <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
               <div>
-                <h2 class="font-semibold text-text-primary">
-                  Alumnos con saldo pendiente
-                </h2>
+                <h2 class="font-semibold text-text-primary">Alumnos con saldo pendiente</h2>
                 <p class="text-xs mt-0.5 text-text-muted">
                   Alumnos con saldo por pagar. Registrar abonos para actualizar el saldo y habilitar
                   clase 7 cuando corresponda.
@@ -132,7 +130,7 @@ const POR_PAGINA = 5;
             } @else {
               <div>
                 <div
-                  class="hidden lg:grid px-6 py-2 grid-cols-6 gap-4 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+                  class="deudores-grid-cols hidden lg:grid px-6 py-2 gap-4 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
                 >
                   <span>Alumno</span>
                   <span>RUT</span>
@@ -144,12 +142,14 @@ const POR_PAGINA = 5;
                 <div class="rows-divider">
                   @for (alumno of deudoresVisibles(); track alumno.enrollmentId) {
                     <div
-                      class="deudores-row p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:grid-cols-6 lg:gap-4 lg:items-center transition-colors"
+                      class="deudores-row deudores-grid-cols p-4 lg:px-6 lg:py-4 flex flex-col lg:grid lg:gap-4 lg:items-center transition-colors"
                     >
                       <div class="flex flex-col min-w-0">
-                        <span class="text-sm font-semibold truncate text-text-primary">{{
-                          alumno.alumno
-                        }}</span>
+                        <span
+                          class="text-sm font-semibold truncate text-text-primary"
+                          [title]="alumno.alumno"
+                          >{{ alumno.alumno }}</span
+                        >
                         <span class="text-xs lg:hidden mt-0.5 text-text-secondary"
                           >RUT: {{ alumno.rut }}</span
                         >
@@ -239,7 +239,7 @@ const POR_PAGINA = 5;
 
           <!-- Pagos Recientes + Métodos de Pago -->
           <div
-            class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:col-span-12 items-start"
+            class="pagos-recientes-layout grid grid-cols-1 lg:grid-cols-12 gap-6 lg:col-span-12 items-start"
             [class.force-compact]="layoutDrawer.isOpen()"
           >
             <div class="lg:col-span-8 card p-0 overflow-hidden" appCardHover>
@@ -335,7 +335,7 @@ const POR_PAGINA = 5;
                 </div>
               } @else {
                 <div
-                  class="hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
+                  class="pagos-grid-cols hidden lg:grid px-6 py-2 grid-cols-7 gap-3 text-xs font-semibold tracking-wide uppercase border-b text-text-muted bg-surface border-border-muted"
                 >
                   <span>Fecha</span><span>Alumno</span><span>Concepto</span>
                   <span class="text-right">Monto</span><span>Método</span> <span>N° Documento</span
@@ -344,7 +344,7 @@ const POR_PAGINA = 5;
                 <div class="rows-divider">
                   @for (pago of pagosVisibles(); track pago.id) {
                     <div
-                      class="p-4 lg:px-6 lg:py-3.5 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
+                      class="pagos-grid-cols p-4 lg:px-6 lg:py-3.5 flex flex-col lg:grid lg:grid-cols-7 gap-3 lg:items-center hover:bg-[color-mix(in_srgb,var(--bg-surface)_60%,transparent)] transition-colors"
                     >
                       <div class="flex items-center justify-between lg:contents">
                         <span class="text-xs font-medium text-brand">{{
@@ -358,15 +358,17 @@ const POR_PAGINA = 5;
                         </app-badge>
                       </div>
                       <div class="flex flex-col lg:contents min-w-0">
-                        <span class="text-sm font-semibold truncate text-text-primary">{{
-                          pago.alumno
-                        }}</span>
+                        <span
+                          class="text-sm font-semibold truncate text-text-primary"
+                          [title]="pago.alumno"
+                          >{{ pago.alumno }}</span
+                        >
                         <span class="text-xs truncate mt-0.5 lg:mt-0 text-text-muted">{{
                           pago.concepto ?? '—'
                         }}</span>
                       </div>
                       <div
-                        class="flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
+                        class="fin-group flex flex-col lg:contents mt-2 lg:mt-0 pt-2 lg:pt-0 border-t lg:border-none border-border-muted"
                       >
                         <div class="flex justify-between items-center lg:contents">
                           <span class="text-xs uppercase font-bold lg:hidden text-text-muted"
@@ -584,7 +586,9 @@ const POR_PAGINA = 5;
           background: transparent;
         }
       }
-      .force-compact .hidden.lg\\:grid {
+      .force-compact .hidden.lg\\:grid,
+      .force-compact .hidden.lg\\:flex,
+      .force-compact .hidden.lg\\:block {
         display: none !important;
       }
       .force-compact .lg\\:hidden {
@@ -606,9 +610,39 @@ const POR_PAGINA = 5;
         padding-top: 0.5rem !important;
         width: 100% !important;
       }
+      /* El wrapper "Finanzas" agrupa 2 sub-filas (Monto / Método+Documento) que deben
+         apilarse verticalmente, no aplastarse en fila como el resto de .lg\\:contents. */
+      .force-compact .fin-group.lg\\:contents {
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+      }
       .force-compact .lg\\:text-right,
       .force-compact .lg\\:text-center {
         text-align: left !important;
+      }
+      /* El wrapper raíz "Pagos Recientes | Métodos de Pago" tiene la clase
+         .force-compact en sí mismo (no en un ancestro), así que las reglas
+         ".force-compact .lg\\:grid-cols-*" (combinador descendiente) no lo
+         alcanzan. Lo colapsamos explícitamente para que ambas cards se apilen
+         a ancho completo en vez de compartir la fila de 12 columnas. */
+      .pagos-recientes-layout.force-compact {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+      }
+      .pagos-recientes-layout.force-compact > * {
+        width: 100% !important;
+      }
+      /* Da más espacio a Alumno (nombre completo) y menos a RUT, que es de ancho fijo. */
+      .deudores-grid-cols {
+        grid-template-columns: 2fr 0.8fr 1fr 1fr 1fr 1.2fr;
+      }
+      /* Da más espacio a Alumno y menos a Concepto (valores cortos y fijos).
+         Selector de doble clase (sin !important) para ganarle a la utility de Tailwind
+         sin pisar el !important de .force-compact cuando el drawer está abierto. */
+      .pagos-grid-cols.grid-cols-7,
+      .pagos-grid-cols.lg\\:grid-cols-7 {
+        grid-template-columns: 0.9fr 1.6fr 0.8fr 1fr 1fr 1fr 1fr;
       }
     `,
   ],

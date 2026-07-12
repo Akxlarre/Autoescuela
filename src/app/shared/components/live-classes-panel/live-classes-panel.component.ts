@@ -115,7 +115,7 @@ import { TooltipModule } from 'primeng/tooltip';
             <div class="flex items-center gap-4 min-w-0">
               <!-- Hora y Estado -->
               <div class="flex flex-col shrink-0 w-14">
-                <span class="text-base font-bold text-text-primary leading-none">{{
+                <span class="font-bold text-text-primary leading-none">{{
                   formatTime(cls.scheduledAt)
                 }}</span>
                 <span

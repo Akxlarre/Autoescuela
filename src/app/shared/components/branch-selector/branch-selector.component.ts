@@ -101,7 +101,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
                 data-llm-action="select-branch-all"
               >
                 <span class="branch-panel__item-dot branch-panel__item-dot--all"></span>
-                <span class="branch-panel__item-label">Todas las escuelas</span>
+                <span class="branch-panel__item-label">Todas las sedes</span>
                 @if (allOptionDisabled()) {
                   <app-icon name="lock" [size]="11" class="branch-panel__item-lock" />
                 } @else if (selectedBranchId() === null) {
@@ -159,7 +159,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
               data-llm-action="select-branch-all"
             >
               <app-icon name="globe" [size]="14" />
-              Todas las escuelas
+              Todas las sedes
             </button>
           }
           @for (branch of branches(); track branch.id) {
@@ -231,7 +231,7 @@ import type { BranchOption } from '@core/models/ui/branch.model';
           background: var(--bg-surface);
           box-shadow: var(--shadow-sm);
         }
-        
+
         .branch-trigger:hover {
           border-color: var(--border-strong);
           background: var(--bg-elevated);

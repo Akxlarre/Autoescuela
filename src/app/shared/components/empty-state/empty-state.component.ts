@@ -49,7 +49,7 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
     @if (icon()) {
       <!-- Contenedor ilustrativo del ícono -->
       <div
-        class="flex items-center justify-center w-16 h-16 rounded-2xl flex-shrink-0 bg-subtle"
+        class="flex items-center justify-center w-16 h-16 rounded-2xl shrink-0 bg-subtle"
         aria-hidden="true"
       >
         <app-icon [name]="icon()!" [size]="32" class="text-text-muted" />
@@ -57,7 +57,7 @@ import { PressFeedbackDirective } from '@core/directives/press-feedback.directiv
     }
 
     <!-- Texto principal -->
-    <div class="flex flex-col gap-1.5 max-w-[280px]">
+    <div class="flex flex-col gap-1.5 max-w-70">
       <p class="m-0 text-sm font-semibold text-text-primary">{{ message() }}</p>
       @if (subtitle()) {
         <p class="m-0 text-sm text-text-muted">{{ subtitle() }}</p>

@@ -14,6 +14,7 @@ import type {
 } from '@core/models/ui/pagos.model';
 import { toISODate } from '@core/utils/date.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { buildStudentDisplayName } from '@core/utils/student-name.util';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ export class PagosFacade {
     let q: any = this.supabase.client
       .from('enrollments')
       .select(
-        'id, base_price, discount, total_paid, pending_balance, students!inner(users!inner(first_names, paternal_last_name, rut))',
+        'id, base_price, discount, total_paid, pending_balance, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut))',
       )
       .gt('pending_balance', 0)
       .neq('status', 'draft')
@@ -283,8 +284,11 @@ export class PagosFacade {
     this._alumnosConDeuda.set(
       (data ?? []).map((row: any) => ({
         enrollmentId: row.id,
-        alumno:
-          `${row.students?.users?.first_names ?? ''} ${row.students?.users?.paternal_last_name ?? ''}`.trim(),
+        alumno: buildStudentDisplayName({
+          firstNames: row.students?.users?.first_names,
+          paternalLastName: row.students?.users?.paternal_last_name,
+          maternalLastName: row.students?.users?.maternal_last_name,
+        }),
         rut: row.students?.users?.rut ?? '—',
         totalAPagar: (row.base_price ?? 0) - (row.discount ?? 0),
         pagado: row.total_paid ?? 0,
@@ -297,7 +301,7 @@ export class PagosFacade {
     let q: any = this.supabase.client
       .from('payments')
       .select(
-        'id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, enrollments!inner(branch_id, students(users(first_names, paternal_last_name)))',
+        'id, payment_date, type, total_amount, transfer_amount, cash_amount, card_amount, voucher_amount, document_number, status, enrollments!inner(branch_id, students(users(first_names, paternal_last_name, maternal_last_name)))',
       )
       .order('created_at', { ascending: false })
       .limit(50);
@@ -310,8 +314,11 @@ export class PagosFacade {
         return {
           id: row.id,
           fecha: row.payment_date,
-          alumno:
-            `${row.enrollments?.students?.users?.first_names ?? ''} ${row.enrollments?.students?.users?.paternal_last_name ?? ''}`.trim(),
+          alumno: buildStudentDisplayName({
+            firstNames: row.enrollments?.students?.users?.first_names,
+            paternalLastName: row.enrollments?.students?.users?.paternal_last_name,
+            maternalLastName: row.enrollments?.students?.users?.maternal_last_name,
+          }),
           concepto: mapConcepto(row.type),
           monto: row.total_amount ?? 0,
           metodo,
@@ -460,7 +467,7 @@ export class PagosFacade {
     const { data } = await this.supabase.client
       .from('enrollments')
       .select(
-        'id, base_price, discount, total_paid, pending_balance, payment_status, students!inner(users!inner(first_names, paternal_last_name, rut, email, phone)), courses!inner(name)',
+        'id, base_price, discount, total_paid, pending_balance, payment_status, students!inner(users!inner(first_names, paternal_last_name, maternal_last_name, rut, email, phone)), courses!inner(name)',
       )
       .eq('id', enrollmentId)
       .maybeSingle();
@@ -468,7 +475,11 @@ export class PagosFacade {
     const user = (data as any).students?.users;
     this._estadoCuentaResumen.set({
       enrollmentId: data.id,
-      alumno: `${user.first_names ?? ''} ${user.paternal_last_name ?? ''}`.trim(),
+      alumno: buildStudentDisplayName({
+        firstNames: user?.first_names,
+        paternalLastName: user?.paternal_last_name,
+        maternalLastName: user?.maternal_last_name,
+      }),
       rut: user?.rut ?? '—',
       email: user?.email,
       telefono: user?.phone,
