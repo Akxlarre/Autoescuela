@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  DestroyRef,
   inject,
   effect,
   viewChild,
@@ -206,6 +207,7 @@ export class AppShellComponent {
   private readonly gsap = inject(GsapAnimationsService);
   private readonly injector = inject(Injector);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly mainContent = viewChild<ElementRef<HTMLElement>>('mainContent');
 
@@ -254,6 +256,15 @@ export class AppShellComponent {
   }
 
   constructor() {
+    // Tier por contenedor (spec 0028): el ancho real de <main> (layoutmain)
+    // alimenta LayoutService.tier para la densidad adaptativa de las páginas.
+    afterNextRender(() => {
+      const mainEl = this.mainContent()?.nativeElement;
+      if (mainEl) {
+        this.destroyRef.onDestroy(this.layout.observeMain(mainEl));
+      }
+    });
+
     // Premium Feel: Si abrimos el layout drawer global y estamos en pantallas
     // algo ajustadas (<= 1280px), colapsamos el Sidebar para cederle espacio al drawer.
     effect(() => {

@@ -355,7 +355,7 @@
 | `app-kpi-card-variant` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `trendSuffix`, `subValue`, `accent`, `icon`, `color`, `loading`, `progressPercent` | — | `src/app/shared/components/kpi-card/kpi-card-variant.component.ts` |
 | `app-kpi-card` | `value`, `label`, `suffix`, `prefix`, `trend`, `trendLabel`, `accent`, `icon`, `size`, `color` | — | `src/app/shared/components/kpi-card/kpi-card.component.ts` |
 | `app-liquidaciones-content` | `liquidaciones`, `kpis`, `isLoading`, `isExporting`, `mesActual`, `anioActual`, `isDrawerOpen` | `mesAnterior`, `mesSiguiente`, `deshacer`, `pagar`, `exportRequested` | `src/app/shared/components/liquidaciones-content/liquidaciones-content.component.ts` |
-| `app-live-classes-panel` | `classes`, `loading` | `actionClick`, `viewAllClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
+| `app-live-classes-panel` | `classes`, `loading`, `maxItems` | `actionClick`, `viewAllClick` | `src/app/shared/components/live-classes-panel/live-classes-panel.component.ts` |
 | `app-login-card` | `mode`, `loading`, `errorMsg`, `successMsg` | `modeChange`, `formSubmit` | `src/app/shared/components/login-card/login-card.component.ts` |
 | `app-logo` | — | — | `src/app/shared/components/logo/logo.component.ts` |
 | `app-assignment-step` | `data`, `loading`, `stepNumber`, `hidePaymentMode`, `nextLabel` | `dataChange`, `next`, `back` | `src/app/shared/components/matricula-steps/assignment/assignment.component.ts` |

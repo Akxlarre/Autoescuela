@@ -1,12 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   input,
   output,
   ElementRef,
   viewChild,
   effect,
 } from '@angular/core';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { CommonModule } from '@angular/common';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
 import { IconComponent } from '../icon/icon.component';
@@ -30,13 +32,10 @@ import { TooltipModule } from 'primeng/tooltip';
     TooltipModule,
   ],
   host: {
-    // contain: 'size' oculta el tamaño intrínseco del contenido al Bento Grid.
-    // min-height asegura un tamaño base, pero al no tener contenido intrínseco visible para el grid,
-    // NO estirará las filas automáticas, sino que se adaptará perfectamente al alto de la celda.
-    // El fallback se neutraliza vía @container (ver `styles`), no con `lg:` de Tailwind:
-    // el layout-drawer angosta <main> sin cambiar el viewport.
-    class: 'flex flex-col gap-3 h-full overflow-hidden w-full min-h-[450px]',
-    style: 'contain: size;',
+    // El modo fill-screen (contain: size en desktop) lo aporta la clase
+    // `.bento-fill` del design system (spec 0028) — el consumidor la pone
+    // junto a bento-wide/bento-card. En móvil la celda mide su contenido.
+    class: 'flex flex-col gap-3 h-full overflow-hidden w-full',
   },
   template: `
     <!-- Header de sección estandarizado -->
@@ -47,7 +46,7 @@ import { TooltipModule } from 'primeng/tooltip';
 
     @if (loading()) {
       <ul class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-hidden pr-2">
-        @for (i of [1, 2, 3, 4, 5]; track i) {
+        @for (i of skeletonItems(); track i) {
           <li
             class="flex items-center justify-between p-3 rounded-xl bg-surface border border-transparent"
           >
@@ -104,7 +103,7 @@ import { TooltipModule } from 'primeng/tooltip';
         #scrollContainer
         class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2 relative"
       >
-        @for (cls of classes(); track cls.id; let i = $index) {
+        @for (cls of visibleClasses(); track cls.id; let i = $index) {
           <li
             [attr.data-status]="cls.status"
             class="live-class-item group flex items-center justify-between p-3 rounded-xl cursor-pointer hover:bg-subtle transition-all duration-300"
@@ -239,17 +238,6 @@ import { TooltipModule } from 'primeng/tooltip';
         background-color: var(--text-muted);
       }
 
-      /* El piso de min-height debe neutralizarse según el ancho del *contenedor*
-         layoutmain, no del viewport: al abrir el layout-drawer, <main> se angosta
-         sin que cambie el viewport (ver dashboard.component.ts, mismo patrón).
-         Breakpoint 768px asegura que se active incluso cuando el drawer reduce <main>
-         a ~800px en viewports como 1280x720. */
-      @container layoutmain (min-width: 768px) {
-        :host {
-          min-height: 0;
-        }
-      }
-
       /* Forzar color blanco en el icono cuando la fila (group) está en hover */
       .group:hover .hover-icon-container {
         color: #ffffff !important;
@@ -268,13 +256,20 @@ import { TooltipModule } from 'primeng/tooltip';
 export class LiveClassesPanelComponent {
   readonly classes = input<LiveClassModel[]>([]);
   readonly loading = input<boolean>(false);
+  /** Presupuesto de densidad (spec 0028): null = sin límite (desktop). */
+  readonly maxItems = input<number | null>(null);
   readonly actionClick = output<LiveClassModel>();
   readonly viewAllClick = output<void>();
   private scrollContainer = viewChild<ElementRef<HTMLUListElement>>('scrollContainer');
 
+  readonly visibleClasses = computed(() => sliceByBudget(this.classes(), this.maxItems()));
+  readonly skeletonItems = computed(() =>
+    Array.from({ length: this.maxItems() ?? 5 }, (_, i) => i),
+  );
+
   constructor() {
     effect(() => {
-      const classList = this.classes();
+      const classList = this.visibleClasses();
       const container = this.scrollContainer()?.nativeElement;
       if (classList.length > 0 && container) {
         // Encontrar la primera clase en curso o pendiente para centrarla

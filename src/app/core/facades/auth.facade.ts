@@ -237,11 +237,14 @@ export class AuthFacade {
     return { error: error ? new Error(mapAuthError(error)) : null };
   }
 
-  logout(): void {
+  logout(options: { redirect?: boolean } = {}): void {
+    const { redirect = true } = options;
     this.disposeRealtime();
     this.supabase.signOut();
     this._currentUser.set(null);
-    this.router.navigate(['/']);
+    if (redirect) {
+      this.router.navigate(['/']);
+    }
   }
 
   setUser(user: User | null): void {

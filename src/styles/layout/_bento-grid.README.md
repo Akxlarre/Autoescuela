@@ -150,6 +150,82 @@ onPageChange(): void {
 @layer bento.components    → bento-card, bento-media
 ```
 
+> ⚠️ **Trampa de capas:** los `@layer bento.*` se declaran DESPUÉS del
+> `@layer utilities` de Tailwind, por lo que cualquier propiedad definida
+> aquí le gana a la utility equivalente puesta en el mismo elemento
+> (ej: un `min-h-[450px]` junto a `.bento-card` NO aplica donde
+> `.bento-card` declare `min-height`). Antes de agregar propiedades de
+> layout a `.bento-card`, considerar este efecto.
+
+## Modo Dual: fill-screen desktop / scroll natural móvil (spec 0028)
+
+El modo app-like (sin scroll de página) SOLO existe en desktop
+(contenedor `layoutmain ≥ 1024px`). En móvil/tablet las celdas miden su
+contenido y la página scrollea nativamente en `.shell-content`.
+
+```html
+<div class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
+  <app-section-hero />                        <!-- fila auto -->
+  <div class="bento-banner card bento-fill">  <!-- llena el resto -->
+    <!-- listas internas con overflow-y-auto + flex-1 min-h-0 -->
+  </div>
+</div>
+```
+
+Reglas:
+
+1. `.bento-fill` va SOLO en la(s) celda(s) protagonista(s) de un grid
+   `--fill-screen` / `--fill-screen-2`. En desktop recibe
+   `contain: size; min-height: 0` (la fila `minmax(0,1fr)` dicta el alto);
+   bajo 1024px no emite nada.
+2. **PROHIBIDO** `style="contain: size"` o `min-height: NNNpx` inline en
+   componentes — el modo dual vive únicamente en `_bento-grid.scss`.
+3. NO aplicar `.bento-fill` (ni `contain`) al hero: su fila es `auto` y
+   colapsaría.
+4. Las listas internas scrollean solas en desktop (`overflow-y-auto` +
+   `flex-1 min-h-0`); en móvil crecen naturalmente, y la densidad la
+   recorta el componente con `sliceByBudget(items, budget)` +
+   `LayoutService.tier()` (ver `core/utils/layout-tier.utils.ts`).
+5. `min-height: 0` de `.bento-card` también está scoped a ≥1024px: bajo
+   ese ancho las utilities `min-h-*` vuelven a funcionar (evitar usarlas
+   para layout de celdas — preferir altura natural).
+
+### Checklist para migrar una página existente al modo dual
+
+Receta completa, en orden. Referencias reales ya migradas (spec 0028):
+`features/dashboard/dashboard.component.ts` (Smart, con densidad) y
+`shared/components/alumnos-list-content/alumnos-list-content.component.ts`
+(fill-screen sin densidad extra + "Cargar más").
+
+1. **Quitar todo estilo inline de layout** en el Smart/Dumb de la página:
+   `style="contain: size"`, `min-h-[NNNpx]`, y cualquier `@container` local
+   duplicado que compensara el bug (buscar `dashboard-panel` o similar en
+   el `styles:` del componente como ejemplo del patrón viejo a eliminar).
+2. **Contenedor raíz** del grid: agregar el modificador fill-screen —
+   `bento-grid--fill-screen` (una celda protagonista) o
+   `bento-grid--fill-screen-2` (dos filas de celdas, como el dashboard).
+3. **Celda(s) protagonista(s)**: agregar la clase `.bento-fill` junto a su
+   clase de proporción (`bento-wide bento-card bento-fill`, etc.). El hero
+   NUNCA lleva `.bento-fill`.
+4. **(Opcional) Densidad adaptativa** — solo si la página tiene listas
+   largas que deban recortarse en móvil:
+   - Inyectar `LayoutService` (`core/services/ui/layout.service.ts`) en el
+     Smart Component.
+   - Derivar el presupuesto: `computed(() => layoutService.tier() === 'desktop' ? null : N)`
+     (elegir `N` según cuántos ítems tienen sentido en una pantalla chica).
+   - Recortar listas locales con `sliceByBudget(items(), budget())` de
+     `core/utils/layout-tier.utils.ts`.
+   - Si el recorte es de un Dumb Component hijo (no local), pasarle el
+     presupuesto por `input()` (ver `maxItems` en `live-classes-panel`) —
+     el Dumb sigue sin inyectar servicios.
+   - Para listas "cargar más" en vez de "ver todas" (como la vista tarjetas
+     de alumnos), usar un `signal` local de cuántos mostrar + botón que lo
+     incrementa; resetear ese signal cuando cambien los filtros.
+5. **Verificar** con `/verify` en 390×844 (sin scroll interno, sin celdas
+   colapsadas) y 1440×900 (`.shell-content` sin scroll de página) — ambos
+   en modo claro y oscuro. Si la página tiene drawer lateral, abrirlo y
+   confirmar que la densidad reacciona sin recargar.
+
 ## Accesibilidad
 
 - `grid-auto-flow: dense` puede desincronizar orden visual vs DOM

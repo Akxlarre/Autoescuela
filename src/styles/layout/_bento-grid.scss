@@ -83,7 +83,7 @@ $bp-lg: 1024px;
     }
 
     /* ── Modificador Canónico para Layouts Full-Screen (App-like) ── */
-    /* Resuelve pantallas con Hero + Card. 
+    /* Resuelve pantallas con Hero + Card.
        En mobile permite scroll nativo. En desktop (lg+) asegura que la Card ocupe el resto del viewport. */
     &.bento-grid--fill-screen {
       @container layoutmain (min-width: #{$bp-lg}) {
@@ -99,6 +99,30 @@ $bp-lg: 1024px;
         grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
       }
     }
+  }
+}
+
+/* ── MODO DUAL (spec 0028): celda protagonista de un grid fill-screen ──
+   `.bento-fill` marca la(s) celda(s) que en desktop deben LLENAR el resto
+   del viewport. Solo emite CSS dentro del contenedor layoutmain ≥ lg y
+   solo bajo un grid --fill-screen(-2):
+
+     - `contain: size` oculta el tamaño intrínseco del contenido, para que
+       la fila minmax(0, 1fr) del grid dicte el alto (el contenido interno
+       scrollea con overflow-y-auto).
+     - Bajo lg NO aplica nada → la celda mide su contenido natural y la
+       página scrollea nativamente (.shell-content).
+
+   PROHIBIDO volver a poner `contain: size` o `min-height` de layout como
+   estilo inline en componentes: esta clase es la única fuente del modo dual.
+   NO se aplica vía `> *` a propósito: el hero (fila auto) no debe recibir
+   `contain: size` o su fila colapsaría.
+   ──────────────────────────────────────────────────────────────────── */
+@container layoutmain (min-width: #{$bp-lg}) {
+  .bento-grid--fill-screen > .bento-fill,
+  .bento-grid--fill-screen-2 > .bento-fill {
+    contain: size;
+    min-height: 0;
   }
 }
 
@@ -347,11 +371,21 @@ $bp-lg: 1024px;
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    /* Previene blowout del contenido */
-    min-height: 0;
+    /* Previene blowout horizontal del contenido */
     min-width: 0;
     /* Soften breakpoint snaps during continuous container resizing */
     transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+  }
+
+  /* min-height: 0 SOLO en desktop (modo fill-screen, spec 0028).
+     ⚠️ Trampa de capas: los @layer bento.* se declaran DESPUÉS de
+     `utilities` de Tailwind, así que este min-height le gana a cualquier
+     utility `min-h-*` puesta junto a .bento-card. Al scopearlo a lg,
+     en móvil/tablet las celdas recuperan su altura natural. */
+  @container layoutmain (min-width: #{$bp-lg}) {
+    .bento-card {
+      min-height: 0;
+    }
   }
 
   /* Efecto hover global para dar feedback interactivo a las tarjetas */
@@ -504,4 +538,3 @@ $bp-lg: 1024px;
   min-width: 45% !important;
   border-bottom-width: 1px !important;
 }
-
