@@ -9,7 +9,9 @@ import {
   viewChild,
   ElementRef,
   AfterViewInit,
+  WritableSignal,
 } from '@angular/core';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -89,7 +91,7 @@ interface ExpedienteStatus {
   ],
   template: `
     <div
-      class="bento-grid"
+      class="bento-grid bento-grid--fill-screen"
       appBentoGridLayout
       #bentoGrid
       aria-label="Panel de alumnos"
@@ -111,10 +113,10 @@ interface ExpedienteStatus {
         (kpiClick)="onHeroKpiClick($event)"
       />
 
-      <!-- Filtros y Tabla (Dual-Viewport) -->
+      <!-- Filtros y Tabla (Dual-Viewport). El modo fill-screen desktop lo da
+           .bento-fill (spec 0028); en móvil la card crece con su contenido. -->
       <div
-        class="bento-banner card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
-        style="contain: size; min-height: 600px;"
+        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
         appCardHover
         #tableCard
       >
@@ -132,14 +134,16 @@ interface ExpedienteStatus {
               placeholder="Buscar por nombre, RUT o Nº Expediente..."
               class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
               data-llm-description="Search students by name, RUT or file number"
-              [(ngModel)]="searchTerm"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="updateFilter(searchTerm, $event)"
             />
           </div>
 
           <!-- Filtros -->
           <p-select
             [options]="cursos"
-            [(ngModel)]="selectedCurso"
+            [ngModel]="selectedCurso()"
+            (ngModelChange)="updateFilter(selectedCurso, $event)"
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los cursos"
@@ -148,7 +152,8 @@ interface ExpedienteStatus {
           />
           <p-select
             [options]="estados"
-            [(ngModel)]="selectedEstado"
+            [ngModel]="selectedEstado()"
+            (ngModelChange)="updateFilter(selectedEstado, $event)"
             optionLabel="label"
             optionValue="value"
             placeholder="Todos los estados"
@@ -157,7 +162,8 @@ interface ExpedienteStatus {
           />
           <p-select
             [options]="expedienteOpciones"
-            [(ngModel)]="selectedExpediente"
+            [ngModel]="selectedExpediente()"
+            (ngModelChange)="updateFilter(selectedExpediente, $event)"
             optionLabel="label"
             optionValue="value"
             placeholder="Expediente: Todos"
@@ -506,7 +512,7 @@ interface ExpedienteStatus {
             <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
             <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
               <div class="bento-grid">
-                @for (alumno of filteredAlumnos(); track alumno.id) {
+                @for (alumno of visibleCards(); track alumno.id) {
                   <div
                     class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
                     appCardHover
@@ -644,6 +650,21 @@ interface ExpedienteStatus {
                       actionIcon="refresh-cw"
                       (action)="resetFilters()"
                     />
+                  </div>
+                }
+
+                <!-- Cargar más (AC5/AC6): densidad incremental de la vista tarjetas -->
+                @if (remainingCards() > 0) {
+                  <div class="col-span-full pt-1">
+                    <button
+                      type="button"
+                      class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
+                      (click)="loadMoreCards()"
+                      data-llm-action="load-more-students"
+                    >
+                      <app-icon name="chevron-down" [size]="16" />
+                      Cargar más ({{ remainingCards() }} restantes)
+                    </button>
                   </div>
                 }
               </div>
@@ -790,12 +811,20 @@ export class AlumnosListContentComponent implements AfterViewInit {
     },
   ]);
 
-  searchTerm = '';
-  selectedCurso = '';
-  selectedEstado = '';
-  selectedExpediente = '';
+  readonly searchTerm = signal('');
+  readonly selectedCurso = signal('');
+  readonly selectedEstado = signal('');
+  readonly selectedExpediente = signal('');
   isDrawerOpen = signal(false);
   readonly exportMenuOpen = signal(false);
+
+  /** Densidad incremental de la vista tarjetas (spec 0028, AC5). */
+  private static readonly CARDS_STEP = 6;
+  readonly mobileShown = signal(AlumnosListContentComponent.CARDS_STEP);
+  readonly visibleCards = computed(() => sliceByBudget(this.filteredAlumnos(), this.mobileShown()));
+  readonly remainingCards = computed(() =>
+    Math.max(0, this.filteredAlumnos().length - this.mobileShown()),
+  );
 
   readonly cursos = [
     { label: 'Clase B', value: 'Clase B' },
@@ -823,9 +852,13 @@ export class AlumnosListContentComponent implements AfterViewInit {
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
-  filteredAlumnos(): AlumnoTableRow[] {
+  readonly filteredAlumnos = computed<AlumnoTableRow[]>(() => {
+    const term = this.searchTerm().toLowerCase();
+    const curso = this.selectedCurso();
+    const estado = this.selectedEstado();
+    const expediente = this.selectedExpediente();
+
     return this.alumnos().filter((a) => {
-      const term = this.searchTerm.toLowerCase();
       const matchSearch =
         !term ||
         a.nombre.toLowerCase().includes(term) ||
@@ -833,17 +866,29 @@ export class AlumnosListContentComponent implements AfterViewInit {
         a.rut.includes(term) ||
         a.nroExpedientes.some((n) => n.toLowerCase().includes(term));
 
-      const matchCurso =
-        !this.selectedCurso || a.cursos.some((c) => c.nombre === this.selectedCurso);
-      const matchEstado = !this.selectedEstado || a.status === this.selectedEstado;
+      const matchCurso = !curso || a.cursos.some((c) => c.nombre === curso);
+      const matchEstado = !estado || a.status === estado;
       const matchExpediente = (() => {
-        if (!this.selectedExpediente) return true;
+        if (!expediente) return true;
         const exp = this.getExpedienteStatus(a.expediente);
-        return exp.label === this.selectedExpediente;
+        return exp.label === expediente;
       })();
 
       return matchSearch && matchCurso && matchEstado && matchExpediente;
     });
+  });
+
+  /**
+   * Setea un filtro y resetea la densidad de tarjetas (AC6): el filtro opera
+   * sobre el TOTAL y el contador de "Cargar más" se recalcula desde cero.
+   */
+  updateFilter(filter: WritableSignal<string>, value: string): void {
+    filter.set(value);
+    this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
+  }
+
+  loadMoreCards(): void {
+    this.mobileShown.update((n) => n + AlumnosListContentComponent.CARDS_STEP);
   }
 
   totalAlumnos(): number {
@@ -896,10 +941,11 @@ export class AlumnosListContentComponent implements AfterViewInit {
   }
 
   resetFilters(): void {
-    this.searchTerm = '';
-    this.selectedCurso = '';
-    this.selectedEstado = '';
-    this.selectedExpediente = '';
+    this.searchTerm.set('');
+    this.selectedCurso.set('');
+    this.selectedEstado.set('');
+    this.selectedExpediente.set('');
+    this.mobileShown.set(AlumnosListContentComponent.CARDS_STEP);
   }
 
   openPorVencerDrawer(): void {
@@ -937,10 +983,10 @@ export class AlumnosListContentComponent implements AfterViewInit {
     this.exportMenuOpen.set(false);
     this.exportRequested.emit({
       format,
-      search: this.searchTerm,
-      curso: this.selectedCurso,
-      estado: this.selectedEstado,
-      expediente: this.selectedExpediente,
+      search: this.searchTerm(),
+      curso: this.selectedCurso(),
+      estado: this.selectedEstado(),
+      expediente: this.selectedExpediente(),
     });
   }
 

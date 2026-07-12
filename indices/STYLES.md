@@ -222,7 +222,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 239 | `src/styles/tokens/_variables.scss` |
+| `.card` | 240 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
@@ -253,6 +253,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.bento-card__body--center` | — |
 | `.bento-card__body--spread` | — |
 | `.bento-feature` | 2/3 ancho × 2 filas |
+| `.bento-fill` | — |
 | `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
 | `.bento-grid--fill-screen` | — |
 | `.bento-grid--fill-screen-2` | — |

@@ -22,6 +22,8 @@ import { SectionHeroComponent } from '@shared/components/section-hero/section-he
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
 import { LiveClassModel } from '@core/models/ui/dashboard.model';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -110,20 +112,20 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Izquierda: Live Classes (Lista vertical compacta) ─── -->
       <app-live-classes-panel
-        class="bento-wide bento-card w-full"
+        class="bento-wide bento-card bento-fill w-full"
         appCardHover
         data-row-span-md="2"
         data-row-span="2"
         [classes]="liveClasses()"
         [loading]="loading()"
+        [maxItems]="liveClassesBudget()"
         (actionClick)="handleLiveClassAction($event)"
         (viewAllClick)="openAgenda()"
       />
 
       <!-- ── Derecha Arriba: Actividad reciente ─── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-75 dashboard-panel"
-        style="contain: size;"
+        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
         appCardHover
       >
         <!-- Header de sección -->
@@ -156,7 +158,7 @@ import { to24hTime } from '@core/utils/date.utils';
             #activityList
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (item of activities(); track item.id; let i = $index) {
+            @for (item of visibleActivities(); track item.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
               >
@@ -214,8 +216,7 @@ import { to24hTime } from '@core/utils/date.utils';
 
       <!-- ── Derecha Abajo: Alertas Importantes ───── -->
       <div
-        class="bento-wide bento-card flex flex-col w-full h-full overflow-hidden min-h-62.5 dashboard-panel"
-        style="contain: size;"
+        class="bento-wide bento-card bento-fill flex flex-col w-full h-full overflow-hidden"
         appCardHover
       >
         <!-- Header de sección -->
@@ -246,7 +247,7 @@ import { to24hTime } from '@core/utils/date.utils';
           <ul
             class="m-0 p-0 list-none flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto custom-scrollbar pr-2"
           >
-            @for (alert of alerts(); track alert.id; let i = $index) {
+            @for (alert of visibleAlerts(); track alert.id; let i = $index) {
               <li
                 class="flex items-start gap-3 py-2.5 border-b last:border-b-0 border-border-subtle"
               >
@@ -325,32 +326,13 @@ import { to24hTime } from '@core/utils/date.utils';
       .custom-scrollbar:hover::-webkit-scrollbar-thumb {
         background-color: var(--text-muted);
       }
-
-      /* El piso de min-height (fallback antes de que el grid pueda estirar la fila)
-         debe neutralizarse según el ancho del *contenedor* layoutmain, no del viewport:
-         al abrir el layout-drawer, <main> se angosta sin que cambie el viewport.
-         Breakpoint 768px asegura que se active incluso cuando el drawer reduce <main>
-         a ~800px en viewports como 1280x720. */
-      @container layoutmain (min-width: 768px) {
-        .dashboard-panel {
-          min-height: 0;
-        }
-      }
-
-      /* Con un drawer abierto, .dashboard-panel usa "contain: size" y queda
-         fuera del cálculo "auto" del grid, cayendo al piso mínimo de fila
-         (120px) — insuficiente para header + lista. Restauramos el mismo
-         piso que tienen sin drawer (300px) para no perder ítems visibles
-         (con 220px solo entraban 2 de los 3 ítems esperados). */
-      .force-compact .dashboard-panel {
-        min-height: 300px !important;
-      }
     `,
   ],
 })
 export class DashboardComponent {
   private readonly dashboardFacade = inject(DashboardFacade);
   protected readonly dashboardAlertsFacade = inject(DashboardAlertsFacade);
+  private readonly layoutService = inject(LayoutService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly auth = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -377,6 +359,17 @@ export class DashboardComponent {
   readonly quickActions = computed(() => this.dashboardFacade.data()?.quickActions ?? []);
   readonly alerts = computed(() => this.dashboardAlertsFacade.activeAlerts());
   readonly liveClasses = computed(() => this.dashboardFacade.data()?.liveClasses ?? []);
+
+  // ── Densidad adaptativa (spec 0028): presupuestos por tier del contenedor ──
+  // desktop = sin límite (scroll interno); tablet/mobile = resumen + "Ver todas".
+  private readonly isDesktopTier = computed(() => this.layoutService.tier() === 'desktop');
+  readonly liveClassesBudget = computed(() => (this.isDesktopTier() ? null : 4));
+  readonly visibleActivities = computed(() =>
+    sliceByBudget(this.activities(), this.isDesktopTier() ? null : 3),
+  );
+  readonly visibleAlerts = computed(() =>
+    sliceByBudget(this.alerts(), this.isDesktopTier() ? null : 3),
+  );
 
   readonly heroSectionTitle = computed(() => `¡Bienvenido, ${this.hero()?.userName ?? ''}!`);
   readonly heroContextLine = computed(() => this.hero()?.date ?? '');

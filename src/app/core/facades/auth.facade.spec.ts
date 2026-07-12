@@ -120,6 +120,21 @@ describe('AuthFacade', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 
+  it('logout({ redirect: false }) should clear the user without navigating', () => {
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    const user: User = {
+      id: 'u1',
+      name: 'Test',
+      email: 'test@example.com',
+      role: 'member',
+      initials: 'T',
+    };
+    service.setUser(user);
+    service.logout({ redirect: false });
+    expect(service.currentUser()).toBeNull();
+    expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
   it('login() should call supabase.signIn with the given credentials', async () => {
     // Use an error response so the polling loop (waiting for _currentUser) is skipped
     supabaseSpy.signIn.mockResolvedValue({ error: new Error('_skip_poll') } as any);
