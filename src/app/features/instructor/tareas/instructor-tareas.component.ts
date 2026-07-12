@@ -3,24 +3,21 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
-  ElementRef,
   OnInit,
   computed,
   inject,
   signal,
-  viewChild,
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
-import { TaskCardComponent } from '@shared/components/task-card/task-card.component';
-import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type { TaskType } from '@core/models/ui/task.model';
 
 type TaskTypeFilter = 'all' | TaskType;
@@ -37,15 +34,13 @@ interface FilterTab {
   imports: [
     SectionHeroComponent,
     KpiCardVariantComponent,
-    TaskCardComponent,
-    EmptyStateComponent,
-    TabsComponent,
+    TaskListContentComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoReveal appBentoGridLayout>
       <!-- Hero (sin CTA — instructor es receptor puro en v1) -->
       <app-section-hero
         class="bento-hero"
@@ -75,43 +70,29 @@ interface FilterTab {
         />
       </div>
 
-      <!-- Lista de tareas -->
-      <div class="bento-banner card p-0 overflow-hidden" appCardHover>
-        <!-- Tabs -->
-        <app-tabs
-          [tabs]="filterTabs()"
-          [activeId]="activeFilter()"
-          variant="line"
-          (activeIdChange)="activeFilter.set($any($event))"
-        />
-
-        <!-- Contenido del tab activo -->
-        <div class="p-4 flex flex-col gap-3">
-          @if (facade.isLoading()) {
-            @for (sk of skeletons; track sk) {
-              <app-task-card [task]="dummyTask" [loading]="true" />
-            }
-          } @else if (filteredTasks().length === 0) {
-            <app-empty-state
-              [message]="emptyMessage()"
-              [subtitle]="emptySubtitle()"
-              icon="clipboard-list"
-            />
-          } @else {
-            @for (task of filteredTasks(); track task.id) {
-              <app-task-card [task]="task" (cardClicked)="openDetail($event)" />
-            }
-          }
-        </div>
-      </div>
+      <!-- Lista de tareas + densidad adaptativa (spec 0028/0029) -->
+      <app-task-list-content
+        class="bento-banner card p-0 overflow-hidden bento-fill"
+        appCardHover
+        [tabs]="filterTabs()"
+        [activeTab]="activeFilter()"
+        [tasks]="filteredTasks()"
+        [loading]="facade.isLoading()"
+        [maxVisible]="maxVisible()"
+        [emptyMessage]="emptyMessage()"
+        [emptySubtitle]="emptySubtitle()"
+        emptyIcon="clipboard-list"
+        (activeTabChange)="activeFilter.set($any($event))"
+        (taskClicked)="openDetail($event)"
+      />
     </div>
   `,
 })
 export class InstructorTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
+  private readonly layoutService = inject(LayoutService);
   private readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly skeletons = [1, 2, 3];
 
   // ── filtro por tipo ──────────────────────────────────────────────────────────
   protected readonly activeFilter = signal<TaskTypeFilter>('all');
@@ -131,17 +112,23 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
     {
       id: 'task',
       label: 'Tareas',
-      count: this.facade.receivedTasks().filter((t) => t.type === 'task' && t.status !== 'completed').length,
+      count: this.facade
+        .receivedTasks()
+        .filter((t) => t.type === 'task' && t.status !== 'completed').length,
     },
     {
       id: 'question',
       label: 'Consultas',
-      count: this.facade.receivedTasks().filter((t) => t.type === 'question' && t.status !== 'completed').length,
+      count: this.facade
+        .receivedTasks()
+        .filter((t) => t.type === 'question' && t.status !== 'completed').length,
     },
     {
       id: 'observation',
       label: 'Observaciones',
-      count: this.facade.receivedTasks().filter((t) => t.type === 'observation' && t.status !== 'completed').length,
+      count: this.facade
+        .receivedTasks()
+        .filter((t) => t.type === 'observation' && t.status !== 'completed').length,
     },
   ]);
 
@@ -185,34 +172,11 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
     }
   });
 
-  protected readonly dummyTask = {
-    id: '',
-    branch_id: 0,
-    from_user_id: 0,
-    from_role: 'secretary' as const,
-    to_user_id: 0,
-    to_role: 'instructor' as const,
-    type: 'task' as const,
-    subject: '',
-    body: null,
-    status: 'pending' as const,
-    due_date: null,
-    completed_at: null,
-    seen_at: null,
-    seen_by: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    deleted_at: null,
-    senderName: '',
-    recipientName: '',
-    replyCount: 0,
-    isOverdue: false,
-    ageInDays: 0,
-    recipientInactive: false,
-    canEdit: false,
-    canChangeStatus: false,
-    canDelete: false,
-  };
+  // Densidad adaptativa (spec 0028/0029): sin límite en desktop, acotado
+  // en tablet/mobile o con el drawer lateral abierto (tier por contenedor).
+  protected readonly maxVisible = computed(() =>
+    this.layoutService.tier() === 'desktop' ? null : 5,
+  );
 
   ngOnInit(): void {
     void this.facade.initialize();

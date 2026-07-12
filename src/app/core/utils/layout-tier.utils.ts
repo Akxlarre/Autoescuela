@@ -30,3 +30,27 @@ export function sliceByBudget<T>(items: readonly T[], budget: number | null): T[
   if (budget === null || items.length <= budget) return [...items];
   return items.slice(0, budget);
 }
+
+/** A qué tab pertenecen los clicks acumulados de "Cargar más" (spec 0029). */
+export interface LoadMoreState {
+  readonly forTab: string | null;
+  readonly clicks: number;
+}
+
+/**
+ * Recorta una lista aplicando "Cargar más" de forma tab-scoped: los clicks
+ * solo cuentan si pertenecen al tab activo — evita que un contador de otro
+ * tab (o un refresh SWR que no toca el tab) infle el presupuesto por error.
+ * `budget === null` significa "sin límite" (desktop): ignora el estado de
+ * "Cargar más" por completo.
+ */
+export function visibleWithLoadMore<T>(
+  items: readonly T[],
+  budget: number | null,
+  activeTab: string,
+  loadMore: LoadMoreState,
+): T[] {
+  if (budget === null) return sliceByBudget(items, null);
+  const clicks = loadMore.forTab === activeTab ? loadMore.clicks : 0;
+  return sliceByBudget(items, budget * (1 + clicks));
+}

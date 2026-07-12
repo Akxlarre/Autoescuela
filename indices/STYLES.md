@@ -193,11 +193,11 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 481 | `#38bdf8` |
-| `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 410 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 269 | `var(--color-primary-text)` |
 | `--state-error` | 231 | `#f87171` |
 | `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
-| `--border-subtle` | 214 | `rgba(255, 255, 255, 0.18)` |
+| `--border-subtle` | 215 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 202 | `#18181b` |
 | `--state-success` | 197 | `#4ade80` |
 | `--color-primary` | 175 | `#38bdf8` |
@@ -257,6 +257,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `.bento-grid` | Contenedor raíz (con [appBentoGridLayout]) |
 | `.bento-grid--fill-screen` | — |
 | `.bento-grid--fill-screen-2` | — |
+| `.bento-grid--fill-screen-kpi` | — |
 | `.bento-grid--forms` | — |
 | `.bento-grid--four-equal` | — |
 | `.bento-grid--wizard` | — |
@@ -322,7 +323,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1193 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1191 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 

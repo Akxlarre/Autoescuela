@@ -12,20 +12,17 @@ import {
   viewChild,
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { TaskCardComponent } from '@shared/components/task-card/task-card.component';
-import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { ScrollContainerDirective } from '@core/directives/scroll-container.directive';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
-
-import { TabsComponent } from '@shared/components/tabs/tabs.component';
 
 type TaskTab = 'sent' | 'received' | 'observations';
 
@@ -34,19 +31,12 @@ type TaskTab = 'sent' | 'received' | 'observations';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
-    TaskCardComponent,
-    EmptyStateComponent,
+    TaskListContentComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
-    TabsComponent,
-    ScrollContainerDirective,
   ],
   template: `
-    <div 
-      #bentoGrid 
-      class="bento-grid bento-grid--fill-screen" 
-      appBentoGridLayout
-    >
+    <div #bentoGrid class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
       <!-- Hero -->
       <app-section-hero
         density="slim"
@@ -60,50 +50,28 @@ type TaskTab = 'sent' | 'received' | 'observations';
         (actionClick)="onHeroAction($event)"
       />
 
-      <!-- Lista de tareas con tabs -->
-      <div class="bento-banner card p-0 overflow-hidden flex flex-col" appCardHover>
-        <!-- Tabs -->
-        <div class="shrink-0">
-          <app-tabs
-          [tabs]="tabs()"
-          [activeId]="activeTab()"
-          variant="line"
-          (activeIdChange)="activeTab.set($any($event))"
-        />
-
-        </div>
-
-        <!-- Contenido del tab activo -->
-        <div 
-          class="p-4 flex flex-col gap-3 flex-1" 
-          [class.justify-center]="!facade.isLoading() && activeTasks().length === 0"
-          appScrollContainer 
-          maxHeight="none" 
-          [scrollX]="false"
-        >
-          @if (facade.isLoading()) {
-            @for (sk of skeletons; track sk) {
-              <app-task-card [task]="dummyTask" [loading]="true" />
-            }
-          } @else if (activeTasks().length === 0) {
-            <app-empty-state
-              message="Sin tareas en esta sección"
-              subtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
-              icon="clipboard-list"
-            />
-          } @else {
-            @for (task of activeTasks(); track task.id) {
-              <app-task-card [task]="task" (cardClicked)="openDetail($event)" />
-            }
-          }
-        </div>
-      </div>
+      <!-- Lista de tareas con tabs + densidad adaptativa (spec 0028/0029) -->
+      <app-task-list-content
+        class="bento-banner card p-0 overflow-hidden bento-fill"
+        appCardHover
+        [tabs]="tabs()"
+        [activeTab]="activeTab()"
+        [tasks]="activeTasks()"
+        [loading]="facade.isLoading()"
+        [maxVisible]="maxVisible()"
+        emptyMessage="Sin tareas en esta sección"
+        emptySubtitle="Las tareas aparecerán aquí cuando sean creadas o asignadas."
+        emptyIcon="clipboard-list"
+        (activeTabChange)="activeTab.set($any($event))"
+        (taskClicked)="openDetail($event)"
+      />
     </div>
   `,
 })
 export class AdminTareasComponent implements OnInit, AfterViewInit {
   protected readonly facade = inject(TasksFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly layoutService = inject(LayoutService);
   private readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
   private readonly destroyRef = inject(DestroyRef);
@@ -174,37 +142,11 @@ export class AdminTareasComponent implements OnInit, AfterViewInit {
     },
   ]);
 
-  protected readonly skeletons = [1, 2, 3];
-
-  // Placeholder task used only when loading=true (skeleton mode)
-  protected readonly dummyTask = {
-    id: '',
-    branch_id: 0,
-    from_user_id: 0,
-    from_role: 'admin' as const,
-    to_user_id: 0,
-    to_role: 'admin' as const,
-    type: 'task' as const,
-    subject: '',
-    body: null,
-    status: 'pending' as const,
-    due_date: null,
-    completed_at: null,
-    seen_at: null,
-    seen_by: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    deleted_at: null,
-    senderName: '',
-    recipientName: '',
-    replyCount: 0,
-    isOverdue: false,
-    ageInDays: 0,
-    recipientInactive: false,
-    canEdit: false,
-    canChangeStatus: false,
-    canDelete: false,
-  };
+  // Densidad adaptativa (spec 0028/0029): sin límite en desktop, acotado
+  // en tablet/mobile o con el drawer lateral abierto (tier por contenedor).
+  protected readonly maxVisible = computed(() =>
+    this.layoutService.tier() === 'desktop' ? null : 5,
+  );
 
   constructor() {
     effect(() => {

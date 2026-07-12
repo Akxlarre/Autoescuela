@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sliceByBudget, widthToTier } from './layout-tier.utils';
+import { sliceByBudget, visibleWithLoadMore, widthToTier } from './layout-tier.utils';
 
 describe('widthToTier', () => {
   it('devuelve desktop para null (SSR / observer aún no montado)', () => {
@@ -47,5 +47,35 @@ describe('sliceByBudget', () => {
   it('con lista vacía devuelve vacío para cualquier budget (AC-E1)', () => {
     expect(sliceByBudget([], null)).toEqual([]);
     expect(sliceByBudget([], 4)).toEqual([]);
+  });
+});
+
+describe('visibleWithLoadMore (spec 0029: "Cargar más" tab-scoped)', () => {
+  const items = Array.from({ length: 12 }, (_, i) => `t${i}`);
+
+  it('con budget null devuelve todo, ignorando el estado de "Cargar más"', () => {
+    const result = visibleWithLoadMore(items, null, 'sent', { forTab: 'sent', clicks: 3 });
+    expect(result).toEqual(items);
+  });
+
+  it('con budget=5 y sin clicks previos, devuelve los primeros 5', () => {
+    const result = visibleWithLoadMore(items, 5, 'sent', { forTab: null, clicks: 0 });
+    expect(result.length).toBe(5);
+  });
+
+  it('con clicks del MISMO tab activo, expande el presupuesto (budget * (1+clicks))', () => {
+    const result = visibleWithLoadMore(items, 5, 'sent', { forTab: 'sent', clicks: 1 });
+    expect(result.length).toBe(10);
+  });
+
+  it('con clicks de OTRO tab, los ignora (no expande el tab activo)', () => {
+    const result = visibleWithLoadMore(items, 5, 'received', { forTab: 'sent', clicks: 3 });
+    expect(result.length).toBe(5);
+  });
+
+  it('no genera duplicados ni excede el total real de items', () => {
+    const result = visibleWithLoadMore(items, 5, 'sent', { forTab: 'sent', clicks: 10 });
+    expect(result.length).toBe(items.length);
+    expect(new Set(result).size).toBe(items.length);
   });
 });

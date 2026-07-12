@@ -99,6 +99,20 @@ $bp-lg: 1024px;
         grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr);
       }
     }
+
+    /* Variante para Hero + fila de KPIs separada (no embebidos en el hero) + Card
+       que llena el resto (spec 0029, ej: Comunicaciones en Secretaria/Instructor).
+       Fila 1 = hero (auto, full-width, agota la fila → nada más cabe ahí).
+       Fila 2 = KPIs (.bento-square × N, auto — el auto-flow denso los ubica solos
+       porque la fila 1 ya está completa por el hero full-width).
+       Fila 3 = card protagonista (.bento-fill, minmax(0,1fr) — llena el resto).
+       No requiere data-row-start: el flujo natural del grid resuelve la posición. */
+    &.bento-grid--fill-screen-kpi {
+      @container layoutmain (min-width: #{$bp-lg}) {
+        height: calc(100vh - 120px);
+        grid-template-rows: auto auto minmax(0, 1fr);
+      }
+    }
   }
 }
 
@@ -120,7 +134,8 @@ $bp-lg: 1024px;
    ──────────────────────────────────────────────────────────────────── */
 @container layoutmain (min-width: #{$bp-lg}) {
   .bento-grid--fill-screen > .bento-fill,
-  .bento-grid--fill-screen-2 > .bento-fill {
+  .bento-grid--fill-screen-2 > .bento-fill,
+  .bento-grid--fill-screen-kpi > .bento-fill {
     contain: size;
     min-height: 0;
   }

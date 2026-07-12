@@ -395,6 +395,7 @@
 | `app-stat-box` | `label`, `value`, `variant`, `icon`, `suffix`, `compact`, `useMono` | — | `src/app/shared/components/stat-box/stat-box.component.ts` |
 | `app-tabs` | `tabs`, `activeId`, `variant`, `uppercase` | `activeIdChange` | `src/app/shared/components/tabs/tabs.component.ts` |
 | `app-task-card` | `task`, `loading` | `cardClicked` | `src/app/shared/components/task-card/task-card.component.ts` |
+| `app-task-list-content` | `tabs`, `activeTab`, `tasks`, `loading`, `maxVisible`, `emptyMessage`, `emptySubtitle`, `emptyIcon` | `activeTabChange`, `taskClicked` | `src/app/shared/components/task-list-content/task-list-content.component.ts` |
 | `app-task-reply-thread` | `replies`, `taskStatus`, `currentUserId` | `replySent` | `src/app/shared/components/task-reply-thread/task-reply-thread.component.ts` |
 | `app-task-status-badge` | `status` | — | `src/app/shared/components/task-status-badge/task-status-badge.component.ts` |
 | `app-user-panel` | `user`, `darkMode` | `action`, `toggleTheme`, `logout` | `src/app/shared/components/user-panel/user-panel.component.ts` |
