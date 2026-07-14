@@ -15,6 +15,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { AdminAlumnoDetalleFacade } from '@core/facades/admin-alumno-detalle.facade';
 import { AdminAlumnosFacade } from '@core/facades/admin-alumnos.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
@@ -1009,6 +1010,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly certFacade = inject(CertificacionClaseBFacade);
   private readonly certProfFacade = inject(CertificacionProfesionalFacade);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly authFacade = inject(AuthFacade);
+
+  protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -1035,6 +1039,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   // ── Estado del modal de borrado ──────────────────────────────────────────────
   protected readonly deleteModalVisible = signal(false);
   protected readonly deleteHasHistory = signal(false);
+
+  // ── Estado de carga al abrir el certificado ya generado (hero action) ───────
+  protected readonly isViewingCertificado = signal(false);
 
   // ── Estado del modal de justificación (Inasistencias Clase B, RF-053) ───────
   protected readonly justificarClaseBOpen = signal(false);
@@ -1070,19 +1077,26 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     let certAction: SectionHeroAction;
 
     if (alumno.licenseGroup === 'professional') {
+      const isGeneratingCert = this.certProfFacade.generatingId() === alumno.enrollmentId;
+      const isViewingCert = this.isViewingCertificado();
+
       if (certPath) {
         certAction = {
           id: 'generar-certificado',
-          label: 'Ver Certificado',
-          icon: 'file-check',
+          label: isViewingCert ? 'Cargando...' : 'Ver Certificado',
+          icon: isViewingCert ? 'loader-2' : 'file-check',
           primary: false,
+          loading: isViewingCert,
+          disabled: isViewingCert,
         };
       } else if (this.facade.elegibleProf()) {
         certAction = {
           id: 'generar-certificado',
-          label: 'Generar Certificado',
-          icon: 'file-plus',
+          label: isGeneratingCert ? 'Generando...' : 'Generar Certificado',
+          icon: isGeneratingCert ? 'loader-2' : 'file-plus',
           primary: false,
+          loading: isGeneratingCert,
+          disabled: isGeneratingCert,
         };
       } else {
         const e = this.facade.elegibilidadProf();
@@ -1099,20 +1113,38 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       // Clase B
       const progreso = this.facade.progresoPractico();
       const canEmitCert = progreso.completadas >= progreso.requeridas;
+      const isGeneratingCert = this.certFacade.generatingId() === alumno.enrollmentId;
+      const isViewingCert = this.isViewingCertificado();
 
       if (certPath) {
         certAction = {
           id: 'generar-certificado',
-          label: 'Ver Certificado',
-          icon: 'file-check',
+          label: isViewingCert ? 'Cargando...' : 'Ver Certificado',
+          icon: isViewingCert ? 'loader-2' : 'file-check',
           primary: false,
+          loading: isViewingCert,
+          disabled: isViewingCert,
         };
       } else if (canEmitCert) {
         certAction = {
           id: 'generar-certificado',
-          label: 'Generar Certificado',
-          icon: 'file-plus',
+          label: isGeneratingCert ? 'Generando...' : 'Generar Certificado',
+          icon: isGeneratingCert ? 'loader-2' : 'file-plus',
           primary: false,
+          loading: isGeneratingCert,
+          disabled: isGeneratingCert,
+        };
+      } else if (this.isAdmin()) {
+        // Bypass admin: habilitado aunque falten prácticas — pide confirmación al generar.
+        certAction = {
+          id: 'generar-certificado',
+          label: isGeneratingCert
+            ? 'Generando...'
+            : `Generar Certificado (${progreso.completadas}/${progreso.requeridas})`,
+          icon: isGeneratingCert ? 'loader-2' : 'file-plus',
+          primary: false,
+          loading: isGeneratingCert,
+          disabled: isGeneratingCert,
         };
       } else {
         certAction = {
@@ -1322,7 +1354,12 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
     if (alumno.licenseGroup === 'professional') {
       if (certPath) {
-        await this.certProfFacade.verCertificado(certPath, alumno.nombre);
+        this.isViewingCertificado.set(true);
+        try {
+          await this.certProfFacade.verCertificado(certPath, alumno.nombre);
+        } finally {
+          this.isViewingCertificado.set(false);
+        }
         return;
       }
       // Práctica incompleta: advertencia (criterio flexible, no bloquea)
@@ -1332,7 +1369,7 @@ export class AdminAlumnoDetalleComponent implements OnInit {
           title: 'Asistencia práctica incompleta',
           message: `${alumno.nombre} registra ${pct}% de asistencia práctica. ¿Deseas generar el certificado de todas formas?`,
           severity: 'warn',
-          confirmLabel: 'Generar igual',
+          confirmLabel: 'Generar',
           cancelLabel: 'Cancelar',
         });
         if (!confirmed) return;
@@ -1342,20 +1379,30 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     } else {
       // Clase B
       if (certPath) {
-        await this.certFacade.verCertificado(certPath, alumno.nombre);
+        this.isViewingCertificado.set(true);
+        try {
+          await this.certFacade.verCertificado(certPath, alumno.nombre);
+        } finally {
+          this.isViewingCertificado.set(false);
+        }
         return;
       }
-      const pctTeoria = this.facade.porcentajeTeoricas();
-      if (pctTeoria < 100) {
+
+      const progreso = this.facade.progresoPractico();
+      if (progreso.completadas < progreso.requeridas) {
+        // Solo el admin ve el botón habilitado en este caso — la secretaria
+        // nunca llega aquí (acción deshabilitada en heroActions).
+        if (!this.isAdmin()) return;
         const confirmed = await this.confirmModal.confirm({
-          title: 'Asistencia teórica incompleta',
-          message: `${alumno.nombre} registra ${pctTeoria}% de asistencia teórica. ¿Deseas generar el certificado de todas formas?`,
+          title: 'Prácticas incompletas',
+          message: `${alumno.nombre} lleva ${progreso.completadas}/${progreso.requeridas} clases prácticas completadas. ¿Deseas generar el certificado de todas formas?`,
           severity: 'warn',
-          confirmLabel: 'Generar igual',
+          confirmLabel: 'Generar',
           cancelLabel: 'Cancelar',
         });
         if (!confirmed) return;
       }
+
       await this.certFacade.generarCertificado(alumno.enrollmentId);
       await this.facade.refresh();
     }

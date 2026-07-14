@@ -53,6 +53,15 @@ export function to24hTime(date: Date | string): string {
   });
 }
 
+/** Adds `minutes` to a 'HH:MM' time string, wrapping past midnight. */
+export function addMinutesToTime(timeStr: string, minutes: number): string {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  const hh = String(Math.floor(total / 60) % 24).padStart(2, '0');
+  const mm = String(total % 60).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
 /**
  * Formats a date for display in Chilean format (es-CL).
  * Example: "14 mar. 2026" or "sábado, 14 de marzo" depending on options.

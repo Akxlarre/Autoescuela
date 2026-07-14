@@ -140,6 +140,17 @@ import type {
           flex: none !important;
         }
 
+        /* Contenedor RIGHT (chips + acciones): shrink-0 + align-items:flex-start
+           (forzado arriba) lo dejaban en su ancho natural (shrink-to-fit), que
+           en modo compacto suele exceder el ancho disponible. El ancestro
+           .overflow-hidden del slim mode recortaba el sobrante en vez de
+           dejarlo bajar de línea. Forzamos ancho completo + shrink habilitado
+           para que el wrap de sus hijos (chips, [role='group']) funcione. */
+        .flex.items-center.gap-2.flex-wrap.shrink-0 {
+          width: 100% !important;
+          flex-shrink: 1 !important;
+        }
+
         /* Grupo de acciones: alineación izquierda y gap consistente en móvil */
         [role='group'] {
           justify-content: flex-start !important;
