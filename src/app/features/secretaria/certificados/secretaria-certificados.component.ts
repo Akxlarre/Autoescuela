@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { CertificacionClaseBContentComponent } from '@shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component';
@@ -25,6 +25,7 @@ import { CertificacionClaseBContentComponent } from '@shared/components/certific
       [sendingMasivo]="facade.sendingMasivo()"
       [isExporting]="facade.isExporting()"
       [isGeneratingPendientes]="facade.isGeneratingPendientes()"
+      [isAdmin]="isAdmin()"
       (generarCertificado)="facade.generarCertificado($event)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
@@ -37,6 +38,8 @@ import { CertificacionClaseBContentComponent } from '@shared/components/certific
 export class SecretariaCertificadosComponent implements OnInit {
   protected readonly facade = inject(CertificacionClaseBFacade);
   private readonly authFacade = inject(AuthFacade);
+
+  protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
   ngOnInit(): void {
     void this.facade.initialize();

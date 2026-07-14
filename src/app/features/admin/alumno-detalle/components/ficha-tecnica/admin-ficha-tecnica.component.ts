@@ -57,6 +57,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             @for (clase of clases(); track clase.numero) {
               <tr
                 [class.fila-pendiente]="!clase.completada"
+                [class.fila-completada]="clase.completada"
                 [class.fila-ausente]="clase.ausente"
                 [class.fila-cancelada]="!clase.ausente && clase.cancelada"
                 class="group transition-colors hover:bg-elevated/50"
@@ -94,10 +95,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                 <td class="max-w-50">
                   <div class="flex flex-col gap-1">
                     @if (clase.ausente) {
-                      <span
-                        class="badge-estado-clase"
-                        [class.badge-estado-clase--ok]="clase.justificada"
-                      >
+                      <span class="badge-estado-clase">
                         {{ clase.justificada ? 'Inasistencia justificada' : 'Inasistencia' }}
                       </span>
                     } @else if (clase.cancelada) {
@@ -112,7 +110,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                       {{
                         clase.observaciones ||
                           clase.justificacion ||
-                          (clase.ausente || clase.cancelada ? '' : 'Pendiente de sesión')
+                          (clase.ausente || clase.cancelada || clase.completada
+                            ? ''
+                            : 'Pendiente de sesión')
                       }}
                     </span>
                   </div>
@@ -217,10 +217,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
             </div>
 
             @if (clase.ausente) {
-              <span
-                class="badge-estado-clase self-start"
-                [class.badge-estado-clase--ok]="clase.justificada"
-              >
+              <span class="badge-estado-clase self-start">
                 {{ clase.justificada ? 'Inasistencia justificada' : 'Inasistencia' }}
               </span>
             } @else if (clase.cancelada) {
@@ -235,7 +232,7 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
                   "{{ clase.observaciones || clase.justificacion }}"
                 </p>
               </div>
-            } @else if (!clase.ausente && !clase.cancelada) {
+            } @else if (!clase.ausente && !clase.cancelada && !clase.completada) {
               <div class="h-px bg-border-subtle w-full"></div>
               <span class="text-2xs text-text-muted italic text-center"
                 >Sesión aún no realizada</span
@@ -282,6 +279,9 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     .fila-pendiente td {
       color: var(--text-muted);
     }
+    .fila-completada {
+      background: color-mix(in srgb, var(--state-success) 5%, transparent);
+    }
     .fila-ausente {
       background: color-mix(in srgb, var(--state-error) 5%, transparent);
     }
@@ -307,10 +307,6 @@ import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
     .badge-estado-clase--warning {
       color: var(--state-warning);
       background: color-mix(in srgb, var(--state-warning) 12%, transparent);
-    }
-    .badge-estado-clase--ok {
-      color: var(--state-success);
-      background: color-mix(in srgb, var(--state-success) 12%, transparent);
     }
 
     .firma-dot {
