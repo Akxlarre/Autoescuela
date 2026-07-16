@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { CiclosTeoricosFacade } from '@core/facades/ciclos-teoricos.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { AsistenciaClaseBContentComponent } from '@shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component';
@@ -33,6 +34,7 @@ import type {
       [selectedDate]="facade.selectedDate()"
       [isLoading]="facade.isLoading()"
       [isSaving]="facade.isSaving() || ciclos.isSaving()"
+      [maxVisible]="maxVisible()"
       [cycles]="ciclos.cycles()"
       [selectedCycleId]="ciclos.selectedCycleId()"
       [clasesCiclo]="ciclos.clases()"
@@ -63,8 +65,15 @@ export class SecretariaAsistenciaComponent implements OnInit {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   protected readonly ciclos = inject(CiclosTeoricosFacade);
   private readonly authFacade = inject(AuthFacade);
+  private readonly layoutService = inject(LayoutService);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
+
+  // Densidad adaptativa (spec 0028/0030): sin límite en desktop, 6 filas +
+  // "Cargar más" en tablet/mobile o con el drawer lateral abierto (tier por contenedor).
+  protected readonly maxVisible = computed(() =>
+    this.layoutService.tier() === 'desktop' ? null : 6,
+  );
 
   private get branchId(): number | null {
     return this.authFacade.currentUser()?.branchId ?? null;

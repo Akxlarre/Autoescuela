@@ -193,17 +193,17 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Token | Usos | Valor |
 |-------|------|-------|
 | `--ds-brand` | 481 | `#38bdf8` |
-| `--text-muted` | 410 | `rgba(255, 255, 255, 0.55)` |
+| `--text-muted` | 408 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 269 | `var(--color-primary-text)` |
-| `--state-error` | 231 | `#f87171` |
 | `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
+| `--state-error` | 227 | `#f87171` |
 | `--border-subtle` | 215 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 202 | `#18181b` |
-| `--state-success` | 197 | `#4ade80` |
+| `--state-success` | 194 | `#4ade80` |
 | `--color-primary` | 175 | `#38bdf8` |
 | `--border-default` | 147 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 137 | `#fbbf24` |
-| `--bg-elevated` | 80 | `#27272a` |
+| `--state-warning` | 135 | `#fbbf24` |
+| `--bg-elevated` | 78 | `#27272a` |
 | `--duration-fast` | 66 | `200ms` |
 | `--text-sm` | 65 | `0.875rem` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
@@ -215,14 +215,14 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--text-xs` | 44 | `0.75rem` |
 | `--color-primary-muted` | 43 | `rgba(56, 189, 248, 0.15)` |
 | `--color-success` | 41 | `—` |
-| `--state-success-bg` | 32 | `rgba(74, 222, 128, 0.1)` |
 | `--radius-full` | 31 | `9999px` |
+| `--state-success-bg` | 30 | `rgba(74, 222, 128, 0.1)` |
 
 ## Clases semánticas del Design System
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 240 | `src/styles/tokens/_variables.scss` |
+| `.card` | 239 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
@@ -323,7 +323,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1191 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1189 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -331,7 +331,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 
 | Repeticiones | Cluster |
 |--------------|---------|
-| 65 | `text-sm font-semibold text-text-primary` |
+| 63 | `text-sm font-semibold text-text-primary` |
 | 38 | `text-sm font-bold text-text-primary` |
 | 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 17 | `text-lg font-semibold text-text-primary` |

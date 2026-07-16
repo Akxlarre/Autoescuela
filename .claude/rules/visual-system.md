@@ -110,7 +110,7 @@ El proyecto utiliza un patrón estricto de **Single-Component Skeleton** para ev
     - `.bento-hero` → Para el `app-section-hero`.
     - `.bento-square` (o `.bento-1x1`) → Para `app-kpi-card` o mini-widgets.
     - `.bento-banner` (o `.bento-wide`) → Para tablas, listados o bloques de ancho completo.
-- **Modificadores App-like (Desktop 100vh):** Usar `.bento-grid--fill-screen` o `--fill-screen-2` en el contenedor `.bento-grid` para layouts que ocupan toda la pantalla en Desktop (lg+) y hacen scroll interno. En Mobile permiten scroll nativo.
+- **Modificadores App-like (Desktop 100vh):** Usar `.bento-grid--fill-screen`, `--fill-screen-2` o `--fill-screen-kpi` en el contenedor `.bento-grid` para layouts que ocupan toda la pantalla en Desktop (lg+) y hacen scroll interno. En Mobile permiten scroll nativo. **⚠️ El modificador CSS es solo la mitad del patrón — leer la sección _Patrón App-like_ abajo antes de aplicarlo.**
 - **GSAP:** El método `animateBentoGrid()` del `GsapAnimationsService` requiere que los hijos sean directos para que el stagger funcione correctamente.
 
 ```html
@@ -124,6 +124,61 @@ El proyecto utiliza un patrón estricto de **Single-Component Skeleton** para ev
 
 - Solo **UN** `.card-accent` por sección bento (usualmente en la primera KPI o en el Hero).
 - SCSS canónico: `src/styles/layout/_bento-grid.scss`
+
+## Patrón App-like (fill-screen Desktop / scroll Mobile)
+
+> Cuando en este proyecto se dice **"hazlo app-like"** significa **exactamente esto**, no una estética genérica de app.
+
+**Definición:** la página ocupa **toda la pantalla (100vh) en Desktop (lg+) sin que el documento scrollee** — como una app de escritorio nativa. El overflow se resuelve con **scroll interno** dentro de los paneles (tabla, lista, rail), no moviendo la página. En **Mobile** revierte a **scroll nativo** normal. Peleado en specs 0028–0031.
+
+### App-like son DOS pilares, no uno
+
+Aplicar solo el modificador CSS produce una página que "llena la pantalla" pero **recorta o scrollea mal**. App-like **OBLIGA** a los dos pilares juntos:
+
+1. **Shell fill-screen (CSS):** modificador en el `.bento-grid` raíz + la celda que crece marcada con `.bento-fill`.
+2. **Densidad adaptativa (TS):** el contenido se **presupuesta** para caber en el alto fijo — nunca "se deja empujar".
+
+### Pilar 1 — Shell (clases canónicas)
+
+| Clase | Uso |
+|---|---|
+| `.bento-grid--fill-screen` / `--fill-screen-2` | Grid de pantalla completa (1 o 2 zonas de fill). |
+| `.bento-grid--fill-screen-kpi` | Variante **hero + fila de KPIs + lista**. **Además** evita el _shift de tabs por el scrollbar de Windows_ (se aplica incondicional, sin `@if`). |
+| `.bento-fill` | Celda que **crece y scrollea internamente**. Aplica `contain:size` **solo en lg+**. |
+
+- **PROHIBIDO** `contain` o `min-height` **inline** en la celda — el canon vive en `.bento-fill`. Duplicarlo inline rompe el layout dual (spec 0028).
+- **`flex`, no `grid`,** para las columnas internas: solo `flex` propaga el alto para que cada columna tenga su propio scroll (spec 0031).
+- Un componente Angular que actúa como celda `.bento-fill` necesita `:host { display:flex; flex-direction:column; min-height:0 }` y el parent le pasa `class="bento-fill flex flex-col"`.
+
+### Pilar 2 — Densidad adaptativa (medir por CONTENEDOR)
+
+- `LayoutService.tier()` → signal `mobile | tablet | desktop` (umbrales 640/1024) alimentado por `observeMain(<main>)` (ResizeObserver, registrado una vez en `AppShellComponent`). Es **por contenedor**, no por viewport.
+- `core/utils/layout-tier.utils.ts` → `widthToTier`, **`sliceByBudget`** (recorta N items al presupuesto de alto), `visibleWithLoadMore`, `LoadMoreState`.
+- El Smart Component resuelve el presupuesto y lo pasa al Dumb como input (p. ej. `maxVisible: number | null`).
+
+### Trampas ya resueltas (no reinventar)
+
+- **Switch de layout por CONTENEDOR, NO por `lg:` de Tailwind.** Usar `isDesktopLayout() = maxVisible() === null` (= tier desktop). Con `lg:` el rail/columnas no se apilan cuando un drawer angosta `<main>` (spec 0030).
+- **Jerarquía por ancho, no por tamaño de fuente.** Si "se siente apretado", revisar qué panel es el protagonista (tabla ancha `flex-1` + rail angosto `<aside w-80>`) **antes** de achicar tipografías (spec 0030).
+- **QA geométrico ≠ mirada humana.** 13/13 ACs verdes no garantizan que se vea bien; validar visualmente con `/verify`.
+- **Nunca backticks dentro de comentarios de un `template` literal** — rompen el build y `ng serve` sirve un bundle stale en silencio (spec 0030).
+- **Nunca corchetes en un binding de clase** (`[class.flex-[2]]`) — rompen el binding (spec 0031).
+
+### Ejemplo mínimo
+
+```html
+<!-- Smart Component raíz: shell fill-screen -->
+<div class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout>
+  <app-section-hero class="bento-hero" ... />
+  <div class="bento-square"> <app-kpi-card ... /> </div>
+
+  <!-- celda que crece y scrollea internamente -->
+  <app-mi-tabla-content
+    class="bento-fill flex flex-col"
+    [maxVisible]="budget()"        <!-- densidad: number en móvil, null en desktop -->
+    [isDesktop]="isDesktopLayout()" />
+</div>
+```
 
 ## Cards
 

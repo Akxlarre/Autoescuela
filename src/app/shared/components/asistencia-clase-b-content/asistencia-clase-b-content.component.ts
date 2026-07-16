@@ -19,6 +19,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { todayIso } from '@core/utils/date.utils';
+import { visibleWithLoadMore } from '@core/utils/layout-tier.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -67,11 +68,18 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     IconComponent,
     BadgeComponent,
     BentoGridLayoutDirective,
+    CardHoverDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <!-- Modo dual (spec 0030/0031): fill-screen en AMBOS tabs (3 filas fijas:
+         hero / tabs / celda fill). El modificador es incondicional para que la
+         página no scrollee en ningún tab → no aparece/desaparece el scrollbar al
+         alternar tabs (fix del shift de la fila de tabs, spec 0031). La celda
+         fill es el contenido del tab activo (Prácticas: tabla+rail alertas;
+         Ciclos: selector + columnas con scroll interno). -->
+    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -105,7 +113,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 : 'none'
             "
             data-llm-action="tab-practicas"
-            (click)="activeTab.set('practicas')"
+            (click)="selectTab('practicas')"
           >
             <app-icon name="calendar-check" [size]="18" />
             Prácticas
@@ -123,7 +131,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 : 'none'
             "
             data-llm-action="tab-ciclos"
-            (click)="activeTab.set('ciclos')"
+            (click)="selectTab('ciclos')"
           >
             <app-icon name="video" [size]="18" />
             Ciclos Teóricos
@@ -131,108 +139,128 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         </div>
       </div>
 
-      <!-- ── Alertas ────────────────────────────────────────────────────────── -->
-      @if (activeTab() === 'practicas' && !isLoading() && alertas().length > 0) {
-        <div class="bento-banner flex flex-col gap-4">
-          <section class="bento-banner card p-5 flex flex-col gap-4">
-            <div class="flex items-center gap-2">
-              <app-icon name="alert-triangle" [size]="18" [style.color]="'var(--state-warning)'" />
-              <h2 class="text-sm font-semibold text-text-primary">Alertas y Acciones Urgentes</h2>
-            </div>
+      <!-- ── Celda protagonista (spec 0030): tabla + rail de alertas ────────── -->
+      <!-- Hijo directo del grid con .bento-fill: en desktop llena el resto del
+           viewport (fila minmax(0,1fr) + contain:size vía _bento-grid.scss);
+           bajo lg mide su contenido natural y la página scrollea.
+           2 columnas en desktop (feedback owner 2026-07-13): la TABLA es la
+           protagonista y ocupa el ancho principal; las alertas van a un rail
+           lateral angosto (contexto, no bloqueo) — antes apiladas verticalmente
+           invertían la jerarquía (secundario arriba comía 45% del alto).
+           Las utilidades order-1/order-2 dejan la tabla primera en AMBOS ejes:
+           arriba en móvil (flex-col → trabajo principal inmediato), izquierda
+           en desktop (flex-row). El DOM mantiene [alertas, tabla] para no
+           mover el bloque grande de la tabla. El switch col/row usa
+           isDesktopLayout() (= maxVisible()===null = tier desktop por
+           contenedor), NO el breakpoint de viewport lg: de Tailwind. -->
+      @if (activeTab() === 'practicas') {
+        <div
+          class="bento-banner bento-fill flex gap-4 min-h-0 overflow-hidden"
+          [class.flex-col]="!isDesktopLayout()"
+          [class.flex-row]="isDesktopLayout()"
+        >
+          <!-- Rail lateral de alertas (contexto, no bloqueo). Filas compactas
+               de 1 línea; el detalle completo (última falta, política) va en el
+               atributo title (tooltip nativo). order-2 = a la derecha en
+               desktop / debajo de la tabla en móvil. En desktop el rail llena
+               el alto de la fila (min-h-0) y el listado scrollea internamente;
+               en móvil altura natural y la página scrollea (dual). -->
+          @if (!isLoading() && alertas().length > 0) {
+            <aside
+              class="card p-3 flex flex-col gap-1.5 order-2 min-h-0 overflow-hidden"
+              [class.w-80]="isDesktopLayout()"
+              [class.shrink-0]="isDesktopLayout()"
+              appCardHover
+            >
+              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                <app-icon
+                  name="alert-triangle"
+                  [size]="14"
+                  [style.color]="'var(--state-warning)'"
+                />
+                <h2 class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Alertas ({{ alertas().length }})
+                </h2>
+              </div>
 
-            @for (alerta of alertas(); track alerta.enrollmentId) {
-              <div
-                class="flex items-start justify-between gap-4 rounded-lg px-4 py-3 border"
-                [style.border-color]="
-                  alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                "
-                [style.background]="
-                  alerta.nivel === 'danger' ? 'var(--state-error-bg)' : 'var(--state-warning-bg)'
-                "
-              >
-                <!-- Info del alumno -->
-                <div class="flex items-start gap-3 min-w-0 flex-1">
+              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
+                @for (alerta of alertas(); track alerta.enrollmentId) {
                   <div
-                    class="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white"
-                    [style.background]="
+                    class="flex items-center justify-between gap-3 rounded-md pl-3 pr-2 py-1.5 border-l-[3px] transition-colors hover:bg-elevated"
+                    [style.border-left-color]="
                       alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
                     "
+                    [title]="alertaTooltip(alerta)"
                   >
-                    {{ initials(alerta.alumnoName) }}
-                  </div>
-                  <div class="min-w-0">
-                    <p
-                      class="text-sm font-semibold truncate"
-                      [style.color]="
-                        alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                      "
-                    >
-                      {{ alerta.alumnoName }} — {{ alerta.faltasConsecutivas }}
-                      {{
-                        alerta.faltasConsecutivas === 1
-                          ? 'falta consecutiva'
-                          : 'faltas consecutivas'
-                      }}
-                    </p>
-                    @if (alerta.nivel === 'danger') {
-                      <p class="text-xs mt-0.5" [style.color]="'var(--state-error)'">
-                        Última falta: {{ formatIsoDate(alerta.ultimaFechaFalta) }}
+                    <!-- Info del alumno (1 línea) -->
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                      <div
+                        class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-white"
+                        [style.background]="
+                          alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
+                        "
+                      >
+                        {{ initials(alerta.alumnoName) }}
+                      </div>
+                      <p class="text-xs truncate">
+                        <span
+                          class="font-semibold"
+                          [style.color]="
+                            alerta.nivel === 'danger'
+                              ? 'var(--state-error)'
+                              : 'var(--state-warning)'
+                          "
+                          >{{ alerta.alumnoName }}</span
+                        >
+                        <span class="text-text-muted">
+                          — {{ alerta.faltasConsecutivas }}
+                          {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }}</span
+                        >
                       </p>
-                      <p class="text-xs mt-0.5" [style.color]="'var(--state-error)'">
-                        Política: 2 inasistencias consecutivas — acción manual requerida
-                      </p>
-                    } @else {
-                      <p class="text-xs mt-0.5" [style.color]="'var(--state-warning)'">
-                        Próxima inasistencia podría requerir eliminación del horario
-                      </p>
-                    }
-                  </div>
-                </div>
+                    </div>
 
-                <!-- Acciones -->
-                <div class="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                  @if (alerta.nivel === 'danger') {
-                    @if (alerta.horarioActivo) {
-                      <button
-                        class="btn-primary text-xs px-3 py-1.5"
-                        [disabled]="isSaving()"
-                        data-llm-action="remove-schedule"
-                        (click)="removeSchedule.emit(alerta.enrollmentId)"
-                      >
-                        Eliminar Horario
-                      </button>
-                    } @else {
-                      <button
-                        class="btn-secondary text-xs px-3 py-1.5"
-                        [disabled]="isSaving()"
-                        data-llm-action="reactivate-schedule"
-                        (click)="reactivateSchedule.emit(alerta.enrollmentId)"
-                      >
-                        Reactivar Horario
-                      </button>
-                    }
-                  } @else {
-                    <button
-                      class="btn-secondary text-xs px-3 py-1.5"
-                      [disabled]="isSaving()"
-                      data-llm-action="send-reminder"
-                      (click)="sendReminder.emit(alerta.enrollmentId)"
-                    >
-                      Enviar Recordatorio
-                    </button>
-                  }
-                </div>
+                    <!-- Acción -->
+                    <div class="shrink-0">
+                      @if (alerta.nivel === 'danger') {
+                        @if (alerta.horarioActivo) {
+                          <button
+                            class="btn-primary text-xs px-2.5 py-1"
+                            [disabled]="isSaving()"
+                            data-llm-action="remove-schedule"
+                            (click)="removeSchedule.emit(alerta.enrollmentId)"
+                          >
+                            Eliminar
+                          </button>
+                        } @else {
+                          <button
+                            class="btn-secondary text-xs px-2.5 py-1"
+                            [disabled]="isSaving()"
+                            data-llm-action="reactivate-schedule"
+                            (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                          >
+                            Reactivar
+                          </button>
+                        }
+                      } @else {
+                        <button
+                          class="btn-secondary text-xs px-2.5 py-1"
+                          [disabled]="isSaving()"
+                          data-llm-action="send-reminder"
+                          (click)="sendReminder.emit(alerta.enrollmentId)"
+                        >
+                          Recordar
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
-            }
-          </section>
-        </div>
-      }
+            </aside>
+          }
 
-      <!-- ── Asistencia del Día (Prácticas) ─────────────────────────────── -->
-      @if (activeTab() === 'practicas') {
-        <div class="bento-banner flex flex-col gap-6">
-          <section class="bento-banner card p-5 flex flex-col gap-4">
-            <div class="flex flex-wrap items-center justify-between gap-3">
+          <!-- ── Asistencia del Día (Prácticas) — PROTAGONISTA ────────────── -->
+          <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0 order-1" appCardHover>
+            <div class="flex flex-wrap items-center justify-between gap-3 shrink-0">
               <div class="flex items-center gap-2">
                 <app-icon
                   name="calendar-check"
@@ -271,7 +299,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             </div>
 
             <!-- Filtros -->
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
               @for (f of statusFilters; track f.value) {
                 <button
                   class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
@@ -286,7 +314,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                       ? 'var(--color-primary)'
                       : 'var(--border-subtle)'
                   "
-                  (click)="activeStatusFilter.set(f.value)"
+                  (click)="setStatusFilter(f.value)"
                 >
                   {{ f.label }}
                   @if (countByStatus(f.value) > 0) {
@@ -303,7 +331,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   optionValue="value"
                   placeholder="Todos los instructores"
                   [ngModel]="selectedInstructorId()"
-                  (ngModelChange)="selectedInstructorId.set($event)"
+                  (ngModelChange)="setInstructorFilter($event)"
                   styleClass="w-auto"
                   data-llm-description="filter attendance by instructor"
                 />
@@ -313,7 +341,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
             <!-- Tabla -->
             @if (isLoading()) {
               <div class="flex flex-col gap-2">
-                @for (i of [1, 2, 3, 4, 5]; track i) {
+                @for (i of skeletonIndexes(); track i) {
                   <app-skeleton-block variant="rect" width="100%" height="44px" />
                 }
               </div>
@@ -322,9 +350,12 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 No hay registros que coincidan con los filtros seleccionados.
               </p>
             } @else {
-              <div class="overflow-x-auto">
+              <!-- Único contenedor de scroll (X siempre; Y solo surte efecto en
+                   desktop fill, donde la celda tiene alto fijo). thead sticky
+                   se ancla a este scrollport. -->
+              <div class="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
                 <table class="w-full text-sm">
-                  <thead>
+                  <thead class="sticky top-0 z-10 bg-surface">
                     <tr class="border-b" [style.border-color]="'var(--border-subtle)'">
                       <th
                         class="text-left text-xs font-semibold text-text-secondary pb-2 pr-4 w-20"
@@ -362,7 +393,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                     </tr>
                   </thead>
                   <tbody>
-                    @for (row of filteredPracticas(); track row.id) {
+                    @for (row of visiblePracticas(); track row.id) {
                       <tr
                         class="border-b transition-colors hover:bg-elevated"
                         [style.border-color]="'var(--border-subtle)'"
@@ -510,6 +541,17 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                     }
                   </tbody>
                 </table>
+                @if (hasMorePracticas()) {
+                  <button
+                    type="button"
+                    class="btn-ghost w-full flex items-center justify-center gap-1.5 font-medium transition-colors cursor-pointer mt-2"
+                    data-llm-action="load-more-practicas"
+                    (click)="loadMorePracticas()"
+                  >
+                    <app-icon name="chevron-down" [size]="14" />
+                    Cargar más ({{ remainingPracticas() }} restantes)
+                  </button>
+                }
               </div>
             }
           </section>
@@ -519,7 +561,8 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       <!-- ── Pestaña Ciclos Teóricos (Spec 0001) ────────────────────────────── -->
       @if (activeTab() === 'ciclos') {
         <app-ciclos-teoricos-content
-          class="bento-banner"
+          class="bento-banner bento-fill flex flex-col min-h-0 overflow-hidden"
+          [isDesktop]="isDesktopLayout()"
           [cycles]="cycles()"
           [selectedCycleId]="selectedCycleId()"
           [clases]="clasesCiclo()"
@@ -604,6 +647,8 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly instructores = input<InstructorOption[]>([]);
   readonly isLoading = input(false);
   readonly isSaving = input(false);
+  /** Presupuesto de densidad (spec 0028/0030): null = sin límite (desktop). Llega resuelto por input — este Dumb NO inyecta LayoutService. */
+  readonly maxVisible = input<number | null>(null);
 
   // ── Inputs Ciclos Teóricos (Spec 0001) ──────────────────────────────────────
   readonly cycles = input<CicloOption[]>([]);
@@ -711,6 +756,18 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
 
   // ── Computed ─────────────────────────────────────────────────────────────────
 
+  /**
+   * true = layout desktop de 2 columnas (tabla + rail de alertas).
+   * Se deriva de `maxVisible() === null`, que el Smart resuelve como
+   * `LayoutService.tier() === 'desktop'` (main ≥ 1024px) — MISMA señal que
+   * activa el fill-screen (`@container layoutmain min-width:1024px`). Se usa
+   * en vez del breakpoint de viewport `lg:` de Tailwind a propósito: con el
+   * drawer lateral abierto el viewport sigue ancho pero `<main>` se angosta →
+   * queremos apilar (1 columna) igual que se compacta la densidad, no mantener
+   * 2 columnas apretadas.
+   */
+  protected readonly isDesktopLayout = computed(() => this.maxVisible() === null);
+
   /** true cuando la fecha seleccionada es posterior a hoy → modo solo lectura */
   protected readonly isFutureDate = computed(() => this.selectedDate() > this.todayIsoVal);
 
@@ -728,10 +785,69 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     return rows;
   });
 
+  // ── Densidad adaptativa (spec 0030) ──────────────────────────────────────────
+  // "Cargar más" tab-scoped (canon 0029) + reset explícito al cambiar filtro,
+  // instructor, fecha o tab (los setters wrapper de abajo). Los filtros operan
+  // sobre el total (filteredPracticas); el presupuesto solo recorta el render.
+  private readonly loadMoreTab = signal<string | null>(null);
+  private readonly loadMoreClicks = signal(0);
+
+  protected readonly visiblePracticas = computed(() =>
+    visibleWithLoadMore(this.filteredPracticas(), this.maxVisible(), this.activeTab(), {
+      forTab: this.loadMoreTab(),
+      clicks: this.loadMoreClicks(),
+    }),
+  );
+
+  protected readonly hasMorePracticas = computed(
+    () => this.visiblePracticas().length < this.filteredPracticas().length,
+  );
+
+  protected readonly remainingPracticas = computed(
+    () => this.filteredPracticas().length - this.visiblePracticas().length,
+  );
+
+  protected readonly skeletonIndexes = computed(() => {
+    const count = this.maxVisible() ?? 5;
+    return Array.from({ length: count }, (_, i) => i);
+  });
+
+  protected loadMorePracticas(): void {
+    const tab = this.activeTab();
+    if (this.loadMoreTab() !== tab) {
+      this.loadMoreTab.set(tab);
+      this.loadMoreClicks.set(1);
+    } else {
+      this.loadMoreClicks.update((n) => n + 1);
+    }
+  }
+
+  private resetLoadMore(): void {
+    this.loadMoreTab.set(null);
+    this.loadMoreClicks.set(0);
+  }
+
+  protected setStatusFilter(filter: StatusFilter): void {
+    this.activeStatusFilter.set(filter);
+    this.resetLoadMore();
+  }
+
+  protected setInstructorFilter(id: number | null): void {
+    this.selectedInstructorId.set(id);
+    this.resetLoadMore();
+  }
+
+  protected selectTab(tab: 'practicas' | 'ciclos'): void {
+    this.activeTab.set(tab);
+    this.resetLoadMore();
+  }
+
   // ── Template helpers ─────────────────────────────────────────────────────────
 
   protected onDateChange(val: string): void {
-    if (val) this.dateChange.emit(val);
+    if (!val) return;
+    this.resetLoadMore();
+    this.dateChange.emit(val);
   }
 
   protected onHeroAction(id: string): void {
@@ -750,7 +866,11 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   }
 
   protected formatIsoDate(iso: string): string {
-    const [y, m, d] = iso.split('-');
+    // Acepta 'YYYY-MM-DD' o timestamp ISO completo ('YYYY-MM-DDTHH:mm:ss...') —
+    // el origen real (recorded_at/scheduled_at) es timestamptz de Supabase, no
+    // date-only (deuda documentada en spec 0030, corregida aquí porque el
+    // tooltip de alerta ahora la muestra para TODAS las alertas, no solo danger).
+    const [y, m, d] = iso.slice(0, 10).split('-');
     return `${d}-${m}-${y}`;
   }
 
@@ -761,6 +881,20 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
       .map((w) => w[0])
       .join('')
       .toUpperCase();
+  }
+
+  /** Detalle completo de la alerta para el tooltip nativo de la fila compacta. */
+  protected alertaTooltip(alerta: AlertaFaltaConsecutiva): string {
+    const countLabel =
+      alerta.faltasConsecutivas === 1 ? 'falta consecutiva' : 'faltas consecutivas';
+    const lines = [`${alerta.alumnoName} — ${alerta.faltasConsecutivas} ${countLabel}`];
+    if (alerta.nivel === 'danger') {
+      lines.push(`Última falta: ${this.formatIsoDate(alerta.ultimaFechaFalta)}`);
+      lines.push('Política: 2 inasistencias consecutivas — acción manual requerida');
+    } else {
+      lines.push('Próxima inasistencia podría requerir eliminación del horario');
+    }
+    return lines.join('\n');
   }
 
   // ── Status badge helpers ──────────────────────────────────────────────────────
