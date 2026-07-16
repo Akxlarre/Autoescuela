@@ -13,7 +13,7 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 
-import { toISODate, to24hTime, buildDayLabel } from '@core/utils/date.utils';
+import { toISODate, to24hTime, buildDayLabel, addMinutesToTime } from '@core/utils/date.utils';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -163,11 +163,11 @@ export class AgendaFacade {
 
     this._initialized = true;
     this._lastBranchId = branchId;
-    
+
     // Iniciar skeleton inmediatamente para respetar protocolo de animación
     // y evitar salto visual: Empty State -> Skeleton -> Contenido
     this._isLoading.set(true);
-    
+
     try {
       await Promise.all([this.loadLookupMaps(), this.loadInstructors()]);
       await this.loadWeek(); // loadWeek se encarga de apagar isLoading() al finalizar
@@ -175,7 +175,7 @@ export class AgendaFacade {
       this._error.set('Error al inicializar la agenda. Intenta de nuevo.');
       this._isLoading.set(false);
     }
-    
+
     this.subscribeRealtime();
   }
 
@@ -528,14 +528,4 @@ export class AgendaFacade {
     };
     return map[raw] ?? 'scheduled';
   }
-}
-
-// ─── Helper extra ─────────────────────────────────────────────────────────
-
-function addMinutesToTime(timeStr: string, minutes: number): string {
-  const [h, m] = timeStr.split(':').map(Number);
-  const total = h * 60 + m + minutes;
-  const hh = String(Math.floor(total / 60) % 24).padStart(2, '0');
-  const mm = String(total % 60).padStart(2, '0');
-  return `${hh}:${mm}`;
 }

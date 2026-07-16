@@ -72,10 +72,6 @@ describe('AdminAlumnoDetalleFacade', () => {
     expect(facade.porcentajePracticas()).toBe(0);
   });
 
-  it('porcentajeTeoricas should return 0 initially', () => {
-    expect(facade.porcentajeTeoricas()).toBe(0);
-  });
-
   describe('generarCarnet', () => {
     it("variant 'initial' invoca la Edge Function con variant=initial y setea el path inicial", async () => {
       await facade.generarCarnet(1, 'initial');

@@ -491,13 +491,12 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     </tr>
                   }
 
-                  <!-- Fila de confirmación inline — visible solo si teoría < 100 % -->
+                  <!-- Fila de confirmación inline — visible solo si el admin bypassea prácticas incompletas -->
                   @if (pendingConfirmId() === alumno.enrollmentId) {
                     <tr class="border-b border-(--border-default)">
-                      <td colspan="9" class="px-4 pb-4 pt-0">
+                      <td colspan="9" class="px-4 py-3">
                         <div
-                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3"
-                          class="bg-warning-subtle border border-warning"
+                          class="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl px-4 py-3 bg-warning-subtle border border-warning"
                         >
                           <app-icon
                             name="alert-triangle"
@@ -505,18 +504,18 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                             class="text-warning shrink-0"
                           />
                           <p class="text-sm flex-1 text-text-secondary">
-                            <span class="font-semibold text-warning">
-                              Asistencia teórica incompleta:
-                            </span>
-                            {{ alumno.nombre }} registra
-                            <strong>{{ alumno.pctAsistenciaTeoria }}%</strong>
-                            de asistencia a sus clases teóricas. Las prácticas están completas
-                            (12/12). ¿Confirmar generación del certificado de todos modos?
+                            <span class="font-semibold text-warning">Prácticas incompletas:</span>
+                            {{ alumno.nombre }} lleva
+                            <strong
+                              >{{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}</strong
+                            >
+                            clases prácticas completadas. ¿Confirmar generación del certificado de
+                            todos modos?
                           </p>
                           <div class="flex items-center gap-2 shrink-0">
                             <button
                               class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
-                              data-llm-action="confirm-generate-certificate-partial-theory"
+                              data-llm-action="confirm-generate-certificate-partial-practicas"
                               [disabled]="generatingId() !== null"
                               (click)="confirmarGenerar()"
                             >
@@ -562,7 +561,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
               </span>
               <div class="flex items-center gap-1">
                 <button
-                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
+                  class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPageAlumnos() === 0"
                   (click)="prevPageAlumnos()"
                 >
@@ -572,7 +571,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                   Pág. {{ currentPageAlumnos() + 1 }} / {{ totalPagesAlumnos() }}
                 </span>
                 <button
-                  class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
+                  class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPageAlumnos() >= totalPagesAlumnos() - 1"
                   (click)="nextPageAlumnos()"
                 >
@@ -667,7 +666,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                 </span>
                 <div class="flex items-center gap-1">
                   <button
-                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
+                    class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                     [disabled]="currentPageLog() === 0"
                     (click)="prevPageLog()"
                   >
@@ -677,7 +676,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     Pág. {{ currentPageLog() + 1 }} / {{ totalPagesLog() }}
                   </span>
                   <button
-                    class="p-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
+                    class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                     [disabled]="currentPageLog() >= totalPagesLog() - 1"
                     (click)="nextPageLog()"
                   >
@@ -711,6 +710,8 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly isExporting = input(false);
   /** true mientras se están generando certificados pendientes en lote. */
   readonly isGeneratingPendientes = input(false);
+  /** true si el usuario autenticado es admin — habilita el bypass de prácticas incompletas. */
+  readonly isAdmin = input(false);
 
   // ── Outputs ──
   readonly generarCertificado = output<number>();
@@ -869,19 +870,20 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   /**
    * Punto de entrada del botón "Generar".
-   * - Si teoría = 100 % o sin registro → emite directamente.
-   * - Si teoría < 100 % → abre la fila de confirmación inline.
+   * - Prácticas completas (12/12) → emite directamente.
+   * - Prácticas incompletas + admin → abre la fila de confirmación inline (bypass).
+   * - Prácticas incompletas + secretaria → bloqueado, no emite (checkeo obligatorio).
    */
   onClickGenerar(alumno: CertificacionAlumnoRow): void {
-    const pct = alumno.pctAsistenciaTeoria;
-    if (pct === null || pct >= 100) {
+    if (alumno.clasesCompletadas >= alumno.clasesTotales) {
       this.generarCertificado.emit(alumno.enrollmentId);
       return;
     }
+    if (!this.isAdmin()) return;
     this.pendingConfirmId.set(alumno.enrollmentId);
   }
 
-  /** Confirmó generar a pesar de teoría incompleta. */
+  /** Confirmó generar a pesar de prácticas incompletas (bypass admin). */
   confirmarGenerar(): void {
     const id = this.pendingConfirmId();
     if (id !== null) {

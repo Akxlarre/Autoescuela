@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { AuthFacade } from '@core/facades/auth.facade';
 import { CertificacionClaseBContentComponent } from '@shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component';
 
 /**
@@ -25,6 +26,7 @@ import { CertificacionClaseBContentComponent } from '@shared/components/certific
       [sendingMasivo]="facade.sendingMasivo()"
       [isExporting]="facade.isExporting()"
       [isGeneratingPendientes]="facade.isGeneratingPendientes()"
+      [isAdmin]="isAdmin()"
       (generarCertificado)="facade.generarCertificado($event)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
@@ -37,6 +39,9 @@ import { CertificacionClaseBContentComponent } from '@shared/components/certific
 export class AdminCertificacionComponent {
   protected readonly facade = inject(CertificacionClaseBFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly authFacade = inject(AuthFacade);
+
+  protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
   constructor() {
     let previousBranchId: number | null | undefined = undefined;

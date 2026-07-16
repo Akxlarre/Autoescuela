@@ -31,7 +31,7 @@ import type {
   SectionHeroKpi,
 } from '@core/models/ui/section-hero.model';
 import type { LiveClassModel } from '@core/models/ui/dashboard.model';
-import { to24hTime } from '@core/utils/date.utils';
+import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
 
 @Component({
   selector: 'app-secretaria-dashboard',
@@ -374,11 +374,12 @@ export class SecretariaDashboardComponent implements OnInit {
         await import('../../admin/asistencia/admin-iniciar-clase-drawer.component');
       this.layoutDrawer.open(AdminIniciarClaseDrawerComponent, 'Iniciar Clase Práctica', 'play');
     } else {
+      const startTime = to24hTime(cls.scheduledAt);
       const slot: any = {
         id: cls.id,
         date: cls.scheduledAt.split('T')[0],
-        startTime: cls.scheduledAt.split('T')[1].substring(0, 5),
-        endTime: '',
+        startTime,
+        endTime: addMinutesToTime(startTime, 45),
         status: cls.status,
         instructorId: 0,
         instructorName: cls.instructorName,

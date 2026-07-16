@@ -61,7 +61,6 @@ const STATUS_PRESENTE = 'present';
 
 /** Clases requeridas por defecto para Clase B. */
 const PRACTICAS_REQUERIDAS_B = 12;
-const TEORICAS_REQUERIDAS_B = 8;
 
 const TEORIA_MIN_PROF = 75;
 const NOTA_MIN_PROF = 75;
@@ -96,10 +95,6 @@ export class AdminAlumnoDetalleFacade {
   private readonly _progresoPractico = signal<ProgresoUI>({
     completadas: 0,
     requeridas: PRACTICAS_REQUERIDAS_B,
-  });
-  private readonly _progresoTeorico = signal<ProgresoUI>({
-    completadas: 0,
-    requeridas: TEORICAS_REQUERIDAS_B,
   });
   private readonly _certPdfPath = signal<string | null>(null);
   /** Carnet de 6 clases (amarillo). */
@@ -171,7 +166,6 @@ export class AdminAlumnoDetalleFacade {
   );
   readonly historialPagos = this._historialPagos.asReadonly();
   readonly progresoPractico = this._progresoPractico.asReadonly();
-  readonly progresoTeorico = this._progresoTeorico.asReadonly();
   readonly certPdfPath = this._certPdfPath.asReadonly();
   readonly licenseInitialPath = this._licenseInitialPath.asReadonly();
   readonly licenseFullPath = this._licenseFullPath.asReadonly();
@@ -204,11 +198,6 @@ export class AdminAlumnoDetalleFacade {
   readonly porcentajePracticas = computed(() => {
     const p = this._progresoPractico();
     return p.requeridas > 0 ? Math.round((p.completadas / p.requeridas) * 100) : 0;
-  });
-
-  readonly porcentajeTeoricas = computed(() => {
-    const t = this._progresoTeorico();
-    return t.requeridas > 0 ? Math.round((t.completadas / t.requeridas) * 100) : 0;
   });
 
   // ── 3. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
@@ -289,7 +278,6 @@ export class AdminAlumnoDetalleFacade {
     this._clasesPendientesReagendar.set([]);
     this._historialPagos.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: PRACTICAS_REQUERIDAS_B });
-    this._progresoTeorico.set({ completadas: 0, requeridas: TEORICAS_REQUERIDAS_B });
     this._certPdfPath.set(null);
     this._licenseInitialPath.set(null);
     this._licenseFullPath.set(null);
@@ -554,12 +542,6 @@ export class AdminAlumnoDetalleFacade {
       requeridas: PRACTICAS_REQUERIDAS_B,
     });
 
-    // Asistencia teórica eliminada (Spec 0001 — Ciclos Teóricos).
-    this._progresoTeorico.set({
-      completadas: 0,
-      requeridas: TEORICAS_REQUERIDAS_B,
-    });
-
     this._inasistencias.set(
       (evidenceResult.data ?? []).map((e: any) => ({
         id: e.id,
@@ -662,7 +644,7 @@ export class AdminAlumnoDetalleFacade {
           kmInicio: ses.km_start,
           kmFin: ses.km_end,
           observaciones: ses.performance_notes ?? ses.notes ?? null,
-          completada: !!(ses.student_signature && ses.instructor_signature),
+          completada: ses.status === 'completed',
           ausente: ses.status === 'no_show',
           cancelada: ses.status === 'cancelled',
           justificada: attendance?.status === 'excused',
@@ -855,7 +837,6 @@ export class AdminAlumnoDetalleFacade {
     this._inasistenciasClaseB.set([]);
     this._clasesPendientesReagendar.set([]);
     this._progresoPractico.set({ completadas: 0, requeridas: 0 });
-    this._progresoTeorico.set({ completadas: 0, requeridas: 0 });
   }
 
   /**
