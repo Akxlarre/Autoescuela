@@ -116,6 +116,8 @@ export interface InasistenciaClaseBUI {
   /** Motivo de justificación, si ya fue justificada */
   justificacion: string | null;
   instructor: string | null;
+  /** true si la sesión asociada ya no está en 'no_show' (fue reciclada por el flujo de reagendar) */
+  reagendada: boolean;
 }
 
 /**

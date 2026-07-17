@@ -502,7 +502,7 @@ export class AdminAlumnoDetalleFacade {
               `
               id, status, justification, recorded_at,
               class_b_sessions!inner(
-                id, enrollment_id, class_number, scheduled_at,
+                id, enrollment_id, class_number, scheduled_at, status,
                 instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name))
               )
             `,
@@ -684,6 +684,9 @@ export class AdminAlumnoDetalleFacade {
       justificada: row.status === 'excused',
       justificacion: row.justification ?? null,
       instructor,
+      // RF-053 (soft archive): la sesión ya no está en 'no_show' → fue reciclada por
+      // el flujo de reagendar, pero el registro de inasistencia se conserva para auditoría.
+      reagendada: session?.status != null && session.status !== 'no_show',
     };
   }
 
@@ -966,18 +969,28 @@ export class AdminAlumnoDetalleFacade {
     void this.refreshSilently();
   }
 
+  /**
+   * Actualiza el perfil del alumno vía Edge Function `update-student-profile`.
+   * El email NO se actualiza directo en public.users desde el cliente: la function
+   * primero lo cambia en Auth (service_role) y solo si eso tiene éxito toca la tabla
+   * pública — evita que auth.users y public.users queden desincronizados.
+   */
   async actualizarPerfilAlumno(userId: number, data: any): Promise<void> {
-    const { error } = await this.supabase.client
-      .from('users')
-      .update({
-        first_names: data.first_names.trim(),
-        paternal_last_name: data.paternal_last_name.trim(),
-        maternal_last_name: data.maternal_last_name.trim(),
-        email: data.email.trim(),
-        phone: data.phone.trim() || null,
-      })
-      .eq('id', userId);
-    if (error) throw error;
+    const currentEmail = this.alumno()?.email ?? '';
+
+    const { error } = await this.supabase.client.functions.invoke('update-student-profile', {
+      body: {
+        userId,
+        firstNames: data.first_names.trim(),
+        paternalLastName: data.paternal_last_name.trim(),
+        maternalLastName: data.maternal_last_name.trim(),
+        phone: data.phone.trim(),
+        email: data.email.trim().toLowerCase(),
+        currentEmail: currentEmail.trim().toLowerCase(),
+      },
+    });
+    if (error)
+      throw new Error(this.sanitizer.sanitize(error).message ?? 'Error al actualizar el perfil');
     void this.refreshSilently();
   }
 
@@ -1297,12 +1310,10 @@ export class AdminAlumnoDetalleFacade {
         })
         .eq('id', session.sessionId);
       if (updateError) throw updateError;
-
-      const { error: deleteError } = await this.supabase.client
-        .from('class_b_practice_attendance')
-        .delete()
-        .eq('class_b_session_id', session.sessionId);
-      if (deleteError) throw deleteError;
+      // Soft archive (RF-053): NO se borra class_b_practice_attendance — el historial de
+      // la inasistencia original se conserva para auditoría. La grilla principal ya
+      // deriva su color de class_b_sessions.status, así que queda "limpia" (azul) sin
+      // necesidad de tocar la tabla de asistencia.
     }
 
     this._reagendarSeleccion.set([]);

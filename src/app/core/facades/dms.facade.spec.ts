@@ -94,6 +94,16 @@ describe('DmsFacade', () => {
       expect(result).toBe(true);
     });
 
+    it('rechaza eliminar documentos con source enrollment_license (fila sintética del Carnet, sin registro propio)', async () => {
+      const deleteSpy = vi.fn();
+      supabaseSpy.client.from = vi.fn().mockReturnValue({ delete: deleteSpy });
+
+      await expect(
+        facade.deleteStudentDocument('lic-full-9', 'enrollment_license'),
+      ).rejects.toThrow('El Carnet no se puede eliminar desde el DMS');
+      expect(deleteSpy).not.toHaveBeenCalled();
+    });
+
     it('should call dmsViewer.openByUrl on openDocument', async () => {
       await facade.openDocument('storage/path/doc.pdf', 'File');
       expect(viewerSpy.openByUrl).toHaveBeenCalledWith('https://example.com/signed/doc', 'File');

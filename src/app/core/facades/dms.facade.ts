@@ -24,6 +24,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
 const LABELS_TIPO_ALUMNO: Record<string, string> = {
   contrato: 'Contrato',
+  contract: 'Contrato',
   foto_licencia: 'Foto Licencia',
   hoja_vida: 'Hoja de Vida',
   cedula: 'Cédula',
@@ -33,6 +34,8 @@ const LABELS_TIPO_ALUMNO: Record<string, string> = {
   cedula_identidad: 'Cédula Identidad',
   certificado_medico: 'Certificado Médico',
   semep: 'SEMEP',
+  carnet_inicial: 'Carnet Inicial (6 clases)',
+  carnet_completo: 'Carnet Completo (12 clases)',
 };
 
 const LABELS_TIPO_ESCUELA: Record<string, string> = {
@@ -116,8 +119,8 @@ interface RawTemplate {
  */
 @Injectable({ providedIn: 'root' })
 export class DmsFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerService);
@@ -370,7 +373,11 @@ private readonly supabase = inject(SupabaseService);
         this._studentDocs.set([]);
       }
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos del alumno');
+      this._error.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al cargar documentos del alumno',
+      );
     } finally {
       this._studentDocsLoading.set(false);
     }
@@ -418,8 +425,13 @@ private readonly supabase = inject(SupabaseService);
 
   async deleteStudentDocument(
     docId: string,
-    source: 'student_document' | 'digital_contract',
+    source: 'student_document' | 'digital_contract' | 'enrollment_license',
   ): Promise<void> {
+    if (source === 'enrollment_license') {
+      // Fila sintética derivada de enrollments.license_*_url — no existe como registro
+      // propio que borrar. El carnet se regenera/reemplaza desde la ficha del alumno.
+      throw new Error('El Carnet no se puede eliminar desde el DMS. Ve a la ficha del alumno.');
+    }
     const table = source === 'student_document' ? 'student_documents' : 'digital_contracts';
     const numericId = parseInt(docId, 10);
     const { error } = await this.supabase.client.from(table).delete().eq('id', numericId);
@@ -656,7 +668,9 @@ private readonly supabase = inject(SupabaseService);
       this._schoolDocs.set(schoolDocs);
       this._templates.set(templates);
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos');
+      this._error.set(
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al cargar documentos',
+      );
     }
   }
 
@@ -675,7 +689,7 @@ private readonly supabase = inject(SupabaseService);
       : 'Alumno';
     return {
       id: d.id,
-      source: d.source as 'student_document' | 'digital_contract',
+      source: d.source as 'student_document' | 'digital_contract' | 'enrollment_license',
       studentId: d.student_id,
       enrollmentId: d.enrollment_id,
       type: d.type ?? '',

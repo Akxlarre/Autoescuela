@@ -15,15 +15,16 @@ export interface StudentWithDocsRow {
 }
 
 export interface DmsStudentDocRow {
-  id: string;              // TEXT desde la vista
-  source: 'student_document' | 'digital_contract';
+  id: string; // TEXT desde la vista
+  /** 'enrollment_license' = fila sintética derivada de enrollments.license_*_url (sin fila propia que borrar) */
+  source: 'student_document' | 'digital_contract' | 'enrollment_license';
   studentId: number;
   enrollmentId: number;
   type: string;
   fileName: string;
   fileUrl: string | null;
   status: string;
-  documentAt: string;      // fecha ISO
+  documentAt: string; // fecha ISO
   managedBy: number | null;
   // Campos derivados en el facade
   studentName: string;
@@ -39,8 +40,8 @@ export interface SchoolDocRow {
   description: string | null;
   branchId: number;
   createdAt: string;
-  uploaderName: string;    // derivado del JOIN con users
-  typeLabel: string;       // derivado del type
+  uploaderName: string; // derivado del JOIN con users
+  typeLabel: string; // derivado del type
 }
 
 export interface TemplateCard {
@@ -52,8 +53,8 @@ export interface TemplateCard {
   version: string;
   fileUrl: string;
   downloadCount: number;
-  categoryLabel: string;   // derivado
-  formatColor: string;     // derivado del format
+  categoryLabel: string; // derivado
+  formatColor: string; // derivado del format
 }
 
 export interface DmsKpis {

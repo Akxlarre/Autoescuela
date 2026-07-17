@@ -735,9 +735,23 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                         {{ item.instructor ?? 'Sin instructor' }}
                       </p>
                     </div>
-                    @if (item.justificada) {
-                      <div class="flex flex-col items-end gap-0.5 shrink-0">
-                        <span class="inas-status-badge" data-status="approved">Justificado</span>
+                    <div class="flex flex-col items-end gap-0.5 shrink-0">
+                      <div class="flex items-center gap-1">
+                        @if (item.reagendada) {
+                          <span
+                            class="inas-status-badge"
+                            data-status="reagendada"
+                            [pTooltip]="'Esta inasistencia ya fue reagendada'"
+                            tooltipPosition="top"
+                            data-llm-description="indica que la clase asociada a esta inasistencia ya fue reagendada"
+                            >Reagendada</span
+                          >
+                        }
+                        @if (item.justificada) {
+                          <span class="inas-status-badge" data-status="approved">Justificado</span>
+                        }
+                      </div>
+                      @if (item.justificada) {
                         @if (item.justificacion) {
                           <span
                             class="text-[10px] text-text-muted italic truncate max-w-32 cursor-help"
@@ -748,17 +762,17 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             Motivo: {{ item.justificacion }}
                           </span>
                         }
-                      </div>
-                    } @else {
-                      <button
-                        type="button"
-                        class="text-xs font-semibold text-brand hover:underline shrink-0"
-                        data-llm-action="justificar-inasistencia-clase-b"
-                        (click)="openJustificarClaseB(item.id)"
-                      >
-                        Justificar
-                      </button>
-                    }
+                      } @else {
+                        <button
+                          type="button"
+                          class="text-xs font-semibold text-brand hover:underline shrink-0"
+                          data-llm-action="justificar-inasistencia-clase-b"
+                          (click)="openJustificarClaseB(item.id)"
+                        >
+                          Justificar
+                        </button>
+                      }
+                    </div>
                   </div>
                 }
               </div>
@@ -986,6 +1000,11 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       color: var(--state-error);
       background: var(--state-error-bg);
       border-color: var(--state-error-border);
+    }
+    .inas-status-badge[data-status='reagendada'] {
+      color: var(--state-info);
+      background: var(--state-info-bg);
+      border-color: var(--state-info-border);
     }
 
     /* Force Compact overrides (Drawer Open) — mismo patrón que
