@@ -21,25 +21,22 @@ import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.f
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
-import { FichaTecnicaPrintService } from '@core/services/ui/ficha-tecnica-print.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { Button } from 'primeng/button';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
-import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
-import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
-import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
 import { AdminReagendarClasesDrawerComponent } from './reagendar-clases-drawer/admin-reagendar-clases-drawer.component';
+import { AdminInasistenciasDrawerComponent } from './inasistencias-drawer/admin-inasistencias-drawer.component';
+import { AdminFichaTecnicaDrawerComponent } from './ficha-tecnica-drawer/admin-ficha-tecnica-drawer.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import type {
   SectionHeroAction,
   SectionHeroChip,
   SectionHeroMenuItem,
 } from '@core/models/ui/section-hero.model';
-import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
@@ -54,7 +51,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     SkeletonBlockComponent,
     SectionHeroComponent,
     Button,
-    AdminFichaTecnicaComponent,
     AdminHistorialPagosComponent,
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
@@ -150,27 +146,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           </div>
         }
 
-        <!-- 4. Ficha Técnica (bento-hero) -->
-        <div class="bento-card bento-hero p-0! flex flex-col h-full w-full overflow-hidden">
-          <div
-            class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30"
-          >
-            <div class="flex items-center gap-3">
-              <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="8px" />
-              <div class="flex flex-col gap-1">
-                <app-skeleton-block variant="text" width="120px" height="16px" />
-                <app-skeleton-block variant="text" width="180px" height="12px" />
-              </div>
-            </div>
-          </div>
-          <div class="p-5 flex flex-col gap-4">
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-          </div>
-        </div>
-
-        <!-- 5. Estado Financiero (bento-tall) -->
+        <!-- Estado Financiero (Historial de Pagos) -->
         <div class="bento-card bento-tall p-0! flex flex-col h-full w-full overflow-hidden">
           <div
             class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
@@ -767,164 +743,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           [totalPagado]="alumno.totalPagado"
           [saldoPendiente]="alumno.saldoPendiente"
         />
-
-        <!-- Bento Item 4: Inasistencias (Banner, común) — OCULTO Fase 1 (app-like):
-             reemplazado por el botón "Inasistencias" en la tarjeta de Perfil, que en
-             Fase 2 abrirá esto como drawer. Se deja el markup intacto (solo apagado
-             con @if(false)) para reactivarlo sin reescribir nada. -->
-        @if (showLegacyPanels) {
-          <div class="bento-card bento-banner bg-warning-subtle border-warning">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div class="flex items-center gap-4">
-                <div
-                  class="w-10 h-10 rounded-xl bg-surface border border-warning-border flex items-center justify-center text-warning shadow-sm"
-                >
-                  <app-icon name="alert-triangle" [size]="20" />
-                </div>
-                <div class="flex flex-col">
-                  <span class="font-bold text-text-primary">Inasistencias Registradas</span>
-                  <span class="text-xs text-text-secondary">
-                    @if (alumno.licenseGroup === 'class_b') {
-                      @if (facade.inasistenciasClaseB().length > 0) {
-                        Se han detectado {{ facade.inasistenciasClaseB().length }} inasistencias en
-                        clases prácticas.
-                      } @else {
-                        No hay inasistencias registradas hasta la fecha.
-                      }
-                    } @else {
-                      @if (facade.inasistencias().length > 0) {
-                        Se han detectado {{ facade.inasistencias().length }} registros que requieren
-                        seguimiento.
-                      } @else {
-                        No hay inasistencias registradas hasta la fecha.
-                      }
-                    }
-                  </span>
-                </div>
-              </div>
-              @if (alumno.licenseGroup !== 'class_b') {
-                <p-button
-                  label="Registrar Nueva"
-                  icon="pi pi-plus"
-                  size="small"
-                  severity="warn"
-                  (onClick)="openInasistenciaDrawer()"
-                />
-              }
-            </div>
-
-            @if (alumno.licenseGroup === 'class_b') {
-              @if (facade.inasistenciasClaseB().length > 0) {
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                  @for (item of facade.inasistenciasClaseB(); track item.id) {
-                    <div
-                      class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
-                    >
-                      <div class="inas-date-pill border-none! bg-elevated!">
-                        <span class="text-[10px] font-bold text-text-secondary">{{
-                          item.fecha
-                        }}</span>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p
-                          class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
-                        >
-                          Clase #{{ item.claseNumero ?? '—' }}
-                        </p>
-                        <p class="text-[10px] text-text-muted truncate m-0 italic">
-                          {{ item.instructor ?? 'Sin instructor' }}
-                        </p>
-                      </div>
-                      <div class="flex flex-col items-end gap-0.5 shrink-0">
-                        <div class="flex items-center gap-1">
-                          @if (item.reagendada) {
-                            <span
-                              class="inas-status-badge"
-                              data-status="reagendada"
-                              [pTooltip]="'Esta inasistencia ya fue reagendada'"
-                              tooltipPosition="top"
-                              data-llm-description="indica que la clase asociada a esta inasistencia ya fue reagendada"
-                              >Reagendada</span
-                            >
-                          }
-                          @if (item.justificada) {
-                            <span class="inas-status-badge" data-status="approved"
-                              >Justificado</span
-                            >
-                          }
-                        </div>
-                        @if (item.justificada) {
-                          @if (item.justificacion) {
-                            <span
-                              class="text-[10px] text-text-muted italic truncate max-w-32 cursor-help"
-                              [pTooltip]="'Motivo: ' + item.justificacion"
-                              tooltipPosition="top"
-                              data-llm-description="motivo de la justificación de la inasistencia"
-                            >
-                              Motivo: {{ item.justificacion }}
-                            </span>
-                          }
-                        } @else {
-                          <button
-                            type="button"
-                            class="text-xs font-semibold text-brand hover:underline shrink-0"
-                            data-llm-action="justificar-inasistencia-clase-b"
-                            (click)="openJustificarClaseB(item.id)"
-                          >
-                            Justificar
-                          </button>
-                        }
-                      </div>
-                    </div>
-                  }
-                </div>
-              }
-            } @else {
-              @if (facade.inasistencias().length > 0) {
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                  @for (item of facade.inasistencias().slice(0, 3); track item.id) {
-                    <div
-                      class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
-                    >
-                      <div class="inas-date-pill border-none! bg-elevated!">
-                        <span class="text-[10px] font-bold text-text-secondary">{{
-                          item.fecha
-                        }}</span>
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <p
-                          class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
-                        >
-                          {{ item.documentType }}
-                        </p>
-                        <p class="text-[10px] text-text-muted truncate m-0 italic">
-                          {{ item.description || 'Sin descripción' }}
-                        </p>
-                      </div>
-                      <span class="inas-status-badge" [attr.data-status]="item.status">
-                        {{ statusLabel(item.status) }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              }
-            }
-          </div>
-        }
-
-        <!-- Bento Item 5: Ficha Técnica (solo Clase B) — OCULTO Fase 1 (app-like):
-             reemplazado por el botón "Ficha Técnica" en la tarjeta de Perfil, que en
-             Fase 2 abrirá esto como drawer. Markup intacto, solo apagado. -->
-        @if (showLegacyPanels) {
-          @if (alumno.licenseGroup === 'class_b') {
-            <app-admin-ficha-tecnica
-              class="bento-hero w-full h-full block"
-              [clases]="facade.clasesPracticas()"
-              (imprimirFicha)="imprimirFicha()"
-              (reprogramarRequested)="openReprogramarDrawer($event)"
-            />
-          }
-        }
       }
     </div>
 
@@ -937,61 +755,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       (confirmado)="onConfirmArchivar()"
       (cancelado)="onCancelArchivar()"
     />
-
-    <!-- Modal de justificación de inasistencia Clase B (RF-053) -->
-    <!-- Fuera de .bento-grid a propósito: ese contenedor recibe transform CSS de
-         GsapAnimationsService.animateBentoGrid(), lo que crea un containing
-         block para position: fixed y rompe el overlay centrado en viewport. -->
-    @if (justificarClaseBOpen()) {
-      <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-        (click)="closeJustificarClaseB()"
-      >
-        <div
-          class="surface-glass rounded-2xl p-6 w-full max-w-md flex flex-col gap-4"
-          (click)="$event.stopPropagation()"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Justificar inasistencia"
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
-            <button
-              class="p-1 rounded-md text-text-muted hover:text-text-primary"
-              aria-label="Cerrar"
-              (click)="closeJustificarClaseB()"
-            >
-              <app-icon name="x" [size]="18" />
-            </button>
-          </div>
-          <p class="text-sm text-text-secondary">
-            Ingresa el motivo de la justificación para registrar en el historial del alumno.
-          </p>
-          <textarea
-            class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
-            style="border-color: var(--border-subtle)"
-            rows="3"
-            placeholder="Ej: Certificado médico presentado..."
-            data-llm-description="textarea for absence justification reason"
-            [value]="justificarClaseBReason()"
-            (input)="justificarClaseBReason.set($any($event.target).value)"
-          ></textarea>
-          <div class="flex justify-end gap-2">
-            <button class="btn-secondary text-sm px-4 py-2" (click)="closeJustificarClaseB()">
-              Cancelar
-            </button>
-            <button
-              class="btn-primary text-sm px-4 py-2"
-              [disabled]="!justificarClaseBReason().trim()"
-              data-llm-action="submit-justificacion-clase-b"
-              (click)="submitJustificarClaseB()"
-            >
-              Guardar
-            </button>
-          </div>
-        </div>
-      </div>
-    }
 
     <!-- Input oculto para subir contrato firmado (flujo online) -->
     <input
@@ -1079,39 +842,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       color: var(--state-error);
       background: var(--state-error-bg);
       border-color: var(--state-error-border);
-    }
-
-    .inas-status-badge {
-      flex-shrink: 0;
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      font-size: 10px;
-      font-weight: var(--font-bold);
-      text-transform: uppercase;
-      background: var(--bg-elevated);
-      color: var(--text-muted);
-      border: 1px solid var(--border-subtle);
-    }
-    .inas-status-badge[data-status='pending'] {
-      color: var(--state-warning);
-      background: var(--state-warning-bg);
-      border-color: var(--state-warning-border);
-    }
-    .inas-status-badge[data-status='approved'],
-    .inas-status-badge[data-status='revisado'] {
-      color: var(--state-success);
-      background: var(--state-success-bg);
-      border-color: var(--state-success-border);
-    }
-    .inas-status-badge[data-status='rejected'] {
-      color: var(--state-error);
-      background: var(--state-error-bg);
-      border-color: var(--state-error-border);
-    }
-    .inas-status-badge[data-status='reagendada'] {
-      color: var(--state-info);
-      background: var(--state-info-bg);
-      border-color: var(--state-info-border);
     }
 
     /* Force Compact overrides (Drawer Open) — mismo patrón que
@@ -1234,7 +964,6 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
-  private readonly fichaTecnicaPrint = inject(FichaTecnicaPrintService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -1254,22 +983,12 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     });
   }
 
-  // ── Fase 1 (app-like): Inasistencias/Ficha Técnica pasan a botones en la
-  // tarjeta de Perfil. El markup original queda apagado (no eliminado) para
-  // reactivarlo en Fase 2 como drawers, sin reescribirlo desde cero.
-  protected readonly showLegacyPanels = false;
-
   // ── Estado del modal de borrado ──────────────────────────────────────────────
   protected readonly deleteModalVisible = signal(false);
   protected readonly deleteHasHistory = signal(false);
 
   // ── Estado de carga al abrir el certificado ya generado (hero action) ───────
   protected readonly isViewingCertificado = signal(false);
-
-  // ── Estado del modal de justificación (Inasistencias Clase B, RF-053) ───────
-  protected readonly justificarClaseBOpen = signal(false);
-  protected readonly justificarClaseBId = signal<number | null>(null);
-  protected readonly justificarClaseBReason = signal('');
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -1529,13 +1248,19 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     this.handleHeroAction(item.id);
   }
 
-  // ── Nuevos botones (Fase 1 — solo UI, sin lógica todavía; Fase 2 abrirán drawers) ──
+  // ── Drawers de Inasistencias / Ficha Técnica (Fase 2 app-like) ───────────────
+  // Mismo sistema de drawer que Editar Perfil / Reagendar Clases: backdrop,
+  // header con título + X, y scroll lock del fondo ya los da LayoutDrawerComponent.
   protected openInasistenciasPanel(): void {
-    // TODO Fase 2: abrir drawer de Inasistencias Registradas.
+    this.layoutDrawer.open(
+      AdminInasistenciasDrawerComponent,
+      'Inasistencias Registradas',
+      'alert-triangle',
+    );
   }
 
   protected openFichaTecnicaPanel(): void {
-    // TODO Fase 2: abrir drawer de Ficha Técnica.
+    this.layoutDrawer.open(AdminFichaTecnicaDrawerComponent, 'Ficha Técnica', 'clipboard-check');
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -1680,71 +1405,12 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     await this.facade.verCarnet(path);
   }
 
-  // ── Helpers de template ─────────────────────────────────────────────────────
-  protected imprimirFicha(): void {
-    const alumno = this.facade.alumno();
-    this.fichaTecnicaPrint.printFichaTecnica(this.facade.clasesPracticas(), {
-      studentName: alumno?.nombre,
-      matricula: alumno?.matricula,
-    });
-  }
-
-  protected statusLabel(status: string): string {
-    const map: Record<string, string> = {
-      pending: 'Pendiente',
-      approved: 'Aprobado',
-      revisado: 'Revisado',
-      rejected: 'Rechazado',
-    };
-    return map[status?.toLowerCase()] ?? status ?? 'Pendiente';
-  }
-
   // ── Handlers ────────────────────────────────────────────────────────────────
-  protected openInasistenciaDrawer(): void {
-    this.layoutDrawer.open(
-      AdminInasistenciaDrawerComponent,
-      'Registrar Inasistencia',
-      'alert-triangle',
-    );
-  }
-
-  // ── Justificación de inasistencias Clase B (RF-053) ─────────────────────────
-  protected openJustificarClaseB(attendanceId: number): void {
-    this.justificarClaseBId.set(attendanceId);
-    this.justificarClaseBReason.set('');
-    this.justificarClaseBOpen.set(true);
-  }
-
-  protected closeJustificarClaseB(): void {
-    this.justificarClaseBOpen.set(false);
-    this.justificarClaseBId.set(null);
-    this.justificarClaseBReason.set('');
-  }
-
-  protected submitJustificarClaseB(): void {
-    const id = this.justificarClaseBId();
-    const reason = this.justificarClaseBReason().trim();
-    if (id === null || !reason) return;
-    void this.facade.justificarInasistenciaClaseB(id, reason);
-    this.closeJustificarClaseB();
-  }
-
   protected openEditDrawer(): void {
     this.layoutDrawer.open(
       AdminEditarPerfilDrawerComponent,
       'Editar Perfil del Alumno',
       'user-pen',
-    );
-  }
-
-  protected openReprogramarDrawer(clase: ClasePracticaUI): void {
-    const enrollmentId = this.facade.alumno()?.enrollmentId;
-    if (enrollmentId == null) return;
-    this.facade.setReprogramarTarget(clase.sessionId, clase.numero, enrollmentId);
-    this.layoutDrawer.open(
-      AdminReprogramarClaseDrawerComponent,
-      'Reprogramar Clase',
-      'calendar-clock',
     );
   }
 
