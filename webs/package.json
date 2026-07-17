@@ -11,11 +11,15 @@
     "build": "astro build",
     "build:all": "node scripts/build-sites.mjs",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "vitest run"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.2",
     "astro": "^6.3.7",
     "lucide": "^1.16.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
   }
 }
