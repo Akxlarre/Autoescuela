@@ -286,6 +286,8 @@ export const appConfig: ApplicationConfig = {
         ],
         today: 'Hoy',
         clear: 'Limpiar',
+        emptyMessage: 'No se encontraron resultados',
+        emptyFilterMessage: 'No se encontraron resultados',
       },
     }),
     provideCoreAuth(),

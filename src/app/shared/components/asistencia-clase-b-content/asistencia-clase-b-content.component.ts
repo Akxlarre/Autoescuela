@@ -231,17 +231,15 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                     <div class="flex items-center gap-2">
                       <div
                         class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-white"
-                        [style.background]="
-                          alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                        "
+                        [class.bg-error]="alerta.nivel === 'danger'"
+                        [class.bg-warning]="alerta.nivel !== 'danger'"
                       >
                         {{ initials(alerta.alumnoName) }}
                       </div>
                       <p
                         class="text-xs font-semibold leading-tight min-w-0 flex-1"
-                        [style.color]="
-                          alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                        "
+                        [class.text-error]="alerta.nivel === 'danger'"
+                        [class.text-warning]="alerta.nivel !== 'danger'"
                       >
                         {{ alerta.alumnoName }}
                       </p>
@@ -338,17 +336,12 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               @for (f of statusFilters; track f.value) {
                 <button
                   class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
-                  [style.background]="
-                    activeStatusFilter() === f.value ? 'var(--color-primary)' : 'transparent'
-                  "
-                  [style.color]="
-                    activeStatusFilter() === f.value ? '#fff' : 'var(--text-secondary)'
-                  "
-                  [style.border-color]="
-                    activeStatusFilter() === f.value
-                      ? 'var(--color-primary)'
-                      : 'var(--border-subtle)'
-                  "
+                  [class.bg-brand]="activeStatusFilter() === f.value"
+                  [class.text-white]="activeStatusFilter() === f.value"
+                  [class.border-brand]="activeStatusFilter() === f.value"
+                  [class.bg-transparent]="activeStatusFilter() !== f.value"
+                  [class.text-text-secondary]="activeStatusFilter() !== f.value"
+                  [class.border-border-subtle]="activeStatusFilter() !== f.value"
                   (click)="setStatusFilter(f.value)"
                 >
                   {{ f.label }}
@@ -481,9 +474,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           @if (row.alumnoName) {
                             <span
                               class="text-text-secondary"
-                              [style.color]="
-                                row.status === 'ausente' ? 'var(--color-primary)' : undefined
-                              "
+                              [class.text-brand]="row.status === 'ausente'"
                             >
                               {{ row.alumnoName }}
                             </span>
@@ -518,10 +509,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
-                                [style.color]="'var(--color-primary)'"
-                                [style.border-color]="'var(--color-primary)'"
-                                [style.background]="'color-mix(in srgb, var(--color-primary) 8%, transparent)'"
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-brand border-brand bg-brand/10"
                                 [disabled]="isSaving()"
                                 pTooltip="Iniciar clase"
                                 tooltipPosition="top"
@@ -534,10 +522,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               <!-- Marcar inasistencia (solo si ya pasó la hora) -->
                               @if (isPastStartTime(row.scheduledAt)) {
                                 <button
-                                  class="p-1.5 rounded-md transition-colors cursor-pointer"
+                                  class="p-1.5 rounded-md transition-colors cursor-pointer text-error"
                                   pTooltip="Marcar inasistencia"
                                   tooltipPosition="top"
-                                  [style.color]="'var(--state-error)'"
                                   [disabled]="isSaving()"
                                   data-llm-action="mark-ausente"
                                   (click)="
@@ -554,10 +541,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               >
                               <!-- Finalizar clase -->
                               <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
-                                [style.color]="'var(--state-success)'"
-                                [style.border-color]="'var(--state-success)'"
-                                [style.background]="'var(--state-success-bg)'"
+                                class="btn-success-soft text-xs font-semibold px-2.5 py-1 rounded-lg border flex items-center gap-1 cursor-pointer"
                                 [disabled]="isSaving()"
                                 pTooltip="Finalizar clase"
                                 tooltipPosition="top"
@@ -570,8 +554,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.status === 'ausente' && !row.justificacion) {
                               <button
-                                class="text-xs font-medium hover:underline cursor-pointer"
-                                [style.color]="'var(--color-primary)'"
+                                class="btn-ghost text-xs px-2 py-1"
                                 [disabled]="isSaving()"
                                 data-llm-action="justify-absence"
                                 (click)="openJustifyModal(row.id)"
@@ -581,19 +564,15 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.justificacion) {
                               <span
-                                class="text-xs italic truncate max-w-40"
+                                class="text-xs italic truncate max-w-40 text-text-muted"
                                 [pTooltip]="row.justificacion"
                                 tooltipPosition="top"
-                                [style.color]="'var(--text-muted)'"
                               >
                                 {{ row.justificacion }}
                               </span>
                             }
                             @if (row.status === 'presente') {
-                              <span
-                                class="text-xs font-medium"
-                                [style.color]="'var(--state-success)'"
-                              >
+                              <span class="text-xs font-medium text-success">
                                 Finalizada
                               </span>
                             }
@@ -644,62 +623,66 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           (addStudent)="addCicloStudent.emit($event)"
         />
       }
+    </div>
 
-      <!-- ── Modal de justificación (canon: backdrop + card, hotfix-021) ─────── -->
-      <div [appModalOverlay]="justifyModalOpen()">
-        @if (justifyModalOpen()) {
+    <!-- ── Modal de justificación (canon: backdrop + card, hotfix-021) ───────
+         Fuera del .bento-grid (hotfix-022): como sibling, igual que el modal
+         de admin-alumnos.component.ts. Dentro del grid, el wrapper vacío del
+         [appModalOverlay] contaba como ítem sin clase bento-* y CSS Grid le
+         reservaba una fila fantasma (grid-auto-rows), comprimiendo la fila
+         fill real. -->
+    <div [appModalOverlay]="justifyModalOpen()">
+      @if (justifyModalOpen()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Justificar inasistencia"
+          (click)="closeJustifyModal()"
+          (document:keydown.escape)="closeJustifyModal()"
+        >
           <div
-            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Justificar inasistencia"
-            (click)="closeJustifyModal()"
-            (document:keydown.escape)="closeJustifyModal()"
+            class="surface-glass rounded-2xl p-6 w-full max-w-md flex flex-col gap-4"
+            (click)="$event.stopPropagation()"
+            appAnimateIn
           >
-            <div
-              class="surface-glass rounded-2xl p-6 w-full max-w-md flex flex-col gap-4"
-              (click)="$event.stopPropagation()"
-              appAnimateIn
-            >
-              <div class="flex items-center justify-between">
-                <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
-                <button
-                  class="p-1 rounded-md text-text-muted hover:text-text-primary"
-                  aria-label="Cerrar"
-                  (click)="closeJustifyModal()"
-                >
-                  <app-icon name="x" [size]="18" />
-                </button>
-              </div>
-              <p class="text-sm text-text-secondary">
-                Ingresa el motivo de la justificación para registrar en el historial del alumno.
-              </p>
-              <textarea
-                class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
-                [style.border-color]="'var(--border-subtle)'"
-                rows="3"
-                placeholder="Ej: Certificado médico presentado..."
-                data-llm-description="textarea for absence justification reason"
-                [value]="justifyReason()"
-                (input)="justifyReason.set($any($event.target).value)"
-              ></textarea>
-              <div class="flex justify-end gap-2">
-                <button class="btn-secondary text-sm px-4 py-2" (click)="closeJustifyModal()">
-                  Cancelar
-                </button>
-                <button
-                  class="btn-primary text-sm px-4 py-2"
-                  [disabled]="!justifyReason().trim() || isSaving()"
-                  data-llm-action="submit-justification"
-                  (click)="submitJustification()"
-                >
-                  Guardar
-                </button>
-              </div>
+            <div class="flex items-center justify-between">
+              <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
+              <button
+                class="p-1 rounded-md text-text-muted hover:text-text-primary"
+                aria-label="Cerrar"
+                (click)="closeJustifyModal()"
+              >
+                <app-icon name="x" [size]="18" />
+              </button>
+            </div>
+            <p class="text-sm text-text-secondary">
+              Ingresa el motivo de la justificación para registrar en el historial del alumno.
+            </p>
+            <textarea
+              class="w-full rounded-lg border border-border-subtle p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
+              rows="3"
+              placeholder="Ej: Certificado médico presentado..."
+              data-llm-description="textarea for absence justification reason"
+              [value]="justifyReason()"
+              (input)="justifyReason.set($any($event.target).value)"
+            ></textarea>
+            <div class="flex justify-end gap-2">
+              <button class="btn-secondary text-sm px-4 py-2" (click)="closeJustifyModal()">
+                Cancelar
+              </button>
+              <button
+                class="btn-primary text-sm px-4 py-2"
+                [disabled]="!justifyReason().trim() || isSaving()"
+                data-llm-action="submit-justification"
+                (click)="submitJustification()"
+              >
+                Guardar
+              </button>
             </div>
           </div>
-        }
-      </div>
+        </div>
+      }
     </div>
   `,
 })
