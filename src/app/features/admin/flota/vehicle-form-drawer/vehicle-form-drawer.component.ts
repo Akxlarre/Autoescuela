@@ -55,23 +55,45 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-5 px-6 py-8">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <div class="grid grid-cols-2 gap-4">
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-            <app-skeleton-block variant="text" width="100%" height="60px" />
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-6 px-6 py-8">
+            <!-- Patente -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="25%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="44px" />
+            </div>
+            <!-- Marca / Modelo -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="35%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="40%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+              </div>
+            </div>
+            <!-- Año / KM -->
+            <div class="grid grid-cols-2 gap-4">
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="25%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="45%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+              </div>
+            </div>
+            <!-- Estado -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="40%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="44px" />
+            </div>
           </div>
-          <div class="grid grid-cols-2 gap-4">
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-          </div>
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+        </ng-template>
+        <ng-template #content>
           <form [formGroup]="vehicleForm" (ngSubmit)="onSubmit()">
             <div class="grid grid-cols-1 gap-6">
               <!-- Patente -->
@@ -191,25 +213,24 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               }
             </div>
           </form>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Footer — acciones canónicas -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
-            <button
-              type="button"
-              class="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              [disabled]="vehicleForm.invalid || isSaving()"
-              (click)="onSubmit()"
-            >
-              @if (isSaving()) {
-                <app-icon name="loader-2" [size]="18" class="animate-spin" />
-              }
-              {{ isEdit() ? 'Guardar Cambios' : 'Crear Vehículo' }}
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          [disabled]="vehicleForm.invalid || isSaving()"
+          (click)="onSubmit()"
+        >
+          @if (isSaving()) {
+            <app-icon name="loader-2" [size]="18" class="animate-spin" />
+          }
+          {{ isEdit() ? 'Guardar Cambios' : 'Crear Vehículo' }}
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class VehicleFormDrawerComponent {

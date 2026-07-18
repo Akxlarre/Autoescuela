@@ -5,7 +5,6 @@ import {
   OnDestroy,
   AfterViewInit,
   computed,
-  effect,
   inject,
   signal,
   ElementRef,
@@ -20,13 +19,16 @@ import type { PromocionTableRow } from '@core/models/ui/promocion-table.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
-import { BadgeComponent } from '@shared/components/badge/badge.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 
 import { SelectModule } from 'primeng/select';
+import { TagModule } from 'primeng/tag';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { AdminPromocionCrearDrawerComponent } from './admin-promocion-crear-drawer.component';
 import { AdminPromocionVerDrawerComponent } from './admin-promocion-ver-drawer.component';
 import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-drawer.component';
@@ -39,15 +41,18 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
     DatePipe,
     FormsModule,
     SelectModule,
+    TagModule,
+    ButtonModule,
+    TooltipModule,
     SectionHeroComponent,
     IconComponent,
-    BadgeComponent,
+    EmptyStateComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -60,146 +65,167 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- ── Content (Grillet) ─────────────────────────────────────────────── -->
-      <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col min-h-100 overflow-hidden" appCardHover>
-          <div
-            class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
-          >
-            <div class="flex items-center justify-between">
-              <h2 class="font-semibold text-text-primary">Historial de Promociones</h2>
-              <span class="text-xs text-text-muted">
-                {{ filteredPromociones().length }} promociones encontradas
-              </span>
-            </div>
-
-            <!-- ── Barra de búsqueda + filtros (Integrada como Toolbar) ── -->
-            <div class="flex flex-col xl:flex-row gap-3 w-full">
-              <!-- Input de búsqueda -->
-              <div class="relative flex-1">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <app-icon name="search" [size]="16" color="var(--text-muted)" />
-                </div>
-                <input
-                  type="search"
-                  placeholder="Buscar por nombre o código..."
-                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
-                  [ngModel]="searchTerm()"
-                  (ngModelChange)="searchTerm.set($event)"
-                  (input)="currentPage.set(1)"
-                />
-              </div>
-
-              <div class="flex flex-col sm:flex-row gap-3">
-                <p-select
-                  [options]="estadoOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Todos los estados"
-                  [ngModel]="filtroEstado()"
-                  (ngModelChange)="filtroEstado.set($event); currentPage.set(1)"
-                  styleClass="w-full sm:w-48"
-                  data-llm-description="filter promotions by status"
-                />
-              </div>
-            </div>
+      <!-- ── Cards ─────────────────────────────────────────────────────────── -->
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col w-full h-full"
+        appCardHover
+      >
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
+          <div class="relative flex-1 min-w-52 max-w-xs">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
+            />
+            <input
+              type="search"
+              placeholder="Buscar por nombre o código..."
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="searchTerm.set($event); currentPage.set(1)"
+              data-llm-description="Search promotions by name or code"
+            />
           </div>
 
-          <div class="p-6">
-            @if (facade.isLoading()) {
-              <div class="flex flex-col gap-3">
-                @for (_ of [1, 2, 3, 4]; track $index) {
-                  <div
-                    class="flex items-center gap-4 py-4"
-                    style="border-bottom: 1px solid var(--border-subtle);"
-                  >
-                    <div class="flex-1 flex flex-col gap-2">
-                      <app-skeleton-block variant="text" width="200px" height="14px" />
-                      <app-skeleton-block variant="text" width="300px" height="12px" />
-                    </div>
-                    <app-skeleton-block variant="rect" width="80px" height="24px" />
-                    <app-skeleton-block variant="rect" width="32px" height="32px" />
-                  </div>
-                }
-              </div>
-            } @else if (paginatedPromociones().length === 0) {
-              <div class="flex-1 flex flex-col items-center justify-center py-14 text-center">
-                <app-icon name="calendar-x" [size]="40" color="var(--text-muted)" class="mb-3" />
-                <p class="text-sm font-medium text-text-primary">No se encontraron promociones</p>
-                <p class="text-xs mt-1 mb-4 text-text-muted">
-                  Intenta cambiar los términos de búsqueda o filtros.
-                </p>
-                <button
-                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-brand bg-brand/8"
-                  (click)="limpiarFiltros()"
-                  data-llm-action="limpiar-filtros-promociones"
+          <p-select
+            [options]="estadoOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Todos los estados"
+            [ngModel]="filtroEstado()"
+            (ngModelChange)="filtroEstado.set($event); currentPage.set(1)"
+            class="h-9"
+            data-llm-description="filter promotions by status"
+          />
+
+          <span class="text-xs text-text-muted ml-auto">
+            {{ filteredPromociones().length }} promociones encontradas
+          </span>
+        </div>
+
+        <!-- Contenido -->
+        @if (facade.isLoading()) {
+          <div class="p-4 lg:p-5 flex-1 min-h-0 overflow-y-auto">
+            <div class="bento-grid promo-grid">
+              @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
+                <div
+                  class="p-4 rounded-xl border border-(--border-subtle) bento-wide"
+                  data-col-span="4"
                 >
-                  <app-icon name="filter-x" [size]="16" />
-                  Limpiar Filtros
-                </button>
-              </div>
-            } @else {
-              <div class="flex flex-col">
-                @for (promo of paginatedPromociones(); track promo.id) {
-                  <div
-                    class="promo-row flex items-center gap-4 py-4"
-                    style="border-bottom: 1px solid var(--border-subtle);"
-                  >
-                    <!-- Info principal -->
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2 mb-1 flex-wrap">
-                        <span class="text-sm font-bold text-text-primary">
+                  <div class="flex items-center gap-3 mb-4">
+                    <app-skeleton-block variant="circle" width="40px" height="40px" />
+                    <div class="flex-1 flex flex-col gap-2">
+                      <app-skeleton-block variant="text" width="70%" height="13px" />
+                      <app-skeleton-block variant="text" width="40%" height="11px" />
+                    </div>
+                    <app-skeleton-block variant="rect" width="60px" height="20px" />
+                  </div>
+                  <app-skeleton-block variant="text" width="90%" height="11px" class="mb-3" />
+                  <div class="flex flex-wrap gap-2">
+                    <app-skeleton-block variant="rect" width="30px" height="18px" />
+                    <app-skeleton-block variant="rect" width="30px" height="18px" />
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        } @else if (filteredPromociones().length === 0) {
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <app-empty-state
+              icon="calendar-x"
+              message="No se encontraron promociones"
+              subtitle="Intenta cambiar los términos de búsqueda o filtros."
+              actionLabel="Limpiar Filtros"
+              actionIcon="filter-x"
+              (action)="limpiarFiltros()"
+            />
+          </div>
+        } @else {
+          <div class="p-4 lg:p-5 flex-1 min-h-0 overflow-y-auto">
+            <div class="bento-grid promo-grid">
+              @for (promo of paginatedPromociones(); track promo.id) {
+                <div
+                  class="promo-card p-4 rounded-xl border border-(--border-subtle) relative bento-wide"
+                  data-col-span="4"
+                >
+                  <!-- Header: icono + nombre/código + estado -->
+                  <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div
+                        class="w-10 h-10 rounded-full bg-brand-tint text-brand flex items-center justify-center shrink-0"
+                      >
+                        <app-icon name="calendar" [size]="18" />
+                      </div>
+                      <div class="flex flex-col min-w-0">
+                        <h3 class="text-sm font-semibold truncate text-text-primary">
                           {{ promo.name }}
-                        </span>
-                        <span
-                          class="text-2xs font-mono px-1.5 py-0.5 rounded bg-elevated text-text-muted"
-                        >
-                          {{ promo.code }}
-                        </span>
-                        <app-badge [variant]="statusVariant(promo.status)">
-                          {{ statusLabel(promo.status) }}
-                        </app-badge>
-                      </div>
-
-                      <div class="flex items-center gap-4 flex-wrap">
-                        <span class="flex items-center gap-1.5 text-xs text-text-muted">
-                          <app-icon name="calendar" [size]="12" />
-                          {{ promo.startDate | date: 'dd/MM/yyyy' }} →
-                          {{ promo.endDate | date: 'dd/MM/yyyy' }}
-                        </span>
-                        <span class="flex items-center gap-1.5 text-xs text-text-secondary">
-                          <app-icon name="users" [size]="12" />
-                          {{ promo.totalEnrolled }} / {{ promo.maxStudents }} alumnos
-                        </span>
+                        </h3>
+                        <span class="text-xs font-mono text-text-muted">{{ promo.code }}</span>
                       </div>
                     </div>
+                    <p-tag
+                      [value]="statusLabel(promo.status)"
+                      [severity]="statusSeverity(promo.status)"
+                      styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                    ></p-tag>
+                  </div>
 
-                    <!-- Cursos mini-pills -->
-                    <div class="hidden md:flex items-center gap-1 shrink-0">
-                      @for (curso of promo.cursos; track curso.id) {
-                        <span
-                          class="w-6 h-6 flex items-center justify-center rounded text-2xs font-bold text-white"
-                          [style.background]="getCourseColor(curso.courseCode)"
-                          [title]="curso.courseName + ': ' + curso.enrolledStudents + ' alumnos'"
-                        >
-                          {{ curso.courseCode }}
-                        </span>
-                      }
-                    </div>
+                  <!-- Meta: fechas + alumnos -->
+                  <div class="flex items-center gap-4 flex-wrap mb-3">
+                    <span class="flex items-center gap-1.5 text-xs text-text-muted">
+                      <app-icon name="calendar" [size]="12" />
+                      {{ promo.startDate | date: 'dd/MM/yyyy' }} →
+                      {{ promo.endDate | date: 'dd/MM/yyyy' }}
+                    </span>
+                    <span class="flex items-center gap-1.5 text-xs text-text-secondary">
+                      <app-icon name="users" [size]="12" />
+                      {{ promo.totalEnrolled }} / {{ promo.maxStudents }} alumnos
+                    </span>
+                  </div>
 
-                    <!-- Acciones -->
-                    <div class="flex items-center gap-1 shrink-0">
+                  <!-- Cursos -->
+                  <div class="flex flex-wrap gap-1.5 mb-3">
+                    @for (curso of promo.cursos; track curso.id) {
+                      <span
+                        class="course-badge"
+                        [style.background]="getCourseColor(curso.courseCode)"
+                        [pTooltip]="
+                          curso.courseName +
+                          ': ' +
+                          curso.enrolledStudents +
+                          '/' +
+                          curso.maxStudents +
+                          ' alumnos'
+                        "
+                      >
+                        {{ curso.courseCode }}
+                      </span>
+                    }
+                  </div>
+
+                  <!-- Footer: acciones -->
+                  <div
+                    class="flex items-center justify-between pt-3"
+                    style="border-top: 1px dashed var(--border-subtle)"
+                  >
+                    <span class="text-2xs uppercase font-bold text-text-muted">
+                      {{ promo.cursos.length }} curso(s)
+                    </span>
+                    <div class="inline-flex items-center gap-0.5">
                       <button
-                        class="action-btn"
-                        title="Ver detalle"
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        pTooltip="Ver detalle"
                         (click)="openVerDrawer(promo)"
                         data-llm-action="ver-promocion"
                       >
                         <app-icon name="eye" [size]="16" />
                       </button>
                       <button
-                        class="action-btn"
-                        title="Editar promoción"
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        pTooltip="Editar promoción"
                         (click)="openEditarDrawer(promo)"
                         data-llm-action="editar-promocion"
                       >
@@ -207,21 +233,21 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
                       </button>
                     </div>
                   </div>
-                }
-              </div>
-            }
+                </div>
+              }
+            </div>
 
             <!-- Paginación -->
-            @if (!facade.isLoading() && filteredPromociones().length > 0) {
+            @if (filteredPromociones().length > 0) {
               <div
-                class="flex items-center justify-between mt-6 pt-6"
+                class="flex items-center justify-between mt-4 pt-4"
                 style="border-top: 1px solid var(--border-subtle);"
               >
                 <p class="text-xs text-text-muted">
                   Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
                   {{ filteredPromociones().length }} promociones
                 </p>
-                <div class="flex items-center justify-end flex-wrap gap-2">
+                <div class="flex items-center gap-2">
                   <button
                     class="pagination-btn"
                     [disabled]="currentPage() === 1"
@@ -242,34 +268,37 @@ import { AdminPromocionEditarDrawerComponent } from './admin-promocion-editar-dr
               </div>
             }
           </div>
-        </div>
+        }
       </div>
     </div>
   `,
   styles: `
-    .promo-row {
-      transition: background var(--duration-fast);
-    }
-    .promo-row:hover {
-      background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
+    .promo-grid {
+      gap: var(--space-4);
     }
 
-    .action-btn {
-      display: flex;
+    .promo-card {
+      background: var(--bg-base);
+      transition: all var(--duration-fast);
+      cursor: default;
+    }
+    .promo-card:hover {
+      border-color: var(--ds-brand);
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-2px);
+    }
+
+    .course-badge {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all var(--duration-fast);
-    }
-    .action-btn:hover {
-      background: var(--bg-elevated);
-      color: var(--text-primary);
+      min-width: 26px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: white;
+      cursor: default;
     }
 
     .pagination-btn {
@@ -364,13 +393,14 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
   protected readonly searchTerm = signal('');
   protected readonly filtroEstado = signal<string | null>(null);
   protected readonly currentPage = signal(1);
+  private readonly pageSize = 6;
 
   readonly estadoOptions = [
     { label: 'Planificada', value: 'planned' },
     { label: 'En curso', value: 'in_progress' },
+    { label: 'Finalizada', value: 'finished' },
     { label: 'Cancelada', value: 'cancelled' },
   ];
-  private readonly pageSize = 10;
 
   // ── Lista filtrada ─────────────────────────────────────────────────────────
   protected readonly filteredPromociones = computed<PromocionTableRow[]>(() => {
@@ -408,21 +438,26 @@ export class AdminProfesionalPromocionesComponent implements OnInit, OnDestroy, 
     const map: Record<string, string> = {
       planned: 'Planificada',
       in_progress: 'En curso',
+      finished: 'Finalizada',
       cancelled: 'Cancelada',
     };
     return map[status] ?? status;
   }
 
-  protected statusVariant(status: string): 'brand' | 'success' | 'neutral' | 'error' {
+  protected statusSeverity(
+    status: string,
+  ): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | undefined {
     switch (status) {
       case 'planned':
-        return 'brand';
+        return 'warn';
       case 'in_progress':
         return 'success';
+      case 'finished':
+        return 'info';
       case 'cancelled':
-        return 'error';
+        return 'danger';
       default:
-        return 'neutral';
+        return 'secondary';
     }
   }
 

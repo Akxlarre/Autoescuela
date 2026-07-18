@@ -53,20 +53,57 @@ const PAYMENT_LABEL: Record<string, string> = {
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <div class="grid grid-cols-3 gap-3">
-            <app-skeleton-block variant="text" width="100%" height="50px" />
-            <app-skeleton-block variant="text" width="100%" height="50px" />
-            <app-skeleton-block variant="text" width="100%" height="50px" />
+    <app-drawer-form [hasFooter]="false">
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Ficha del curso (nombre + badge + grid 2x2 de datos) -->
+            <div class="card card-tinted p-4 flex flex-col gap-4">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="160px" height="16px" />
+                  <app-skeleton-block variant="text" width="110px" height="11px" />
+                </div>
+                <app-skeleton-block
+                  variant="rect"
+                  width="64px"
+                  height="22px"
+                  borderRadius="999px"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <app-skeleton-block variant="rect" width="100%" height="46px" />
+                <app-skeleton-block variant="rect" width="100%" height="46px" />
+                <app-skeleton-block variant="rect" width="100%" height="46px" />
+                <app-skeleton-block variant="rect" width="100%" height="46px" />
+              </div>
+            </div>
+            <!-- KPIs mini -->
+            <div class="grid grid-cols-3 gap-3">
+              <app-skeleton-block variant="rect" width="100%" height="50px" />
+              <app-skeleton-block variant="rect" width="100%" height="50px" />
+              <app-skeleton-block variant="rect" width="100%" height="50px" />
+            </div>
+            <!-- Inscritos (header + filas) -->
+            <div class="flex flex-col gap-0 rounded-xl border border-border-muted overflow-hidden">
+              <app-skeleton-block variant="rect" width="100%" height="44px" borderRadius="0" />
+              @for (i of [1, 2, 3]; track i) {
+                <div
+                  class="px-4 py-3 flex items-center justify-between border-t border-border-muted"
+                >
+                  <app-skeleton-block variant="text" width="55%" height="14px" />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="70px"
+                    height="22px"
+                    borderRadius="999px"
+                  />
+                </div>
+              }
+            </div>
           </div>
-          <app-skeleton-block variant="rect" width="100%" height="120px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form [hasFooter]="false">
+        </ng-template>
+        <ng-template #content>
           @if (facade.selectedCurso(); as curso) {
             <div class="flex flex-col gap-4">
               <!-- ── Ficha del curso ──────────────────────────────────────────────── -->
@@ -282,9 +319,9 @@ const PAYMENT_LABEL: Record<string, string> = {
               <p class="text-sm text-text-muted">Sin curso seleccionado.</p>
             </div>
           }
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+        </ng-template>
+      </app-drawer-content-loader>
+    </app-drawer-form>
   `,
 })
 export class AdminCursoSingularDetalleDrawerComponent {

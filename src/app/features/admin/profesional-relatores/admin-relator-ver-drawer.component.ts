@@ -37,51 +37,63 @@ const SPEC_LABELS: Record<string, string> = {
   ],
   template: `
     @if (facade.selectedRelator(); as rel) {
-      <app-drawer-content-loader>
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-5">
-            <div class="flex items-center gap-4">
-              <app-skeleton-block variant="circle" width="56px" height="56px" />
-              <div class="flex flex-col gap-2 flex-1">
-                <app-skeleton-block variant="text" width="70%" height="18px" />
-                <app-skeleton-block variant="text" width="40%" height="13px" />
+      <app-drawer-form>
+        <app-drawer-content-loader>
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-5">
+              <div class="flex flex-col items-center gap-3 pb-6">
+                <app-skeleton-block variant="circle" width="64px" height="64px" />
+                <app-skeleton-block variant="text" width="140px" height="16px" />
+                <app-skeleton-block variant="text" width="90px" height="12px" />
+                <app-skeleton-block variant="rect" width="120px" height="20px" />
               </div>
+              <div class="grid grid-cols-2 gap-3">
+                <app-skeleton-block variant="rect" width="100%" height="60px" />
+                <app-skeleton-block variant="rect" width="100%" height="60px" />
+                <app-skeleton-block variant="rect" width="100%" height="60px" class="col-span-2" />
+              </div>
+
+              <!-- Especialidades: filas con badge + label -->
+              <div class="flex flex-col gap-2">
+                @for (i of [1, 2]; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="44px" />
+                }
+              </div>
+
+              <!-- Cursos asignados -->
+              <app-skeleton-block variant="rect" width="100%" height="80px" />
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" class="col-span-2" />
-            </div>
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form>
+          </ng-template>
+          <ng-template #content>
             <!-- ── Avatar + nombre ─────────────────────────────────────────────── -->
-            <div class="flex items-center gap-4 mb-6">
+            <div
+              class="flex flex-col items-center gap-3 pb-6 mb-6"
+              style="border-bottom: 1px solid var(--border-subtle)"
+            >
               <div
-                class="flex items-center justify-center w-14 h-14 rounded-full shrink-0 text-base font-bold bg-brand-tint text-brand"
+                class="flex items-center justify-center w-16 h-16 rounded-full text-xl font-bold bg-brand-tint text-brand"
               >
                 {{ rel.initials }}
               </div>
-              <div>
-                <h2 class="text-base font-semibold text-text-primary">
+              <div class="text-center">
+                <p class="text-base font-semibold text-text-primary">
                   {{ rel.nombre }}
-                </h2>
-                <p class="text-xs mt-0.5 text-text-muted">{{ rel.rut }}</p>
-                <div class="flex items-center gap-2 mt-1.5 flex-wrap">
-                  @for (spec of rel.specializations; track spec) {
-                    <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
-                  }
-                  @if (rel.estado === 'activo') {
-                    <app-badge variant="success">
-                      <app-icon name="check-circle" [size]="10" />
-                      Activo
-                    </app-badge>
-                  } @else {
-                    <app-badge variant="neutral">Inactivo</app-badge>
-                  }
-                </div>
+                </p>
+                <p class="text-sm text-text-muted">{{ rel.rut }}</p>
+              </div>
+
+              <div class="flex items-center justify-center gap-2 flex-wrap">
+                @for (spec of rel.specializations; track spec) {
+                  <span class="spec-badge" [style.background]="specColor(spec)">{{ spec }}</span>
+                }
+                @if (rel.estado === 'activo') {
+                  <app-badge variant="success">
+                    <app-icon name="check-circle" [size]="10" />
+                    Activo
+                  </app-badge>
+                } @else {
+                  <app-badge variant="neutral">Inactivo</app-badge>
+                }
               </div>
             </div>
 
@@ -224,21 +236,20 @@ const SPEC_LABELS: Record<string, string> = {
                 }
               </div>
             }
+          </ng-template>
+        </app-drawer-content-loader>
 
-            <!-- ── Acciones ───────────────────────────────────────────────────── -->
-            <ng-container ngProjectAs="[drawer-form-footer]">
-              <button
-                class="btn-primary flex items-center gap-2"
-                (click)="editar()"
-                data-llm-action="editar-relator"
-              >
-                <app-icon name="edit" [size]="15" />
-                Editar relator
-              </button>
-            </ng-container>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button
+            class="btn-primary flex items-center gap-2"
+            (click)="editar()"
+            data-llm-action="editar-relator"
+          >
+            <app-icon name="edit" [size]="15" />
+            Editar relator
+          </button>
+        </ng-container>
+      </app-drawer-form>
     }
   `,
   styles: `

@@ -25,51 +25,51 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <!-- Skeleton Header -->
-        <div
-          class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
-        >
-          <app-skeleton-block variant="text" width="120px" height="20px" />
-          <app-skeleton-block variant="text" width="80px" height="16px" />
-        </div>
-        <!-- Skeleton Body -->
-        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          @for (_ of [1, 2, 3, 4]; track $index) {
-            <div class="group p-4 rounded-xl border bg-base">
-              <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <!-- Skeleton Header -->
+          <div
+            class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
+          >
+            <app-skeleton-block variant="text" width="120px" height="20px" />
+            <app-skeleton-block variant="text" width="80px" height="16px" />
+          </div>
+          <!-- Skeleton Body -->
+          <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+            @for (_ of [1, 2, 3, 4]; track $index) {
+              <div class="group p-4 rounded-xl border bg-base">
+                <div class="flex items-start justify-between">
+                  <div class="flex items-center gap-3">
+                    <app-skeleton-block
+                      variant="rect"
+                      width="48px"
+                      height="40px"
+                      borderRadius="0.5rem"
+                    />
+                    <div class="flex flex-col gap-1.5">
+                      <app-skeleton-block variant="text" width="120px" height="14px" />
+                      <app-skeleton-block variant="text" width="80px" height="10px" />
+                    </div>
+                  </div>
                   <app-skeleton-block
                     variant="rect"
-                    width="48px"
-                    height="40px"
+                    width="32px"
+                    height="32px"
                     borderRadius="0.5rem"
                   />
-                  <div class="flex flex-col gap-1.5">
-                    <app-skeleton-block variant="text" width="120px" height="14px" />
-                    <app-skeleton-block variant="text" width="80px" height="10px" />
-                  </div>
                 </div>
-                <app-skeleton-block
-                  variant="rect"
-                  width="32px"
-                  height="32px"
-                  borderRadius="0.5rem"
-                />
               </div>
-            </div>
-          }
-        </div>
-        <!-- Skeleton Footer -->
-        <div
-          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
-        >
-          <app-skeleton-block variant="rect" width="140px" height="44px" borderRadius="0.5rem" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+            }
+          </div>
+          <!-- Skeleton Footer -->
+          <div
+            class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
+          >
+            <app-skeleton-block variant="rect" width="140px" height="44px" borderRadius="0.5rem" />
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- Filtro de Fecha (Simple por ahora) -->
           <div class="flex items-center justify-between pb-4 mb-4 border-b border-border-subtle">
             <h3 class="text-sm font-bold text-text-primary">Agenda del Día</h3>
@@ -168,14 +168,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Footer -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button type="button" class="btn-primary" (click)="onClose()">Cerrar Agenda</button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-primary" (click)="onClose()">Cerrar Agenda</button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class VehicleAgendaDrawerComponent {

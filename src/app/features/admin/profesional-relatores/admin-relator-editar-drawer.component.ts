@@ -34,16 +34,41 @@ const SPEC_COLORS: Record<string, string> = {
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Información Personal: header + 5 campos label+input -->
+            <app-skeleton-block variant="text" width="40%" height="14px" />
+            <div class="flex flex-col gap-4">
+              @for (i of [1, 2, 3, 4, 5]; track i) {
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="30%" height="12px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              }
+            </div>
+
+            <!-- Especialidades: header + subtítulo + chips -->
+            <app-skeleton-block variant="text" width="35%" height="14px" />
+            <app-skeleton-block variant="text" width="60%" height="12px" />
+            <div class="grid grid-cols-2 gap-2">
+              @for (i of [1, 2, 3, 4]; track i) {
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              }
+            </div>
+
+            <!-- Zona de peligro: estado del relator (toggle) -->
+            <div class="rounded-lg p-4 mt-2 border border-border-subtle">
+              <app-skeleton-block variant="text" width="45%" height="14px" />
+              <div class="flex items-center justify-between gap-3 mt-3">
+                <app-skeleton-block variant="rect" width="55%" height="30px" />
+                <app-skeleton-block variant="text" width="44px" height="24px" />
+              </div>
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <h3 class="section-title">Información Personal</h3>
           <div class="flex flex-col gap-4 mb-6">
             <!-- Nombres -->
@@ -183,35 +208,34 @@ const SPEC_COLORS: Record<string, string> = {
               </button>
             </div>
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- ── Acciones (footer canónico) ──────────────────────────────────────── -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              class="btn-secondary"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-editar-relator"
-            >
-              Cancelar
-            </button>
-            <button
-              class="btn-primary flex items-center gap-2"
-              [disabled]="facade.isSubmitting()"
-              (click)="submit()"
-              data-llm-action="confirmar-editar-relator"
-              aria-label="Guardar cambios del relator"
-            >
-              @if (facade.isSubmitting()) {
-                <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                Guardando...
-              } @else {
-                <app-icon name="save" [size]="15" />
-                Guardar cambios
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template></app-drawer-content-loader
-    >
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          class="btn-secondary"
+          (click)="layoutDrawer.close()"
+          data-llm-action="cancelar-editar-relator"
+        >
+          Cancelar
+        </button>
+        <button
+          class="btn-primary flex items-center gap-2"
+          [disabled]="facade.isSubmitting()"
+          (click)="submit()"
+          data-llm-action="confirmar-editar-relator"
+          aria-label="Guardar cambios del relator"
+        >
+          @if (facade.isSubmitting()) {
+            <app-icon name="loader-2" [size]="15" class="animate-spin" />
+            Guardando...
+          } @else {
+            <app-icon name="save" [size]="15" />
+            Guardar cambios
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     /* .field-*, .section-title → globales en styles/components/_form-fields.scss */

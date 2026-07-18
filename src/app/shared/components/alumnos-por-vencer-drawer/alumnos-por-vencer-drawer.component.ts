@@ -22,23 +22,23 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-3 p-1">
-          @for (_ of [1, 2, 3]; track $index) {
-            <div class="card p-3 flex items-center justify-between border-l-4 border-l-error/30">
-              <div class="flex flex-col gap-1.5 flex-1 pr-4">
-                <app-skeleton-block variant="text" width="70%" height="14px" />
-                <app-skeleton-block variant="text" width="50%" height="12px" />
-                <app-skeleton-block variant="text" width="40%" height="12px" />
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-3 p-1">
+            @for (_ of [1, 2, 3]; track $index) {
+              <div class="card p-3 flex items-center justify-between border-l-4 border-l-error/30">
+                <div class="flex flex-col gap-1 flex-1 pr-4">
+                  <app-skeleton-block variant="text" width="65%" height="14px" />
+                  <app-skeleton-block variant="text" width="50%" height="12px" />
+                  <app-skeleton-block variant="text" width="35%" height="12px" />
+                </div>
+                <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
               </div>
-              <app-skeleton-block variant="circle" width="32px" height="32px" class="shrink-0" />
-            </div>
-          }
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+            }
+          </div>
+        </ng-template>
+        <ng-template #content>
           <div class="flex flex-col gap-4">
             @for (item of facade.alumnosPorVencer(); track item.id) {
               <div
@@ -68,9 +68,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
           </div>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+        </ng-template>
+      </app-drawer-content-loader>
+    </app-drawer-form>
   `,
 })
 export class AlumnosPorVencerDrawerComponent {

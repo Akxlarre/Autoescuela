@@ -38,21 +38,46 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
   ],
   template: `
     @if (facade.selectedSesion(); as sesion) {
-      <app-drawer-content-loader>
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-4">
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <div class="grid grid-cols-2 gap-3">
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
+      <app-drawer-form [hasFooter]="false">
+        <app-drawer-content-loader>
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-4">
+              <!-- Header de la sesión: título + badge estado + KPIs -->
+              <div class="rounded-lg border border-border bg-surface p-4 flex flex-col gap-3">
+                <div class="flex items-center justify-between">
+                  <app-skeleton-block variant="text" width="140px" height="16px" />
+                  <app-skeleton-block variant="rect" width="80px" height="20px" />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                </div>
+              </div>
+
+              <!-- Toggle de modo (Asistencia / Editar sesión) -->
+              <div class="flex gap-2">
+                <app-skeleton-block variant="rect" width="100%" height="36px" />
+                <app-skeleton-block variant="rect" width="100%" height="36px" />
+              </div>
+
+              <!-- Lista de alumnos con acciones de asistencia -->
+              <div class="flex flex-col gap-3">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <div
+                    class="flex items-center gap-3 rounded-lg border border-border bg-surface p-3"
+                  >
+                    <app-skeleton-block variant="circle" width="32px" height="32px" />
+                    <div class="flex-1 flex flex-col gap-1.5">
+                      <app-skeleton-block variant="text" width="70%" height="14px" />
+                      <app-skeleton-block variant="text" width="40%" height="12px" />
+                    </div>
+                    <app-skeleton-block variant="rect" width="120px" height="28px" />
+                  </div>
+                }
+              </div>
             </div>
-            <app-skeleton-block variant="rect" width="100%" height="52px" />
-            <app-skeleton-block variant="rect" width="100%" height="52px" />
-            <app-skeleton-block variant="rect" width="100%" height="52px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form [hasFooter]="false">
+          </ng-template>
+          <ng-template #content>
             <!-- ═══ Header de la sesión ═══ -->
             <div class="mb-4 rounded-lg border border-border bg-surface p-4">
               <div class="flex items-center justify-between">
@@ -348,9 +373,9 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
                 />
               </div>
             }
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+          </ng-template>
+        </app-drawer-content-loader>
+      </app-drawer-form>
     }
   `,
   styles: `

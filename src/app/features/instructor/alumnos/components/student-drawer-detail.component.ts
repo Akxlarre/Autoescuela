@@ -38,22 +38,44 @@ function avatarPalette(name: string) {
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-5 p-6">
-          <div class="flex items-center gap-4">
-            <app-skeleton-block variant="circle" width="64px" height="64px" />
-            <div class="flex flex-col gap-2 flex-1">
-              <app-skeleton-block variant="text" width="60%" height="18px" />
-              <app-skeleton-block variant="text" width="40%" height="14px" />
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5 p-6">
+            <!-- Avatar + nombre + rut + tag de estado -->
+            <div class="flex items-center gap-4">
+              <app-skeleton-block variant="circle" width="64px" height="64px" />
+              <div class="flex flex-col gap-2 flex-1">
+                <app-skeleton-block variant="text" width="60%" height="18px" />
+                <app-skeleton-block variant="text" width="40%" height="14px" />
+                <app-skeleton-block variant="rect" width="70px" height="18px" />
+              </div>
             </div>
+
+            <!-- Contacto: 2 links (teléfono, email) -->
+            <div class="flex flex-col gap-2">
+              <app-skeleton-block variant="text" width="70px" height="11px" />
+              <app-skeleton-block variant="rect" width="100%" height="42px" />
+              <app-skeleton-block variant="rect" width="100%" height="42px" />
+            </div>
+
+            <!-- Progreso: curso + barra de práctica -->
+            <div class="flex flex-col gap-3">
+              <app-skeleton-block variant="text" width="80px" height="11px" />
+              <div
+                class="rounded-xl p-4 flex flex-col gap-4 bg-elevated border border-border-subtle"
+              >
+                <app-skeleton-block variant="text" width="55%" height="14px" />
+                <app-skeleton-block variant="text" width="100%" height="10px" />
+                <app-skeleton-block variant="rect" width="100%" height="8px" borderRadius="999px" />
+              </div>
+            </div>
+
+            <!-- Próxima clase (banner) -->
+            <app-skeleton-block variant="rect" width="100%" height="60px" />
           </div>
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="100px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+        </ng-template>
+        <ng-template #content>
           @if (facade.activeStudent(); as detail) {
             <!-- Avatar + estado -->
             <div class="flex items-center gap-4">
@@ -156,21 +178,23 @@ function avatarPalette(name: string) {
                 </div>
               </div>
             }
-
-            <!-- CTA -->
-            <ng-container ngProjectAs="[drawer-form-footer]">
-              <a
-                [routerLink]="['/app/instructor/alumnos', detail.studentId, 'ficha']"
-                class="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                <app-icon name="file-text" [size]="18" />
-                Ver Ficha Técnica Completa
-              </a>
-            </ng-container>
           }
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+        </ng-template>
+      </app-drawer-content-loader>
+
+      <!-- CTA -->
+      @if (facade.activeStudent(); as detail) {
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <a
+            [routerLink]="['/app/instructor/alumnos', detail.studentId, 'ficha']"
+            class="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <app-icon name="file-text" [size]="18" />
+            Ver Ficha Técnica Completa
+          </a>
+        </ng-container>
+      }
+    </app-drawer-form>
   `,
   styles: [
     `

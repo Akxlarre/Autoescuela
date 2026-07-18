@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   effect,
+  HostListener,
   inject,
   OnInit,
   signal,
@@ -20,25 +21,24 @@ import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.f
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
-import { FichaTecnicaPrintService } from '@core/services/ui/ficha-tecnica-print.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { Button } from 'primeng/button';
 import { EliminarAlumnoModalComponent } from '@shared/components/eliminar-alumno-modal/eliminar-alumno-modal.component';
-import { AdminInasistenciaDrawerComponent } from './inasistencia-drawer/admin-inasistencia-drawer.component';
 import { AdminEditarPerfilDrawerComponent } from './editar-perfil-drawer/admin-editar-perfil-drawer.component';
-import { AdminFichaTecnicaComponent } from './components/ficha-tecnica/admin-ficha-tecnica.component';
 import { AdminHistorialPagosComponent } from './components/historial-pagos/admin-historial-pagos.component';
-import { AdminReprogramarClaseDrawerComponent } from './reprogramar-clase-drawer/admin-reprogramar-clase-drawer.component';
 import { AdminReagendarClasesDrawerComponent } from './reagendar-clases-drawer/admin-reagendar-clases-drawer.component';
+import { AdminInasistenciasDrawerComponent } from './inasistencias-drawer/admin-inasistencias-drawer.component';
+import { AdminFichaTecnicaDrawerComponent } from './ficha-tecnica-drawer/admin-ficha-tecnica-drawer.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
-import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroMenuItem,
+} from '@core/models/ui/section-hero.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
-import { AnimateInDirective } from '@core/directives/animate-in.directive';
 
 @Component({
   selector: 'app-admin-alumno-detalle',
@@ -51,13 +51,10 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
     SkeletonBlockComponent,
     SectionHeroComponent,
     Button,
-    AdminFichaTecnicaComponent,
     AdminHistorialPagosComponent,
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
     CardHoverDirective,
-    ModalOverlayDirective,
-    AnimateInDirective,
     TabsComponent,
   ],
   template: `
@@ -67,7 +64,9 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
       appBentoGridLayout
       [class.force-compact]="layoutDrawer.isOpen()"
     >
-      <!-- ── Hero Principal (Siempre visible) ── -->
+      <!-- ── Header (restaurado): navegación + contexto a la izquierda,
+           solo Editar Perfil / Eliminar Alumno a la derecha — el resto de
+           acciones vive ahora en la tarjeta de Perfil (ver headerActions()). ── -->
       <app-section-hero
         density="slim"
         [animateOnInit]="false"
@@ -81,24 +80,14 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
         icon="user"
         backRoute="/app/admin/alumnos"
         backLabel="Listado de Alumnos"
-        [actions]="heroActions()"
+        [actions]="headerActions()"
         [chips]="heroChips()"
         (actionClick)="handleHeroAction($event)"
       />
 
       <!-- ── Estado de Carga ── -->
       @if (facade.isLoading()) {
-        <!-- 1. Skeleton: Selector de Matrícula -->
-        <div class="col-span-full flex w-full">
-          <div
-            class="flex items-center bg-surface border border-border-subtle p-1.5 rounded-2xl shadow-sm gap-2 w-full md:w-auto overflow-hidden"
-          >
-            <app-skeleton-block variant="rect" width="120px" height="40px" borderRadius="12px" />
-            <app-skeleton-block variant="rect" width="140px" height="40px" borderRadius="12px" />
-          </div>
-        </div>
-
-        <!-- 2. Info Personal -->
+        <!-- Info Personal -->
         <div class="bento-card bento-tall flex flex-col h-full w-full">
           <div class="flex flex-col gap-5 p-5 md:p-6 h-full">
             <div class="flex items-center gap-4">
@@ -157,27 +146,7 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
           </div>
         }
 
-        <!-- 4. Ficha Técnica (bento-hero) -->
-        <div class="bento-card bento-hero p-0! flex flex-col h-full w-full overflow-hidden">
-          <div
-            class="flex items-center justify-between gap-4 p-5 border-b border-border-subtle bg-elevated/30"
-          >
-            <div class="flex items-center gap-3">
-              <app-skeleton-block variant="rect" width="32px" height="32px" borderRadius="8px" />
-              <div class="flex flex-col gap-1">
-                <app-skeleton-block variant="text" width="120px" height="16px" />
-                <app-skeleton-block variant="text" width="180px" height="12px" />
-              </div>
-            </div>
-          </div>
-          <div class="p-5 flex flex-col gap-4">
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-            <app-skeleton-block variant="rect" width="100%" height="40px" />
-          </div>
-        </div>
-
-        <!-- 5. Estado Financiero (bento-tall) -->
+        <!-- Estado Financiero (Historial de Pagos) -->
         <div class="bento-card bento-tall p-0! flex flex-col h-full w-full overflow-hidden">
           <div
             class="flex items-center justify-between p-5 border-b border-border-subtle bg-elevated/30"
@@ -255,6 +224,9 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
                   >{{ alumno.nombre }}</span
                 >
                 <span class="text-xs text-text-secondary">{{ alumno.rut }}</span>
+                <span class="text-sm font-bold text-text-primary mt-0.5" data-llm-info="matricula"
+                  >Matrícula #{{ alumno.matricula }}</span
+                >
                 <span class="text-2xs font-bold text-brand uppercase tracking-wider mt-0.5"
                   >ESTADO: {{ alumno.estado }}</span
                 >
@@ -277,6 +249,102 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
               <div class="flex flex-col gap-1" data-llm-info="ingreso">
                 <span class="kpi-label">FECHA DE INGRESO</span>
                 <span class="text-sm font-medium text-text-primary">{{ alumno.fechaIngreso }}</span>
+              </div>
+            </div>
+
+            <div class="h-px bg-border-subtle w-full"></div>
+
+            <!-- ── Acciones operativas (Editar/Eliminar viven en el header) ── -->
+            <div class="flex flex-col gap-2">
+              <div class="grid grid-cols-2 gap-2">
+                @for (action of secondaryActions(); track action.id) {
+                  <div class="relative">
+                    <button
+                      type="button"
+                      class="btn-secondary w-full justify-center gap-1.5"
+                      [disabled]="action.disabled ?? false"
+                      [attr.data-llm-action]="action.id"
+                      [attr.aria-haspopup]="action.menu ? 'menu' : null"
+                      [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
+                      (click)="
+                        action.menu
+                          ? toggleCardMenu(action.id, $event)
+                          : handleHeroAction(action.id)
+                      "
+                    >
+                      @if (action.icon) {
+                        <app-icon
+                          [name]="action.icon"
+                          [size]="14"
+                          [class.animate-spin]="action.loading"
+                        />
+                      }
+                      <span class="truncate">{{ action.label }}</span>
+                      @if (action.menu) {
+                        <app-icon
+                          name="chevron-down"
+                          [size]="12"
+                          class="shrink-0 card-menu-chevron"
+                          [class.card-menu-chevron--open]="openCardMenuId() === action.id"
+                        />
+                      }
+                    </button>
+
+                    @if (action.menu && openCardMenuId() === action.id) {
+                      <div class="card-action-menu" role="menu" (click)="$event.stopPropagation()">
+                        @for (item of action.menu; track item.id) {
+                          @if (item.header) {
+                            <div class="card-action-menu__header">{{ item.label }}</div>
+                          } @else {
+                            <button
+                              type="button"
+                              role="menuitem"
+                              class="card-action-menu__item"
+                              [class.card-action-menu__item--disabled]="item.disabled"
+                              [disabled]="item.disabled ?? false"
+                              [attr.data-llm-action]="item.id"
+                              (click)="onCardMenuItemClick(item)"
+                            >
+                              @if (item.icon) {
+                                <app-icon
+                                  [name]="item.icon"
+                                  [size]="13"
+                                  class="card-action-menu__item-icon"
+                                />
+                              }
+                              <span class="card-action-menu__item-body">
+                                <span class="card-action-menu__item-label">{{ item.label }}</span>
+                                @if (item.hint) {
+                                  <span class="card-action-menu__item-hint">{{ item.hint }}</span>
+                                }
+                              </span>
+                            </button>
+                          }
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Nuevos (Fase 1 — solo UI, sin lógica todavía) -->
+                <button
+                  type="button"
+                  class="btn-secondary w-full justify-center gap-1.5"
+                  data-llm-action="ver-inasistencias"
+                  (click)="openInasistenciasPanel()"
+                >
+                  <app-icon name="alert-triangle" [size]="14" />
+                  <span class="truncate">Inasistencias</span>
+                </button>
+                <button
+                  type="button"
+                  class="btn-secondary w-full justify-center gap-1.5"
+                  data-llm-action="ver-ficha-tecnica"
+                  (click)="openFichaTecnicaPanel()"
+                >
+                  <app-icon name="file-text" [size]="14" />
+                  <span class="truncate">Ficha Técnica</span>
+                </button>
               </div>
             </div>
           </div>
@@ -675,152 +743,6 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
           [totalPagado]="alumno.totalPagado"
           [saldoPendiente]="alumno.saldoPendiente"
         />
-
-        <!-- Bento Item 4: Inasistencias (Banner, común) -->
-        <div class="bento-card bento-banner bg-warning-subtle border-warning">
-          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div class="flex items-center gap-4">
-              <div
-                class="w-10 h-10 rounded-xl bg-surface border border-warning-border flex items-center justify-center text-warning shadow-sm"
-              >
-                <app-icon name="alert-triangle" [size]="20" />
-              </div>
-              <div class="flex flex-col">
-                <span class="font-bold text-text-primary">Inasistencias Registradas</span>
-                <span class="text-xs text-text-secondary">
-                  @if (alumno.licenseGroup === 'class_b') {
-                    @if (facade.inasistenciasClaseB().length > 0) {
-                      Se han detectado {{ facade.inasistenciasClaseB().length }} inasistencias en
-                      clases prácticas.
-                    } @else {
-                      No hay inasistencias registradas hasta la fecha.
-                    }
-                  } @else {
-                    @if (facade.inasistencias().length > 0) {
-                      Se han detectado {{ facade.inasistencias().length }} registros que requieren
-                      seguimiento.
-                    } @else {
-                      No hay inasistencias registradas hasta la fecha.
-                    }
-                  }
-                </span>
-              </div>
-            </div>
-            @if (alumno.licenseGroup !== 'class_b') {
-              <p-button
-                label="Registrar Nueva"
-                icon="pi pi-plus"
-                size="small"
-                severity="warn"
-                (onClick)="openInasistenciaDrawer()"
-              />
-            }
-          </div>
-
-          @if (alumno.licenseGroup === 'class_b') {
-            @if (facade.inasistenciasClaseB().length > 0) {
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                @for (item of facade.inasistenciasClaseB(); track item.id) {
-                  <div
-                    class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
-                  >
-                    <div class="inas-date-pill border-none! bg-elevated!">
-                      <span class="text-[10px] font-bold text-text-secondary">{{
-                        item.fecha
-                      }}</span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <p
-                        class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
-                      >
-                        Clase #{{ item.claseNumero ?? '—' }}
-                      </p>
-                      <p class="text-[10px] text-text-muted truncate m-0 italic">
-                        {{ item.instructor ?? 'Sin instructor' }}
-                      </p>
-                    </div>
-                    <div class="flex flex-col items-end gap-0.5 shrink-0">
-                      <div class="flex items-center gap-1">
-                        @if (item.reagendada) {
-                          <span
-                            class="inas-status-badge"
-                            data-status="reagendada"
-                            [pTooltip]="'Esta inasistencia ya fue reagendada'"
-                            tooltipPosition="top"
-                            data-llm-description="indica que la clase asociada a esta inasistencia ya fue reagendada"
-                            >Reagendada</span
-                          >
-                        }
-                        @if (item.justificada) {
-                          <span class="inas-status-badge" data-status="approved">Justificado</span>
-                        }
-                      </div>
-                      @if (item.justificada) {
-                        @if (item.justificacion) {
-                          <button
-                            type="button"
-                            class="text-[10px] font-semibold text-brand hover:underline shrink-0 ml-1"
-                            (click)="openViewMotivo(item.justificacion)"
-                          >
-                            Ver motivo
-                          </button>
-                        }
-                      } @else {
-                        <button
-                          type="button"
-                          class="text-xs font-semibold text-brand hover:underline shrink-0"
-                          data-llm-action="justificar-inasistencia-clase-b"
-                          (click)="openJustificarClaseB(item.id)"
-                        >
-                          Justificar
-                        </button>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-          } @else {
-            @if (facade.inasistencias().length > 0) {
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 mt-2">
-                @for (item of facade.inasistencias().slice(0, 3); track item.id) {
-                  <div
-                    class="flex items-center gap-3 p-3 rounded-lg bg-surface border border-border-subtle shadow-sm transition-all hover:shadow-md"
-                  >
-                    <div class="inas-date-pill border-none! bg-elevated!">
-                      <span class="text-[10px] font-bold text-text-secondary">{{
-                        item.fecha
-                      }}</span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <p
-                        class="text-xs font-bold text-text-primary truncate m-0 font-display uppercase tracking-tight"
-                      >
-                        {{ item.documentType }}
-                      </p>
-                      <p class="text-[10px] text-text-muted truncate m-0 italic">
-                        {{ item.description || 'Sin descripción' }}
-                      </p>
-                    </div>
-                    <span class="inas-status-badge" [attr.data-status]="item.status">
-                      {{ statusLabel(item.status) }}
-                    </span>
-                  </div>
-                }
-              </div>
-            }
-          }
-        </div>
-
-        <!-- Bento Item 5: Ficha Técnica (solo Clase B) -->
-        @if (alumno.licenseGroup === 'class_b') {
-          <app-admin-ficha-tecnica
-            class="bento-hero w-full h-full block"
-            [clases]="facade.clasesPracticas()"
-            (imprimirFicha)="imprimirFicha()"
-            (reprogramarRequested)="openReprogramarDrawer($event)"
-          />
-        }
       }
     </div>
 
@@ -833,102 +755,6 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
       (confirmado)="onConfirmArchivar()"
       (cancelado)="onCancelArchivar()"
     />
-
-    <!-- Modal de justificación de inasistencia Clase B (RF-053) -->
-    <!-- Fuera de .bento-grid a propósito: ese contenedor recibe transform CSS de
-         GsapAnimationsService.animateBentoGrid(), lo que crea un containing
-         block para position: fixed y rompe el overlay centrado en viewport. -->
-    @if (justificarClaseBOpen()) {
-      <div
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
-        (click)="closeJustificarClaseB()"
-      >
-        <div
-          class="surface-glass rounded-2xl p-6 w-full max-w-md flex flex-col gap-4"
-          (click)="$event.stopPropagation()"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Justificar inasistencia"
-        >
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
-            <button
-              class="p-1 rounded-md text-text-muted hover:text-text-primary"
-              aria-label="Cerrar"
-              (click)="closeJustificarClaseB()"
-            >
-              <app-icon name="x" [size]="18" />
-            </button>
-          </div>
-          <p class="text-sm text-text-secondary">
-            Ingresa el motivo de la justificación para registrar en el historial del alumno.
-          </p>
-          <textarea
-            class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
-            style="border-color: var(--border-subtle)"
-            rows="3"
-            placeholder="Ej: Certificado médico presentado..."
-            data-llm-description="textarea for absence justification reason"
-            [value]="justificarClaseBReason()"
-            (input)="justificarClaseBReason.set($any($event.target).value)"
-          ></textarea>
-          <div class="flex justify-end gap-2">
-            <button class="btn-secondary text-sm px-4 py-2" (click)="closeJustificarClaseB()">
-              Cancelar
-            </button>
-            <button
-              class="btn-primary text-sm px-4 py-2"
-              [disabled]="!justificarClaseBReason().trim()"
-              data-llm-action="submit-justificacion-clase-b"
-              (click)="submitJustificarClaseB()"
-            >
-              Guardar
-            </button>
-          </div>
-        </div>
-      </div>
-    }
-    
-    <!-- Modal para ver el motivo de justificación -->
-    <div [appModalOverlay]="viewMotivoModalOpen()">
-      @if (viewMotivoModalOpen()) {
-        <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          (click)="closeViewMotivo()"
-          (document:keydown.escape)="closeViewMotivo()"
-        >
-          <div
-            class="surface-glass rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
-            (click)="$event.stopPropagation()"
-            appAnimateIn
-          >
-            <div class="flex items-center justify-between border-b border-border-subtle pb-3">
-              <h3 class="font-semibold text-text-primary flex items-center gap-2">
-                <app-icon name="info" [size]="18" class="text-brand" />
-                Motivo de Justificación
-              </h3>
-              <button
-                class="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-                aria-label="Cerrar"
-                (click)="closeViewMotivo()"
-              >
-                <app-icon name="x" [size]="18" />
-              </button>
-            </div>
-            <div class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap">
-              {{ viewMotivoText() }}
-            </div>
-            <div class="flex justify-end pt-2">
-              <button class="btn-secondary text-sm px-4 py-2 cursor-pointer" (click)="closeViewMotivo()">
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      }
-    </div>
 
     <!-- Input oculto para subir contrato firmado (flujo online) -->
     <input
@@ -1018,39 +844,6 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
       border-color: var(--state-error-border);
     }
 
-    .inas-status-badge {
-      flex-shrink: 0;
-      padding: 2px 8px;
-      border-radius: var(--radius-full);
-      font-size: 10px;
-      font-weight: var(--font-bold);
-      text-transform: uppercase;
-      background: var(--bg-elevated);
-      color: var(--text-muted);
-      border: 1px solid var(--border-subtle);
-    }
-    .inas-status-badge[data-status='pending'] {
-      color: var(--state-warning);
-      background: var(--state-warning-bg);
-      border-color: var(--state-warning-border);
-    }
-    .inas-status-badge[data-status='approved'],
-    .inas-status-badge[data-status='revisado'] {
-      color: var(--state-success);
-      background: var(--state-success-bg);
-      border-color: var(--state-success-border);
-    }
-    .inas-status-badge[data-status='rejected'] {
-      color: var(--state-error);
-      background: var(--state-error-bg);
-      border-color: var(--state-error-border);
-    }
-    .inas-status-badge[data-status='reagendada'] {
-      color: var(--state-info);
-      background: var(--state-info-bg);
-      border-color: var(--state-info-border);
-    }
-
     /* Force Compact overrides (Drawer Open) — mismo patrón que
        cuadratura-content.component.ts: colapsa el bento-grid a una sola
        columna en vez de repartir columnas angostas entre celdas con
@@ -1064,6 +857,98 @@ import { AnimateInDirective } from '@core/directives/animate-in.directive';
 
     .force-compact.bento-grid > * {
       width: 100% !important;
+    }
+
+    /* ── Dropdown de acciones dentro de la tarjeta de Perfil (Carnet/Contrato) ──
+       Mismo lenguaje visual que hero-menu-panel de SectionHeroComponent, pero
+       posicionado relativo al botón (no fixed) — no necesita cálculo de posición
+       por JS porque vive dentro del flujo estático de la card. */
+    .card-menu-chevron {
+      opacity: 0.7;
+      transition: transform var(--duration-fast) var(--ease-standard);
+    }
+    .card-menu-chevron--open {
+      transform: rotate(180deg);
+    }
+
+    .card-action-menu {
+      position: absolute;
+      z-index: 30;
+      top: calc(100% + 4px);
+      left: 0;
+      min-width: 220px;
+      padding: 6px;
+      background: var(--bg-glass-surface, var(--bg-surface));
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card-action-menu__header {
+      padding: 8px 10px 4px;
+      font-size: var(--text-xs);
+      font-weight: var(--font-semibold);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .card-action-menu__header:not(:first-child) {
+      margin-top: 4px;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 10px;
+    }
+
+    .card-action-menu__item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 10px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: var(--text-sm);
+      font-weight: var(--font-medium);
+      font-family: var(--font-body);
+      text-align: left;
+      cursor: pointer;
+      transition: var(--transition-color);
+    }
+    .card-action-menu__item:not(:disabled):hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+    .card-action-menu__item-icon {
+      flex-shrink: 0;
+      color: var(--text-muted);
+    }
+    .card-action-menu__item-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex: 1;
+      min-width: 0;
+    }
+    .card-action-menu__item-label {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .card-action-menu__item-hint {
+      font-size: 10px;
+      font-weight: var(--font-normal);
+      color: var(--text-muted);
+      white-space: normal;
+      line-height: 1.3;
+    }
+    .card-action-menu__item--disabled,
+    .card-action-menu__item--disabled:hover {
+      background: transparent;
+      color: var(--text-muted);
+      cursor: not-allowed;
     }
   `,
 })
@@ -1079,7 +964,6 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
-  private readonly fichaTecnicaPrint = inject(FichaTecnicaPrintService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly bentoGrid = viewChild<ElementRef>('bentoGrid');
@@ -1105,14 +989,6 @@ export class AdminAlumnoDetalleComponent implements OnInit {
 
   // ── Estado de carga al abrir el certificado ya generado (hero action) ───────
   protected readonly isViewingCertificado = signal(false);
-
-  // ── Estado del modal de justificación (Inasistencias Clase B, RF-053) ───────
-  protected readonly justificarClaseBOpen = signal(false);
-  protected readonly justificarClaseBId = signal<number | null>(null);
-  protected readonly justificarClaseBReason = signal('');
-
-  protected readonly viewMotivoModalOpen = signal(false);
-  protected readonly viewMotivoText = signal('');
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -1257,23 +1133,28 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     const contractGenerated = this.facade.contractGeneratedPath();
     const contractSigned = this.facade.contractSignedPath();
     const contractActions: SectionHeroAction[] = [];
+    const isViewingContrato = this.facade.isViewingContrato();
 
     if (channel === 'presential' && contractGenerated) {
       // En flujo presencial, file_url ES el contrato firmado que se subió en Step 5
       contractActions.push({
         id: 'ver-contrato',
-        label: 'Ver Contrato',
-        icon: 'file-signature',
+        label: isViewingContrato ? 'Cargando...' : 'Ver Contrato',
+        icon: isViewingContrato ? 'loader-2' : 'file-signature',
         primary: false,
+        disabled: isViewingContrato,
+        loading: isViewingContrato,
       });
     } else if (channel === 'online') {
       if (contractSigned) {
         // Ya subieron el contrato firmado → solo "Ver Contrato"
         contractActions.push({
           id: 'ver-contrato',
-          label: 'Ver Contrato',
-          icon: 'file-signature',
+          label: isViewingContrato ? 'Cargando...' : 'Ver Contrato',
+          icon: isViewingContrato ? 'loader-2' : 'file-signature',
           primary: false,
+          disabled: isViewingContrato,
+          loading: isViewingContrato,
         });
       } else if (contractGenerated) {
         // Contrato generado pero no firmado → dropdown con Descargar + Subir Firmado
@@ -1330,6 +1211,16 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     ];
   });
 
+  // ── Acciones: Editar/Eliminar quedan en el header restaurado; el resto vive
+  // en la tarjeta de Perfil. Ambos derivan del mismo heroActions() — cero
+  // cambios a su lógica dinámica de labels/loading/disabled/menu. ───────────
+  protected readonly headerActions = computed<SectionHeroAction[]>(() =>
+    this.heroActions().filter((a) => a.primary || a.danger),
+  );
+  protected readonly secondaryActions = computed(() =>
+    this.heroActions().filter((a) => !a.primary && !a.danger),
+  );
+
   protected readonly heroChips = computed<SectionHeroChip[]>(() => {
     const alumno = this.facade.alumno();
     if (!alumno) return [];
@@ -1341,6 +1232,41 @@ export class AdminAlumnoDetalleComponent implements OnInit {
       },
     ];
   });
+
+  /** Id de la acción secundaria cuyo dropdown (Carnet/Contrato) está abierto. */
+  protected readonly openCardMenuId = signal<string | null>(null);
+
+  protected toggleCardMenu(id: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openCardMenuId.update((current) => (current === id ? null : id));
+  }
+
+  /** Cierra cualquier dropdown abierto al hacer click fuera (mismo patrón que SectionHeroComponent). */
+  @HostListener('document:click')
+  protected closeCardMenu(): void {
+    this.openCardMenuId.set(null);
+  }
+
+  protected onCardMenuItemClick(item: SectionHeroMenuItem): void {
+    if (item.disabled || item.header) return;
+    this.closeCardMenu();
+    this.handleHeroAction(item.id);
+  }
+
+  // ── Drawers de Inasistencias / Ficha Técnica (Fase 2 app-like) ───────────────
+  // Mismo sistema de drawer que Editar Perfil / Reagendar Clases: backdrop,
+  // header con título + X, y scroll lock del fondo ya los da LayoutDrawerComponent.
+  protected openInasistenciasPanel(): void {
+    this.layoutDrawer.open(
+      AdminInasistenciasDrawerComponent,
+      'Inasistencias Registradas',
+      'alert-triangle',
+    );
+  }
+
+  protected openFichaTecnicaPanel(): void {
+    this.layoutDrawer.open(AdminFichaTecnicaDrawerComponent, 'Ficha Técnica', 'clipboard-check');
+  }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
   ngOnInit(): void {
@@ -1484,81 +1410,12 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     await this.facade.verCarnet(path);
   }
 
-  // ── Helpers de template ─────────────────────────────────────────────────────
-  protected imprimirFicha(): void {
-    const alumno = this.facade.alumno();
-    this.fichaTecnicaPrint.printFichaTecnica(this.facade.clasesPracticas(), {
-      studentName: alumno?.nombre,
-      matricula: alumno?.matricula,
-    });
-  }
-
-  protected statusLabel(status: string): string {
-    const map: Record<string, string> = {
-      pending: 'Pendiente',
-      approved: 'Aprobado',
-      revisado: 'Revisado',
-      rejected: 'Rechazado',
-    };
-    return map[status?.toLowerCase()] ?? status ?? 'Pendiente';
-  }
-
   // ── Handlers ────────────────────────────────────────────────────────────────
-  protected openInasistenciaDrawer(): void {
-    this.layoutDrawer.open(
-      AdminInasistenciaDrawerComponent,
-      'Registrar Inasistencia',
-      'alert-triangle',
-    );
-  }
-
-  // ── Justificación de inasistencias Clase B (RF-053) ─────────────────────────
-  protected openJustificarClaseB(attendanceId: number): void {
-    this.justificarClaseBId.set(attendanceId);
-    this.justificarClaseBReason.set('');
-    this.justificarClaseBOpen.set(true);
-  }
-
-  protected closeJustificarClaseB(): void {
-    this.justificarClaseBOpen.set(false);
-    this.justificarClaseBId.set(null);
-    this.justificarClaseBReason.set('');
-  }
-  
-  openViewMotivo(motivo: string) {
-    this.viewMotivoText.set(motivo);
-    this.viewMotivoModalOpen.set(true);
-  }
-
-  closeViewMotivo() {
-    this.viewMotivoModalOpen.set(false);
-    this.viewMotivoText.set('');
-  }
-
-  protected submitJustificarClaseB(): void {
-    const id = this.justificarClaseBId();
-    const reason = this.justificarClaseBReason().trim();
-    if (id === null || !reason) return;
-    void this.facade.justificarInasistenciaClaseB(id, reason);
-    this.closeJustificarClaseB();
-  }
-
   protected openEditDrawer(): void {
     this.layoutDrawer.open(
       AdminEditarPerfilDrawerComponent,
       'Editar Perfil del Alumno',
       'user-pen',
-    );
-  }
-
-  protected openReprogramarDrawer(clase: ClasePracticaUI): void {
-    const enrollmentId = this.facade.alumno()?.enrollmentId;
-    if (enrollmentId == null) return;
-    this.facade.setReprogramarTarget(clase.sessionId, clase.numero, enrollmentId);
-    this.layoutDrawer.open(
-      AdminReprogramarClaseDrawerComponent,
-      'Reprogramar Clase',
-      'calendar-clock',
     );
   }
 

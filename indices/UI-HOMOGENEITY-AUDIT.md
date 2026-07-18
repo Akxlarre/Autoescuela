@@ -75,7 +75,7 @@ Header artesanal `<div class="p-6"><div class="flex items-center gap-3 mb-6">`, 
 
 ---
 
-### ✅ Tier B — Bento roto por wrapper — RESUELTO (fix-015, 2026-06-14)
+### ✅ Tier B — Bento roto por wrapper — RESUELTO (fix-015-m, 2026-06-14)
 El `*-content` ya trae su propio `.bento-grid`, pero la página lo envuelve en un contenedor no-grid → doble contenedor (ancho/padding no canónico). **Las 4 páginas ahora delegan bare. Verificado con build + Playwright.**
 
 **Fix:** eliminar el wrapper, delegar bare (igual que reportes/cuadratura/flota).
@@ -89,7 +89,7 @@ El `*-content` ya trae su propio `.bento-grid`, pero la página lo envuelve en u
 
 ---
 
-### ✅ Tier B2 — Bento fragmentado dentro del `*-content` (causa del "KPI desalineado") — RESUELTO (fix-015, 2026-06-14)
+### ✅ Tier B2 — Bento fragmentado dentro del `*-content` (causa del "KPI desalineado") — RESUELTO (fix-015-m, 2026-06-14)
 `liquidaciones-content.component.ts` no usa un grid plano. Tiene el hero en un `<div class="bento-banner">` **suelto** (fuera de cualquier grid) y los KPIs en un `<div class="bento-grid">` **separado**. Como hero y KPIs viven en contenedores distintos con padding distinto, **sus bordes no se alinean**.
 
 | Archivo | Líneas | Problema |

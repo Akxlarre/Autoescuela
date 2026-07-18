@@ -175,7 +175,7 @@ Para el hook `architect.js` / un check de CI (esto es lo que faltaba detectar):
 
 ```
 # Clases de token no canónicas (H1) — deben fallar el build:
-# (cubre TODAS las familias muertas encontradas en fix-015; NO matchea `rows-divider` que es CSS custom)
+# (cubre TODAS las familias muertas encontradas en fix-015-m; NO matchea `rows-divider` que es CSS custom)
 \b(bg-bg-(base|surface|elevated|subtle|overlay)|(text|bg|border)-state-(success|warning|error|info)|bg-surface-(elevated|hover|base)|(border|bg|divide)-divider)\b
 
 # Colores Tailwind hardcodeados (AP-004) — ya cubierto, reconfirmar:

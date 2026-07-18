@@ -30,17 +30,71 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Banner informativo (rol asignado automáticamente) -->
+            <app-skeleton-block variant="rect" width="100%" height="52px" />
+
+            <!-- Título de sección -->
+            <app-skeleton-block variant="text" width="140px" height="14px" />
+
+            <div class="flex flex-col gap-4">
+              <!-- Nombres -->
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="35%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+              </div>
+
+              <!-- Apellido Paterno / Materno -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="60%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="60%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+              </div>
+
+              <!-- RUT -->
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="20%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+              </div>
+
+              <!-- Email -->
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="45%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+              </div>
+
+              <!-- Teléfono -->
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="25%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+              </div>
+
+              <!-- Sede -->
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="40%" height="13px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+              </div>
+
+              <!-- Acceso a sedes (toggle de 2 botones) -->
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="35%" height="13px" />
+                <div class="flex items-center gap-3">
+                  <app-skeleton-block variant="rect" width="100%" height="34px" />
+                  <app-skeleton-block variant="rect" width="100%" height="34px" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <div class="flex items-start gap-3 rounded-lg p-3 mb-5 bg-brand/6 border border-brand/20">
             <app-icon name="clipboard-list" [size]="16" color="var(--ds-brand)" />
             <p class="text-xs leading-relaxed text-brand">
@@ -238,35 +292,34 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               }
             </div>
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Acciones -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              class="btn-secondary"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-crear-secretaria"
-            >
-              Cancelar
-            </button>
-            <button
-              class="btn-primary flex items-center gap-2"
-              [disabled]="facade.isSubmitting()"
-              (click)="submit()"
-              data-llm-action="confirmar-crear-secretaria"
-              aria-label="Crear nueva secretaria"
-            >
-              @if (facade.isSubmitting()) {
-                <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                Creando...
-              } @else {
-                <app-icon name="user-plus" [size]="15" />
-                Crear secretaria
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          class="btn-secondary"
+          (click)="layoutDrawer.close()"
+          data-llm-action="cancelar-crear-secretaria"
+        >
+          Cancelar
+        </button>
+        <button
+          class="btn-primary flex items-center gap-2"
+          [disabled]="facade.isSubmitting()"
+          (click)="submit()"
+          data-llm-action="confirmar-crear-secretaria"
+          aria-label="Crear nueva secretaria"
+        >
+          @if (facade.isSubmitting()) {
+            <app-icon name="loader-2" [size]="15" class="animate-spin" />
+            Creando...
+          } @else {
+            <app-icon name="user-plus" [size]="15" />
+            Crear secretaria
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     .section-title {

@@ -68,17 +68,59 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
     DateInputComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <!-- Selector/info del alumno (refleja el mismo modo que #content) -->
+            @if (facade.enrollmentSeleccionado() === null) {
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="25%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+            } @else {
+              <app-skeleton-block variant="rect" width="100%" height="56px" />
+            }
+
+            <!-- Fecha de pago -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+
+            <!-- Concepto -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+
+            <!-- Monto total -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+
+            <!-- Desglose de pago (4 métodos en grid) -->
+            <div class="flex flex-col gap-3">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <div class="grid grid-cols-2 gap-3">
+                @for (_ of [1, 2, 3, 4]; track $index) {
+                  <div class="flex flex-col gap-1">
+                    <app-skeleton-block variant="text" width="55%" height="11px" />
+                    <app-skeleton-block variant="rect" width="100%" height="36px" />
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- N° documento -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="45%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
             <!-- ── MODO GLOBAL: selector de alumno ────────────────────────────── -->
             @if (facade.enrollmentSeleccionado() === null) {
@@ -101,7 +143,11 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                     optionValue="value"
                     placeholder="Selecciona un alumno..."
                     styleClass="w-full"
-                    data-llm-description="Selecciona el alumno al que se le asocia el pago"
+                    [filter]="true"
+                    filterBy="label"
+                    filterPlaceholder="Buscar alumno..."
+                    emptyFilterMessage="No se encontraron alumnos"
+                    data-llm-description="Selecciona el alumno al que se le asocia el pago, con buscador por nombre"
                     [class.field-input--error]="isInvalid('enrollment_id')"
                   />
                   @if (isInvalid('enrollment_id')) {
@@ -382,31 +428,31 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
               </div>
             }
           </form>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- ── Footer ──────────────────────────────────────────────────────────── -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              type="button"
-              class="btn-secondary"
-              (click)="onCancel()"
-              data-llm-action="cancelar-registro-pago"
-            >
-              Cancelar
-            </button>
+      <!-- ── Footer ──────────────────────────────────────────────────────────── -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          type="button"
+          class="btn-secondary"
+          (click)="onCancel()"
+          data-llm-action="cancelar-registro-pago"
+        >
+          Cancelar
+        </button>
 
-            <app-async-btn
-              variant="primary"
-              label="Guardar Pago"
-              loadingLabel="Guardando..."
-              icon="check"
-              [loading]="isSaving()"
-              [disabled]="form.invalid"
-              (clicked)="onSubmit()"
-            />
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+        <app-async-btn
+          variant="primary"
+          label="Guardar Pago"
+          loadingLabel="Guardando..."
+          icon="check"
+          [loading]="isSaving()"
+          [disabled]="form.invalid"
+          (clicked)="onSubmit()"
+        />
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     /* ── Alumno info ── */

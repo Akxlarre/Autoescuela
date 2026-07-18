@@ -490,6 +490,7 @@ const POR_PAGINA = 5;
       [dismissableMask]="false"
       [style]="{ width: '560px' }"
       [contentStyle]="{ padding: '0.75rem 1.5rem 1.25rem' }"
+      appendTo="body"
     >
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-2">

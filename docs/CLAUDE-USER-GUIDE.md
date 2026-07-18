@@ -47,9 +47,15 @@ A partir de v5.1, **todo codigo de produccion requiere una Spec o Fix activa**. 
 
 | Track | Cuando usarlo | Formato ID | Archivo contrato |
 |-------|--------------|------------|-----------------|
-| **Spec** | Feature nueva o modulo completo | `NNNN-kebab-slug` (ej: `0001-flujo-pago`) | `specs/<id>/spec.md` |
-| **Fix** | Bug o regresion con ACs afectados | `fix-NNN-slug` (ej: `fix-001-calculo-mora`) | `specs/<id>/fix.md` |
-| **Hotfix** | Fix urgente en produccion, sin ACs complejos | `hotfix-NNN-slug` | Auto-cerrado por hook |
+| **Spec** | Feature nueva o modulo completo | `NNNN-X-kebab-slug` (ej: `0004-m-flujo-pago`) | `specs/<id>/spec.md` |
+| **Fix** | Bug o regresion con ACs afectados | `fix-NNN-X-slug` (ej: `fix-052-m-calculo-mora`) | `specs/<id>/fix.md` |
+| **Hotfix** | Fix urgente en produccion, sin ACs complejos | `hotfix-NNN-X-slug` | Auto-cerrado por hook |
+
+`X` es tu código de autor (1 letra, ver `specs/AUTHORS.md`). Desde que el equipo
+comparte `specs/` en el repo, cada dev numera sus propios tracks de forma
+independiente — el contador de un compañero no te afecta a ti. Antes de tu primer
+`/spec-new`, `/fix-new` o `/hotfix`, configura `.claude/author.local.json` (plantilla
+en `.claude/author.local.json.example`) con tu código.
 
 ### Slash Commands (globales en `~/.claude/`)
 
@@ -60,15 +66,16 @@ A partir de v5.1, **todo codigo de produccion requiere una Spec o Fix activa**. 
 | `/spec-plan` | Claude analiza la spec activa y genera `specs/<id>/plan.md` |
 | `/spec-tasks` | Claude desglosa el plan en tareas atomicas |
 | `/spec-verify` | Claude revisa cuales ACs quedan abiertos |
-| `/fix-new <descripcion>` | Crea `specs/fix-NNN-slug/fix.md` con ACs afectados |
+| `/fix-new <descripcion>` | Crea `specs/fix-NNN-X-slug/fix.md` con ACs afectados (X = tu autor) |
 | `/fix-close` | Cierra el track fix tras verificar el test de regresion |
 
 ### Flujo tipico para una Feature nueva
 
 ```
-1. /spec-new            → Claude crea specs/0002-mi-feature/spec.md
+1. /spec-new            → Claude lee specs/AUTHORS.md, calcula tu siguiente numero
+                           y crea specs/0002-m-mi-feature/spec.md
 2. (Editas spec.md con los ACs)
-3. /spec-activate 0002-mi-feature
+3. /spec-activate 0002-m-mi-feature
 4. /spec-plan           → Claude genera plan.md
 5. (Revisas y apruebas plan.md)
 6. Claude implementa    → Spec Gate inyecta el plan en cada escritura
@@ -79,8 +86,9 @@ A partir de v5.1, **todo codigo de produccion requiere una Spec o Fix activa**. 
 
 ```
 1. /fix-new "calculo de mora incorrecto"
-   → Crea specs/fix-001-calculo-mora/fix.md con ACs afectados
-2. /spec-activate fix-001-calculo-mora
+   → Claude calcula tu siguiente numero segun specs/AUTHORS.md y crea
+     specs/fix-052-m-calculo-mora/fix.md con ACs afectados
+2. /spec-activate fix-052-m-calculo-mora
 3. Claude corrige el codigo
 4. npm run test:ci      → Verifica test de regresion en verde
 5. /fix-close           → Cierra el track
@@ -95,9 +103,13 @@ El gate **no bloquea** escrituras en:
 
 ### El archivo `specs/.active`
 
-Contiene **una sola linea** con el ID del track activo (ej: `0002-mi-feature`).
+Contiene **una sola linea** con el ID del track activo (ej: `0002-m-mi-feature`).
 Para desactivar manualmente: borra el contenido o escribe `--bypass` (uso excepcional).
-El estado del roadmap se mantiene en `specs/ROADMAP.md`.
+Es el unico archivo de `specs/` que sigue siendo local por dev/maquina (esta en
+`.gitignore`) — cada uno puede tener un track activo distinto sin pisar al resto.
+El resto de `specs/` (spec.md, fix.md, plan.md, etc.) SI se commitea al repo desde
+que existe `specs/AUTHORS.md`, para que los agentes de todo el equipo vean el trabajo
+de todos. El estado del roadmap se mantiene en `specs/ROADMAP.md`.
 
 ---
 
@@ -176,7 +188,7 @@ Ahora puedes enfocarte en **QUE** quieres construir:
 ### A. Para Crear una Feature (con SDD)
 
 ```
-1. Primero activa la spec: /spec-activate 0003-nueva-feature
+1. Primero activa la spec: /spec-activate 0003-m-nueva-feature
 2. Luego: "Implementa el Facade y el Smart Component segun el plan de la spec activa."
 ```
 
@@ -184,7 +196,7 @@ Ahora puedes enfocarte en **QUE** quieres construir:
 
 ```
 1. /fix-new "descripcion del bug"
-2. /spec-activate fix-002-descripcion
+2. /spec-activate fix-052-m-descripcion
 3. "Corrige el bug y corre npm run test:ci para verificar."
 ```
 

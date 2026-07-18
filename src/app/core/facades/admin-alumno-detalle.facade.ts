@@ -108,6 +108,7 @@ export class AdminAlumnoDetalleFacade {
   private readonly _registrationChannel = signal<'presential' | 'online' | null>(null);
   private readonly _isUploadingContract = signal(false);
   private readonly _isDownloadingContract = signal(false);
+  private readonly _isViewingContrato = signal(false);
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
 
@@ -176,6 +177,7 @@ export class AdminAlumnoDetalleFacade {
   readonly registrationChannel = this._registrationChannel.asReadonly();
   readonly isUploadingContract = this._isUploadingContract.asReadonly();
   readonly isDownloadingContract = this._isDownloadingContract.asReadonly();
+  readonly isViewingContrato = this._isViewingContrato.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly error = this._error.asReadonly();
 
@@ -894,14 +896,19 @@ export class AdminAlumnoDetalleFacade {
 
   /** Abre el contrato (firmado o presencial) usando una signed URL de corta vida. */
   async verContrato(path: string): Promise<void> {
-    const { data, error } = await this.supabase.client.storage
-      .from('documents')
-      .createSignedUrl(path, 3600);
-    if (error || !data?.signedUrl) {
-      this.toast.error('No se pudo abrir el contrato. Intenta de nuevo.');
-      return;
+    this._isViewingContrato.set(true);
+    try {
+      const { data, error } = await this.supabase.client.storage
+        .from('documents')
+        .createSignedUrl(path, 3600);
+      if (error || !data?.signedUrl) {
+        this.toast.error('No se pudo abrir el contrato. Intenta de nuevo.');
+        return;
+      }
+      this.dmsViewer.openByUrl(data.signedUrl, 'Contrato del Alumno');
+    } finally {
+      this._isViewingContrato.set(false);
     }
-    this.dmsViewer.openByUrl(data.signedUrl, 'Contrato del Alumno');
   }
 
   /** Descarga el contrato generado (sin firmar) como PDF. Solo para flujo online. */

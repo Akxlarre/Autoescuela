@@ -27,8 +27,8 @@ export interface EditarRelatorPayload {
 
 @Injectable({ providedIn: 'root' })
 export class RelatoresFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -179,7 +179,8 @@ private readonly supabase = inject(SupabaseService);
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar relator';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al registrar relator';
       this.toast.error(msg);
       return false;
     } finally {
@@ -209,7 +210,8 @@ private readonly supabase = inject(SupabaseService);
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar relator';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar relator';
       this.toast.error(msg);
       return false;
     } finally {
@@ -232,11 +234,9 @@ private readonly supabase = inject(SupabaseService);
     const nombre = [l.first_names, l.paternal_last_name, l.maternal_last_name]
       .filter(Boolean)
       .join(' ');
-    const parts = nombre.trim().split(' ');
-    const initials = parts
-      .filter((_, i) => i === 0 || i === parts.length - 1)
-      .map((p) => p[0]?.toUpperCase() ?? '')
-      .join('');
+    const initials = (
+      (l.first_names?.trim()[0] ?? '') + (l.paternal_last_name?.trim()[0] ?? '')
+    ).toUpperCase();
 
     return {
       id: l.id,

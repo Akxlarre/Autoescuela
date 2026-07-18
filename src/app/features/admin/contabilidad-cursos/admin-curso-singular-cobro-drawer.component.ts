@@ -31,20 +31,36 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <div class="grid grid-cols-3 gap-3">
-            <app-skeleton-block variant="text" width="100%" height="50px" />
-            <app-skeleton-block variant="text" width="100%" height="50px" />
-            <app-skeleton-block variant="text" width="100%" height="50px" />
+    <app-drawer-form [hasFooter]="false">
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Resumen del curso (card-tinted) -->
+            <app-skeleton-block variant="rect" width="100%" height="66px" />
+            <!-- Resumen de cobros (3 stat-boxes) -->
+            <div class="grid grid-cols-3 gap-3">
+              <app-skeleton-block variant="rect" width="100%" height="50px" />
+              <app-skeleton-block variant="rect" width="100%" height="50px" />
+              <app-skeleton-block variant="rect" width="100%" height="50px" />
+            </div>
+            <!-- Lista de cobros por alumno (header + filas) -->
+            <div class="flex flex-col gap-0 rounded-xl border border-border-muted overflow-hidden">
+              <app-skeleton-block variant="rect" width="100%" height="44px" borderRadius="0" />
+              @for (i of [1, 2, 3]; track i) {
+                <div
+                  class="px-4 py-3 flex items-center justify-between gap-3 border-t border-border-muted"
+                >
+                  <div class="flex flex-col gap-1.5">
+                    <app-skeleton-block variant="text" width="140px" height="14px" />
+                    <app-skeleton-block variant="text" width="90px" height="11px" />
+                  </div>
+                  <app-skeleton-block variant="rect" width="76px" height="28px" />
+                </div>
+              }
+            </div>
           </div>
-          <app-skeleton-block variant="rect" width="100%" height="120px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form [hasFooter]="false">
+        </ng-template>
+        <ng-template #content>
           @if (facade.selectedCurso(); as curso) {
             <div class="flex flex-col gap-4">
               <!-- ── Resumen del curso ─────────────────────────────────────────────── -->
@@ -200,9 +216,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <p class="text-sm text-text-muted">Sin curso seleccionado.</p>
             </div>
           }
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+        </ng-template>
+      </app-drawer-content-loader>
+    </app-drawer-form>
   `,
 })
 export class AdminCursoSingularCobroDrawerComponent {

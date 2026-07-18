@@ -13,7 +13,7 @@
 | `roleGuard` | `CanActivateFn` | Bloquea acceso a portales de rol incorrecto | `/app/admin`, `/app/secretaria`, `/app/instructor`, `/app/alumno` |
 | `firstLoginGuard` | `CanActivateFn` | Fuerza cambio de contraseña en primer login (`first_login=true`) | Rutas de portal tras autenticar |
 | `enrollmentDraftGuard` | `CanDeactivateFn` | Confirma salida si hay un draft de matrícula activo (no guardado) | `SecretariaMatriculaComponent` |
-| `professionalBranchGuard` | `CanActivateFn` | Bloquea rutas profesionales de secretaría si la sede no ofrece Clase Profesional (fix-028/029) | 11 rutas profesionales de secretaría |
+| `professionalBranchGuard` | `CanActivateFn` | Bloquea rutas profesionales de secretaría si la sede no ofrece Clase Profesional (fix-028-m/029) | 11 rutas profesionales de secretaría |
 
 ## Auto-Index — Guards detectados por AST (generado automáticamente)
 

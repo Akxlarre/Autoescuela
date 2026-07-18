@@ -38,9 +38,14 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 
 | Track | Cuándo | ID format | Contrato |
 |-------|--------|-----------|---------|
-| **Spec** | Feature nueva | `NNNN-slug` | `specs/<id>/spec.md` con ACs |
-| **Fix** | Bug con ACs afectados | `fix-NNN-slug` | `specs/<id>/fix.md` |
-| **Hotfix** | Fix urgente simple | `hotfix-NNN-slug` | Auto-cerrado por hook |
+| **Spec** | Feature nueva | `NNNN-X-slug` | `specs/<id>/spec.md` con ACs |
+| **Fix** | Bug con ACs afectados | `fix-NNN-X-slug` | `specs/<id>/fix.md` |
+| **Hotfix** | Fix urgente simple | `hotfix-NNN-X-slug` | Auto-cerrado por hook |
+
+`X` = código de autor de una letra (ver `specs/AUTHORS.md`). `specs/` se commitea al
+repo — cada autor numera de forma independiente por track (el contador de Benjamín no
+afecta el de Matías). **Antes de crear un track nuevo, lee `specs/AUTHORS.md`** para
+obtener tu código y calcular el siguiente número correcto para TU autor en ESE track.
 
 ### Slash commands globales
 
@@ -62,7 +67,7 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 ### Flujo Bug Fix
 
 ```
-/fix-new "desc" → /spec-activate fix-NNN → corregir → npm run test:ci → /fix-close
+/fix-new "desc" → /spec-activate fix-NNN-X → corregir → npm run test:ci → /fix-close
 ```
 
 **Paths exentos del gate:** `specs/`, `indices/`, `docs/`, `.claude/`, `scripts/`, tests, configs.
