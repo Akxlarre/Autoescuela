@@ -11,8 +11,11 @@ import { BranchFacade } from '@core/facades/branch.facade';
  */
 function makeSupabaseMock() {
   const results = new Map<string, { data: any; error: any }>();
+  const pending = new Map<string, Promise<{ data: any; error: any }>>();
   const updateCalls: { table: string; payload: any }[] = [];
   const eqCalls: { table: string; column: string; value: any }[] = [];
+  const orderCalls: { table: string; column: string; options: any }[] = [];
+  const limitCalls: { table: string; count: number }[] = [];
   const invoke = vi.fn().mockResolvedValue({ data: { sent: 0, errors: [] }, error: null });
 
   function builder(table: string): any {
@@ -26,13 +29,25 @@ function makeSupabaseMock() {
       neq: vi.fn(() => b),
       not: vi.fn(() => b),
       gte: vi.fn(() => b),
-      order: vi.fn(() => b),
+      order: vi.fn((column: string, options: any) => {
+        orderCalls.push({ table, column, options });
+        return b;
+      }),
+      limit: vi.fn((count: number) => {
+        limitCalls.push({ table, count });
+        return b;
+      }),
       update: vi.fn((payload: any) => {
         lastUpdatePayload = payload;
         updateCalls.push({ table, payload });
         return b;
       }),
-      then: (resolve: any) => resolve(results.get(table) ?? { data: [], error: null }),
+      // Delega en una Promise real (pendiente o ya resuelta) — evita timing issues
+      // de thenables custom bajo zone.js (ver hotfix-020).
+      then: (resolve: any, reject?: any) =>
+        (
+          pending.get(table) ?? Promise.resolve(results.get(table) ?? { data: [], error: null })
+        ).then(resolve, reject),
     };
     void lastUpdatePayload;
     return b;
@@ -50,7 +65,23 @@ function makeSupabaseMock() {
     invoke,
     updateCalls,
     eqCalls,
+    orderCalls,
+    limitCalls,
     setResult: (table: string, data: any, error: any = null) => results.set(table, { data, error }),
+    /** Deja la query de `table` pendiente hasta que se llame al resolver devuelto. */
+    deferResult: (table: string): ((data: any, error?: any) => void) => {
+      let resolveFn: (value: { data: any; error: any }) => void = () => {};
+      pending.set(
+        table,
+        new Promise((resolve) => {
+          resolveFn = resolve;
+        }),
+      );
+      return (data: any, error: any = null) => {
+        pending.delete(table);
+        resolveFn({ data, error });
+      };
+    },
   };
 }
 
@@ -186,6 +217,19 @@ describe('CiclosTeoricosFacade', () => {
 
       expect(facade.roster().map((r) => r.nombre)).toEqual(['Pérez Soto Juan', 'Soto Díaz Ana']);
     });
+
+    it('fetchRoster aplica .order()+.limit(1000) explícito como red de seguridad (fix-053)', async () => {
+      mock.setResult('class_b_theory_sessions', []);
+      mock.setResult('enrollments', []);
+
+      await facade.selectCycle(5);
+
+      const order = mock.orderCalls.find((c) => c.table === 'enrollments');
+      expect(order?.column).toBe('id');
+      expect(order?.options).toEqual({ ascending: true });
+      const limit = mock.limitCalls.find((c) => c.table === 'enrollments');
+      expect(limit?.count).toBe(1000);
+    });
   });
 
   describe('sendZoomEmail', () => {
@@ -286,6 +330,24 @@ describe('CiclosTeoricosFacade', () => {
   });
 
   describe('loadAddableStudents', () => {
+    it('expone isLoadingAddable mientras la carga está en curso y lo limpia al terminar (hotfix-020)', async () => {
+      mock.setResult('class_b_theory_cycles', [
+        { id: 5, branch_id: 1, start_date: '2026-03-09', end_date: '2026-03-20', status: 'active' },
+      ]);
+      facade.setBranchFilter(1);
+      await facade.loadCycles();
+      expect(facade.isLoadingAddable()).toBe(false);
+
+      const resolveEnrollments = mock.deferResult('enrollments');
+
+      const loadPromise = facade.loadAddableStudents();
+      expect(facade.isLoadingAddable()).toBe(true);
+
+      resolveEnrollments([]);
+      await loadPromise;
+      expect(facade.isLoadingAddable()).toBe(false);
+    });
+
     it('filtra por la sede del ciclo seleccionado, no por el filtro global del dashboard', async () => {
       // "Todas las escuelas" en el dashboard admin (branchFilter = null)
       mock.setResult('class_b_theory_cycles', [
@@ -303,6 +365,47 @@ describe('CiclosTeoricosFacade', () => {
         (c) => c.table === 'enrollments' && c.column === 'branch_id',
       );
       expect(branchEq?.value).toBe(1);
+    });
+
+    it('aplica .order()+.limit(1000) explícito como red de seguridad ante max_rows (fix-053)', async () => {
+      mock.setResult('class_b_theory_cycles', [
+        { id: 5, branch_id: 1, start_date: '2026-03-09', end_date: '2026-03-20', status: 'active' },
+      ]);
+      facade.setBranchFilter(1);
+      await facade.loadCycles();
+
+      mock.setResult('enrollments', []);
+      await facade.loadAddableStudents();
+
+      const order = mock.orderCalls.find((c) => c.table === 'enrollments');
+      expect(order?.column).toBe('id');
+      expect(order?.options).toEqual({ ascending: true });
+      const limit = mock.limitCalls.find((c) => c.table === 'enrollments');
+      expect(limit?.count).toBe(1000);
+    });
+
+    it('loguea una advertencia si el resultado alcanza la cota de 1000 filas (fix-053)', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      mock.setResult('class_b_theory_cycles', [
+        { id: 5, branch_id: 1, start_date: '2026-03-09', end_date: '2026-03-20', status: 'active' },
+      ]);
+      facade.setBranchFilter(1);
+      await facade.loadCycles();
+
+      const row = {
+        id: 1,
+        theory_cycle_id: 9,
+        students: { id: 1, users: { first_names: 'A', paternal_last_name: 'B', email: 'a@x.cl' } },
+        class_b_theory_cycles: { id: 9, start_date: '2026-01-05' },
+      };
+      mock.setResult(
+        'enrollments',
+        Array.from({ length: 1000 }, (_, i) => ({ ...row, id: i })),
+      );
+      await facade.loadAddableStudents();
+
+      expect(warnSpy).toHaveBeenCalled();
+      warnSpy.mockRestore();
     });
   });
 

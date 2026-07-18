@@ -106,14 +106,14 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
                     </div>
                     @if (item.justificada) {
                       @if (item.justificacion) {
-                        <span
-                          class="text-2xs text-text-muted italic truncate max-w-32 cursor-help"
-                          [pTooltip]="'Motivo: ' + item.justificacion"
-                          tooltipPosition="top"
-                          data-llm-description="motivo de la justificación de la inasistencia"
+                        <button
+                          type="button"
+                          class="text-2xs font-semibold text-brand hover:underline shrink-0"
+                          data-llm-action="ver-motivo-justificacion"
+                          (click)="openViewMotivo(item.justificacion)"
                         >
-                          Motivo: {{ item.justificacion }}
-                        </span>
+                          Ver motivo
+                        </button>
                       }
                     } @else {
                       <button
@@ -199,9 +199,7 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
             (input)="justificarClaseBReason.set($any($event.target).value)"
           ></textarea>
           <div class="flex justify-end gap-2">
-            <button class="btn-secondary" (click)="closeJustificarClaseB()">
-              Cancelar
-            </button>
+            <button class="btn-secondary" (click)="closeJustificarClaseB()">Cancelar</button>
             <button
               class="btn-primary"
               [disabled]="!justificarClaseBReason().trim()"
@@ -209,6 +207,51 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
               (click)="submitJustificarClaseB()"
             >
               Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Modal para ver el motivo completo de una justificación (solo lectura).
+         Mismo patrón fixed que el modal de justificar de arriba: el drawer ya
+         vive en su propio stacking context, no necesita ModalOverlayDirective. -->
+    @if (viewMotivoModalOpen()) {
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Motivo de justificación"
+        (click)="closeViewMotivo()"
+      >
+        <div
+          class="surface-glass rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="flex items-center justify-between border-b border-border-subtle pb-3">
+            <h3 class="font-semibold text-text-primary flex items-center gap-2">
+              <app-icon name="info" [size]="18" class="text-brand" />
+              Motivo de Justificación
+            </h3>
+            <button
+              class="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              aria-label="Cerrar"
+              (click)="closeViewMotivo()"
+            >
+              <app-icon name="x" [size]="18" />
+            </button>
+          </div>
+          <div
+            class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap"
+          >
+            {{ viewMotivoText() }}
+          </div>
+          <div class="flex justify-end pt-2">
+            <button
+              class="btn-secondary text-sm px-4 py-2 cursor-pointer"
+              (click)="closeViewMotivo()"
+            >
+              Cerrar
             </button>
           </div>
         </div>
@@ -258,6 +301,9 @@ export class AdminInasistenciasDrawerComponent {
   protected readonly justificarClaseBId = signal<number | null>(null);
   protected readonly justificarClaseBReason = signal('');
 
+  protected readonly viewMotivoModalOpen = signal(false);
+  protected readonly viewMotivoText = signal('');
+
   protected statusLabel(status: string): string {
     const map: Record<string, string> = {
       pending: 'Pendiente',
@@ -295,5 +341,15 @@ export class AdminInasistenciasDrawerComponent {
     if (id === null || !reason) return;
     void this.facade.justificarInasistenciaClaseB(id, reason);
     this.closeJustificarClaseB();
+  }
+
+  protected openViewMotivo(motivo: string): void {
+    this.viewMotivoText.set(motivo);
+    this.viewMotivoModalOpen.set(true);
+  }
+
+  protected closeViewMotivo(): void {
+    this.viewMotivoModalOpen.set(false);
+    this.viewMotivoText.set('');
   }
 }

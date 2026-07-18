@@ -6,16 +6,20 @@ import {
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
-import { DialogModule } from 'primeng/dialog';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
 import { groupCyclesByStatus } from '@core/utils/ciclo-select-groups.util';
 import { formatChileanDate, to24hTime } from '@core/utils/date.utils';
+import { filterBySearch } from '@core/utils/search-filter.utils';
 import type {
   CicloAlumno,
   CicloAlumnoMovible,
@@ -41,11 +45,13 @@ import type {
   imports: [
     FormsModule,
     SelectModule,
-    DialogModule,
     IconComponent,
     BadgeComponent,
     SkeletonBlockComponent,
+    EmptyStateComponent,
     CardHoverDirective,
+    AnimateInDirective,
+    ModalOverlayDirective,
   ],
   styles: `
     /* El host se comporta como celda fill (spec 0031): cuando el parent le pone
@@ -70,6 +76,9 @@ import type {
     .field-input:focus {
       border-color: var(--ds-brand);
     }
+    .field-input--icon {
+      padding-left: 2.25rem;
+    }
     .field-label {
       display: block;
       font-size: var(--text-xs);
@@ -87,10 +96,70 @@ import type {
          la fila que ocupaba (~140px de 457px). En móvil = altura natural. -->
     <div class="flex-1 min-h-0 flex flex-col gap-4">
       @if (isLoading()) {
-        <div class="flex flex-col gap-2 flex-1 min-h-0">
-          @for (i of [1, 2, 3]; track i) {
-            <app-skeleton-block variant="rect" width="100%" height="64px" />
-          }
+        <!-- Skeleton de 2 columnas (fix-046): espeja el shell real (card Clases
+             flex-1 + card Alumnos w-96), no 3 barras desnudas. Mismo switch
+             fila/columna por isDesktop() que el layout cargado. -->
+        <div class="flex flex-col gap-6 flex-1 min-h-0" [class.flex-row]="isDesktop()">
+          <!-- Columna Clases (protagonista) -->
+          <section class="card p-5 flex flex-col gap-4 flex-1 min-w-0 min-h-0">
+            <div class="flex items-center gap-2 shrink-0">
+              <app-skeleton-block variant="circle" width="18px" height="18px" />
+              <div class="flex-1 min-w-0">
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+              <app-skeleton-block variant="rect" width="72px" height="26px" />
+            </div>
+            <div class="flex flex-col gap-4 flex-1 min-h-0 overflow-hidden">
+              @for (i of [1, 2]; track i) {
+                <div
+                  class="rounded-xl border p-5 flex flex-col gap-4"
+                  [style.border-color]="'var(--border-subtle)'"
+                >
+                  <app-skeleton-block variant="text" width="140px" height="14px" />
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="flex flex-col gap-1">
+                      <app-skeleton-block variant="text" width="90px" height="10px" />
+                      <app-skeleton-block variant="rect" width="100%" height="38px" />
+                    </div>
+                    <div class="flex flex-col gap-1">
+                      <app-skeleton-block variant="text" width="80px" height="10px" />
+                      <app-skeleton-block variant="rect" width="100%" height="38px" />
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-end gap-2">
+                    <app-skeleton-block variant="rect" width="84px" height="36px" />
+                    <app-skeleton-block variant="rect" width="180px" height="36px" />
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+
+          <!-- Rail Alumnos -->
+          <section
+            class="card p-5 flex flex-col gap-4 min-h-0"
+            [class.w-96]="isDesktop()"
+            [class.shrink-0]="isDesktop()"
+          >
+            <div class="flex items-center justify-between gap-2 shrink-0">
+              <div class="flex items-center gap-2">
+                <app-skeleton-block variant="circle" width="20px" height="20px" />
+                <app-skeleton-block variant="text" width="130px" height="14px" />
+              </div>
+              <app-skeleton-block variant="rect" width="104px" height="36px" />
+            </div>
+            <div class="flex flex-col gap-1 flex-1 min-h-0 overflow-hidden">
+              @for (i of [1, 2, 3, 4, 5]; track i) {
+                <div class="flex items-center justify-between gap-2 px-2 py-3">
+                  <div class="flex flex-col gap-1.5 min-w-0 flex-1">
+                    <app-skeleton-block variant="text" width="60%" height="13px" />
+                    <app-skeleton-block variant="text" width="80%" height="10px" />
+                  </div>
+                  <app-skeleton-block variant="text" width="80px" height="12px" />
+                </div>
+              }
+            </div>
+          </section>
         </div>
       } @else {
         <!-- 2 columnas con flex (no grid): en fill de altura acotada, flex-1 +
@@ -123,6 +192,7 @@ import type {
                     (ngModelChange)="selectCycle.emit($event)"
                     placeholder="Selecciona un ciclo"
                     styleClass="w-full"
+                    appendTo="body"
                     data-llm-description="Selector de ciclo teórico"
                   />
                 </div>
@@ -151,9 +221,11 @@ import type {
                   }
                 </div>
               } @else if (selectedCycleId() === null) {
-                <p class="text-sm text-text-secondary text-center py-8">
-                  Selecciona un ciclo para ver sus clases.
-                </p>
+                <app-empty-state
+                  icon="monitor-play"
+                  message="Sin ciclo seleccionado"
+                  subtitle="Selecciona un ciclo para ver sus clases."
+                />
               } @else {
                 @for (clase of clases(); track clase.id) {
                   <div
@@ -221,84 +293,13 @@ import type {
                         }
                       </button>
                     </div>
-
-                    <!-- Panel de destinatarios (preseleccionados, des-seleccionables) -->
-                    @if (openPanelClassId() === clase.id) {
-                      <div
-                        class="rounded-lg border p-3 flex flex-col gap-2"
-                        [style.border-color]="'var(--ds-brand)'"
-                        [style.background]="'color-mix(in srgb, var(--ds-brand) 5%, transparent)'"
-                      >
-                        <div class="flex items-center justify-between">
-                          <p class="text-xs font-semibold text-text-primary">
-                            Destinatarios ({{ selectedRecipientCount() }} de {{ roster().length }})
-                          </p>
-                          <button
-                            class="text-xs font-medium text-brand bg-transparent border-none cursor-pointer"
-                            (click)="toggleAllRecipients()"
-                          >
-                            {{ allRecipientsSelected() ? 'Quitar todos' : 'Marcar todos' }}
-                          </button>
-                        </div>
-                        @if (roster().length === 0) {
-                          <p class="text-xs text-text-muted py-2">El ciclo no tiene alumnos.</p>
-                        } @else {
-                          <div class="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                            @for (alumno of roster(); track alumno.enrollmentId) {
-                              <label
-                                class="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-elevated"
-                              >
-                                <input
-                                  type="checkbox"
-                                  class="accent-(--ds-brand)"
-                                  [checked]="isRecipientSelected(alumno.enrollmentId)"
-                                  (change)="toggleRecipient(alumno.enrollmentId)"
-                                />
-                                <span class="min-w-0 flex-1">
-                                  <span class="text-sm text-text-primary block truncate">{{
-                                    alumno.nombre
-                                  }}</span>
-                                  <span class="text-xs text-text-muted block truncate">{{
-                                    alumno.email || 'Sin correo'
-                                  }}</span>
-                                </span>
-                              </label>
-                            }
-                          </div>
-                        }
-                        <div class="flex items-center justify-end gap-2 pt-1">
-                          <button
-                            class="btn-secondary text-sm px-4 py-2"
-                            [disabled]="sendingClassId() === clase.id"
-                            (click)="closeSendPanel()"
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            class="btn-primary text-sm px-4 py-2 flex items-center gap-2"
-                            [disabled]="
-                              isSaving() ||
-                              selectedRecipientCount() === 0 ||
-                              sendingClassId() === clase.id
-                            "
-                            data-llm-action="confirmar-envio-zoom"
-                            (click)="confirmSend(clase.id)"
-                          >
-                            @if (sendingClassId() === clase.id) {
-                              <app-icon name="loader-circle" [size]="14" class="animate-spin" />
-                              Enviando...
-                            } @else {
-                              Enviar a {{ selectedRecipientCount() }}
-                            }
-                          </button>
-                        </div>
-                      </div>
-                    }
                   </div>
                 } @empty {
-                  <p class="text-sm text-text-secondary text-center py-4">
-                    Este ciclo aún no tiene clases generadas.
-                  </p>
+                  <app-empty-state
+                    icon="video-off"
+                    message="Ciclo sin clases"
+                    subtitle="Este ciclo aún no tiene clases generadas."
+                  />
                 }
               }
             </div>
@@ -338,14 +339,42 @@ import type {
                 }
               </div>
             } @else if (selectedCycleId() === null) {
-              <p class="text-sm text-text-secondary text-center py-4">
-                Selecciona un ciclo para ver sus alumnos.
-              </p>
+              <app-empty-state
+                icon="users"
+                message="Sin ciclo seleccionado"
+                subtitle="Selecciona un ciclo para ver sus alumnos."
+              />
             } @else if (roster().length === 0) {
-              <p class="text-sm text-text-secondary text-center py-4">Sin alumnos en este ciclo.</p>
+              <app-empty-state
+                icon="user-x"
+                message="Ciclo vacío"
+                subtitle="Sin alumnos en este ciclo."
+              />
             } @else {
+              <div class="relative shrink-0">
+                <app-icon
+                  name="search"
+                  [size]="14"
+                  class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                />
+                <input
+                  type="text"
+                  class="field-input field-input--icon"
+                  placeholder="Buscar alumno…"
+                  [ngModel]="rosterSearchQuery()"
+                  (ngModelChange)="rosterSearchQuery.set($event)"
+                  data-llm-description="Buscar alumno dentro del roster del ciclo"
+                />
+              </div>
+              @if (filteredRoster().length === 0) {
+                <app-empty-state
+                  icon="search"
+                  message="Sin resultados"
+                  subtitle="No se encontraron alumnos para tu búsqueda."
+                />
+              }
               <div class="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
-                @for (alumno of roster(); track alumno.enrollmentId) {
+                @for (alumno of filteredRoster(); track alumno.enrollmentId) {
                   <div class="flex items-center gap-2 px-2 py-3 rounded-md hover:bg-elevated">
                     <div class="min-w-0 flex-1">
                       <p class="text-text-primary truncate">{{ alumno.nombre }}</p>
@@ -362,6 +391,7 @@ import type {
                         (ngModelChange)="moveTargetCycleId.set($event)"
                         placeholder="Cambiar a…"
                         styleClass="w-40"
+                        appendTo="body"
                         data-llm-description="Ciclo destino para cambiar al alumno de ciclo"
                       />
                       <button
@@ -402,50 +432,227 @@ import type {
       }
     </div>
 
-    <!-- Modal: traer alumno de otro ciclo -->
-    <p-dialog
-      header="Incorporar alumno de otro ciclo"
-      [visible]="addPanelOpen()"
-      (visibleChange)="onAddPanelVisibleChange($event)"
-      [modal]="true"
-      [closable]="true"
-      [dismissableMask]="true"
-      [style]="{ width: '480px' }"
-      appendTo="body"
-    >
-      @if (addableStudents().length === 0) {
-        <p class="text-sm text-text-muted py-2">No hay alumnos en otros ciclos de esta sede.</p>
-      } @else {
-        <div class="flex flex-col gap-1 max-h-96 overflow-y-auto">
-          @for (a of addableStudents(); track a.enrollmentId) {
-            <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-elevated">
-              <div class="min-w-0 flex-1">
-                <p class="text-sm text-text-primary truncate">{{ a.nombre }}</p>
-                <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>
+    <!-- Modal: elegir destinatarios y enviar Zoom (canon: backdrop + card, hotfix-021) -->
+    <div [appModalOverlay]="openPanelClassId() !== null">
+      @if (openPanelClassId() !== null && sendingClase(); as clase) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Elegir destinatarios y enviar enlace Zoom"
+          (click)="closeSendPanel()"
+          (document:keydown.escape)="closeSendPanel()"
+        >
+          <div
+            class="relative w-full max-w-md max-h-[85vh] rounded-2xl shadow-2xl flex flex-col gap-0 overflow-hidden bg-surface"
+            (click)="$event.stopPropagation()"
+            appAnimateIn
+          >
+            <!-- Header -->
+            <div
+              class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
+            >
+              <div class="min-w-0">
+                <span class="font-bold text-base text-text-primary block truncate"
+                  >Elegir destinatarios</span
+                >
+                <span class="text-xs text-text-muted truncate block">{{ clase.label }}</span>
               </div>
               <button
-                class="text-xs font-medium text-brand hover:underline cursor-pointer flex items-center gap-1"
-                [disabled]="isSaving()"
-                data-llm-action="incorporar-alumno"
-                (click)="onAddStudent(a.enrollmentId)"
+                type="button"
+                class="p-1.5 rounded-md cursor-pointer text-text-muted hover:bg-elevated shrink-0"
+                title="Cerrar"
+                [disabled]="sendingClassId() === clase.id"
+                data-llm-action="cerrar-destinatarios-zoom"
+                (click)="closeSendPanel()"
               >
-                @if (addingEnrollmentId() === a.enrollmentId) {
-                  <app-icon name="loader-circle" [size]="12" class="animate-spin" />
-                  Agregando...
+                <app-icon name="x" [size]="16" />
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="px-6 py-5 flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold text-text-primary">
+                  Destinatarios ({{ selectedRecipientCount() }} de {{ roster().length }})
+                </p>
+                <button
+                  class="text-xs font-medium text-brand bg-transparent border-none cursor-pointer"
+                  (click)="toggleAllRecipients()"
+                >
+                  {{ allRecipientsSelected() ? 'Quitar todos' : 'Marcar todos' }}
+                </button>
+              </div>
+              @if (roster().length === 0) {
+                <p class="text-xs text-text-muted py-2">El ciclo no tiene alumnos.</p>
+              } @else {
+                <div class="flex flex-col gap-1">
+                  @for (alumno of roster(); track alumno.enrollmentId) {
+                    <label
+                      class="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-elevated"
+                    >
+                      <input
+                        type="checkbox"
+                        class="accent-(--ds-brand)"
+                        [checked]="isRecipientSelected(alumno.enrollmentId)"
+                        (change)="toggleRecipient(alumno.enrollmentId)"
+                      />
+                      <span class="min-w-0 flex-1">
+                        <span class="text-sm text-text-primary block truncate">{{
+                          alumno.nombre
+                        }}</span>
+                        <span class="text-xs text-text-muted block truncate">{{
+                          alumno.email || 'Sin correo'
+                        }}</span>
+                      </span>
+                    </label>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Footer -->
+            <div
+              class="flex items-center justify-end gap-2 px-6 py-4 border-t border-border-subtle shrink-0"
+            >
+              <button
+                class="btn-secondary text-sm px-4 py-2"
+                [disabled]="sendingClassId() === clase.id"
+                (click)="closeSendPanel()"
+              >
+                Cancelar
+              </button>
+              <button
+                class="btn-primary text-sm px-4 py-2 flex items-center gap-2"
+                [disabled]="
+                  isSaving() || selectedRecipientCount() === 0 || sendingClassId() === clase.id
+                "
+                data-llm-action="confirmar-envio-zoom"
+                (click)="confirmSend(clase.id)"
+              >
+                @if (sendingClassId() === clase.id) {
+                  <app-icon name="loader-circle" [size]="14" class="animate-spin" />
+                  Enviando...
                 } @else {
-                  Agregar
+                  Enviar a {{ selectedRecipientCount() }}
                 }
               </button>
             </div>
-          }
+          </div>
         </div>
       }
-      <ng-template pTemplate="footer">
-        <div class="flex justify-end px-2 py-2">
-          <button class="btn-secondary text-sm px-4 py-2" (click)="closeAddPanel()">Cerrar</button>
+    </div>
+
+    <!-- Modal: traer alumno de otro ciclo (canon: backdrop + card, no p-dialog) -->
+    <div [appModalOverlay]="addPanelOpen()">
+      @if (addPanelOpen()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Incorporar alumno de otro ciclo"
+          (click)="closeAddPanel()"
+          (document:keydown.escape)="closeAddPanel()"
+        >
+          <div
+            class="relative w-full max-w-md max-h-[85vh] rounded-2xl shadow-2xl flex flex-col gap-0 overflow-hidden bg-surface"
+            (click)="$event.stopPropagation()"
+            appAnimateIn
+          >
+            <!-- Header -->
+            <div
+              class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
+            >
+              <span class="font-bold text-base text-text-primary"
+                >Incorporar alumno de otro ciclo</span
+              >
+              <button
+                type="button"
+                class="p-1.5 rounded-md cursor-pointer text-text-muted hover:bg-elevated"
+                title="Cerrar"
+                data-llm-action="cerrar-incorporar-alumno"
+                (click)="closeAddPanel()"
+              >
+                <app-icon name="x" [size]="16" />
+              </button>
+            </div>
+
+            <!-- Body -->
+            <div class="px-6 py-5 flex-1 min-h-0 overflow-y-auto flex flex-col gap-3">
+              @if (isLoadingAddable() && addableStudents().length === 0) {
+                <!-- SWR (swr-pattern.md): skeleton solo en la carga inicial sin datos
+                     cacheados, para no mostrar el empty state y luego "saltar" al
+                     llegar los datos. -->
+                <div class="flex flex-col gap-2">
+                  @for (i of [1, 2, 3]; track i) {
+                    <app-skeleton-block variant="rect" width="100%" height="44px" />
+                  }
+                </div>
+              } @else if (addableStudents().length === 0) {
+                <app-empty-state
+                  icon="users-minus"
+                  message="Sin candidatos"
+                  subtitle="No hay alumnos en otros ciclos de esta sede."
+                />
+              } @else {
+                <div class="relative shrink-0">
+                  <app-icon
+                    name="search"
+                    [size]="14"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+                  />
+                  <input
+                    type="text"
+                    class="field-input field-input--icon"
+                    placeholder="Buscar alumno…"
+                    [ngModel]="addableSearchQuery()"
+                    (ngModelChange)="addableSearchQuery.set($event)"
+                    data-llm-description="Buscar alumno candidato a incorporar"
+                  />
+                </div>
+                @if (filteredAddableStudents().length === 0) {
+                  <app-empty-state
+                    icon="search"
+                    message="Sin resultados"
+                    subtitle="No se encontraron alumnos para tu búsqueda."
+                  />
+                }
+                <div class="flex flex-col gap-1">
+                  @for (a of filteredAddableStudents(); track a.enrollmentId) {
+                    <div class="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-elevated">
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm text-text-primary truncate">{{ a.nombre }}</p>
+                        <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>
+                      </div>
+                      <button
+                        class="text-xs font-medium text-brand hover:underline cursor-pointer flex items-center gap-1"
+                        [disabled]="isSaving()"
+                        data-llm-action="incorporar-alumno"
+                        (click)="onAddStudent(a.enrollmentId)"
+                      >
+                        @if (addingEnrollmentId() === a.enrollmentId) {
+                          <app-icon name="loader-circle" [size]="12" class="animate-spin" />
+                          Agregando...
+                        } @else {
+                          Agregar
+                        }
+                      </button>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+
+            <!-- Footer -->
+            <div class="flex justify-end px-6 py-4 border-t border-border-subtle shrink-0">
+              <button class="btn-secondary text-sm px-4 py-2" (click)="closeAddPanel()">
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
-      </ng-template>
-    </p-dialog>
+      }
+    </div>
   `,
 })
 export class CiclosTeoricosContentComponent {
@@ -455,6 +662,8 @@ export class CiclosTeoricosContentComponent {
   readonly clases = input<CicloClaseRow[]>([]);
   readonly roster = input<CicloAlumno[]>([]);
   readonly addableStudents = input<CicloAlumnoMovible[]>([]);
+  /** true mientras el Facade resuelve loadAddableStudents() (fix del flash/resize al abrir el modal). */
+  readonly isLoadingAddable = input(false);
   readonly isLoading = input(false);
   readonly isLoadingCycle = input(false);
   readonly isSaving = input(false);
@@ -488,6 +697,8 @@ export class CiclosTeoricosContentComponent {
   protected readonly moveTargetCycleId = signal<number | null>(null);
   protected readonly addPanelOpen = signal(false);
   protected readonly addingEnrollmentId = signal<number | null>(null);
+  protected readonly rosterSearchQuery = signal('');
+  protected readonly addableSearchQuery = signal('');
   private previousSendingClassId: number | null = null;
   private previousIsSaving = false;
 
@@ -515,6 +726,12 @@ export class CiclosTeoricosContentComponent {
       }
       this.previousIsSaving = isSaving;
     });
+
+    // Limpia el buscador del roster al cambiar de ciclo, para no ocultar la lista nueva con texto obsoleto.
+    effect(() => {
+      this.selectedCycleId();
+      untracked(() => this.rosterSearchQuery.set(''));
+    });
   }
 
   // ── Computed ─────────────────────────────────────────────────────────────────
@@ -536,6 +753,21 @@ export class CiclosTeoricosContentComponent {
 
   protected readonly allRecipientsSelected = computed(
     () => this.roster().length > 0 && this.recipientSelection().size === this.roster().length,
+  );
+
+  /** Clase objetivo del modal "Elegir destinatarios" (hotfix-021: ahora vive a nivel raíz, no inline en la card). */
+  protected readonly sendingClase = computed(
+    () => this.clases().find((c) => c.id === this.openPanelClassId()) ?? null,
+  );
+
+  /** Roster filtrado por el buscador del rail (no afecta el conteo del header ni destinatarios Zoom). */
+  protected readonly filteredRoster = computed(() =>
+    filterBySearch(this.roster(), this.rosterSearchQuery(), (a) => [a.nombre, a.email]),
+  );
+
+  /** Candidatos filtrados por el buscador del modal "Incorporar". */
+  protected readonly filteredAddableStudents = computed(() =>
+    filterBySearch(this.addableStudents(), this.addableSearchQuery(), (a) => [a.nombre, a.email]),
   );
 
   // ── Clases: guardar / enviar ──────────────────────────────────────────────────
@@ -628,15 +860,12 @@ export class CiclosTeoricosContentComponent {
 
   protected openAddPanel(): void {
     this.addPanelOpen.set(true);
+    this.addableSearchQuery.set('');
     this.requestAddable.emit();
   }
 
   protected closeAddPanel(): void {
     this.addPanelOpen.set(false);
-  }
-
-  protected onAddPanelVisibleChange(visible: boolean): void {
-    this.addPanelOpen.set(visible);
   }
 
   protected onAddStudent(enrollmentId: number): void {

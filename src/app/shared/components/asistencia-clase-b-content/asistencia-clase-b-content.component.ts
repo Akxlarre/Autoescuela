@@ -12,18 +12,22 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
+import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
 import { todayIso } from '@core/utils/date.utils';
 import { visibleWithLoadMore } from '@core/utils/layout-tier.utils';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { CiclosTeoricosContentComponent } from '@shared/components/ciclos-teoricos-content/ciclos-teoricos-content.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import type {
   AlertaFaltaConsecutiva,
   AsistenciaClaseBKpis,
@@ -63,14 +67,18 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   imports: [
     FormsModule,
     SelectModule,
+    TooltipModule,
     SectionHeroComponent,
     SkeletonBlockComponent,
     IconComponent,
     BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    AnimateInDirective,
+    ModalOverlayDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
+    EmptyStateComponent,
   ],
   template: `
     <!-- Modo dual (spec 0030/0031): fill-screen en AMBOS tabs (3 filas fijas:
@@ -154,8 +162,12 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
            isDesktopLayout() (= maxVisible()===null = tier desktop por
            contenedor), NO el breakpoint de viewport lg: de Tailwind. -->
       @if (activeTab() === 'practicas') {
+        <!-- Sin overflow-hidden a propósito (fix-045): el alto ya lo fija
+             contain:size de .bento-fill y el scroll lo dueñan los contenedores
+             hijos (lista de alertas + tabla). El overflow-hidden recortaba el
+             hover glow (y:-2 + sombra) de las cards appCardHover anidadas. -->
         <div
-          class="bento-banner bento-fill flex gap-4 min-h-0 overflow-hidden"
+          class="bento-banner bento-fill flex gap-4 min-h-0"
           [class.flex-col]="!isDesktopLayout()"
           [class.flex-row]="isDesktopLayout()"
         >
@@ -165,7 +177,27 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                desktop / debajo de la tabla en móvil. En desktop el rail llena
                el alto de la fila (min-h-0) y el listado scrollea internamente;
                en móvil altura natural y la página scrollea (dual). -->
-          @if (!isLoading() && alertas().length > 0) {
+          <!-- Skeleton del rail (fix-046): mismas clases/dimensiones que el rail
+               real para que la tabla NO cambie de ancho entre carga y datos
+               (antes el aside solo existía tras cargar → la tabla saltaba de
+               904→568px). Sin appCardHover: es un placeholder, no interactivo. -->
+          @if (isLoading()) {
+            <aside
+              class="card p-3 flex flex-col gap-1.5 order-2 min-h-0 overflow-hidden"
+              [class.w-80]="isDesktopLayout()"
+              [class.shrink-0]="isDesktopLayout()"
+            >
+              <div class="flex items-center gap-1.5 px-1 pb-0.5 shrink-0">
+                <app-skeleton-block variant="circle" width="14px" height="14px" />
+                <app-skeleton-block variant="text" width="80px" height="12px" />
+              </div>
+              <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
+                @for (i of alertSkeletonIndexes; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="48px" />
+                }
+              </div>
+            </aside>
+          } @else if (alertas().length > 0) {
             <aside
               class="card p-3 flex flex-col gap-1.5 order-2 min-h-0 overflow-hidden"
               [class.w-80]="isDesktopLayout()"
@@ -185,72 +217,75 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 
               <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-y-auto">
                 @for (alerta of alertas(); track alerta.enrollmentId) {
+                  <!-- Fila de 2 líneas (fix-047): descomprime yendo a lo vertical
+                       (el rail scrollea). Línea 1 = avatar + nombre completo (sin
+                       truncar); línea 2 = conteo + última falta + acción. El title
+                       conserva la política como enriquecimiento en hover. -->
                   <div
-                    class="flex items-center justify-between gap-3 rounded-md pl-3 pr-2 py-1.5 border-l-[3px] transition-colors hover:bg-elevated"
+                    class="flex flex-col gap-1 rounded-md pl-3 pr-2 py-2 border-l-[3px] transition-colors hover:bg-elevated"
                     [style.border-left-color]="
                       alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
                     "
-                    [title]="alertaTooltip(alerta)"
+                    [pTooltip]="alertaTooltip(alerta)"
+                    tooltipPosition="left"
                   >
-                    <!-- Info del alumno (1 línea) -->
-                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <!-- Línea 1: avatar + nombre completo -->
+                    <div class="flex items-center gap-2">
                       <div
                         class="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-2xs font-bold text-white"
-                        [style.background]="
-                          alerta.nivel === 'danger' ? 'var(--state-error)' : 'var(--state-warning)'
-                        "
+                        [class.bg-error]="alerta.nivel === 'danger'"
+                        [class.bg-warning]="alerta.nivel !== 'danger'"
                       >
                         {{ initials(alerta.alumnoName) }}
                       </div>
-                      <p class="text-xs truncate">
-                        <span
-                          class="font-semibold"
-                          [style.color]="
-                            alerta.nivel === 'danger'
-                              ? 'var(--state-error)'
-                              : 'var(--state-warning)'
-                          "
-                          >{{ alerta.alumnoName }}</span
-                        >
-                        <span class="text-text-muted">
-                          — {{ alerta.faltasConsecutivas }}
-                          {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }}</span
-                        >
+                      <p
+                        class="text-xs font-semibold leading-tight min-w-0 flex-1"
+                        [class.text-error]="alerta.nivel === 'danger'"
+                        [class.text-warning]="alerta.nivel !== 'danger'"
+                      >
+                        {{ alerta.alumnoName }}
                       </p>
                     </div>
 
-                    <!-- Acción -->
-                    <div class="shrink-0">
-                      @if (alerta.nivel === 'danger') {
-                        @if (alerta.horarioActivo) {
-                          <button
-                            class="btn-primary text-xs px-2.5 py-1"
-                            [disabled]="isSaving()"
-                            data-llm-action="remove-schedule"
-                            (click)="removeSchedule.emit(alerta.enrollmentId)"
-                          >
-                            Eliminar
-                          </button>
+                    <!-- Línea 2: detalle (conteo + última falta) + acción -->
+                    <div class="flex items-center justify-between gap-2 pl-7">
+                      <span class="text-2xs text-text-muted leading-tight">
+                        {{ alerta.faltasConsecutivas }}
+                        {{ alerta.faltasConsecutivas === 1 ? 'falta' : 'faltas' }} · últ.
+                        {{ formatIsoDateShort(alerta.ultimaFechaFalta) }}
+                      </span>
+                      <div class="shrink-0">
+                        @if (alerta.nivel === 'danger') {
+                          @if (alerta.horarioActivo) {
+                            <button
+                              class="btn-primary text-xs px-2.5 py-1"
+                              [disabled]="isSaving()"
+                              data-llm-action="remove-schedule"
+                              (click)="removeSchedule.emit(alerta.enrollmentId)"
+                            >
+                              Eliminar
+                            </button>
+                          } @else {
+                            <button
+                              class="btn-secondary text-xs px-2.5 py-1"
+                              [disabled]="isSaving()"
+                              data-llm-action="reactivate-schedule"
+                              (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                            >
+                              Reactivar
+                            </button>
+                          }
                         } @else {
                           <button
                             class="btn-secondary text-xs px-2.5 py-1"
                             [disabled]="isSaving()"
-                            data-llm-action="reactivate-schedule"
-                            (click)="reactivateSchedule.emit(alerta.enrollmentId)"
+                            data-llm-action="send-reminder"
+                            (click)="sendReminder.emit(alerta.enrollmentId)"
                           >
-                            Reactivar
+                            Recordar
                           </button>
                         }
-                      } @else {
-                        <button
-                          class="btn-secondary text-xs px-2.5 py-1"
-                          [disabled]="isSaving()"
-                          data-llm-action="send-reminder"
-                          (click)="sendReminder.emit(alerta.enrollmentId)"
-                        >
-                          Recordar
-                        </button>
-                      }
+                      </div>
                     </div>
                   </div>
                 }
@@ -303,17 +338,12 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               @for (f of statusFilters; track f.value) {
                 <button
                   class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors"
-                  [style.background]="
-                    activeStatusFilter() === f.value ? 'var(--color-primary)' : 'transparent'
-                  "
-                  [style.color]="
-                    activeStatusFilter() === f.value ? '#fff' : 'var(--text-secondary)'
-                  "
-                  [style.border-color]="
-                    activeStatusFilter() === f.value
-                      ? 'var(--color-primary)'
-                      : 'var(--border-subtle)'
-                  "
+                  [class.bg-brand]="activeStatusFilter() === f.value"
+                  [class.text-white]="activeStatusFilter() === f.value"
+                  [class.border-brand]="activeStatusFilter() === f.value"
+                  [class.bg-transparent]="activeStatusFilter() !== f.value"
+                  [class.text-text-secondary]="activeStatusFilter() !== f.value"
+                  [class.border-border-subtle]="activeStatusFilter() !== f.value"
                   (click)="setStatusFilter(f.value)"
                 >
                   {{ f.label }}
@@ -340,15 +370,40 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
 
             <!-- Tabla -->
             @if (isLoading()) {
-              <div class="flex flex-col gap-2">
+              <!-- Skeleton parecido a tabla (fix-046): header + filas con celdas
+                   tipo columna, en vez de barras genéricas. -->
+              <div class="flex-1 min-h-0 overflow-hidden">
+                <div
+                  class="flex items-center gap-4 pb-2 mb-1 border-b"
+                  [style.border-color]="'var(--border-subtle)'"
+                >
+                  @for (w of skeletonColWidths; track $index) {
+                    <app-skeleton-block variant="text" [width]="w" height="10px" />
+                  }
+                </div>
                 @for (i of skeletonIndexes(); track i) {
-                  <app-skeleton-block variant="rect" width="100%" height="44px" />
+                  <div
+                    class="flex items-center gap-4 py-3 border-b overflow-hidden"
+                    [style.border-color]="'var(--border-subtle)'"
+                  >
+                    <app-skeleton-block variant="text" width="40px" height="12px" />
+                    <app-skeleton-block variant="text" width="28px" height="12px" />
+                    <app-skeleton-block variant="text" width="28px" height="12px" />
+                    <app-skeleton-block variant="text" width="40px" height="12px" />
+                    <app-skeleton-block variant="text" width="52px" height="12px" />
+                    <app-skeleton-block variant="text" width="60px" height="12px" />
+                    <app-skeleton-block variant="text" width="44px" height="12px" />
+                    <app-skeleton-block variant="rect" width="40px" height="22px" />
+                    <app-skeleton-block variant="rect" width="32px" height="26px" />
+                  </div>
                 }
               </div>
             } @else if (filteredPracticas().length === 0) {
-              <p class="text-sm text-text-secondary text-center py-6">
-                No hay registros que coincidan con los filtros seleccionados.
-              </p>
+              <app-empty-state
+                icon="calendar-x"
+                message="Sin resultados"
+                subtitle="No hay registros que coincidan con los filtros seleccionados."
+              />
             } @else {
               <!-- Único contenedor de scroll (X siempre; Y solo surte efecto en
                    desktop fill, donde la celda tiene alto fijo). thead sticky
@@ -423,9 +478,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           @if (row.alumnoName) {
                             <span
                               class="text-text-secondary"
-                              [style.color]="
-                                row.status === 'ausente' ? 'var(--color-primary)' : undefined
-                              "
+                              [class.text-brand]="row.status === 'ausente'"
                             >
                               {{ row.alumnoName }}
                             </span>
@@ -460,12 +513,10 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             @if (row.status === 'pendiente' && row.alumnoName && !isFutureDate()) {
                               <!-- Iniciar clase -->
                               <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
-                                [style.color]="'var(--color-primary)'"
-                                [style.border-color]="'var(--color-primary)'"
-                                [style.background]="'color-mix(in srgb, var(--color-primary) 8%, transparent)'"
+                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer text-brand border-brand bg-brand/10"
                                 [disabled]="isSaving()"
-                                title="Iniciar clase"
+                                pTooltip="Iniciar clase"
+                                tooltipPosition="top"
                                 data-llm-action="iniciar-clase-practica"
                                 (click)="iniciarClase.emit(row)"
                               >
@@ -475,9 +526,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               <!-- Marcar inasistencia (solo si ya pasó la hora) -->
                               @if (isPastStartTime(row.scheduledAt)) {
                                 <button
-                                  class="p-1.5 rounded-md transition-colors cursor-pointer"
-                                  title="Marcar inasistencia"
-                                  [style.color]="'var(--state-error)'"
+                                  class="p-1.5 rounded-md transition-colors cursor-pointer text-error"
+                                  pTooltip="Marcar inasistencia"
+                                  tooltipPosition="top"
                                   [disabled]="isSaving()"
                                   data-llm-action="mark-ausente"
                                   (click)="
@@ -494,12 +545,10 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               >
                               <!-- Finalizar clase -->
                               <button
-                                class="text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors flex items-center gap-1 cursor-pointer"
-                                [style.color]="'var(--state-success)'"
-                                [style.border-color]="'var(--state-success)'"
-                                [style.background]="'var(--state-success-bg)'"
+                                class="btn-success-soft text-xs font-semibold px-2.5 py-1 rounded-lg border flex items-center gap-1 cursor-pointer"
                                 [disabled]="isSaving()"
-                                title="Finalizar clase"
+                                pTooltip="Finalizar clase"
+                                tooltipPosition="top"
                                 data-llm-action="finalizar-clase-practica"
                                 (click)="finalizarClase.emit(row)"
                               >
@@ -509,8 +558,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.status === 'ausente' && !row.justificacion) {
                               <button
-                                class="text-xs font-medium hover:underline cursor-pointer"
-                                [style.color]="'var(--color-primary)'"
+                                class="btn-ghost text-xs px-2 py-1"
                                 [disabled]="isSaving()"
                                 data-llm-action="justify-absence"
                                 (click)="openJustifyModal(row.id)"
@@ -519,19 +567,19 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               </button>
                             }
                             @if (row.justificacion) {
-                              <span
-                                class="text-xs italic truncate max-w-40"
-                                [title]="row.justificacion"
-                                [style.color]="'var(--text-muted)'"
+                              <button
+                                class="btn-ghost text-xs px-2 py-1 flex items-center gap-1"
+                                [pTooltip]="row.justificacion"
+                                tooltipPosition="top"
+                                data-llm-action="view-justification"
+                                (click)="openViewMotivo(row.justificacion)"
                               >
-                                {{ row.justificacion }}
-                              </span>
+                                <app-icon name="info" [size]="14" />
+                                Ver motivo
+                              </button>
                             }
                             @if (row.status === 'presente') {
-                              <span
-                                class="text-xs font-medium"
-                                [style.color]="'var(--state-success)'"
-                              >
+                              <span class="text-xs font-medium text-success">
                                 Finalizada
                               </span>
                             }
@@ -561,7 +609,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
       <!-- ── Pestaña Ciclos Teóricos (Spec 0001) ────────────────────────────── -->
       @if (activeTab() === 'ciclos') {
         <app-ciclos-teoricos-content
-          class="bento-banner bento-fill flex flex-col min-h-0 overflow-hidden"
+          class="bento-banner bento-fill flex flex-col min-h-0"
           [isDesktop]="isDesktopLayout()"
           [cycles]="cycles()"
           [selectedCycleId]="selectedCycleId()"
@@ -570,6 +618,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           [addableStudents]="addableStudents()"
           [isLoading]="isLoadingCiclos()"
           [isLoadingCycle]="isLoadingCycle()"
+          [isLoadingAddable]="isLoadingAddable()"
           [isSaving]="isSaving()"
           [sendingClassId]="sendingClassId()"
           (selectCycle)="selectCycle.emit($event)"
@@ -581,19 +630,28 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
           (addStudent)="addCicloStudent.emit($event)"
         />
       }
+    </div>
 
-      <!-- ── Modal de justificación ─────────────────────────────────────────── -->
+    <!-- ── Modal de justificación (canon: backdrop + card, hotfix-021) ───────
+         Fuera del .bento-grid (hotfix-022): como sibling, igual que el modal
+         de admin-alumnos.component.ts. Dentro del grid, el wrapper vacío del
+         [appModalOverlay] contaba como ítem sin clase bento-* y CSS Grid le
+         reservaba una fila fantasma (grid-auto-rows), comprimiendo la fila
+         fill real. -->
+    <div [appModalOverlay]="justifyModalOpen()">
       @if (justifyModalOpen()) {
         <div
-          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Justificar inasistencia"
           (click)="closeJustifyModal()"
+          (document:keydown.escape)="closeJustifyModal()"
         >
           <div
             class="surface-glass rounded-2xl p-6 w-full max-w-md flex flex-col gap-4"
             (click)="$event.stopPropagation()"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Justificar inasistencia"
+            appAnimateIn
           >
             <div class="flex items-center justify-between">
               <h3 class="font-semibold text-text-primary">Justificar Inasistencia</h3>
@@ -609,8 +667,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               Ingresa el motivo de la justificación para registrar en el historial del alumno.
             </p>
             <textarea
-              class="w-full rounded-lg border p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
-              [style.border-color]="'var(--border-subtle)'"
+              class="w-full rounded-lg border border-border-subtle p-3 text-sm text-text-primary bg-surface resize-none focus:outline-none"
               rows="3"
               placeholder="Ej: Certificado médico presentado..."
               data-llm-description="textarea for absence justification reason"
@@ -628,6 +685,47 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 (click)="submitJustification()"
               >
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+    
+    <!-- Modal para ver el motivo de justificación -->
+    <div [appModalOverlay]="viewMotivoModalOpen()">
+      @if (viewMotivoModalOpen()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          (click)="closeViewMotivo()"
+          (document:keydown.escape)="closeViewMotivo()"
+        >
+          <div
+            class="surface-glass rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+            (click)="$event.stopPropagation()"
+            appAnimateIn
+          >
+            <div class="flex items-center justify-between border-b border-border-subtle pb-3">
+              <h3 class="font-semibold text-text-primary flex items-center gap-2">
+                <app-icon name="info" [size]="18" class="text-brand" />
+                Motivo de Justificación
+              </h3>
+              <button
+                class="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                aria-label="Cerrar"
+                (click)="closeViewMotivo()"
+              >
+                <app-icon name="x" [size]="18" />
+              </button>
+            </div>
+            <div class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap">
+              {{ viewMotivoText() }}
+            </div>
+            <div class="flex justify-end pt-2">
+              <button class="btn-secondary text-sm px-4 py-2 cursor-pointer" (click)="closeViewMotivo()">
+                Cerrar
               </button>
             </div>
           </div>
@@ -658,6 +756,7 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   readonly addableStudents = input<CicloAlumnoMovible[]>([]);
   readonly isLoadingCiclos = input(false);
   readonly isLoadingCycle = input(false);
+  readonly isLoadingAddable = input(false);
   readonly sendingClassId = input<number | null>(null);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
@@ -700,6 +799,21 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     });
   })();
   protected readonly statusFilters = STATUS_FILTERS;
+
+  // Skeletons (fix-046): anchos de columnas del header de tabla + nº de filas del rail.
+  // Suma acotada para caber en la card angosta (568px) del layout 2-col sin recorte.
+  protected readonly skeletonColWidths = [
+    '40px',
+    '28px',
+    '28px',
+    '40px',
+    '52px',
+    '60px',
+    '44px',
+    '40px',
+    '32px',
+  ];
+  protected readonly alertSkeletonIndexes = [0, 1, 2, 3, 4, 5, 6, 7];
   protected readonly activeStatusFilter = signal<StatusFilter>('todos');
   protected readonly selectedInstructorId = signal<number | null>(null);
 
@@ -711,6 +825,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly justifyModalOpen = signal(false);
   protected readonly justifySessionId = signal<number | null>(null);
   protected readonly justifyReason = signal('');
+
+  protected readonly viewMotivoModalOpen = signal(false);
+  protected readonly viewMotivoText = signal('');
 
   // ── Hero actions ─────────────────────────────────────────────────────────────
   protected readonly heroActions: SectionHeroAction[] = [
@@ -865,13 +982,10 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     return new Date(scheduledAt) < new Date();
   }
 
-  protected formatIsoDate(iso: string): string {
-    // Acepta 'YYYY-MM-DD' o timestamp ISO completo ('YYYY-MM-DDTHH:mm:ss...') —
-    // el origen real (recorded_at/scheduled_at) es timestamptz de Supabase, no
-    // date-only (deuda documentada en spec 0030, corregida aquí porque el
-    // tooltip de alerta ahora la muestra para TODAS las alertas, no solo danger).
-    const [y, m, d] = iso.slice(0, 10).split('-');
-    return `${d}-${m}-${y}`;
+  /** Fecha compacta DD-MM para la línea 2 de la fila de alerta (fix-047). */
+  protected formatIsoDateShort(iso: string): string {
+    const [, m, d] = iso.slice(0, 10).split('-');
+    return `${d}-${m}`;
   }
 
   protected initials(name: string): string {
@@ -883,18 +997,12 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
       .toUpperCase();
   }
 
-  /** Detalle completo de la alerta para el tooltip nativo de la fila compacta. */
+  /** Política/motivo de la alerta para el pTooltip canon (fix-048). Nombre, conteo y
+   *  última fecha ya van inline en la fila (fix-047); el tooltip solo aporta el "por qué". */
   protected alertaTooltip(alerta: AlertaFaltaConsecutiva): string {
-    const countLabel =
-      alerta.faltasConsecutivas === 1 ? 'falta consecutiva' : 'faltas consecutivas';
-    const lines = [`${alerta.alumnoName} — ${alerta.faltasConsecutivas} ${countLabel}`];
-    if (alerta.nivel === 'danger') {
-      lines.push(`Última falta: ${this.formatIsoDate(alerta.ultimaFechaFalta)}`);
-      lines.push('Política: 2 inasistencias consecutivas — acción manual requerida');
-    } else {
-      lines.push('Próxima inasistencia podría requerir eliminación del horario');
-    }
-    return lines.join('\n');
+    return alerta.nivel === 'danger'
+      ? 'Política: 2 inasistencias consecutivas — acción manual requerida'
+      : 'Próxima inasistencia podría requerir eliminar el horario';
   }
 
   // ── Status badge helpers ──────────────────────────────────────────────────────
@@ -958,6 +1066,16 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     this.justifyModalOpen.set(false);
     this.justifySessionId.set(null);
     this.justifyReason.set('');
+  }
+  
+  protected openViewMotivo(motivo: string): void {
+    this.viewMotivoText.set(motivo);
+    this.viewMotivoModalOpen.set(true);
+  }
+  
+  protected closeViewMotivo(): void {
+    this.viewMotivoModalOpen.set(false);
+    this.viewMotivoText.set('');
   }
 
   protected submitJustification(): void {
