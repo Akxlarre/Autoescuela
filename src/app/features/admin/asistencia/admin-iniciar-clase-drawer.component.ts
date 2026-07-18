@@ -2,11 +2,14 @@ import { TooltipModule } from 'primeng/tooltip';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   OnInit,
   computed,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { odometerFontTier } from '@core/utils/odometer.utils';
 import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
@@ -131,7 +134,10 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 type="number"
                 formControlName="kmStart"
                 max="999999"
-                class="bg-transparent! border-none! outline-none! shadow-none! ring-0! text-5xl font-display font-black text-text-primary text-center p-0 w-36 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent!"
+                class="bg-transparent! border-none! outline-none! shadow-none! ring-0! font-display font-black text-text-primary text-center p-0 w-36 placeholder:text-border-strong tracking-tighter tabular-nums m-0 focus:bg-transparent! transition-all duration-150"
+                [class.text-5xl]="kmFontTier() === '5xl'"
+                [class.text-4xl]="kmFontTier() === '4xl'"
+                [class.text-3xl]="kmFontTier() === '3xl'"
                 placeholder="0"
                 data-llm-description="Odómetro inicial del vehículo para iniciar clase práctica"
               />
@@ -189,9 +195,16 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly isSubmitting = signal(false);
   protected readonly error = signal<string | null>(null);
+
+  /** Valor reactivo de kmStart para dimensionar la fuente del odómetro (OnPush-safe). */
+  protected readonly kmValue = signal<number | null>(null);
+
+  /** Tier de fuente adaptativo (fix-050): el número se achica para caber en la caja fija. */
+  protected readonly kmFontTier = computed(() => odometerFontTier(this.kmValue()));
 
   /** ID del vehículo seleccionado en el dropdown (null = usa el de la sesión). */
   protected readonly selectedVehicleId = signal<number | null>(null);
@@ -219,6 +232,13 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     this.form = this.fb.group({
       kmStart: [currentKm, [Validators.required, Validators.min(0), Validators.max(999999)]],
     });
+
+    // Refleja kmStart en un signal para el tier de fuente adaptativo (OnPush-safe).
+    this.kmValue.set(currentKm);
+    this.form
+      .get('kmStart')!
+      .valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((v) => this.kmValue.set(v));
 
     if (cls?.branchId) {
       this.facade.loadVehiclesByBranch(cls.branchId).then(() => {

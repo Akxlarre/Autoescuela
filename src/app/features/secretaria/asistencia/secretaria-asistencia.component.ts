@@ -42,6 +42,7 @@ import type {
       [addableStudents]="ciclos.addableStudents()"
       [isLoadingCiclos]="ciclos.isLoading()"
       [isLoadingCycle]="ciclos.isLoadingCycle()"
+      [isLoadingAddable]="ciclos.isLoadingAddable()"
       (markAttendance)="onMarkAttendance($event)"
       (justifyAbsence)="facade.justifyAbsence($event.sessionId, $event.reason)"
       (removeSchedule)="facade.removeSchedule($event)"

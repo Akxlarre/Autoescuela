@@ -99,30 +99,33 @@ describe('AsistenciaClaseBContentComponent — alerta compacta (fix post-QA visu
     component = TestBed.createComponent(AsistenciaClaseBContentComponent).componentInstance;
   });
 
-  it('formatIsoDate acepta un timestamp ISO completo (timestamptz real de Supabase)', () => {
-    // Bug real encontrado en QA: recorded_at/scheduled_at son timestamptz,
-    // no date-only — un split('-') ingenuo producía "07T09:33:41...-07-2026".
-    expect((component as any).formatIsoDate('2026-07-14T09:33:41.902234+00:00')).toBe('14-07-2026');
+  it('formatIsoDateShort devuelve DD-MM desde un timestamptz real de Supabase (fix-047)', () => {
+    // recorded_at/scheduled_at son timestamptz, no date-only — el slice(0,10)
+    // evita el bug del split('-') ingenuo. La fila de alerta muestra DD-MM (fix-047).
+    expect((component as any).formatIsoDateShort('2026-07-14T09:33:41.902234+00:00')).toBe('14-07');
   });
 
-  it('formatIsoDate sigue aceptando date-only "YYYY-MM-DD" (compatibilidad)', () => {
-    expect((component as any).formatIsoDate('2026-07-14')).toBe('14-07-2026');
+  it('formatIsoDateShort sigue aceptando date-only "YYYY-MM-DD" (compatibilidad)', () => {
+    expect((component as any).formatIsoDateShort('2026-07-14')).toBe('14-07');
   });
 
-  it('alertaTooltip de nivel danger incluye última falta y política', () => {
+  it('alertaTooltip de nivel danger es la política, en una sola línea (fix-048)', () => {
+    // Tras fix-047/048: nombre, conteo y última fecha van INLINE en la fila; el
+    // pTooltip canon aporta solo el "por qué" (la política).
     const tooltip = (component as any).alertaTooltip(makeAlerta({ nivel: 'danger' }));
-    expect(tooltip).toContain('Erling Haaland — 2 faltas consecutivas');
-    expect(tooltip).toContain('Última falta: 14-07-2026');
+    expect(tooltip).toContain('Política');
     expect(tooltip).toContain('acción manual requerida');
+    expect(tooltip).not.toContain('Erling Haaland');
+    expect(tooltip).not.toContain('Última falta');
   });
 
-  it('alertaTooltip de nivel warning no incluye última falta ni política', () => {
+  it('alertaTooltip de nivel warning es el hint, sin política (fix-048)', () => {
     const tooltip = (component as any).alertaTooltip(
       makeAlerta({ nivel: 'warning', faltasConsecutivas: 1 }),
     );
-    expect(tooltip).toContain('1 falta consecutiva');
-    expect(tooltip).not.toContain('Última falta');
     expect(tooltip).toContain('Próxima inasistencia');
+    expect(tooltip).toContain('eliminar el horario');
+    expect(tooltip).not.toContain('Política');
   });
 });
 

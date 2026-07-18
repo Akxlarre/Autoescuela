@@ -192,12 +192,12 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 481 | `#38bdf8` |
+| `--ds-brand` | 473 | `#38bdf8` |
 | `--text-muted` | 408 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 269 | `var(--color-primary-text)` |
 | `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
 | `--state-error` | 227 | `#f87171` |
-| `--border-subtle` | 215 | `rgba(255, 255, 255, 0.18)` |
+| `--border-subtle` | 221 | `rgba(255, 255, 255, 0.18)` |
 | `--bg-surface` | 202 | `#18181b` |
 | `--state-success` | 194 | `#4ade80` |
 | `--color-primary` | 175 | `#38bdf8` |
@@ -222,7 +222,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 239 | `src/styles/tokens/_variables.scss` |
+| `.card` | 244 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.card-accent` | 11 | `src/styles/tokens/_variables.scss` |
@@ -322,8 +322,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 55 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1189 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 57 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 1190 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -345,7 +345,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
 | 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
-| 9 | `font-semibold text-sm m-0 text-text-primary` |
+| 9 | `text-sm font-bold text-text-primary truncate` |
 
 
 <!-- AUTO-GENERATED:END -->

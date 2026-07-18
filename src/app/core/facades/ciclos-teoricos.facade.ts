@@ -14,6 +14,9 @@ import type {
   ZoomEmailResult,
 } from '@core/models/ui/ciclos-teoricos.model';
 
+/** Cota explícita para queries sin paginación, alineada a `max_rows` de supabase/config.toml. */
+const MAX_QUERY_ROWS = 1000;
+
 /**
  * CiclosTeoricosFacade — Spec 0001.
  *
@@ -39,6 +42,7 @@ export class CiclosTeoricosFacade {
   private readonly _clases = signal<CicloClaseRow[]>([]);
   private readonly _roster = signal<CicloAlumno[]>([]);
   private readonly _addableStudents = signal<CicloAlumnoMovible[]>([]);
+  private readonly _isLoadingAddable = signal(false);
   private readonly _isLoading = signal(false);
   private readonly _isLoadingCycle = signal(false);
   private readonly _isSaving = signal(false);
@@ -52,6 +56,7 @@ export class CiclosTeoricosFacade {
   readonly clases = this._clases.asReadonly();
   readonly roster = this._roster.asReadonly();
   readonly addableStudents = this._addableStudents.asReadonly();
+  readonly isLoadingAddable = this._isLoadingAddable.asReadonly();
   readonly isLoading = this._isLoading.asReadonly();
   readonly isLoadingCycle = this._isLoadingCycle.asReadonly();
   readonly isSaving = this._isSaving.asReadonly();
@@ -300,6 +305,7 @@ export class CiclosTeoricosFacade {
     const branchId = this.selectedCycle()?.branchId ?? null;
     if (currentCycleId === null) return;
 
+    this._isLoadingAddable.set(true);
     try {
       let query = this.supabase.client
         .from('enrollments')
@@ -314,12 +320,20 @@ export class CiclosTeoricosFacade {
         .eq('status', 'active')
         .eq('license_group', 'class_b')
         .not('theory_cycle_id', 'is', null)
-        .neq('theory_cycle_id', currentCycleId);
+        .neq('theory_cycle_id', currentCycleId)
+        .order('id', { ascending: true })
+        .limit(MAX_QUERY_ROWS);
 
       if (branchId !== null) query = query.eq('branch_id', branchId);
 
       const { data, error } = await query;
       if (error) throw error;
+
+      if ((data?.length ?? 0) >= MAX_QUERY_ROWS) {
+        console.warn(
+          `[CiclosTeoricosFacade] loadAddableStudents alcanzó la cota de ${MAX_QUERY_ROWS} filas — puede haber candidatos no listados.`,
+        );
+      }
 
       const movibles: CicloAlumnoMovible[] = (data ?? []).map((row: any) => {
         const u = row.students?.users;
@@ -342,6 +356,8 @@ export class CiclosTeoricosFacade {
     } catch {
       this._addableStudents.set([]);
       this.toast.error('Error al cargar alumnos de otros ciclos');
+    } finally {
+      this._isLoadingAddable.set(false);
     }
   }
 
@@ -380,8 +396,16 @@ export class CiclosTeoricosFacade {
       `,
       )
       .eq('theory_cycle_id', cycleId)
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .order('id', { ascending: true })
+      .limit(MAX_QUERY_ROWS);
     if (error) throw error;
+
+    if ((data?.length ?? 0) >= MAX_QUERY_ROWS) {
+      console.warn(
+        `[CiclosTeoricosFacade] fetchRoster alcanzó la cota de ${MAX_QUERY_ROWS} filas — puede haber alumnos no listados.`,
+      );
+    }
 
     const roster: CicloAlumno[] = (data ?? []).map((row: any) => {
       const u = row.students?.users;
