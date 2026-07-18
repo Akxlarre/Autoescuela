@@ -31,16 +31,52 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-5">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <!-- Información general: header + nombre + código + fechas -->
+            <section>
+              <app-skeleton-block variant="text" width="45%" height="16px" />
+              <div class="mt-4 mb-4">
+                <app-skeleton-block variant="text" width="30%" height="12px" />
+                <div class="mt-1">
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              </div>
+              <div class="mb-4">
+                <app-skeleton-block variant="text" width="20%" height="12px" />
+                <div class="mt-1">
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <app-skeleton-block variant="text" width="50%" height="12px" />
+                  <div class="mt-1">
+                    <app-skeleton-block variant="rect" width="100%" height="40px" />
+                  </div>
+                </div>
+                <div>
+                  <app-skeleton-block variant="text" width="50%" height="12px" />
+                  <div class="mt-1">
+                    <app-skeleton-block variant="rect" width="100%" height="40px" />
+                  </div>
+                </div>
+              </div>
+              <app-skeleton-block variant="text" width="70%" height="10px" />
+            </section>
+
+            <!-- Estado de la promoción: header + select -->
+            <section>
+              <app-skeleton-block variant="text" width="45%" height="16px" />
+              <div class="mt-3">
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+            </section>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- ── Información general ───────────────────────────────────── -->
           <section>
             <h3 class="text-sm font-semibold mb-4 text-text-primary">Información general</h3>
@@ -135,28 +171,27 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
           </section>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- ── Acciones ──────────────────────────────────────────────── -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              class="btn-secondary"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-editar-promocion"
-            >
-              Cancelar
-            </button>
-            <app-async-btn
-              label="Guardar cambios"
-              icon="save"
-              [loading]="facade.isSubmitting()"
-              [disabled]="!canSave()"
-              (click)="submit()"
-              data-llm-action="submit-editar-promocion"
-            />
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          class="btn-secondary"
+          (click)="layoutDrawer.close()"
+          data-llm-action="cancelar-editar-promocion"
+        >
+          Cancelar
+        </button>
+        <app-async-btn
+          label="Guardar cambios"
+          icon="save"
+          [loading]="facade.isSubmitting()"
+          [disabled]="!canSave()"
+          (click)="submit()"
+          data-llm-action="submit-editar-promocion"
+        />
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     .form-input {

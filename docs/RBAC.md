@@ -2,7 +2,7 @@
 
 > Documento canónico de **quién puede ver/hacer qué** en Autoescuela.
 > Fuente de verdad del detalle por tabla: `indices/DATABASE.md` (columna "Restricciones RLS").
-> Origen: auditoría RBAC (2026-07-05, hotfix-019).
+> Origen: auditoría RBAC (2026-07-05, hotfix-019-m).
 
 ## 1. Modelo de roles
 
@@ -82,4 +82,4 @@ Evaluado y **descartado** (2026-07-05) mientras se mantengan estas condiciones:
 2. Aparecen sub-permisos dentro de un portal (ej: ver pagos pero no anularlos).
 3. Se acumulan más de ~3 flags booleanos de permiso en `users` (los flags se están volviendo un sistema de permisos ad-hoc).
 
-**Nota histórica:** existió una `HasRoleDirective` (`*appHasRole`) para ocultar elementos por rol dentro de una vista. Se eliminó en hotfix-019 por tener 0 usos (los portales son exclusivos por rol). Si aparecen vistas compartidas entre roles, recuperarla de git (`src/app/core/directives/has-role.directive.ts`, eliminada tras el commit `6f2ca16`).
+**Nota histórica:** existió una `HasRoleDirective` (`*appHasRole`) para ocultar elementos por rol dentro de una vista. Se eliminó en hotfix-019-m por tener 0 usos (los portales son exclusivos por rol). Si aparecen vistas compartidas entre roles, recuperarla de git (`src/app/core/directives/has-role.directive.ts`, eliminada tras el commit `6f2ca16`).

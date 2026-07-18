@@ -36,17 +36,33 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <!-- Tipo de egreso (label + select) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="42px" />
+            </div>
+            <!-- Monto (label + input) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="42px" />
+            </div>
+            <!-- Descripción / Motivo (label + input) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="45%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="42px" />
+            </div>
+            <!-- Fecha (label + display box) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="20%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="42px" />
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- ── Cuerpo con formulario ─────────────────────────────────────── -->
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onSubmit()">
             <!-- Tipo de egreso -->
@@ -133,37 +149,37 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               </div>
             }
           </form>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- ── Footer fijo ─────────────────────────────────────────────── -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              type="button"
-              class="btn-secondary"
-              [disabled]="isSaving()"
-              data-llm-action="cancelar-egreso-cuadratura"
-              (click)="onCancel()"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              class="btn-primary flex items-center gap-2"
-              [disabled]="form.invalid || isSaving()"
-              data-llm-action="guardar-egreso-cuadratura"
-              (click)="onSubmit()"
-            >
-              @if (isSaving()) {
-                <app-icon name="loader-2" [size]="14" class="animate-spin" />
-                Guardando...
-              } @else {
-                <app-icon name="check" [size]="14" />
-                Guardar Egreso
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <!-- ── Footer fijo ─────────────────────────────────────────────── -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          type="button"
+          class="btn-secondary"
+          [disabled]="isSaving()"
+          data-llm-action="cancelar-egreso-cuadratura"
+          (click)="onCancel()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2"
+          [disabled]="form.invalid || isSaving()"
+          data-llm-action="guardar-egreso-cuadratura"
+          (click)="onSubmit()"
+        >
+          @if (isSaving()) {
+            <app-icon name="loader-2" [size]="14" class="animate-spin" />
+            Guardando...
+          } @else {
+            <app-icon name="check" [size]="14" />
+            Guardar Egreso
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     /* ── Fields ── */

@@ -32,18 +32,73 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
-      <app-drawer-content-loader class="flex-col h-full flex p-5 pb-0">
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-4 w-full">
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form>
+      <app-drawer-form>
+        <app-drawer-content-loader class="flex-col h-full flex p-5 pb-0">
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-4 w-full">
+              <!-- Mini-header: avatar + nombre + email -->
+              <div class="flex items-center gap-3 rounded-lg p-3 mb-1">
+                <app-skeleton-block variant="circle" width="36px" height="36px" />
+                <div class="flex flex-col gap-1.5 flex-1">
+                  <app-skeleton-block variant="text" width="45%" height="14px" />
+                  <app-skeleton-block variant="text" width="65%" height="12px" />
+                </div>
+              </div>
+
+              <!-- Título de sección -->
+              <app-skeleton-block variant="text" width="140px" height="14px" />
+
+              <div class="flex flex-col gap-4">
+                <!-- Nombres -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="35%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <!-- Apellido Paterno -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="60%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <!-- Apellido Materno -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="60%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <!-- Sede -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="40%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <!-- Email -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="45%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <!-- Teléfono -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="25%" height="13px" />
+                  <app-skeleton-block variant="rect" width="100%" height="38px" />
+                </div>
+                <!-- Estado activo/inactivo (toggle de 2 botones) -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="35%" height="13px" />
+                  <div class="flex items-center gap-3">
+                    <app-skeleton-block variant="rect" width="100%" height="34px" />
+                    <app-skeleton-block variant="rect" width="100%" height="34px" />
+                  </div>
+                </div>
+                <!-- Acceso a sedes (toggle de 2 botones) -->
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="35%" height="13px" />
+                  <div class="flex items-center gap-3">
+                    <app-skeleton-block variant="rect" width="100%" height="34px" />
+                    <app-skeleton-block variant="rect" width="100%" height="34px" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+          <ng-template #content>
             <!-- Mini-header con la secretaria que se está editando -->
             <div
               class="flex items-center gap-3 rounded-lg p-3 mb-5 bg-elevated border border-border-subtle"
@@ -249,35 +304,34 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 }
               </div>
             </div>
+          </ng-template>
+        </app-drawer-content-loader>
 
-            <!-- Acciones -->
-            <ng-container ngProjectAs="[drawer-form-footer]">
-              <button
-                class="btn-secondary"
-                (click)="layoutDrawer.close()"
-                data-llm-action="cancelar-editar-secretaria"
-              >
-                Cancelar
-              </button>
-              <button
-                class="btn-primary flex items-center gap-2"
-                [disabled]="facade.isSubmitting()"
-                (click)="submit(sec.id)"
-                data-llm-action="guardar-editar-secretaria"
-                aria-label="Guardar cambios de secretaria"
-              >
-                @if (facade.isSubmitting()) {
-                  <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                  Guardando...
-                } @else {
-                  <app-icon name="save" [size]="15" />
-                  Guardar cambios
-                }
-              </button>
-            </ng-container>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button
+            class="btn-secondary"
+            (click)="layoutDrawer.close()"
+            data-llm-action="cancelar-editar-secretaria"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn-primary flex items-center gap-2"
+            [disabled]="facade.isSubmitting()"
+            (click)="submit(sec.id)"
+            data-llm-action="guardar-editar-secretaria"
+            aria-label="Guardar cambios de secretaria"
+          >
+            @if (facade.isSubmitting()) {
+              <app-icon name="loader-2" [size]="15" class="animate-spin" />
+              Guardando...
+            } @else {
+              <app-icon name="save" [size]="15" />
+              Guardar cambios
+            }
+          </button>
+        </ng-container>
+      </app-drawer-form>
     }
   `,
   styles: `

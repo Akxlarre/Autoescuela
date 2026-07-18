@@ -17,25 +17,25 @@ describe('RelatoresFacade', () => {
         select: vi.fn().mockReturnValue({
           order: vi.fn().mockResolvedValue({ data: [], error: null }),
           in: vi.fn().mockReturnValue({
-             not: vi.fn().mockResolvedValue({ data: [], error: null })
+            not: vi.fn().mockResolvedValue({ data: [], error: null }),
           }),
           eq: vi.fn().mockReturnValue({
-             order: vi.fn().mockResolvedValue({ data: [], error: null })
-          })
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
         }),
         insert: vi.fn().mockResolvedValue({ error: null }),
         update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ error: null })
-        })
-      })
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      }),
     };
 
     TestBed.configureTestingModule({
       providers: [
         RelatoresFacade,
         { provide: SupabaseService, useValue: supabaseSpy },
-        { provide: ToastService, useValue: toastSpy }
-      ]
+        { provide: ToastService, useValue: toastSpy },
+      ],
     });
 
     facade = TestBed.inject(RelatoresFacade);
@@ -55,5 +55,33 @@ describe('RelatoresFacade', () => {
     const relator = { id: 1 } as any;
     facade.selectRelator(relator);
     expect(facade.selectedRelator()).toBe(relator);
+  });
+
+  it('mapToRow should build initials from first name + paternal last name, not maternal', async () => {
+    supabaseSpy.client.from = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 1,
+              rut: '1.234.567-8',
+              first_names: 'Juan Patricio',
+              paternal_last_name: 'Álvarez',
+              maternal_last_name: 'Riquelme',
+              email: null,
+              phone: null,
+              specializations: [],
+              active: true,
+              registration_date: null,
+            },
+          ],
+          error: null,
+        }),
+      }),
+    });
+
+    await facade.initialize();
+
+    expect(facade.relatores()[0].initials).toBe('JÁ');
   });
 });

@@ -40,7 +40,7 @@ const MONTH_NAMES = [
           </button>
 
           <div class="flex flex-col items-center gap-0.5">
-            <span class="text-base font-semibold text-text-primary">
+            <span class="font-semibold text-text-primary">
               {{ periodoLabel() }}
             </span>
             @if (facade.isHorasCurrentMonth()) {

@@ -30,17 +30,33 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-5">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="rect" width="100%" height="140px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <!-- Nombre -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
+            </div>
+            <!-- Descripción (textarea) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="56px" />
+            </div>
+            <!-- Categoría -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
+            </div>
+            <!-- Archivo (dropzone) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="25%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="150px" />
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <div class="flex-1 flex flex-col gap-5">
             <!-- Nombre -->
             <div class="flex flex-col gap-1.5">
@@ -132,21 +148,20 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               </app-alert-card>
             }
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Footer -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
-            <app-async-btn
-              label="Guardar plantilla"
-              icon="folder"
-              [loading]="isSubmitting()"
-              [disabled]="!canSubmit()"
-              (click)="onSubmit()"
-            ></app-async-btn>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
+        <app-async-btn
+          label="Guardar plantilla"
+          icon="folder"
+          [loading]="isSubmitting()"
+          [disabled]="!canSubmit()"
+          (click)="onSubmit()"
+        ></app-async-btn>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class DmsTemplateDrawerComponent {

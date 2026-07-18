@@ -130,16 +130,27 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
         </button>
       </div>
 
-      <app-drawer-content-loader class="flex-col h-full flex pb-0">
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-4">
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="120px" />
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form [hasFooter]="false">
+      <app-drawer-form [hasFooter]="false">
+        <app-drawer-content-loader class="flex-col h-full flex pb-0">
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-4">
+              <!-- Grid de datos personales (Nombre, RUT, Correo, Teléfono, etc.) -->
+              <div class="grid grid-cols-2 gap-3">
+                @for (_ of skeletonDataCards; track $index) {
+                  <div class="card flex flex-col gap-1.5">
+                    <app-skeleton-block variant="text" width="55%" height="10px" />
+                    <app-skeleton-block variant="text" width="80%" height="16px" />
+                  </div>
+                }
+              </div>
+              <!-- Observaciones -->
+              <div class="card flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="35%" height="10px" />
+                <app-skeleton-block variant="text" width="90%" height="16px" />
+              </div>
+            </div>
+          </ng-template>
+          <ng-template #content>
             <!-- ─── TAB: DATOS PERSONALES ──────────────────────────────────── -->
             @if (activeTab() === 'datos') {
               <div class="space-y-4" #tabContent>
@@ -1043,9 +1054,9 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                 }
               </div>
             }
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+          </ng-template>
+        </app-drawer-content-loader>
+      </app-drawer-form>
     }
   `,
 })
@@ -1154,6 +1165,8 @@ export class AdminPreInscritoDrawerComponent implements OnDestroy {
 
   // ── Computed ─────────────────────────────────────────────────────────────
   readonly questions = EPQ_QUESTIONS;
+  /** Cantidad de tarjetas de datos personales a previsualizar en el skeleton. */
+  readonly skeletonDataCards = Array.from({ length: 10 });
 
   readonly selectedCourses = computed(() => {
     const promoId = this.selectedPromoId();

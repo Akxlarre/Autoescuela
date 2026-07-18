@@ -106,8 +106,9 @@ interface HorarioBlock {
 
             <div class="space-y-2">
               @if (facade.isLoading()) {
-                <app-skeleton-block height="40px" />
-                <app-skeleton-block height="40px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
               } @else if (localBranchId() === null) {
                 <div
                   class="p-3 border border-border-default rounded-lg bg-base text-sm text-text-muted text-center"

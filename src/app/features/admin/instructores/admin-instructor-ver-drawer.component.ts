@@ -26,22 +26,76 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   template: `
     @if (facade.selectedInstructor(); as inst) {
-      <app-drawer-content-loader>
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-5">
-            <div class="flex justify-center">
-              <app-skeleton-block variant="circle" width="64px" height="64px" />
+      <app-drawer-form [hasFooter]="false">
+        <app-drawer-content-loader>
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-5">
+              <!-- Header: avatar + nombre + rol + badge estado -->
+              <div class="flex flex-col items-center gap-3 pb-6">
+                <app-skeleton-block variant="circle" width="64px" height="64px" />
+                <app-skeleton-block variant="text" width="140px" height="16px" />
+                <app-skeleton-block variant="text" width="110px" height="12px" />
+                <app-skeleton-block variant="rect" width="80px" height="20px" />
+              </div>
+
+              <!-- KPI summary cards -->
+              <div class="grid grid-cols-2 gap-3">
+                <app-skeleton-block variant="rect" width="100%" height="60px" />
+                <app-skeleton-block variant="rect" width="100%" height="60px" />
+              </div>
+
+              <!-- Información Personal (4 filas: icono + label + valor) -->
+              <app-skeleton-block variant="text" width="160px" height="11px" />
+              <div class="flex flex-col gap-3">
+                @for (_ of [1, 2, 3, 4]; track $index) {
+                  <div class="flex items-start gap-3">
+                    <app-skeleton-block variant="circle" width="15px" height="15px" />
+                    <div class="flex flex-col gap-1 flex-1">
+                      <app-skeleton-block variant="text" width="30%" height="10px" />
+                      <app-skeleton-block variant="text" width="60%" height="13px" />
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Información de Licencia (3 filas) -->
+              <app-skeleton-block variant="text" width="180px" height="11px" />
+              <div class="flex flex-col gap-3">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <div class="flex items-start gap-3">
+                    <app-skeleton-block variant="circle" width="15px" height="15px" />
+                    <div class="flex flex-col gap-1 flex-1">
+                      <app-skeleton-block variant="text" width="30%" height="10px" />
+                      <app-skeleton-block variant="text" width="60%" height="13px" />
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Historial de Vehículos Asignados (lista) -->
+              <app-skeleton-block variant="text" width="230px" height="11px" />
+              <div class="flex flex-col gap-2">
+                @for (_ of [1, 2]; track $index) {
+                  <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
+                    <div class="flex flex-col gap-1">
+                      <app-skeleton-block variant="text" width="80px" height="13px" />
+                      <app-skeleton-block variant="text" width="110px" height="11px" />
+                    </div>
+                    <app-skeleton-block variant="text" width="90px" height="11px" />
+                  </div>
+                }
+              </div>
+
+              <!-- Acciones rápidas (3 botones) -->
+              <app-skeleton-block variant="text" width="120px" height="11px" />
+              <div class="flex flex-col gap-2">
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+                <app-skeleton-block variant="rect" width="100%" height="38px" />
+              </div>
             </div>
-            <app-skeleton-block variant="text" width="60%" height="20px" />
-            <div class="grid grid-cols-2 gap-3">
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-            </div>
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form [hasFooter]="false">
+          </ng-template>
+          <ng-template #content>
             <!-- ── Header con nombre y tipo ────────────────────────────────────── -->
             <div
               class="flex flex-col items-center gap-3 pb-6 mb-6"
@@ -53,7 +107,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 {{ inst.initials }}
               </div>
               <div class="text-center">
-                <p class="text-base font-semibold text-text-primary">
+                <p class="font-semibold text-text-primary">
                   {{ inst.nombre }}
                 </p>
                 <p class="text-sm text-brand">Instructor {{ inst.tipoLabel | lowercase }}</p>
@@ -276,9 +330,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 Ver clases activas ({{ inst.activeClassesCount }})
               </button>
             </div>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+          </ng-template>
+        </app-drawer-content-loader>
+      </app-drawer-form>
     }
   `,
   styles: `

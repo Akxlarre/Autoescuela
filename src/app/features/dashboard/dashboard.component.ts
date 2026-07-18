@@ -29,12 +29,14 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { AdminMatriculaComponent } from '../admin/matricula/admin-matricula.component';
 import { AdminAgendaComponent } from '../admin/agenda/admin-agenda.component';
+import { RegistrarPagoDrawerComponent } from '../admin/pagos/registrar-pago-drawer.component';
+import { PagosFacade } from '@core/facades/pagos.facade';
 import { RecentActivityDrawerComponent } from './recent-activity-drawer/recent-activity-drawer.component';
 import { AlertsDrawerComponent } from './alerts-drawer/alerts-drawer.component';
 import { LiveClassesPanelComponent } from '@shared/components/live-classes-panel/live-classes-panel.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { AuthFacade } from '@core/facades/auth.facade';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
@@ -337,10 +339,9 @@ export class DashboardComponent {
   private readonly auth = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
-  private readonly authFacade = inject(AuthFacade);
-  private readonly router = inject(Router);
   private readonly agendaFacade = inject(AgendaFacade);
   private readonly asistenciaFacade = inject(AsistenciaClaseBFacade);
+  private readonly pagosFacade = inject(PagosFacade);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Estado ────────────────────────────────────────────────────────────────
@@ -390,11 +391,11 @@ export class DashboardComponent {
     return chips;
   });
   readonly heroActions = computed((): SectionHeroAction[] =>
-    this.quickActions().map((a, i) => ({
+    this.quickActions().map((a) => ({
       id: a.id,
       label: a.label,
       icon: a.icon,
-      primary: i === 0,
+      primary: a.id === 'qa1' || a.id === 'qa3',
       route: undefined,
     })),
   );
@@ -441,9 +442,8 @@ export class DashboardComponent {
     } else if (actionId === 'qa2') {
       this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
     } else if (actionId === 'qa3') {
-      const role = this.authFacade.currentUser()?.role;
-      const route = role === 'secretaria' ? 'app/secretaria/pagos' : 'app/admin/pagos';
-      void this.router.navigate([route]);
+      this.pagosFacade.seleccionarParaPago(null);
+      this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
     }
   }
 

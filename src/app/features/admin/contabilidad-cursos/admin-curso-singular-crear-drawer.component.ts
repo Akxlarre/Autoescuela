@@ -27,19 +27,51 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
     DateInputComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <div class="grid grid-cols-2 gap-3">
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-            <app-skeleton-block variant="text" width="100%" height="60px" />
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Nombre del curso -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Tipo + Facturación -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="40%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="55%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+            </div>
+            <!-- Precio + Duración -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="45%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="50%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+            </div>
+            <!-- Cupos + Fecha inicio -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="40%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="45%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+            </div>
           </div>
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+        </ng-template>
+        <ng-template #content>
           <form [formGroup]="form" (ngSubmit)="onGuardar()" class="space-y-4">
             <!-- Nombre -->
             <div class="flex flex-col gap-1">
@@ -179,28 +211,28 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
               </div>
             }
           </form>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Botones de Acción -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button type="button" class="btn-secondary" (click)="onCancelar()">Cancelar</button>
-            <button
-              type="button"
-              class="btn-primary flex items-center gap-2"
-              [disabled]="form.invalid || facade.isSaving()"
-              (click)="onGuardar()"
-            >
-              @if (facade.isSaving()) {
-                <app-icon name="loader-2" [size]="18" class="animate-spin" />
-                <span>Guardando...</span>
-              } @else {
-                <app-icon name="check" [size]="18" />
-                <span>Crear curso singular</span>
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <!-- Botones de Acción -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="onCancelar()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2"
+          [disabled]="form.invalid || facade.isSaving()"
+          (click)="onGuardar()"
+        >
+          @if (facade.isSaving()) {
+            <app-icon name="loader-2" [size]="18" class="animate-spin" />
+            <span>Guardando...</span>
+          } @else {
+            <app-icon name="check" [size]="18" />
+            <span>Crear curso singular</span>
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class AdminCursoSingularCrearDrawerComponent {

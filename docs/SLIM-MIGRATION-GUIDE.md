@@ -1,6 +1,6 @@
 # Guía de Migración a `density="slim"` (Section Hero)
 
-> Versión: hotfix-011 | Fecha: 2026-06-19  
+> Versión: hotfix-011-m | Fecha: 2026-06-19  
 > Para el rollout masivo de `density="slim"` en las ~61 páginas del sistema.
 
 ## ¿Por qué slim?
@@ -114,7 +114,7 @@ Para páginas de detalle o sub-secciones:
 |-----------|--------------|-----------------|
 | `animateBentoGrid()` | ✅ Sí — entrada stagger del shell | Ninguna |
 | `animateHero()` | ❌ No — condicionado a `density === 'full'` | Ninguna |
-| `[appBentoReveal]` (fix-018) | ✅ Sí — anti-flash antes del stagger | Ninguna |
+| `[appBentoReveal]` (fix-018-m) | ✅ Sí — anti-flash antes del stagger | Ninguna |
 
 El slim hero entra como cualquier otra celda del bento-grid. No necesita `animateHero()`.
 Si el Smart Component llama `animateHero()` explícitamente, se puede eliminar.
@@ -132,7 +132,7 @@ Si el Smart Component llama `animateHero()` explícitamente, se puede eliminar.
 
 ---
 
-## Skeleton interno (fix-026)
+## Skeleton interno (fix-026-m)
 
 Con `[loading]="true"`, el componente muestra automáticamente:
 - **Row 1**: circle 32px + dos barras de texto + rect de acción (shimmer via `app-skeleton-block`)
@@ -233,7 +233,7 @@ import { formatCLP } from '@core/utils/formatters'; // si existe, o inline
 
 ---
 
-## Reglas de posicionamiento del hero (hotfix-011)
+## Reglas de posicionamiento del hero (hotfix-011-m)
 
 ### OBLIGATORIO: hero como hijo directo del bento-grid
 

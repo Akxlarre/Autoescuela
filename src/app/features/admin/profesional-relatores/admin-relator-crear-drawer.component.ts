@@ -20,16 +20,35 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Aviso banner -->
+            <app-skeleton-block variant="rect" width="100%" height="44px" />
+
+            <!-- Información Personal: header + 6 campos label+input -->
+            <app-skeleton-block variant="text" width="40%" height="14px" />
+            <div class="flex flex-col gap-4">
+              @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="30%" height="12px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              }
+            </div>
+
+            <!-- Especialidades: header + subtítulo + chips -->
+            <app-skeleton-block variant="text" width="35%" height="14px" />
+            <app-skeleton-block variant="text" width="60%" height="12px" />
+            <div class="grid grid-cols-2 gap-2">
+              @for (i of [1, 2, 3, 4]; track i) {
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              }
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- ── Aviso ───────────────────────────────────────────────────────────── -->
           <div class="flex items-start gap-3 rounded-lg p-3 mb-5 bg-brand/6 border border-brand/20">
             <app-icon name="mic" [size]="16" color="var(--ds-brand)" />
@@ -187,35 +206,34 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           @if (specsTouched() && !specsValidas()) {
             <span class="field-error mb-4 block">Selecciona al menos una especialidad.</span>
           }
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- ── Acciones (footer canónico) ──────────────────────────────────────── -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              class="btn-secondary"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-crear-relator"
-            >
-              Cancelar
-            </button>
-            <button
-              class="btn-primary flex items-center gap-2"
-              [disabled]="facade.isSubmitting()"
-              (click)="submit()"
-              data-llm-action="confirmar-crear-relator"
-              aria-label="Crear nuevo relator"
-            >
-              @if (facade.isSubmitting()) {
-                <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                Creando...
-              } @else {
-                <app-icon name="user-plus" [size]="15" />
-                Crear relator
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          class="btn-secondary"
+          (click)="layoutDrawer.close()"
+          data-llm-action="cancelar-crear-relator"
+        >
+          Cancelar
+        </button>
+        <button
+          class="btn-primary flex items-center gap-2"
+          [disabled]="facade.isSubmitting()"
+          (click)="submit()"
+          data-llm-action="confirmar-crear-relator"
+          aria-label="Crear nuevo relator"
+        >
+          @if (facade.isSubmitting()) {
+            <app-icon name="loader-2" [size]="15" class="animate-spin" />
+            Creando...
+          } @else {
+            <app-icon name="user-plus" [size]="15" />
+            Crear relator
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     /* .field-*, .section-title → globales en styles/components/_form-fields.scss */

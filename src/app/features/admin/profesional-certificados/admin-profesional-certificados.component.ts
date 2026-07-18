@@ -8,7 +8,11 @@ import {
 } from '@angular/core';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { CertificacionProfesionalContentComponent } from '@shared/components/certificacion-profesional-content/certificacion-profesional-content.component';
+import { HistorialEmisionesProfDrawerComponent } from './drawers/historial-emisiones-prof-drawer.component';
+import { GenerarPendientesProfDrawerComponent } from './drawers/generar-pendientes-prof-drawer.component';
+import { EnviarMasivoProfDrawerComponent } from './drawers/enviar-masivo-prof-drawer.component';
 
 /**
  * AdminProfesionalCertificadosComponent — Smart component.
@@ -30,7 +34,6 @@ import { CertificacionProfesionalContentComponent } from '@shared/components/cer
       [selectedCursoId]="facade.selectedCursoId()"
       [alumnos]="facade.alumnos()"
       [kpis]="facade.kpis()"
-      [log]="facade.log()"
       [isLoading]="facade.isLoading()"
       [isLoadingAlumnos]="facade.isLoadingAlumnos()"
       [generatingId]="facade.generatingId()"
@@ -43,8 +46,9 @@ import { CertificacionProfesionalContentComponent } from '@shared/components/cer
       (generarCertificado)="facade.generarCertificado($event)"
       (verCertificado)="facade.verCertificado($event.storagePath, $event.nombre)"
       (enviarEmail)="facade.enviarEmail($event)"
-      (generarPendientes)="facade.generarPendientes()"
-      (enviarEmailsMasivo)="facade.enviarEmailsMasivo()"
+      (abrirHistorialDrawer)="openHistorialDrawer()"
+      (abrirGenerarPendientesDrawer)="openGenerarPendientesDrawer()"
+      (abrirEnviarMasivoDrawer)="openEnviarMasivoDrawer()"
       (exportar)="facade.exportar()"
     />
   `,
@@ -52,6 +56,7 @@ import { CertificacionProfesionalContentComponent } from '@shared/components/cer
 export class AdminProfesionalCertificadosComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(CertificacionProfesionalFacade);
   private readonly branchFacade = inject(BranchFacade);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   constructor() {
     let previousBranchId: number | null | undefined = undefined;
@@ -74,5 +79,25 @@ export class AdminProfesionalCertificadosComponent implements OnInit, OnDestroy 
 
   ngOnDestroy(): void {
     this.branchFacade.setProfessionalOnly(false);
+  }
+
+  protected openHistorialDrawer(): void {
+    this.layoutDrawer.open(
+      HistorialEmisionesProfDrawerComponent,
+      'Historial de Emisiones',
+      'scroll',
+    );
+  }
+
+  protected openGenerarPendientesDrawer(): void {
+    this.layoutDrawer.open(
+      GenerarPendientesProfDrawerComponent,
+      'Generar Pendientes',
+      'file-check',
+    );
+  }
+
+  protected openEnviarMasivoDrawer(): void {
+    this.layoutDrawer.open(EnviarMasivoProfDrawerComponent, 'Enviar Emails Masivo', 'send');
   }
 }

@@ -25,19 +25,44 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   template: `
     @if (facade.selectedSecretaria(); as sec) {
-      <app-drawer-content-loader class="flex-col h-full flex p-5 pb-0">
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-6 w-full">
-            <div class="flex justify-center">
-              <app-skeleton-block variant="circle" width="64px" height="64px" />
+      <app-drawer-form [hasFooter]="false">
+        <app-drawer-content-loader>
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-6 w-full">
+              <!-- Avatar + nombre + email + badge estado -->
+              <div class="flex flex-col items-center gap-3 pb-6 mb-6">
+                <app-skeleton-block variant="circle" width="64px" height="64px" />
+                <app-skeleton-block variant="text" width="45%" height="15px" />
+                <app-skeleton-block variant="text" width="60%" height="12px" />
+                <app-skeleton-block
+                  variant="rect"
+                  width="80px"
+                  height="20px"
+                  borderRadius="999px"
+                />
+              </div>
+
+              <!-- Grid de stat-boxes: RUT, Sede, Acceso, Teléfono, Alias -->
+              <div class="flex flex-col gap-4">
+                <app-skeleton-block variant="text" width="100px" height="12px" />
+                <div class="grid grid-cols-2 gap-3">
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                </div>
+                <!-- Último acceso -->
+                <app-skeleton-block variant="rect" width="100%" height="52px" />
+              </div>
+
+              <!-- Rol y permisos (banner) -->
+              <app-skeleton-block variant="rect" width="100%" height="64px" />
+
+              <!-- Botón editar -->
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
             </div>
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form [hasFooter]="false">
+          </ng-template>
+          <ng-template #content>
             <!-- Avatar + nombre -->
             <div
               class="flex flex-col items-center gap-3 pb-6 mb-6"
@@ -49,7 +74,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 {{ sec.initials }}
               </div>
               <div class="text-center">
-                <p class="text-base font-semibold text-text-primary">{{ sec.nombre }}</p>
+                <p class="font-semibold text-text-primary">{{ sec.nombre }}</p>
                 <a [href]="'mailto:' + sec.email" class="text-sm text-brand no-underline">
                   {{ sec.email }}
                 </a>
@@ -161,9 +186,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 Editar secretaria
               </button>
             </div>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+          </ng-template>
+        </app-drawer-content-loader>
+      </app-drawer-form>
     }
   `,
   styles: `

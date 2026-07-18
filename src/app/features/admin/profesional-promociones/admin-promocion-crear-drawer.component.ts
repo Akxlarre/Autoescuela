@@ -115,19 +115,48 @@ function generatePromoName(startIso: string): string {
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-5">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <!-- Fecha de inicio: header + grid de chips (lunes) -->
+            <section>
+              <app-skeleton-block variant="text" width="35%" height="16px" />
+              <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-3 mb-3">
+                @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+                  <app-skeleton-block variant="rect" width="100%" height="52px" />
+                }
+              </div>
+              <app-skeleton-block variant="text" width="70%" height="12px" />
+            </section>
+
+            <!-- Cursos y asignación de relatores: header + subtítulo + N cards -->
+            <section>
+              <app-skeleton-block variant="text" width="55%" height="16px" />
+              <div class="mt-1 mb-3">
+                <app-skeleton-block variant="text" width="80%" height="12px" />
+              </div>
+              <div class="flex flex-col gap-3">
+                @for (i of [1, 2, 3, 4]; track i) {
+                  <div class="rounded-lg p-4 border border-border-subtle">
+                    <div class="flex items-center gap-3 mb-3">
+                      <app-skeleton-block variant="text" width="26px" height="20px" />
+                      <app-skeleton-block variant="text" width="35%" height="16px" />
+                    </div>
+                    <app-skeleton-block variant="text" width="30%" height="12px" />
+                    <div class="mt-2">
+                      <app-skeleton-block variant="rect" width="100%" height="40px" />
+                    </div>
+                  </div>
+                }
+              </div>
+            </section>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- ── Fecha de inicio (primero — determina nombre y código) ───── -->
           <section>
-            <h3 class="text-base font-semibold mb-3 text-text-primary">
+            <h3 class="font-semibold mb-3 text-text-primary">
               <app-icon name="calendar" [size]="16" color="var(--ds-brand)" />
               Fecha de inicio *
             </h3>
@@ -221,7 +250,7 @@ function generatePromoName(startIso: string): string {
                 >
                   <div class="flex items-center gap-3 mb-3">
                     <span
-                      class="inline-flex items-center justify-center min-w-[26px] px-1.5 py-0.5 rounded text-2xs font-bold text-white"
+                      class="inline-flex items-center justify-center min-w-6.5 px-1.5 py-0.5 rounded text-2xs font-bold text-white"
                       [style.background]="courseColor(curso.code)"
                     >
                       {{ curso.code }}
@@ -286,28 +315,27 @@ function generatePromoName(startIso: string): string {
               <li>Si un feriado cae en inicio, la promoción se marca como iniciada igualmente</li>
             </ul>
           </section>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- ── Acciones ──────────────────────────────────────────────────── -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              class="btn-secondary"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-crear-promocion"
-            >
-              Cancelar
-            </button>
-            <app-async-btn
-              label="Crear promoción"
-              icon="plus"
-              [loading]="facade.isSubmitting()"
-              [disabled]="!canSubmit()"
-              (click)="submit()"
-              data-llm-action="submit-crear-promocion"
-            />
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          class="btn-secondary"
+          (click)="layoutDrawer.close()"
+          data-llm-action="cancelar-crear-promocion"
+        >
+          Cancelar
+        </button>
+        <app-async-btn
+          label="Crear promoción"
+          icon="plus"
+          [loading]="facade.isSubmitting()"
+          [disabled]="!canSubmit()"
+          (click)="submit()"
+          data-llm-action="submit-crear-promocion"
+        />
+      </ng-container>
+    </app-drawer-form>
   `,
   styles: `
     .form-input {

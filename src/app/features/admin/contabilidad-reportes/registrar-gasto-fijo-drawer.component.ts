@@ -32,18 +32,34 @@ import {
     SkeletonBlockComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4 p-5">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-        </div>
-      </ng-template>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5 p-5">
+            <!-- Categoría (label + select) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Descripción (label + input) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Monto (label + input) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Fecha (label + date input) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="20%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+          </div>
+        </ng-template>
 
-      <ng-template #content>
-        <app-drawer-form>
+        <ng-template #content>
           <!-- Cuerpo del formulario -->
           <form [formGroup]="form" class="flex flex-col gap-5" (ngSubmit)="onGuardar()">
             <!-- Categoría -->
@@ -145,37 +161,37 @@ import {
               </div>
             }
           </form>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Footer fijo -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              type="button"
-              class="btn-secondary cursor-pointer"
-              [disabled]="isSaving()"
-              data-llm-action="cancelar-gasto-fijo"
-              (click)="onCerrar()"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              class="btn-primary flex items-center gap-2 cursor-pointer"
-              [disabled]="form.invalid || isSaving()"
-              data-llm-action="guardar-gasto-fijo"
-              (click)="onGuardar()"
-            >
-              @if (isSaving()) {
-                <app-icon name="loader" [size]="16" class="animate-spin" />
-                Guardando...
-              } @else {
-                <app-icon name="save" [size]="16" />
-                Guardar Gasto
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <!-- Footer fijo -->
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          type="button"
+          class="btn-secondary cursor-pointer"
+          [disabled]="isSaving()"
+          data-llm-action="cancelar-gasto-fijo"
+          (click)="onCerrar()"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn-primary flex items-center gap-2 cursor-pointer"
+          [disabled]="form.invalid || isSaving()"
+          data-llm-action="guardar-gasto-fijo"
+          (click)="onGuardar()"
+        >
+          @if (isSaving()) {
+            <app-icon name="loader" [size]="16" class="animate-spin" />
+            Guardando...
+          } @else {
+            <app-icon name="save" [size]="16" />
+            Guardar Gasto
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class RegistrarGastoFijoDrawerComponent {

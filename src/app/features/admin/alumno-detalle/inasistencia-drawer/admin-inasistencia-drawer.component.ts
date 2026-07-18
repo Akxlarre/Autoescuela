@@ -29,10 +29,40 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       <app-drawer-content-loader>
         <ng-template #skeletons>
           <div class="flex flex-col gap-6 w-full">
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
+            <!-- Info Alumno -->
+            <div
+              class="flex items-center gap-3 p-3 rounded-xl bg-elevated border border-border-default"
+            >
+              <app-skeleton-block variant="circle" width="40px" height="40px" class="shrink-0" />
+              <div class="flex flex-col gap-1.5 flex-1">
+                <app-skeleton-block variant="text" width="55%" height="14px" />
+                <app-skeleton-block variant="text" width="35%" height="12px" />
+              </div>
+            </div>
+
+            <!-- Fecha de inasistencia -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="45%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+
+            <!-- Tipo de justificación -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="40%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+
+            <!-- Descripción / Motivo -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="80px" />
+            </div>
+
+            <!-- Documento de respaldo -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="35%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="100px" />
+            </div>
           </div>
         </ng-template>
 

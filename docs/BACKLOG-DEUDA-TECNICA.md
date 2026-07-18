@@ -3,33 +3,33 @@
 > Lista viva de pendientes detectados en la auditoría de botones/badges (jul-2026) y el
 > saneamiento de semáforos que siguió. **No es un track SDD** — es un backlog de referencia;
 > cada ítem se convierte en su propio `/fix-new` o `/spec-new` cuando se ataca (mismo patrón
-> que fix-031/032/033). Tachar o mover a "Hecho" cuando se cierre, con el ID del track.
+> que fix-031-m/032/033). Tachar o mover a "Hecho" cuando se cierre, con el ID del track.
 
 ## Roadmap de botones/badges — Fases 4 y 5
 
 Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17, token
-`text-2xs`) **ya están cerradas** — fix-031, fix-032. Ver `indices/ANTI-PATTERNS.md`
+`text-2xs`) **ya están cerradas** — fix-031-m, fix-032-m. Ver `indices/ANTI-PATTERNS.md`
 (AP-012 a AP-015) y `scripts/lib/class-discipline.baseline.json`.
 
 ### Fase 4 — Consolidar `app-badge`
-- [x] **fix-036 (2026-07-08)** — Auditar variants `info`/`default` + resolver fuente única:
+- [x] **fix-036-m (2026-07-08)** — Auditar variants `info`/`default` + resolver fuente única:
       `app-badge` ahora consume `badge-*` (que a su vez consume los tokens `--badge-radius`/
       `--badge-padding-*` de Capa 4, antes huérfanos). `info` = `--state-info` (azul, no
       marca). `default`/`neutral` fusionados en un solo variant `neutral`; nueva utilidad
       `badge-neutral`. Bug real encontrado y corregido: `'badge-' + variant()` no generaba
       CSS (Tailwind v4 poda `@utility` por contenido escaneado) — usar `computed()`+`switch`
       con strings literales, NUNCA concatenación dinámica. Ver `indices/STYLES.md`.
-- [x] **fix-038 (2026-07-08)** — 6º variant `brand` agregado a `app-badge` (utilidad
+- [x] **fix-038-m (2026-07-08)** — 6º variant `brand` agregado a `app-badge` (utilidad
       `badge-brand`, tokens `--ds-brand`/`--color-primary-muted`/`--accent-border`).
       Desbloquea la categoría 2 (chips de rol/marca) para migración.
-- [x] **fix-039 (2026-07-08)** — Migrado `ajustes-drawer.component.ts` (4 pills, en
+- [x] **fix-039-m (2026-07-08)** — Migrado `ajustes-drawer.component.ts` (4 pills, en
       realidad 1 badge de rol con 4 ramas mutuamente excluyentes → colapsado en un solo
       `<app-badge>` con variant/ícono/label derivados del rol; admin usa `variant="brand"`).
-- [x] **fix-040 (2026-07-08)** — Migrado `certificacion-clase-b-content.component.ts`
+- [x] **fix-040-m (2026-07-08)** — Migrado `certificacion-clase-b-content.component.ts`
       (4 pills: chip "curso" → `brand`, estado certificado → success/warning, log de
       acción dinámico de 4 casos → success/**brand**/info/neutral. Confirmado en
-      producción: `email_sent` → `badge-brand`, el caso exacto que motivó fix-038).
-- [x] **fix-042 (2026-07-08)** — Lote 1 semi-automatizado: 30 pills **estáticos**
+      producción: `email_sent` → `badge-brand`, el caso exacto que motivó fix-038-m).
+- [x] **fix-042-m (2026-07-08)** — Lote 1 semi-automatizado: 30 pills **estáticos**
       (sin lógica dinámica, clase `text-{variant}` literal) migrados en 24 archivos vía
       codemod ad-hoc (matcher de spans + inserción de import/registro, `--dry` antes de
       aplicar, Prettier después). Cambio de ritmo tras detectar que 1-fix-por-archivo era
@@ -37,7 +37,7 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       riesgo: harness CSS de los 4 variants + build + 1 página real, no Playwright completo
       por archivo (justificado porque `badge-*` ya está probado 3x y el riesgo aquí es solo
       "mapeo de clase→variant", verificable por lectura de código).
-- [x] **fix-043 (2026-07-09)** — Lote 2: 13 archivos migrados (22 pills dinámicos, vía
+- [x] **fix-043-m (2026-07-09)** — Lote 2: 13 archivos migrados (22 pills dinámicos, vía
       helpers `getXVariant()` reemplazando `getXBg()`/`getXColor()`), 3 archivos revisados y
       excluidos con justificación documentada (`public-context-banner`, `tabs.component`,
       `alumnos-list-content` sin tocar por sesión paralela activa). Hallazgos: (a) 3 falsos
@@ -50,20 +50,20 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       ~50 páginas de blast radius) verificado con Playwright real además de harness — chip
       modo full/hero queda fuera de scope (fondo fijo semi-transparente sobre `.surface-hero`,
       no semántico por diseño). Baseline: 77→51 pills, 49→43 archivos.
-- [x] **fix-044 (2026-07-09)** — Lote 3: 15 archivos migrados (16 pills), 12 archivos
+- [x] **fix-044-m (2026-07-09)** — Lote 3: 15 archivos migrados (16 pills), 12 archivos
       revisados y excluidos con justificación documentada. Hallazgos: (a) 2 bugs latentes
       más corregidos como efecto colateral de la migración — `alumno-pagos.component.ts`
       usaba `var(--color-success-muted)`/`var(--color-warning-muted)` (tokens inexistentes,
       pill renderizaba sin fondo/color) y `certificacion-profesional-content.component.ts`
       usaba `var(--bg-brand-muted)` sin fallback (declaración inválida para `email_sent`,
-      mismo patrón que motivó fix-038); (b) tercera ocurrencia del bug `--color-purple` del
+      mismo patrón que motivó fix-038-m); (b) tercera ocurrencia del bug `--color-purple` del
       pill "tipo" SENCE/Particular, ahora confirmado en 3 archivos de contabilidad-cursos
       (`admin-contabilidad-cursos`, `admin-curso-singular-detalle-drawer`,
       `admin-curso-singular-cobro-drawer`) — requiere decisión de diseño, no forzado; (c) 3
       archivos tenían una migración a medias (rama `@if` "Activo" ya usaba `<app-badge>`,
       rama `@else` "Inactivo" seguía con `<span>` suelto) — completados; (d)
       `vehicle-documents-drawer.component.ts` era la fuente de la colisión accidental
-      documentada en fix-036 (`[class.badge-success]` ya funcionaba por casualidad) —
+      documentada en fix-036-m (`[class.badge-success]` ya funcionaba por casualidad) —
       consolidado a `<app-badge>` limpio; (e) nueva categoría de exclusión encontrada:
       `bg-brand-muted`/`bg-brand-tint` con texto/borde neutro (no `text-brand`), combinación
       que `badge-brand` no puede replicar sin cambiar el color del texto (3 archivos:
@@ -81,7 +81,7 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
       `tabs.component.ts`) no es un badge de estado — ¿merece su propia utilidad `.tab-count`
       o se dejan como excepción documentada del heurístico ARCH-15?
 - [ ] Refinar heurístico ARCH-15 para excluir `<button>` con `(click)` — van 6 falsos
-      positivos confirmados entre fix-043/044 (filtros/acciones que visualmente parecen
+      positivos confirmados entre fix-043-m/044 (filtros/acciones que visualmente parecen
       pills pero son controles interactivos, no badges de estado)
 - [ ] Modificador componible `btn-sm` (NO crear `btn-primary-sm`/`btn-danger-sm`/… por tipo —
       explosión combinatoria) para los casos hoy resueltos mutilando `btn-*` con utilities
@@ -125,6 +125,6 @@ Fases 1-3 (tokens dark-mode `btn-danger`/`btn-neutral`, guardrails ARCH-15/16/17
 
 ## Administrativo
 
-- [ ] Push + PR de la rama `feat/ds-tokens-guardrails` (6 commits: fix-031 tokens danger/neutral,
-      guardrails fase 2 ARCH-15/16/17, fix-032 text-2xs, semáforos verdes ARCH-02/03 + test:ci
-      1209/1209, fix-033 revertir alias + ARCH-18, sync de índices)
+- [ ] Push + PR de la rama `feat/ds-tokens-guardrails` (6 commits: fix-031-m tokens danger/neutral,
+      guardrails fase 2 ARCH-15/16/17, fix-032-m text-2xs, semáforos verdes ARCH-02/03 + test:ci
+      1209/1209, fix-033-m revertir alias + ARCH-18, sync de índices)

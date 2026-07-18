@@ -18,11 +18,16 @@ import type { RelatorTableRow } from '@core/models/ui/relator-table.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { ButtonModule } from 'primeng/button';
+import { TooltipModule } from 'primeng/tooltip';
 import { AdminRelatorCrearDrawerComponent } from './admin-relator-crear-drawer.component';
 import { AdminRelatorVerDrawerComponent } from './admin-relator-ver-drawer.component';
 import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer.component';
@@ -34,14 +39,19 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
   imports: [
     FormsModule,
     SelectModule,
+    TableModule,
+    TagModule,
+    ButtonModule,
+    TooltipModule,
     SectionHeroComponent,
     IconComponent,
+    EmptyStateComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -54,231 +64,298 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- ── Main Content ───────────────────────────────────────────────────── -->
-      <!-- ── Main Content ───────────────────────────────────────────────────── -->
-      <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col min-h-100 overflow-hidden" appCardHover>
-          <div
-            class="p-4 lg:px-6 lg:py-4 flex flex-col gap-4 border-b border-border-muted bg-surface"
-          >
-            <div class="flex items-center justify-between">
-              <h2 class="font-semibold text-text-primary">Lista de Relatores</h2>
-              <span class="text-xs text-text-muted">
-                {{ filteredRelatores().length }} relatores encontrados
-              </span>
-            </div>
-
-            <!-- ── Barra de búsqueda + filtros (Integrada como Toolbar) ── -->
-            <div class="flex flex-col xl:flex-row gap-3 w-full">
-              <!-- Input de búsqueda -->
-              <div class="relative flex-1">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <app-icon name="search" [size]="16" color="var(--text-muted)" />
-                </div>
-                <input
-                  type="search"
-                  placeholder="Buscar por nombre, rut o especialidad..."
-                  class="w-full text-sm pl-10 pr-4 py-2.5 rounded-lg transition-colors focus:outline-none bg-base hover:border-text-muted focus:border-brand border border-border-muted text-text-primary"
-                  [ngModel]="searchTerm()"
-                  (ngModelChange)="searchTerm.set($event)"
-                  (input)="currentPage.set(1)"
-                />
-              </div>
-
-              <div class="flex flex-col sm:flex-row gap-3">
-                <p-select
-                  [options]="especialidadOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Todas las especialidades"
-                  [ngModel]="filtroEspecialidad()"
-                  (ngModelChange)="filtroEspecialidad.set($event); currentPage.set(1)"
-                  styleClass="w-full sm:w-56"
-                  data-llm-description="filter lecturers by specialty"
-                />
-                <p-select
-                  [options]="estadoOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Todos los estados"
-                  [ngModel]="filtroEstado()"
-                  (ngModelChange)="filtroEstado.set($event); currentPage.set(1)"
-                  styleClass="w-full sm:w-44"
-                  data-llm-description="filter lecturers by status"
-                />
-              </div>
-            </div>
+      <!-- ── Tabla / Tarjetas (Dual-Viewport) ─────────────────────────────── -->
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col w-full h-full dual-viewport-container"
+        appCardHover
+      >
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
+          <div class="relative flex-1 min-w-52 max-w-xs">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
+            />
+            <input
+              type="search"
+              placeholder="Buscar por nombre, rut o especialidad..."
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="searchTerm.set($event)"
+              data-llm-description="Search lecturers by name, RUT or specialty"
+            />
           </div>
 
-          <div class="p-6">
-            @if (facade.isLoading()) {
-              <div class="bento-grid">
-                @for (_ of [1, 2, 3, 4, 5, 6]; track $index) {
-                  <div
-                    class="p-4 rounded-xl border border-(--border-subtle) bento-wide"
-                    data-col-span="4"
-                  >
-                    <div class="flex items-center gap-3 mb-4">
-                      <app-skeleton-block variant="circle" width="40px" height="40px" />
-                      <div class="flex-1 flex flex-col gap-2">
-                        <app-skeleton-block variant="text" width="120px" height="13px" />
-                        <app-skeleton-block variant="text" width="80px" height="11px" />
-                      </div>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      <app-skeleton-block variant="rect" width="30px" height="18px" />
-                      <app-skeleton-block variant="rect" width="30px" height="18px" />
-                    </div>
-                  </div>
-                }
-              </div>
-            } @else if (paginatedRelatores().length === 0) {
-              <div class="flex-1 flex flex-col items-center justify-center py-14 text-center">
-                <app-icon name="users" [size]="40" color="var(--text-muted)" class="mb-3" />
-                <p class="text-sm font-medium text-text-primary">No se encontraron relatores</p>
-                <p class="text-xs mt-1 mb-4 text-text-muted">
-                  Intenta cambiar los términos de búsqueda o filtros.
-                </p>
-                <button
-                  class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-brand bg-brand/8"
-                  (click)="limpiarFiltros()"
-                  data-llm-action="limpiar-filtros-relatores"
-                >
-                  <app-icon name="filter-x" [size]="16" />
-                  Limpiar Filtros
-                </button>
-              </div>
-            } @else {
-              <div class="bento-grid">
-                @for (rel of paginatedRelatores(); track rel.id) {
-                  <div
-                    class="relator-card p-4 rounded-xl border border-(--border-subtle) relative bento-wide"
-                    data-col-span="4"
-                  >
-                    <!-- Status Badge -->
-                    <div class="absolute top-4 right-4">
-                      @if (rel.estado === 'activo') {
-                        <span class="flex w-2 h-2 rounded-full bg-success" title="Activo"></span>
-                      } @else {
-                        <span
-                          class="flex w-2 h-2 rounded-full bg-text-muted"
-                          title="Inactivo"
-                        ></span>
-                      }
-                    </div>
+          <p-select
+            [options]="especialidadOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Todas las especialidades"
+            [ngModel]="filtroEspecialidad()"
+            (ngModelChange)="filtroEspecialidad.set($event)"
+            class="h-9"
+            data-llm-description="filter lecturers by specialty"
+          />
+          <p-select
+            [options]="estadoOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Todos los estados"
+            [ngModel]="filtroEstado()"
+            (ngModelChange)="filtroEstado.set($event)"
+            class="h-9"
+            data-llm-description="filter lecturers by status"
+          />
 
-                    <div class="flex items-start gap-3 mb-4">
-                      <!-- Avatar -->
+          <span class="text-xs text-text-muted ml-auto">
+            {{ filteredRelatores().length }} relatores encontrados
+          </span>
+        </div>
+
+        <!-- Contenido -->
+        @if (facade.isLoading()) {
+          <!-- VISTA Desktop: Tabla skeleton (oculta cuando se comprime) -->
+          <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full p-4">
+            <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+              <app-skeleton-block variant="text" width="24%" height="11px" />
+              <app-skeleton-block variant="text" width="14%" height="11px" />
+              <app-skeleton-block variant="text" width="18%" height="11px" />
+              <app-skeleton-block variant="text" width="14%" height="11px" />
+              <app-skeleton-block variant="text" width="10%" height="11px" />
+            </div>
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                <div class="flex items-center gap-3 w-[24%]">
+                  <app-skeleton-block variant="circle" width="36px" height="36px" />
+                  <div class="flex flex-col gap-1.5 flex-1">
+                    <app-skeleton-block variant="text" width="75%" height="12px" />
+                    <app-skeleton-block variant="text" width="45%" height="10px" />
+                  </div>
+                </div>
+                <app-skeleton-block variant="rect" width="60px" height="20px" />
+                <app-skeleton-block variant="text" width="18%" height="12px" />
+                <app-skeleton-block variant="rect" width="64px" height="20px" />
+                <div class="flex items-center gap-1 ml-auto">
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                  <app-skeleton-block variant="circle" width="28px" height="28px" />
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- VISTA Mobile: Tarjetas skeleton (visible cuando se comprime) -->
+          <div class="mobile-view show-on-squeeze p-4 space-y-4">
+            @for (card of [1, 2, 3]; track card) {
+              <div class="bg-base border border-border-subtle rounded-xl p-4 space-y-4">
+                <div class="flex items-center gap-3">
+                  <app-skeleton-block variant="circle" width="36px" height="36px" />
+                  <div class="flex flex-col gap-1.5 flex-1">
+                    <app-skeleton-block variant="text" width="70%" height="13px" />
+                    <app-skeleton-block variant="text" width="45%" height="10px" />
+                  </div>
+                  <app-skeleton-block variant="rect" width="60px" height="20px" />
+                </div>
+                <div class="flex gap-1.5">
+                  <app-skeleton-block variant="rect" width="30px" height="18px" />
+                  <app-skeleton-block variant="rect" width="30px" height="18px" />
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <!-- VISTA Desktop: Tabla clásica (oculta cuando se comprime) -->
+          <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+            <p-table
+              [value]="filteredRelatores()"
+              [rows]="10"
+              [paginator]="true"
+              [scrollable]="true"
+              scrollHeight="flex"
+              styleClass="p-datatable-sm h-full flex flex-col"
+              [showCurrentPageReport]="true"
+              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} relatores"
+            >
+              <ng-template pTemplate="header">
+                <tr
+                  class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
+                >
+                  <th class="pl-6 py-4">Relator</th>
+                  <th>Especialidades</th>
+                  <th>WhatsApp</th>
+                  <th>Estado</th>
+                  <th class="pr-6 text-right">Acciones</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-rel>
+                <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
+                  <!-- Relator -->
+                  <td class="pl-6 py-4">
+                    <div class="flex items-center gap-3">
                       <div
-                        class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 text-xs font-bold bg-brand-tint text-brand"
+                        class="w-9 h-9 rounded-full bg-brand-tint text-brand flex items-center justify-center text-xs font-bold shrink-0"
                       >
                         {{ rel.initials }}
                       </div>
-
-                      <div class="flex-1 min-w-0">
-                        <h3 class="text-sm font-semibold truncate text-text-primary">
-                          {{ rel.nombre }}
-                        </h3>
-                        <p class="text-xs text-text-muted">{{ rel.rut }}</p>
+                      <div class="flex flex-col min-w-0">
+                        <span class="font-bold text-sm text-text-primary truncate">{{
+                          rel.nombre
+                        }}</span>
+                        <span class="text-xs text-text-muted">{{ rel.rut }}</span>
                       </div>
                     </div>
-
-                    <!-- Especialidades -->
-                    <div class="flex flex-wrap gap-1.5 mb-4 max-h-12.5 overflow-hidden">
+                  </td>
+                  <!-- Especialidades -->
+                  <td>
+                    <div class="flex flex-wrap gap-1.5">
                       @for (spec of rel.specializations; track spec) {
                         <span class="spec-badge" [style.background]="getSpecColor(spec)">
                           {{ spec }}
                         </span>
                       }
                     </div>
+                  </td>
+                  <!-- WhatsApp -->
+                  <td class="text-xs font-medium text-text-secondary">
+                    {{ rel.phone || '—' }}
+                  </td>
+                  <!-- Estado -->
+                  <td>
+                    <p-tag
+                      [value]="rel.estado === 'activo' ? 'Activo' : 'Inactivo'"
+                      [severity]="rel.estado === 'activo' ? 'success' : 'secondary'"
+                      styleClass="text-xs font-bold px-2 py-0.5"
+                    ></p-tag>
+                  </td>
+                  <!-- Acciones -->
+                  <td class="pr-6 text-right">
+                    <div class="inline-flex items-center justify-end gap-0.5">
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        pTooltip="Ver detalle"
+                        (click)="openVerDrawer(rel)"
+                        data-llm-action="ver-relator"
+                      >
+                        <app-icon name="eye" [size]="16" />
+                      </button>
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                        pTooltip="Editar relator"
+                        (click)="openEditarDrawer(rel)"
+                        data-llm-action="editar-relator"
+                      >
+                        <app-icon name="edit" [size]="16" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="emptymessage">
+                <tr>
+                  <td colspan="5" class="p-0">
+                    <app-empty-state
+                      icon="users"
+                      message="No se encontraron relatores"
+                      subtitle="Intenta cambiar los términos de búsqueda o filtros."
+                      actionLabel="Limpiar Filtros"
+                      actionIcon="filter-x"
+                      (action)="limpiarFiltros()"
+                    />
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
 
-                    <!-- Footer Acciones -->
+          <!-- VISTA Mobile: Tarjetas apiladas (visible cuando se comprime) -->
+          <div class="mobile-view show-on-squeeze p-4 space-y-4 overflow-y-auto">
+            @for (rel of filteredRelatores(); track rel.id) {
+              <div
+                class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm hover:border-brand hover:-translate-y-0.5 transition-all"
+              >
+                <div
+                  class="p-4 border-b border-border-subtle flex items-center justify-between gap-3 bg-subtle"
+                >
+                  <div class="flex items-center gap-3 min-w-0">
                     <div
-                      class="flex items-center justify-between pt-3"
-                      style="border-top: 1px dashed var(--border-subtle)"
+                      class="w-9 h-9 rounded-full bg-brand-tint text-brand flex items-center justify-center text-xs font-bold shrink-0"
                     >
-                      <div class="flex items-center gap-3">
-                        <div class="flex flex-col">
-                          <span class="text-2xs uppercase font-bold text-text-muted"
-                            >WhatsApp</span
-                          >
-                          <span class="text-xs font-medium text-text-primary">{{
-                            rel.phone || '—'
-                          }}</span>
-                        </div>
-                      </div>
-
-                      <div class="flex items-center gap-1">
-                        <button
-                          class="action-btn"
-                          title="Ver detalle"
-                          (click)="openVerDrawer(rel)"
-                          data-llm-action="ver-relator"
-                        >
-                          <app-icon name="eye" [size]="15" />
-                        </button>
-                        <button
-                          class="action-btn"
-                          title="Editar relator"
-                          (click)="openEditarDrawer(rel)"
-                          data-llm-action="editar-relator"
-                        >
-                          <app-icon name="edit" [size]="15" />
-                        </button>
-                      </div>
+                      {{ rel.initials }}
+                    </div>
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-sm font-bold text-text-primary truncate">{{
+                        rel.nombre
+                      }}</span>
+                      <span class="text-xs text-text-muted truncate">{{ rel.rut }}</span>
                     </div>
                   </div>
-                }
-              </div>
-            }
+                  <p-tag
+                    [value]="rel.estado === 'activo' ? 'Activo' : 'Inactivo'"
+                    [severity]="rel.estado === 'activo' ? 'success' : 'secondary'"
+                    styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                  ></p-tag>
+                </div>
 
-            <!-- Paginación -->
-            @if (!facade.isLoading() && filteredRelatores().length > 0) {
-              <div
-                class="flex items-center justify-between mt-6 pt-6"
-                style="border-top: 1px solid var(--border-subtle);"
-              >
-                <p class="text-xs text-text-muted">
-                  Mostrando {{ paginationStart() }}-{{ paginationEnd() }} de
-                  {{ filteredRelatores().length }} relatores
-                </p>
-                <div class="flex flex-wrap items-center justify-end gap-2">
+                <div class="p-4 grid grid-cols-2 gap-4 text-xs">
+                  <div class="flex flex-col">
+                    <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                      >Especialidades</span
+                    >
+                    <div class="flex flex-wrap gap-1.5">
+                      @for (spec of rel.specializations; track spec) {
+                        <span class="spec-badge" [style.background]="getSpecColor(spec)">
+                          {{ spec }}
+                        </span>
+                      } @empty {
+                        <span class="text-text-muted">—</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-text-muted mb-0.5 uppercase tracking-tighter font-bold"
+                      >WhatsApp</span
+                    >
+                    <span>{{ rel.phone || '—' }}</span>
+                  </div>
+                </div>
+
+                <div class="p-2 border-t border-border-subtle flex justify-end gap-1">
                   <button
-                    class="pagination-btn"
-                    [disabled]="currentPage() === 1"
-                    (click)="currentPage.set(currentPage() - 1)"
-                    data-llm-action="pagina-anterior-relatores"
+                    class="action-btn"
+                    (click)="openVerDrawer(rel)"
+                    pTooltip="Ver detalle"
+                    data-llm-action="ver-relator"
                   >
-                    Anterior
+                    <app-icon name="eye" [size]="16" />
                   </button>
                   <button
-                    class="pagination-btn"
-                    [disabled]="currentPage() >= totalPages()"
-                    (click)="currentPage.set(currentPage() + 1)"
-                    data-llm-action="pagina-siguiente-relatores"
+                    class="action-btn"
+                    (click)="openEditarDrawer(rel)"
+                    pTooltip="Editar relator"
+                    data-llm-action="editar-relator"
                   >
-                    Siguiente
+                    <app-icon name="edit" [size]="16" />
                   </button>
                 </div>
               </div>
+            } @empty {
+              <app-empty-state
+                icon="users"
+                message="No se encontraron relatores"
+                subtitle="Intenta cambiar los términos de búsqueda o filtros."
+                actionLabel="Limpiar Filtros"
+                actionIcon="filter-x"
+                (action)="limpiarFiltros()"
+              />
             }
           </div>
-        </div>
+        }
       </div>
     </div>
   `,
   styles: `
-    .relator-card {
-      background: var(--bg-base);
-      transition: all var(--duration-fast);
-      cursor: default;
-    }
-    .relator-card:hover {
-      border-color: var(--ds-brand);
-      box-shadow: var(--shadow-sm);
-      transform: translateY(-2px);
-    }
-
     .spec-badge {
       display: inline-flex;
       align-items: center;
@@ -309,24 +386,23 @@ import { AdminRelatorEditarDrawerComponent } from './admin-relator-editar-drawer
       color: var(--text-primary);
     }
 
-    .pagination-btn {
-      padding: 6px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border-default);
-      background: var(--bg-base);
-      color: var(--text-secondary);
-      font-size: var(--text-sm);
-      font-family: inherit;
-      cursor: pointer;
-      transition: all var(--duration-fast);
+    /* Container Queries para Dual-Viewport Render */
+    .dual-viewport-container {
+      container-type: inline-size;
+      container-name: relatorContainer;
     }
-    .pagination-btn:hover:not(:disabled) {
-      border-color: var(--ds-brand);
-      color: var(--ds-brand);
+
+    .show-on-squeeze {
+      display: none;
     }
-    .pagination-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+
+    @container relatorContainer (max-width: 850px) {
+      .hide-on-squeeze {
+        display: none !important;
+      }
+      .show-on-squeeze {
+        display: block !important;
+      }
     }
   `,
 })
@@ -392,8 +468,6 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
     { label: 'Activo', value: 'activo' },
     { label: 'Inactivo', value: 'inactivo' },
   ];
-  protected readonly currentPage = signal(1);
-  private readonly pageSize = 9;
 
   // ── Lista filtrada ─────────────────────────────────────────────────────────
   protected readonly filteredRelatores = computed<RelatorTableRow[]>(() => {
@@ -423,24 +497,7 @@ export class AdminProfesionalRelatoresComponent implements OnInit, OnDestroy, Af
     this.searchTerm.set('');
     this.filtroEspecialidad.set(null);
     this.filtroEstado.set(null);
-    this.currentPage.set(1);
   }
-
-  // ── Paginación ─────────────────────────────────────────────────────────────
-  protected readonly totalPages = computed(() =>
-    Math.max(1, Math.ceil(this.filteredRelatores().length / this.pageSize)),
-  );
-
-  protected readonly paginatedRelatores = computed<RelatorTableRow[]>(() => {
-    const start = (this.currentPage() - 1) * this.pageSize;
-    return this.filteredRelatores().slice(start, start + this.pageSize);
-  });
-
-  protected readonly paginationStart = computed(() => (this.currentPage() - 1) * this.pageSize + 1);
-
-  protected readonly paginationEnd = computed(() =>
-    Math.min(this.currentPage() * this.pageSize, this.filteredRelatores().length),
-  );
 
   protected getSpecColor(spec: string): string {
     const colors: Record<string, string> = {
