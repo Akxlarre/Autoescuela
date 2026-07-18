@@ -27,6 +27,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { CiclosTeoricosContentComponent } from '@shared/components/ciclos-teoricos-content/ciclos-teoricos-content.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import type {
   AlertaFaltaConsecutiva,
   AsistenciaClaseBKpis,
@@ -77,6 +78,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
     ModalOverlayDirective,
     DateInputComponent,
     CiclosTeoricosContentComponent,
+    EmptyStateComponent,
   ],
   template: `
     <!-- Modo dual (spec 0030/0031): fill-screen en AMBOS tabs (3 filas fijas:
@@ -397,9 +399,11 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 }
               </div>
             } @else if (filteredPracticas().length === 0) {
-              <p class="text-sm text-text-secondary text-center py-6">
-                No hay registros que coincidan con los filtros seleccionados.
-              </p>
+              <app-empty-state
+                icon="calendar-x"
+                message="Sin resultados"
+                subtitle="No hay registros que coincidan con los filtros seleccionados."
+              />
             } @else {
               <!-- Único contenedor de scroll (X siempre; Y solo surte efecto en
                    desktop fill, donde la celda tiene alto fijo). thead sticky
@@ -563,13 +567,16 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               </button>
                             }
                             @if (row.justificacion) {
-                              <span
-                                class="text-xs italic truncate max-w-40 text-text-muted"
+                              <button
+                                class="btn-ghost text-xs px-2 py-1 flex items-center gap-1"
                                 [pTooltip]="row.justificacion"
                                 tooltipPosition="top"
+                                data-llm-action="view-justification"
+                                (click)="openViewMotivo(row.justificacion)"
                               >
-                                {{ row.justificacion }}
-                              </span>
+                                <app-icon name="info" [size]="14" />
+                                Ver motivo
+                              </button>
                             }
                             @if (row.status === 'presente') {
                               <span class="text-xs font-medium text-success">
@@ -684,6 +691,47 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         </div>
       }
     </div>
+    
+    <!-- Modal para ver el motivo de justificación -->
+    <div [appModalOverlay]="viewMotivoModalOpen()">
+      @if (viewMotivoModalOpen()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          (click)="closeViewMotivo()"
+          (document:keydown.escape)="closeViewMotivo()"
+        >
+          <div
+            class="surface-glass rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+            (click)="$event.stopPropagation()"
+            appAnimateIn
+          >
+            <div class="flex items-center justify-between border-b border-border-subtle pb-3">
+              <h3 class="font-semibold text-text-primary flex items-center gap-2">
+                <app-icon name="info" [size]="18" class="text-brand" />
+                Motivo de Justificación
+              </h3>
+              <button
+                class="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                aria-label="Cerrar"
+                (click)="closeViewMotivo()"
+              >
+                <app-icon name="x" [size]="18" />
+              </button>
+            </div>
+            <div class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap">
+              {{ viewMotivoText() }}
+            </div>
+            <div class="flex justify-end pt-2">
+              <button class="btn-secondary text-sm px-4 py-2 cursor-pointer" (click)="closeViewMotivo()">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
   `,
 })
 export class AsistenciaClaseBContentComponent implements AfterViewInit {
@@ -777,6 +825,9 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
   protected readonly justifyModalOpen = signal(false);
   protected readonly justifySessionId = signal<number | null>(null);
   protected readonly justifyReason = signal('');
+
+  protected readonly viewMotivoModalOpen = signal(false);
+  protected readonly viewMotivoText = signal('');
 
   // ── Hero actions ─────────────────────────────────────────────────────────────
   protected readonly heroActions: SectionHeroAction[] = [
@@ -1015,6 +1066,16 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     this.justifyModalOpen.set(false);
     this.justifySessionId.set(null);
     this.justifyReason.set('');
+  }
+  
+  protected openViewMotivo(motivo: string): void {
+    this.viewMotivoText.set(motivo);
+    this.viewMotivoModalOpen.set(true);
+  }
+  
+  protected closeViewMotivo(): void {
+    this.viewMotivoModalOpen.set(false);
+    this.viewMotivoText.set('');
   }
 
   protected submitJustification(): void {

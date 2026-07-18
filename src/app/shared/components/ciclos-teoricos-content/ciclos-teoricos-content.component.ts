@@ -13,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
@@ -47,6 +48,7 @@ import type {
     IconComponent,
     BadgeComponent,
     SkeletonBlockComponent,
+    EmptyStateComponent,
     CardHoverDirective,
     AnimateInDirective,
     ModalOverlayDirective,
@@ -219,9 +221,11 @@ import type {
                   }
                 </div>
               } @else if (selectedCycleId() === null) {
-                <p class="text-sm text-text-secondary text-center py-8">
-                  Selecciona un ciclo para ver sus clases.
-                </p>
+                <app-empty-state
+                  icon="monitor-play"
+                  message="Sin ciclo seleccionado"
+                  subtitle="Selecciona un ciclo para ver sus clases."
+                />
               } @else {
                 @for (clase of clases(); track clase.id) {
                   <div
@@ -291,9 +295,11 @@ import type {
                     </div>
                   </div>
                 } @empty {
-                  <p class="text-sm text-text-secondary text-center py-4">
-                    Este ciclo aún no tiene clases generadas.
-                  </p>
+                  <app-empty-state
+                    icon="video-off"
+                    message="Ciclo sin clases"
+                    subtitle="Este ciclo aún no tiene clases generadas."
+                  />
                 }
               }
             </div>
@@ -333,11 +339,17 @@ import type {
                 }
               </div>
             } @else if (selectedCycleId() === null) {
-              <p class="text-sm text-text-secondary text-center py-4">
-                Selecciona un ciclo para ver sus alumnos.
-              </p>
+              <app-empty-state
+                icon="users"
+                message="Sin ciclo seleccionado"
+                subtitle="Selecciona un ciclo para ver sus alumnos."
+              />
             } @else if (roster().length === 0) {
-              <p class="text-sm text-text-secondary text-center py-4">Sin alumnos en este ciclo.</p>
+              <app-empty-state
+                icon="user-x"
+                message="Ciclo vacío"
+                subtitle="Sin alumnos en este ciclo."
+              />
             } @else {
               <div class="relative shrink-0">
                 <app-icon
@@ -355,9 +367,11 @@ import type {
                 />
               </div>
               @if (filteredRoster().length === 0) {
-                <p class="text-sm text-text-secondary text-center py-4">
-                  Sin resultados para tu búsqueda.
-                </p>
+                <app-empty-state
+                  icon="search"
+                  message="Sin resultados"
+                  subtitle="No se encontraron alumnos para tu búsqueda."
+                />
               }
               <div class="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto">
                 @for (alumno of filteredRoster(); track alumno.enrollmentId) {
@@ -575,9 +589,11 @@ import type {
                   }
                 </div>
               } @else if (addableStudents().length === 0) {
-                <p class="text-sm text-text-muted py-2">
-                  No hay alumnos en otros ciclos de esta sede.
-                </p>
+                <app-empty-state
+                  icon="users-minus"
+                  message="Sin candidatos"
+                  subtitle="No hay alumnos en otros ciclos de esta sede."
+                />
               } @else {
                 <div class="relative shrink-0">
                   <app-icon
@@ -595,7 +611,11 @@ import type {
                   />
                 </div>
                 @if (filteredAddableStudents().length === 0) {
-                  <p class="text-sm text-text-muted py-2">Sin resultados para tu búsqueda.</p>
+                  <app-empty-state
+                    icon="search"
+                    message="Sin resultados"
+                    subtitle="No se encontraron alumnos para tu búsqueda."
+                  />
                 }
                 <div class="flex flex-col gap-1">
                   @for (a of filteredAddableStudents(); track a.enrollmentId) {

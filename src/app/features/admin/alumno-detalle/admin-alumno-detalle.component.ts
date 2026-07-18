@@ -37,6 +37,8 @@ import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section
 import type { ClasePracticaUI } from '@core/models/ui/alumno-detalle.model';
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
+import { AnimateInDirective } from '@core/directives/animate-in.directive';
 
 @Component({
   selector: 'app-admin-alumno-detalle',
@@ -54,6 +56,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     BentoGridLayoutDirective,
     EliminarAlumnoModalComponent,
     CardHoverDirective,
+    ModalOverlayDirective,
+    AnimateInDirective,
     TabsComponent,
   ],
   template: `
@@ -753,14 +757,13 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       </div>
                       @if (item.justificada) {
                         @if (item.justificacion) {
-                          <span
-                            class="text-[10px] text-text-muted italic truncate max-w-32 cursor-help"
-                            [pTooltip]="'Motivo: ' + item.justificacion"
-                            tooltipPosition="top"
-                            data-llm-description="motivo de la justificación de la inasistencia"
+                          <button
+                            type="button"
+                            class="text-[10px] font-semibold text-brand hover:underline shrink-0 ml-1"
+                            (click)="openViewMotivo(item.justificacion)"
                           >
-                            Motivo: {{ item.justificacion }}
-                          </span>
+                            Ver motivo
+                          </button>
                         }
                       } @else {
                         <button
@@ -885,6 +888,47 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         </div>
       </div>
     }
+    
+    <!-- Modal para ver el motivo de justificación -->
+    <div [appModalOverlay]="viewMotivoModalOpen()">
+      @if (viewMotivoModalOpen()) {
+        <div
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-(--overlay-backdrop) backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          (click)="closeViewMotivo()"
+          (document:keydown.escape)="closeViewMotivo()"
+        >
+          <div
+            class="surface-glass rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+            (click)="$event.stopPropagation()"
+            appAnimateIn
+          >
+            <div class="flex items-center justify-between border-b border-border-subtle pb-3">
+              <h3 class="font-semibold text-text-primary flex items-center gap-2">
+                <app-icon name="info" [size]="18" class="text-brand" />
+                Motivo de Justificación
+              </h3>
+              <button
+                class="p-1 rounded-md text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+                aria-label="Cerrar"
+                (click)="closeViewMotivo()"
+              >
+                <app-icon name="x" [size]="18" />
+              </button>
+            </div>
+            <div class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap">
+              {{ viewMotivoText() }}
+            </div>
+            <div class="flex justify-end pt-2">
+              <button class="btn-secondary text-sm px-4 py-2 cursor-pointer" (click)="closeViewMotivo()">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
 
     <!-- Input oculto para subir contrato firmado (flujo online) -->
     <input
@@ -1066,6 +1110,9 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   protected readonly justificarClaseBOpen = signal(false);
   protected readonly justificarClaseBId = signal<number | null>(null);
   protected readonly justificarClaseBReason = signal('');
+
+  protected readonly viewMotivoModalOpen = signal(false);
+  protected readonly viewMotivoText = signal('');
 
   // ── Computed: derivados del facade ──────────────────────────────────────────
   protected readonly restantesPracticas = computed(
@@ -1476,6 +1523,16 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     this.justificarClaseBOpen.set(false);
     this.justificarClaseBId.set(null);
     this.justificarClaseBReason.set('');
+  }
+  
+  openViewMotivo(motivo: string) {
+    this.viewMotivoText.set(motivo);
+    this.viewMotivoModalOpen.set(true);
+  }
+
+  closeViewMotivo() {
+    this.viewMotivoModalOpen.set(false);
+    this.viewMotivoText.set('');
   }
 
   protected submitJustificarClaseB(): void {
