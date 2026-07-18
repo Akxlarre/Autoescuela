@@ -274,12 +274,13 @@ interface CellSummary {
                     [class.agenda-cell--now]="nowTimeRow() === time"
                     [class.agenda-cell--today]="day.isToday"
                     [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                    [class.cell-condensed--empty]="getCellSummary(day, time).total === 0"
                     role="gridcell"
                     [attr.aria-label]="
                       day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
                     "
                     [class.cell-condensed--expanded]="expandedCellKey() === cellKey(day.date, time)"
-                    (click)="toggleCell(day.date, time)"
+                    (click)="getCellSummary(day, time).total > 0 && toggleCell(day.date, time)"
                   >
                     @if (expandedCellKey() === cellKey(day.date, time)) {
                       <!-- Expandido: slots individuales -->
@@ -318,6 +319,9 @@ interface CellSummary {
                         <span class="cell-expand-hint">
                           <app-icon name="chevron-down" [size]="10" />
                         </span>
+                      } @else {
+                        <!-- Celda vacía: marcador sutil, mantiene la textura de la grilla -->
+                        <span class="cell-empty-marker" aria-hidden="true"></span>
                       }
                     }
                   </div>
@@ -328,6 +332,7 @@ interface CellSummary {
                     [class.agenda-cell--now]="nowTimeRow() === time"
                     [class.agenda-cell--today]="day.isToday"
                     [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                    [class.agenda-cell--empty]="getCell(day, time).length === 0"
                     role="gridcell"
                     [attr.aria-label]="day.label + ' ' + time"
                   >
@@ -337,6 +342,14 @@ interface CellSummary {
                         [compact]="true"
                         (slotClicked)="slotClick.emit($event)"
                       />
+                    }
+                    @if (getCell(day, time).length === 0) {
+                      <!-- Celda vacía: sin slot definido para este instructor/horario —
+                           marcador sutil (NO clickeable: no hay slot real que agendar). -->
+                      <span
+                        class="cell-empty-marker cell-empty-marker--filtered"
+                        aria-hidden="true"
+                      ></span>
                     }
                   </div>
                 }
@@ -512,6 +525,12 @@ interface CellSummary {
     .agenda-grid {
       display: grid;
       /* grid-template-columns set via [style] binding */
+      /* Piso de altura por fila explícito a nivel de grid (no solo en las celdas):
+         así una fila entera sin ninguna clase agendada (semana vacía, fin de
+         semana) conserva la misma altura que una fila llena — la fuente de
+         verdad del alto de fila es el propio grid, no el contenido de cada
+         celda individual. */
+      grid-auto-rows: minmax(56px, auto);
       border-top: 1px solid var(--color-border);
       /* overflow, max-height y scroll-behavior los maneja ScrollContainerDirective */
     }
@@ -615,6 +634,32 @@ interface CellSummary {
       background: color-mix(in srgb, var(--ds-brand) 4%, var(--bg-surface));
     }
 
+    /* ── Celda vacía (Filtered View) — sin slot definido para ese instructor/
+       horario. NO es un slot "available" real (no hay nada que agendar ahí),
+       así que solo se comunica con textura, sin affordance de clic. Mantiene
+       min-height/bordes idénticos a una celda con contenido. ─────────────── */
+    .agenda-cell--empty {
+      background: repeating-linear-gradient(
+        135deg,
+        var(--bg-surface),
+        var(--bg-surface) 6px,
+        var(--bg-elevated) 6px,
+        var(--bg-elevated) 7px
+      );
+    }
+
+    .cell-empty-marker {
+      display: block;
+      margin: auto;
+    }
+
+    .cell-empty-marker--filtered {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--border-subtle);
+    }
+
     /* ── Indicador "ahora" ───────────────────────────────── */
 
     .agenda-time-label--now {
@@ -664,6 +709,22 @@ interface CellSummary {
         text-align: left;
         background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
       }
+
+      /* Sin slots — nada que expandir, así que no se ve/comporta como clickeable. */
+      &--empty {
+        cursor: default;
+
+        &:hover {
+          background: transparent;
+        }
+      }
+    }
+
+    .cell-empty-marker:not(.cell-empty-marker--filtered) {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--border-subtle);
     }
 
     .cell-expanded-content {

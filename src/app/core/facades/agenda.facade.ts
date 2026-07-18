@@ -17,6 +17,35 @@ import { toISODate, to24hTime, buildDayLabel, addMinutesToTime } from '@core/uti
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/**
+ * Bloque horario base de la jornada Clase B (L-V), 13 slots de 45 min —
+ * mismo set que `courses.schedule_blocks` DEFAULT (ver migración
+ * `20260513000001_class_b_schedule_exact_slots.sql`), única fuente de verdad
+ * del horario operativo de la escuela.
+ *
+ * `timeRows` SIEMPRE incluye este set completo, tenga o no tenga clases cada
+ * fila esa semana — así la grilla nunca colapsa a una franja de 1-2 filas en
+ * semanas con pocos datos; las filas sin contenido se ven con la textura de
+ * celda vacía (`AgendaSemanalComponent`). Unido (no reemplazado) con los
+ * horarios reales encontrados en los datos, por si alguna sesión histórica
+ * quedó fuera de este bloque estándar (ej. reprogramaciones manuales).
+ */
+const BASE_TIME_ROWS = [
+  '08:30',
+  '09:20',
+  '10:10',
+  '11:00',
+  '11:50',
+  '12:40',
+  '15:00',
+  '15:50',
+  '16:40',
+  '17:30',
+  '18:20',
+  '19:10',
+  '20:00',
+] as const;
+
 function getMondayOfCurrentWeek(): string {
   const today = new Date();
   const day = today.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
@@ -466,8 +495,11 @@ export class AgendaFacade {
       }
     }
 
-    // Collect unique time rows across all slots
-    const timeRowSet = new Set<string>();
+    // Time rows: baseline de jornada completa (BASE_TIME_ROWS) unido con
+    // cualquier horario real fuera de ese set (defensivo) — nunca deriva
+    // solo de los datos presentes, para que la grilla no colapse en semanas
+    // con pocas o ninguna clase.
+    const timeRowSet = new Set<string>(BASE_TIME_ROWS);
     for (const s of allSlots) timeRowSet.add(s.startTime);
     const timeRows = [...timeRowSet].sort();
 
