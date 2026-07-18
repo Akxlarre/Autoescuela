@@ -35,17 +35,48 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-4">
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-          <app-skeleton-block variant="text" width="100%" height="80px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-4">
+            <!-- Banner de info del rol -->
+            <app-skeleton-block variant="rect" width="100%" height="48px" />
+
+            <!-- Sección: Información Personal (7 campos) -->
+            <app-skeleton-block variant="text" width="150px" height="12px" />
+            <div class="flex flex-col gap-4">
+              @for (_ of [1, 2, 3, 4, 5, 6, 7]; track $index) {
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="35%" height="12px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              }
+            </div>
+
+            <!-- Sección: Información de Licencia (2 campos) -->
+            <app-skeleton-block variant="text" width="180px" height="12px" />
+            <div class="flex flex-col gap-4">
+              @for (_ of [1, 2]; track $index) {
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="35%" height="12px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              }
+            </div>
+
+            <!-- Sección: Asignación (2 campos) -->
+            <app-skeleton-block variant="text" width="100px" height="12px" />
+            <div class="flex flex-col gap-4">
+              @for (_ of [1, 2]; track $index) {
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="35%" height="12px" />
+                  <app-skeleton-block variant="rect" width="100%" height="40px" />
+                </div>
+              }
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- ── Info rol ──────────────────────────────────────────────────────── -->
           <div class="flex items-start gap-3 rounded-lg p-3 mb-5 bg-brand/6 border border-brand/20">
             <app-icon name="clipboard-list" [size]="16" color="var(--ds-brand)" />
@@ -302,34 +333,34 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <span class="text-xs text-text-muted"> Solo se muestran vehículos disponibles </span>
             </div>
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button
-              class="btn-secondary"
-              (click)="layoutDrawer.close()"
-              data-llm-action="cancelar-crear-instructor"
-            >
-              Cancelar
-            </button>
-            <button
-              class="btn-primary flex items-center gap-2"
-              [disabled]="facade.isSubmitting()"
-              (click)="submit()"
-              data-llm-action="confirmar-crear-instructor"
-              aria-label="Crear nuevo instructor"
-            >
-              @if (facade.isSubmitting()) {
-                <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                Creando...
-              } @else {
-                <app-icon name="user-plus" [size]="15" />
-                Crear instructor
-              }
-            </button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button
+          class="btn-secondary"
+          (click)="layoutDrawer.close()"
+          data-llm-action="cancelar-crear-instructor"
+        >
+          Cancelar
+        </button>
+        <button
+          class="btn-primary flex items-center gap-2"
+          [disabled]="facade.isSubmitting()"
+          (click)="submit()"
+          data-llm-action="confirmar-crear-instructor"
+          aria-label="Crear nuevo instructor"
+        >
+          @if (facade.isSubmitting()) {
+            <app-icon name="loader-2" [size]="15" class="animate-spin" />
+            Creando...
+          } @else {
+            <app-icon name="user-plus" [size]="15" />
+            Crear instructor
+          }
+        </button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class AdminInstructorCrearDrawerComponent {

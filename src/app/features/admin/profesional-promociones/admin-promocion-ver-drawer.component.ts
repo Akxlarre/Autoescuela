@@ -37,24 +37,63 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
   ],
   template: `
     @if (promo(); as p) {
-      <app-drawer-content-loader>
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-5">
-            <div class="flex flex-col gap-2">
-              <app-skeleton-block variant="text" width="60%" height="24px" />
-              <app-skeleton-block variant="text" width="40%" height="14px" />
+      <app-drawer-form>
+        <app-drawer-content-loader>
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-5">
+              <!-- Header: título + badge, código + fechas -->
+              <div class="flex flex-col gap-2">
+                <div class="flex items-center gap-3">
+                  <app-skeleton-block variant="text" width="45%" height="20px" />
+                  <app-skeleton-block variant="text" width="70px" height="18px" />
+                </div>
+                <app-skeleton-block variant="text" width="55%" height="12px" />
+              </div>
+
+              <!-- Información general: grid de stat-boxes -->
+              <div>
+                <app-skeleton-block variant="text" width="35%" height="11px" />
+                <div class="grid grid-cols-2 gap-3 mt-3">
+                  @for (i of [1, 2, 3, 4]; track i) {
+                    <app-skeleton-block variant="rect" width="100%" height="52px" />
+                  }
+                  <app-skeleton-block
+                    variant="rect"
+                    width="100%"
+                    height="52px"
+                    class="col-span-2"
+                  />
+                  <app-skeleton-block
+                    variant="rect"
+                    width="100%"
+                    height="52px"
+                    class="col-span-2"
+                  />
+                </div>
+              </div>
+
+              <!-- Cursos de la promoción: N cards con header + relatores + barra -->
+              <div>
+                <app-skeleton-block variant="text" width="40%" height="11px" />
+                <div class="flex flex-col gap-3 mt-3">
+                  @for (i of [1, 2]; track i) {
+                    <div class="rounded-lg p-4 border border-border-subtle">
+                      <div class="flex items-center gap-2 mb-3">
+                        <app-skeleton-block variant="text" width="26px" height="18px" />
+                        <app-skeleton-block variant="text" width="40%" height="14px" />
+                      </div>
+                      <div class="flex items-center gap-2 mb-2">
+                        <app-skeleton-block variant="circle" width="28px" height="28px" />
+                        <app-skeleton-block variant="text" width="45%" height="12px" />
+                      </div>
+                      <app-skeleton-block variant="text" width="100%" height="24px" />
+                    </div>
+                  }
+                </div>
+              </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-            </div>
-            <app-skeleton-block variant="text" width="100%" height="100px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form>
+          </ng-template>
+          <ng-template #content>
             <div class="flex flex-col gap-5">
               <!-- ── Header ──────────────────────────────────────────────── -->
               <div>
@@ -327,21 +366,20 @@ const STATUS_CONFIG: Record<string, { label: string; variant: StatBoxVariant }> 
                 </div>
               </div>
             </div>
+          </ng-template>
+        </app-drawer-content-loader>
 
-            <!-- ── Acciones ────────────────────────────────────────────── -->
-            <ng-container ngProjectAs="[drawer-form-footer]">
-              <button
-                class="btn-primary flex items-center gap-2"
-                (click)="editar()"
-                data-llm-action="editar-promocion"
-              >
-                <app-icon name="edit" [size]="14" />
-                Editar promoción
-              </button>
-            </ng-container>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button
+            class="btn-primary flex items-center gap-2"
+            (click)="editar()"
+            data-llm-action="editar-promocion"
+          >
+            <app-icon name="edit" [size]="14" />
+            Editar promoción
+          </button>
+        </ng-container>
+      </app-drawer-form>
     }
   `,
   styles: `

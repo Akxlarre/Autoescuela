@@ -1191,23 +1191,28 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     const contractGenerated = this.facade.contractGeneratedPath();
     const contractSigned = this.facade.contractSignedPath();
     const contractActions: SectionHeroAction[] = [];
+    const isViewingContrato = this.facade.isViewingContrato();
 
     if (channel === 'presential' && contractGenerated) {
       // En flujo presencial, file_url ES el contrato firmado que se subió en Step 5
       contractActions.push({
         id: 'ver-contrato',
-        label: 'Ver Contrato',
-        icon: 'file-signature',
+        label: isViewingContrato ? 'Cargando...' : 'Ver Contrato',
+        icon: isViewingContrato ? 'loader-2' : 'file-signature',
         primary: false,
+        disabled: isViewingContrato,
+        loading: isViewingContrato,
       });
     } else if (channel === 'online') {
       if (contractSigned) {
         // Ya subieron el contrato firmado → solo "Ver Contrato"
         contractActions.push({
           id: 'ver-contrato',
-          label: 'Ver Contrato',
-          icon: 'file-signature',
+          label: isViewingContrato ? 'Cargando...' : 'Ver Contrato',
+          icon: isViewingContrato ? 'loader-2' : 'file-signature',
           primary: false,
+          disabled: isViewingContrato,
+          loading: isViewingContrato,
         });
       } else if (contractGenerated) {
         // Contrato generado pero no firmado → dropdown con Descargar + Subir Firmado

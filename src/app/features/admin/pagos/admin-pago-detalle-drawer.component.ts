@@ -38,13 +38,23 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <!-- ── Skeleton ──────────────────────────────────────────────────────────── -->
         @if (facade.isLoadingDetalle()) {
           <div class="flex flex-col gap-4">
-            <!-- Ficha alumno skeleton -->
+            <!-- Ficha alumno skeleton: nombre + rut + badge, luego fila de datos -->
             <div class="card p-4 flex flex-col gap-3">
-              <app-skeleton-block variant="text" width="60%" height="20px" />
-              <app-skeleton-block variant="text" width="40%" height="14px" />
-              <app-skeleton-block variant="text" width="50%" height="14px" />
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <app-skeleton-block variant="text" width="140px" height="16px" />
+                  <app-skeleton-block variant="text" width="90px" height="11px" />
+                </div>
+                <app-skeleton-block variant="rect" width="70px" height="20px" />
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-3 border-t border-border-muted">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <app-skeleton-block variant="text" width="80%" height="12px" />
+                }
+              </div>
             </div>
-            <!-- KPIs skeleton -->
+
+            <!-- KPIs skeleton (3 mini-cards) -->
             <div class="grid grid-cols-3 gap-3">
               @for (i of [1, 2, 3]; track i) {
                 <div class="card p-3 flex flex-col gap-2">
@@ -53,14 +63,22 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 </div>
               }
             </div>
-            <!-- Historial skeleton -->
+
+            <!-- Botón Registrar Pago skeleton -->
+            <app-skeleton-block variant="rect" width="100%" height="38px" />
+
+            <!-- Historial skeleton: header + 4 filas de columnas -->
             <div class="card p-0 overflow-hidden">
+              <div class="px-4 py-3 border-b border-border-muted">
+                <app-skeleton-block variant="text" width="130px" height="13px" />
+              </div>
               @for (i of [1, 2, 3, 4]; track i) {
                 <div class="px-4 py-3 flex gap-3 items-center border-b border-border-muted">
-                  <app-skeleton-block variant="text" width="20%" height="12px" />
+                  <app-skeleton-block variant="text" width="12%" height="12px" />
                   <app-skeleton-block variant="text" width="30%" height="12px" />
-                  <app-skeleton-block variant="text" width="20%" height="12px" />
-                  <app-skeleton-block variant="text" width="25%" height="12px" />
+                  <app-skeleton-block variant="text" width="15%" height="12px" />
+                  <app-skeleton-block variant="text" width="12%" height="12px" />
+                  <app-skeleton-block variant="text" width="15%" height="12px" />
                 </div>
               }
             </div>

@@ -13,6 +13,7 @@ export interface LayoutDrawerState {
   title: string;
   icon?: string;
   actions?: LayoutDrawerAction[];
+  badge?: string | null;
 }
 
 /**
@@ -48,6 +49,7 @@ export class LayoutDrawerService {
   readonly title = computed(() => this._state().title);
   readonly icon = computed(() => this._state().icon);
   readonly actions = computed(() => this._state().actions ?? []);
+  readonly badge = computed(() => this._state().badge ?? null);
   /** True cuando hay un estado previo al que se puede volver (back). */
   readonly canGoBack = computed(() => this._history().length > 0);
 
@@ -68,7 +70,7 @@ export class LayoutDrawerService {
   push(component: Type<any>, title: string, icon?: string): void {
     if (this._state().isOpen && this._state().component !== null) {
       this._history.update((h) => [...h, { ...this._state() }]);
-      this._state.update((s) => ({ ...s, component, title, icon, actions: [] }));
+      this._state.update((s) => ({ ...s, component, title, icon, actions: [], badge: null }));
     } else {
       this.open(component, title, icon);
     }
@@ -97,6 +99,14 @@ export class LayoutDrawerService {
   }
 
   /**
+   * Actualiza el badge del header dinámicamente (ej: "Paso 2 de 6").
+   * `null` lo oculta.
+   */
+  setBadge(badge: string | null): void {
+    this._state.update((s) => ({ ...s, badge }));
+  }
+
+  /**
    * Comienza la secuencia de cierre y limpia el historial.
    * IMPORTANTE: No limpia el componente inmediatamente. El LayoutDrawerComponent
    * es responsable de esperar a GSAP y luego llamar a `clear()`.
@@ -116,6 +126,7 @@ export class LayoutDrawerService {
       title: '',
       icon: undefined,
       actions: [],
+      badge: null,
     }));
   }
 }

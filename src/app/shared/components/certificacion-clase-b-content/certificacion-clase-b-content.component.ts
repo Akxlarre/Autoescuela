@@ -10,7 +10,6 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -25,28 +24,24 @@ import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-
 import type {
   CertificacionAlumnoRow,
   CertificacionKpis,
-  CertificacionLogRow,
 } from '@core/models/ui/certificacion-clase-b.model';
-import { ACCION_LABELS } from '@core/models/ui/certificacion-clase-b.model';
 
 type EstadoFilter = 'generado' | 'pendiente' | null;
 
 /**
  * CertificacionClaseBContentComponent — Dumb component.
  *
- * Vista de certificación Clase B:
- *  - Section Hero compacto
+ * Vista de certificación Clase B (app-like, Desktop lg+ fill-screen):
+ *  - Section Hero compacto con acción "Historial de emisiones" (abre drawer)
  *  - 4 KPIs (Total alumnos, Generados, Pendientes Generación, Pendientes Envío)
- *  - Toolbar con buscador (nombre/RUT) + filtro de estado + acciones masivas
- *  - Tabla de alumnos elegibles paginada (PAGE_SIZE=10)
- *  - Historial de emisiones paginado
+ *  - Toolbar con buscador (nombre/RUT) + filtro de estado + acciones masivas (abren drawers)
+ *  - Tabla de alumnos elegibles con scroll interno + paginación (PAGE_SIZE=10)
  */
 @Component({
   selector: 'app-certificacion-clase-b-content',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DatePipe,
     FormsModule,
     SelectModule,
     SectionHeroComponent,
@@ -58,7 +53,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
       <!-- ── Section Hero ──────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"
@@ -68,13 +63,17 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
         subtitle="Certificación de finalización de curso Clase B"
         icon="award"
         [kpis]="heroKpis()"
-        [actions]="heroActions"
+        [actions]="heroActions()"
+        (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- ── Tabla + Toolbar (card unificado) ────────────────────────── -->
-      <div class="bento-banner card overflow-hidden" appCardHover>
+      <!-- ── Tabla + Toolbar (card unificado, app-like fill-screen, dual-viewport) ─────── -->
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col w-full h-full dual-viewport-container"
+        appCardHover
+      >
         <div
-          class="flex flex-wrap items-center gap-3 p-4"
+          class="flex flex-wrap items-center gap-3 p-4 shrink-0"
           style="border-bottom: 1px solid var(--border-default)"
         >
           <!-- Buscador -->
@@ -109,9 +108,9 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
           @if (pendientesCount() > 0) {
             <button
               class="btn-primary flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              data-llm-action="generate-pending-certificates"
+              data-llm-action="open-generate-pending-certificates-drawer"
               [disabled]="isGeneratingPendientes()"
-              (click)="abrirPanelPendientes()"
+              (click)="abrirGenerarPendientesDrawer.emit()"
             >
               @if (isGeneratingPendientes()) {
                 <app-icon name="loader-circle" [size]="16" class="animate-spin" />
@@ -126,9 +125,9 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
           @if (alumnosParaEnvioMasivo().length > 0) {
             <button
               class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              data-llm-action="send-bulk-emails"
+              data-llm-action="open-send-bulk-emails-drawer"
               [disabled]="sendingMasivo()"
-              (click)="abrirPanelMasivo()"
+              (click)="abrirEnviarMasivoDrawer.emit()"
             >
               @if (sendingMasivo()) {
                 <app-icon name="loader-circle" [size]="16" class="animate-spin" />
@@ -156,135 +155,11 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
           </button>
         </div>
 
-        <!-- ── Panel confirmación generar pendientes ────────────────────── -->
-        @if (pendientesPanelVisible()) {
-          <div
-            class="p-5 flex flex-col gap-4"
-            style="border-bottom: 1px solid var(--border-default)"
-          >
-            <div class="flex items-start gap-3">
-              <app-icon
-                name="file-check"
-                [size]="20"
-                class="text-brand shrink-0"
-                style="margin-top: 2px"
-              />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-text-primary">
-                  Generar Pendientes — {{ alumnosPendientes().length }} certificado{{
-                    alumnosPendientes().length !== 1 ? 's' : ''
-                  }}
-                </p>
-                <p class="text-xs mt-0.5 text-text-muted">
-                  Se generará el certificado de todos los alumnos con las prácticas completas.
-                </p>
-              </div>
-            </div>
-
-            <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
-              @for (alumno of alumnosPendientes(); track alumno.enrollmentId) {
-                <div class="flex items-center gap-3 px-4 py-2.5">
-                  <app-icon name="file-check" [size]="14" class="text-success shrink-0" />
-                  <span class="text-sm font-medium flex-1 truncate text-text-primary">
-                    {{ alumno.nombre }}
-                  </span>
-                </div>
-              }
-            </div>
-
-            <div class="flex items-center gap-2 justify-end">
-              <button
-                class="btn-ghost"
-                data-llm-action="cancel-generate-pending-certificates"
-                (click)="cancelarPendientes()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="btn-primary"
-                data-llm-action="confirm-generate-pending-certificates"
-                (click)="confirmarPendientes()"
-              >
-                <app-icon name="file-check" [size]="14" />
-                Generar {{ alumnosPendientes().length }} certificado{{
-                  alumnosPendientes().length !== 1 ? 's' : ''
-                }}
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- ── Panel confirmación envío masivo ──────────────────────────── -->
-        @if (masivoPanelVisible()) {
-          <div
-            class="p-5 flex flex-col gap-4"
-            style="border-bottom: 1px solid var(--border-default)"
-          >
-            <div class="flex items-start gap-3">
-              <app-icon
-                name="send"
-                [size]="20"
-                class="text-brand shrink-0"
-                style="margin-top: 2px"
-              />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-text-primary">
-                  Envío masivo — {{ alumnosParaEnvioMasivo().length }} alumno{{
-                    alumnosParaEnvioMasivo().length !== 1 ? 's' : ''
-                  }}
-                  recibirá{{ alumnosParaEnvioMasivo().length !== 1 ? 'n' : '' }} su certificado por
-                  correo
-                </p>
-                <p class="text-xs mt-0.5 text-text-muted">
-                  Solo se incluyen alumnos con certificado generado que aún no han recibido el
-                  correo.
-                </p>
-              </div>
-            </div>
-
-            <!-- Lista de destinatarios -->
-            <div class="rounded-lg border divide-y overflow-hidden border-border-subtle">
-              @for (alumno of alumnosParaEnvioMasivo(); track alumno.enrollmentId) {
-                <div class="flex items-center gap-3 px-4 py-2.5">
-                  <app-icon name="user" [size]="14" class="text-text-muted shrink-0" />
-                  <span class="text-sm font-medium flex-1 truncate text-text-primary">
-                    {{ alumno.nombre }}
-                  </span>
-                  <span class="text-xs truncate text-brand">
-                    {{ alumno.email }}
-                  </span>
-                </div>
-              }
-            </div>
-
-            <!-- Acciones -->
-            <div class="flex items-center gap-2 justify-end">
-              <button
-                class="btn-ghost"
-                data-llm-action="cancel-bulk-email"
-                (click)="cancelarMasivo()"
-              >
-                Cancelar
-              </button>
-              <button
-                class="btn-primary"
-                data-llm-action="confirm-bulk-email"
-                (click)="confirmarMasivo()"
-              >
-                <app-icon name="send" [size]="14" />
-                Enviar a {{ alumnosParaEnvioMasivo().length }} alumno{{
-                  alumnosParaEnvioMasivo().length !== 1 ? 's' : ''
-                }}
-              </button>
-            </div>
-          </div>
-        }
-
         <!-- ── Tabla principal ─────────────────────────────────────────── -->
         @if (isLoading()) {
           <div class="p-6 flex flex-col gap-4">
             @for (_ of skeletonRows; track $index) {
-              <app-skeleton-block variant="text" width="100%" height="48px" />
+              <app-skeleton-block variant="text" width="100%" height="42px" />
             }
           </div>
         } @else if (filteredAlumnos().length === 0) {
@@ -304,47 +179,48 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             }
           </div>
         } @else {
-          <div class="overflow-x-auto">
+          <!-- VISTA 1: Tabla clásica (oculta cuando el drawer angosta la card) -->
+          <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-y-auto">
             <table class="w-full text-sm">
-              <thead>
+              <thead class="sticky top-0 z-10 bg-surface">
                 <tr class="border-b border-(--border-default)">
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Alumno
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     RUT
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Curso
                   </th>
                   <th
-                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Prácticas
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Fecha Término
                   </th>
                   <th
-                    class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-left px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     N° Certificado
                   </th>
                   <th
-                    class="text-center px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-center px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Estado
                   </th>
                   <th
-                    class="text-right px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
+                    class="text-right px-4 py-2 text-xs font-semibold uppercase tracking-wider text-text-muted"
                   >
                     Acciones
                   </th>
@@ -357,28 +233,28 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                     class="border-b border-(--border-default) last:border-b-0 transition-colors"
                     [class.bg-[var(--bg-subtle)]]="pendingConfirmId() === alumno.enrollmentId"
                   >
-                    <td class="px-4 py-3 font-medium text-text-primary">
+                    <td class="px-4 py-2 font-medium text-text-primary">
                       {{ alumno.nombre }}
                     </td>
-                    <td class="px-4 py-3 text-brand">
+                    <td class="px-4 py-2 text-brand">
                       {{ alumno.rut }}
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-2">
                       <app-badge variant="brand">{{ alumno.curso }}</app-badge>
                     </td>
                     <!-- Prácticas: siempre 12/12 si aparece en esta lista -->
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-4 py-2 text-center">
                       <span class="font-semibold text-success">
                         {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}
                       </span>
                     </td>
-                    <td class="px-4 py-3 text-text-muted">
+                    <td class="px-4 py-2 text-text-muted">
                       {{ alumno.fechaTermino ?? '—' }}
                     </td>
-                    <td class="px-4 py-3 text-brand">
+                    <td class="px-4 py-2 text-brand">
                       {{ alumno.certificadoFolio ?? '—' }}
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-4 py-2 text-center">
                       @if (alumno.certificadoStatus === 'generado') {
                         <app-badge variant="success">
                           <span class="inline-flex items-center gap-1">
@@ -390,7 +266,7 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
                         <app-badge variant="warning">Pendiente</app-badge>
                       }
                     </td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-4 py-2 text-right">
                       <div class="flex items-center justify-end gap-2">
                         @if (alumno.certificadoStatus === 'pendiente') {
                           <button
@@ -550,9 +426,174 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
             </table>
           </div>
 
+          <!-- VISTA 2: Tarjetas compactas (visible cuando la card se angosta, ej. drawer abierto) -->
+          <div
+            class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-3 flex flex-col gap-2"
+          >
+            @for (alumno of pagedAlumnos(); track alumno.enrollmentId) {
+              <div
+                class="rounded-xl border border-border-subtle bg-base p-3 flex flex-col gap-2.5"
+                [class.border-brand]="
+                  pendingConfirmId() === alumno.enrollmentId ||
+                  emailConfirmId() === alumno.enrollmentId
+                "
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-text-primary truncate m-0">
+                      {{ alumno.nombre }}
+                    </p>
+                    <p class="text-xs text-brand m-0">{{ alumno.rut }}</p>
+                  </div>
+                  @if (alumno.certificadoStatus === 'generado') {
+                    <app-badge variant="success">
+                      <span class="inline-flex items-center gap-1">
+                        <app-icon name="check" [size]="12" />
+                        Generado
+                      </span>
+                    </app-badge>
+                  } @else {
+                    <app-badge variant="warning">Pendiente</app-badge>
+                  }
+                </div>
+
+                <div
+                  class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-secondary"
+                >
+                  <app-badge variant="brand">{{ alumno.curso }}</app-badge>
+                  <span class="font-semibold text-success">
+                    {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }} prácticas
+                  </span>
+                  @if (alumno.fechaTermino) {
+                    <span class="text-text-muted">{{ alumno.fechaTermino }}</span>
+                  }
+                  @if (alumno.certificadoFolio) {
+                    <span class="text-brand">{{ alumno.certificadoFolio }}</span>
+                  }
+                </div>
+
+                <div
+                  class="flex items-center gap-2 pt-2"
+                  style="border-top: 1px dashed var(--border-subtle)"
+                >
+                  @if (alumno.certificadoStatus === 'pendiente') {
+                    <button
+                      class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                      data-llm-action="generate-certificate"
+                      [disabled]="generatingId() !== null"
+                      (click)="onClickGenerar(alumno)"
+                    >
+                      @if (generatingId() === alumno.enrollmentId) {
+                        <app-icon name="loader-2" [size]="12" class="animate-spin" />
+                        Generando...
+                      } @else {
+                        <app-icon name="file-check" [size]="12" />
+                        Generar
+                      }
+                    </button>
+                  } @else {
+                    <button
+                      class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary"
+                      data-llm-action="view-certificate-pdf"
+                      (click)="
+                        verCertificado.emit({
+                          storagePath: alumno.storagePath!,
+                          nombre: alumno.nombre,
+                        })
+                      "
+                    >
+                      <app-icon name="eye" [size]="13" />
+                      Ver
+                    </button>
+                    <button
+                      class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
+                      data-llm-action="send-certificate-email"
+                      [disabled]="sendingEmailId() === alumno.enrollmentId"
+                      (click)="onClickEmail(alumno)"
+                    >
+                      @if (sendingEmailId() === alumno.enrollmentId) {
+                        <app-icon name="loader-circle" [size]="13" class="animate-spin" />
+                        Enviando...
+                      } @else if (alumno.emailEnviado) {
+                        <app-icon name="mail-check" [size]="13" />
+                        Reenviar
+                      } @else {
+                        <app-icon name="mail" [size]="13" />
+                        Email
+                      }
+                    </button>
+                  }
+                </div>
+
+                <!-- Confirmación inline — envío de email -->
+                @if (emailConfirmId() === alumno.enrollmentId) {
+                  <div
+                    class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-brand/8 border border-brand/30"
+                  >
+                    <p class="text-xs text-text-secondary m-0">
+                      Se enviará el certificado
+                      @if (alumno.email) {
+                        al correo <strong class="text-brand">{{ alumno.email }}</strong
+                        >.
+                      }
+                      @if (alumno.emailEnviado) {
+                        <span class="text-text-muted"> (ya fue enviado anteriormente)</span>
+                      }
+                    </p>
+                    <div class="flex items-center gap-2">
+                      <button
+                        class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold btn-primary"
+                        data-llm-action="confirm-send-certificate-email"
+                        (click)="confirmarEmail()"
+                      >
+                        <app-icon name="send" [size]="12" />
+                        Confirmar envío
+                      </button>
+                      <button class="btn-ghost text-xs" (click)="cancelarEmail()">Cancelar</button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Confirmación inline — bypass prácticas incompletas -->
+                @if (pendingConfirmId() === alumno.enrollmentId) {
+                  <div
+                    class="flex flex-col gap-2 rounded-lg px-3 py-2.5 bg-warning-subtle border border-warning"
+                  >
+                    <p class="text-xs text-text-secondary m-0">
+                      <span class="font-semibold text-warning">Prácticas incompletas:</span> lleva
+                      {{ alumno.clasesCompletadas }}/{{ alumno.clasesTotales }}. ¿Confirmar de todos
+                      modos?
+                    </p>
+                    <div class="flex items-center gap-2">
+                      <button
+                        class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                        data-llm-action="confirm-generate-certificate-partial-practicas"
+                        [disabled]="generatingId() !== null"
+                        (click)="confirmarGenerar()"
+                      >
+                        @if (generatingId() === pendingConfirmId()) {
+                          <app-icon name="loader-2" [size]="12" class="animate-spin" />
+                          Generando...
+                        } @else {
+                          <app-icon name="check" [size]="12" />
+                          Confirmar
+                        }
+                      </button>
+                      <button class="btn-ghost text-xs" (click)="cancelarGenerar()">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
           <!-- Paginación tabla principal -->
           @if (totalPagesAlumnos() > 1) {
-            <div class="flex items-center justify-between px-4 py-3 border-t border-border-default">
+            <div
+              class="flex items-center justify-between px-4 py-3 border-t border-border-default shrink-0"
+            >
               <span class="text-xs text-text-muted">
                 {{ currentPageAlumnos() * PAGE_SIZE + 1 }}–{{
                   pageEnd(currentPageAlumnos(), filteredAlumnos().length)
@@ -582,114 +623,31 @@ type EstadoFilter = 'generado' | 'pendiente' | null;
           }
         }
       </div>
-
-      <!-- ── Historial de Emisiones (Log) ────────────────────────────── -->
-      <div class="bento-banner">
-        <h2 class="flex items-center gap-2 text-lg font-semibold text-text-primary mb-4">
-          <app-icon name="scroll" [size]="20" />
-          Historial de Emisiones (Log)
-        </h2>
-
-        <div class="card overflow-hidden">
-          @if (isLoading()) {
-            <div class="p-6 flex flex-col gap-4">
-              @for (_ of skeletonRowsSmall; track $index) {
-                <app-skeleton-block variant="text" width="100%" height="36px" />
-              }
-            </div>
-          } @else if (log().length === 0) {
-            <div class="p-6 text-center text-text-muted text-sm">
-              No hay registros de emisión aún
-            </div>
-          } @else {
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b border-(--border-default)">
-                    <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Fecha/Hora
-                    </th>
-                    <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Acción
-                    </th>
-                    <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Alumno
-                    </th>
-                    <th
-                      class="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-text-muted"
-                    >
-                      Usuario
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (entry of pagedLog(); track entry.id) {
-                    <tr
-                      class="border-b border-(--border-default) last:border-b-0 hover:bg-(--bg-subtle) transition-colors"
-                    >
-                      <td class="px-4 py-3 text-text-muted text-xs font-mono">
-                        {{ entry.fecha | date: 'yyyy-MM-dd HH:mm' }}
-                      </td>
-                      <td class="px-4 py-3">
-                        <app-badge [variant]="getAccionVariant(entry.accion)">
-                          {{ getAccionLabel(entry.accion) }}
-                        </app-badge>
-                      </td>
-                      <td class="px-4 py-3 text-text-primary">
-                        {{ entry.alumnoNombre }}
-                      </td>
-                      <td class="px-4 py-3 text-text-muted">
-                        {{ entry.usuarioNombre }}
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Paginación log -->
-            @if (totalPagesLog() > 1) {
-              <div
-                class="flex items-center justify-between px-4 py-3 border-t border-border-default"
-              >
-                <span class="text-xs text-text-muted">
-                  {{ currentPageLog() * PAGE_SIZE + 1 }}–{{
-                    pageEnd(currentPageLog(), log().length)
-                  }}
-                  de {{ log().length }} registros
-                </span>
-                <div class="flex items-center gap-1">
-                  <button
-                    class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
-                    [disabled]="currentPageLog() === 0"
-                    (click)="prevPageLog()"
-                  >
-                    <app-icon name="chevron-left" [size]="16" />
-                  </button>
-                  <span class="text-xs px-3 text-text-secondary">
-                    Pág. {{ currentPageLog() + 1 }} / {{ totalPagesLog() }}
-                  </span>
-                  <button
-                    class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
-                    [disabled]="currentPageLog() >= totalPagesLog() - 1"
-                    (click)="nextPageLog()"
-                  >
-                    <app-icon name="chevron-right" [size]="16" />
-                  </button>
-                </div>
-              </div>
-            }
-          }
-        </div>
-      </div>
     </div>
   `,
+  styles: [
+    `
+      /* Dual-viewport: tabla vs. tarjetas según el ancho REAL de la card
+         (container query, no viewport) — se activa al angostar por un drawer abierto. */
+      .dual-viewport-container {
+        container-type: inline-size;
+        container-name: certListContainer;
+      }
+
+      .show-on-squeeze {
+        display: none;
+      }
+
+      @container certListContainer (max-width: 900px) {
+        .hide-on-squeeze {
+          display: none !important;
+        }
+        .show-on-squeeze {
+          display: flex !important;
+        }
+      }
+    `,
+  ],
 })
 export class CertificacionClaseBContentComponent implements AfterViewInit {
   // ── Internal ────────────────────────────────────────────────────────────────
@@ -698,7 +656,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   // ── Inputs ──
   readonly alumnos = input<CertificacionAlumnoRow[]>([]);
   readonly kpis = input<CertificacionKpis | null>(null);
-  readonly log = input<CertificacionLogRow[]>([]);
   readonly isLoading = input(false);
   /** ID del enrollment cuyo certificado se está generando. null = ninguno en curso. */
   readonly generatingId = input<number | null>(null);
@@ -717,29 +674,27 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   readonly generarCertificado = output<number>();
   readonly verCertificado = output<{ storagePath: string; nombre: string }>();
   readonly enviarEmail = output<number>();
-  readonly generarPendientes = output<void>();
-  readonly enviarEmailsMasivo = output<void>();
+  readonly abrirHistorialDrawer = output<void>();
+  readonly abrirGenerarPendientesDrawer = output<void>();
+  readonly abrirEnviarMasivoDrawer = output<void>();
   readonly exportar = output<void>();
 
   // ── Local state ──
   readonly estadoFilter = signal<EstadoFilter>(null);
   readonly searchQuery = signal('');
   readonly currentPageAlumnos = signal(0);
-  readonly currentPageLog = signal(0);
   /** ID de la matrícula esperando confirmación para generar (teoría incompleta). */
   readonly pendingConfirmId = signal<number | null>(null);
   /** ID de la matrícula esperando confirmación para enviar email. */
   readonly emailConfirmId = signal<number | null>(null);
-  /** true = panel de confirmación masiva visible. */
-  readonly masivoPanelVisible = signal(false);
-  /** true = panel de confirmación de generación en lote visible. */
-  readonly pendientesPanelVisible = signal(false);
 
   // ── Pagination ──
   readonly PAGE_SIZE = 10;
 
   // ── Hero config ──
-  readonly heroActions: SectionHeroAction[] = [];
+  readonly heroActions = computed((): SectionHeroAction[] => [
+    { id: 'historial', label: 'Historial de emisiones', icon: 'scroll', primary: false },
+  ]);
 
   readonly heroKpis = computed((): SectionHeroKpi[] => {
     const k = this.kpis();
@@ -763,6 +718,10 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     ];
   });
 
+  handleHeroAction(actionId: string): void {
+    if (actionId === 'historial') this.abrirHistorialDrawer.emit();
+  }
+
   // ── Filter options ──
   readonly estadoOptions = [
     { label: 'Generados', value: 'generado' },
@@ -770,8 +729,7 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   ];
 
   // ── Skeleton helpers ──
-  readonly skeletonRows = Array.from({ length: 5 });
-  readonly skeletonRowsSmall = Array.from({ length: 3 });
+  readonly skeletonRows = Array.from({ length: 6 });
 
   // ── Computed ──
 
@@ -807,21 +765,8 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     return this.filteredAlumnos().slice(start, start + this.PAGE_SIZE);
   });
 
-  readonly totalPagesLog = computed(() => Math.ceil(this.log().length / this.PAGE_SIZE));
-
-  readonly pagedLog = computed(() => {
-    const page = this.currentPageLog();
-    const start = page * this.PAGE_SIZE;
-    return this.log().slice(start, start + this.PAGE_SIZE);
-  });
-
   readonly pendientesCount = computed(
     () => this.alumnos().filter((a) => a.certificadoStatus === 'pendiente').length,
-  );
-
-  /** Alumnos pendientes de certificado — para el panel de confirmación de generación masiva. */
-  readonly alumnosPendientes = computed(() =>
-    this.alumnos().filter((a) => a.certificadoStatus === 'pendiente'),
   );
 
   /** Alumnos con certificado generado que aún no recibieron el correo. */
@@ -851,14 +796,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
 
   nextPageAlumnos(): void {
     this.currentPageAlumnos.update((p) => Math.min(this.totalPagesAlumnos() - 1, p + 1));
-  }
-
-  prevPageLog(): void {
-    this.currentPageLog.update((p) => Math.max(0, p - 1));
-  }
-
-  nextPageLog(): void {
-    this.currentPageLog.update((p) => Math.min(this.totalPagesLog() - 1, p + 1));
   }
 
   /** Upper bound of the current page range (for "X–Y de N" label). */
@@ -897,32 +834,6 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
     this.pendingConfirmId.set(null);
   }
 
-  abrirPanelPendientes(): void {
-    this.pendientesPanelVisible.set(true);
-  }
-
-  cancelarPendientes(): void {
-    this.pendientesPanelVisible.set(false);
-  }
-
-  confirmarPendientes(): void {
-    this.pendientesPanelVisible.set(false);
-    this.generarPendientes.emit();
-  }
-
-  abrirPanelMasivo(): void {
-    this.masivoPanelVisible.set(true);
-  }
-
-  cancelarMasivo(): void {
-    this.masivoPanelVisible.set(false);
-  }
-
-  confirmarMasivo(): void {
-    this.masivoPanelVisible.set(false);
-    this.enviarEmailsMasivo.emit();
-  }
-
   /** Abre la confirmación inline de envío de email. */
   onClickEmail(alumno: CertificacionAlumnoRow): void {
     this.emailConfirmId.set(alumno.enrollmentId);
@@ -945,22 +856,5 @@ export class CertificacionClaseBContentComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     const grid = this.bentoGrid();
     if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
-  }
-
-  getAccionLabel(accion: string): string {
-    return ACCION_LABELS[accion] ?? accion;
-  }
-
-  getAccionVariant(accion: string): 'success' | 'brand' | 'info' | 'neutral' {
-    switch (accion) {
-      case 'generated':
-        return 'success';
-      case 'email_sent':
-        return 'brand';
-      case 'downloaded':
-        return 'info';
-      default:
-        return 'neutral';
-    }
   }
 }

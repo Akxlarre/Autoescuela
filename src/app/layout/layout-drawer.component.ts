@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { CommonModule, NgComponentOutlet } from '@angular/common';
 import { IconComponent } from '@shared/components/icon/icon.component';
+import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { PressFeedbackDirective } from '@core/directives/press-feedback.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
@@ -33,6 +34,7 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
   imports: [
     CommonModule,
     IconComponent,
+    BadgeComponent,
     PressFeedbackDirective,
     CardHoverDirective,
     NgComponentOutlet,
@@ -98,6 +100,9 @@ import { LayoutDrawerService } from '@core/services/ui/layout-drawer.service';
           <h2 class="m-0 text-base font-semibold truncate" style="color: var(--text-primary);">
             {{ title() }}
           </h2>
+          @if (badge()) {
+            <app-badge variant="brand" class="ml-3 shrink-0">{{ badge() }}</app-badge>
+          }
         </div>
 
         <!-- LADO DERECHO: Acciones y Cerrar -->
@@ -159,6 +164,7 @@ export class LayoutDrawerComponent implements OnDestroy {
   readonly title = this.layoutDrawer.title;
   readonly icon = this.layoutDrawer.icon;
   readonly actions = this.layoutDrawer.actions;
+  readonly badge = this.layoutDrawer.badge;
   readonly canGoBack = this.layoutDrawer.canGoBack;
 
   private isCurrentlyVisible = false;

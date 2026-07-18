@@ -38,16 +38,28 @@ type UploadMode = 'student' | 'school';
     DrawerFormComponent,
   ],
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <div class="flex flex-col gap-5">
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="text" width="100%" height="60px" />
-          <app-skeleton-block variant="rect" width="100%" height="140px" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <div class="flex flex-col gap-5">
+            <!-- Alumno (select, modo student) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="20%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
+            </div>
+            <!-- Tipo de documento -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="40%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="38px" />
+            </div>
+            <!-- Archivo (dropzone) -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="150px" />
+            </div>
+          </div>
+        </ng-template>
+        <ng-template #content>
           <div class="flex-1 flex flex-col gap-5">
             <!-- ── Selector alumno (modo student) ── -->
             @if (facade.currentUploadMode() === 'student') {
@@ -152,21 +164,20 @@ type UploadMode = 'student' | 'school';
               </app-alert-card>
             }
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Footer integrado en el contenido -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
-            <app-async-btn
-              label="Subir documento"
-              icon="upload"
-              [loading]="isSubmitting()"
-              [disabled]="!canSubmit()"
-              (click)="onSubmit()"
-            ></app-async-btn>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
+        <app-async-btn
+          label="Subir documento"
+          icon="upload"
+          [loading]="isSubmitting()"
+          [disabled]="!canSubmit()"
+          (click)="onSubmit()"
+        ></app-async-btn>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class DmsUploadDrawerComponent {

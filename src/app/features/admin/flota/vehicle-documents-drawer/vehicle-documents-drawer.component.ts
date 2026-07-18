@@ -27,58 +27,58 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-drawer-content-loader>
-      <ng-template #skeletons>
-        <!-- Skeleton Header -->
-        <div
-          class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
-        >
-          <app-skeleton-block variant="text" width="160px" height="20px" />
-        </div>
-        <!-- Skeleton Body -->
-        <div class="flex-1 overflow-y-auto px-6 py-6">
-          <div class="grid grid-cols-1 gap-4">
-            @for (_ of [1, 2, 3]; track $index) {
-              <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <app-skeleton-block
-                    variant="rect"
-                    width="48px"
-                    height="48px"
-                    borderRadius="0.75rem"
-                  />
-                  <div class="flex flex-col gap-1.5">
-                    <app-skeleton-block variant="text" width="140px" height="14px" />
-                    <app-skeleton-block variant="text" width="90px" height="10px" />
+    <app-drawer-form>
+      <app-drawer-content-loader>
+        <ng-template #skeletons>
+          <!-- Skeleton Header -->
+          <div
+            class="shrink-0 px-6 py-4 border-b flex items-center justify-between border-border-subtle"
+          >
+            <app-skeleton-block variant="text" width="160px" height="20px" />
+          </div>
+          <!-- Skeleton Body -->
+          <div class="flex-1 overflow-y-auto px-6 py-6">
+            <div class="grid grid-cols-1 gap-4">
+              @for (_ of [1, 2, 3]; track $index) {
+                <div class="p-5 rounded-2xl border bg-base flex items-center justify-between">
+                  <div class="flex items-center gap-4">
+                    <app-skeleton-block
+                      variant="rect"
+                      width="48px"
+                      height="48px"
+                      borderRadius="0.75rem"
+                    />
+                    <div class="flex flex-col gap-1.5">
+                      <app-skeleton-block variant="text" width="140px" height="14px" />
+                      <app-skeleton-block variant="text" width="90px" height="10px" />
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <app-skeleton-block
+                      variant="rect"
+                      width="64px"
+                      height="20px"
+                      borderRadius="999px"
+                    />
+                    <app-skeleton-block
+                      variant="rect"
+                      width="32px"
+                      height="32px"
+                      borderRadius="0.5rem"
+                    />
                   </div>
                 </div>
-                <div class="flex items-center gap-2">
-                  <app-skeleton-block
-                    variant="rect"
-                    width="64px"
-                    height="20px"
-                    borderRadius="999px"
-                  />
-                  <app-skeleton-block
-                    variant="rect"
-                    width="32px"
-                    height="32px"
-                    borderRadius="0.5rem"
-                  />
-                </div>
-              </div>
-            }
+              }
+            </div>
           </div>
-        </div>
-        <!-- Skeleton Footer -->
-        <div
-          class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
-        >
-          <app-skeleton-block variant="rect" width="140px" height="44px" borderRadius="0.5rem" />
-        </div>
-      </ng-template>
-      <ng-template #content>
-        <app-drawer-form>
+          <!-- Skeleton Footer -->
+          <div
+            class="shrink-0 p-6 border-t bg-surface flex items-center justify-end border-border-subtle"
+          >
+            <app-skeleton-block variant="rect" width="140px" height="44px" borderRadius="0.5rem" />
+          </div>
+        </ng-template>
+        <ng-template #content>
           <!-- Header Info -->
           <div class="pb-4 mb-4 border-b border-border-subtle">
             <h3 class="text-sm font-bold text-text-primary">Documentación Obligatoria</h3>
@@ -165,14 +165,13 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </div>
             }
           </div>
+        </ng-template>
+      </app-drawer-content-loader>
 
-          <!-- Footer -->
-          <ng-container ngProjectAs="[drawer-form-footer]">
-            <button type="button" class="btn-primary" (click)="onClose()">Cerrar Panel</button>
-          </ng-container>
-        </app-drawer-form>
-      </ng-template>
-    </app-drawer-content-loader>
+      <ng-container ngProjectAs="[drawer-form-footer]">
+        <button type="button" class="btn-primary" (click)="onClose()">Cerrar Panel</button>
+      </ng-container>
+    </app-drawer-form>
   `,
 })
 export class VehicleDocumentsDrawerComponent {

@@ -38,19 +38,31 @@ type StatusConfig = {
   },
   template: `
     @if (slot(); as s) {
-      <app-drawer-content-loader class="flex-col h-full flex">
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-5 py-2">
-            <app-skeleton-block variant="text" width="100px" height="24px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <div class="grid grid-cols-2 gap-3">
-              <app-skeleton-block variant="text" width="100%" height="60px" />
-              <app-skeleton-block variant="text" width="100%" height="60px" />
+      <app-drawer-form>
+        <app-drawer-content-loader class="flex-col h-full flex">
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-5 py-2">
+              <!-- Estado (pill) -->
+              <app-skeleton-block variant="rect" width="100px" height="22px" borderRadius="999px" />
+
+              <!-- Horario (stat-box prominente) -->
+              <app-skeleton-block variant="rect" width="100%" height="72px" />
+
+              <!-- Instructor + Vehículo -->
+              <div class="grid grid-cols-2 gap-3">
+                <app-skeleton-block variant="rect" width="100%" height="58px" />
+                <app-skeleton-block variant="rect" width="100%" height="58px" />
+              </div>
+
+              <!-- Alumno asignado (card) -->
+              <div class="card p-4 flex flex-col gap-3">
+                <app-skeleton-block variant="text" width="45%" height="11px" />
+                <app-skeleton-block variant="text" width="65%" height="16px" />
+                <app-skeleton-block variant="rect" width="70px" height="18px" />
+              </div>
             </div>
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form>
+          </ng-template>
+          <ng-template #content>
             <div class="flex flex-col gap-5">
               <!-- ── Estado ─────────────────────────────────────────── -->
               <div
@@ -109,16 +121,15 @@ type StatusConfig = {
                 </div>
               }
             </div>
+          </ng-template>
+        </app-drawer-content-loader>
 
-            <!-- ── Acción ────────────────────────────────────────── -->
-            <ng-container ngProjectAs="[drawer-form-footer]">
-              <button class="btn-secondary" (click)="close()" data-llm-action="close-slot-detail">
-                Cerrar detalle
-              </button>
-            </ng-container>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button class="btn-secondary" (click)="close()" data-llm-action="close-slot-detail">
+            Cerrar detalle
+          </button>
+        </ng-container>
+      </app-drawer-form>
     }
   `,
   styles: `

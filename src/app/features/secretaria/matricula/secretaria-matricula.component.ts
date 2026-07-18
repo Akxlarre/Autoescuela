@@ -176,6 +176,12 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         }
       }
     });
+
+    // Badge "Paso N de 6" en el header del drawer (no-op si se usa como vista routeada).
+    effect(() => {
+      const badge = this.viewMode() === 'wizard' ? `Paso ${this.activeStep() + 1} de 6` : null;
+      this.layoutDrawer.setBadge(badge);
+    });
   }
 
   // ── Vista: 'branch-gate' fuerza elección de sede antes de arrancar el wizard ──
@@ -406,28 +412,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
     () => `stepper-premium stepper-premium--step-${this.activeStep() + 1}`,
   );
 
-  private readonly stepLabels = [
-    'Datos Personales',
-    'Asignación',
-    'Documentos',
-    'Contrato',
-    'Pago',
-    'Confirmación',
-  ];
-
-  readonly progressLabel = computed(() => this.stepLabels[this.activeStep()] ?? '');
-
-  /** Pasos del tracker con estado (completed / active / pending) para el header. */
-  readonly wizardSteps = computed<{ label: string; status: 'completed' | 'active' | 'pending' }[]>(
-    () => {
-      const active = this.activeStep();
-      return this.stepLabels.map((label, i) => ({
-        label,
-        status: i < active ? 'completed' : i === active ? 'active' : 'pending',
-      }));
-    },
-  );
-
   ngOnInit(): void {
     this.setupDrawerActions();
     this.initWizard();
@@ -435,6 +419,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.layoutDrawer.setActions([]);
+    this.layoutDrawer.setBadge(null);
     this.branchFacade.setRequiresSpecificBranch(false);
   }
 
@@ -538,7 +523,6 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
 
   private setupDrawerActions(): void {
     this.layoutDrawer.setActions([
-      { label: 'Ayuda', icon: 'help-circle', callback: () => console.log('Ayuda') },
       { label: 'Reiniciar', icon: 'rotate-ccw', callback: () => this.resetWizard() },
     ]);
   }

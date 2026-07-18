@@ -41,9 +41,14 @@ docs/qa-ux/
 /*.jpeg
 /*.webp
 
-# SDD — artefactos privados de dev (no se comparten en el repo)
-# Si querés compartir una spec, copiala a docs/specs/ y commitéala ahí.
-specs/
+# SDD — specs/fixes/hotfixes SÍ se commitean (así todos los agentes del equipo
+# ven el trabajo de todos). Ver specs/AUTHORS.md para la convención de autoría.
+# Lo único local por dev/máquina es qué track tengo activo YO ahora mismo:
+specs/.active
+
+# Código de autor (1 letra) de esta máquina/dev. Ver plantilla en
+# .claude/author.local.json.example — cada dev crea el suyo, no se comparte.
+.claude/author.local.json
 
 environments/
 docs/2020libros-curso-profesional.pdf

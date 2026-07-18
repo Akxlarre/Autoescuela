@@ -34,6 +34,14 @@ describe('AdminAlumnoDetalleFacade', () => {
         insert: vi.fn().mockResolvedValue({ error: null }),
       }),
       functions: { invoke: invokeSpy },
+      storage: {
+        from: vi.fn().mockReturnValue({
+          createSignedUrl: vi.fn().mockResolvedValue({
+            data: { signedUrl: 'https://signed/contrato.pdf' },
+            error: null,
+          }),
+        }),
+      },
     };
 
     dmsViewerSpy = { openByUrl: vi.fn() };
@@ -99,6 +107,35 @@ describe('AdminAlumnoDetalleFacade', () => {
       expect(invokeSpy).toHaveBeenCalledWith('generate-student-license-pdf', {
         body: { enrollment_id: 3, variant: 'initial' },
       });
+    });
+  });
+
+  describe('verContrato', () => {
+    it('setea isViewingContrato en true durante la carga y en false al terminar (éxito)', async () => {
+      expect(facade.isViewingContrato()).toBe(false);
+
+      const promise = facade.verContrato('contracts/1/Contrato.pdf');
+      expect(facade.isViewingContrato()).toBe(true);
+
+      await promise;
+
+      expect(facade.isViewingContrato()).toBe(false);
+      expect(dmsViewerSpy.openByUrl).toHaveBeenCalledWith(
+        'https://signed/contrato.pdf',
+        'Contrato del Alumno',
+      );
+    });
+
+    it('vuelve a poner isViewingContrato en false si la signed URL falla', async () => {
+      (supabaseSpy.client.storage.from as any).mockReturnValueOnce({
+        createSignedUrl: vi.fn().mockResolvedValue({ data: null, error: new Error('boom') }),
+      });
+
+      await facade.verContrato('contracts/1/Contrato.pdf');
+
+      expect(facade.isViewingContrato()).toBe(false);
+      expect(toastSpy.error).toHaveBeenCalled();
+      expect(dmsViewerSpy.openByUrl).not.toHaveBeenCalled();
     });
   });
 

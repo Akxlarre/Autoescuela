@@ -17,6 +17,7 @@ export class LayoutDrawerFacadeService {
   readonly title = this.layoutDrawer.title;
   readonly icon = this.layoutDrawer.icon;
   readonly actions = this.layoutDrawer.actions;
+  readonly badge = this.layoutDrawer.badge;
   readonly canGoBack = this.layoutDrawer.canGoBack;
 
   open(component: Type<any>, title: string, icon?: string, actions?: any[]): void {
@@ -35,6 +36,10 @@ export class LayoutDrawerFacadeService {
 
   setActions(actions: any[]): void {
     this.layoutDrawer.setActions(actions);
+  }
+
+  setBadge(badge: string | null): void {
+    this.layoutDrawer.setBadge(badge);
   }
 
   close(): void {

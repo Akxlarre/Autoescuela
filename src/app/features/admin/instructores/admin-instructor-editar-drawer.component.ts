@@ -38,17 +38,78 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   ],
   template: `
     @if (facade.selectedInstructor(); as inst) {
-      <app-drawer-content-loader>
-        <ng-template #skeletons>
-          <div class="flex flex-col gap-4">
-            <app-skeleton-block variant="text" width="100%" height="60px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-            <app-skeleton-block variant="text" width="100%" height="80px" />
-          </div>
-        </ng-template>
-        <ng-template #content>
-          <app-drawer-form>
+      <app-drawer-form>
+        <app-drawer-content-loader>
+          <ng-template #skeletons>
+            <div class="flex flex-col gap-4">
+              <!-- Mini-header: avatar + nombre + email -->
+              <div class="flex items-center gap-3 rounded-lg p-3">
+                <app-skeleton-block variant="circle" width="36px" height="36px" />
+                <div class="flex flex-col gap-1.5 flex-1">
+                  <app-skeleton-block variant="text" width="55%" height="13px" />
+                  <app-skeleton-block variant="text" width="70%" height="11px" />
+                </div>
+              </div>
+
+              <!-- Sección: Información Personal (7 campos) -->
+              <app-skeleton-block variant="text" width="150px" height="12px" />
+              <div class="flex flex-col gap-4">
+                @for (_ of [1, 2, 3, 4, 5, 6, 7]; track $index) {
+                  <div class="flex flex-col gap-1.5">
+                    <app-skeleton-block variant="text" width="35%" height="12px" />
+                    <app-skeleton-block variant="rect" width="100%" height="40px" />
+                  </div>
+                }
+              </div>
+
+              <!-- Sección: Información de Licencia (3 campos) -->
+              <app-skeleton-block variant="text" width="180px" height="12px" />
+              <div class="flex flex-col gap-4">
+                @for (_ of [1, 2, 3]; track $index) {
+                  <div class="flex flex-col gap-1.5">
+                    <app-skeleton-block variant="text" width="35%" height="12px" />
+                    <app-skeleton-block variant="rect" width="100%" height="40px" />
+                  </div>
+                }
+              </div>
+
+              <!-- Sección: Tipo de Instructor (1 campo) -->
+              <app-skeleton-block variant="text" width="160px" height="12px" />
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="35%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+
+              <!-- Sección: Asignación de Vehículo (1 campo) -->
+              <app-skeleton-block variant="text" width="200px" height="12px" />
+              <div class="flex flex-col gap-1.5">
+                <app-skeleton-block variant="text" width="35%" height="12px" />
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+
+              <!-- Sección: Historial de Asignaciones (lista) -->
+              <app-skeleton-block variant="text" width="210px" height="12px" />
+              <div class="flex flex-col gap-2">
+                @for (_ of [1, 2]; track $index) {
+                  <div class="flex items-center justify-between py-2.5 px-3 rounded-lg bg-elevated">
+                    <div class="flex flex-col gap-1">
+                      <app-skeleton-block variant="text" width="80px" height="13px" />
+                      <app-skeleton-block variant="text" width="110px" height="11px" />
+                    </div>
+                    <app-skeleton-block variant="text" width="90px" height="11px" />
+                  </div>
+                }
+              </div>
+
+              <!-- Sección: Estado de la cuenta (2 botones) -->
+              <app-skeleton-block variant="text" width="140px" height="12px" />
+              <div class="flex items-center gap-3">
+                <app-skeleton-block variant="rect" width="100%" height="34px" />
+                <app-skeleton-block variant="rect" width="100%" height="34px" />
+              </div>
+            </div>
+          </ng-template>
+          <ng-template #content>
             <!-- ── Mini-header ─────────────────────────────────────────────────── -->
             <div
               class="flex items-center gap-3 rounded-lg p-3 mb-5 bg-elevated border border-border-subtle"
@@ -381,34 +442,34 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 </div>
               }
             </div>
+          </ng-template>
+        </app-drawer-content-loader>
 
-            <ng-container ngProjectAs="[drawer-form-footer]">
-              <button
-                class="btn-secondary"
-                (click)="layoutDrawer.close()"
-                data-llm-action="cancelar-editar-instructor"
-              >
-                Cancelar
-              </button>
-              <button
-                class="btn-primary flex items-center gap-2"
-                [disabled]="facade.isSubmitting()"
-                (click)="submit(inst.id, inst.userId)"
-                data-llm-action="guardar-editar-instructor"
-                aria-label="Guardar cambios del instructor"
-              >
-                @if (facade.isSubmitting()) {
-                  <app-icon name="loader-2" [size]="15" class="animate-spin" />
-                  Guardando...
-                } @else {
-                  <app-icon name="check" [size]="15" />
-                  Guardar cambios
-                }
-              </button>
-            </ng-container>
-          </app-drawer-form>
-        </ng-template>
-      </app-drawer-content-loader>
+        <ng-container ngProjectAs="[drawer-form-footer]">
+          <button
+            class="btn-secondary"
+            (click)="layoutDrawer.close()"
+            data-llm-action="cancelar-editar-instructor"
+          >
+            Cancelar
+          </button>
+          <button
+            class="btn-primary flex items-center gap-2"
+            [disabled]="facade.isSubmitting()"
+            (click)="submit(inst.id, inst.userId)"
+            data-llm-action="guardar-editar-instructor"
+            aria-label="Guardar cambios del instructor"
+          >
+            @if (facade.isSubmitting()) {
+              <app-icon name="loader-2" [size]="15" class="animate-spin" />
+              Guardando...
+            } @else {
+              <app-icon name="check" [size]="15" />
+              Guardar cambios
+            }
+          </button>
+        </ng-container>
+      </app-drawer-form>
     }
   `,
   styles: `

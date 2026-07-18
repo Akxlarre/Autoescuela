@@ -678,6 +678,15 @@ app-main-layout p-toast.p-toast-top-center,
   padding: var(--space-2) var(--space-1) !important;
 }
 
+/* Buscador dentro del overlay del select — bordes redondeados como el resto de inputs */
+.p-select-filter-container {
+  padding: 0 var(--space-1) var(--space-2) !important;
+}
+
+.p-select-filter {
+  border-radius: var(--radius-md) !important;
+}
+
 .p-select-list,
 .p-dropdown-items {
   display: flex !important;

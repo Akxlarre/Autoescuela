@@ -25,11 +25,31 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       <app-drawer-content-loader>
         <ng-template #skeletons>
           <div class="flex flex-col gap-5 w-full">
-            <app-skeleton-block variant="text" width="100%" height="70px" />
-            <app-skeleton-block variant="text" width="100%" height="70px" />
-            <app-skeleton-block variant="text" width="100%" height="70px" />
-            <app-skeleton-block variant="text" width="100%" height="70px" />
-            <app-skeleton-block variant="text" width="100%" height="70px" />
+            <!-- Nombres -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="30%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Apellido Paterno -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="40%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Apellido Materno -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="40%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Email -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="20%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
+            <!-- Teléfono -->
+            <div class="flex flex-col gap-1.5">
+              <app-skeleton-block variant="text" width="25%" height="12px" />
+              <app-skeleton-block variant="rect" width="100%" height="40px" />
+            </div>
           </div>
         </ng-template>
 

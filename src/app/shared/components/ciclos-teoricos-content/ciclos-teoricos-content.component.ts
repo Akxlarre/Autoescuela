@@ -411,6 +411,7 @@ import type {
       [closable]="true"
       [dismissableMask]="true"
       [style]="{ width: '480px' }"
+      appendTo="body"
     >
       @if (addableStudents().length === 0) {
         <p class="text-sm text-text-muted py-2">No hay alumnos en otros ciclos de esta sede.</p>
