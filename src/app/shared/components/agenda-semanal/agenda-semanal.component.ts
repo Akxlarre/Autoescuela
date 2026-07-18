@@ -76,10 +76,10 @@ interface CellSummary {
   ],
   host: { class: 'block' },
   template: `
-    <div 
-      class="bento-grid bento-grid--fill-screen" 
-      appBentoGridLayout 
-      #bentoGrid 
+    <div
+      class="bento-grid bento-grid--fill-screen"
+      appBentoGridLayout
+      #bentoGrid
       aria-label="Agenda semanal"
     >
       <!-- ── Hero + KPIs inline ───────────────────────────────────────────── -->
@@ -126,7 +126,9 @@ interface CellSummary {
         }
 
         <!-- Toolbar de navegación + filtro -->
-        <div class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b shrink-0">
+        <div
+          class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b shrink-0"
+        >
           <!-- Navegación de semana -->
           <div class="flex items-center gap-1">
             <button
@@ -167,19 +169,21 @@ interface CellSummary {
           </div>
 
           <!-- Filtro de instructor -->
-          <div class="flex items-center gap-2 min-w-0">
+          <div class="agenda-instructor-filter flex items-center gap-2 min-w-0">
             <span class="instructor-label">Mostrando horario de:</span>
-            <p-select
-              [options]="instructorOptions()"
-              [ngModel]="selectedInstructorId()"
-              (ngModelChange)="instructorFilterChange.emit($event)"
-              optionLabel="label"
-              optionValue="value"
-              [style]="{ 'min-width': '180px' }"
-              placeholder="Todos los instructores"
-              styleClass="agenda-select"
-              [attr.data-llm-description]="'Filtrar calendario por instructor'"
-            />
+            <div class="agenda-select-wrap">
+              <p-select
+                [options]="instructorOptions()"
+                [ngModel]="selectedInstructorId()"
+                (ngModelChange)="instructorFilterChange.emit($event)"
+                optionLabel="label"
+                optionValue="value"
+                [style]="{ 'min-width': '180px' }"
+                placeholder="Todos los instructores"
+                styleClass="agenda-select"
+                [attr.data-llm-description]="'Filtrar calendario por instructor'"
+              />
+            </div>
           </div>
         </div>
 
@@ -216,7 +220,9 @@ interface CellSummary {
             }
           </div>
         } @else if (!weekData() || timeRows().length === 0) {
-          <div class="flex flex-1 items-center justify-center border-t border-[var(--color-border)]">
+          <div
+            class="flex flex-1 items-center justify-center border-t border-[var(--color-border)]"
+          >
             <app-empty-state
               icon="calendar"
               message="No hay clases en esta semana"
@@ -236,10 +242,11 @@ interface CellSummary {
           >
             <!-- Header: esquina vacía + cabeceras de días -->
             <div class="agenda-corner" role="columnheader" aria-label="Hora"></div>
-            @for (day of filteredDays(); track day.date) {
+            @for (day of filteredDays(); track day.date; let dayIdx = $index) {
               <div
                 class="agenda-day-header"
                 [class.agenda-day-header--today]="day.isToday"
+                [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
                 role="columnheader"
                 [attr.aria-label]="day.label"
               >
@@ -259,13 +266,14 @@ interface CellSummary {
               </div>
 
               <!-- Celdas por día -->
-              @for (day of filteredDays(); track day.date) {
+              @for (day of filteredDays(); track day.date; let dayIdx = $index) {
                 @if (isMasterView()) {
                   <!-- MASTER VIEW: Vista condensada con indicadores -->
                   <div
                     class="agenda-cell cell-condensed"
                     [class.agenda-cell--now]="nowTimeRow() === time"
                     [class.agenda-cell--today]="day.isToday"
+                    [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
                     role="gridcell"
                     [attr.aria-label]="
                       day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
@@ -319,6 +327,7 @@ interface CellSummary {
                     class="agenda-cell"
                     [class.agenda-cell--now]="nowTimeRow() === time"
                     [class.agenda-cell--today]="day.isToday"
+                    [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
                     role="gridcell"
                     [attr.aria-label]="day.label + ' ' + time"
                   >
@@ -470,6 +479,34 @@ interface CellSummary {
       white-space: nowrap;
     }
 
+    .agenda-select-wrap {
+      min-width: 0;
+    }
+
+    @media (max-width: 640px) {
+      /* Libera el ancho del toolbar: el placeholder del select ya comunica
+         el propósito ("Todos los instructores"), la etiqueta es redundante. */
+      .instructor-label {
+        display: none;
+      }
+
+      .agenda-instructor-filter {
+        flex: 1 1 100%;
+      }
+
+      .agenda-select-wrap {
+        flex: 1;
+      }
+
+      /* El inline [style]="{'min-width':'180px'}" de PrimeNG gana especificidad
+         sobre reglas normales — !important necesario para que el select ocupe
+         el ancho completo disponible en vez de quedar apretado junto al nav. */
+      .agenda-select-wrap ::ng-deep .p-select {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+    }
+
     /* ── CSS Grid del calendario ─────────────────────────────── */
 
     .agenda-grid {
@@ -477,10 +514,30 @@ interface CellSummary {
       /* grid-template-columns set via [style] binding */
       border-top: 1px solid var(--color-border);
       /* overflow, max-height y scroll-behavior los maneja ScrollContainerDirective */
+    }
 
-      @media (max-width: 640px) {
-        /* Columnas compactas en mobile para scroll horizontal fluido */
+    /* ── Mobile: un solo día visible por vez ──────────────────────────────
+       Reglas SIN nesting (@media plano, no anidado dentro de un selector):
+       el nesting nativo mezclado con .agenda-cell / .agenda-grid (definidas
+       arriba sin @media) no ganaba la cascada de forma confiable en todos
+       los motores — .agenda-col--mobile-hidden no ocultaba nada y el grid
+       de 2 columnas terminaba envolviendo los 5 slots por fila en filas
+       implícitas nuevas (el apilamiento reportado). Un @media plano al final
+       de la hoja, con igual especificidad (una sola clase) mata cualquier
+       ambigüedad: por orden de aparición, esta regla siempre gana. */
+    @media (max-width: 640px) {
+      .agenda-grid {
         font-size: 0.75rem;
+        /* !important porque grid-template-columns llega inline vía [style]
+           (gridTemplateStyle()), pensado solo para desktop. */
+        grid-template-columns: 64px 1fr !important;
+      }
+
+      /* Columna de día no seleccionada (ver mobileDayIndex) — display:none
+         saca el nodo por completo del grid, así el layout de 2 columnas
+         solo recibe 2 items reales por fila (hora + día activo). */
+      .agenda-col--mobile-hidden {
+        display: none !important;
       }
     }
 
@@ -899,14 +956,13 @@ export class AgendaSemanalComponent implements AfterViewInit {
     }
   }
 
-  /** Selecciona el día en mobile y hace scroll suave hasta su columna en la grilla. */
+  /**
+   * Selecciona el día visible en mobile. Las columnas de los demás días se
+   * ocultan vía CSS (`.agenda-col--mobile-hidden`, comparando contra este
+   * índice) — ya no depende de scroll horizontal manual.
+   */
   selectMobileDay(index: number): void {
     this.mobileDayIndex.set(index);
-    const gridEl = this.calendarGridRef()?.nativeElement as HTMLElement | undefined;
-    if (!gridEl) return;
-    // Columna 0 = time-label (64px), columnas 1-N = días
-    const colWidth = (gridEl.scrollWidth - 64) / (this.filteredDays().length || 1);
-    gridEl.scrollTo({ left: 64 + colWidth * index, behavior: 'smooth' });
   }
 
   /**
