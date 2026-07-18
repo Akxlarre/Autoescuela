@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -33,6 +34,20 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+
+/**
+ * True si el fin de la semana visible (`weekEnd`, ISO 'YYYY-MM-DD') ya alcanza
+ * o pasa la fecha límite de visualización (`maxVisibleDateIso`). Función pura
+ * — comparación de strings ISO, que ordenan igual que fechas — extraída del
+ * componente para poder testearla sin montar todo el árbol de Angular.
+ */
+export function isWeekBeyondVisibilityLimit(
+  weekEnd: string | null | undefined,
+  maxVisibleDateIso: string | null,
+): boolean {
+  if (!maxVisibleDateIso || !weekEnd) return false;
+  return weekEnd >= maxVisibleDateIso;
+}
 
 /** Opción para el dropdown de filtro de instructor. */
 interface InstructorOption {
@@ -64,6 +79,7 @@ interface CellSummary {
   imports: [
     FormsModule,
     SelectModule,
+    TooltipModule,
     IconComponent,
     SkeletonBlockComponent,
     EmptyStateComponent,
@@ -150,6 +166,10 @@ interface CellSummary {
 
             <button
               class="agenda-nav-btn"
+              [disabled]="isNextWeekDisabled()"
+              [attr.aria-disabled]="isNextWeekDisabled()"
+              [pTooltip]="isNextWeekDisabled() ? nextWeekDisabledHint() : undefined"
+              tooltipPosition="bottom"
               (click)="weekNext.emit()"
               aria-label="Semana siguiente"
               data-llm-action="next-week"
@@ -165,6 +185,12 @@ interface CellSummary {
               >
                 Hoy
               </button>
+            }
+
+            @if (maxVisibleDateLabel()) {
+              <span class="agenda-visibility-hint">
+                Mostrando horarios hasta el {{ maxVisibleDateLabel() }}
+              </span>
             }
           </div>
 
@@ -456,6 +482,32 @@ interface CellSummary {
         border-color: var(--ds-brand);
         color: var(--ds-brand);
         background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+
+        &:hover {
+          border-color: var(--color-border);
+          color: var(--text-secondary);
+          background: var(--bg-surface);
+        }
+      }
+    }
+
+    /* Texto sutil: hasta qué fecha se están cargando datos (límite de meses
+       configurable en Ajustes → AgendaSettingsService). */
+    .agenda-visibility-hint {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      white-space: nowrap;
+      margin-left: 0.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .agenda-visibility-hint {
+        display: none;
       }
     }
 
@@ -857,6 +909,14 @@ export class AgendaSemanalComponent implements AfterViewInit {
   showKpis = input(true);
   /** Ocultar hero cuando la agenda se renderiza dentro de un drawer. */
   showHero = input(true);
+  /**
+   * Fecha límite (ISO YYYY-MM-DD) hasta la que se puede navegar/agendar —
+   * viene de `AgendaSettingsService` a través del Smart padre (este Dumb
+   * component no inyecta services, solo recibe el valor ya resuelto).
+   */
+  maxVisibleDateIso = input<string | null>(null);
+  /** Etiqueta legible de esa misma fecha límite, ej. "18 de septiembre, 2026". */
+  maxVisibleDateLabel = input<string | null>(null);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
@@ -881,6 +941,18 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   /** True cuando no hay filtro de instructor → vista de todos. */
   readonly isMasterView = computed(() => this.selectedInstructorId() === null);
+
+  /**
+   * True cuando la semana actualmente visible ya alcanza o pasa la fecha
+   * límite (`maxVisibleDateIso`) — deshabilita "Semana siguiente".
+   */
+  readonly isNextWeekDisabled = computed(() =>
+    isWeekBeyondVisibilityLimit(this.weekData()?.weekEnd, this.maxVisibleDateIso()),
+  );
+
+  readonly nextWeekDisabledHint = computed(
+    () => `No se puede agendar más allá del ${this.maxVisibleDateLabel() ?? 'límite configurado'}`,
+  );
 
   /**
    * Fila de hora más cercana a la hora actual (HH:MM) — para el indicador "ahora".
