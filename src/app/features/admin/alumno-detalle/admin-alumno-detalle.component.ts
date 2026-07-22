@@ -791,6 +791,22 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
     />
   `,
   styles: `
+    /* El header (app-section-hero, density="slim") solo mide ~64-70px de alto,
+       pero .bento-grid base fuerza grid-auto-rows: minmax(120px, auto) en TODA
+       fila implícita (incluida la primera) — a diferencia de los listados
+       (app-alumnos-list-content / app-alumnos-profesional-list-content), que
+       usan .bento-grid--fill-screen y por eso su fila 1 ya es "auto" en vez de
+       min 120px. Esta página no adopta el modificador --fill-screen completo
+       (cambiaría el resto del grid a modo app-like con scroll interno, fuera
+       de alcance aquí) — solo se sobreescribe grid-template-rows para que la
+       PRIMERA fila (el header) sea "auto" y no reserve 120px de alto vacío.
+       Los estilos de componente de Angular no están dentro de ningún @layer,
+       así que ganan por cascada sobre la regla base (@layer bento.grid) sin
+       necesitar !important ni tocar _bento-grid.scss. */
+    .bento-grid {
+      grid-template-rows: auto;
+    }
+
     .kpi-label {
       font-size: var(--text-xs);
       font-weight: var(--font-bold);
