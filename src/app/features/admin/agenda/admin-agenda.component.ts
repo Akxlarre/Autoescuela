@@ -35,6 +35,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       (weekNext)="facade.goToNextWeek()"
       (weekPrev)="facade.goToPrevWeek()"
       (weekToday)="facade.goToToday()"
+      (weekJump)="facade.goToDate($event)"
       (instructorFilterChange)="facade.setInstructorFilter($event)"
       (slotClick)="onSlotClick($event)"
     />

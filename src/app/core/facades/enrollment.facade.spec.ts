@@ -9,6 +9,7 @@ import { EnrollmentDocumentsFacade } from '@core/facades/enrollment-documents.fa
 import { EnrollmentPaymentFacade } from '@core/facades/enrollment-payment.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 
 // ── Mock Supabase client ──
 
@@ -21,6 +22,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     gt: vi.fn().mockReturnThis(),
+    lte: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     like: vi.fn().mockReturnThis(),
     not: vi.fn().mockReturnThis(),
@@ -91,6 +93,7 @@ describe('EnrollmentFacade', () => {
   let mockPayment: any;
   let mockNotifications: any;
   let mockToast: any;
+  let mockAgendaSettings: any;
 
   beforeEach(() => {
     mockSupabase = createMockSupabaseService();
@@ -104,6 +107,7 @@ describe('EnrollmentFacade', () => {
       notifyRole: vi.fn().mockResolvedValue(undefined),
     };
     mockToast = { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() };
+    mockAgendaSettings = { maxVisibleDateIso: vi.fn().mockReturnValue('2026-06-16') };
 
     TestBed.configureTestingModule({
       providers: [
@@ -116,6 +120,7 @@ describe('EnrollmentFacade', () => {
         { provide: EnrollmentPaymentFacade, useValue: mockPayment },
         { provide: NotificationsFacade, useValue: mockNotifications },
         { provide: ToastService, useValue: mockToast },
+        { provide: AgendaSettingsService, useValue: mockAgendaSettings },
       ],
     });
 
@@ -621,6 +626,31 @@ describe('EnrollmentFacade', () => {
       mockSupabase.client.from = vi.fn().mockReturnValue(builder);
     }
 
+    it('should filter available slots by the AgendaSettingsService dynamic limit, not a hardcoded date', async () => {
+      const builder = createMockQueryBuilder();
+      builder.order = vi.fn().mockResolvedValue({ data: mockSlots, error: null });
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+      mockAgendaSettings.maxVisibleDateIso.mockReturnValue('2026-09-20');
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+      expect(builder.lte).toHaveBeenCalledWith('slot_start', '2026-09-20T23:59:59');
+    });
+
+    it('should re-derive the upper bound from AgendaSettingsService on every call (no cached/stale limit)', async () => {
+      const builder = createMockQueryBuilder();
+      builder.order = vi.fn().mockResolvedValue({ data: mockSlots, error: null });
+      mockSupabase.client.from = vi.fn().mockReturnValue(builder);
+
+      mockAgendaSettings.maxVisibleDateIso.mockReturnValue('2026-05-14');
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+      expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-05-14T23:59:59');
+
+      mockAgendaSettings.maxVisibleDateIso.mockReturnValue('2026-11-14');
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+      expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-11-14T23:59:59');
+    });
+
     it('should create a realtime channel when loadScheduleGrid is called', async () => {
       setupScheduleQuery();
 
@@ -677,6 +707,7 @@ describe('EnrollmentFacade', () => {
       mockSupabase.client.from = vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: mockSlots, error: null }),
       });
 
@@ -715,6 +746,7 @@ describe('EnrollmentFacade', () => {
       mockSupabase.client.from = vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({ data: occupiedSlots, error: null }),
       });
 

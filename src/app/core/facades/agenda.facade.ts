@@ -46,13 +46,18 @@ const BASE_TIME_ROWS = [
   '20:00',
 ] as const;
 
-function getMondayOfCurrentWeek(): string {
-  const today = new Date();
-  const day = today.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
+/** Lunes de la semana que contiene `baseDate` (ISO 'YYYY-MM-DD', default hoy). */
+function getMondayOfWeek(baseDate?: string): string {
+  const base = baseDate ? new Date(baseDate + 'T12:00:00') : new Date();
+  const day = base.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
   const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + diff);
+  const monday = new Date(base);
+  monday.setDate(base.getDate() + diff);
   return toISODate(monday);
+}
+
+function getMondayOfCurrentWeek(): string {
+  return getMondayOfWeek();
 }
 
 function addDays(dateStr: string, days: number): string {
@@ -289,6 +294,17 @@ export class AgendaFacade {
 
   goToToday(): void {
     this._weekStart.set(getMondayOfCurrentWeek());
+    this.loadWeek();
+  }
+
+  /**
+   * Salta a la semana que contiene `dateIso` — usado por el "salto rápido"
+   * (DatePicker) de `AgendaSemanalComponent`. Resuelve el lunes de esa semana
+   * y recarga, igual que `goToToday()`.
+   */
+  goToDate(dateIso: string): void {
+    if (!dateIso) return;
+    this._weekStart.set(getMondayOfWeek(dateIso));
     this.loadWeek();
   }
 

@@ -90,6 +90,31 @@ describe('AgendaFacade', () => {
     expect(facade.selectedSlot()).toBe(slot);
   });
 
+  describe('goToDate — salto rápido a una fecha específica', () => {
+    it('salta al lunes de la semana que contiene la fecha elegida (fecha entre semana)', () => {
+      // 2026-09-16 es un miércoles → el lunes de esa semana es 2026-09-14.
+      facade.goToDate('2026-09-16');
+      expect(facade.weekStart()).toBe('2026-09-14');
+    });
+
+    it('si la fecha elegida ya es lunes, salta a esa misma fecha', () => {
+      facade.goToDate('2026-09-14');
+      expect(facade.weekStart()).toBe('2026-09-14');
+    });
+
+    it('resuelve correctamente una fecha en domingo (vuelve al lunes anterior)', () => {
+      // 2026-09-20 es domingo → pertenece a la semana que empezó el 2026-09-14.
+      facade.goToDate('2026-09-20');
+      expect(facade.weekStart()).toBe('2026-09-14');
+    });
+
+    it('ignora un string vacío (no rompe ni cambia weekStart)', () => {
+      const initial = facade.weekStart();
+      facade.goToDate('');
+      expect(facade.weekStart()).toBe(initial);
+    });
+  });
+
   describe('timeRows — baseline de jornada completa', () => {
     it('incluye las 13 filas del bloque horario base aunque la semana no tenga ninguna clase', async () => {
       // El mock por defecto (beforeEach) ya resuelve slots y sesiones vacíos.

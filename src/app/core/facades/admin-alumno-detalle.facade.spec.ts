@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 
 describe('AdminAlumnoDetalleFacade', () => {
   let facade: AdminAlumnoDetalleFacade;
@@ -951,6 +952,56 @@ describe('AdminAlumnoDetalleFacade', () => {
           selectedSlotIds: ['2026-07-10T09:00:00'],
         }),
       ).rejects.toThrow('La cantidad de horarios elegidos no coincide con la selección.');
+    });
+  });
+
+  describe('loadScheduleGrid — límite dinámico de reagendamiento', () => {
+    /** Fuerza esta suite a que el límite superior venga del AgendaSettingsService mockeado. */
+    function setupWithAgendaLimit(maxVisibleDateIso: string) {
+      const builder: any = {
+        select: vi.fn(() => builder),
+        eq: vi.fn(() => builder),
+        lte: vi.fn(() => builder),
+        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const mock = {
+        client: {
+          from: vi.fn(() => builder),
+          functions: { invoke: vi.fn() },
+        },
+      };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          AdminAlumnoDetalleFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: ToastService, useValue: toastSpy },
+          { provide: DmsViewerService, useValue: dmsViewerSpy },
+          { provide: NotificationsFacade, useValue: notificationsSpy },
+          {
+            provide: AgendaSettingsService,
+            useValue: { maxVisibleDateIso: vi.fn().mockReturnValue(maxVisibleDateIso) },
+          },
+        ],
+      });
+      facade = TestBed.inject(AdminAlumnoDetalleFacade);
+
+      return builder;
+    }
+
+    it('recorta la disponibilidad al límite dinámico de AgendaSettingsService, no a un mes fijo', async () => {
+      const builder = setupWithAgendaLimit('2026-09-20');
+
+      await facade.loadScheduleGrid(9);
+
+      expect(builder.lte).toHaveBeenCalledWith('slot_start', '2026-09-20T23:59:59');
+    });
+
+    it('re-deriva el límite en cada llamada — no queda pegado al primer valor leído', async () => {
+      const builder = setupWithAgendaLimit('2026-05-14');
+      await facade.loadScheduleGrid(9);
+      expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-05-14T23:59:59');
     });
   });
 });
