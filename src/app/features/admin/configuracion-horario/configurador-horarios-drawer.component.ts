@@ -131,6 +131,7 @@ interface HorarioBlock {
                       class="h-4 w-4 rounded border-border-default text-brand focus:ring-brand focus:ring-offset-base bg-surface"
                       [checked]="selectedCourseIds().includes(course.id)"
                       (change)="toggleCourseSelection(course.id)"
+                      data-llm-action="alternar-curso-afectado-por-grilla"
                     />
                     <div class="flex-1">
                       <div class="text-sm font-semibold text-text-primary">{{ course.name }}</div>
@@ -155,6 +156,7 @@ interface HorarioBlock {
                     type="button"
                     class="absolute top-3 right-3 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
                     (click)="removeTurno(turno.id)"
+                    data-llm-action="eliminar-turno"
                   >
                     <app-icon name="trash-2" [size]="14" />
                   </button>
@@ -164,6 +166,7 @@ interface HorarioBlock {
                     [(ngModel)]="turno.name"
                     class="turno-name-input text-sm font-bold border-none outline-none focus:ring-0 p-0 text-text-primary w-full sm:w-48 mb-3"
                     placeholder="Nombre del Turno"
+                    data-llm-description="input for the shift/turno name"
                   />
 
                   <div class="flex flex-col sm:flex-row gap-3 mb-3">
@@ -253,13 +256,19 @@ interface HorarioBlock {
                 type="button"
                 class="w-full flex items-center justify-center gap-2 py-2 border border-dashed border-brand/50 rounded-lg text-brand text-xs font-semibold hover:bg-brand-muted transition-colors cursor-pointer"
                 (click)="addTurno()"
+                data-llm-action="agregar-turno"
               >
                 <app-icon name="plus" [size]="14" />
                 Añadir Turno
               </button>
             </div>
 
-            <button type="button" class="btn-primary w-full py-2.5 mt-2" (click)="generateGrid()">
+            <button
+              type="button"
+              class="btn-primary w-full py-2.5 mt-2"
+              (click)="generateGrid()"
+              data-llm-action="generar-grilla-horaria"
+            >
               <app-icon name="zap" [size]="14" />
               Generar Grilla
             </button>
@@ -359,6 +368,7 @@ interface HorarioBlock {
             class="btn-secondary"
             (click)="close()"
             [disabled]="facade.isSaving()"
+            data-llm-action="cancelar-configuracion-horario"
           >
             Cancelar
           </button>
@@ -367,6 +377,7 @@ interface HorarioBlock {
             class="btn-primary flex items-center gap-2"
             [disabled]="!canSave()"
             (click)="save()"
+            data-llm-action="aplicar-cambios-grilla-horaria"
           >
             <app-icon name="save" [size]="14" />
             {{ facade.isSaving() ? 'Guardando...' : 'Aplicar Cambios' }}
