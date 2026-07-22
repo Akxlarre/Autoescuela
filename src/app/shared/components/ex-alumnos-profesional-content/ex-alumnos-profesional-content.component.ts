@@ -12,6 +12,7 @@ import {
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TagModule } from 'primeng/tag';
 
 import { IconComponent } from '../icon/icon.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
@@ -35,6 +36,7 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     CurrencyPipe,
     FormsModule,
     SelectModule,
+    TagModule,
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
@@ -43,7 +45,12 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid aria-label="Ex-Alumnos Profesional">
+    <div
+      class="bento-grid bento-grid--fill-screen"
+      appBentoGridLayout
+      #bentoGrid
+      aria-label="Ex-Alumnos Profesional"
+    >
       <app-section-hero
         density="slim"
         [animateOnInit]="false"
@@ -57,7 +64,10 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
         [actions]="[]"
       />
 
-      <div class="bento-banner card p-0 overflow-hidden flex flex-col" appCardHover>
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden flex flex-col dual-viewport-container w-full h-full"
+        appCardHover
+      >
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <div class="relative flex-1 min-w-52 max-w-xs">
@@ -89,13 +99,19 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
         </div>
 
         @if (isLoading()) {
-          <div class="p-4 space-y-3">
+          <div class="desktop-view hide-on-squeeze p-4 space-y-3">
             @for (i of skeletonRows; track i) {
               <app-skeleton-block variant="rect" width="100%" height="44px" />
             }
           </div>
+          <div class="mobile-view show-on-squeeze p-4 space-y-2">
+            @for (i of skeletonRows; track i) {
+              <app-skeleton-block variant="rect" width="100%" height="76px" />
+            }
+          </div>
         } @else {
-          <div class="overflow-x-auto">
+          <!-- VISTA 1: TABLA CLÁSICA (Oculta cuando se comprime) -->
+          <div class="desktop-view hide-on-squeeze overflow-x-auto">
             <table class="w-full border-collapse text-sm">
               <thead>
                 <tr class="bg-subtle text-text-muted uppercase text-xs tracking-wider text-left">
@@ -166,11 +182,88 @@ import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
               </tbody>
             </table>
           </div>
+
+          <!-- VISTA 2: TARJETAS COMPACTAS (Visible cuando se comprime) -->
+          <div class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+            @for (egresado of filtered(); track egresado.id) {
+              <div class="flex flex-col gap-2 p-3 rounded-lg border border-border-subtle bg-base">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold text-text-primary truncate">
+                      {{ egresado.nombre }}
+                    </p>
+                    <p class="text-xs text-text-muted font-mono truncate">{{ egresado.rut }}</p>
+                  </div>
+                  <p-tag
+                    [value]="egresado.licencia"
+                    severity="secondary"
+                    styleClass="text-2xs shrink-0"
+                  />
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-xs">
+                    <span class="font-bold text-text-primary">{{ egresado.anio ?? '—' }}</span>
+                    <span class="text-text-muted italic"> · {{ egresado.sede }}</span>
+                  </div>
+                  @if (egresado.saldoPendiente > 0) {
+                    <p-tag
+                      [value]="
+                        'Debe ' + (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
+                      "
+                      severity="warn"
+                      styleClass="text-2xs shrink-0"
+                    />
+                  } @else {
+                    <p-tag value="Al día" severity="success" styleClass="text-2xs shrink-0" />
+                  }
+                </div>
+                <button
+                  type="button"
+                  class="rematricular-btn w-full justify-center"
+                  (click)="reEnroll.emit(egresado)"
+                  data-llm-action="re-enroll-student-card"
+                  [attr.aria-label]="'Re-matricular a ' + egresado.nombre"
+                >
+                  <app-icon name="user-plus" [size]="14" />
+                  <span>Re-matricular</span>
+                </button>
+              </div>
+            } @empty {
+              <app-empty-state
+                icon="graduation-cap"
+                message="No hay ex-alumnos profesionales"
+                subtitle="Ajusta la búsqueda o el filtro de clase."
+                actionLabel="Limpiar filtros"
+                actionIcon="refresh-cw"
+                (action)="resetFilters()"
+              />
+            }
+          </div>
         }
       </div>
     </div>
   `,
   styles: `
+    /* Container Queries para Dual-Viewport Render — idéntico al patrón ya
+       usado en app-alumnos-list-content / app-alumnos-profesional-list-content. */
+    .dual-viewport-container {
+      container-type: inline-size;
+      container-name: listContainer;
+    }
+
+    .show-on-squeeze {
+      display: none;
+    }
+
+    @container listContainer (max-width: 900px) {
+      .hide-on-squeeze {
+        display: none !important;
+      }
+      .show-on-squeeze {
+        display: block !important;
+      }
+    }
+
     .rematricular-btn {
       display: inline-flex;
       align-items: center;
