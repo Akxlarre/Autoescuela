@@ -87,6 +87,7 @@ import { ACCION_LABELS } from '@core/models/ui/certificacion-clase-b.model';
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() === 0"
                   (click)="prevPage()"
+                  data-llm-action="pagina-anterior-historial-emisiones"
                 >
                   <app-icon name="chevron-left" [size]="16" />
                 </button>
@@ -97,6 +98,7 @@ import { ACCION_LABELS } from '@core/models/ui/certificacion-clase-b.model';
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() >= totalPages() - 1"
                   (click)="nextPage()"
+                  data-llm-action="pagina-siguiente-historial-emisiones"
                 >
                   <app-icon name="chevron-right" [size]="16" />
                 </button>

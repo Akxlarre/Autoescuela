@@ -266,6 +266,7 @@ const INTERFACE_ICONS = [
                   (click)="
                     heroGroup().get('background.type')?.setValue('none'); heroGroup().markAsDirty()
                   "
+                  data-llm-action="seleccionar-fondo-hero-tema"
                 >
                   <app-icon name="palette" [size]="13" />
                   <span>Tema (Degradado)</span>
@@ -277,6 +278,7 @@ const INTERFACE_ICONS = [
                   (click)="
                     heroGroup().get('background.type')?.setValue('color'); heroGroup().markAsDirty()
                   "
+                  data-llm-action="seleccionar-fondo-hero-color"
                 >
                   <app-icon name="pipette" [size]="13" />
                   <span>Color Personalizado</span>
@@ -288,6 +290,7 @@ const INTERFACE_ICONS = [
                   (click)="
                     heroGroup().get('background.type')?.setValue('image'); heroGroup().markAsDirty()
                   "
+                  data-llm-action="seleccionar-fondo-hero-imagen"
                 >
                   <app-icon name="image" [size]="13" />
                   <span>Imagen</span>
@@ -299,6 +302,7 @@ const INTERFACE_ICONS = [
                   (click)="
                     heroGroup().get('background.type')?.setValue('video'); heroGroup().markAsDirty()
                   "
+                  data-llm-action="seleccionar-fondo-hero-video"
                 >
                   <app-icon name="video" [size]="13" />
                   <span>Video (MP4)</span>

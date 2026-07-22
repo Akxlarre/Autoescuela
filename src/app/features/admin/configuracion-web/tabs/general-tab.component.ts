@@ -33,6 +33,7 @@ const CDN_URL =
               formControlName="name"
               class="field-input"
               placeholder="Ej: Autoescuela Chillán"
+              data-llm-description="input for the commercial school name shown site-wide"
             />
           </div>
           <div class="flex flex-col gap-1.5 bento-wide">
@@ -42,6 +43,7 @@ const CDN_URL =
               formControlName="shortName"
               class="field-input"
               placeholder="Ej: Autoescuela"
+              data-llm-description="input for the short brand name"
             />
           </div>
         </div>
@@ -53,6 +55,7 @@ const CDN_URL =
             formControlName="slogan"
             class="field-input"
             placeholder="Ej: Tu licencia en Chillán, más cerca y fácil"
+            data-llm-description="input for the SEO main slogan"
           />
         </div>
 
@@ -64,6 +67,7 @@ const CDN_URL =
               formControlName="domain"
               class="field-input"
               placeholder="Ej: autoescuelachillan.cl"
+              data-llm-description="input for the public website domain"
             />
           </div>
           <div class="flex flex-col gap-1.5 bento-wide">
@@ -90,7 +94,9 @@ const CDN_URL =
         </h3>
         <div class="bento-grid bento-grid--forms bento-grid--forms">
           <!-- Logo -->
-          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide">
+          <div
+            class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide"
+          >
             <div class="flex flex-col gap-1">
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Logo de la Escuela</span
@@ -109,7 +115,9 @@ const CDN_URL =
           </div>
 
           <!-- OG Image -->
-          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide">
+          <div
+            class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide"
+          >
             <div class="flex flex-col gap-1">
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Imagen Open Graph (SEO / Redes)</span
@@ -128,7 +136,9 @@ const CDN_URL =
           </div>
 
           <!-- Favicon -->
-          <div class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide">
+          <div
+            class="p-4 rounded-xl border flex flex-col gap-4 border-border-default bg-elevated bento-wide"
+          >
             <div class="flex flex-col gap-1">
               <span class="text-xs font-bold uppercase tracking-wider text-text-primary"
                 >Favicon (Pestaña del Navegador)</span
@@ -163,6 +173,7 @@ const CDN_URL =
               formControlName="facebook"
               class="field-input"
               placeholder="https://facebook.com/..."
+              data-llm-description="input for the Facebook page URL"
             />
           </div>
           <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
@@ -172,6 +183,7 @@ const CDN_URL =
               formControlName="instagram"
               class="field-input"
               placeholder="https://instagram.com/..."
+              data-llm-description="input for the Instagram profile URL"
             />
           </div>
           <div class="flex flex-col gap-1.5" data-col-span-md="4" data-col-span="4">
@@ -181,6 +193,7 @@ const CDN_URL =
               formControlName="tiktok"
               class="field-input"
               placeholder="https://tiktok.com/@..."
+              data-llm-description="input for the TikTok profile URL"
             />
           </div>
         </div>
