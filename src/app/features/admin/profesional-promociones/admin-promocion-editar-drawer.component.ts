@@ -95,16 +95,22 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               />
             </div>
 
-            <!-- Código (editable) -->
+            <!-- Código: ID numérico MTT (editable) -->
             <div class="mb-4">
-              <label class="text-xs font-medium mb-1 block text-text-secondary"> Código </label>
+              <label class="text-xs font-medium mb-1 block text-text-secondary">
+                Código (ID numérico MTT)
+              </label>
               <input
                 class="form-input"
                 type="text"
+                inputmode="numeric"
                 [(ngModel)]="codeModel"
-                placeholder="Ej: PROM-2026-03"
-                data-llm-description="Código editable de la promoción"
+                placeholder="Ej: 156"
+                data-llm-description="ID numérico MTT de la promoción; se propaga a sus cursos como {id}.{licencia}"
               />
+              @if (code().trim().length > 0 && !codeIsValid()) {
+                <p class="text-2xs mt-1 text-error">Debe ser solo números (ej: 156).</p>
+              }
             </div>
 
             <!-- Fechas (readonly) -->
@@ -306,11 +312,15 @@ export class AdminPromocionEditarDrawerComponent {
     return new Date(p.startDate + 'T00:00:00') > today;
   });
 
-  /** Habilita guardar si nombre/código cambiaron O si el nuevo estado es una transición válida. */
+  /** El código es el ID numérico MTT — estrictamente dígitos. */
+  protected readonly codeIsValid = computed(() => /^\d+$/.test(this.code().trim()));
+
+  /** Habilita guardar si nombre/código cambiaron (código válido) O si el nuevo estado es una transición válida. */
   protected readonly canSave = computed(() => {
     const p = this.facade.selectedPromocion();
     if (!p) return false;
-    const nameOrCodeChanged = this.name().trim() !== p.name || this.code().trim() !== p.code;
+    const codeChanged = this.code().trim() !== p.code;
+    const nameOrCodeChanged = this.name().trim() !== p.name || (codeChanged && this.codeIsValid());
     const statusChanged =
       this.status() !== p.status &&
       this.availableStatusOptions().some((o) => o.value === this.status());

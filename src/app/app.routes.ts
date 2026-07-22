@@ -287,8 +287,8 @@ export const routes: Routes = [
           {
             path: 'libro-de-clases',
             loadComponent: () =>
-              import('./features/admin/libro-de-clases/admin-libro-de-clases.component').then(
-                (m) => m.AdminLibroDeClasesComponent,
+              import('./features/libro-de-clases/libro-de-clases.component').then(
+                (m) => m.LibroDeClasesComponent,
               ),
           },
           {
@@ -609,8 +609,8 @@ export const routes: Routes = [
             path: 'libro-de-clases',
             canActivate: [professionalBranchGuard],
             loadComponent: () =>
-              import('./features/secretaria/libro-de-clases/secretaria-libro-de-clases.component').then(
-                (m) => m.SecretariaLibroDeClasesComponent,
+              import('./features/libro-de-clases/libro-de-clases.component').then(
+                (m) => m.LibroDeClasesComponent,
               ),
           },
           {

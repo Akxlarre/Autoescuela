@@ -12,11 +12,12 @@ import type {
   CrearPromocionPayload,
   EditarPromocionPayload,
 } from '@core/models/ui/promocion-table.model';
+import { licenseClassToSuffix } from '@core/utils/license-suffix.utils';
 
 @Injectable({ providedIn: 'root' })
 export class PromocionesFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
 
   // ── Estado privado ──────────────────────────────────────────────────────────
@@ -248,7 +249,6 @@ private readonly supabase = inject(SupabaseService);
         .from('professional_promotions')
         .insert({
           name: payload.name,
-          code: payload.code,
           start_date: payload.startDate,
           end_date: payload.endDate,
           status: 'planned',
@@ -306,7 +306,8 @@ private readonly supabase = inject(SupabaseService);
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción';
+      const msg =
+        err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al crear promoción';
       this.toast.error(msg);
       return false;
     } finally {
@@ -371,16 +372,47 @@ private readonly supabase = inject(SupabaseService);
 
       if (error) throw error;
 
+      if (/^\d+$/.test(payload.code)) {
+        await this.propagateCodeToCourses(id, payload.code);
+      }
+
       this.toast.success('Promoción actualizada correctamente');
       await this.refreshSilently();
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error al actualizar promoción';
+      const msg =
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error al actualizar promoción';
       this.toast.error(msg);
       return false;
     } finally {
       this._isSubmitting.set(false);
     }
+  }
+
+  /**
+   * Propaga el ID numérico MTT de la promoción a cada uno de sus cursos:
+   * promotion_courses.code = "{promoCode}.{sufijo de licencia}" (ej. "156.2" para A2).
+   */
+  private async propagateCodeToCourses(promotionId: number, promoCode: string): Promise<void> {
+    const { data, error } = await this.supabase.client
+      .from('promotion_courses')
+      .select('id, courses!inner(license_class)')
+      .eq('promotion_id', promotionId);
+
+    if (error || !data) return;
+
+    await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (data as any[]).map((pc) => {
+        const suffix = licenseClassToSuffix(pc.courses.license_class ?? '');
+        return this.supabase.client
+          .from('promotion_courses')
+          .update({ code: `${promoCode}.${suffix}` })
+          .eq('id', pc.id);
+      }),
+    );
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────

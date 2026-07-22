@@ -73,13 +73,6 @@ function formatMondayLabel(iso: string): string {
   });
 }
 
-function generatePromoCode(startIso: string): string {
-  const d = new Date(startIso + 'T12:00:00');
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  return `PROM-${year}-${month}`;
-}
-
 function generatePromoName(startIso: string): string {
   const d = new Date(startIso + 'T12:00:00');
   const day = d.getDate();
@@ -200,34 +193,24 @@ function generatePromoName(startIso: string): string {
             }
           </section>
 
-          <!-- ── Nombre y código (auto-generados) ──────────────────────────── -->
+          <!-- ── Nombre (auto-generado) ──────────────────────────────────────── -->
           @if (selectedStartDate()) {
             <section>
               <h3 class="text-sm font-semibold mb-3 text-text-primary">
                 Información de la promoción
               </h3>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="text-xs font-medium mb-1 block text-text-secondary">
-                    Nombre (automático)
-                  </label>
-                  <div class="form-input bg-elevated cursor-default">
-                    {{ nombre() }}
-                  </div>
-                </div>
-                <div>
-                  <label class="text-xs font-medium mb-1 block text-text-secondary">
-                    Código (automático)
-                  </label>
-                  <div class="form-input bg-elevated cursor-default">
-                    {{ codigo() }}
-                  </div>
+              <div>
+                <label class="text-xs font-medium mb-1 block text-text-secondary">
+                  Nombre (automático)
+                </label>
+                <div class="form-input bg-elevated cursor-default">
+                  {{ nombre() }}
                 </div>
               </div>
               <p class="text-2xs mt-1.5 text-text-muted">
                 <app-icon name="info" [size]="10" />
-                El nombre y código se generan automáticamente a partir de la fecha de inicio
-                seleccionada.
+                El nombre se genera automáticamente a partir de la fecha de inicio seleccionada. El
+                ID numérico del MTT se asigna después, desde "Editar Promoción".
               </p>
             </section>
           }
@@ -415,7 +398,6 @@ export class AdminPromocionCrearDrawerComponent {
 
   // ── Form state ────────────────────────────────────────────────────────────
   protected readonly nombre = signal('');
-  protected readonly codigo = signal('');
   protected readonly selectedStartDate = signal<string | null>(null);
   protected readonly endDate = computed(() => {
     const start = this.selectedStartDate();
@@ -449,11 +431,7 @@ export class AdminPromocionCrearDrawerComponent {
 
   // ── Validation ────────────────────────────────────────────────────────────
   protected readonly canSubmit = computed(() => {
-    return (
-      this.nombre().trim().length > 0 &&
-      this.codigo().trim().length > 0 &&
-      !!this.selectedStartDate()
-    );
+    return this.nombre().trim().length > 0 && !!this.selectedStartDate();
   });
 
   constructor() {
@@ -461,12 +439,11 @@ export class AdminPromocionCrearDrawerComponent {
     this.facade.loadRelatoresDisponibles();
     this.facade.loadProfessionalCourses();
 
-    // Auto-generate name and code from start date (non-editable)
+    // Auto-generate name from start date (non-editable)
     effect(() => {
       const date = this.selectedStartDate();
       if (date) {
         this.nombre.set(generatePromoName(date));
-        this.codigo.set(generatePromoCode(date));
       }
     });
   }
@@ -516,7 +493,6 @@ export class AdminPromocionCrearDrawerComponent {
 
     const success = await this.facade.crearPromocion({
       name: this.nombre().trim(),
-      code: this.codigo().trim(),
       startDate: this.selectedStartDate()!,
       endDate: this.endDate(),
       cursos,
