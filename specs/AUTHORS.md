@@ -17,6 +17,19 @@ ID de track lleva un **código de autor de una letra**.
 Si se suma alguien al equipo: agregar su código acá **antes** de que cree su primer
 track, para evitar colisiones con alguien que ya esté usando esa letra.
 
+## Cómo se reparte el trabajo entre el equipo
+
+Antes de que alguien escriba su propia spec/fix, el trabajo se designa vía el tablero
+`specs/ASSIGNMENTS.md` (capa previa a un track, no reemplaza nada de lo de abajo):
+
+```
+/assign-new "título"    → lo agrega a specs/ASSIGNMENTS.md, asignado a un código de autor (o "cualquiera")
+/assign-list             → cada quien ve qué le toca a él
+/assign-claim <ASG-ID>   → genera SU spec/fix/hotfix (numerado con su propio código, según las reglas de abajo)
+```
+
+Ver `specs/ASSIGNMENTS.md` para el tablero actual y las convenciones completas.
+
 ## Formato de ID (con autor)
 
 | Track      | Formato          | Ejemplo                        |

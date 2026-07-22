@@ -430,14 +430,6 @@ export const routes: Routes = [
               ),
           },
           {
-            path: 'asistencia/profesional',
-            canActivate: [professionalBranchGuard],
-            loadComponent: () =>
-              import('./features/secretaria/asistencia-profesional/secretaria-asistencia-profesional.component').then(
-                (m) => m.SecretariaAsistenciaProfesionalComponent,
-              ),
-          },
-          {
             path: 'matricula',
             loadComponent: () =>
               import('./features/secretaria/matricula/secretaria-matricula.component').then(

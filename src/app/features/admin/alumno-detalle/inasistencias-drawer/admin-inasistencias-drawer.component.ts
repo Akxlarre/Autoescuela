@@ -247,12 +247,7 @@ import { AdminInasistenciaDrawerComponent } from '../inasistencia-drawer/admin-i
             {{ viewMotivoText() }}
           </div>
           <div class="flex justify-end pt-2">
-            <button
-              class="btn-secondary text-sm px-4 py-2 cursor-pointer"
-              (click)="closeViewMotivo()"
-            >
-              Cerrar
-            </button>
+            <button class="btn-secondary" (click)="closeViewMotivo()">Cerrar</button>
           </div>
         </div>
       </div>
