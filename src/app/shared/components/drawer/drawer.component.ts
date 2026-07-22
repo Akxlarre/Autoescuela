@@ -56,7 +56,6 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
             @if (icon()) {
               <div
                 class="flex items-center justify-center rounded-lg w-8 h-8 bg-brand-tint text-brand"
-                
               >
                 <app-icon [name]="icon()!" [size]="18" />
               </div>
@@ -68,7 +67,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
           <button
             appPressFeedback
             (click)="close()"
-            class="btn-ghost w-8 h-8 rounded-full"
+            class="btn-ghost w-8 h-8"
             aria-label="Cerrar panel"
             data-llm-action="cerrar-drawer"
           >
@@ -83,10 +82,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 
         <!-- Footer (opcional via select) -->
         @if (hasFooter()) {
-          <footer
-            class="px-6 py-4 border-t shrink-0 bg-elevated border-border-subtle"
-            
-          >
+          <footer class="px-6 py-4 border-t shrink-0 bg-elevated border-border-subtle">
             <ng-content select="[drawer-footer]"></ng-content>
           </footer>
         }

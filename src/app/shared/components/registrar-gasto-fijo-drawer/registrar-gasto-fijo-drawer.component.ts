@@ -181,7 +181,7 @@ import {
           </button>
           <button
             type="submit"
-            class="flex-1 h-10 rounded-xl text-sm font-bold flex items-center justify-center gap-2 btn-primary transition-all active:scale-[0.98]"
+            class="flex-1 h-10 font-bold flex items-center justify-center gap-2 btn-primary transition-all active:scale-[0.98]"
             [disabled]="form.invalid || isSaving()"
             [style.opacity]="form.invalid || isSaving() ? '0.6' : '1'"
             data-llm-action="guardar-gasto-fijo"
