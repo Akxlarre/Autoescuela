@@ -68,7 +68,6 @@
 | `/app/secretaria/agenda` | `SecretariaAgendaComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/asistencia` | `SecretariaAsistenciaComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/asistencia/matriz` | `SecretariaAsistenciaMatrizComponent` | — | `src/app/app.routes.ts` |
-| `/app/secretaria/asistencia/profesional` | `SecretariaAsistenciaProfesionalComponent` | `professionalBranchGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/matricula` | `SecretariaMatriculaComponent` | `enrollmentDraftGuard` | `src/app/app.routes.ts` |
 | `/app/secretaria/pagos` | `SecretariaPagosComponent` | — | `src/app/app.routes.ts` |
 | `/app/secretaria/contabilidad/cuadratura` | `SecretariaContabilidadCuadraturaComponent` | — | `src/app/app.routes.ts` |

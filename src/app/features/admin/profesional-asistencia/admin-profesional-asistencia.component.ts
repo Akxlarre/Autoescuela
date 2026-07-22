@@ -1,32 +1,39 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  inject,
-  OnInit,
-  OnDestroy,
-  signal,
   computed,
   effect,
-  AfterViewInit,
-  ElementRef,
-  viewChild,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AsistenciaProfesionalFacade } from '@core/facades/asistencia-profesional.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { LayoutService } from '@core/services/ui/layout.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
+import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { SelectModule } from 'primeng/select';
 import { AdminSesionDrawerComponent } from './admin-sesion-drawer.component';
-import { SessionDayCardComponent } from './session-day-card.component';
+import { WeekMatrixComponent } from './week-matrix.component';
+import { FirmaSemanalTableComponent } from './firma-semanal-table.component';
+import { ResumenAlumnosTableComponent } from './resumen-alumnos-table.component';
 import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model';
 
+/**
+ * Página de Clases y Asistencia de Clase Profesional (admin; secretaría la
+ * reutiliza vía thin-wrapper). Modo dual (spec 0033-b): fill-screen en desktop
+ * (hero / mapa semanal / panel de tabs con scroll interno) y scroll nativo bajo lg.
+ * El modificador fill-screen es incondicional para que la página nunca scrollee
+ * en desktop (sin shift de scrollbar, canon spec 0031).
+ */
 @Component({
   selector: 'app-admin-profesional-asistencia',
   standalone: true,
@@ -37,13 +44,16 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
     SkeletonBlockComponent,
     IconComponent,
     BentoGridLayoutDirective,
+    BentoRevealDirective,
     CardHoverDirective,
-    SessionDayCardComponent,
+    WeekMatrixComponent,
+    FirmaSemanalTableComponent,
+    ResumenAlumnosTableComponent,
     SelectModule,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
-      <!-- ═══ Hero ═══ -->
+    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoReveal appBentoGridLayout>
+      <!-- ═══ Hero (fila 1, auto) ═══ -->
       <app-section-hero
         density="slim"
         [animateOnInit]="false"
@@ -54,15 +64,30 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
         [kpis]="heroKpis()"
       />
 
-      <!-- ═══ CONTENIDO PRINCIPAL: Integrado con Filtros y Grilla ═══ -->
-      <div class="bento-banner flex flex-col gap-6">
-        <div class="card p-0 flex flex-col overflow-hidden" appCardHover>
-          <!-- TOOLBAR: Filtros + Navegación -->
+      <!-- ═══ Mapa semanal (fila 2, auto): toolbar + grilla de días ═══ -->
+      <div class="bento-banner card p-0 flex flex-col overflow-hidden" appCardHover>
+        <!-- TOOLBAR: Filtros + Navegación. Switch fila/columna por CONTENEDOR
+             (isDesktop() = LayoutService.tier() por ResizeObserver de <main>),
+             NUNCA por breakpoint de viewport (xl:/sm:) — con el drawer de
+             sesión abierto, <main> se angosta pero el viewport sigue ancho;
+             las utilities xl:/sm: no reaccionan y el toolbar se desborda
+             (misma trampa documentada en spec 0030). -->
+        <div
+          class="px-4 py-3 lg:px-6 flex flex-col gap-4 border-b bg-surface border-border-muted"
+          [class.flex-row]="isDesktop()"
+          [class.items-center]="isDesktop()"
+          [class.justify-between]="isDesktop()"
+        >
+          <!-- Selectores: flex-1 min-w-0 en cada wrapper permite que se
+               achiquen cuando el contenedor no alcanza para 2×256px, en vez
+               de desbordar (mismo patrón que el selector de ciclo en
+               ciclos-teoricos-content). -->
           <div
-            class="p-4 lg:px-6 lg:py-4 flex flex-col xl:flex-row gap-4 border-b xl:items-center justify-between bg-surface border-border-muted"
+            class="flex flex-col gap-3 w-full"
+            [class.flex-row]="isDesktop()"
+            [class.w-auto]="isDesktop()"
           >
-            <!-- Selectores -->
-            <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+            <div class="flex-1 min-w-0" [class.max-w-64]="isDesktop()">
               <p-select
                 [options]="promoOptions()"
                 optionLabel="name"
@@ -70,9 +95,11 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 placeholder="Seleccione la promoción"
                 [ngModel]="facade.selectedPromocionId()"
                 (ngModelChange)="onPromoChange($event)"
-                styleClass="w-full sm:w-64"
+                styleClass="w-full"
                 data-llm-description="select professional promotion for attendance"
               />
+            </div>
+            <div class="flex-1 min-w-0" [class.max-w-64]="isDesktop()">
               <p-select
                 [options]="cursoOptions()"
                 optionLabel="courseCode"
@@ -80,463 +107,187 @@ import type { SesionProfesional } from '@core/models/ui/sesion-profesional.model
                 placeholder="Módulo del Curso"
                 [ngModel]="facade.selectedCursoId()"
                 (ngModelChange)="onCursoChange($event)"
-                styleClass="w-full sm:w-64"
+                styleClass="w-full"
                 [disabled]="facade.cursos().length === 0"
                 data-llm-description="select course module for attendance"
               />
             </div>
-
-            <!-- Navegación Semanal (solo se muestra si hay curso seleccionado) -->
-            @if (facade.selectedCursoId()) {
-              <div class="flex items-center gap-1 bg-elevated border border-subtle rounded-lg p-1">
-                <button
-                  class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
-                  (click)="facade.prevWeek()"
-                  title="Semana Anterior"
-                >
-                  <app-icon name="chevron-left" [size]="16" />
-                </button>
-
-                <div class="px-3 flex flex-col items-center justify-center min-w-[200px]">
-                  <span class="text-sm font-semibold text-text-primary">{{
-                    facade.weekLabel()
-                  }}</span>
-                  @if (!facade.isCurrentWeek()) {
-                    <button
-                      class="mt-0.5 text-2xs font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
-                      (click)="facade.goToCurrentWeek()"
-                    >
-                      Volver a Hoy
-                    </button>
-                  }
-                </div>
-
-                <button
-                  class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
-                  (click)="facade.nextWeek()"
-                  title="Semana Siguiente"
-                >
-                  <app-icon name="chevron-right" [size]="16" />
-                </button>
-              </div>
-            }
           </div>
 
-          <!-- ÁREA DE MAPA SEMANAL -->
-          <div class="p-6 bg-surface">
-            @if (facade.isLoading()) {
-              <div class="bento-grid">
-                @for (i of skeletonDays; track i) {
-                  <div
-                    class="rounded-xl border border-border bg-base p-3 bento-square"
-                    data-col-span="2"
-                    data-col-span-md="2"
+          <!-- Navegación Semanal (solo se muestra si hay curso seleccionado) -->
+          @if (facade.selectedCursoId()) {
+            <div
+              class="flex items-center gap-1 bg-elevated border border-subtle rounded-lg p-1 shrink-0"
+            >
+              <button
+                class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+                (click)="facade.prevWeek()"
+                title="Semana Anterior"
+              >
+                <app-icon name="chevron-left" [size]="16" />
+              </button>
+
+              <div class="px-3 flex flex-col items-center justify-center min-w-[160px]">
+                <span class="text-sm font-semibold text-text-primary">{{
+                  facade.weekLabel()
+                }}</span>
+                @if (!facade.isCurrentWeek()) {
+                  <button
+                    class="mt-0.5 text-2xs font-bold uppercase tracking-wider bg-brand text-white px-2 py-0.5 rounded-full transition-transform hover:scale-105 active:scale-95"
+                    (click)="facade.goToCurrentWeek()"
                   >
-                    <app-skeleton-block variant="text" width="60%" height="14px" />
-                    <div class="mt-3 space-y-2">
-                      <app-skeleton-block variant="rect" width="100%" height="56px" />
-                      <app-skeleton-block variant="rect" width="100%" height="56px" />
-                    </div>
-                  </div>
+                    Volver a Hoy
+                  </button>
                 }
               </div>
-            } @else if (facade.selectedCursoId()) {
-              <div class="bento-grid">
-                @for (day of facade.weekDays(); track day.date) {
-                  <app-session-day-card
-                    class="bento-square block"
-                    data-col-span="2"
-                    data-col-span-md="2"
-                    [day]="day"
-                    (selectSession)="openSesion($event)"
-                  />
-                }
-              </div>
-            } @else {
-              <div class="py-14 text-center">
-                <app-icon
-                  name="calendar-check"
-                  [size]="48"
-                  color="var(--text-muted)"
-                  class="mb-3"
-                />
-                <h3 class="text-sm font-semibold text-text-primary">Información Semanal</h3>
-                <p class="mt-1 text-xs text-text-secondary">
-                  Selecciona la Promoción y luego el Módulo de Curso para revisar su Calendario.
-                </p>
-              </div>
-            }
-          </div>
+
+              <button
+                class="flex items-center justify-center rounded-md p-1.5 text-text-secondary hover:bg-surface hover:text-text-primary transition-colors"
+                (click)="facade.nextWeek()"
+                title="Semana Siguiente"
+              >
+                <app-icon name="chevron-right" [size]="16" />
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- MATRIZ SEMANAL compacta (refinamiento owner): columnas = días,
+             filas = Teoría/Práctica. Banda mínima → máximo alto para el panel. -->
+        <div class="p-3 bg-surface">
+          @if (facade.isLoading()) {
+            <div class="flex flex-col gap-2">
+              <app-skeleton-block variant="text" width="100%" height="22px" />
+              <app-skeleton-block variant="rect" width="100%" height="32px" />
+              <app-skeleton-block variant="rect" width="100%" height="32px" />
+            </div>
+          } @else if (facade.selectedCursoId()) {
+            <app-week-matrix [days]="facade.weekDays()" (selectSession)="openSesion($event)" />
+          } @else {
+            <div class="py-6 text-center">
+              <app-icon name="calendar-check" [size]="40" color="var(--text-muted)" class="mb-2" />
+              <h3 class="text-sm font-semibold text-text-primary">Información Semanal</h3>
+              <p class="mt-1 text-xs text-text-secondary">
+                Selecciona la Promoción y luego el Módulo de Curso para revisar su Calendario.
+              </p>
+            </div>
+          }
         </div>
       </div>
 
-      <!-- ═══ Firma Semanal ═══ -->
-      @if (facade.selectedCursoId()) {
-        <div class="bento-banner card p-0 flex flex-col overflow-hidden" appCardHover>
+      <!-- ═══ Panel de tablas (fila 3, fill): tabs Firma semanal | Resumen ═══ -->
+      <!-- Celda .bento-fill: en desktop llena el resto del viewport (contain:size
+           vía _bento-grid.scss) y el scroll vive en el cuerpo del panel; bajo lg
+           mide su contenido natural y la página scrollea nativamente. -->
+      <div class="bento-banner bento-fill card p-0 flex flex-col" appCardHover>
+        <!-- Header: tabs + contexto del tab activo -->
+        <div
+          class="px-4 py-3 border-b flex items-center justify-between gap-3 flex-wrap bg-surface border-border-muted"
+        >
           <div
-            class="p-4 lg:px-6 lg:py-4 border-b flex justify-between items-center bg-surface border-border-muted"
+            class="flex gap-1.5 p-1 rounded-xl bg-subtle"
+            role="tablist"
+            aria-label="Tablas de asistencia"
           >
-            <div class="flex items-center gap-2">
-              <app-icon name="pen-line" [size]="16" color="var(--ds-brand)" />
-              <h2 class="text-sm font-semibold text-text-primary">
-                Firma semanal de asistencia teórica
-              </h2>
-              <span class="text-xs text-text-muted ml-1">{{ facade.weekLabel() }}</span>
-            </div>
-            @if (!facade.isLoadingFirmas()) {
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab() === 'firma'"
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0 flex items-center gap-2"
+              [style.background]="activeTab() === 'firma' ? 'var(--bg-surface)' : 'transparent'"
+              [style.color]="activeTab() === 'firma' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [style.boxShadow]="
+                activeTab() === 'firma'
+                  ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
+                  : 'none'
+              "
+              data-llm-action="tab-firma-semanal"
+              (click)="activeTab.set('firma')"
+            >
+              <app-icon name="pen-line" [size]="15" />
+              Firma semanal
+            </button>
+            <button
+              type="button"
+              role="tab"
+              [attr.aria-selected]="activeTab() === 'resumen'"
+              class="px-4 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer border-0 flex items-center gap-2"
+              [style.background]="activeTab() === 'resumen' ? 'var(--bg-surface)' : 'transparent'"
+              [style.color]="activeTab() === 'resumen' ? 'var(--ds-brand)' : 'var(--text-muted)'"
+              [style.boxShadow]="
+                activeTab() === 'resumen'
+                  ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.12)), inset 0 0 0 1.5px var(--ds-brand)'
+                  : 'none'
+              "
+              data-llm-action="tab-resumen-alumnos"
+              (click)="activeTab.set('resumen')"
+            >
+              <app-icon name="users" [size]="15" />
+              Resumen por alumno
+            </button>
+          </div>
+
+          @if (facade.selectedCursoId()) {
+            @if (activeTab() === 'firma' && !facade.isLoadingFirmas()) {
               <span class="text-xs font-medium text-text-secondary">
-                {{ facade.firmasSemanaCount().firmaron }}/{{ facade.firmasSemanaCount().total }}
-                firmaron
+                {{ facade.firmasSemanaCount().firmaron }}/{{
+                  facade.firmasSemanaCount().total
+                }}
+                firmaron · {{ facade.weekLabel() }}
               </span>
+            } @else if (activeTab() === 'resumen') {
+              <span class="text-xs text-text-muted">Sesiones completadas</span>
             }
-          </div>
-
-          @if (facade.isLoadingFirmas()) {
-            <div class="card p-4 flex flex-col gap-3">
-              @for (i of [1, 2, 3]; track i) {
-                <app-skeleton-block variant="text" width="100%" height="36px" />
-              }
-            </div>
-          } @else if (facade.firmasSemana().length === 0) {
-            <div class="card p-8 text-center">
-              <p class="text-sm text-text-muted">No hay alumnos matriculados en este curso.</p>
-            </div>
-          } @else {
-            <div class="card overflow-hidden">
-              <table class="resumen-table w-full">
-                <thead>
-                  <tr>
-                    <th class="text-left">Alumno</th>
-                    <th class="text-center">% Teoría esta semana</th>
-                    <th class="text-center">Estado firma</th>
-                    <th class="text-center">
-                      @if (facade.firmasSemana().some((a) => a.signatureId === null)) {
-                        <label class="flex items-center gap-1 cursor-pointer justify-center">
-                          <input
-                            type="checkbox"
-                            [checked]="allPendingSelected()"
-                            (change)="toggleSelectAll()"
-                            data-llm-description="Seleccionar todos los alumnos sin firma"
-                            class="cursor-pointer"
-                          />
-                          <span
-                            style="font-size: inherit; font-weight: inherit; letter-spacing: inherit; color: inherit;"
-                            >Marcar todos</span
-                          >
-                        </label>
-                      }
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (alumno of facade.firmasSemana(); track alumno.enrollmentId) {
-                    <tr>
-                      <td>
-                        <div class="flex items-center gap-2">
-                          <div class="initials-avatar">{{ alumno.initials }}</div>
-                          <div>
-                            <p class="text-sm font-medium text-text-primary">{{ alumno.nombre }}</p>
-                            <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="text-center">
-                        @if (
-                          alumno.pctTeoriaSemana === 0 &&
-                          facade.weekDays()[0]?.theory === null &&
-                          facade.weekDays()[1]?.theory === null
-                        ) {
-                          <span class="text-xs text-text-muted">Sin sesiones</span>
-                        } @else {
-                          <span
-                            class="pct-badge"
-                            [class.pct-ok]="alumno.pctTeoriaSemana >= 75"
-                            [class.pct-warn]="
-                              alumno.pctTeoriaSemana >= 50 && alumno.pctTeoriaSemana < 75
-                            "
-                            [class.pct-danger]="alumno.pctTeoriaSemana < 50"
-                          >
-                            {{ alumno.pctTeoriaSemana }}%
-                          </span>
-                        }
-                      </td>
-                      <td class="text-center">
-                        @if (alumno.signatureId !== null) {
-                          <span class="firma-badge firma-ok">
-                            <app-icon name="check-circle" [size]="12" />
-                            Firmó {{ formatSignedAt(alumno.signedAt) }}
-                          </span>
-                        } @else {
-                          <span class="firma-badge firma-pending">Sin firma</span>
-                        }
-                      </td>
-                      <td class="text-center">
-                        @if (alumno.signatureId === null) {
-                          <input
-                            type="checkbox"
-                            [checked]="isSelected(alumno.enrollmentId)"
-                            (change)="toggleSelect(alumno.enrollmentId)"
-                            data-llm-action="select-student-for-signature"
-                            class="cursor-pointer"
-                          />
-                        }
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-
-              @if (selectedForSign().length > 0) {
-                <div
-                  class="flex items-center justify-between border-t border-border px-4 py-3 bg-surface"
-                >
-                  <span class="text-xs text-text-secondary">
-                    {{ selectedForSign().length }} alumno{{
-                      selectedForSign().length > 1 ? 's' : ''
-                    }}
-                    seleccionado{{ selectedForSign().length > 1 ? 's' : '' }}
-                  </span>
-                  <button
-                    class="btn-primary"
-                    [disabled]="facade.isSaving()"
-                    (click)="onRegistrarFirmas()"
-                    data-llm-action="register-weekly-signatures"
-                  >
-                    <app-icon name="pen-line" [size]="14" />
-                    Registrar firma{{ selectedForSign().length > 1 ? 's' : '' }}
-                  </button>
-                </div>
-              }
-            </div>
           }
         </div>
-      }
 
-      <!-- ═══ Resumen de asistencia por alumno ═══ -->
-      @if (facade.selectedCursoId()) {
-        <div class="bento-banner card p-0 flex flex-col overflow-hidden mb-6" appCardHover>
-          <div
-            class="p-4 lg:px-6 lg:py-4 border-b flex items-center gap-2 bg-surface border-border-muted"
-          >
-            <app-icon name="users" [size]="16" color="var(--ds-brand)" />
-            <h2 class="text-sm font-semibold text-text-primary">
-              Resumen de asistencia por alumno
-            </h2>
-            <span class="text-xs text-text-muted ml-1">(sesiones completadas)</span>
-          </div>
-
-          @if (facade.isLoadingResumen()) {
-            <div class="card p-4 flex flex-col gap-3">
-              @for (i of [1, 2, 3]; track i) {
-                <app-skeleton-block variant="text" width="100%" height="36px" />
-              }
+        <!-- Cuerpo con scroll interno (dueño del overflow en desktop) -->
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          @if (!facade.selectedCursoId()) {
+            <div class="p-8 text-center">
+              <p class="text-sm text-text-muted">
+                Selecciona la Promoción y el Módulo para ver la firma semanal y el resumen por
+                alumno.
+              </p>
             </div>
-          } @else if (facade.resumenAlumnos().length === 0) {
-            <div class="card p-8 text-center">
-              <p class="text-sm text-text-muted">No hay alumnos matriculados en este curso.</p>
-            </div>
+          } @else if (activeTab() === 'firma') {
+            <app-firma-semanal-table
+              [alumnos]="facade.firmasSemana()"
+              [isLoading]="facade.isLoadingFirmas()"
+              [isSaving]="facade.isSaving()"
+              [sinSesionesSemana]="sinSesionesTeoriaSemana()"
+              (registrarFirmas)="onRegistrarFirmas($event)"
+            />
           } @else {
-            <div class="card overflow-hidden">
-              <table class="resumen-table w-full">
-                <thead>
-                  <tr>
-                    <th class="text-left">Alumno</th>
-                    <th class="text-center">Teoría</th>
-                    <th class="text-center">% Teoría</th>
-                    <th class="text-center">Práctica</th>
-                    <th class="text-center">% Práctica</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (alumno of facade.resumenAlumnos(); track alumno.studentId) {
-                    <tr>
-                      <td>
-                        <div class="flex items-center gap-2">
-                          <div class="initials-avatar">{{ alumno.initials }}</div>
-                          <div>
-                            <p class="text-sm font-medium text-text-primary">{{ alumno.nombre }}</p>
-                            <p class="text-xs text-text-muted">{{ alumno.rut }}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td class="text-center text-sm text-text-secondary">
-                        {{ alumno.teoriaAsistida }}/{{ alumno.teoriaTotal }}
-                      </td>
-                      <td class="text-center">
-                        <span
-                          class="pct-badge"
-                          [class.pct-ok]="alumno.pctTeoria >= 75"
-                          [class.pct-warn]="alumno.pctTeoria >= 50 && alumno.pctTeoria < 75"
-                          [class.pct-danger]="alumno.pctTeoria < 50"
-                        >
-                          {{ alumno.pctTeoria }}%
-                        </span>
-                      </td>
-                      <td class="text-center text-sm text-text-secondary">
-                        {{ alumno.practicaAsistida }}/{{ alumno.practicaTotal }}
-                      </td>
-                      <td class="text-center">
-                        <span
-                          class="pct-badge"
-                          [class.pct-ok]="alumno.pctPractica >= 75"
-                          [class.pct-warn]="alumno.pctPractica >= 50 && alumno.pctPractica < 75"
-                          [class.pct-danger]="alumno.pctPractica < 50"
-                        >
-                          {{ alumno.pctPractica }}%
-                        </span>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+            <app-resumen-alumnos-table
+              [alumnos]="facade.resumenAlumnos()"
+              [isLoading]="facade.isLoadingResumen()"
+            />
           }
         </div>
-      }
+      </div>
     </div>
     <!-- /bento-grid -->
   `,
   styles: `
-    .session-card {
-      cursor: pointer;
-    }
-    .session-scheduled {
-      border-color: var(--color-border);
-      background: var(--color-bg-surface);
-    }
-    .session-completed {
-      border-color: var(--color-success);
-      background: color-mix(in srgb, var(--color-success) 8%, transparent);
-    }
-    .session-in_progress {
-      border-color: var(--ds-brand);
-      background: color-mix(in srgb, var(--ds-brand) 8%, transparent);
-    }
-    .session-cancelled {
-      border-color: var(--color-border);
-      background: var(--color-bg-surface);
-      opacity: 0.5;
-    }
-    .session-future {
-      border-color: var(--color-border);
-      background: var(--color-bg-surface);
-      opacity: 0.6;
-      cursor: pointer;
-    }
-    .day-column {
-      min-height: 120px;
-    }
-
-    .resumen-table {
-      border-collapse: collapse;
-    }
-    .resumen-table th {
-      padding: 10px 16px;
-      font-size: var(--text-xs);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border-subtle);
-      background: var(--bg-elevated);
-    }
-    .resumen-table td {
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--border-subtle);
-    }
-    .resumen-table tr:last-child td {
-      border-bottom: none;
-    }
-    .resumen-table tr:hover td {
-      background: var(--bg-elevated);
-    }
-
-    .initials-avatar {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      font-size: 11px;
-      font-weight: 700;
-      flex-shrink: 0;
-      background: var(--color-primary-tint);
-      color: var(--color-primary);
-    }
-
-    .pct-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: var(--text-xs);
-      font-weight: 600;
-    }
-    .pct-ok {
-      background: color-mix(in srgb, var(--state-success) 12%, transparent);
-      color: var(--state-success);
-    }
-    .pct-warn {
-      background: color-mix(in srgb, var(--state-warning) 12%, transparent);
-      color: var(--state-warning);
-    }
-    .pct-danger {
-      background: color-mix(in srgb, var(--state-error) 12%, transparent);
-      color: var(--state-error);
-    }
-    .border-brand {
-      border-color: var(--ds-brand);
-    }
-    .bg-brand-muted {
-      background: color-mix(in srgb, var(--ds-brand) 4%, var(--color-bg-surface));
-    }
-
-    .firma-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: var(--text-xs);
-      font-weight: 600;
-    }
-    .firma-ok {
-      background: color-mix(in srgb, var(--state-success) 12%, transparent);
-      color: var(--state-success);
-    }
-    .firma-pending {
-      background: var(--color-bg-elevated, var(--bg-elevated));
-      color: var(--text-muted);
-    }
     .border-border-muted {
       border-color: var(--border-muted);
     }
   `,
 })
-export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, AfterViewInit {
+export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy {
   readonly facade = inject(AsistenciaProfesionalFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
-  private readonly gsap = inject(GsapAnimationsService);
+  private readonly layoutService = inject(LayoutService);
 
-  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
+  // ── Tab del panel de tablas ─────────────────────────────────────────────────
+  readonly activeTab = signal<'firma' | 'resumen'>('firma');
 
-  readonly skeletonDays = [1, 2, 3, 4, 5, 6];
-
-  // ── Firma semanal — estado de selección local ──────────────────────────────
-  readonly selectedForSign = signal<number[]>([]);
-
-  readonly allPendingSelected = computed(() => {
-    const pending = this.facade.firmasSemana().filter((a) => a.signatureId === null);
-    return (
-      pending.length > 0 && pending.every((a) => this.selectedForSign().includes(a.enrollmentId))
-    );
-  });
-
-  readonly somePendingSelected = computed(() => {
-    const sel = this.selectedForSign();
-    return sel.length > 0 && !this.allPendingSelected();
-  });
+  /** Tier por CONTENEDOR (<main>, ResizeObserver) — nunca viewport. Gobierna
+   *  el switch fila/columna del toolbar: con el drawer de sesión abierto,
+   *  <main> se angosta aunque el viewport siga ancho. */
+  readonly isDesktop = computed(() => this.layoutService.tier() === 'desktop');
 
   readonly promoOptions = computed(() =>
     this.facade.promociones().map((p) => ({
@@ -583,11 +334,11 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
     },
   ]);
 
-  readonly drawerTitle = computed(() => {
-    const sesion = this.facade.selectedSesion();
-    if (!sesion) return 'Sesión';
-    const tipo = sesion.tipo === 'theory' ? 'Teoría' : 'Práctica';
-    return `${tipo} — ${this.formatDate(sesion.date)}`;
+  /** Semana visible sin sesiones de teoría (Lun/Mar sin carga) — la tabla de
+   *  firma muestra "Sin sesiones" en vez de 0%. */
+  readonly sinSesionesTeoriaSemana = computed(() => {
+    const days = this.facade.weekDays();
+    return (days[0]?.theory ?? null) === null && (days[1]?.theory ?? null) === null;
   });
 
   constructor() {
@@ -595,7 +346,6 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
     effect(() => {
       const _week = this.facade.weekOffset();
       if (this.facade.selectedCursoId()) {
-        this.selectedForSign.set([]);
         void this.facade.fetchFirmasSemana();
       }
     });
@@ -608,11 +358,6 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
 
   ngOnDestroy(): void {
     this.branchFacade.setProfessionalOnly(false);
-  }
-
-  ngAfterViewInit(): void {
-    const grid = this.bentoGrid();
-    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
   }
 
   onPromoChange(id: number): void {
@@ -630,48 +375,8 @@ export class AdminProfesionalAsistenciaComponent implements OnInit, OnDestroy, A
     this.layoutDrawer.open(AdminSesionDrawerComponent, title, 'clipboard-list');
   }
 
-  closeDrawer(): void {
-    this.layoutDrawer.close();
-    this.facade.clearSelectedSesion();
-  }
-
-  getSessionClasses(session: SesionProfesional): string {
-    const today = new Date().toISOString().slice(0, 10);
-    if (session.date > today) return 'session-future';
-    return `session-${session.status}`;
-  }
-
-  // ── Firma semanal ───────────────────────────────────────────────────────────
-
-  isSelected(enrollmentId: number): boolean {
-    return this.selectedForSign().includes(enrollmentId);
-  }
-
-  toggleSelect(enrollmentId: number): void {
-    this.selectedForSign.update((ids) =>
-      ids.includes(enrollmentId) ? ids.filter((id) => id !== enrollmentId) : [...ids, enrollmentId],
-    );
-  }
-
-  toggleSelectAll(): void {
-    const pending = this.facade
-      .firmasSemana()
-      .filter((a) => a.signatureId === null)
-      .map((a) => a.enrollmentId);
-    this.selectedForSign.set(this.allPendingSelected() ? [] : pending);
-  }
-
-  async onRegistrarFirmas(): Promise<void> {
-    const ids = this.selectedForSign();
-    const ok = await this.facade.registrarFirmas(ids);
-    if (ok) this.selectedForSign.set([]);
-  }
-
-  formatSignedAt(signedAt: string | null): string {
-    if (!signedAt) return '';
-    const d = new Date(signedAt);
-    const dayNames = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-    return `${dayNames[d.getDay()]} ${d.getDate()}`;
+  async onRegistrarFirmas(enrollmentIds: number[]): Promise<void> {
+    await this.facade.registrarFirmas(enrollmentIds);
   }
 
   private formatDate(dateStr: string): string {
