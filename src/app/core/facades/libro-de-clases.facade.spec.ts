@@ -75,6 +75,7 @@ function cursoCompleto(): Record<string, TableConfig> {
       single: {
         data: {
           id: 5,
+          code: 'P26.4',
           courses: { name: 'Camiones', code: 'PROF-A4-01', license_class: 'A4' },
           professional_promotions: {
             name: 'Otoño 2026',
@@ -190,6 +191,7 @@ describe('LibroDeClasesFacade', () => {
       expect(cab.branchName).toBe('Centro');
       expect(cab.classBookId).toBeNull();
       expect(cab.senceCode).toBe('');
+      expect(cab.bookId).toBe('P26.4');
     });
 
     it('alumnos ordenados alfabéticamente y renumerados 1..N', async () => {

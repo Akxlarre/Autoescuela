@@ -19,15 +19,17 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { LibroClasesSubnavSection } from '@core/models/ui/libro-clases-subnav.model';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
+import { LibroDeClasesSubnavComponent } from '@shared/components/libro-de-clases-subnav/libro-de-clases-subnav.component';
 import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
 @Component({
-  selector: 'app-secretaria-libro-de-clases',
+  selector: 'app-libro-de-clases',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -38,6 +40,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     IconComponent,
     AsyncBtnComponent,
     EmptyStateComponent,
+    LibroDeClasesSubnavComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
@@ -58,11 +61,11 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
       <div class="bento-banner card p-4" appCardHover>
         @if (facade.isLoading()) {
           <div class="flex flex-col gap-4 sm:flex-row">
-            <div class="flex-1 space-y-2">
+            <div class="flex-1 space-y-1">
               <app-skeleton-block variant="text" width="70px" height="12px" />
               <app-skeleton-block variant="rect" width="100%" height="40px" />
             </div>
-            <div class="flex-1 space-y-2">
+            <div class="flex-1 space-y-1">
               <app-skeleton-block variant="text" width="48px" height="12px" />
               <app-skeleton-block variant="rect" width="100%" height="40px" />
             </div>
@@ -79,6 +82,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 [ngModel]="facade.selectedPromocionId()"
                 (ngModelChange)="onPromoChange($event)"
                 styleClass="w-full"
+                appendTo="body"
                 data-llm-description="select promotion for class book"
               />
             </div>
@@ -92,6 +96,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 [ngModel]="facade.selectedCursoId()"
                 (ngModelChange)="onCursoChange($event)"
                 styleClass="w-full"
+                appendTo="body"
                 [disabled]="facade.cursos().length === 0"
                 data-llm-description="select course for class book"
               />
@@ -100,17 +105,56 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
         }
       </div>
 
-      <!-- ═══ Skeleton secciones ═══ -->
+      <!-- ═══ Skeleton secciones — imita el subnav + la card "Cabecera" (sección activa por defecto al entrar) ═══ -->
       @if (facade.isLoadingSections()) {
-        @for (i of skeletonRows; track i) {
-          <div class="bento-banner card flex items-center justify-between p-5">
-            <div class="flex items-center gap-3">
-              <app-skeleton-block variant="rect" width="18px" height="18px" />
-              <app-skeleton-block variant="text" [width]="skeletonWidths[i % 4]" height="15px" />
-            </div>
-            <app-skeleton-block variant="rect" width="18px" height="18px" />
+        <div class="bento-banner flex items-center">
+          <div class="flex gap-1 p-1 rounded-xl bg-subtle w-full">
+            @for (i of skeletonRows; track i) {
+              <div class="flex-1 flex items-center justify-center py-3 px-2">
+                <app-skeleton-block variant="text" width="70%" height="13px" />
+              </div>
+            }
           </div>
-        }
+        </div>
+        <section class="bento-banner card p-6">
+          <app-skeleton-block variant="text" width="220px" height="20px" />
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <!-- 4 líneas: Autoescuela, Curso, ID, Promoción -->
+            <div class="space-y-2">
+              <app-skeleton-block variant="text" width="85%" height="14px" />
+              <app-skeleton-block variant="text" width="70%" height="14px" />
+              <app-skeleton-block variant="text" width="60%" height="14px" />
+              <app-skeleton-block variant="text" width="80%" height="14px" />
+            </div>
+            <!-- 3 líneas: Fecha inicio, Fecha término, Dirección -->
+            <div class="space-y-2">
+              <app-skeleton-block variant="text" width="65%" height="14px" />
+              <app-skeleton-block variant="text" width="65%" height="14px" />
+              <app-skeleton-block variant="text" width="75%" height="14px" />
+            </div>
+          </div>
+          <div class="mt-4 border-t pt-4 border-border-default">
+            <app-skeleton-block variant="text" width="180px" height="15px" />
+            <div class="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <div class="mb-1">
+                  <app-skeleton-block variant="text" width="60%" height="12px" />
+                </div>
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+              <div>
+                <div class="mb-1">
+                  <app-skeleton-block variant="text" width="40%" height="12px" />
+                </div>
+                <app-skeleton-block variant="rect" width="100%" height="40px" />
+              </div>
+            </div>
+            <div class="mt-3 flex items-center gap-3">
+              <app-skeleton-block variant="rect" width="100px" height="36px" />
+              <app-skeleton-block variant="text" width="70px" height="12px" />
+            </div>
+          </div>
+        </section>
       }
 
       <!-- ═══ Error ═══ -->
@@ -135,23 +179,21 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
 
       <!-- ═══ Contenido del Libro ═══ -->
       @if (facade.hasDatos() && !facade.isLoadingSections()) {
-        <!-- 1. Cabecera -->
-        <section class="bento-banner card card-accent p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('cabecera')"
-            data-llm-action="toggle-cabecera-section"
-          >
+        <!-- ═══ Subnav: reemplaza el acordeón — una sola sección visible a la vez ═══ -->
+        <div class="bento-banner flex items-center">
+          <app-libro-de-clases-subnav
+            [sections]="subnavSections()"
+            [activeId]="activeSection()"
+            (sectionChange)="onSectionChange($event)"
+          />
+        </div>
+
+        @if (activeSection() === 'cabecera') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon name="file-text" [size]="18" class="mr-2 inline-block align-text-bottom" />
               Libro de Control de Clases
             </h2>
-            <app-icon
-              [name]="isSectionOpen('cabecera') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('cabecera')) {
             @if (facade.cabecera(); as cab) {
               <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="space-y-2 text-sm">
@@ -163,19 +205,15 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                     <span class="font-medium text-text-secondary">Curso:</span> {{ cab.courseName }}
                   </p>
                   <p>
-                    <span class="font-medium text-text-secondary">Código:</span>
-                    {{ cab.courseCode }}
+                    <span class="font-medium text-text-secondary">ID:</span>
+                    {{ cab.bookId || '—' }}
                   </p>
-                  <p>
-                    <span class="font-medium text-text-secondary">Licencia:</span>
-                    {{ cab.licenseClass }}
-                  </p>
-                </div>
-                <div class="space-y-2 text-sm">
                   <p>
                     <span class="font-medium text-text-secondary">Promoción:</span>
                     {{ cab.promotionName }} ({{ cab.promotionCode }})
                   </p>
+                </div>
+                <div class="space-y-2 text-sm">
                   <p>
                     <span class="font-medium text-text-secondary">Fecha inicio:</span>
                     {{ formatDate(cab.startDate) }}
@@ -238,27 +276,16 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </div>
               </div>
             }
-          }
-        </section>
+          </section>
+        }
 
-        <!-- 2. Profesores por módulo -->
-        <section class="bento-banner card p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('profesores')"
-            data-llm-action="toggle-profesores-section"
-          >
+        @if (activeSection() === 'profesores') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon name="users" [size]="18" class="mr-2 inline-block align-text-bottom" />
               Profesores por Módulo
               <span class="section-meta">{{ facade.profesores().length }} módulos</span>
             </h2>
-            <app-icon
-              [name]="isSectionOpen('profesores') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('profesores')) {
             <div class="mt-4 overflow-x-auto">
               <table class="ldc-table">
                 <thead>
@@ -279,16 +306,11 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </tbody>
               </table>
             </div>
-          }
-        </section>
+          </section>
+        }
 
-        <!-- 3. Lista de Clase -->
-        <section class="bento-banner card p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('alumnos')"
-            data-llm-action="toggle-alumnos-section"
-          >
+        @if (activeSection() === 'alumnos') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="list-checks"
@@ -300,12 +322,6 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 >({{ facade.totalAlumnos() }} alumnos)</span
               >
             </h2>
-            <app-icon
-              [name]="isSectionOpen('alumnos') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('alumnos')) {
             <div class="mt-4 overflow-x-auto">
               <table class="ldc-table">
                 <thead>
@@ -337,16 +353,11 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </tbody>
               </table>
             </div>
-          }
-        </section>
+          </section>
+        }
 
-        <!-- 4. Control de Asistencia -->
-        <section class="bento-banner card p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('asistencia')"
-            data-llm-action="toggle-asistencia-section"
-          >
+        @if (activeSection() === 'asistencia') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="calendar-check"
@@ -356,12 +367,6 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
               Control de Asistencia (Firma Diaria)
               <span class="section-meta">{{ facade.asistenciaSemanal().length }} semanas</span>
             </h2>
-            <app-icon
-              [name]="isSectionOpen('asistencia') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('asistencia')) {
             <div class="mt-3 flex flex-wrap gap-3">
               <span class="flex items-center gap-1.5 text-xs text-text-secondary"
                 ><span class="attendance-present">P</span> Presente</span
@@ -430,27 +435,16 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </div>
               </div>
             }
-          }
-        </section>
+          </section>
+        }
 
-        <!-- 5. Calendario de Clases -->
-        <section class="bento-banner card p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('calendario')"
-            data-llm-action="toggle-calendario-section"
-          >
+        @if (activeSection() === 'calendario') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon name="calendar" [size]="18" class="mr-2 inline-block align-text-bottom" />
               Calendario de Clases
               <span class="section-meta">{{ facade.calendario().length }} clases</span>
             </h2>
-            <app-icon
-              [name]="isSectionOpen('calendario') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('calendario')) {
             <div class="mt-4 overflow-x-auto">
               <table class="ldc-table">
                 <thead>
@@ -482,16 +476,11 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </tbody>
               </table>
             </div>
-          }
-        </section>
+          </section>
+        }
 
-        <!-- 6. Evaluaciones -->
-        <section class="bento-banner card p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('evaluaciones')"
-            data-llm-action="toggle-evaluaciones-section"
-          >
+        @if (activeSection() === 'evaluaciones') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="clipboard-list"
@@ -501,12 +490,6 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
               Evaluaciones Clase Profesional
               <span class="section-meta">Escala MTT · Mín. 75</span>
             </h2>
-            <app-icon
-              [name]="isSectionOpen('evaluaciones') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('evaluaciones')) {
             <div class="mt-4 overflow-x-auto">
               <table class="ldc-table ldc-table-compact">
                 <thead>
@@ -559,16 +542,11 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </tbody>
               </table>
             </div>
-          }
-        </section>
+          </section>
+        }
 
-        <!-- 7. Resumen Asistencia -->
-        <section class="bento-banner card p-6" appCardHover>
-          <button
-            class="section-toggle"
-            (click)="toggleSection('resumen')"
-            data-llm-action="toggle-resumen-section"
-          >
+        @if (activeSection() === 'resumen') {
+          <section class="bento-banner card p-6" appCardHover>
             <h2 class="text-lg font-semibold text-text-primary">
               <app-icon
                 name="bar-chart-2"
@@ -578,12 +556,6 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
               Asistencia Clase Profesional
               <span class="section-meta">{{ facade.resumenAsistencia().length }} alumnos</span>
             </h2>
-            <app-icon
-              [name]="isSectionOpen('resumen') ? 'chevron-up' : 'chevron-down'"
-              [size]="18"
-            />
-          </button>
-          @if (isSectionOpen('resumen')) {
             <div class="mt-4 overflow-x-auto">
               <table class="ldc-table">
                 <thead>
@@ -627,12 +599,18 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
                 </tbody>
               </table>
             </div>
-          }
-        </section>
+          </section>
+        }
       }
     </div>
   `,
   styles: `
+    .bento-grid {
+      /* Permite que cada fila mida según su contenido real (hero slim, secciones
+         variables) en vez de imponer un piso de 120px por fila. */
+      --bento-row-min: auto;
+    }
+
     .ldc-table {
       width: 100%;
       border-collapse: collapse;
@@ -723,21 +701,6 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     .ldc-input::placeholder {
       color: var(--text-muted);
     }
-    .section-toggle {
-      display: flex;
-      width: calc(100% + 1.5rem);
-      align-items: center;
-      justify-content: space-between;
-      text-align: left;
-      border-radius: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      margin: -0.5rem -0.75rem;
-      cursor: pointer;
-      transition: background-color 0.15s ease;
-    }
-    .section-toggle:hover {
-      background: var(--bg-subtle, color-mix(in srgb, var(--bg-surface) 92%, var(--text-primary)));
-    }
     .section-meta {
       margin-left: 0.5rem;
       font-size: 0.75rem;
@@ -746,7 +709,7 @@ import { getModuleNames, MODULE_COUNT } from '@core/utils/professional-modules';
     }
   `,
 })
-export class SecretariaLibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy {
+export class LibroDeClasesComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly facade = inject(LibroDeClasesFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly gsap = inject(GsapAnimationsService);
@@ -755,29 +718,13 @@ export class SecretariaLibroDeClasesComponent implements OnInit, AfterViewInit, 
 
   readonly MODULE_COUNT = MODULE_COUNT;
   readonly skeletonRows = [0, 1, 2, 3, 4, 5, 6];
-  readonly skeletonWidths = ['160px', '200px', '220px', '175px'];
 
-  private static readonly ALL_SECTIONS = [
-    'cabecera',
-    'profesores',
-    'alumnos',
-    'asistencia',
-    'calendario',
-    'evaluaciones',
-    'resumen',
-  ] as const;
-
-  private readonly openSections = signal<Set<string>>(new Set(['cabecera']));
+  /** Sección visible del subnav — reemplaza el `openSections: Set<string>` del acordeón. */
+  readonly activeSection = signal<string>('cabecera');
 
   readonly heroActions = computed<SectionHeroAction[]>(() => {
     if (!this.facade.hasDatos() || this.facade.isLoadingSections()) return [];
     return [
-      {
-        id: 'toggle-sections',
-        label: this.allSectionsOpen() ? 'Colapsar todo' : 'Expandir todo',
-        icon: this.allSectionsOpen() ? 'chevrons-up' : 'chevrons-down',
-        primary: false,
-      },
       {
         id: 'export-pdf',
         label: this.facade.isExporting() ? 'Generando PDF...' : 'Exportar PDF',
@@ -787,9 +734,45 @@ export class SecretariaLibroDeClasesComponent implements OnInit, AfterViewInit, 
     ];
   });
 
-  readonly allSectionsOpen = computed(() =>
-    SecretariaLibroDeClasesComponent.ALL_SECTIONS.every((s) => this.openSections().has(s)),
-  );
+  readonly subnavSections = computed<LibroClasesSubnavSection[]>(() => [
+    { id: 'cabecera', label: 'Cabecera', shortLabel: 'Cab.', icon: 'file-text' },
+    {
+      id: 'profesores',
+      label: 'Profesores por Módulo',
+      shortLabel: 'Prof.',
+      icon: 'users',
+      meta: `${this.facade.profesores().length}`,
+    },
+    {
+      id: 'alumnos',
+      label: 'Lista de Clase',
+      shortLabel: 'Alum.',
+      icon: 'list-checks',
+      meta: `${this.facade.totalAlumnos()}`,
+    },
+    {
+      id: 'asistencia',
+      label: 'Firma Diaria',
+      shortLabel: 'Firma',
+      icon: 'calendar-check',
+      meta: `${this.facade.asistenciaSemanal().length}`,
+    },
+    {
+      id: 'calendario',
+      label: 'Calendario de Clases',
+      shortLabel: 'Cal.',
+      icon: 'calendar',
+      meta: `${this.facade.calendario().length}`,
+    },
+    { id: 'evaluaciones', label: 'Evaluaciones', shortLabel: 'Eval.', icon: 'clipboard-list' },
+    {
+      id: 'resumen',
+      label: 'Resumen Asistencia',
+      shortLabel: 'Res.',
+      icon: 'bar-chart-2',
+      meta: `${this.facade.resumenAsistencia().length}`,
+    },
+  ]);
 
   readonly promoOptions = computed(() =>
     this.facade.promociones().map((p) => ({ ...p, name: `${p.name} (${p.code})` })),
@@ -840,7 +823,6 @@ export class SecretariaLibroDeClasesComponent implements OnInit, AfterViewInit, 
 
   onHeroAction(id: string): void {
     if (id === 'export-pdf') void this.facade.exportPdf();
-    if (id === 'toggle-sections') this.toggleAllSections();
   }
 
   onPromoChange(id: number): void {
@@ -853,25 +835,8 @@ export class SecretariaLibroDeClasesComponent implements OnInit, AfterViewInit, 
     void this.facade.saveClassBookFields(this.editSenceCode(), this.editHorario());
   }
 
-  toggleAllSections(): void {
-    if (this.allSectionsOpen()) {
-      this.openSections.set(new Set());
-    } else {
-      this.openSections.set(new Set(SecretariaLibroDeClasesComponent.ALL_SECTIONS));
-    }
-  }
-
-  toggleSection(section: string): void {
-    this.openSections.update((set) => {
-      const next = new Set(set);
-      if (next.has(section)) next.delete(section);
-      else next.add(section);
-      return next;
-    });
-  }
-
-  isSectionOpen(section: string): boolean {
-    return this.openSections().has(section);
+  onSectionChange(id: string): void {
+    this.activeSection.set(id);
   }
 
   formatDate(dateStr: string): string {
