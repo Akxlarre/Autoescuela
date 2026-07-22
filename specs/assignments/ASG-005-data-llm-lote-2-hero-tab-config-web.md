@@ -33,6 +33,16 @@ Archivos de este lote (ninguno se superpone con ASG-004/006/007):
 - `.claude/rules/ai-readability.md`.
 - `specs/fix-055-b-ai-readability-data-llm-coverage/fix.md` — fix ya cerrado que hizo los primeros 3 archivos completos + el arranque de `hero-tab`, útil como referencia de convención exacta usada.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/configuracion-web/tabs/hero-tab.component.ts`
+- `src/app/features/admin/configuracion-web/tabs/promo-tab.component.ts`
+- `src/app/features/admin/secretarias/admin-secretarias.component.ts`
+- `src/app/features/auth/force-password-change/force-password-change.component.ts`
+- `src/app/features/dashboard/dashboard.component.ts`
+- `src/app/features/instructor/clase-detail/instructor-clase-detail.component.ts`
+- `src/app/features/instructor/notificaciones/instructor-notificaciones.component.ts`
+
 ## Notas para quien la reclame
 
 - ⚠️ **Coordinar con ASG-018** (fix H-001/H-002/H-008, toca `dashboard.component.ts` también) — no editar el mismo archivo en paralelo sin avisarse.

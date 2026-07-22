@@ -26,6 +26,10 @@ Al matricular a un alumno en "Profesional A2" (wizard de secretaria o admin), el
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-029.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/shared/components/matricula-steps/payment/payment.component.ts`
+
 ## Notas para quien la reclame
 
 - Prioridad alta por ser un error de cobro con impacto financiero directo, aunque técnicamente es "solo" un bug de UI/cálculo, no de seguridad.

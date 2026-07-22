@@ -25,6 +25,10 @@ El wizard público de matrícula (`/inscripcion`) limita a "Máximo 1 clase por 
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-021.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- Ninguno declarado — es una decisión de producto primero; el archivo a tocar depende de qué se decida (wizard público vs. wizard interno).
+
 ## Notas para quien la reclame
 
 - Este es más una conversación de producto que un bug — no asumir cuál de los dos límites es "el correcto" sin preguntar al owner primero.

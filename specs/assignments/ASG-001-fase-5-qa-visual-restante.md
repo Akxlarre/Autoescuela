@@ -28,6 +28,10 @@ Las iteraciones 19-21 de la Fase 5 del audit (`indices/FLOWS-QA-AUDIT.md`) reque
 - `indices/FLOWS-QA-AUDIT.md`, iteraciones 19-21 (Fase 5), y la iteración 14 (Fase 3) que ya cubrió Dashboard/Base Alumnos B como referencia de método.
 - `.claude/rules/swr-pattern.md`, `.claude/rules/visual-system.md`.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- Ninguno declarado — cobertura QA visual transversal (varias páginas), no un archivo puntual.
+
 ## Notas para quien la reclame
 
 - Reservada para Benjamín porque requiere el entorno de navegador local — si alguien más quiere tomarla, coordinar primero.

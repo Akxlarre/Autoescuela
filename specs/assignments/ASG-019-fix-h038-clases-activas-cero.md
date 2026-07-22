@@ -25,6 +25,10 @@ Los 6 instructores muestran "0" en la columna/KPI "Clases activas", sin excepci�
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-038 — nota que es el mismo patrón de riesgo que H-016 (dato cacheado/mock que se desincroniza de la realidad).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/instructores.facade.ts`
+
 ## Notas para quien la reclame
 
 - No bloquea ningún flujo, pero es un dato falso y consistente que un admin podría usar para evaluar carga de trabajo sin saber que nunca refleja la realidad.

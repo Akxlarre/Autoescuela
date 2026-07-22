@@ -26,6 +26,11 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-016 — el hallazgo más severo de la Fase 1, con causa raíz exacta y el riesgo del fix ya documentado.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/instructor-clases.facade.ts`
+- `src/app/core/facades/instructor-clases.facade.spec.ts`
+
 ## Notas para quien la reclame
 
 - **Prioridad Crítica** — riesgo real de que un instructor intente operar sobre datos falsos.

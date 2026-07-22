@@ -24,6 +24,10 @@ En `/login` → "¿Olvidaste tu contraseña?", el formulario cambia el título a
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-032.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/auth/login/login.component.ts`
+
 ## Notas para quien la reclame
 
 - Fix muy acotado, un solo componente (login/recuperar contraseña) — buen candidato rápido.

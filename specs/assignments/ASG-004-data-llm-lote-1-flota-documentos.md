@@ -36,6 +36,18 @@ Para cada botón: `data-llm-action="verbo-kebab-case"` si ejecuta una acción (m
 - `indices/FLOWS-QA-AUDIT.md`, Fase 5.9 (iteración 25) — tiene el patrón ya usado en 3 archivos completos como ejemplo de convención (`historial-emisiones-drawer.component.ts`, `configurador-horarios-drawer.component.ts`, `general-tab.component.ts`).
 - `.claude/rules/ai-readability.md`.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/documentos/alumno-docs-detalle/admin-alumno-docs-detalle.component.ts`
+- `src/app/features/admin/documentos/dms-template-drawer/dms-template-drawer.component.ts`
+- `src/app/features/admin/documentos/dms-upload-drawer/dms-upload-drawer.component.ts`
+- `src/app/features/admin/flota/route-sheet/route-sheet.component.ts`
+- `src/app/features/admin/flota/vehicle-agenda-drawer/vehicle-agenda-drawer.component.ts`
+- `src/app/features/admin/flota/vehicle-documents-drawer/vehicle-documents-drawer.component.ts`
+- `src/app/features/admin/flota/vehicle-form-drawer/vehicle-form-drawer.component.ts`
+- `src/app/features/admin/flota/vehicle-maintenances/vehicle-maintenances.component.ts`
+- `src/app/features/admin/profesional-certificados/drawers/historial-emisiones-prof-drawer.component.ts`
+
 ## Notas para quien la reclame
 
 - Prioridad baja, cosmético — buen candidato para alguien con poco tiempo o nuevo en el repo.

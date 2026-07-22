@@ -26,6 +26,12 @@ El buscador global (Ctrl+K) funciona bien para nombres de módulos/páginas (ej.
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-031.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/global-search.facade.ts`
+- `src/app/core/services/ui/search-panel.service.ts`
+- `src/app/shared/components/search-panel/search-panel.component.ts`
+
 ## Notas para quien la reclame
 
 - Prioridad media — no bloquea trabajo diario, pero es una herramienta que las secretarias probablemente esperan poder usar dado el atajo de teclado visible.

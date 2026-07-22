@@ -25,6 +25,10 @@ En `/app/admin/ex-alumnos` con "Todas las sedes", el hero/KPI dice "2 Egresados"
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-003.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/ex-alumnos.facade.ts` (componente Smart exacto de "Ex-Alumnos B" no confirmado — verificar routing bajo `admin/alumnos`)
+
 ## Notas para quien la reclame
 
 - Similar en espíritu a H-013 (dos fuentes de verdad sin conciliar) — vale la pena revisar si comparten un patrón de causa raíz común en el repo (facades con queries duplicadas para el mismo concepto).

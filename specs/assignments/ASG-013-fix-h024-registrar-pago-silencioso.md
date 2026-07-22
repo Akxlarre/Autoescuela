@@ -26,6 +26,11 @@ Al registrar un pago con monto mayor al saldo pendiente (ej. $200.000 sobre una 
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-024 — reproducido 2 veces con el mismo resultado, incluye verificación de que no hay corrupción de datos.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/pagos/admin-pagos.component.ts`
+- `src/app/features/admin/pagos/registrar-pago-drawer.component.ts`
+
 ## Notas para quien la reclame
 
 - Nota positiva ya confirmada: el sistema SÍ previene el saldo negativo — el problema es exclusivamente la ausencia de feedback, no la integridad de datos.

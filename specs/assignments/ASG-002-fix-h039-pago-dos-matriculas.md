@@ -26,6 +26,10 @@ Un alumno con dos matrículas (ej. Clase B con saldo pendiente + Profesional pag
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-039 (detalle completo con causa raíz confirmada en código).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `supabase/functions/student-payment/index.ts`
+
 ## Notas para quien la reclame
 
 - Bug real, no cosmético — prioridad alta aunque el caso de negocio (2 matrículas) es acotado.

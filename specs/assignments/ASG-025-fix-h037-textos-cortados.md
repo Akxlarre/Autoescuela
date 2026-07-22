@@ -26,6 +26,11 @@ En la ficha de alumno (`/app/admin/alumnos/{id}`), los 6 botones de acción bajo
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-037 (con el fix sugerido ya detallado).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/alumno-detalle/admin-alumno-detalle.component.ts` (líneas 331-347, `SectionHeroAction`)
+- `src/app/features/admin/instructores/admin-instructores.component.ts` (fila de título)
+
 ## Notas para quien la reclame
 
 - Fix acotado y de bajo riesgo — es un problema clásico de Tailwind/Flexbox, no de contenido ni de lógica.

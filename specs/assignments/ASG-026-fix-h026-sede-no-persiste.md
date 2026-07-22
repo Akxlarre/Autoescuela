@@ -25,6 +25,10 @@ Como admin, si se cambia el selector de sede a una específica (ej. "Conductores
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-026.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/branch.facade.ts`
+
 ## Notas para quien la reclame
 
 - Impacto bajo pero real: un admin que refresca mientras trabaja en el contexto de una sede específica pierde ese contexto sin darse cuenta y puede terminar operando sobre "Todas las sedes" por error.

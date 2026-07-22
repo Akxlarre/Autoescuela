@@ -30,6 +30,12 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-019, H-020, H-033, H-034 (causas raíz ya confirmadas en código para H-033).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/public-enrollment/retorno/public-enrollment-retorno.component.ts`
+- `src/app/core/facades/public-enrollment.facade.ts`
+- Componente de subida de foto carnet dentro del wizard (nombre exacto no confirmado — revisar `src/app/shared/components/public-enrollment-steps/`)
+
 ## Notas para quien la reclame
 
 - H-033 es el más grave de los 4 (alumno pierde su trabajo justo cuando más necesita reintentar) — priorizarlo si hay que dividir el trabajo.

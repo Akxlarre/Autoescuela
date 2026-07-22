@@ -29,6 +29,12 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-001, H-002, H-008.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/dashboard.facade.ts`
+- `src/app/core/facades/flota.facade.ts`
+- `src/app/features/dashboard/dashboard.component.ts`
+
 ## Notas para quien la reclame
 
 - ⚠️ **Coordinar con ASG-005** (cobertura `data-llm-*`, también toca `dashboard.component.ts`) — avisarse antes de editar en paralelo.

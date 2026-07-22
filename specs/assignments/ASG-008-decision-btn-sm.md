@@ -28,6 +28,13 @@ El linter `lint:arch` (regla ARCH-16) detectó que 3 archivos (`asistencia-clase
 - `indices/FLOWS-QA-AUDIT.md`, Fase 5, iteración 17 (detalle de por qué se deferieron estos 3 archivos).
 - `specs/fix-054-b-arch16-ratchet-btn-utilities/fix.md` (el fix que sí resolvió los otros 3 archivos "limpios" de la misma regresión ARCH-16).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/tailwind.css`
+- `src/app/shared/components/asistencia-clase-b-content/asistencia-clase-b-content.component.ts`
+- `src/app/shared/components/certificacion-clase-b-content/certificacion-clase-b-content.component.ts`
+- `src/app/shared/components/certificacion-profesional-content/certificacion-profesional-content.component.ts`
+
 ## Notas para quien la reclame
 
 - Es una decisión de diseño primero, implementación después — por eso el tipo sugerido es `spec`, no `fix` directo.

@@ -24,6 +24,10 @@ En `/app/secretaria/contabilidad/cuadratura`, la tabla "Registro de Ingresos" co
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-023.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/shared/components/cuadratura-content/cuadratura-content.component.ts`
+
 ## Notas para quien la reclame
 
 - Fix simple — el mapeo correcto ya existe en otra página, solo hace falta reutilizarlo acá.

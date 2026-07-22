@@ -35,6 +35,17 @@ Nota especial para `async-btn.component.ts`: es un botón wrapper genérico (pro
 - `indices/FLOWS-QA-AUDIT.md`, Fase 5.9 (iteración 25).
 - `.claude/rules/ai-readability.md`.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/shared/components/ajustes-drawer/ajustes-drawer.component.ts`
+- `src/app/shared/components/alert-card/alert-card.component.ts`
+- `src/app/shared/components/alumnos-por-vencer-drawer/alumnos-por-vencer-drawer.component.ts`
+- `src/app/shared/components/async-btn/async-btn.component.ts`
+- `src/app/shared/components/daily-schedule-timeline/daily-schedule-timeline.component.ts`
+- `src/app/shared/components/dms-list-content/dms-list-content.component.ts`
+- `src/app/shared/components/dms-viewer-modal/dms-viewer-modal.component.ts`
+- `src/app/shared/components/drawer-form/drawer-form.component.ts`
+
 ## Notas para quien la reclame
 
 - Prioridad baja, cosmético. `drawer-form.component.ts` es un componente base reutilizado en muchos drawers — revisar con cuidado de no romper su API pública (`input()`/`output()`).

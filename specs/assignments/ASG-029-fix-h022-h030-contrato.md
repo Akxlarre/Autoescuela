@@ -27,6 +27,11 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-022 y H-030.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `supabase/functions/generate-contract-pdf/index.ts`
+- `src/app/shared/components/matricula-steps/contract/contract.component.ts`
+
 ## Notas para quien la reclame
 
 - Prioridad baja: el PDF real (el documento legalmente vinculante) ya está bien — el riesgo es solo de confusión visual para quien lee la preview antes de firmar.
