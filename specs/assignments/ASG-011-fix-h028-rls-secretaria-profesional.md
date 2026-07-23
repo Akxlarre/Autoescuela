@@ -1,14 +1,14 @@
 # Asignación ASG-011 — Fix H-028: RLS bloquea a la secretaria en matrícula Profesional (403)
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-23
+> **resulting_track:** fix-054-m-h028-rls-secretaria-documentos-profesional
 
 ---
 

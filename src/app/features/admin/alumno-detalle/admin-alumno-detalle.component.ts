@@ -6,6 +6,7 @@ import {
   effect,
   HostListener,
   inject,
+  OnDestroy,
   OnInit,
   signal,
   ElementRef,
@@ -87,6 +88,7 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
       appBentoReveal
       appBentoGridLayout
       [class.force-compact]="layoutDrawer.isOpen()"
+      [class.has-enrollment-selector]="facade.enrollmentSummaries().length > 1"
     >
       <!-- ── Header (restaurado): navegación + contexto a la izquierda,
            solo Editar Perfil / Eliminar Alumno a la derecha — el resto de
@@ -219,7 +221,7 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
         <!-- Selector de matrícula (solo visible cuando hay más de una) -->
         @if (facade.enrollmentSummaries().length > 1) {
           <div class="col-span-full flex w-full">
-            <div class="p-1.5 w-full md:w-auto">
+            <div class="w-full md:w-auto">
               <app-tabs
                 [tabs]="enrollmentTabs()"
                 [activeId]="activeEnrollmentStr()"
@@ -282,72 +284,34 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
             <div class="flex flex-col gap-2">
               <div class="grid grid-cols-2 gap-2">
                 @for (action of secondaryActions(); track action.id) {
-                  <div class="relative">
-                    <button
-                      type="button"
-                      class="btn-secondary w-full justify-center gap-1.5"
-                      [disabled]="action.disabled ?? false"
-                      [attr.data-llm-action]="action.id"
-                      [attr.aria-haspopup]="action.menu ? 'menu' : null"
-                      [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
-                      (click)="
-                        action.menu
-                          ? toggleCardMenu(action.id, $event)
-                          : handleHeroAction(action.id)
-                      "
-                    >
-                      @if (action.icon) {
-                        <app-icon
-                          [name]="action.icon"
-                          [size]="14"
-                          [class.animate-spin]="action.loading"
-                        />
-                      }
-                      <span class="truncate">{{ action.label }}</span>
-                      @if (action.menu) {
-                        <app-icon
-                          name="chevron-down"
-                          [size]="12"
-                          class="shrink-0 card-menu-chevron"
-                          [class.card-menu-chevron--open]="openCardMenuId() === action.id"
-                        />
-                      }
-                    </button>
-
-                    @if (action.menu && openCardMenuId() === action.id) {
-                      <div class="card-action-menu" role="menu" (click)="$event.stopPropagation()">
-                        @for (item of action.menu; track item.id) {
-                          @if (item.header) {
-                            <div class="card-action-menu__header">{{ item.label }}</div>
-                          } @else {
-                            <button
-                              type="button"
-                              role="menuitem"
-                              class="card-action-menu__item"
-                              [class.card-action-menu__item--disabled]="item.disabled"
-                              [disabled]="item.disabled ?? false"
-                              [attr.data-llm-action]="item.id"
-                              (click)="onCardMenuItemClick(item)"
-                            >
-                              @if (item.icon) {
-                                <app-icon
-                                  [name]="item.icon"
-                                  [size]="13"
-                                  class="card-action-menu__item-icon"
-                                />
-                              }
-                              <span class="card-action-menu__item-body">
-                                <span class="card-action-menu__item-label">{{ item.label }}</span>
-                                @if (item.hint) {
-                                  <span class="card-action-menu__item-hint">{{ item.hint }}</span>
-                                }
-                              </span>
-                            </button>
-                          }
-                        }
-                      </div>
+                  <button
+                    type="button"
+                    class="btn-secondary w-full justify-center gap-1.5"
+                    [disabled]="action.disabled ?? false"
+                    [attr.data-llm-action]="action.id"
+                    [attr.aria-haspopup]="action.menu ? 'menu' : null"
+                    [attr.aria-expanded]="action.menu ? openCardMenuId() === action.id : null"
+                    (click)="
+                      action.menu ? toggleCardMenu(action.id, $event) : handleHeroAction(action.id)
+                    "
+                  >
+                    @if (action.icon) {
+                      <app-icon
+                        [name]="action.icon"
+                        [size]="14"
+                        [class.animate-spin]="action.loading"
+                      />
                     }
-                  </div>
+                    <span class="truncate">{{ action.label }}</span>
+                    @if (action.menu) {
+                      <app-icon
+                        name="chevron-down"
+                        [size]="12"
+                        class="shrink-0 card-menu-chevron"
+                        [class.card-menu-chevron--open]="openCardMenuId() === action.id"
+                      />
+                    }
+                  </button>
                 }
 
                 <!-- Nuevos (Fase 1 — solo UI, sin lógica todavía) -->
@@ -373,6 +337,48 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
             </div>
           </div>
         </div>
+
+        <!-- Dropdown de Carnet/Contrato — hermano fuera de .bento-card a propósito:
+             la card tiene overflow:hidden (bordes redondeados) + appCardHover (transform
+             GSAP en hover), y un transform ancestro se vuelve containing block de un
+             position:fixed, recortando el panel igual que si fuera absolute. Viviendo
+             aquí, fuera de cualquier ancestro con overflow/transform, el fixed se
+             posiciona relativo al viewport sin recortes (ver fix-056-m). -->
+        @if (openCardMenuId() && openCardMenuItems(); as menuItems) {
+          <div
+            class="card-action-menu"
+            role="menu"
+            [style.top.px]="cardMenuPos()?.top"
+            [style.left.px]="cardMenuPos()?.left"
+            (click)="$event.stopPropagation()"
+          >
+            @for (item of menuItems; track item.id) {
+              @if (item.header) {
+                <div class="card-action-menu__header">{{ item.label }}</div>
+              } @else {
+                <button
+                  type="button"
+                  role="menuitem"
+                  class="card-action-menu__item"
+                  [class.card-action-menu__item--disabled]="item.disabled"
+                  [disabled]="item.disabled ?? false"
+                  [attr.data-llm-action]="item.id"
+                  (click)="onCardMenuItemClick(item)"
+                >
+                  @if (item.icon) {
+                    <app-icon [name]="item.icon" [size]="13" class="card-action-menu__item-icon" />
+                  }
+                  <span class="card-action-menu__item-body">
+                    <span class="card-action-menu__item-label">{{ item.label }}</span>
+                    @if (item.hint) {
+                      <span class="card-action-menu__item-hint">{{ item.hint }}</span>
+                    }
+                  </span>
+                </button>
+              }
+            }
+          </div>
+        }
 
         <!-- ── PROGRESO: CLASE B ── -->
         @if (alumno.licenseGroup === 'class_b') {
@@ -807,6 +813,17 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
       grid-template-rows: auto;
     }
 
+    /* Cuando hay selector de matrícula (2+ enrollments), la fila 2 (el
+       selector de pills, ~44px de alto) también cae bajo grid-auto-rows:
+       minmax(120px, auto) de la base .bento-grid, dejando ~76px de espacio
+       vacío antes de la fila 3 (cards de contenido). Se extiende el mismo
+       "auto" que ya tiene la fila del header a esta segunda fila explícita;
+       las filas de contenido siguen siendo implícitas y conservan el
+       minmax(120px, auto) de la base sin cambios. */
+    .bento-grid.has-enrollment-selector {
+      grid-template-rows: auto auto;
+    }
+
     .kpi-label {
       font-size: var(--text-xs);
       font-weight: var(--font-bold);
@@ -900,9 +917,13 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
     }
 
     /* ── Dropdown de acciones dentro de la tarjeta de Perfil (Carnet/Contrato) ──
-       Mismo lenguaje visual que hero-menu-panel de SectionHeroComponent, pero
-       posicionado relativo al botón (no fixed) — no necesita cálculo de posición
-       por JS porque vive dentro del flujo estático de la card. */
+       Mismo lenguaje visual que hero-menu-panel de SectionHeroComponent. A
+       diferencia del hero, este panel SÍ necesita position:fixed + cálculo de
+       posición por JS (getBoundingClientRect): vive lógicamente junto al botón,
+       pero el botón está dentro de una card con overflow:hidden + appCardHover
+       (transform en hover) — anidado ahí, ni position:fixed lo salva del
+       recorte. Por eso el panel se renderiza como hermano fuera de la card
+       (ver template) y solo su posición se calcula respecto al botón trigger. */
     .card-menu-chevron {
       opacity: 0.7;
       transition: transform var(--duration-fast) var(--ease-standard);
@@ -912,10 +933,8 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
     }
 
     .card-action-menu {
-      position: absolute;
-      z-index: 30;
-      top: calc(100% + 4px);
-      left: 0;
+      position: fixed;
+      z-index: 1000;
       min-width: 220px;
       padding: 6px;
       background: var(--bg-glass-surface, var(--bg-surface));
@@ -992,7 +1011,7 @@ export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | u
     }
   `,
 })
-export class AdminAlumnoDetalleComponent implements OnInit {
+export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   protected readonly facade = inject(AdminAlumnoDetalleFacade);
   protected readonly alumnosFacade = inject(AdminAlumnosFacade);
   private readonly certFacade = inject(CertificacionClaseBFacade);
@@ -1290,15 +1309,46 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   /** Id de la acción secundaria cuyo dropdown (Carnet/Contrato) está abierto. */
   protected readonly openCardMenuId = signal<string | null>(null);
 
+  /** Items del menú actualmente abierto (fix-056-m: el panel vive fuera de la card). */
+  protected readonly openCardMenuItems = computed<SectionHeroMenuItem[] | null>(() => {
+    const id = this.openCardMenuId();
+    if (!id) return null;
+    return this.secondaryActions().find((a) => a.id === id)?.menu ?? null;
+  });
+
+  /** Posición (viewport) del dropdown — recalculada vía getBoundingClientRect(), mismo
+   * patrón que SectionHeroComponent.menuPos/updateMenuPos(). */
+  protected readonly cardMenuPos = signal<{ top: number; left: number } | null>(null);
+  private cardMenuTriggerEl: HTMLElement | null = null;
+  private readonly repositionCardMenuListener = (): void => this.updateCardMenuPos();
+
   protected toggleCardMenu(id: string, event: MouseEvent): void {
     event.stopPropagation();
-    this.openCardMenuId.update((current) => (current === id ? null : id));
+    if (this.openCardMenuId() === id) {
+      this.closeCardMenu();
+      return;
+    }
+    this.cardMenuTriggerEl = event.currentTarget as HTMLElement;
+    this.openCardMenuId.set(id);
+    this.updateCardMenuPos();
+    window.addEventListener('scroll', this.repositionCardMenuListener, true);
+    window.addEventListener('resize', this.repositionCardMenuListener);
+  }
+
+  private updateCardMenuPos(): void {
+    if (!this.cardMenuTriggerEl) return;
+    const r = this.cardMenuTriggerEl.getBoundingClientRect();
+    this.cardMenuPos.set({ top: r.bottom + 4, left: r.left });
   }
 
   /** Cierra cualquier dropdown abierto al hacer click fuera (mismo patrón que SectionHeroComponent). */
   @HostListener('document:click')
   protected closeCardMenu(): void {
     this.openCardMenuId.set(null);
+    this.cardMenuPos.set(null);
+    this.cardMenuTriggerEl = null;
+    window.removeEventListener('scroll', this.repositionCardMenuListener, true);
+    window.removeEventListener('resize', this.repositionCardMenuListener);
   }
 
   protected onCardMenuItemClick(item: SectionHeroMenuItem): void {
@@ -1328,6 +1378,11 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     if (id && !isNaN(Number(id))) {
       void this.facade.initialize(Number(id));
     }
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('scroll', this.repositionCardMenuListener, true);
+    window.removeEventListener('resize', this.repositionCardMenuListener);
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────
