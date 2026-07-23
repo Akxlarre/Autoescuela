@@ -1,7 +1,8 @@
 # Fix: Dropdowns "Carnet" y "Contrato" se cortan detrás de la card de Perfil
 > id: fix-056-m-alumno-detalle-dropdown-carnet-contrato-cortado
 > refs: —
-> status: in_progress
+> status: done
+> closed: 2026-07-23
 > created: 2026-07-23
 
 ## Root Cause
@@ -53,3 +54,4 @@ cualquier ancestro con `appCardHover`/transform-on-hover.
 - Verificación visual manual: abrir la ficha de un alumno, hacer click en "Carnet" o "Contrato" y
   confirmar que el dropdown se ve completo (sin recorte), tanto con el mouse quieto sobre el botón
   como recién llegado desde fuera de la card (para cubrir el caso con `transform` de hover activo).
+  ✓ Verificado 2026-07-23 por el usuario: "funcionó perfecto".
