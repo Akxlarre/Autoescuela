@@ -28,6 +28,12 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-004 y H-005.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/contabilidad-anticipos/admin-contabilidad-anticipos.component.ts`
+- `src/app/shared/components/reportes-contables-content/reportes-contables-content.component.ts`
+- `src/app/core/facades/cursos-singulares.facade.ts` (componente Smart exacto no confirmado)
+
 ## Notas para quien la reclame
 
 - Ambos son fixes de formato/copy, bajo riesgo, sin lógica de negocio involucrada — buen paquete para alguien nuevo en el repo.

@@ -6,7 +6,7 @@ export interface LibroCabecera {
   promotionName: string;
   promotionCode: string;
   courseName: string;
-  courseCode: string;
+  bookId: string;
   licenseClass: string;
   startDate: string;
   endDate: string;

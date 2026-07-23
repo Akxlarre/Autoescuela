@@ -26,6 +26,10 @@ La sección Configuración Web usa voseo argentino ("Seleccioná una sede…", "
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-006.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/configuracion-web/**` (glob amplio, no un archivo puntual — varios tabs)
+
 ## Notas para quien la reclame
 
 - Solo copy, sin lógica — buen candidato para alguien nuevo en el repo o con poco tiempo disponible.

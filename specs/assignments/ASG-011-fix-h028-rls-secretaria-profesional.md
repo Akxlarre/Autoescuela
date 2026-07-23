@@ -27,6 +27,10 @@ La secretaria de una sede CON Academia Profesional no puede completar NINGUNA ma
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-028 — confirmado reproduciendo el mismo trámite como admin vs. secretaria con la misma matrícula (`enrollment_id=122`).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- Ninguno declarado — requiere migración SQL nueva (RLS de `student_documents`), el archivo todavía no existe.
+
 ## Notas para quien la reclame
 
 - **Prioridad Crítica** — bloquea por completo el único flujo de negocio que esa secretaria debería poder hacer.

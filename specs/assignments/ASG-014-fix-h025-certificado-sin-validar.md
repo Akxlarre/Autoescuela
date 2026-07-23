@@ -27,6 +27,12 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-025 y H-012 (con el fragmento de código exacto que documenta la diferencia intencional).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `supabase/functions/generate-certificate-b-pdf/index.ts`
+- `src/app/core/facades/certificacion-clase-b.facade.ts`
+- `src/app/features/admin/certificacion/admin-certificacion.component.ts`
+
 ## Notas para quien la reclame
 
 - H-025 es prioridad alta real — el camino de explotación ya existe hoy en producción, no requiere bypasear nada.

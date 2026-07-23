@@ -24,6 +24,10 @@ Al navegar a "Pagos y Clases" como alumno de Clase B justo tras el login, por un
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-036.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/alumno/pagos/alumno-pagos.component.ts`
+
 ## Notas para quien la reclame
 
 - Fix trivial, un solo archivo — buen candidato para alguien con poco tiempo. Considerar agruparlo junto con **ASG-005** si la misma persona ya está tocando `alumno-pagos` por otro motivo (no hay overlap de archivo hoy, pero es un área relacionada).

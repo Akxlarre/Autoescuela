@@ -29,6 +29,12 @@
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-010, H-014, H-018.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/agenda/admin-agenda.component.ts` (H-010)
+- `src/app/features/secretaria/contabilidad-reportes/secretaria-contabilidad-reportes.component.ts` (H-014)
+- `src/app/features/alumno/dashboard/alumno-dashboard.component.ts` (H-018)
+
 ## Notas para quien la reclame
 
 - Buen paquete para alguien con poco tiempo — cada uno es un cambio aislado y de bajo riesgo.

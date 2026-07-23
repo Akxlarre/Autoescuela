@@ -26,6 +26,11 @@ Ninguna secretaria puede cuadrar su caja del mes: "Pagos" y "Caja Diaria" muestr
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-013 — **el hallazgo más grave de la Fase 1-2 junto con H-016**, con evidencia histórica y fresca reproducida 2 veces.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/reportes-contables.facade.ts`
+- Edge Function / trigger de creación de pago — a identificar durante la investigación (no confirmado aún cuál escribe el `branch_id`).
+
 ## Notas para quien la reclame
 
 - **Prioridad Crítica** — bloquea el cuadre financiero mensual de cualquier secretaria, para todo pago (no solo Webpay).

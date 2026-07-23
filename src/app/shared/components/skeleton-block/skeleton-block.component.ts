@@ -27,7 +27,13 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
       aria-hidden="true"
     ></div>
   `,
-  styles: [],
+  styles: [
+    `
+      :host {
+        display: block;
+      }
+    `,
+  ],
 })
 export class SkeletonBlockComponent implements OnDestroy {
   readonly variant = input<'rect' | 'circle' | 'text'>('rect');

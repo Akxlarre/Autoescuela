@@ -21,8 +21,8 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
 
 @Injectable({ providedIn: 'root' })
 export class LibroDeClasesFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
   private readonly toast = inject(ToastService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly auth = inject(AuthFacade);
@@ -183,7 +183,11 @@ private readonly supabase = inject(SupabaseService);
     try {
       await this.loadAllSections(promotionCourseId);
     } catch (err) {
-      this._error.set(err instanceof Error ? this.sanitizer.sanitize(err).message : 'Error cargando libro de clases');
+      this._error.set(
+        err instanceof Error
+          ? this.sanitizer.sanitize(err).message
+          : 'Error cargando libro de clases',
+      );
     } finally {
       this._isLoadingSections.set(false);
     }
@@ -213,7 +217,7 @@ private readonly supabase = inject(SupabaseService);
       this.supabase.client
         .from('promotion_courses')
         .select(
-          `id,
+          `id, code,
            courses!inner(name, code, license_class),
            professional_promotions!inner(name, code, start_date, end_date, status,
              branches(name, address)
@@ -239,7 +243,7 @@ private readonly supabase = inject(SupabaseService);
       promotionName: promo.name ?? promo.code,
       promotionCode: promo.code ?? '',
       courseName: course.name,
-      courseCode: course.code,
+      bookId: (pcRes.data as any).code ?? '',
       licenseClass: course.license_class,
       startDate: promo.start_date,
       endDate: promo.end_date ?? '',
@@ -646,7 +650,8 @@ private readonly supabase = inject(SupabaseService);
       );
 
       if (error) {
-        const msg = error instanceof Error ? this.sanitizer.sanitize(error).message : JSON.stringify(error);
+        const msg =
+          error instanceof Error ? this.sanitizer.sanitize(error).message : JSON.stringify(error);
         this.toast.error(`Error al generar PDF: ${msg}`);
         return null;
       }

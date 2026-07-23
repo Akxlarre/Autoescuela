@@ -27,6 +27,17 @@
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-040 (con líneas exactas de código y la auditoría completa de qué facade está bien y cuál no).
 - `.claude/rules/swr-pattern.md`.
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/dashboard.facade.ts`
+- `src/app/core/facades/admin-alumnos.facade.ts`
+- `src/app/core/facades/admin-alumno-detalle.facade.ts`
+- `src/app/core/facades/flota.facade.ts`
+- `src/app/core/facades/pagos.facade.ts`
+- `src/app/core/facades/liquidaciones.facade.ts`
+- `src/app/core/facades/cuadratura.facade.ts`
+- (+ los Smart Components que instancian cada uno de estos facades)
+
 ## Notas para quien la reclame
 
 - Impacto acotado (cada facade tiene guard contra doble-suscripción), pero es trabajo de fondo/CPU innecesario acumulado durante toda la sesión del usuario.

@@ -26,6 +26,10 @@ Mismo bug encontrado 2 veces en iteraciones distintas del audit (H-017 en Fase 1
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgos H-035 (con causa raíz completa) y H-017 (primera detección, mismo bug).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/student-home.facade.ts`
+
 ## Notas para quien la reclame
 
 - El fix en sí es trivial (2 líneas) — el valor de esta asignación es sobre todo la verificación en vivo con datos reales, ya que el bug es 100% reproducible y silencioso (nadie lo notaría sin mirar la consola).

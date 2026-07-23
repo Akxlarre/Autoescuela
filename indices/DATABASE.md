@@ -1460,7 +1460,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `professional_promotions` — 🔒 RLS
 
-> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059)
+> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059).
+> `code`: ID numérico asignado por el MTT (ej. `"156"`) — estrictamente dígitos
+> (`/^\d+$/`). Se asigna vía "Editar Promoción" (fix-053-m); al crear queda
+> `null` hasta que el MTT lo entregue. Al editarlo se propaga a
+> `promotion_courses.code` de todos sus cursos.
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -1578,7 +1582,11 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `promotion_courses` — 🔒 RLS
 
-> Curso específico (A2/A3/A4/A5) dentro de una promoción, con relator y cupo de 25 (RF-059)
+> Curso específico (A2/A3/A4/A5) dentro de una promoción, con relator y cupo de 25 (RF-059).
+> `code`: ID de Libro de Clases = `"{professional_promotions.code}.{sufijo licencia}"`
+> (ej. `"156.2"` para un A2 de la promoción 156) — recalculado automáticamente
+> por `PromocionesFacade.editarPromocion()` cada vez que cambia el code de la
+> promoción (fix-053-m). Mostrado en Libro de Clases → Cabecera → "ID".
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|

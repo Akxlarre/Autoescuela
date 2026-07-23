@@ -26,6 +26,11 @@ Las queries `checkYellowAttendance`/`checkRedAttendance` (`dashboard-alerts.faca
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-027 (con el refinamiento que acota el error específicamente a la rama con `branchId` no nulo).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/core/facades/dashboard-alerts.facade.ts`
+- Migración SQL correctiva de la vista `v_professional_attendance` (nueva)
+
 ## Notas para quien la reclame
 
 - A diferencia de la mayoría de los hallazgos del audit (400 silenciosos, fallos de UX), este es un 500 real del backend — la causa está en SQL, no en el frontend.

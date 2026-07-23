@@ -76,10 +76,14 @@
 - **`Tipo sugerido`:** `spec` (feature nueva) / `fix` (bug con AC afectados) / `hotfix` (fix urgente simple) — quien reclama puede cambiarlo con `--as=` si al leer el contexto no coincide.
 - **Reclamar:** solo se puede reclamar una asignación con `Asignado a: cualquiera`, o una asignada específicamente a tu propio código de autor. Una vez `Reclamada`, nadie más puede tomarla.
 - **Cerrar:** marcar como `Completada` es **manual** — se mueve la fila cuando el track resultante (spec/fix/hotfix) llega a `done`/se cierra. No se sincroniza automáticamente con `/spec-verify` ni `/fix-close`.
+- **Archivos involucrados:** cada `ASG-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapás con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
 
 ### Conflictos entre ramas
 
-Si dos personas reclaman la misma asignación en paralelo (por trabajar en ramas divergentes sin sincronizar), no hay resolución automática — es coordinación humana: quien se entera después, cede y reclama otra. Para minimizar el riesgo:
+`/assign-claim` ya hace un `git fetch` + comparación contra `origin/main` en automático antes de reclamar
+(best-effort: si falla por falta de red/remoto, no bloquea). Si dos personas igual reclaman la misma
+asignación en paralelo (ej. por no pushear a tiempo), no hay resolución automática más allá de ese aviso
+— es coordinación humana: quien se entera después, cede y reclama otra. Para minimizar el riesgo:
 
-1. Antes de reclamar, hacé `git fetch` y confirmá que tu copia de este archivo no está atrás de la rama principal remota.
+1. Si `/assign-claim` te avisa que tu copia está atrás, hacé `git pull` antes de continuar.
 2. Al reclamar, commiteá y pusheá **solo ese cambio** (este archivo + el track nuevo) de inmediato, separado del resto de tu trabajo de feature.

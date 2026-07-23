@@ -26,6 +26,11 @@ Al entrar por primera vez a `/app/admin/agenda` (~4s) o `/app/admin/libro-de-cla
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-007.
 - `.claude/rules/swr-pattern.md`, `.claude/rules/visual-system.md` (sección Skeletons y Estados de Carga).
 
+## Archivos involucrados (opcional, para detectar solapes)
+
+- `src/app/features/admin/agenda/admin-agenda.component.ts`
+- `src/app/features/admin/libro-de-clases/admin-libro-de-clases.component.ts`
+
 ## Notas para quien la reclame
 
 - ⚠️ **Coordinar con ASG-001** (verificación de skeletons de Benjamín en Fase 5) — esta asignación es el FIX del bug ya confirmado, ASG-001 es la verificación en otras páginas. No dupliquen el diagnóstico de este mismo bug.
