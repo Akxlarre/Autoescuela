@@ -29,7 +29,6 @@
 | ASG-008 | Decisión de diseño: modificador componible `btn-sm` en el DS + aplicar a los 3 archivos deferidos de ARCH-16 | `m` | spec | Baja | b | ~120 instancias del anti-patrón en todo el repo. Ver `docs/BACKLOG-DEUDA-TECNICA.md` línea 86-88 y `indices/FLOWS-QA-AUDIT.md` iteración 17 |
 | ASG-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | `i` | fix | **Crítica** | b | Archivo: `instructor-clases.facade.ts:53`. La rama real ya existe pero tiene 0% cobertura de tests — agregarlos ANTES de activar el flag, no después |
 | ASG-012 | Fix H-020 + H-019 + H-033 + H-034: matrícula pública — overlay bloquea click en foto carnet, landing sin sede con links muertos, retry tras pago rechazado destruye la matrícula, fotos huérfanas en Storage | `b` | fix | Alta | b | Mismo módulo (wizard público de matrícula), 4 hallazgos relacionados. Archivos: `public-enrollment-retorno.component.ts:372-374`, `public-enrollment.facade.ts` (`clearDraft()`), componente de subida de foto carnet |
-| ASG-013 | Fix H-024: "Registrar Pago" con monto mayor al saldo pendiente falla en silencio, sin feedback al usuario | `m` | fix | Alta | b | No corrompe datos (no hay INSERT), pero no avisa el fallo. Archivo: drawer de registrar pago (`admin/pagos` o `admin-pagos.component.ts` y su drawer) |
 | ASG-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
 | ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real al filtrar por sede específica (`v_professional_attendance`) | `m` | fix | Alta | b | Migración SQL — la vista rompe con JOIN/cast al aplicar filtro de sede; funciona bien con `branchId=null` |
 | ASG-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
@@ -57,6 +56,7 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-013 | Fix H-024: "Registrar Pago" con monto mayor al saldo pendiente falla en silencio, sin feedback al usuario | m | [fix-057-m-registrar-pago-monto-excesivo-silencioso](fix-057-m-registrar-pago-monto-excesivo-silencioso/fix.md) | 2026-07-23 |
 
 ---
 
