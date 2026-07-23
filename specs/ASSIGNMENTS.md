@@ -30,7 +30,6 @@
 | ASG-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | `i` | fix | **Crítica** | b | Archivo: `instructor-clases.facade.ts:53`. La rama real ya existe pero tiene 0% cobertura de tests — agregarlos ANTES de activar el flag, no después |
 | ASG-012 | Fix H-020 + H-019 + H-033 + H-034: matrícula pública — overlay bloquea click en foto carnet, landing sin sede con links muertos, retry tras pago rechazado destruye la matrícula, fotos huérfanas en Storage | `b` | fix | Alta | b | Mismo módulo (wizard público de matrícula), 4 hallazgos relacionados. Archivos: `public-enrollment-retorno.component.ts:372-374`, `public-enrollment.facade.ts` (`clearDraft()`), componente de subida de foto carnet |
 | ASG-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
-| ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real al filtrar por sede específica (`v_professional_attendance`) | `m` | fix | Alta | b | Migración SQL — la vista rompe con JOIN/cast al aplicar filtro de sede; funciona bien con `branchId=null` |
 | ASG-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
 | ASG-017 | Fix H-035 + H-017: Portal Alumno nunca puede mostrar la nota del Examen Final — columna equivocada en la query (mismo bug, 2 hallazgos duplicados) | `b` | fix | Alta | b | Fix simple y acotado: `student-home.facade.ts:174` y `:265`, cambiar `.select('grade, created_at')` → `.select('score, created_at')` |
 | ASG-018 | Fix H-001 + H-002 + H-008: Dashboard admin — KPI "Vehículos" siempre en 0 (status `operational` vs `available`), formato roto en KPI "Ingresos Mes", estados contradictorios en "Clases Actuales" | `b` | fix | Media | b | Archivos: `dashboard.facade.ts:281`, `flota.facade.ts` (`resolveStatus()`). ⚠️ **Coordinar con ASG-005** (mismo `dashboard.component.ts`, cobertura `data-llm-*`) para no pisarse |
@@ -56,6 +55,7 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real al filtrar por sede específica (`v_professional_attendance`) | m | [fix-060-m-h027-alertas-asistencia-profesional-sede](fix-060-m-h027-alertas-asistencia-profesional-sede/fix.md) | 2026-07-23 |
 
 ---
 
