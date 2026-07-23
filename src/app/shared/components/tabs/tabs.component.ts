@@ -28,7 +28,7 @@ export type TabVariant = 'line' | 'segmented' | 'pill';
         @for (tab of tabs(); track tab.id) {
           <button
             role="tab"
-            class="flex-1 min-w-[120px] px-4 py-3.5 text-sm font-medium transition-all duration-300 border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
+            class="flex-1 min-w-30 px-4 py-3.5 text-sm font-medium transition-all duration-300 border-b-[3px] cursor-pointer flex items-center justify-center gap-1.5"
             [class.border-brand]="activeId() === tab.id"
             [class.border-transparent]="activeId() !== tab.id"
             [class.tab-line-active]="activeId() === tab.id"

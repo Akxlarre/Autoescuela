@@ -93,9 +93,9 @@ test prueba la corrección.
 
 ## Reglas
 
-- Un fix track = una causa raíz = un cambio puntual. Si encontrás dos bugs, creá dos fixes.
+- Un fix track = una causa raíz = un cambio puntual. Si encuentras dos bugs, crea dos fixes.
 - El ID es secuencial y NO se reutiliza.
 - `specs/.active` solo puede tener un ID a la vez (spec o fix, no ambos).
-- Si hay una spec activa cuando corrés `/fix-new`, el fix la reemplaza en `.active`. La spec
-  sigue existiendo — podés volver con `/spec-activate <id>` cuando termines el fix.
+- Si hay una spec activa cuando corres `/fix-new`, el fix la reemplaza en `.active`. La spec
+  sigue existiendo — puedes volver con `/spec-activate <id>` cuando termines el fix.
 - El Fix Gate no requiere `plan.md` ni `tasks.md`. Solo `fix.md`.

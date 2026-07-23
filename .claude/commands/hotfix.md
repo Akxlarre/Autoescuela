@@ -59,7 +59,7 @@ Un hotfix aplica cuando **TODAS** estas condiciones se cumplen:
    ✅ specs/.active actualizado: <id>
 
    Este track se cierra automáticamente al terminar la sesión.
-   Ya podés editar el código — el spec-gate permite escrituras.
+   Ya puedes editar el código — el spec-gate permite escrituras.
    ```
 
 ## Template de hotfix.md

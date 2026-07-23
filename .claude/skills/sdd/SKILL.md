@@ -22,7 +22,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 ## Cuándo activar este skill
 
 - El usuario invoca `/spec-new`, `/spec-activate`, `/spec-plan`, `/spec-tasks`, `/spec-verify`, `/fix-new`, `/fix-close`, `/hotfix`, `/assign-new`, `/assign-list` o `/assign-claim`.
-- El usuario pide "creemos la spec de…", "planifiquemos el feature X", "verificá los AC", "asignale esto a X", "qué me toca a mí", "designemos tareas al equipo".
+- El usuario pide "creemos la spec de…", "planifiquemos el feature X", "verifica los AC", "asígnale esto a X", "qué me toca a mí", "designemos tareas al equipo".
 - Vas a tocar `src/`, `app/`, `lib/` o `supabase/migrations/` y el proyecto tiene carpeta `specs/`
   (en ese caso el `spec-gate` te bloqueará si no hay spec activa — este skill te dice cómo desbloquearlo).
 
@@ -107,12 +107,12 @@ nada — esto los hace seguros como hooks globales sin romper proyectos legacy.
 
 ## Reglas de operación
 
-1. **Una spec activa a la vez.** No hay paralelismo. Si necesitás cambiar de feature, cerrá la actual o desactivá (`/spec-activate --clear`).
-2. **No tocás código sin spec activa.** El spec-gate te bloquea. Si te bloquea, leés este skill y le decís al usuario qué comando correr.
+1. **Una spec activa a la vez.** No hay paralelismo. Si necesitas cambiar de feature, cierra la actual o desactívala (`/spec-activate --clear`).
+2. **No tocas código sin spec activa.** El spec-gate te bloquea. Si te bloquea, lee este skill y dile al usuario qué comando correr.
 3. **El plan se deriva de la spec; las tareas del plan.** Nunca al revés.
-4. **Out-of-scope es sagrado.** Si el usuario pide algo que está fuera del scope declarado, sugerís crear una spec nueva, no extender la actual.
+4. **Out-of-scope es sagrado.** Si el usuario pide algo que está fuera del scope declarado, sugiere crear una spec nueva, no extender la actual.
 5. **Acceptance Criteria son Gherkin.** Given/When/Then. Verificables. Nada de "el sistema debe ser rápido".
-6. **El AC verifier es la fuente de verdad del cierre.** No marcás una spec como `done` sin haber pasado `/spec-verify`.
+6. **El AC verifier es la fuente de verdad del cierre.** No marques una spec como `done` sin haber pasado `/spec-verify`.
 
 ## Plantillas
 

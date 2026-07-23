@@ -68,6 +68,6 @@ allowed-tools: Read, Write, Bash, Glob
 
 ## Reglas
 
-- NUNCA actives una spec con status `done` o `archived`. Avisá al usuario.
+- NUNCA actives una spec con status `done` o `archived`. Avisa al usuario.
 - NUNCA actives una spec con status `draft` sin avisar: las specs deben estar `approved` antes de ejecutarse.
 - El archivo `specs/.active` debe tener UNA sola línea con el ID o el bypass.

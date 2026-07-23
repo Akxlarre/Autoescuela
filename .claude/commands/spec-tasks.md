@@ -20,16 +20,16 @@ cat specs/.active
 ### 2. Verificar que la spec tenga `plan.md` aprobado
 
 - Leer `specs/<active>/plan.md`
-- Si no existe → abortar: "No hay plan. Corré /spec-plan primero."
+- Si no existe → abortar: "No hay plan. Corre /spec-plan primero."
 - Si está marcado como `Status: draft` en frontmatter, advertir al usuario
 
 ### 3. Leer también `spec.md`
 
-Necesitás los AC para cruzar cada tarea con el AC que cumple (campo `AC ref:`).
+Necesitas los AC para cruzar cada tarea con el AC que cumple (campo `AC ref:`).
 
 ### 4. Generar `tasks.md`
 
-Lee la plantilla `.claude/skills/sdd/templates/tasks.md` y completala:
+Lee la plantilla `.claude/skills/sdd/templates/tasks.md` y complétala:
 
 #### Reemplazos básicos
 - `{{ID}}`, `{{TITLE}}`, `{{DATE}}`
@@ -43,7 +43,7 @@ Lee la plantilla `.claude/skills/sdd/templates/tasks.md` y completala:
 5. **Fase 5 — Validación**: lint, tests, QA manual, /spec-verify
 6. **Fase 6 — Cierre**: indices, ROADMAP, .active
 
-Si una fase no aplica al feature, eliminala. No dejes fases vacías.
+Si una fase no aplica al feature, elimínala. No dejes fases vacías.
 
 #### Reglas para cada tarea
 
@@ -84,13 +84,13 @@ Resumen:
   - Orden recomendado: Datos → Facade → UI → Conexión → Validación → Cierre
 
 Para empezar a ejecutar:
-  "Implementá la tarea T1.1"
+  "Implementa la tarea T1.1"
   (el plan-injector va a inyectar la spec y el plan como contexto en cada Edit)
 ```
 
 ## Reglas
 
 - NO mezclar fases. Datos antes de UI siempre.
-- NO crear tareas que no mapeen al `plan.md`. Si descubrís algo no planificado, sugerí actualizar el plan primero.
+- NO crear tareas que no mapeen al `plan.md`. Si descubres algo no planificado, sugiere actualizar el plan primero.
 - NO incluir DoD genéricos tipo "está terminado". DoD = lista verificable.
-- Si el feature es trivial (1-2 archivos), generá 2-3 tareas, no fuerces 6 fases.
+- Si el feature es trivial (1-2 archivos), genera 2-3 tareas, no fuerces 6 fases.

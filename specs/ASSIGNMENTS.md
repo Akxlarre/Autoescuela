@@ -86,5 +86,5 @@
 asignación en paralelo (ej. por no pushear a tiempo), no hay resolución automática más allá de ese aviso
 — es coordinación humana: quien se entera después, cede y reclama otra. Para minimizar el riesgo:
 
-1. Si `/assign-claim` te avisa que tu copia está atrás, hacé `git pull` antes de continuar.
-2. Al reclamar, commiteá y pusheá **solo ese cambio** (este archivo + el track nuevo) de inmediato, separado del resto de tu trabajo de feature.
+1. Si `/assign-claim` te avisa que tu copia está atrás, haz `git pull` antes de continuar.
+2. Al reclamar, commitea y pushea **solo ese cambio** (este archivo + el track nuevo) de inmediato, separado del resto de tu trabajo de feature.

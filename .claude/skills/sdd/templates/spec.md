@@ -31,7 +31,7 @@
 
 ## 3. Acceptance Criteria (Gherkin)
 
-> Cada AC debe ser verificable empíricamente. Si no podés escribir un test o un check
+> Cada AC debe ser verificable empíricamente. Si no puedes escribir un test o un check
 > manual reproducible, el AC está mal formulado.
 
 - **AC1**: Given {{precondición}}, When {{acción}}, Then {{resultado observable}}.
