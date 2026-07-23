@@ -212,8 +212,11 @@ export class ReportesContablesFacade {
         }),
       );
 
+      // El tipado de supabase-js infiere `enrollments` como array porque el cliente
+      // no usa el `Database` generado (sin codegen no puede saber la cardinalidad real
+      // de la FK) — en runtime es un objeto (fix-056). Se castea vía `unknown` a propósito.
       const payments = filterPaymentsByBranch(
-        [...((paymentsResult.data ?? []) as PaymentRow[]), ...singularRows],
+        [...((paymentsResult.data ?? []) as unknown as PaymentRow[]), ...singularRows],
         branchId,
       );
       const operationalExpenses = (expensesResult.data ?? []) as ExpenseRow[];

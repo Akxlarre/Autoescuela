@@ -19,8 +19,11 @@ export interface PaymentRow {
   total_amount: number;
   type: string | null;
   payment_date: string | null;
-  // Supabase devuelve relaciones siempre como array, incluso con !inner
-  enrollments: { branch_id: number; license_group: string | null }[];
+  // payments.enrollment_id → enrollments.id es many-to-one: Supabase/PostgREST
+  // devuelve la relación como OBJETO plano (no array), aun con el hint `!inner`.
+  // (fix-056: el código previo asumía array y leía [0], que en un objeto es
+  // siempre undefined — todo pago quedaba fuera del filtro de sede).
+  enrollments: { branch_id: number; license_group: string | null };
 }
 
 export interface ExpenseRow {
@@ -76,7 +79,7 @@ function incomeCategoryKey(p: PaymentRow, showBranch: boolean): string {
   if (type === 'special_service') return 'special_service';
   // enrollment | monthly_fee | standalone → agrupar por license_group (+ branch si showBranch)
   // Los cursos singulares llegan con license_group='standalone' (fix-016).
-  const enr = p.enrollments[0];
+  const enr = p.enrollments;
   const lg = enr?.license_group ?? 'unknown';
   return showBranch ? `${lg}:${enr?.branch_id ?? 0}` : lg;
 }
@@ -128,7 +131,7 @@ export function mapSingularSaleToPaymentRow(s: SingularSaleReportDto): PaymentRo
     total_amount: s.amount_paid ?? 0,
     type: 'standalone',
     payment_date: s.paid_at ? s.paid_at.slice(0, 10) : null,
-    enrollments: [{ branch_id: s.branch_id, license_group: 'standalone' }],
+    enrollments: { branch_id: s.branch_id, license_group: 'standalone' },
   };
 }
 
@@ -141,7 +144,7 @@ export function filterPaymentsByBranch(
   branchId: number | null,
 ): PaymentRow[] {
   if (branchId === null) return payments;
-  return payments.filter((p) => p.enrollments[0]?.branch_id === branchId);
+  return payments.filter((p) => p.enrollments?.branch_id === branchId);
 }
 
 /** Calcula los KPIs a partir de los arrays raw de pagos y gastos. */

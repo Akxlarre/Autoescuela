@@ -24,7 +24,8 @@ const mkPayment = (
   total_amount: total,
   type,
   payment_date: date,
-  enrollments: [{ branch_id: branchId, license_group: licenseGroup }],
+  // Forma real que devuelve Supabase para una relación many-to-one (fix-056): objeto, no array.
+  enrollments: { branch_id: branchId, license_group: licenseGroup },
 });
 
 const mkExpense = (amount: number, category: string, date = '2026-04-05'): ExpenseRow => ({
@@ -57,13 +58,30 @@ describe('filterPaymentsByBranch', () => {
   it('filters to only branch 1 payments', () => {
     const result = filterPaymentsByBranch(PAYMENTS, 1);
     expect(result).toHaveLength(3);
-    expect(result.every((p) => p.enrollments[0]?.branch_id === 1)).toBe(true);
+    expect(result.every((p) => p.enrollments?.branch_id === 1)).toBe(true);
   });
 
   it('filters to only branch 2 payments', () => {
     const result = filterPaymentsByBranch(PAYMENTS, 2);
     expect(result).toHaveLength(2);
-    expect(result.every((p) => p.enrollments[0]?.branch_id === 2)).toBe(true);
+    expect(result.every((p) => p.enrollments?.branch_id === 2)).toBe(true);
+  });
+});
+
+// ── fix-056: regresión H-013 (bug array-vs-objeto en la relación enrollments) ─
+
+describe('fix-056: enrollments como objeto (no array) desde Supabase', () => {
+  it('un pago real de matrícula (enrollment) de la sede de la secretaria NO se descarta', () => {
+    const pagoMatriculaWebpay = mkPayment(180_000, 'enrollment', 'class_b', 2, '2026-07-22');
+    const result = filterPaymentsByBranch([pagoMatriculaWebpay], 2);
+    expect(result).toHaveLength(1);
+  });
+
+  it('con showBranch, categoriza por la sede real en vez de caer en "Otros (Sede 0)"', () => {
+    const pagoMatriculaWebpay = mkPayment(180_000, 'enrollment', 'class_b', 2, '2026-07-22');
+    const cats = computeIngresosCategoria([pagoMatriculaWebpay], true);
+    expect(cats.map((c) => c.nombre)).not.toContain('Otros (Sede 0)');
+    expect(cats.map((c) => c.nombre)).toContain('Clase B (C. Chillán)');
   });
 });
 
@@ -262,7 +280,7 @@ describe('cursos singulares (standalone) en el reporte', () => {
     expect(row.total_amount).toBe(200_000);
     expect(row.type).toBe('standalone');
     expect(row.payment_date).toBe('2026-04-10');
-    expect(row.enrollments[0]).toEqual({ branch_id: 2, license_group: 'standalone' });
+    expect(row.enrollments).toEqual({ branch_id: 2, license_group: 'standalone' });
   });
 
   it('mapSingularSaleToPaymentRow tolera amount_paid y paid_at nulos', () => {

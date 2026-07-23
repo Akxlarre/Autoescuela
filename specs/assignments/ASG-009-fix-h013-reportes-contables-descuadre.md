@@ -1,6 +1,6 @@
 # Asignación ASG-009 — Fix H-013: Reportes Contables no cuenta pagos reales (descuadre financiero)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
