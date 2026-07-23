@@ -21,7 +21,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-001 | Fase 5 QA visual restante: skeletons en carga real, capturas claro/oscuro/mobile de páginas sin cobertura, regla 3-2-1 de marca | `b` | fix | Media | b | Iteraciones 19-21 de `indices/FLOWS-QA-AUDIT.md` (Fase 5) — bloqueadas por indisponibilidad temporal del clasificador de Playwright, requieren navegador |
-| ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | `b` | fix | Alta | b | Bug real confirmado en código, ver `indices/FLOWS-QA-AUDIT.md` H-039. Archivo: `supabase/functions/student-payment/index.ts:206-217` |
 | ASG-003 | Fix H-040: 7 facades con canal Realtime que nunca se limpia + polling prohibido (`setInterval`) en `dashboard.facade.ts` | `i` | fix | Media | b | Ver `indices/FLOWS-QA-AUDIT.md` H-040. Archivos: `dashboard`/`admin-alumnos`/`admin-alumno-detalle`/`flota`/`pagos`/`liquidaciones`/`cuadratura` facades + sus Smart Components |
 | ASG-004 | Cobertura `data-llm-*` — lote 1: Admin Flota + Documentos + Certificados (9 archivos) | `m` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-005/006/007 |
 | ASG-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-004/006/007 |
@@ -58,6 +57,7 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | b | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 
 ---
 

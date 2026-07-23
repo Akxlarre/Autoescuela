@@ -1,14 +1,14 @@
 # Asignación ASG-002 — Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-23
+> **resulting_track:** fix-058-b-pago-multiples-matriculas
 
 ---
 
