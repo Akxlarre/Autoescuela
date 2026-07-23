@@ -2203,6 +2203,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `branch_visible` | `(p_branch_id INT)` |
 | `calculate_vehicle_document_status` | `()` |
 | `cascade_promotion_status_to_courses` | `()` |
+| `check_payment_within_pending_balance` | `()` |
 | `check_standalone_course_capacity` | `()` |
 | `cleanup_expired_drafts` | `()` |
 | `cleanup_expired_public_enrollment` | `()` |

@@ -281,6 +281,10 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
                 </div>
                 @if (isInvalid('total_amount')) {
                   <span class="field-error">Ingresa un monto válido mayor a 0.</span>
+                } @else if (saldoExcedido) {
+                  <span class="field-error">
+                    El monto excede el saldo pendiente ({{ clp(saldoPendienteActual!) }}).
+                  </span>
                 }
               </div>
             </div>
@@ -448,8 +452,8 @@ function sumMatchesTotalValidator(group: AbstractControl): ValidationErrors | nu
           loadingLabel="Guardando..."
           icon="check"
           [loading]="isSaving()"
-          [disabled]="form.invalid"
-          (clicked)="onSubmit()"
+          [disabled]="form.invalid || saldoExcedido"
+          (click)="onSubmit()"
         />
       </ng-container>
     </app-drawer-form>
@@ -606,6 +610,45 @@ export class RegistrarPagoDrawerComponent {
     return this.facade.alumnosConDeuda().find((a) => a.enrollmentId === eid) ?? null;
   }
 
+  /**
+   * Resuelve los montos actuales (total pagado + saldo pendiente) del enrollment,
+   * con la misma prioridad usada por onSubmit(): estado de cuenta primero (más
+   * fiable), lista de deudores como respaldo. Devuelve null si no hay matrícula
+   * asociada o no se encuentra en ninguna fuente (pago sin vínculo, permitido).
+   */
+  private resolveMontosActuales(
+    enrollmentId: number | null,
+  ): { total_paid: number; pending_balance: number } | null {
+    if (enrollmentId === null) return null;
+    const res = this.facade.estadoCuentaResumen();
+    if (res && res.enrollmentId === enrollmentId) {
+      return { total_paid: res.totalPagado, pending_balance: res.saldoPendiente };
+    }
+    const alumno = this.facade.alumnosConDeuda().find((a) => a.enrollmentId === enrollmentId);
+    return alumno ? { total_paid: alumno.pagado, pending_balance: alumno.saldo } : null;
+  }
+
+  /** Enrollment efectivo según el modo activo (mismo criterio que onSubmit()). */
+  private get enrollmentIdActual(): number | null {
+    return this.modoGlobal()
+      ? ((this.form.get('enrollment_id')?.value as number | null) ?? null)
+      : this.facade.enrollmentSeleccionado();
+  }
+
+  /** Saldo pendiente del enrollment actualmente seleccionado, o null si no aplica. */
+  protected get saldoPendienteActual(): number | null {
+    return this.resolveMontosActuales(this.enrollmentIdActual)?.pending_balance ?? null;
+  }
+
+  /** True si el monto total ingresado excede el saldo pendiente conocido. */
+  protected get saldoExcedido(): boolean {
+    const totalAmount = Number(this.form.get('total_amount')?.value ?? 0);
+    if (totalAmount <= 0) return false;
+    const saldo = this.saldoPendienteActual;
+    if (saldo === null) return false;
+    return totalAmount > saldo + 0.5;
+  }
+
   // ── Formulario reactivo ─────────────────────────────────────────────────────
   protected readonly form = this.fb.group(
     {
@@ -613,10 +656,10 @@ export class RegistrarPagoDrawerComponent {
       payment_date: [toISODate(new Date()), Validators.required],
       type: ['', Validators.required],
       total_amount: [null as number | null, [Validators.required, Validators.min(1)]],
-      cash_amount: [0, Validators.min(0)],
-      transfer_amount: [0, Validators.min(0)],
-      card_amount: [0, Validators.min(0)],
-      voucher_amount: [0, Validators.min(0)],
+      cash_amount: [null as number | null, Validators.min(0)],
+      transfer_amount: [null as number | null, Validators.min(0)],
+      card_amount: [null as number | null, Validators.min(0)],
+      voucher_amount: [null as number | null, Validators.min(0)],
       document_number: [''],
     },
     { validators: sumMatchesTotalValidator },
@@ -667,6 +710,13 @@ export class RegistrarPagoDrawerComponent {
       return;
     }
 
+    if (this.saldoExcedido) {
+      this.saveError.set(
+        `El monto excede el saldo pendiente (${this.clp(this.saldoPendienteActual!)}).`,
+      );
+      return;
+    }
+
     this.isSaving.set(true);
     this.saveError.set(null);
 
@@ -678,21 +728,7 @@ export class RegistrarPagoDrawerComponent {
         ? (v.enrollment_id ?? null)
         : this.facade.enrollmentSeleccionado();
 
-      // Resuelve montosActuales según el modo
-      let montosActuales: { total_paid: number; pending_balance: number } | null = null;
-      if (enrollmentId !== null) {
-        // Prioridad 1: Estado de cuenta (más fiable)
-        const res = this.facade.estadoCuentaResumen();
-        if (res && res.enrollmentId === enrollmentId) {
-          montosActuales = { total_paid: res.totalPagado, pending_balance: res.saldoPendiente };
-        } else {
-          // Prioridad 2: Buscar en la lista de deudores
-          const alumno = this.facade.alumnosConDeuda().find((a) => a.enrollmentId === enrollmentId);
-          if (alumno) {
-            montosActuales = { total_paid: alumno.pagado, pending_balance: alumno.saldo };
-          }
-        }
-      }
+      const montosActuales = this.resolveMontosActuales(enrollmentId);
 
       await this.facade.registrarNuevoPago(
         enrollmentId,
@@ -739,10 +775,10 @@ export class RegistrarPagoDrawerComponent {
       payment_date: toISODate(new Date()),
       type: '',
       total_amount: null,
-      cash_amount: 0,
-      transfer_amount: 0,
-      card_amount: 0,
-      voucher_amount: 0,
+      cash_amount: null,
+      transfer_amount: null,
+      card_amount: null,
+      voucher_amount: null,
       document_number: '',
     });
     this.form.markAsPristine();
