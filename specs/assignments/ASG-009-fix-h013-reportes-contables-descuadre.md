@@ -1,14 +1,14 @@
 # Asignación ASG-009 — Fix H-013: Reportes Contables no cuenta pagos reales (descuadre financiero)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P0
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-23
+> **resulting_track:** fix-056-b-reportes-contables-branch-id
 
 ---
 

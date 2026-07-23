@@ -28,7 +28,6 @@
 | ASG-006 | Cobertura `data-llm-*` — lote 3: shared/components parte 1 (8 archivos) | `m` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-004/005/007 |
 | ASG-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-004/005/006 |
 | ASG-008 | Decisión de diseño: modificador componible `btn-sm` en el DS + aplicar a los 3 archivos deferidos de ARCH-16 | `m` | spec | Baja | b | ~120 instancias del anti-patrón en todo el repo. Ver `docs/BACKLOG-DEUDA-TECNICA.md` línea 86-88 y `indices/FLOWS-QA-AUDIT.md` iteración 17 |
-| ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | `b` | fix | **Crítica** | b | Pipeline de creación de pago no escribe/lee `branch_id` resoluble para el filtro de Reportes. Investigar `reportes-contables.facade.ts` + Edge Function de pago |
 | ASG-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | `i` | fix | **Crítica** | b | Archivo: `instructor-clases.facade.ts:53`. La rama real ya existe pero tiene 0% cobertura de tests — agregarlos ANTES de activar el flag, no después |
 | ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | `m` | fix | **Crítica** | b | Policy RLS de INSERT/UPDATE en `student_documents` solo contempla `'admin'` para contexto profesional — migración SQL nueva |
 | ASG-012 | Fix H-020 + H-019 + H-033 + H-034: matrícula pública — overlay bloquea click en foto carnet, landing sin sede con links muertos, retry tras pago rechazado destruye la matrícula, fotos huérfanas en Storage | `b` | fix | Alta | b | Mismo módulo (wizard público de matrícula), 4 hallazgos relacionados. Archivos: `public-enrollment-retorno.component.ts:372-374`, `public-enrollment.facade.ts` (`clearDraft()`), componente de subida de foto carnet |
@@ -59,6 +58,7 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | b | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
 
 ---
 
