@@ -132,7 +132,23 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 - Agregala a "Reclamadas / En curso": ID, título, quién reclamó (mi código), track resultante (ID + link relativo), fecha de hoy.
 - Actualizá también el frontmatter de `specs/assignments/ASG-NNN-slug.md`: `status: reclamada`, `claimed_by`, `claimed_at`, `resulting_track`.
 
-### 10. Reportar al usuario
+### 10. Commit + push automático de la reclamación (sin confirmar — decisión explícita del equipo)
+
+Este paso corre siempre, sin preguntar, salvo que el paso 2 haya detectado que el fetch falló (sin red/remoto) — en ese caso saltalo y avisá en el reporte final que quedó pendiente de push manual.
+
+```bash
+git branch --show-current
+```
+
+- **Si la rama actual es `main`/`master`** (la rama principal detectada en el paso 2): stagea **solo** estos paths exactos (nunca `-A` ni `.`):
+  - `specs/ASSIGNMENTS.md`
+  - `specs/assignments/ASG-NNN-slug.md`
+  - el path nuevo del track (`specs/fix-NNN-<codigo>-slug/`, `specs/NNNN-<codigo>-slug/` o `specs/fixes/hotfixes/hotfix-NNN-<codigo>-slug/`)
+
+  Luego commiteá con `chore(assign): reclamar ASG-NNN → <track-id>` y pusheá directo (`git push`), sin pedir confirmación — el usuario ya autorizó este flujo de forma durable. Si el push falla (conflicto con otro push en paralelo), NO forcees: hacé `git pull --rebase` una vez y reintentá; si vuelve a fallar, avisá al usuario en el reporte en vez de insistir.
+- **Si la rama actual NO es la principal:** no intentes pushear a main desde ahí (cambiar de rama con cambios de otro feature en curso es más riesgoso y no fue lo que se autorizó). Commiteá igual esos mismos paths puntuales en la rama actual como respaldo local, y en el reporte avisá que falta llevar `specs/ASSIGNMENTS.md` + el track nuevo a `main` a mano (ej. cherry-pick o pasar a `main` antes de seguir).
+
+### 11. Reportar al usuario
 
 Usá el mismo formato de reporte que ya imprime el comando subyacente (`/spec-new`, `/fix-new` o `/hotfix`), y agregale al principio:
 
@@ -142,9 +158,15 @@ Usá el mismo formato de reporte que ya imprime el comando subyacente (`/spec-ne
 
 [... reporte estándar del comando subyacente ...]
 
-⚠️  Multi-rama: commiteá y pusheá el cambio en specs/ASSIGNMENTS.md (+ el nuevo
-    track) AHORA MISMO a la rama principal compartida, antes de armar tu rama
-    de feature — así nadie más intenta reclamar ASG-NNN en paralelo.
+✅ Commit + push automático a <rama>: <hash corto> — ya visible para el resto del equipo.
+```
+
+o, si no se pudo pushear (sin red, conflicto persistente, o no estabas en la rama principal):
+
+```
+⚠️  No se pudo pushear automáticamente (<motivo>). Commiteado localmente en <rama>;
+    llevá specs/ASSIGNMENTS.md + el track nuevo a la rama principal a mano antes de
+    que alguien más reclame ASG-NNN en paralelo.
 ```
 
 ## Reglas
