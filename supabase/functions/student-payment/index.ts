@@ -24,6 +24,7 @@
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { pickEnrollmentToShow } from '../_shared/enrollment-selection.ts';
 
 // ─── CORS headers ───
 
@@ -202,8 +203,12 @@ async function handleLoadEnrollmentStatus(supabase: any, supabaseUid: string) {
     .maybeSingle();
   if (!student) return errorResponse('Alumno no encontrado', 404);
 
-  // 3. Matrícula activa más reciente (con o sin saldo pendiente, para mostrar historial)
-  const { data: enrollment, error: enrollError } = await supabase
+  // 3. Matrículas activas/completadas del alumno (con o sin saldo pendiente, para
+  // mostrar historial). fix-058 (H-039): antes se tomaba directo la más reciente por
+  // created_at, dejando sin forma de pagar a un alumno con una matrícula más antigua
+  // con saldo pendiente y otra más nueva ya saldada. pickEnrollmentToShow() prioriza
+  // la que tiene saldo real y solo cae a la más reciente cuando todas están saldadas.
+  const { data: enrollments, error: enrollError } = await supabase
     .from('enrollments')
     .select(
       `id, number, base_price, total_paid, pending_balance, payment_status, payment_mode, license_group,
@@ -212,14 +217,14 @@ async function handleLoadEnrollmentStatus(supabase: any, supabaseUid: string) {
     )
     .eq('student_id', student.id)
     .in('status', ['active', 'completed'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order('created_at', { ascending: false });
 
   if (enrollError) {
     console.error('enrollment query error:', enrollError);
     return errorResponse('Error al cargar la matrícula', 500);
   }
+
+  const enrollment = pickEnrollmentToShow(enrollments ?? []);
 
   const studentName = `${user.first_names} ${user.paternal_last_name}`.trim();
 

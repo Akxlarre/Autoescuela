@@ -58,7 +58,6 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | b | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 
 ---
 
@@ -67,6 +66,7 @@
 | ID | Título | Track resultante | Cerrada |
 |----|--------|-------------------|---------|
 | ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
+| ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 
 ---
 
