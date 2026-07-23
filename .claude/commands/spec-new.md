@@ -12,7 +12,7 @@ Vas a crear el scaffold completo de una nueva spec siguiendo el patrón SDD de K
 
 Título del feature: **$ARGUMENTS**
 
-(Si está vacío, pedile al usuario que provea un título descriptivo. Ejemplo: "Pre-inscripción profesional online".)
+(Si está vacío, pídele al usuario que provea un título descriptivo. Ejemplo: "Pre-inscripción profesional online".)
 
 ## Procedimiento
 
@@ -59,10 +59,10 @@ Lee la plantilla `.claude/skills/sdd/templates/spec.md` y reemplaza los placehol
 - `{{ID}}` → el ID nuevo (ej. `0001`)
 - `{{TITLE}}` → el título del feature
 - `{{DATE}}` → fecha actual en formato `YYYY-MM-DD`
-- `{{OWNER}}` → el usuario (preguntá si no lo sabés)
-- `{{P0|P1|P2}}` → preguntale al usuario la prioridad
+- `{{OWNER}}` → el usuario (pregunta si no lo sabes)
+- `{{P0|P1|P2}}` → pregúntale al usuario la prioridad
 
-Las secciones internas (User Stories, AC, etc.) las dejás con los placeholders `{{...}}` para que el usuario las complete. NO inventes contenido de negocio.
+Las secciones internas (User Stories, AC, etc.) las dejas con los placeholders `{{...}}` para que el usuario las complete. NO inventes contenido de negocio.
 
 ### 6. Actualizar `specs/ROADMAP.md`
 
@@ -82,12 +82,12 @@ Archivos:
   - acceptance.md (vacío)
 
 Próximos pasos:
-  1. Completá las secciones de spec.md (User Stories, AC, Out of scope, etc.)
-  2. Cambiá el status de "draft" a "approved" cuando esté lista
+  1. Completa las secciones de spec.md (User Stories, AC, Out of scope, etc.)
+  2. Cambia el status de "draft" a "approved" cuando esté lista
   3. /spec-activate NNNN-slug para empezar a trabajarla
   4. /spec-plan para generar el plan técnico
 
-¿Querés que te ayude a redactar las User Stories y los Acceptance Criteria ahora?
+¿Quieres que te ayude a redactar las User Stories y los Acceptance Criteria ahora?
 ```
 
 ## Reglas
@@ -95,4 +95,4 @@ Próximos pasos:
 - NO actives la spec automáticamente (eso es trabajo de `/spec-activate`).
 - NO redactes user stories ni AC sin pedírselos al usuario — la spec es su contrato.
 - NO toques `specs/.active` en este comando.
-- Si el usuario invoca `/spec-new` sin argumento, pedile el título antes de hacer nada.
+- Si el usuario invoca `/spec-new` sin argumento, pídele el título antes de hacer nada.

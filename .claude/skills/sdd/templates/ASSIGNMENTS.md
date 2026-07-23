@@ -10,7 +10,7 @@
 > flujo SDD normal desde ahí.
 >
 > ⚠️ **Multi-rama**: si cada persona trabaja en su propia rama, este archivo puede
-> quedar desactualizado entre ramas. Commiteá y pusheá los cambios acá **de inmediato**
+> quedar desactualizado entre ramas. Haz commit y push de los cambios acá **de inmediato**
 > (antes de armar tu rama de feature) para que el resto del equipo vea la reclamación
 > a tiempo. Ver sección "Conflictos entre ramas" al final.
 
@@ -53,5 +53,5 @@
 asignación en paralelo (ej. por no pushear a tiempo), no hay resolución automática más allá de ese aviso
 — es coordinación humana: quien se entera después, cede y reclama otra. Para minimizar el riesgo:
 
-1. Si `/assign-claim` te avisa que tu copia está atrás, hacé `git pull` antes de continuar.
-2. Al reclamar, commiteá y pusheá **solo ese cambio** (este archivo + el track nuevo) de inmediato, separado del resto de tu trabajo de feature.
+1. Si `/assign-claim` te avisa que tu copia está atrás, haz `git pull` antes de continuar.
+2. Al reclamar, haz commit y push de **solo ese cambio** (este archivo + el track nuevo) de inmediato, separado del resto de tu trabajo de feature.

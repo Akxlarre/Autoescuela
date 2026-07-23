@@ -41,7 +41,7 @@ allowed-tools: Read, Write, Bash, Glob
      - specs/.active → vacío
    
    El spec-gate volverá a bloquear escrituras en código de producto.
-   Si querés continuar con una spec, usá /spec-activate <id>.
+   Si quieres continuar con una spec, usa /spec-activate <id>.
    ```
 
 ## Notas

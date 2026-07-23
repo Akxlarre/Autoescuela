@@ -16,14 +16,14 @@
 
 <!-- 2-4 frases: qué hay que lograr y por qué. Esto se pre-carga tal cual en el §1
      de spec.md (o en "Root Cause" de fix.md/hotfix.md) cuando alguien la reclama —
-     escribilo pensando en que la persona que lo tome parta de acá, no de cero. -->
+     escríbelo pensando en que la persona que lo tome parta de acá, no de cero. -->
 ...
 
 ## Alcance sugerido
 
 <!-- Bullets de qué probablemente entra/no entra. Es una intuición de quien asigna,
      NO son Acceptance Criteria en Gherkin — eso lo escribe quien reclama en su
-     propia spec/fix. Si tenés dudas de scope, decilo acá en vez de inventar. -->
+     propia spec/fix. Si tienes dudas de scope, dilo acá en vez de inventar. -->
 - ...
 - ...
 
