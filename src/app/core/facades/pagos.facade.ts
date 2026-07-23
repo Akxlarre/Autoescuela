@@ -13,6 +13,7 @@ import type {
   PagoReciente,
 } from '@core/models/ui/pagos.model';
 import { toISODate } from '@core/utils/date.utils';
+import { roundPercentagesTo100 } from '@core/utils/percentage.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
 
@@ -348,18 +349,18 @@ export class PagosFacade {
       ...cfg,
       total: (data ?? []).reduce((acc: number, r: any) => acc + (r[cfg.key] ?? 0), 0),
     }));
-    const grandTotal = totals.reduce((acc, m) => acc + m.total, 0);
+    const porcentajes = roundPercentagesTo100(totals.map((m) => m.total));
 
     this._metodosPagoMes.set(
       totals
-        .filter((m) => m.total > 0)
-        .map((m) => ({
+        .map((m, i) => ({
           metodo: m.metodo,
           total: m.total,
-          porcentaje: grandTotal > 0 ? Math.round((m.total / grandTotal) * 100) : 0,
+          porcentaje: porcentajes[i],
           color: m.color,
           icono: m.icono,
         }))
+        .filter((m) => m.total > 0)
         .sort((a, b) => b.porcentaje - a.porcentaje),
     );
   }

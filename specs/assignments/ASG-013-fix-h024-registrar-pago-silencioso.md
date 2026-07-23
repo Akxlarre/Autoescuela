@@ -1,14 +1,14 @@
 # Asignación ASG-013 — Fix H-024: Registrar Pago con monto excesivo falla en silencio
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-23
+> **resulting_track:** fix-057-m-registrar-pago-monto-excesivo-silencioso
 
 ---
 
