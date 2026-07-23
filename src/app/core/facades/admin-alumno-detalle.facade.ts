@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 import type {
   AlumnoDetalleUI,
   ClasePendienteReagendarUI,
@@ -72,6 +73,7 @@ export class AdminAlumnoDetalleFacade {
   private readonly toast = inject(ToastService);
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
+  private readonly agendaSettings = inject(AgendaSettingsService);
 
   // ── 1. ESTADO REACTIVO (Privado) ────────────────────────────────────────────
   private readonly _alumno = signal<AlumnoDetalleUI | null>(null);
@@ -1126,6 +1128,9 @@ export class AdminAlumnoDetalleFacade {
         .from('v_class_b_schedule_availability')
         .select('*')
         .eq('instructor_id', instructorId)
+        // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
+        // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
+        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
         .order('slot_start', { ascending: true });
 
       if (data && data.length > 0) {

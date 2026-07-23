@@ -180,6 +180,18 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       }
     }
 
+    /* ── Fuera del límite de visualización configurado (Ajustes) ── */
+
+    .slot-block--disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+
+      &:hover {
+        box-shadow: none;
+      }
+    }
+
     /* ── Texto ── */
 
     .slot-time {
@@ -209,18 +221,29 @@ export class AgendaSlotComponent {
   slot = input.required<AgendaSlot>();
   /** Modo compacto: reduce padding/min-height, oculta instructor en available. */
   compact = input(false);
+  /**
+   * Fuerza el slot a no-interactivo (sin click, sin foco por teclado, opacidad
+   * reducida) — usado cuando el día excede el límite de visualización de la
+   * Agenda. Distinto de `status='cancelled'`: este es un bloqueo externo, no
+   * un estado propio del slot.
+   */
+  disabled = input(false);
   slotClicked = output<AgendaSlot>();
 
-  /** Todos los estados son interactivos excepto cancelled. */
-  readonly isInteractive = computed(() => this.slot().status !== 'cancelled');
+  /** Todos los estados son interactivos excepto cancelled o forzado por `disabled`. */
+  readonly isInteractive = computed(() => !this.disabled() && this.slot().status !== 'cancelled');
 
   readonly statusClass = computed(() => {
     const base = `slot-block slot-block--${this.slot().status}`;
-    return this.compact() ? `${base} slot-block--compact` : base;
+    const withCompact = this.compact() ? `${base} slot-block--compact` : base;
+    return this.disabled() ? `${withCompact} slot-block--disabled` : withCompact;
   });
 
   readonly ariaLabel = computed(() => {
     const s = this.slot();
+    if (this.disabled()) {
+      return `${s.startTime} — fuera del rango de visualización configurado.`;
+    }
     if (s.status === 'available') {
       return `Slot disponible ${s.startTime} — ${s.instructorName}. Clic para agendar.`;
     }

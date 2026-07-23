@@ -177,4 +177,72 @@ describe('AdminAlumnosProfesionalFacade', () => {
     await facade.initialize();
     expect(builders['enrollments'].eq).toHaveBeenCalledWith('branch_id', -1);
   });
+
+  describe('checkHistorial — homologación con AdminAlumnosFacade (Clase B)', () => {
+    /**
+     * Builder que distingue entre queries de filas (`.select('id')` → {data})
+     * y queries de conteo (`.select('id', {count:'exact', head:true})` → {count}),
+     * necesario porque checkHistorial usa ambas formas sobre distintas tablas.
+     */
+    function makeHistorialMock(config: {
+      enrollmentIds: number[];
+      payments?: number;
+      theory?: number;
+      practice?: number;
+    }): void {
+      const counts: Record<string, number> = {
+        payments: config.payments ?? 0,
+        professional_theory_attendance: config.theory ?? 0,
+        professional_practice_attendance: config.practice ?? 0,
+      };
+
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        let countMode = false;
+        const builder: any = {
+          select: vi.fn((_col: string, opts?: { count?: string; head?: boolean }) => {
+            countMode = opts?.count === 'exact';
+            return builder;
+          }),
+          eq: vi.fn(() => builder),
+          neq: vi.fn(() => builder),
+          in: vi.fn(() => builder),
+          then: (resolve: any) =>
+            countMode
+              ? resolve({ count: counts[table] ?? 0, error: null })
+              : resolve({ data: config.enrollmentIds.map((id) => ({ id })), error: null }),
+        };
+        return builder;
+      });
+    }
+
+    it('sin matrículas no-draft → sin historial (no consulta pagos/asistencia)', async () => {
+      makeHistorialMock({ enrollmentIds: [] });
+      const result = await facade.checkHistorial(5);
+      expect(result.hasHistory).toBe(false);
+    });
+
+    it('con matrículas pero sin pagos ni asistencia → sin historial', async () => {
+      makeHistorialMock({ enrollmentIds: [100] });
+      const result = await facade.checkHistorial(5);
+      expect(result.hasHistory).toBe(false);
+    });
+
+    it('con pagos registrados → hasHistory=true', async () => {
+      makeHistorialMock({ enrollmentIds: [100], payments: 2 });
+      const result = await facade.checkHistorial(5);
+      expect(result.hasHistory).toBe(true);
+    });
+
+    it('con asistencia teórica registrada → hasHistory=true', async () => {
+      makeHistorialMock({ enrollmentIds: [100], theory: 1 });
+      const result = await facade.checkHistorial(5);
+      expect(result.hasHistory).toBe(true);
+    });
+
+    it('con asistencia práctica registrada → hasHistory=true', async () => {
+      makeHistorialMock({ enrollmentIds: [100], practice: 3 });
+      const result = await facade.checkHistorial(5);
+      expect(result.hasHistory).toBe(true);
+    });
+  });
 });

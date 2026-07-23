@@ -75,7 +75,7 @@ interface SemaforoInfo {
   ],
   template: `
     <div
-      class="bento-grid"
+      class="bento-grid bento-grid--fill-screen"
       appBentoGridLayout
       #bentoGrid
       aria-label="Panel de alumnos profesionales"
@@ -95,8 +95,13 @@ interface SemaforoInfo {
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- Filtros + Tabla -->
-      <div class="bento-banner card p-0 overflow-hidden shadow-sm" appCardHover>
+      <!-- Filtros y Tabla (Dual-Viewport). El modo fill-screen desktop lo da
+           .bento-fill (spec 0028); en móvil la card crece con su contenido —
+           mismo patrón que app-alumnos-list-content (Clase B). -->
+      <div
+        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
+        appCardHover
+      >
         <!-- Toolbar -->
         <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
           <div class="relative flex-1 min-w-52 max-w-xs">
@@ -139,108 +144,306 @@ interface SemaforoInfo {
         </div>
 
         @if (isLoading()) {
-          <div class="p-4 space-y-3" appAnimateIn>
-            @for (i of skeletonRows; track i) {
-              <app-skeleton-block variant="rect" width="100%" height="44px" />
-            }
+          <div
+            class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full"
+            appAnimateIn
+          >
+            <!-- VISTA 1: TABLA SKELETON (Oculta cuando se comprime) -->
+            <div class="desktop-view hide-on-squeeze p-4 space-y-3 flex-1 min-h-0 h-full w-full">
+              @for (i of skeletonRows; track i) {
+                <app-skeleton-block variant="rect" width="100%" height="44px" />
+              }
+            </div>
+
+            <!-- VISTA 2: TARJETAS SKELETON (Visible cuando se comprime o móvil) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="bento-grid">
+                @for (card of skeletonRows; track card) {
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
+                    data-col-span="4"
+                  >
+                    <div
+                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
+                    >
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <app-skeleton-block
+                          variant="circle"
+                          width="40px"
+                          height="40px"
+                          class="shrink-0"
+                        />
+                        <div class="flex flex-col gap-2 w-full">
+                          <app-skeleton-block variant="text" width="80%" height="12px" />
+                          <app-skeleton-block variant="text" width="60%" height="10px" />
+                        </div>
+                      </div>
+                      <app-skeleton-block
+                        variant="rect"
+                        width="48px"
+                        height="20px"
+                        class="shrink-0"
+                      />
+                    </div>
+                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 bg-surface">
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="40%" height="10px" />
+                        <app-skeleton-block variant="text" width="80%" height="12px" />
+                      </div>
+                      <div class="flex flex-col gap-1.5">
+                        <app-skeleton-block variant="text" width="60%" height="10px" />
+                        <app-skeleton-block variant="rect" width="70px" height="20px" />
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
           </div>
         } @else {
-          <!-- Tabla (desktop) -->
-          <div class="hidden md:block" appAnimateIn>
-            <p-table
-              [value]="filteredAlumnos()"
-              [rows]="10"
-              [paginator]="filteredAlumnos().length > 10"
-              styleClass="p-datatable-sm p-datatable-striped"
-              [showCurrentPageReport]="true"
-              currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
-            >
-              <ng-template pTemplate="header">
-                <tr
-                  class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
-                >
-                  <th class="pl-6 py-4">Alumno</th>
-                  <th>Nº Mat.</th>
-                  <th>Promoción</th>
-                  <th>Módulos</th>
-                  <th>Asistencia</th>
-                  <th>Estado</th>
-                  <th>Saldo</th>
-                  <th class="pr-6 text-right">Acciones</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-alumno>
-                <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
-                  <td class="pl-6 py-4">
-                    <div class="flex items-center gap-3">
-                      <div
-                        class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+          <!-- Contenido principal interactivo -->
+          <div
+            class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full"
+            appAnimateIn
+          >
+            <!-- VISTA 1: LA TABLA CLÁSICA (Oculta cuando se comprime) -->
+            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+              <p-table
+                [value]="filteredAlumnos()"
+                [rows]="10"
+                [paginator]="filteredAlumnos().length > 10"
+                [scrollable]="true"
+                scrollHeight="flex"
+                styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} alumnos"
+              >
+                <ng-template pTemplate="header">
+                  <tr
+                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
+                  >
+                    <th class="pl-6 py-4">Alumno</th>
+                    <th>Nº Mat.</th>
+                    <th>Promoción</th>
+                    <th>Módulos</th>
+                    <th>Asistencia</th>
+                    <th>Estado</th>
+                    <th>Saldo</th>
+                    <th class="pr-6 text-right">Acciones</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-alumno>
+                  <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
+                    <td class="pl-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                        >
+                          {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="font-bold text-sm text-text-primary"
+                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
+                          >
+                          <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="text-xs text-text-muted font-mono">{{ alumno.nroMatricula }}</td>
+                    <td>
+                      <span
+                        class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
                       >
-                        {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
+                        {{ alumno.promocion }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <div class="w-16 h-1.5 rounded-full bg-elevated overflow-hidden">
+                          <div
+                            class="h-full bg-brand rounded-full"
+                            [style.width.%]="moduloPct(alumno)"
+                          ></div>
+                        </div>
+                        <span class="text-xs text-text-secondary font-mono"
+                          >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
+                        >
+                      </div>
+                    </td>
+                    <td>
+                      @let sem = getSemaforo(alumno.semaforo);
+                      <p-tag
+                        [value]="sem.label"
+                        [severity]="sem.severity"
+                        styleClass="text-xs font-bold px-2 py-0.5"
+                      ></p-tag>
+                    </td>
+                    <td>
+                      <p-tag
+                        [value]="alumno.estado"
+                        [severity]="getStatusSeverity(alumno.estado)"
+                        styleClass="text-xs font-bold px-2 py-0.5"
+                      ></p-tag>
+                    </td>
+                    <td class="text-xs font-medium text-text-secondary">
+                      {{ alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0' }}
+                    </td>
+                    <td class="pr-6 text-right">
+                      <div class="inline-flex items-center justify-end gap-0.5">
+                        @if (trashView()) {
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-success"
+                            pTooltip="Restaurar alumno"
+                            (click)="restaurarRequested.emit(alumno.id)"
+                            data-llm-action="restore-professional-student"
+                          >
+                            <app-icon name="rotate-ccw" [size]="16" />
+                          </button>
+                        } @else {
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                            pTooltip="Ver ficha"
+                            [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
+                          >
+                            <app-icon name="eye" [size]="16" />
+                          </button>
+                          <button
+                            pButton
+                            class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-error"
+                            pTooltip="Archivar alumno"
+                            (click)="archivarRequested.emit(alumno.id)"
+                            data-llm-action="archive-professional-student"
+                          >
+                            <app-icon name="trash-2" [size]="16" />
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="8" class="p-0">
+                      <app-empty-state
+                        icon="graduation-cap"
+                        message="No hay alumnos profesionales"
+                        subtitle="Ajusta los filtros o registra nuevas matrículas profesionales."
+                        actionLabel="Limpiar filtros"
+                        actionIcon="refresh-cw"
+                        (action)="resetFilters()"
+                      />
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+
+            <!-- VISTA 2: TARJETAS APILADAS (Visible cuando se comprime o en móvil) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="bento-grid">
+                @for (alumno of filteredAlumnos(); track alumno.id) {
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
+                    appCardHover
+                    data-col-span="4"
+                  >
+                    <!-- Header: Nombre + Estado -->
+                    <div
+                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
+                    >
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div
+                          class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
+                        >
+                          {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                          <span
+                            class="font-bold text-sm text-text-primary truncate"
+                            [pTooltip]="alumno.apellido + ' ' + alumno.nombre"
+                            tooltipPosition="top"
+                            >{{ alumno.apellido }} {{ alumno.nombre }}</span
+                          >
+                          <span
+                            class="text-xs text-text-muted truncate font-mono"
+                            [pTooltip]="alumno.rut"
+                            tooltipPosition="top"
+                            >{{ alumno.rut }}</span
+                          >
+                        </div>
+                      </div>
+                      <p-tag
+                        [value]="alumno.estado"
+                        [severity]="getStatusSeverity(alumno.estado)"
+                        styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
+                      ></p-tag>
+                    </div>
+
+                    <!-- Body: RUT visible en header; progreso + asistencia + saldo aquí -->
+                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">Promoción</span>
+                        <div class="flex items-center">
+                          <p-tag
+                            [value]="alumno.promocion"
+                            severity="secondary"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5"
+                          ></p-tag>
+                        </div>
                       </div>
                       <div class="flex flex-col">
-                        <span class="font-bold text-sm text-text-primary"
-                          >{{ alumno.apellido }} {{ alumno.nombre }}</span
-                        >
-                        <span class="text-xs text-text-muted">{{ alumno.rut }}</span>
+                        <span class="text-2xs text-text-muted mb-0.5">Asistencia</span>
+                        @let semM = getSemaforo(alumno.semaforo);
+                        <div class="flex items-center">
+                          <p-tag
+                            [value]="semM.label"
+                            [severity]="semM.severity"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5"
+                          ></p-tag>
+                        </div>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">Progreso Módulos</span>
+                        <div class="flex items-center gap-2">
+                          <div class="w-14 h-1.5 rounded-full bg-elevated overflow-hidden">
+                            <div
+                              class="h-full bg-brand rounded-full"
+                              [style.width.%]="moduloPct(alumno)"
+                            ></div>
+                          </div>
+                          <span class="font-medium text-text-secondary font-mono text-xs"
+                            >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
+                          >
+                        </div>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">Saldo</span>
+                        <span class="font-medium text-text-secondary text-xs">{{
+                          alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0'
+                        }}</span>
                       </div>
                     </div>
-                  </td>
-                  <td class="text-xs text-text-muted font-mono">{{ alumno.nroMatricula }}</td>
-                  <td>
-                    <span
-                      class="text-xs px-2 py-0.5 rounded-full border border-border-subtle text-text-secondary bg-brand-muted"
+
+                    <!-- Footer Actions -->
+                    <div
+                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
                     >
-                      {{ alumno.promocion }}
-                    </span>
-                  </td>
-                  <td>
-                    <div class="flex items-center gap-2">
-                      <div class="w-16 h-1.5 rounded-full bg-elevated overflow-hidden">
-                        <div
-                          class="h-full bg-brand rounded-full"
-                          [style.width.%]="moduloPct(alumno)"
-                        ></div>
-                      </div>
-                      <span class="text-xs text-text-secondary font-mono"
-                        >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
-                      >
-                    </div>
-                  </td>
-                  <td>
-                    @let sem = getSemaforo(alumno.semaforo);
-                    <p-tag
-                      [value]="sem.label"
-                      [severity]="sem.severity"
-                      styleClass="text-xs font-bold px-2 py-0.5"
-                    ></p-tag>
-                  </td>
-                  <td>
-                    <p-tag
-                      [value]="alumno.estado"
-                      [severity]="getStatusSeverity(alumno.estado)"
-                      styleClass="text-xs font-bold px-2 py-0.5"
-                    ></p-tag>
-                  </td>
-                  <td class="text-xs font-medium text-text-secondary">
-                    {{ alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0' }}
-                  </td>
-                  <td class="pr-6 text-right">
-                    <div class="inline-flex items-center justify-end gap-0.5">
                       @if (trashView()) {
                         <button
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-success"
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-success"
                           pTooltip="Restaurar alumno"
                           (click)="restaurarRequested.emit(alumno.id)"
-                          data-llm-action="restore-professional-student"
+                          data-llm-action="restore-professional-student-card"
                         >
                           <app-icon name="rotate-ccw" [size]="16" />
                         </button>
                       } @else {
                         <button
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
                           pTooltip="Ver ficha"
                           [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
                         >
@@ -248,21 +451,18 @@ interface SemaforoInfo {
                         </button>
                         <button
                           pButton
-                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-error"
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:bg-elevated hover:scale-110 active:scale-95 transition-all text-error"
                           pTooltip="Archivar alumno"
                           (click)="archivarRequested.emit(alumno.id)"
-                          data-llm-action="archive-professional-student"
+                          data-llm-action="archive-professional-student-card"
                         >
                           <app-icon name="trash-2" [size]="16" />
                         </button>
                       }
                     </div>
-                  </td>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="emptymessage">
-                <tr>
-                  <td colspan="8" class="p-0">
+                  </div>
+                } @empty {
+                  <div class="col-span-full py-8">
                     <app-empty-state
                       icon="graduation-cap"
                       message="No hay alumnos profesionales"
@@ -271,108 +471,39 @@ interface SemaforoInfo {
                       actionIcon="refresh-cw"
                       (action)="resetFilters()"
                     />
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </div>
-
-          <!-- Cards (mobile) -->
-          <div class="md:hidden p-4 space-y-3" appAnimateIn>
-            @for (alumno of filteredAlumnos(); track alumno.id) {
-              <div class="bg-base border border-border-subtle rounded-xl p-4 shadow-sm">
-                <div class="flex items-start justify-between gap-3 mb-3">
-                  <div class="flex items-center gap-3 min-w-0">
-                    <div
-                      class="shrink-0 w-10 h-10 rounded-full bg-surface flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
-                    >
-                      {{ alumno.nombre[0] }}{{ alumno.apellido[0] }}
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                      <span class="font-bold text-sm text-text-primary truncate"
-                        >{{ alumno.apellido }} {{ alumno.nombre }}</span
-                      >
-                      <span class="text-xs text-text-muted truncate">{{ alumno.promocion }}</span>
-                    </div>
                   </div>
-                  <p-tag
-                    [value]="alumno.estado"
-                    [severity]="getStatusSeverity(alumno.estado)"
-                    styleClass="text-2xs font-bold px-2 py-0.5 shrink-0"
-                  ></p-tag>
-                </div>
-                <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
-                  <div class="flex flex-col">
-                    <span class="text-2xs text-text-muted mb-0.5">Módulos</span>
-                    <span class="font-medium text-text-secondary text-xs font-mono"
-                      >{{ alumno.modulosAprobados }}/{{ alumno.modulosTotal }}</span
-                    >
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-2xs text-text-muted mb-0.5">Asistencia</span>
-                    @let semM = getSemaforo(alumno.semaforo);
-                    <div>
-                      <p-tag
-                        [value]="semM.label"
-                        [severity]="semM.severity"
-                        styleClass="text-2xs font-bold px-1.5 py-0.5"
-                      ></p-tag>
-                    </div>
-                  </div>
-                  <div class="flex flex-col">
-                    <span class="text-2xs text-text-muted mb-0.5">Saldo</span>
-                    <span class="font-medium text-text-secondary text-xs">{{
-                      alumno.saldo | currency: 'CLP' : 'symbol' : '1.0-0'
-                    }}</span>
-                  </div>
-                  <div class="flex items-end justify-end gap-0.5">
-                    @if (trashView()) {
-                      <button
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-success"
-                        pTooltip="Restaurar"
-                        (click)="restaurarRequested.emit(alumno.id)"
-                        data-llm-action="restore-professional-student-card"
-                      >
-                        <app-icon name="rotate-ccw" [size]="16" />
-                      </button>
-                    } @else {
-                      <button
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center"
-                        pTooltip="Ver ficha"
-                        [routerLink]="[basePath() + '/alumnos/' + alumno.id]"
-                      >
-                        <app-icon name="eye" [size]="16" />
-                      </button>
-                      <button
-                        pButton
-                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-error"
-                        pTooltip="Archivar"
-                        (click)="archivarRequested.emit(alumno.id)"
-                        data-llm-action="archive-professional-student-card"
-                      >
-                        <app-icon name="trash-2" [size]="16" />
-                      </button>
-                    }
-                  </div>
-                </div>
+                }
               </div>
-            } @empty {
-              <app-empty-state
-                icon="graduation-cap"
-                message="No hay alumnos profesionales"
-                subtitle="Ajusta los filtros o registra nuevas matrículas profesionales."
-                actionLabel="Limpiar filtros"
-                actionIcon="refresh-cw"
-                (action)="resetFilters()"
-              />
-            }
+            </div>
           </div>
         }
       </div>
     </div>
   `,
+  styles: [
+    `
+      /* Container Queries para Dual-Viewport Render — idéntico a
+         app-alumnos-list-content (Clase B) para que ambos listados se
+         comporten de forma consistente al comprimirse o en móvil. */
+      .dual-viewport-container {
+        container-type: inline-size;
+        container-name: listContainer;
+      }
+
+      .show-on-squeeze {
+        display: none;
+      }
+
+      @container listContainer (max-width: 900px) {
+        .hide-on-squeeze {
+          display: none !important;
+        }
+        .show-on-squeeze {
+          display: block !important;
+        }
+      }
+    `,
+  ],
 })
 export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   // ── Inputs ──────────────────────────────────────────────────────────────

@@ -2,6 +2,8 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
+  input,
+  output,
   OnInit,
   OnDestroy,
   computed,
@@ -30,6 +32,8 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
       [showSede]="true"
       backRoute="/app/admin/clase-profesional/alumnos"
       backLabel="Alumnos Profesional"
+      [embedded]="embedded()"
+      (closeRequested)="closeRequested.emit()"
       (rowSelected)="openDrawer($event)"
     />
   `,
@@ -45,6 +49,17 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
   protected readonly maxVisible = computed(() =>
     this.layoutService.tier() === 'desktop' ? null : 6,
   );
+
+  /**
+   * Vista embebida (spec: unificar apertura con "Papelera"): cuando es `true`,
+   * el padre (AdminAlumnosProfesionalComponent) renderiza este componente
+   * como vista condicional en lugar de navegar — la URL nunca cambia de
+   * /clase-profesional/alumnos. El botón "volver" pasa de routerLink a
+   * `closeRequested` y el padre NO resetea `professionalOnly` al destruirse
+   * (el padre sigue montado y ya lo gestiona él mismo).
+   */
+  readonly embedded = input(false);
+  readonly closeRequested = output<void>();
 
   readonly heroKpis = computed((): SectionHeroKpi[] => [
     { id: 'total', label: 'Total Pre-inscritos', value: this.facade.total(), icon: 'users' },
@@ -79,8 +94,12 @@ export class AdminPreInscritosComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.branchFacade.setProfessionalOnly(false);
-    // Ya no limpiamos el facade aqui, porque el drawer puede seguir abierto
+    // Embebido: el padre (AdminAlumnosProfesionalComponent) sigue montado y
+    // ya gestiona professionalOnly — resetearlo aquí se lo quitaría de abajo.
+    if (!this.embedded()) {
+      this.branchFacade.setProfessionalOnly(false);
+    }
+    // Ya no limpiamos el facade aquí, porque el drawer puede seguir abierto
     // mientras navegamos. El componente del drawer (AdminPreInscritoDrawerComponent)
     // se encarga de limpiarlo en su propio ngOnDestroy().
   }

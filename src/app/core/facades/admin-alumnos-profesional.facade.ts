@@ -154,6 +154,47 @@ export class AdminAlumnosProfesionalFacade {
     await this.initialize();
   }
 
+  /**
+   * Verifica si un alumno profesional tiene historial de pagos o asistencia
+   * (teórica/práctica). Homologa la regla de `AdminAlumnosFacade.checkHistorial`
+   * (Clase B) — misma forma: enrollments no-draft del alumno → cuenta pagos +
+   * actividad académica asociada. Se usa para decidir qué modal de confirmación
+   * mostrar antes de archivar (`EliminarAlumnoModalComponent`).
+   */
+  async checkHistorial(studentId: number): Promise<{ hasHistory: boolean }> {
+    const { data: enrollmentRows } = await this.supabase.client
+      .from('enrollments')
+      .select('id')
+      .eq('student_id', studentId)
+      .neq('status', 'draft');
+
+    const enrollmentIds: number[] = (enrollmentRows ?? []).map((e: { id: number }) => e.id);
+
+    if (enrollmentIds.length === 0) return { hasHistory: false };
+
+    const [paymentsResult, theoryResult, practiceResult] = await Promise.all([
+      this.supabase.client
+        .from('payments')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds),
+      this.supabase.client
+        .from('professional_theory_attendance')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds),
+      this.supabase.client
+        .from('professional_practice_attendance')
+        .select('id', { count: 'exact', head: true })
+        .in('enrollment_id', enrollmentIds),
+    ]);
+
+    return {
+      hasHistory:
+        (paymentsResult.count ?? 0) > 0 ||
+        (theoryResult.count ?? 0) > 0 ||
+        (practiceResult.count ?? 0) > 0,
+    };
+  }
+
   async archivarAlumno(studentId: number): Promise<void> {
     this._isArchiving.set(true);
     try {

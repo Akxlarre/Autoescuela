@@ -2169,8 +2169,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql` |
-| `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
+| `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql`. **⚠️ pendiente:** se acordó ampliar la ventana de 28 días a 4 meses vía nueva migración `20260722000000_widen_class_b_schedule_availability_window.sql` (superset máximo; el límite exacto de 2/3/4 meses se recortaría client-side vía `.lte('slot_start', ...)` leyendo `AgendaSettingsService.maxVisibleDateIso()` en `EnrollmentFacade.loadScheduleGrid()` y `AdminAlumnoDetalleFacade.loadScheduleGrid()`, unificando la regla con el límite de visualización de la Agenda) — **la migración no existe todavía en `supabase/migrations/`**, verificar antes de asumir que el fix ya está aplicado. |
+| `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` — **⚠️ pendiente:** se acordó extender con 2 branches `UNION ALL` más (`source='enrollment_license'`, `type='carnet_inicial'`/`'carnet_completo'`, leyendo `enrollments.license_initial_url`/`license_full_url`) para que el Carnet aparezca en el DMS (antes solo vivía como columnas sueltas en `enrollments`, invisibles para la vista). El SQL fue entregado al humano para ejecutar manualmente en Supabase — **no aplicado aún como archivo de migración versionado**. El código consumidor (`DmsFacade`, `DmsStudentDocRow.source`) ya soporta el nuevo `source` desde esta sesión. |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
 

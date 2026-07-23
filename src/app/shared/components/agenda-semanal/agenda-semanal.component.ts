@@ -13,13 +13,16 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AgendaSlotComponent } from './agenda-slot.component';
+import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { ScrollContainerDirective } from '@core/directives/scroll-container.directive';
+import { todayIso } from '@core/utils/date.utils';
 
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -33,6 +36,49 @@ import type {
   AgendaInstructorFilter,
 } from '@core/models/ui/agenda.model';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+
+/**
+ * Suma `days` días a una fecha ISO ('YYYY-MM-DD') y devuelve el resultado en
+ * el mismo formato. Mediodía fijo al parsear para evitar corrimientos por
+ * DST/zona horaria. Función pura.
+ */
+export function addDaysToIso(iso: string, days: number): string {
+  const d = new Date(iso + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * True si `dateIso` supera la fecha límite de visualización configurada
+ * (`maxVisibleDateIso`) — usado para deshabilitar celdas/días individuales
+ * dentro de una semana "límite" (parte dentro del rango, parte fuera).
+ * Comparación de strings ISO 'YYYY-MM-DD' (ordenan igual que fechas).
+ */
+export function isDateBeyondLimit(
+  dateIso: string | null | undefined,
+  maxVisibleDateIso: string | null,
+): boolean {
+  if (!maxVisibleDateIso || !dateIso) return false;
+  return dateIso > maxVisibleDateIso;
+}
+
+/**
+ * True si la PRÓXIMA semana (weekStart + 7 días) ya arrancaría más allá de
+ * la fecha límite — es decir, sería una semana enteramente "fantasma" (cero
+ * días válidos). Deshabilita "Semana siguiente" en ese caso exacto: permite
+ * llegar a la última semana con al menos un día válido, nunca a una semana
+ * completamente fuera de rango. Función pura, sin depender de servicios.
+ */
+export function isNextWeekBeyondLimit(
+  weekStart: string | null | undefined,
+  maxVisibleDateIso: string | null,
+): boolean {
+  if (!maxVisibleDateIso || !weekStart) return false;
+  return addDaysToIso(weekStart, 7) > maxVisibleDateIso;
+}
 
 /** Opción para el dropdown de filtro de instructor. */
 interface InstructorOption {
@@ -64,11 +110,13 @@ interface CellSummary {
   imports: [
     FormsModule,
     SelectModule,
+    TooltipModule,
     IconComponent,
     SkeletonBlockComponent,
     EmptyStateComponent,
     SectionHeroComponent,
     AgendaSlotComponent,
+    DateInputComponent,
     BentoGridLayoutDirective,
     ScrollContainerDirective,
     CardHoverDirective,
@@ -76,10 +124,10 @@ interface CellSummary {
   ],
   host: { class: 'block' },
   template: `
-    <div 
-      class="bento-grid bento-grid--fill-screen" 
-      appBentoGridLayout 
-      #bentoGrid 
+    <div
+      class="bento-grid bento-grid--fill-screen"
+      appBentoGridLayout
+      #bentoGrid
       aria-label="Agenda semanal"
     >
       <!-- ── Hero + KPIs inline ───────────────────────────────────────────── -->
@@ -126,7 +174,9 @@ interface CellSummary {
         }
 
         <!-- Toolbar de navegación + filtro -->
-        <div class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b shrink-0">
+        <div
+          class="agenda-toolbar flex items-center justify-between gap-3 px-4 py-3 border-b shrink-0"
+        >
           <!-- Navegación de semana -->
           <div class="flex items-center gap-1">
             <button
@@ -148,6 +198,10 @@ interface CellSummary {
 
             <button
               class="agenda-nav-btn"
+              [disabled]="isNextWeekDisabled()"
+              [attr.aria-disabled]="isNextWeekDisabled()"
+              [pTooltip]="isNextWeekDisabled() ? nextWeekDisabledHint() : undefined"
+              tooltipPosition="bottom"
               (click)="weekNext.emit()"
               aria-label="Semana siguiente"
               data-llm-action="next-week"
@@ -164,22 +218,45 @@ interface CellSummary {
                 Hoy
               </button>
             }
+
+            <!-- Salto rápido: elegir cualquier fecha (respeta min=hoy, max=límite
+                 configurado en Ajustes) → la agenda salta a la semana que contiene
+                 ese día. Reutiliza app-date-input (Boilerplate Local). -->
+            <div class="agenda-jump-date" data-llm-description="Saltar a una fecha específica">
+              <app-date-input
+                [value]="jumpMinDate"
+                [min]="jumpMinDate"
+                [max]="maxVisibleDateIso() ?? ''"
+                [readonlyInput]="true"
+                placeholder="Ir a fecha"
+                inputStyleClass="agenda-jump-date-input"
+                (valueChange)="onJumpToDate($event)"
+              />
+            </div>
+
+            @if (maxVisibleDateLabel()) {
+              <span class="agenda-visibility-hint">
+                Mostrando horarios hasta el {{ maxVisibleDateLabel() }}
+              </span>
+            }
           </div>
 
           <!-- Filtro de instructor -->
-          <div class="flex items-center gap-2 min-w-0">
+          <div class="agenda-instructor-filter flex items-center gap-2 min-w-0">
             <span class="instructor-label">Mostrando horario de:</span>
-            <p-select
-              [options]="instructorOptions()"
-              [ngModel]="selectedInstructorId()"
-              (ngModelChange)="instructorFilterChange.emit($event)"
-              optionLabel="label"
-              optionValue="value"
-              [style]="{ 'min-width': '180px' }"
-              placeholder="Todos los instructores"
-              styleClass="agenda-select"
-              [attr.data-llm-description]="'Filtrar calendario por instructor'"
-            />
+            <div class="agenda-select-wrap">
+              <p-select
+                [options]="instructorOptions()"
+                [ngModel]="selectedInstructorId()"
+                (ngModelChange)="instructorFilterChange.emit($event)"
+                optionLabel="label"
+                optionValue="value"
+                [style]="{ 'min-width': '180px' }"
+                placeholder="Todos los instructores"
+                styleClass="agenda-select"
+                [attr.data-llm-description]="'Filtrar calendario por instructor'"
+              />
+            </div>
           </div>
         </div>
 
@@ -216,7 +293,9 @@ interface CellSummary {
             }
           </div>
         } @else if (!weekData() || timeRows().length === 0) {
-          <div class="flex flex-1 items-center justify-center border-t border-[var(--color-border)]">
+          <div
+            class="flex flex-1 items-center justify-center border-t border-[var(--color-border)]"
+          >
             <app-empty-state
               icon="calendar"
               message="No hay clases en esta semana"
@@ -236,12 +315,15 @@ interface CellSummary {
           >
             <!-- Header: esquina vacía + cabeceras de días -->
             <div class="agenda-corner" role="columnheader" aria-label="Hora"></div>
-            @for (day of filteredDays(); track day.date) {
+            @for (day of filteredDays(); track day.date; let dayIdx = $index) {
               <div
                 class="agenda-day-header"
                 [class.agenda-day-header--today]="day.isToday"
+                [class.agenda-day-header--disabled]="isDayBeyondLimit(day)"
+                [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
                 role="columnheader"
                 [attr.aria-label]="day.label"
+                [attr.aria-disabled]="isDayBeyondLimit(day) || null"
               >
                 {{ day.label }}
               </div>
@@ -259,19 +341,27 @@ interface CellSummary {
               </div>
 
               <!-- Celdas por día -->
-              @for (day of filteredDays(); track day.date) {
+              @for (day of filteredDays(); track day.date; let dayIdx = $index) {
                 @if (isMasterView()) {
                   <!-- MASTER VIEW: Vista condensada con indicadores -->
                   <div
                     class="agenda-cell cell-condensed"
                     [class.agenda-cell--now]="nowTimeRow() === time"
                     [class.agenda-cell--today]="day.isToday"
+                    [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                    [class.cell-condensed--empty]="getCellSummary(day, time).total === 0"
+                    [class.agenda-cell--beyond-limit]="isDayBeyondLimit(day)"
                     role="gridcell"
                     [attr.aria-label]="
                       day.label + ' ' + time + ' — ' + getCellSummary(day, time).total + ' slots'
                     "
+                    [attr.aria-disabled]="isDayBeyondLimit(day) || null"
                     [class.cell-condensed--expanded]="expandedCellKey() === cellKey(day.date, time)"
-                    (click)="toggleCell(day.date, time)"
+                    (click)="
+                      getCellSummary(day, time).total > 0 &&
+                        !isDayBeyondLimit(day) &&
+                        toggleCell(day.date, time)
+                    "
                   >
                     @if (expandedCellKey() === cellKey(day.date, time)) {
                       <!-- Expandido: slots individuales -->
@@ -280,6 +370,7 @@ interface CellSummary {
                           <app-agenda-slot
                             [slot]="slot"
                             [compact]="true"
+                            [disabled]="isDayBeyondLimit(day)"
                             (slotClicked)="slotClick.emit($event)"
                           />
                         }
@@ -310,6 +401,9 @@ interface CellSummary {
                         <span class="cell-expand-hint">
                           <app-icon name="chevron-down" [size]="10" />
                         </span>
+                      } @else {
+                        <!-- Celda vacía: marcador sutil, mantiene la textura de la grilla -->
+                        <span class="cell-empty-marker" aria-hidden="true"></span>
                       }
                     }
                   </div>
@@ -319,15 +413,28 @@ interface CellSummary {
                     class="agenda-cell"
                     [class.agenda-cell--now]="nowTimeRow() === time"
                     [class.agenda-cell--today]="day.isToday"
+                    [class.agenda-col--mobile-hidden]="dayIdx !== mobileDayIndex()"
+                    [class.agenda-cell--empty]="getCell(day, time).length === 0"
+                    [class.agenda-cell--beyond-limit]="isDayBeyondLimit(day)"
                     role="gridcell"
                     [attr.aria-label]="day.label + ' ' + time"
+                    [attr.aria-disabled]="isDayBeyondLimit(day) || null"
                   >
                     @for (slot of getCell(day, time); track slot.id) {
                       <app-agenda-slot
                         [slot]="slot"
                         [compact]="true"
+                        [disabled]="isDayBeyondLimit(day)"
                         (slotClicked)="slotClick.emit($event)"
                       />
+                    }
+                    @if (getCell(day, time).length === 0) {
+                      <!-- Celda vacía: sin slot definido para este instructor/horario —
+                           marcador sutil (NO clickeable: no hay slot real que agendar). -->
+                      <span
+                        class="cell-empty-marker cell-empty-marker--filtered"
+                        aria-hidden="true"
+                      ></span>
                     }
                   </div>
                 }
@@ -435,6 +542,32 @@ interface CellSummary {
         color: var(--ds-brand);
         background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
       }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.4;
+
+        &:hover {
+          border-color: var(--color-border);
+          color: var(--text-secondary);
+          background: var(--bg-surface);
+        }
+      }
+    }
+
+    /* Texto sutil: hasta qué fecha se están cargando datos (límite de meses
+       configurable en Ajustes → AgendaSettingsService). */
+    .agenda-visibility-hint {
+      font-size: var(--text-xs);
+      color: var(--text-muted);
+      white-space: nowrap;
+      margin-left: 0.25rem;
+    }
+
+    @media (max-width: 640px) {
+      .agenda-visibility-hint {
+        display: none;
+      }
     }
 
     .agenda-week-label {
@@ -463,6 +596,50 @@ interface CellSummary {
       }
     }
 
+    /* ── Salto rápido de fecha (compacto — solo el ícono de calendario es
+       clickeable de forma práctica; el input queda readonly y angosto) ── */
+    .agenda-jump-date {
+      margin-left: 0.25rem;
+      width: 34px;
+      flex-shrink: 0;
+    }
+
+    .agenda-jump-date ::ng-deep .p-datepicker {
+      width: 100%;
+    }
+
+    .agenda-jump-date ::ng-deep input.agenda-jump-date-input {
+      width: 0;
+      min-width: 0;
+      padding: 0;
+      border: none;
+      opacity: 0;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .agenda-jump-date ::ng-deep .p-datepicker-dropdown {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition:
+        background 120ms ease,
+        border-color 120ms ease;
+    }
+
+    .agenda-jump-date ::ng-deep .p-datepicker-dropdown:hover {
+      border-color: var(--ds-brand);
+      color: var(--ds-brand);
+      background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
+    }
+
     .instructor-label {
       font-size: var(--text-sm);
       font-weight: var(--font-medium);
@@ -470,17 +647,71 @@ interface CellSummary {
       white-space: nowrap;
     }
 
+    .agenda-select-wrap {
+      min-width: 0;
+    }
+
+    @media (max-width: 640px) {
+      /* Libera el ancho del toolbar: el placeholder del select ya comunica
+         el propósito ("Todos los instructores"), la etiqueta es redundante. */
+      .instructor-label {
+        display: none;
+      }
+
+      .agenda-instructor-filter {
+        flex: 1 1 100%;
+      }
+
+      .agenda-select-wrap {
+        flex: 1;
+      }
+
+      /* El inline [style]="{'min-width':'180px'}" de PrimeNG gana especificidad
+         sobre reglas normales — !important necesario para que el select ocupe
+         el ancho completo disponible en vez de quedar apretado junto al nav. */
+      .agenda-select-wrap ::ng-deep .p-select {
+        width: 100% !important;
+        min-width: 0 !important;
+      }
+    }
+
     /* ── CSS Grid del calendario ─────────────────────────────── */
 
     .agenda-grid {
       display: grid;
       /* grid-template-columns set via [style] binding */
+      /* Piso de altura por fila explícito a nivel de grid (no solo en las celdas):
+         así una fila entera sin ninguna clase agendada (semana vacía, fin de
+         semana) conserva la misma altura que una fila llena — la fuente de
+         verdad del alto de fila es el propio grid, no el contenido de cada
+         celda individual. */
+      grid-auto-rows: minmax(56px, auto);
       border-top: 1px solid var(--color-border);
       /* overflow, max-height y scroll-behavior los maneja ScrollContainerDirective */
+    }
 
-      @media (max-width: 640px) {
-        /* Columnas compactas en mobile para scroll horizontal fluido */
+    /* ── Mobile: un solo día visible por vez ──────────────────────────────
+       Reglas SIN nesting (@media plano, no anidado dentro de un selector):
+       el nesting nativo mezclado con .agenda-cell / .agenda-grid (definidas
+       arriba sin @media) no ganaba la cascada de forma confiable en todos
+       los motores — .agenda-col--mobile-hidden no ocultaba nada y el grid
+       de 2 columnas terminaba envolviendo los 5 slots por fila en filas
+       implícitas nuevas (el apilamiento reportado). Un @media plano al final
+       de la hoja, con igual especificidad (una sola clase) mata cualquier
+       ambigüedad: por orden de aparición, esta regla siempre gana. */
+    @media (max-width: 640px) {
+      .agenda-grid {
         font-size: 0.75rem;
+        /* !important porque grid-template-columns llega inline vía [style]
+           (gridTemplateStyle()), pensado solo para desktop. */
+        grid-template-columns: 64px 1fr !important;
+      }
+
+      /* Columna de día no seleccionada (ver mobileDayIndex) — display:none
+         saca el nodo por completo del grid, así el layout de 2 columnas
+         solo recibe 2 items reales por fila (hora + día activo). */
+      .agenda-col--mobile-hidden {
+        display: none !important;
       }
     }
 
@@ -558,6 +789,55 @@ interface CellSummary {
       background: color-mix(in srgb, var(--ds-brand) 4%, var(--bg-surface));
     }
 
+    /* ── Día fuera del límite de visualización (semana "límite" — parte
+       dentro del rango, parte fuera). Bloquea toda la columna: sin click,
+       sin foco de teclado (pointer-events:none también corta clics a
+       app-agenda-slot hijos, que además reciben su propio [disabled]). ── */
+
+    .agenda-day-header--disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .agenda-cell--beyond-limit {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        135deg,
+        var(--bg-surface),
+        var(--bg-surface) 5px,
+        var(--bg-elevated) 5px,
+        var(--bg-elevated) 6px
+      );
+    }
+
+    /* ── Celda vacía (Filtered View) — sin slot definido para ese instructor/
+       horario. NO es un slot "available" real (no hay nada que agendar ahí),
+       así que solo se comunica con textura, sin affordance de clic. Mantiene
+       min-height/bordes idénticos a una celda con contenido. ─────────────── */
+    .agenda-cell--empty {
+      background: repeating-linear-gradient(
+        135deg,
+        var(--bg-surface),
+        var(--bg-surface) 6px,
+        var(--bg-elevated) 6px,
+        var(--bg-elevated) 7px
+      );
+    }
+
+    .cell-empty-marker {
+      display: block;
+      margin: auto;
+    }
+
+    .cell-empty-marker--filtered {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--border-subtle);
+    }
+
     /* ── Indicador "ahora" ───────────────────────────────── */
 
     .agenda-time-label--now {
@@ -607,6 +887,22 @@ interface CellSummary {
         text-align: left;
         background: color-mix(in srgb, var(--ds-brand) 6%, var(--bg-surface));
       }
+
+      /* Sin slots — nada que expandir, así que no se ve/comporta como clickeable. */
+      &--empty {
+        cursor: default;
+
+        &:hover {
+          background: transparent;
+        }
+      }
+    }
+
+    .cell-empty-marker:not(.cell-empty-marker--filtered) {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--border-subtle);
     }
 
     .cell-expanded-content {
@@ -739,12 +1035,22 @@ export class AgendaSemanalComponent implements AfterViewInit {
   showKpis = input(true);
   /** Ocultar hero cuando la agenda se renderiza dentro de un drawer. */
   showHero = input(true);
+  /**
+   * Fecha límite (ISO YYYY-MM-DD) hasta la que se puede navegar/agendar —
+   * viene de `AgendaSettingsService` a través del Smart padre (este Dumb
+   * component no inyecta services, solo recibe el valor ya resuelto).
+   */
+  maxVisibleDateIso = input<string | null>(null);
+  /** Etiqueta legible de esa misma fecha límite, ej. "18 de septiembre, 2026". */
+  maxVisibleDateLabel = input<string | null>(null);
 
   // ── Outputs ─────────────────────────────────────────────────────────────────
 
   weekNext = output<void>();
   weekPrev = output<void>();
   weekToday = output<void>();
+  /** Fecha ISO elegida en el "salto rápido" — el Smart padre resuelve a qué semana pertenece. */
+  weekJump = output<string>();
   instructorFilterChange = output<number | null>();
   slotClick = output<AgendaSlot>();
 
@@ -763,6 +1069,24 @@ export class AgendaSemanalComponent implements AfterViewInit {
 
   /** True cuando no hay filtro de instructor → vista de todos. */
   readonly isMasterView = computed(() => this.selectedInstructorId() === null);
+
+  /**
+   * True cuando la PRÓXIMA semana ya sería enteramente fantasma (0 días
+   * válidos) — deshabilita "Semana siguiente" exactamente en la última semana
+   * que todavía tiene al menos un día dentro del rango permitido.
+   */
+  readonly isNextWeekDisabled = computed(() =>
+    isNextWeekBeyondLimit(this.weekData()?.weekStart, this.maxVisibleDateIso()),
+  );
+
+  readonly nextWeekDisabledHint = computed(
+    () => `No se puede agendar más allá del ${this.maxVisibleDateLabel() ?? 'límite configurado'}`,
+  );
+
+  /** True si `day.date` supera la fecha límite — bloquea toda la columna de ese día. */
+  isDayBeyondLimit(day: AgendaDayColumn): boolean {
+    return isDateBeyondLimit(day.date, this.maxVisibleDateIso());
+  }
 
   /**
    * Fila de hora más cercana a la hora actual (HH:MM) — para el indicador "ahora".
@@ -899,14 +1223,22 @@ export class AgendaSemanalComponent implements AfterViewInit {
     }
   }
 
-  /** Selecciona el día en mobile y hace scroll suave hasta su columna en la grilla. */
+  /**
+   * Selecciona el día visible en mobile. Las columnas de los demás días se
+   * ocultan vía CSS (`.agenda-col--mobile-hidden`, comparando contra este
+   * índice) — ya no depende de scroll horizontal manual.
+   */
   selectMobileDay(index: number): void {
     this.mobileDayIndex.set(index);
-    const gridEl = this.calendarGridRef()?.nativeElement as HTMLElement | undefined;
-    if (!gridEl) return;
-    // Columna 0 = time-label (64px), columnas 1-N = días
-    const colWidth = (gridEl.scrollWidth - 64) / (this.filteredDays().length || 1);
-    gridEl.scrollTo({ left: 64 + colWidth * index, behavior: 'smooth' });
+  }
+
+  /** Fecha mínima seleccionable en el "salto rápido" — nunca antes de hoy. */
+  protected readonly jumpMinDate = todayIso();
+
+  /** Emite la fecha elegida en el DatePicker de salto rápido hacia el Smart padre. */
+  protected onJumpToDate(dateIso: string): void {
+    if (!dateIso) return;
+    this.weekJump.emit(dateIso);
   }
 
   /**

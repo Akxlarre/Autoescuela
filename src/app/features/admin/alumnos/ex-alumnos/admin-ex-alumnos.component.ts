@@ -10,15 +10,17 @@ import { Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
+import { TagModule } from 'primeng/tag';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { AdminStatsPanelComponent } from './components/stats/admin-ex-alumnos-stats.component';
-import { AdminExAlumnosCommentsComponent } from './components/comments/admin-ex-alumnos-comments.component';
+import { AdminExAlumnosTasasDrawerComponent } from './components/stats/admin-ex-alumnos-tasas-drawer.component';
+import { AdminExAlumnosComentariosDrawerComponent } from './components/comments/admin-ex-alumnos-comentarios-drawer.component';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -35,16 +37,15 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     CurrencyPipe,
     FormsModule,
     SelectModule,
+    TagModule,
     IconComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
-    AdminStatsPanelComponent,
-    AdminExAlumnosCommentsComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
       <!-- ── Hero ── -->
       <app-section-hero
         density="slim"
@@ -56,10 +57,14 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         [actions]="heroActions"
         [chips]="heroChips()"
         [kpis]="heroKpis()"
+        (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- Archivo Histórico — full width, 1 row -->
-      <div class="bento-banner card p-0! overflow-hidden flex flex-col" appCardHover>
+      <!-- Archivo Histórico — full width, celda app-like (scroll interno en desktop) -->
+      <div
+        class="bento-banner bento-fill card p-0! overflow-hidden flex flex-col dual-viewport-container w-full h-full"
+        appCardHover
+      >
         <!-- Header -->
         <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-surface">
           <div class="flex items-center gap-3">
@@ -117,8 +122,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
           </div>
         </div>
 
-        <!-- Tabla -->
-        <div class="flex-1 min-h-0 overflow-x-auto">
+        <!-- Tabla / Tarjetas (Dual-Viewport, mismo patrón que app-alumnos-list-content) -->
+        <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-x-auto">
           <table class="w-full border-collapse text-sm">
             <thead>
               <tr class="bg-surface">
@@ -209,28 +214,89 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             </tbody>
           </table>
         </div>
+
+        <!-- VISTA TARJETAS (Visible cuando se comprime) -->
+        <div class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+          @if (facade.isLoading()) {
+            @for (_ of [1, 2, 3, 4]; track $index) {
+              <app-skeleton-block variant="rect" width="100%" height="76px" />
+            }
+          } @else {
+            @for (egresado of filteredEgresados(); track egresado.id) {
+              <div class="flex flex-col gap-2 p-3 rounded-lg border border-border-subtle bg-base">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-bold text-text-primary truncate">
+                      {{ egresado.nombre }}
+                    </p>
+                    <p class="text-xs text-text-muted font-mono truncate">{{ egresado.rut }}</p>
+                  </div>
+                  <span class="inas-badge shrink-0" [attr.data-licencia]="egresado.licencia">
+                    {{ egresado.licencia }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-xs">
+                    <span class="font-bold text-text-primary">{{ egresado.anio }}</span>
+                    <span class="text-text-muted italic"> · {{ egresado.sede }}</span>
+                  </div>
+                  @if (egresado.saldoPendiente > 0) {
+                    <p-tag
+                      [value]="
+                        'Debe ' + (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
+                      "
+                      severity="warn"
+                      styleClass="text-2xs shrink-0"
+                    />
+                  } @else {
+                    <p-tag value="Al día" severity="success" styleClass="text-2xs shrink-0" />
+                  }
+                </div>
+                <button
+                  type="button"
+                  class="rematricular-btn w-full justify-center"
+                  (click)="reEnroll(egresado)"
+                  data-llm-action="re-enroll-student-card"
+                  [attr.aria-label]="'Re-matricular a ' + egresado.nombre"
+                >
+                  <app-icon name="user-plus" [size]="14" />
+                  <span>Re-matricular</span>
+                </button>
+              </div>
+            } @empty {
+              <div class="flex flex-col items-center gap-3 opacity-30 py-16">
+                <app-icon name="search-x" [size]="40" />
+                <p class="text-sm font-medium text-text-secondary">
+                  No se encontraron egresados con estos criterios
+                </p>
+              </div>
+            }
+          }
+        </div>
       </div>
-
-      <!-- Estadísticas Detalladas -->
-      <app-admin-stats-panel
-        class="bento-wide"
-        [municipalRate]="facade.municipalApprovalRate()"
-        [psychoRate]="facade.psychoApprovalRate()"
-        [totalExams]="facade.totalExamenes()"
-        [egresadosTotal]="facade.annualEgresadosTotal()"
-        [licensesTotal]="facade.annualLicensesTotal()"
-        [successRate]="facade.successConversionRate()"
-      />
-
-      <!-- Comentarios y Feedback -->
-      <app-admin-ex-alumnos-comments
-        class="bento-wide"
-        [comentarios]="facade.surveys()"
-        [avgRate]="facade.avgSatisfaction()"
-      />
     </div>
   `,
   styles: `
+    /* Container Queries para Dual-Viewport Render — idéntico al patrón ya
+       usado en app-alumnos-list-content / app-alumnos-profesional-list-content. */
+    .dual-viewport-container {
+      container-type: inline-size;
+      container-name: listContainer;
+    }
+
+    .show-on-squeeze {
+      display: none;
+    }
+
+    @container listContainer (max-width: 900px) {
+      .hide-on-squeeze {
+        display: none !important;
+      }
+      .show-on-squeeze {
+        display: block !important;
+      }
+    }
+
     .search-input {
       width: 100%;
       padding: 9px 12px 9px 36px;
@@ -330,17 +396,34 @@ export class AdminExAlumnosComponent {
   private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   // ── Hero Config ─────────────────────────────────────────────────────────────
   protected readonly heroActions: SectionHeroAction[] = [
-    {
-      id: 'activos',
-      label: 'Ver Alumnos Activos',
-      icon: 'users',
-      primary: true,
-      route: '/app/admin/alumnos',
-    },
+    { id: 'tasas', label: 'Tasas de Aprobación', icon: 'trending-up', primary: false },
+    { id: 'opiniones', label: 'Opiniones de Egresados', icon: 'message-square', primary: false },
   ];
+
+  protected handleHeroAction(actionId: string): void {
+    switch (actionId) {
+      case 'tasas':
+        this.layoutDrawer.open(
+          AdminExAlumnosTasasDrawerComponent,
+          'Tasas de Aprobación',
+          'trending-up',
+        );
+        break;
+      case 'opiniones':
+        this.layoutDrawer.open(
+          AdminExAlumnosComentariosDrawerComponent,
+          'Opiniones de Egresados',
+          'message-square',
+        );
+        break;
+      default:
+        break;
+    }
+  }
 
   protected readonly heroChips = computed<SectionHeroChip[]>(() => [
     {

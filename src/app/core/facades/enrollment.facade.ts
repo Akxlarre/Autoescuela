@@ -9,6 +9,7 @@ import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 
 import type { Enrollment } from '@core/models/dto/enrollment.model';
 import { normalizeRutForStorage } from '@core/utils/rut.utils';
@@ -77,6 +78,7 @@ export class EnrollmentFacade {
   private readonly dmsViewer = inject(DmsViewerService);
   private readonly notifications = inject(NotificationsFacade);
   private readonly toast = inject(ToastService);
+  private readonly agendaSettings = inject(AgendaSettingsService);
 
   async confirm(config: {
     title: string;
@@ -811,6 +813,9 @@ export class EnrollmentFacade {
         .from('v_class_b_schedule_availability')
         .select('*')
         .eq('instructor_id', instructorId)
+        // Misma fuente de verdad que la Agenda (AgendaSettingsService): la vista
+        // devuelve un superset de 4 meses, se recorta aquí al límite configurado.
+        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
         .order('slot_start', { ascending: true });
 
       if (error) {
@@ -1807,6 +1812,7 @@ export class EnrollmentFacade {
         .from('v_class_b_schedule_availability')
         .select('*')
         .eq('instructor_id', instructorId)
+        .lte('slot_start', `${this.agendaSettings.maxVisibleDateIso()}T23:59:59`)
         .order('slot_start', { ascending: true });
 
       if (error || !data || data.length === 0) return;

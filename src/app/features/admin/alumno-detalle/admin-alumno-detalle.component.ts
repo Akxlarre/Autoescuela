@@ -40,6 +40,30 @@ import type {
 import { buildCarnetMenu } from '@core/utils/carnet-menu.util';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 
+/**
+ * Resuelve la ruta del listado al que "volver" según el rol del usuario y el
+ * tipo de matrícula del alumno cargado. `licenseGroup` es `undefined` en
+ * estado de carga/error (ficha aún no resuelta) — cae al listado por defecto
+ * del rol (class_b), que es el caso más común.
+ */
+export function resolveListadoRoute(
+  isAdmin: boolean,
+  licenseGroup: 'class_b' | 'professional' | undefined,
+): string {
+  const esProfesional = licenseGroup === 'professional';
+  if (isAdmin) {
+    return esProfesional ? '/app/admin/clase-profesional/alumnos' : '/app/admin/alumnos';
+  }
+  return esProfesional ? '/app/secretaria/profesional/alumnos' : '/app/secretaria/alumnos';
+}
+
+/** Etiqueta legible del listado de "volver", acorde al tipo de matrícula. */
+export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | undefined): string {
+  return licenseGroup === 'professional'
+    ? 'Listado de Alumnos Profesionales'
+    : 'Listado de Alumnos';
+}
+
 @Component({
   selector: 'app-admin-alumno-detalle',
   standalone: true,
@@ -78,8 +102,8 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             : 'Obteniendo información...'
         "
         icon="user"
-        backRoute="/app/admin/alumnos"
-        backLabel="Listado de Alumnos"
+        [backRoute]="listadoRoute()"
+        [backLabel]="listadoLabel()"
         [actions]="headerActions()"
         [chips]="heroChips()"
         (actionClick)="handleHeroAction($event)"
@@ -185,7 +209,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
               label="Volver al Listado"
               icon="pi pi-arrow-left"
               [text]="true"
-              routerLink="/app/admin/alumnos"
+              [routerLink]="listadoRoute()"
             />
           </div>
         </div>
@@ -767,6 +791,22 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     />
   `,
   styles: `
+    /* El header (app-section-hero, density="slim") solo mide ~64-70px de alto,
+       pero .bento-grid base fuerza grid-auto-rows: minmax(120px, auto) en TODA
+       fila implícita (incluida la primera) — a diferencia de los listados
+       (app-alumnos-list-content / app-alumnos-profesional-list-content), que
+       usan .bento-grid--fill-screen y por eso su fila 1 ya es "auto" en vez de
+       min 120px. Esta página no adopta el modificador --fill-screen completo
+       (cambiaría el resto del grid a modo app-like con scroll interno, fuera
+       de alcance aquí) — solo se sobreescribe grid-template-rows para que la
+       PRIMERA fila (el header) sea "auto" y no reserve 120px de alto vacío.
+       Los estilos de componente de Angular no están dentro de ningún @layer,
+       así que ganan por cascada sobre la regla base (@layer bento.grid) sin
+       necesitar !important ni tocar _bento-grid.scss. */
+    .bento-grid {
+      grid-template-rows: auto;
+    }
+
     .kpi-label {
       font-size: var(--text-xs);
       font-weight: var(--font-bold);
@@ -961,6 +1001,20 @@ export class AdminAlumnoDetalleComponent implements OnInit {
   private readonly authFacade = inject(AuthFacade);
 
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
+
+  // Ruta de "volver" consciente del contexto: depende del rol (admin/secretaria)
+  // Y del tipo de matrícula del alumno (class_b/professional) — cada combinación
+  // tiene un listado distinto. Antes era un routerLink estático a
+  // /app/admin/alumnos, así que un alumno profesional siempre te devolvía al
+  // listado de Clase B.
+  protected readonly listadoRoute = computed<string>(() =>
+    resolveListadoRoute(this.isAdmin(), this.facade.alumno()?.licenseGroup),
+  );
+
+  protected readonly listadoLabel = computed<string>(() =>
+    resolveListadoLabel(this.facade.alumno()?.licenseGroup),
+  );
+
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
@@ -1448,7 +1502,7 @@ export class AdminAlumnoDetalleComponent implements OnInit {
     if (id === null) return;
     try {
       await this.alumnosFacade.archivarAlumno(id);
-      void this.router.navigate(['/app/admin/alumnos']);
+      void this.router.navigate([this.listadoRoute()]);
     } finally {
       this.deleteModalVisible.set(false);
       this.deleteHasHistory.set(false);

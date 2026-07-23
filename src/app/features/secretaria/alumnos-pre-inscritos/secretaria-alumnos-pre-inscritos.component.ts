@@ -3,6 +3,8 @@ import {
   Component,
   computed,
   inject,
+  input,
+  output,
   OnDestroy,
   OnInit,
 } from '@angular/core';
@@ -29,6 +31,8 @@ import type { PreInscritoTableRow } from '@core/models/ui/pre-inscrito-table.mod
       [showSede]="false"
       backRoute="/app/secretaria/clase-profesional/alumnos"
       backLabel="Alumnos Profesional"
+      [embedded]="embedded()"
+      (closeRequested)="closeRequested.emit()"
       (rowSelected)="openDrawer($event)"
     />
   `,
@@ -44,6 +48,10 @@ export class SecretariaAlumnosPreInscritosComponent implements OnInit, OnDestroy
   protected readonly maxVisible = computed(() =>
     this.layoutService.tier() === 'desktop' ? null : 6,
   );
+
+  /** Vista embebida — ver AdminPreInscritosComponent.embedded para el detalle. */
+  readonly embedded = input(false);
+  readonly closeRequested = output<void>();
 
   readonly heroKpis = computed((): SectionHeroKpi[] => [
     { id: 'total', label: 'Total Pre-inscritos', value: this.facade.total(), icon: 'users' },
@@ -69,7 +77,11 @@ export class SecretariaAlumnosPreInscritosComponent implements OnInit, OnDestroy
   }
 
   ngOnDestroy(): void {
-    this.branchFacade.setProfessionalOnly(false);
+    // Embebido: el padre (SecretariaAlumnosProfesionalComponent) sigue montado
+    // y ya gestiona professionalOnly.
+    if (!this.embedded()) {
+      this.branchFacade.setProfessionalOnly(false);
+    }
   }
 
   protected openDrawer(row: PreInscritoTableRow): void {

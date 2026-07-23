@@ -4,6 +4,10 @@ import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ThemeService } from '@core/services/ui/theme.service';
+import {
+  AgendaSettingsService,
+  type AgendaVisibilityMonths,
+} from '@core/services/ui/agenda-settings.service';
 import { ToastService } from '@core/services/ui/toast.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { StatBoxComponent } from '@shared/components/stat-box/stat-box.component';
@@ -202,6 +206,28 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               </button>
             </div>
 
+            <!-- Límite de Visualización de Agenda -->
+            <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
+              <div class="space-y-0.5">
+                <p class="text-sm font-semibold text-text-primary">
+                  Límite de Visualización de Agenda
+                </p>
+                <p class="text-xs text-text-muted">
+                  Define cuántos meses hacia el futuro los usuarios pueden navegar y agendar clases
+                </p>
+              </div>
+              <select
+                class="w-full cursor-pointer rounded-lg border border-border-default bg-surface px-3 py-2 text-sm font-medium text-text-primary outline-none transition-colors hover:bg-subtle focus:border-brand"
+                [ngModel]="agendaSettings.visibilityMonths()"
+                (ngModelChange)="onVisibilityMonthsChange($event)"
+                data-llm-description="Selector del límite de meses visibles en la Agenda"
+              >
+                <option [ngValue]="2">2 meses</option>
+                <option [ngValue]="3">3 meses</option>
+                <option [ngValue]="4">4 meses</option>
+              </select>
+            </div>
+
             <!-- Website Landing Config card -->
             <div class="rounded-xl bg-base p-4 border border-border-default space-y-3">
               <div class="space-y-0.5">
@@ -348,6 +374,7 @@ export class AjustesDrawerComponent {
   protected readonly auth = inject(AuthFacade);
   protected readonly branchFacade = inject(BranchFacade);
   protected readonly theme = inject(ThemeService);
+  protected readonly agendaSettings = inject(AgendaSettingsService);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -429,6 +456,10 @@ export class AjustesDrawerComponent {
     this.layoutDrawer.close();
     const role = this.currentUser()?.role;
     void this.router.navigate([`/app/${role}/configuracion-web`]);
+  }
+
+  onVisibilityMonthsChange(months: AgendaVisibilityMonths): void {
+    this.agendaSettings.setVisibilityMonths(Number(months) as AgendaVisibilityMonths);
   }
 
   abrirGeneradorHorario(): void {

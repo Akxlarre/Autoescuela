@@ -11,6 +11,7 @@ import { AgendaSemanalComponent } from '@shared/components/agenda-semanal/agenda
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { AgendaSettingsService } from '@core/services/ui/agenda-settings.service';
 import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
 import type { AgendaSlot } from '@core/models/ui/agenda.model';
 
@@ -29,9 +30,12 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
       [selectedInstructorId]="facade.selectedInstructorId()"
       [showHero]="false"
       [showKpis]="false"
+      [maxVisibleDateIso]="agendaSettings.maxVisibleDateIso()"
+      [maxVisibleDateLabel]="agendaSettings.maxVisibleDateLabel()"
       (weekNext)="facade.goToNextWeek()"
       (weekPrev)="facade.goToPrevWeek()"
       (weekToday)="facade.goToToday()"
+      (weekJump)="facade.goToDate($event)"
       (instructorFilterChange)="facade.setInstructorFilter($event)"
       (slotClick)="onSlotClick($event)"
     />
@@ -40,6 +44,7 @@ import type { AgendaSlot } from '@core/models/ui/agenda.model';
 export class AdminAgendaComponent implements OnInit {
   protected readonly facade = inject(AgendaFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
+  protected readonly agendaSettings = inject(AgendaSettingsService);
   private readonly branchFacade = inject(BranchFacade);
   private readonly destroyRef = inject(DestroyRef);
 

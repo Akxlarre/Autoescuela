@@ -89,8 +89,10 @@ const PAGE_SIZE_MOBILE = 6;
         [title]="title()"
         [subtitle]="subtitle()"
         icon="users"
-        [backRoute]="backRoute()"
+        [backRoute]="embedded() ? null : backRoute()"
+        [backClickable]="embedded()"
         [backLabel]="backLabel()"
+        (backClicked)="closeRequested.emit()"
         [actions]="[]"
         [kpis]="heroKpis()"
       />
@@ -405,9 +407,17 @@ export class PreInscritosContentComponent implements AfterViewInit {
   readonly subtitle = input('Gestion de pre-inscripciones online pendientes de revision');
   readonly backRoute = input('');
   readonly backLabel = input('Alumnos Profesional');
+  /**
+   * Vista embebida: cuando es `true`, el Smart padre renderiza este
+   * componente como vista condicional en lugar de navegar a una ruta propia
+   * (la URL no cambia). El botón "volver" del hero pasa de `backRoute`
+   * (routerLink) a `backClickable` + `closeRequested`.
+   */
+  readonly embedded = input(false);
 
   // ── Outputs ───────────────────────────────────────────────────────────────
   readonly rowSelected = output<PreInscritoTableRow>();
+  readonly closeRequested = output<void>();
 
   private readonly gsap = inject(GsapAnimationsService);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
