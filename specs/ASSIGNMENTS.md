@@ -50,6 +50,7 @@
 | ASG-030 | Fix H-023: Caja Diaria muestra la glosa cruda del origen del pago ("online"/"enrollment") en vez de un concepto legible | `b` | fix | Baja | b | Mapeo ya existe en la página Pagos — reutilizar el mismo mapeo en Caja Diaria |
 | ASG-031 | Fix H-032: el formulario "Recuperar Contraseña" sigue mostrando el campo de Contraseña del login normal | `b` | fix | Baja | b | Solo ocultar/limpiar el campo al cambiar de modo — el envío del enlace ya funciona bien |
 | ASG-032 | Fix H-036: flash de texto incorrecto ("matrícula profesional") en la página Pagos de un alumno de Clase B mientras carga | `b` | fix | Baja | b | Archivo: `alumno-pagos.component.ts:205-212` — cambiar el valor por defecto de `heroSubtitle` |
+| ASG-033 | Portal alumno no muestra matrículas múltiples: con 2+ matrículas activas, Pagos y el KPI del Dashboard solo muestran una, ocultando la otra aunque esté pagada y activa | `b` | spec | Media | b | Hallado al verificar fix-058-b (H-039) en vivo. Admin ya resuelve esto con tabs por matrícula; portal alumno no. Ver `specs/fix-058-b-pago-multiples-matriculas/fix.md` |
 
 ---
 
