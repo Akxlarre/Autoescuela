@@ -67,7 +67,11 @@ END;
 $$;
 
 -- 3. Programar limpieza automática con pg_cron (diariamente a las 3:00 AM UTC)
--- NOTA: pg_cron debe estar habilitado en Supabase (Dashboard > Extensions > pg_cron)
+-- NOTA: en producción pg_cron ya está habilitado vía Dashboard > Extensions > pg_cron;
+-- este CREATE EXTENSION es idempotente (no-op en remoto) y solo resuelve el bootstrap
+-- de un entorno local nuevo (`supabase start` / `supabase db reset` desde cero).
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
 SELECT cron.schedule(
   'cleanup-expired-enrollment-drafts',
   '0 3 * * *',

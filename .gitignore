@@ -50,6 +50,10 @@ specs/.active
 # .claude/author.local.json.example — cada dev crea el suyo, no se comparte.
 .claude/author.local.json
 
+# Supabase CLI — estado local de qué branch de Supabase tienes activo
+# (supabase/.temp/ SÍ se commitea a propósito: project-ref/versiones del equipo)
+supabase/.branches/
+
 environments/
 docs/2020libros-curso-profesional.pdf
 docs/2020libros-curso-profesional.xlsx

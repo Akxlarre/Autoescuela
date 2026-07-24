@@ -1,4 +1,11 @@
 -- ============================================================================
+-- SCRIPT MANUAL (no es una migración) — correr a mano con psql/SQL editor
+-- después de `supabase start` / `supabase db reset` si se necesitan estos
+-- datos de prueba. Se movió fuera de supabase/migrations/ porque asumía un
+-- estado de datos (instructor_id/vehicle_id específicos) que no garantiza
+-- un replay completo desde cero, y bloqueaba `supabase start` en entornos
+-- nuevos. Ver hotfix-041/042/043/044/045 y fix-060 para el contexto.
+-- ============================================================================
 -- SEED: Alumnos de prueba Clase B con 12 prácticas completadas
 -- ============================================================================
 -- Propósito: Crear datos de desarrollo para verificar el módulo de

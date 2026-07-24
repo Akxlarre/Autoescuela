@@ -32,7 +32,17 @@ SET schedule_days   = '{1,2,3,4,5}',
 WHERE type = 'class_b';
 
 -- ──────────────────────────────────────────────────────────────────────────────
--- 2. Eliminar columnas de disponibilidad individual de `instructors`
+-- 2. Eliminar vista dependiente ANTES de tocar columnas de `instructors`
+-- ──────────────────────────────────────────────────────────────────────────────
+-- v_class_b_schedule_availability depende de instructors.available_days/
+-- available_from/available_until — debe eliminarse antes del DROP COLUMN de
+-- la sección 3, o Postgres rechaza el ALTER TABLE (SQLSTATE 2BP01).
+-- ──────────────────────────────────────────────────────────────────────────────
+
+DROP VIEW IF EXISTS v_class_b_schedule_availability;
+
+-- ──────────────────────────────────────────────────────────────────────────────
+-- 3. Eliminar columnas de disponibilidad individual de `instructors`
 -- ──────────────────────────────────────────────────────────────────────────────
 
 ALTER TABLE instructors
@@ -41,14 +51,12 @@ ALTER TABLE instructors
   DROP COLUMN IF EXISTS available_until;
 
 -- ──────────────────────────────────────────────────────────────────────────────
--- 3. Recrear vista v_class_b_schedule_availability
+-- 4. Recrear vista v_class_b_schedule_availability
 -- ──────────────────────────────────────────────────────────────────────────────
 -- Ahora genera slots a partir de courses.schedule_days/schedule_blocks en lugar
 -- de instructor.available_days/available_from/available_until.
 -- Aplica a cursos type = 'class_b' (incluye class_b y class_b_sence).
 -- ──────────────────────────────────────────────────────────────────────────────
-
-DROP VIEW IF EXISTS v_class_b_schedule_availability;
 
 CREATE OR REPLACE VIEW v_class_b_schedule_availability AS
 WITH

@@ -1,4 +1,15 @@
 -- ============================================================================
+-- SCRIPT MANUAL (no es una migración) — correr a mano con psql/SQL editor
+-- después de `supabase start` / `supabase db reset` si se necesitan estos
+-- datos de prueba. Se movió fuera de supabase/migrations/ porque asumía un
+-- estado de datos (registered_by/cursos específicos) que no garantiza un
+-- replay completo desde cero, y bloqueaba `supabase start` en entornos
+-- nuevos. Nota: este seed inserta pagos vía INSERT directo — si el trigger
+-- `trg_check_payment_within_pending_balance` (fix-057) está activo, puede
+-- ser necesario deshabilitarlo temporalmente para la carga
+-- (`ALTER TABLE payments DISABLE/ENABLE TRIGGER ...`). Ver hotfix-041/042/
+-- 043/044/045 y fix-060/fix-061 para el contexto.
+-- ============================================================================
 -- SEED: Alumnos de prueba Clase Profesional — Certificación
 -- ============================================================================
 -- Propósito: Crear datos de desarrollo para verificar el módulo de
