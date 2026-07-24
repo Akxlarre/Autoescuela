@@ -55,7 +55,6 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real al filtrar por sede específica (`v_professional_attendance`) | m | [fix-060-m-h027-alertas-asistencia-profesional-sede](fix-060-m-h027-alertas-asistencia-profesional-sede/fix.md) | 2026-07-23 |
 
 ---
 
@@ -67,6 +66,7 @@
 | ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 | ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |
 | ASG-013 | Fix H-024: "Registrar Pago" con monto mayor al saldo pendiente falla en silencio, sin feedback al usuario | [fix-057-m-registrar-pago-monto-excesivo-silencioso](fix-057-m-registrar-pago-monto-excesivo-silencioso/fix.md) | 2026-07-23 |
+| ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real (statement timeout) al filtrar por sede específica (`v_professional_attendance`) | [fix-060-m-h027-alertas-asistencia-profesional-sede](fix-060-m-h027-alertas-asistencia-profesional-sede/fix.md) | 2026-07-23 |
 
 ---
 

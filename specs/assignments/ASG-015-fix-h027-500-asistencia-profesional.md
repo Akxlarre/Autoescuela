@@ -1,6 +1,6 @@
 # Asignación ASG-015 — Fix H-027: 500 real en alertas de asistencia Profesional con filtro de sede
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1
