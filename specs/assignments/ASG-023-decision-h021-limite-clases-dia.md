@@ -1,14 +1,14 @@
 # Asignación ASG-023 — Decisión de producto + fix H-021: límite de clases/día distinto público vs interno
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-25
+> **resulting_track:** fix-062-m-unificar-limite-clases-dia
 
 ---
 

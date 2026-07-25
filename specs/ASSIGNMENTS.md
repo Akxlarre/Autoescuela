@@ -37,7 +37,6 @@
 | ASG-020 | Fix H-004 + H-005: Anticipos muestra enum crudo "both" sin traducir, KPIs financieros sin separador de miles + "Otros (Sede 0)" sin resolver nombre | `m` | fix | Media | b | Formato/pipes en `admin/contabilidad/anticipos`, `admin/contabilidad/reportes`, `admin/contabilidad/cursos` |
 | ASG-021 | Fix H-006: Configuración Web usa voseo argentino en vez de español de Chile | `i` | fix | Media | b | Solo copy, sin lógica — buen candidato para alguien nuevo en el repo |
 | ASG-022 | Fix H-007: páginas cargan en blanco varios segundos sin skeleton en Agenda y Libro de Clases | `b` | fix | Media | b | Viola `swr-pattern.md`. ⚠️ **Coordinar con ASG-001** (verificación de skeletons de Benja) para no duplicar trabajo |
-| ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto entre wizard público (1) y wizard interno (3) para la misma operación | `m` | spec | Media | b | Requiere decidir si es intencional antes de tocar código — si no lo es, unificar la regla de negocio |
 | ASG-024 | Fix H-031: la búsqueda global (Ctrl+K) no indexa alumnos ni instructores, solo navegación | `b` | fix | Media | b | Extender el índice del buscador a datos de negocio (alumnos por nombre/RUT, instructores) |
 | ASG-025 | Fix H-037: botones y títulos se recortan a mitad de palabra (falta `min-width:0` en hijos flex con `truncate`) | `i` | fix | Media | b | Archivos: `admin-alumno-detalle.component.ts:331-347` (`SectionHeroAction`) + fila de título en Instructores |
 | ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | `m` | fix | Media | b | `BranchFacade.selectedBranchId` vive solo en memoria — persistir en `localStorage` o query param |
@@ -55,6 +54,7 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto entre wizard público (1) y wizard interno (3) para la misma operación | m | [fix-062-m-unificar-limite-clases-dia](fix-062-m-unificar-limite-clases-dia/fix.md) | 2026-07-25 |
 
 ---
 
