@@ -128,7 +128,7 @@
                 <div class="flex flex-col items-center gap-3">
                   <app-skeleton-block variant="rect" width="160px" height="160px" />
                   <p class="text-xs text-text-muted flex items-center gap-1.5 animate-pulse">
-                    <app-icon name="loader" [size]="12" class="animate-spin" />
+                    <app-icon name="loader-circle" [size]="12" class="animate-spin" />
                     Subiendo foto...
                   </p>
                 </div>
@@ -272,9 +272,10 @@
                     [class.border-border-subtle]="isUploaded(doc.type)"
                     [class.text-text-secondary]="isUploaded(doc.type)"
                     [class.hover:bg-base]="isUploaded(doc.type) && uploadingDocType() !== doc.type"
+                    [appStableWidth]="uploadingDocType() === doc.type"
                   >
                     @if (uploadingDocType() === doc.type) {
-                      <app-icon name="loader" [size]="14" class="animate-spin" />
+                      <app-icon name="loader-circle" [size]="14" class="animate-spin" />
                       Subiendo...
                     } @else if (isUploaded(doc.type)) {
                       <app-icon name="refresh-cw" [size]="14" />

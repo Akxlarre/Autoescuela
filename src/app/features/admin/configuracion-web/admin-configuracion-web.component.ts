@@ -30,6 +30,7 @@ import { PromoTabComponent } from './tabs/promo-tab.component';
 import { ContactoTabComponent } from './tabs/contacto-tab.component';
 import { FaqsTabComponent } from './tabs/faqs-tab.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
 
@@ -51,6 +52,7 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
     ContactoTabComponent,
     FaqsTabComponent,
     TabsComponent,
+    StableWidthDirective,
   ],
   template: `
     <div #bentoGrid class="bento-grid" appBentoGridLayout>
@@ -177,8 +179,9 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
               </span>
               <button
                 type="submit"
-                class="btn-primary py-2.5 px-6 flex items-center gap-2 shadow-md cursor-pointer hover:-translate-y-0.5 transition-transform"
+                class="btn-primary py-2.5 px-6 flex items-center justify-center gap-2 shadow-md cursor-pointer hover:-translate-y-0.5 transition-transform"
                 [disabled]="facade.isSaving() || facade.isLoading() || form.invalid"
+                [appStableWidth]="facade.isSaving()"
                 data-llm-action="save-changes-footer"
               >
                 @if (facade.isSaving()) {

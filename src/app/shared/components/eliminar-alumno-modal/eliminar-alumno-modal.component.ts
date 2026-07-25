@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../icon/icon.component';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * Modal de confirmación para archivar un alumno (soft-delete).
@@ -27,7 +28,7 @@ import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive'
   selector: 'app-eliminar-alumno-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, IconComponent, AnimateInDirective],
+  imports: [FormsModule, IconComponent, AnimateInDirective, StableWidthDirective],
   hostDirectives: [
     {
       directive: ModalOverlayDirective,
@@ -98,7 +99,7 @@ import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive'
               />
             </div>
             <div class="flex flex-col min-w-0">
-              <span class="font-bold text-base text-text-primary">
+              <span class="font-bold text-base">
                 {{ hasHistory() ? 'Archivar con historial' : 'Archivar alumno' }}
               </span>
               <span class="text-xs truncate text-text-muted">
@@ -180,11 +181,12 @@ import { ModalOverlayDirective } from '@core/directives/modal-overlay.directive'
               type="button"
               class="btn-danger-solid"
               [disabled]="!canConfirm() || isDeleting()"
+              [appStableWidth]="isDeleting()"
               (click)="onConfirmar()"
               data-llm-action="confirm-archive-student"
             >
               @if (isDeleting()) {
-                <app-icon name="loader" [size]="14" class="animate-spin" />
+                <app-icon name="loader-circle" [size]="14" class="animate-spin" />
                 Archivando...
               } @else {
                 <app-icon name="archive" [size]="14" />

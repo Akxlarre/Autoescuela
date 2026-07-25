@@ -1,6 +1,6 @@
 # Asignación ASG-023 — Decisión de producto + fix H-021: límite de clases/día distinto público vs interno
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2

@@ -28,6 +28,7 @@ import type {
   CursoCertOption,
   PromocionCertOption,
 } from '@core/models/ui/certificacion-profesional.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 type EstadoFilter = 'generado' | 'pendiente' | null;
 
@@ -59,6 +60,7 @@ const PAGE_SIZE = 10;
     BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    StableWidthDirective,
   ],
   template: `
     <div class="bento-grid bento-grid--fill-screen" appBentoGridLayout #bentoGrid>
@@ -188,9 +190,10 @@ const PAGE_SIZE = 10;
 
             @if (pendientesCount() > 0) {
               <button
-                class="btn-primary flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn-primary flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 data-llm-action="open-generate-pending-professional-certificates-drawer"
                 [disabled]="isGeneratingPendientes()"
+                [appStableWidth]="isGeneratingPendientes()"
                 (click)="abrirGenerarPendientesDrawer.emit()"
               >
                 @if (isGeneratingPendientes()) {
@@ -205,9 +208,10 @@ const PAGE_SIZE = 10;
 
             @if (alumnosParaEnvioMasivo().length > 0) {
               <button
-                class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 data-llm-action="open-send-bulk-emails-professional-drawer"
                 [disabled]="sendingMasivo()"
+                [appStableWidth]="sendingMasivo()"
                 (click)="abrirEnviarMasivoDrawer.emit()"
               >
                 @if (sendingMasivo()) {
@@ -221,9 +225,10 @@ const PAGE_SIZE = 10;
             }
 
             <button
-              class="btn-secondary flex items-center gap-2 text-sm ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
+              class="btn-secondary flex items-center justify-center gap-2 text-sm ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
               data-llm-action="export-professional-certificates"
               [disabled]="isExporting()"
+              [appStableWidth]="isExporting()"
               (click)="exportar.emit()"
             >
               @if (isExporting()) {
@@ -423,9 +428,10 @@ const PAGE_SIZE = 10;
                         <div class="flex items-center justify-end gap-2">
                           @if (alumno.certificadoStatus === 'pendiente') {
                             <button
-                              class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                              class="group inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                               data-llm-action="generate-professional-certificate"
                               [disabled]="generatingId() !== null || !alumno.elegible"
+                              [appStableWidth]="generatingId() === alumno.enrollmentId"
                               [title]="
                                 !alumno.elegible ? 'El alumno no cumple todos los requisitos' : ''
                               "
@@ -460,9 +466,10 @@ const PAGE_SIZE = 10;
                               Ver
                             </button>
                             <button
-                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
+                              class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
                               data-llm-action="send-professional-certificate-email"
                               [disabled]="sendingEmailId() === alumno.enrollmentId"
+                              [appStableWidth]="sendingEmailId() === alumno.enrollmentId"
                               (click)="onClickEmail(alumno)"
                             >
                               @if (sendingEmailId() === alumno.enrollmentId) {
@@ -546,9 +553,10 @@ const PAGE_SIZE = 10;
                             </p>
                             <div class="flex items-center gap-2 shrink-0">
                               <button
-                                class="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                                class="group inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                                 data-llm-action="confirm-generate-professional-certificate-partial-practice"
                                 [disabled]="generatingId() !== null"
+                                [appStableWidth]="generatingId() === pendingConfirmId()"
                                 (click)="confirmarGenerar()"
                               >
                                 @if (generatingId() === pendingConfirmId()) {

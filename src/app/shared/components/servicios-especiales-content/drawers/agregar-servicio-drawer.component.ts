@@ -4,6 +4,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * AgregarServicioDrawerComponent — Formulario para crear un nuevo servicio en side-drawer (RF-037).
@@ -12,7 +13,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
   selector: 'app-agregar-servicio-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, DrawerFormComponent],
+  imports: [ReactiveFormsModule, IconComponent, DrawerFormComponent, StableWidthDirective],
   template: `
     <app-drawer-form>
       <form [formGroup]="servicioForm" (ngSubmit)="submitServicio()" class="flex flex-col gap-5">
@@ -73,8 +74,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="servicioForm.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           (click)="submitServicio()"
         >
           @if (isSaving()) {

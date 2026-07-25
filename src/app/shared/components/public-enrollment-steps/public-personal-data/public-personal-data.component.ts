@@ -25,6 +25,7 @@ import { validateRut, formatRut } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { getAgeStatus, isInvalidDate } from '@core/utils/age.utils';
 import { validateName, stripInvalidNameChars } from '@core/utils/name.utils';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 export { getAgeStatus };
 
@@ -76,6 +77,7 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
     PhoneInputComponent,
     PublicContextBannerComponent,
     DateInputComponent,
+    StableWidthDirective,
   ],
   template: `
     @if (context()) {
@@ -495,12 +497,13 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
         </button>
         <button
           type="submit"
-          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2"
+          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
           [disabled]="_isLoading()"
+          [appStableWidth]="_isLoading()"
           data-llm-action="submit-personal-data"
         >
           @if (_isLoading()) {
-            <app-icon name="loader" [size]="16" class="animate-spin" />
+            <app-icon name="loader-circle" [size]="16" class="animate-spin" />
             Procesando...
           } @else {
             Continuar

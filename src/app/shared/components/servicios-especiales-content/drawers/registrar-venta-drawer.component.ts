@@ -7,6 +7,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -21,6 +22,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     SelectModule,
     DateInputComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -154,8 +156,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
         <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="ventaForm.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           (click)="submitVenta()"
         >
           @if (isSaving()) {

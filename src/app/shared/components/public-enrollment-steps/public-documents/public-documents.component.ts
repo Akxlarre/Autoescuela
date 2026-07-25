@@ -14,12 +14,13 @@ import {
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-public-documents',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, AsyncBtnComponent],
+  imports: [IconComponent, AsyncBtnComponent, StableWidthDirective],
   template: `
     <div class="space-y-5">
       <div>
@@ -107,11 +108,22 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             border: 1.5px solid color-mix(in srgb, var(--state-success) 30%, transparent);
           "
         >
-          <div class="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden" style="border: 2px solid var(--state-success); background: var(--bg-elevated);">
+          <div
+            class="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden"
+            style="border: 2px solid var(--state-success); background: var(--bg-elevated);"
+          >
             <!-- Loader skeleton -->
             @if (!isImageLoaded()) {
-              <div class="absolute inset-0 flex items-center justify-center animate-pulse" style="background: var(--bg-inverted-subtle);">
-                <app-icon name="loader" [size]="16" class="animate-spin" color="var(--text-muted)" />
+              <div
+                class="absolute inset-0 flex items-center justify-center animate-pulse"
+                style="background: var(--bg-inverted-subtle);"
+              >
+                <app-icon
+                  name="loader-circle"
+                  [size]="16"
+                  class="animate-spin"
+                  color="var(--text-muted)"
+                />
               </div>
             }
             <img
@@ -135,16 +147,8 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
             for="pub-carnet-rechange"
           >
             Cambiar
-            <button
-              type="button"
-              class="sr-only"
-              id="pub-carnet-rechange"
-            ></button>
-            <button
-              type="button"
-              (click)="handleClearPhoto()"
-              class="cursor-pointer"
-            >
+            <button type="button" class="sr-only" id="pub-carnet-rechange"></button>
+            <button type="button" (click)="handleClearPhoto()" class="cursor-pointer">
               Cambiar
             </button>
           </label>
@@ -188,8 +192,14 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
               class="flex flex-col items-center gap-3 rounded-xl px-6 py-8 cursor-pointer transition-all focus-within:outline focus-within:outline-(--ds-brand) focus-within:outline-offset-2"
               [class.opacity-50]="isUploading()"
               [class.pointer-events-none]="isUploading()"
-              [style.background]="isDragging() ? 'color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface))' : 'var(--bg-surface)'"
-              [style.border]="isDragging() ? '2px dashed var(--ds-brand)' : '2px dashed var(--border-default)'"
+              [style.background]="
+                isDragging()
+                  ? 'color-mix(in srgb, var(--ds-brand) 5%, var(--bg-surface))'
+                  : 'var(--bg-surface)'
+              "
+              [style.border]="
+                isDragging() ? '2px dashed var(--ds-brand)' : '2px dashed var(--border-default)'
+              "
               for="pub-carnet-upload"
               (dragover)="onDragOver($event)"
               (dragleave)="onDragLeave($event)"
@@ -203,7 +213,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
               >
                 @if (isUploading()) {
                   <app-icon
-                    name="loader"
+                    name="loader-circle"
                     [size]="24"
                     color="var(--ds-brand)"
                     class="animate-spin"
@@ -320,13 +330,14 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
         </button>
         <button
           type="button"
-          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2"
+          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
           [disabled]="!hasPhoto() || isUploading()"
+          [appStableWidth]="isUploading()"
           data-llm-action="confirm-carnet-photo"
           (click)="!isUploading() && hasPhoto() && next.emit()"
         >
           @if (isUploading()) {
-            <app-icon name="loader" [size]="16" class="animate-spin" />
+            <app-icon name="loader-circle" [size]="16" class="animate-spin" />
             Subiendo...
           } @else {
             Continuar
@@ -397,9 +408,9 @@ export class PublicDocumentsComponent implements OnDestroy {
   onDrop(event: DragEvent): void {
     event.preventDefault();
     this.isDragging.set(false);
-    
+
     if (this.isUploading()) return;
-    
+
     const file = event.dataTransfer?.files?.[0];
     if (file && file.type.startsWith('image/')) {
       this.fileSelected.emit({ type: 'id_photo', file });
@@ -419,9 +430,9 @@ export class PublicDocumentsComponent implements OnDestroy {
 
   handleClearPhoto(): void {
     if (this.isUploading()) return;
-    
+
     this.fileSelected.emit({ type: 'clear', file: null as any });
-    
+
     this.activeTab.set('upload');
     this.stopCamera();
   }

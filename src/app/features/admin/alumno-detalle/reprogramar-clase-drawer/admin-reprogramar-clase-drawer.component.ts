@@ -123,7 +123,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
               <div
                 class="h-40 rounded-2xl flex items-center justify-center gap-2 bg-base border border-border-default"
               >
-                <app-icon name="loader" [size]="16" class="animate-spin text-text-muted" />
+                <app-icon name="loader-circle" [size]="16" class="animate-spin text-text-muted" />
                 <span class="text-sm text-text-muted">Cargando disponibilidad...</span>
               </div>
             } @else if (!facade.scheduleGrid() || daysFromGrid().length === 0) {
@@ -261,7 +261,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
           data-llm-action="confirmar-reprogramar-clase"
         >
           @if (isSaving()) {
-            <app-icon name="loader" [size]="14" class="animate-spin" />
+            <app-icon name="loader-circle" [size]="14" class="animate-spin" />
             Guardando...
           } @else {
             <app-icon name="calendar-check" [size]="14" />

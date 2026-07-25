@@ -188,7 +188,7 @@ import {
             (click)="onGuardar()"
           >
             @if (isSaving()) {
-              <app-icon name="loader" [size]="16" class="animate-spin" />
+              <app-icon name="loader-circle" [size]="16" class="animate-spin" />
               Guardando...
             } @else {
               <app-icon name="save" [size]="16" />

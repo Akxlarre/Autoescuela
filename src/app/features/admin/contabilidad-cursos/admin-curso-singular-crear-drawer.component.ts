@@ -11,6 +11,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-admin-curso-singular-crear-drawer',
@@ -25,6 +26,7 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
     DrawerContentLoaderComponent,
     DrawerFormComponent,
     DateInputComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -219,8 +221,9 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
         <button type="button" class="btn-secondary" (click)="onCancelar()">Cancelar</button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="form.invalid || facade.isSaving()"
+          [appStableWidth]="facade.isSaving()"
           (click)="onGuardar()"
         >
           @if (facade.isSaving()) {

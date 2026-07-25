@@ -4,6 +4,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { CertificacionProfesionalFacade } from '@core/facades/certificacion-profesional.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * EnviarMasivoProfDrawerComponent — Smart / Drawer.
@@ -13,7 +14,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   selector: 'app-enviar-masivo-prof-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerFormComponent, IconComponent, EmptyStateComponent],
+  imports: [DrawerFormComponent, IconComponent, EmptyStateComponent, StableWidthDirective],
   template: `
     <app-drawer-form>
       <div class="flex flex-col gap-4">
@@ -64,9 +65,10 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           Cancelar
         </button>
         <button
-          class="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          class="btn-primary flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           data-llm-action="confirm-bulk-email-professional"
           [disabled]="destinatarios().length === 0 || facade.sendingMasivo()"
+          [appStableWidth]="facade.sendingMasivo()"
           (click)="confirmar()"
         >
           @if (facade.sendingMasivo()) {

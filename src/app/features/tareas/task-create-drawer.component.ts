@@ -9,6 +9,7 @@ import { TaskCreateContextService } from '@core/services/ui/task-create-context.
 import type { TaskType } from '@core/models/ui/task.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 const TYPE_OPTIONS: { label: string; value: TaskType }[] = [
   { label: 'Tarea', value: 'task' },
@@ -32,6 +33,7 @@ const ROLE_LABEL: Record<string, string> = {
     SelectModule,
     DateInputComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -137,8 +139,9 @@ const ROLE_LABEL: Record<string, string> = {
         <button type="button" class="btn-secondary" (click)="drawer.close()">Cancelar</button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="form.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           (click)="submit()"
           data-llm-action="submit-create-task"
         >

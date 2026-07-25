@@ -49,6 +49,7 @@ interface RawUser {
   email: string;
   phone: string | null;
   branch_id: number | null;
+  branches: { name: string } | null;
 }
 
 interface RawStudent {
@@ -351,7 +352,7 @@ export class AdminAlumnosFacade {
         .select(
           `
           id, status, address,
-          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id),
+          users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone, branch_id, branches(name)),
           enrollments(id, number, status, payment_status, pending_balance, total_paid, docs_complete, created_at, expires_at, license_group,
             courses(id, name),
             student_documents(type, status)
@@ -372,7 +373,9 @@ export class AdminAlumnosFacade {
 
       // Filtrar alumnos: la Base B solo muestra alumnos con matrícula Clase B.
       // (profesional-only y singular-only quedan fuera — tienen sus propias vistas)
-      const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment']);
+      // 'draft' excluido: son wizards abandonados (aunque sea en el paso 1) que nunca
+      // se confirmaron, no deben listarse como Pre-inscritos (fix-066).
+      const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment', 'draft']);
       const validStudents = rawData.filter((s) => {
         const allEnrollments = s.enrollments ?? [];
         const classBEnrollments = allEnrollments.filter(isClassBEnrollment);
@@ -411,9 +414,10 @@ export class AdminAlumnosFacade {
     // La Base B solo considera las matrículas Clase B del alumno (AC-E1):
     // un alumno con B + Profesional muestra aquí únicamente sus datos de B.
     const classBEnrollments = s.enrollments.filter(isClassBEnrollment);
-    // Excluir enrollments incompletos (Webpay abandonado/rechazado) del display.
-    // El enrollment principal es el más reciente con estado válido DENTRO de B.
-    const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment']);
+    // Excluir enrollments incompletos (Webpay abandonado/rechazado, o draft nunca
+    // confirmado) del display. El enrollment principal es el más reciente con
+    // estado válido DENTRO de B.
+    const INCOMPLETE_STATUSES = new Set(['cancelled', 'pending_payment', 'draft']);
     const sorted =
       classBEnrollments.length > 0
         ? [...classBEnrollments]
@@ -441,7 +445,7 @@ export class AdminAlumnosFacade {
       rut: u.rut,
       email: u.email,
       celular: u.phone ?? '',
-      sucursal: u.branch_id ? `Sucursal ${u.branch_id}` : '',
+      sucursal: u.branches?.name ?? '—',
       comuna: s.address ?? '',
       nroExpedientes: nroExpedientes.length > 0 ? nroExpedientes : ['—'],
       fechaIngreso: enrollment ? enrollment.created_at.slice(0, 10) : '—',

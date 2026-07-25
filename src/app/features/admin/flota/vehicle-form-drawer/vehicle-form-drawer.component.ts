@@ -31,6 +31,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 import { FlotaFacade } from '@core/facades/flota.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * VehicleFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -52,6 +53,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -220,8 +222,9 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           [disabled]="vehicleForm.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           (click)="onSubmit()"
         >
           @if (isSaving()) {

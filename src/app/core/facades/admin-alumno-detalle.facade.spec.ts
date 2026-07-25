@@ -1040,5 +1040,88 @@ describe('AdminAlumnoDetalleFacade', () => {
       await facade.loadScheduleGrid(9);
       expect(builder.lte).toHaveBeenLastCalledWith('slot_start', '2026-05-14T23:59:59');
     });
+
+    it('bloquea (fix-062, ASG-023) un día que ya tiene 2 clases agendadas — tope bajó de 3 a 2', async () => {
+      const builder = setupWithAgendaLimit('2026-09-20');
+      builder.order.mockResolvedValue({
+        data: [
+          {
+            slot_start: '2026-07-10T09:00:00',
+            slot_end: '2026-07-10T10:00:00',
+            slot_status: 'available',
+            instructor_id: 9,
+            vehicle_id: 1,
+          },
+        ],
+        error: null,
+      });
+      (facade as any)._clasesPracticas.set([
+        { sessionId: 1, scheduledDate: '2026-07-10' },
+        { sessionId: 2, scheduledDate: '2026-07-10' },
+      ]);
+
+      await facade.loadScheduleGrid(9);
+
+      const slot = facade.scheduleGrid()?.slots.find((s) => s.date === '2026-07-10');
+      expect(slot?.status).toBe('occupied');
+    });
+
+    it('NO bloquea (fix-062) un día que solo tiene 1 clase agendada — cabe una 2da', async () => {
+      const builder = setupWithAgendaLimit('2026-09-20');
+      builder.order.mockResolvedValue({
+        data: [
+          {
+            slot_start: '2026-07-10T09:00:00',
+            slot_end: '2026-07-10T10:00:00',
+            slot_status: 'available',
+            instructor_id: 9,
+            vehicle_id: 1,
+          },
+        ],
+        error: null,
+      });
+      (facade as any)._clasesPracticas.set([{ sessionId: 1, scheduledDate: '2026-07-10' }]);
+
+      await facade.loadScheduleGrid(9);
+
+      const slot = facade.scheduleGrid()?.slots.find((s) => s.date === '2026-07-10');
+      expect(slot?.status).toBe('available');
+    });
+  });
+
+  describe('loadInstructores — scope de sede (fix-063)', () => {
+    it('filtra por users.branch_id igual al branchId del alumno cargado', async () => {
+      (facade as any)._alumno.set({ branchId: 2 });
+      const eqSpy = vi.fn().mockReturnValue({ data: [], error: null });
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            is: vi.fn().mockReturnValue({
+              eq: eqSpy,
+            }),
+          }),
+        }),
+      });
+
+      await facade.loadInstructores();
+
+      expect(eqSpy).toHaveBeenCalledWith('users.branch_id', 2);
+    });
+
+    it('no aplica filtro de sede si el alumno aún no tiene branchId', async () => {
+      (facade as any)._alumno.set({ branchId: null });
+      const isSpy = vi.fn().mockResolvedValue({ data: [], error: null });
+      supabaseSpy.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            is: isSpy,
+          }),
+        }),
+      });
+
+      await facade.loadInstructores();
+
+      expect(isSpy).toHaveBeenCalledWith('vehicle_assignments.end_date', null);
+    });
   });
 });

@@ -2,7 +2,8 @@
 
 > id: fix-062-m-unificar-limite-clases-dia
 > refs: ASG-023
-> status: in-progress
+> status: done
+> closed: 2026-07-25
 > created: 2026-07-25
 
 ## Root Cause
@@ -11,7 +12,9 @@
 1. **Wizard público** (`public-enrollment.facade.ts:332-338`, computed `maxClassesPerDay`) → ya en 1, sin cambios.
 2. **Wizard interno de matrícula** (`secretaria-matricula.component.ts:253`) → `maxClassesPerDay: 3` hardcodeado, debe bajar a `2`.
 3. **Reasignación de clases canceladas** (`admin-reagendar-horarios-drawer.component.ts:83`) → `maxClassesPerDay: 3` hardcodeado, debe bajar a `2`.
-4. **Reagendamiento desde ficha técnica** (`admin-reprogramar-clase-drawer.component.ts`) → **no tiene ninguna validación de límite diario** (solo valida orden secuencial contra la clase anterior/siguiente). Al reprogramar una sola clase a una fecha/slot arbitrario, puede dejar 3+ clases el mismo día sin bloqueo. Hay que agregar el mismo tope de 2/día que los otros flujos internos.
+4. **Reagendamiento desde ficha técnica** (`admin-reprogramar-clase-drawer.component.ts`, vía `AdminAlumnoDetalleFacade.computeBlockedDates()` en `admin-alumno-detalle.facade.ts:1342-1355`) → SÍ existe un mecanismo de bloqueo (fechas con `count >= 3` se marcan `occupied` en el grid), pero el umbral está hardcodeado en 3, no en 2. Hay que bajarlo a `>= 2` para que sea consistente con el resto de flujos internos.
+
+Nota: la investigación inicial (previa a leer el Facade completo) reportó erróneamente que este flujo no tenía validación alguna — sí la tiene, solo con el umbral equivocado.
 
 ## ACs Afectados
 - Ninguno de spec — hallazgo H-021 (`indices/FLOWS-QA-AUDIT.md`), gestionado como Asignación de equipo (ASG-023).
@@ -19,10 +22,14 @@
 ## Cambio
 - `secretaria-matricula.component.ts:253` — `maxClassesPerDay: 3` → `2`.
 - `admin-reagendar-horarios-drawer.component.ts:83` — `maxClassesPerDay: 3` → `2`.
-- `admin-reprogramar-clase-drawer.component.ts` — agregar validación de máximo 2 clases el mismo día al reprogramar (actualmente inexistente), reutilizando el mismo criterio de conteo que `schedule-grid.logic.ts`.
+- `admin-alumno-detalle.facade.ts:1352` (`computeBlockedDates()`) — `count >= 3` → `count >= 2`. Afecta directamente al drawer "Reprogramar Clase" de la ficha técnica, que consume este método vía `loadScheduleGrid()`.
 
 ## Test de Regresión
-<!-- Pendiente: agregar test que verifique 1/día en público, 2/día en los 3 flujos internos (matrícula, reasignación de canceladas, reprogramar ficha técnica), y que un intento de exceder el tope sea bloqueado en los 4 lugares. -->
+`admin-alumno-detalle.facade.spec.ts` (nuevos, dentro de `describe('loadScheduleGrid — límite dinámico de reagendamiento')`):
+- "bloquea un día que ya tiene 2 clases agendadas — tope bajó de 3 a 2": con 2 sesiones existentes el mismo día, el slot resultante queda `status: 'occupied'`.
+- "NO bloquea un día que solo tiene 1 clase agendada — cabe una 2da": con 1 sesión existente, el slot queda `status: 'available'`.
+
+29/29 tests verdes en `admin-alumno-detalle.facade.spec.ts`. `secretaria-matricula.component.ts` y `admin-reagendar-horarios-drawer.component.ts` no tienen `.spec.ts` (constante literal sin lógica derivada) — cambio verificado por lectura + `tsc --noEmit` sin errores.
 
 ## Notas
 - Originado de Asignación ASG-023 (`specs/assignments/ASG-023-decision-h021-limite-clases-dia.md`).

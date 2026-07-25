@@ -19,6 +19,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-admin-instructor-crear-drawer',
@@ -33,6 +34,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -345,8 +347,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           Cancelar
         </button>
         <button
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="facade.isSubmitting()"
+          [appStableWidth]="facade.isSubmitting()"
           (click)="submit()"
           data-llm-action="confirmar-crear-instructor"
           aria-label="Crear nuevo instructor"

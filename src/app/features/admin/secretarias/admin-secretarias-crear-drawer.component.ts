@@ -16,6 +16,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-admin-secretarias-crear-drawer',
@@ -28,6 +29,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -304,8 +306,9 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
           Cancelar
         </button>
         <button
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="facade.isSubmitting()"
+          [appStableWidth]="facade.isSubmitting()"
           (click)="submit()"
           data-llm-action="confirmar-crear-secretaria"
           aria-label="Crear nueva secretaria"

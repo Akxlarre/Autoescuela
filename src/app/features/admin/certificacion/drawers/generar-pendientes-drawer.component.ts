@@ -4,6 +4,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { CertificacionClaseBFacade } from '@core/facades/certificacion-clase-b.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * GenerarPendientesDrawerComponent — Smart / Drawer.
@@ -13,7 +14,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
   selector: 'app-generar-pendientes-drawer',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DrawerFormComponent, IconComponent, EmptyStateComponent],
+  imports: [DrawerFormComponent, IconComponent, EmptyStateComponent, StableWidthDirective],
   template: `
     <app-drawer-form>
       <div class="flex flex-col gap-4">
@@ -59,9 +60,10 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
           Cancelar
         </button>
         <button
-          class="btn-primary flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+          class="btn-primary flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
           data-llm-action="confirm-generate-pending-certificates"
           [disabled]="pendientes().length === 0 || facade.isGeneratingPendientes()"
+          [appStableWidth]="facade.isGeneratingPendientes()"
           (click)="confirmar()"
         >
           @if (facade.isGeneratingPendientes()) {

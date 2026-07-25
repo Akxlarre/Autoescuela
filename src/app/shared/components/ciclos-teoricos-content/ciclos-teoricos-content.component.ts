@@ -26,6 +26,7 @@ import type {
   CicloClaseRow,
   CicloOption,
 } from '@core/models/ui/ciclos-teoricos.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * CiclosTeoricosContentComponent — Dumb (OnPush).
@@ -52,6 +53,7 @@ import type {
     CardHoverDirective,
     AnimateInDirective,
     ModalOverlayDirective,
+    StableWidthDirective,
   ],
   styles: `
     /* El host se comporta como celda fill (spec 0031): cuando el parent le pone
@@ -277,8 +279,9 @@ import type {
                         Guardar
                       </button>
                       <button
-                        class="btn-primary text-sm px-4 py-2 flex items-center gap-2"
+                        class="btn-primary text-sm px-4 py-2 flex items-center justify-center gap-2"
                         [disabled]="isSaving() || !hasZoom(clase)"
+                        [appStableWidth]="sendingClassId() === clase.id"
                         data-llm-action="abrir-envio-zoom"
                         (click)="openSendPanel(clase)"
                       >
@@ -453,7 +456,7 @@ import type {
               class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
             >
               <div class="min-w-0">
-                <span class="font-bold text-base text-text-primary block truncate"
+                <span class="font-bold text-base block truncate"
                   >Elegir destinatarios</span
                 >
                 <span class="text-xs text-text-muted truncate block">{{ clase.label }}</span>
@@ -523,10 +526,11 @@ import type {
                 Cancelar
               </button>
               <button
-                class="btn-primary text-sm px-4 py-2 flex items-center gap-2"
+                class="btn-primary text-sm px-4 py-2 flex items-center justify-center gap-2"
                 [disabled]="
                   isSaving() || selectedRecipientCount() === 0 || sendingClassId() === clase.id
                 "
+                [appStableWidth]="sendingClassId() === clase.id"
                 data-llm-action="confirmar-envio-zoom"
                 (click)="confirmSend(clase.id)"
               >
@@ -563,7 +567,7 @@ import type {
             <div
               class="flex items-center justify-between gap-3 px-6 py-5 border-b border-border-subtle shrink-0"
             >
-              <span class="font-bold text-base text-text-primary"
+              <span class="font-bold text-base"
                 >Incorporar alumno de otro ciclo</span
               >
               <button
@@ -625,8 +629,9 @@ import type {
                         <p class="text-xs text-text-muted truncate">{{ a.cicloActualLabel }}</p>
                       </div>
                       <button
-                        class="text-xs font-medium text-brand hover:underline cursor-pointer flex items-center gap-1"
+                        class="text-xs font-medium text-brand hover:underline cursor-pointer flex items-center justify-center gap-1"
                         [disabled]="isSaving()"
+                        [appStableWidth]="addingEnrollmentId() === a.enrollmentId"
                         data-llm-action="incorporar-alumno"
                         (click)="onAddStudent(a.enrollmentId)"
                       >

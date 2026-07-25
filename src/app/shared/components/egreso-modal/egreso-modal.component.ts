@@ -12,17 +12,19 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SelectModule } from 'primeng/select';
 import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-egreso-modal',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ReactiveFormsModule, IconComponent, SelectModule],
+  imports: [ReactiveFormsModule, IconComponent, SelectModule, StableWidthDirective],
   template: `
     @if (isOpen()) {
       <!-- Backdrop -->
       <div
         class="fixed inset-0 z-40"
-        class="bg-black/40" style="backdrop-filter: blur(2px)"
+        class="bg-black/40"
+        style="backdrop-filter: blur(2px)"
         aria-hidden="true"
         (click)="onCerrar()"
       ></div>
@@ -36,13 +38,10 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
         aria-labelledby="egreso-modal-title"
       >
         <!-- Header -->
-        <div
-          class="flex items-center justify-between px-6 py-4 border-b border-border-muted"
-          
-        >
+        <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
           <div class="flex items-center gap-2.5">
             <app-icon name="minus-circle" [size]="18" color="var(--state-warning)" />
-            <h2 id="egreso-modal-title" class="text-base font-semibold text-text-primary">
+            <h2 id="egreso-modal-title" class="text-base font-semibold">
               Registrar Egreso
             </h2>
           </div>
@@ -75,7 +74,7 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               data-llm-description="Selector del tipo de egreso: gasto varios o anticipo a instructor"
             />
             @if (form.get('tipo')?.invalid && form.get('tipo')?.touched) {
-              <p class="text-xs text-error" >Seleccione un tipo de egreso.</p>
+              <p class="text-xs text-error">Seleccione un tipo de egreso.</p>
             }
           </div>
 
@@ -99,7 +98,6 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
                 min="1"
                 formControlName="monto"
                 class="w-full text-sm pl-7 pr-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-primary outline-none"
-                
                 placeholder="0"
                 data-llm-description="Monto del egreso en pesos chilenos"
                 [style.borderColor]="
@@ -110,9 +108,9 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               />
             </div>
             @if (form.get('monto')?.hasError('required') && form.get('monto')?.touched) {
-              <p class="text-xs text-error" >Ingrese el monto.</p>
+              <p class="text-xs text-error">Ingrese el monto.</p>
             } @else if (form.get('monto')?.hasError('min') && form.get('monto')?.touched) {
-              <p class="text-xs text-error" >El monto debe ser mayor a 0.</p>
+              <p class="text-xs text-error">El monto debe ser mayor a 0.</p>
             }
           </div>
 
@@ -129,7 +127,6 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               type="text"
               formControlName="descripcion"
               class="w-full text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-primary outline-none"
-              
               [placeholder]="tipoPlaceholder()"
               data-llm-description="Descripción o motivo del egreso"
               [style.borderColor]="
@@ -139,9 +136,7 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
               "
             />
             @if (form.get('descripcion')?.invalid && form.get('descripcion')?.touched) {
-              <p class="text-xs text-error" >
-                Ingrese una descripción o motivo.
-              </p>
+              <p class="text-xs text-error">Ingrese una descripción o motivo.</p>
             }
           </div>
 
@@ -152,7 +147,6 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
             </label>
             <div
               class="flex items-center gap-2 text-sm px-3 py-2.5 rounded-lg bg-surface border border-border-muted text-text-muted"
-              
             >
               <app-icon name="calendar" [size]="14" />
               {{ fechaHoy() }}
@@ -162,14 +156,10 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
         </form>
 
         <!-- Footer con botones -->
-        <div
-          class="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-muted"
-          
-        >
+        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-muted">
           <button
             type="button"
             class="text-sm font-medium px-4 py-2 rounded-lg bg-surface border border-border-muted text-text-primary"
-            
             [disabled]="isSaving()"
             aria-label="Cancelar registro de egreso"
             (click)="onCerrar()"
@@ -178,15 +168,16 @@ import type { EgresoFormData } from '@core/models/ui/cuadratura.model';
           </button>
           <button
             type="submit"
-            class="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg btn-primary transition-opacity"
+            class="flex items-center justify-center gap-2 text-sm font-semibold px-4 py-2 rounded-lg btn-primary transition-opacity"
             [disabled]="form.invalid || isSaving()"
+            [appStableWidth]="isSaving()"
             [style.opacity]="form.invalid || isSaving() ? '0.6' : '1'"
             data-llm-action="guardar-egreso-cuadratura"
             aria-label="Guardar egreso en caja"
             (click)="onSubmit()"
           >
             @if (isSaving()) {
-              <app-icon name="loader" [size]="14" />
+              <app-icon name="loader-circle" [size]="14" class="animate-spin" />
               Guardando...
             } @else {
               <app-icon name="check" [size]="14" />

@@ -7,6 +7,8 @@ export interface EnrollmentSummary {
   id: number;
   number: string | null;
   courseName: string;
+  /** Sede de esta matrícula — usado para acotar instructores por sede al cambiar de matrícula */
+  branchId: number | null;
   licenseGroup: 'class_b' | 'professional';
   promotionCourseId: number | null;
   createdAt: string;
@@ -28,6 +30,8 @@ export interface AlumnoDetalleUI {
   userId: number;
   /** PK de la matrícula activa — requerido para insertar en absence_evidence */
   enrollmentId: number | null;
+  /** Sede de la matrícula más reciente — usado para acotar instructores por sede */
+  branchId: number | null;
   /** Todas las matrículas del alumno, ordenadas de más reciente a más antigua */
   enrollments: EnrollmentSummary[];
   /** Nombre completo para mostrar */

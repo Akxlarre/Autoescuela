@@ -14,6 +14,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 const SPEC_COLORS: Record<string, string> = {
   A2: '#3b82f6',
@@ -32,6 +33,7 @@ const SPEC_COLORS: Record<string, string> = {
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -220,8 +222,9 @@ const SPEC_COLORS: Record<string, string> = {
           Cancelar
         </button>
         <button
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="facade.isSubmitting()"
+          [appStableWidth]="facade.isSubmitting()"
           (click)="submit()"
           data-llm-action="confirmar-editar-relator"
           aria-label="Guardar cambios del relator"
