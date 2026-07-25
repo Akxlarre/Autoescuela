@@ -21,6 +21,7 @@
 - Nombres en kebab-case igual que en lucide.dev (ej: `"trending-up"`, `"trash-2"`)
 - Para agregar un ícono nuevo: importarlo de `'lucide-angular'` y registrarlo en `provideIcons()` en `app.config.ts`
 - **NUNCA** insertar `<svg>` inline ad-hoc — siempre pasar por `<app-icon>`
+- **Spinner de carga (OBLIGATORIO):** `name="loader-circle"` + `class="animate-spin"` — es el único ícono de carga permitido (anillo con un segmento incompleto, fluido al rotar). **PROHIBIDO** `name="loader"` (rayos radiales tipo "estallido", poco legible en tamaños pequeños) — ni siquiera está registrado en `provideIcons()` (fix-065). `name="loader-2"` es un alias visualmente idéntico a `loader-circle` (Lucide lo renombró) — no hace falta migrar los usos existentes, pero usa `loader-circle` en código nuevo.
 
 ## Regla 3-2-1 de Marca (Brand Color Discipline)
 

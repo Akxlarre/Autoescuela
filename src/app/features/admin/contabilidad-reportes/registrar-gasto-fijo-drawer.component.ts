@@ -12,6 +12,7 @@ import {
   GASTO_FIJO_CATEGORIES,
   type RegistrarGastoFijoPayload,
 } from '@core/models/ui/reportes-contables.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * RegistrarGastoFijoDrawerComponent — Formulario Smart de gasto fijo.
@@ -30,6 +31,7 @@ import {
     DrawerContentLoaderComponent,
     DrawerFormComponent,
     SkeletonBlockComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -177,13 +179,14 @@ import {
         </button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2 cursor-pointer"
+          class="btn-primary flex items-center justify-center gap-2 cursor-pointer"
           [disabled]="form.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           data-llm-action="guardar-gasto-fijo"
           (click)="onGuardar()"
         >
           @if (isSaving()) {
-            <app-icon name="loader" [size]="16" class="animate-spin" />
+            <app-icon name="loader-circle" [size]="16" class="animate-spin" />
             Guardando...
           } @else {
             <app-icon name="save" [size]="16" />

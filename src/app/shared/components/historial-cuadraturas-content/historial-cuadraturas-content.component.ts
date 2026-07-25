@@ -234,7 +234,7 @@ function formatCLP(value: number): string {
       >
         <!-- Cabecera de días (LUN–DOM) | DESKTOP SOLO -->
         <div
-          class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/50 border-b border-border-muted/50"
+          class="hidden lg:grid grid-cols-7 gap-px bg-border-muted/50 border-b border-border-muted/50"
         >
           @for (dia of diasSemana; track dia) {
             <div
@@ -246,7 +246,7 @@ function formatCLP(value: number): string {
         </div>
 
         <!-- Grid de celdas | DESKTOP SOLO -->
-        <div class="hidden lg:grid grid-cols-7 gap-[1px] bg-border-muted/30 flex-1">
+        <div class="hidden lg:grid grid-cols-7 gap-px bg-border-muted/30 flex-1">
           @if (isLoading()) {
             @for (i of skeletonCells; track i) {
               <div class="cal-cell bg-elevated p-2 flex flex-col justify-between">
@@ -387,13 +387,13 @@ function formatCLP(value: number): string {
                         </div>
                         <div class="flex items-center gap-1 text-text-muted text-xs">
                           <app-icon name="user" [size]="10" />
-                          <span class="truncate max-w-[120px] lg:max-w-none">{{
+                          <span class="truncate max-w-30 lg:max-w-none">{{
                             cierre.cajero
                           }}</span>
                         </div>
                       } @else if (celda.isToday) {
                         <div class="flex items-center gap-1.5 mb-1 text-brand">
-                          <app-icon name="loader" [size]="14" class="animate-spin" />
+                          <app-icon name="loader-circle" [size]="14" class="animate-spin" />
                           <span class="text-[13px] font-bold">Sesión en curso</span>
                         </div>
                         <span class="text-text-muted text-2xs font-semibold"
@@ -434,7 +434,7 @@ function formatCLP(value: number): string {
                   <app-icon name="calendar-x" [size]="20" class="opacity-50" />
                 </div>
                 <h3 class="text-sm font-bold text-text-primary mb-1">Sin Actividad</h3>
-                <p class="text-xs max-w-[200px]">
+                <p class="text-xs max-w-50">
                   No existen cierres ni registros arqueados en este mes.
                 </p>
               </div>

@@ -68,7 +68,12 @@ import {
             class="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl"
             style="background: color-mix(in srgb, var(--bg-surface) 55%, transparent); backdrop-filter: blur(1px);"
           >
-            <app-icon name="loader" class="animate-spin" [size]="32" color="var(--ds-brand)" />
+            <app-icon
+              name="loader-circle"
+              class="animate-spin"
+              [size]="32"
+              color="var(--ds-brand)"
+            />
           </div>
         }
 

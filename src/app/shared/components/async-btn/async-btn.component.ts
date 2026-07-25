@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * AsyncBtnComponent — Botón primario con estados loading / success / error integrados.
@@ -33,15 +34,16 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
 @Component({
   selector: 'app-async-btn',
   standalone: true,
-  imports: [IconComponent],
+  imports: [IconComponent, StableWidthDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
       #btn
       type="button"
       [disabled]="isDisabledOrLoading()"
+      [appStableWidth]="activeState() !== 'idle'"
       class="cursor-pointer px-8 py-2.5 text-sm font-semibold rounded-lg shadow-sm
-             flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
+             flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
              transition-colors duration-200"
       [class.opacity-50]="isDisabledOrLoading() && !loading()"
       [style.background]="btnBg()"
@@ -49,7 +51,7 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
     >
       @switch (activeState()) {
         @case ('loading') {
-          <app-icon name="loader" [size]="14" class="animate-spin" aria-hidden="true" />
+          <app-icon name="loader-circle" [size]="14" class="animate-spin" aria-hidden="true" />
           <span>{{ loadingLabel() }}</span>
         }
         @case ('success') {

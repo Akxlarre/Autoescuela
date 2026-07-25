@@ -11,11 +11,13 @@ const TOTAL = EPQ_TOTAL;
 const PAGE_SIZE = EPQ_PAGE_SIZE;
 const TOTAL_PAGES = EPQ_TOTAL_PAGES;
 
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
+
 @Component({
   selector: 'app-psych-test',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, StableWidthDirective],
   template: `
     <div class="space-y-6">
       <!-- Header -->
@@ -124,8 +126,9 @@ const TOTAL_PAGES = EPQ_TOTAL_PAGES;
         @if (isLastPage()) {
           <button
             type="button"
-            class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            class="btn-primary px-6 py-2.5 rounded-lg font-medium text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             [disabled]="!pageComplete() || loading()"
+            [appStableWidth]="loading()"
             data-llm-action="psych-test-submit"
             (click)="onSubmit()"
           >

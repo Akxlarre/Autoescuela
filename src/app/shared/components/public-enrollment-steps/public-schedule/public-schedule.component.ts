@@ -4,12 +4,13 @@ import { SelectModule } from 'primeng/select';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { ScheduleGridComponent } from '@shared/components/schedule-grid/schedule-grid.component';
 import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assignment.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-public-schedule',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, FormsModule, SelectModule, ScheduleGridComponent],
+  imports: [IconComponent, FormsModule, SelectModule, ScheduleGridComponent, StableWidthDirective],
   styles: [
     `
       /* Estilos para el p-select para igualar los inputs premium de la UI */
@@ -168,7 +169,7 @@ import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assign
           style="background: var(--bg-surface); border: 1px dashed var(--border-default);"
         >
           <app-icon
-            name="loader"
+            name="loader-circle"
             class="animate-spin mb-3"
             [size]="32"
             color="var(--text-secondary)"
@@ -212,13 +213,14 @@ import type { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assign
         </button>
         <button
           type="button"
-          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2"
+          class="btn-primary px-7 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2"
           [disabled]="!selectionComplete() || loading()"
+          [appStableWidth]="loading()"
           data-llm-action="confirm-schedule-selection"
           (click)="onNext()"
         >
           @if (loading()) {
-            <app-icon name="loader" [size]="16" class="animate-spin" />
+            <app-icon name="loader-circle" [size]="16" class="animate-spin" />
             Confirmando...
           } @else {
             Confirmar horario

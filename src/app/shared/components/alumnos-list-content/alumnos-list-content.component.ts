@@ -32,6 +32,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import type {
   SectionHeroAction,
   SectionHeroChip,
@@ -88,6 +89,7 @@ interface ExpedienteStatus {
     AnimateInDirective,
     CardHoverDirective,
     SectionHeroComponent,
+    StableWidthDirective,
   ],
   template: `
     <div
@@ -175,8 +177,9 @@ interface ExpedienteStatus {
           <div class="relative ml-auto">
             <button
               type="button"
-              class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60"
+              class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
               [disabled]="isExporting()"
+              [appStableWidth]="isExporting()"
               (click)="exportMenuOpen.set(!exportMenuOpen())"
               data-llm-action="open-export-menu"
             >
@@ -230,6 +233,9 @@ interface ExpedienteStatus {
                 <app-skeleton-block variant="text" width="9%" height="11px" />
                 <app-skeleton-block variant="text" width="9%" height="11px" />
                 <app-skeleton-block variant="text" width="9%" height="11px" />
+                @if (showSedeColumn()) {
+                  <app-skeleton-block variant="text" width="9%" height="11px" />
+                }
                 <app-skeleton-block variant="text" width="11%" height="11px" />
                 <app-skeleton-block variant="text" width="7%" height="11px" />
                 <app-skeleton-block variant="text" width="9%" height="11px" />
@@ -247,6 +253,9 @@ interface ExpedienteStatus {
                   <app-skeleton-block variant="text" width="9%" height="12px" />
                   <app-skeleton-block variant="text" width="9%" height="12px" />
                   <app-skeleton-block variant="rect" width="64px" height="20px" />
+                  @if (showSedeColumn()) {
+                    <app-skeleton-block variant="text" width="9%" height="12px" />
+                  }
                   <app-skeleton-block variant="text" width="11%" height="12px" />
                   <app-skeleton-block variant="rect" width="56px" height="20px" />
                   <app-skeleton-block variant="rect" width="72px" height="20px" />
@@ -360,6 +369,9 @@ interface ExpedienteStatus {
                     <th>RUT</th>
                     <th>Nº Exp.</th>
                     <th>Curso</th>
+                    @if (showSedeColumn()) {
+                      <th>Sede</th>
+                    }
                     <th>Fecha Ingreso</th>
                     <th>Estado</th>
                     <th>Expediente</th>
@@ -410,6 +422,10 @@ interface ExpedienteStatus {
                         }
                       </div>
                     </td>
+                    @if (showSedeColumn()) {
+                      <!-- Sede -->
+                      <td class="text-xs text-text-secondary">{{ alumno.sucursal }}</td>
+                    }
                     <!-- Fecha Ingreso -->
                     <td class="text-xs text-text-secondary">{{ alumno.fechaIngreso }}</td>
                     <!-- Estado -->
@@ -494,7 +510,7 @@ interface ExpedienteStatus {
                 </ng-template>
                 <ng-template pTemplate="emptymessage">
                   <tr>
-                    <td colspan="8" class="p-0">
+                    <td [attr.colspan]="showSedeColumn() ? 9 : 8" class="p-0">
                       <app-empty-state
                         icon="search"
                         message="No se encontraron alumnos"
@@ -739,6 +755,7 @@ export class AlumnosListContentComponent implements AfterViewInit {
   readonly trashView = input(false);
   readonly basePath = input<string>('/app/secretaria');
   readonly alumnosPorVencer = input<number>(0);
+  readonly showSedeColumn = input(false);
 
   // ── Outputs ─────────────────────────────────────────────────────────────
   readonly refreshRequested = output<void>();

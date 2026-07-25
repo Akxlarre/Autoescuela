@@ -80,7 +80,7 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
         requiredCount,
         currentCount: slots.length,
         // Mismo tope que el wizard admin/secretaria (vs 1 en el flujo público).
-        maxClassesPerDay: 3,
+        maxClassesPerDay: 2,
         isComplete: slots.length === requiredCount,
       },
       promotionId: null,

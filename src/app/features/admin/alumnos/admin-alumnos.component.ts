@@ -29,6 +29,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
       [trashView]="facade.trashView()"
       [alumnosPorVencer]="facade.alumnosPorVencer().length"
       [isExporting]="facade.isExporting()"
+      [showSedeColumn]="branchFacade.selectedBranchId() === null"
       (refreshRequested)="facade.initialize()"
       (archivarRequested)="requestArchivar($event)"
       (trashViewToggled)="onTrashViewToggled()"
@@ -50,7 +51,7 @@ import type { AlumnoTableRow } from '@core/models/ui/alumno-table-row.model';
 })
 export class AdminAlumnosComponent implements OnInit {
   protected readonly facade = inject(AdminAlumnosFacade);
-  private readonly branchFacade = inject(BranchFacade);
+  protected readonly branchFacade = inject(BranchFacade);
 
   // ── Estado del modal de borrado ──────────────────────────────────────────
   protected readonly deleteTarget = signal<AlumnoTableRow | null>(null);

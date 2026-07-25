@@ -19,6 +19,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { SelectModule } from 'primeng/select';
@@ -57,6 +58,7 @@ const POR_PAGINA = 5;
     BadgeComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
+    StableWidthDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -556,11 +558,12 @@ const POR_PAGINA = 5;
           <button
             class="btn-primary"
             [disabled]="!reportStartDate || !reportEndDate || facade.isGeneratingReport()"
+            [appStableWidth]="facade.isGeneratingReport()"
             (click)="onGenerarReporte()"
             data-llm-action="generate-payment-report"
           >
             @if (facade.isGeneratingReport()) {
-              <app-icon name="loader" [size]="14" class="animate-spin" />
+              <app-icon name="loader-circle" [size]="14" class="animate-spin" />
               Generando...
             } @else {
               <app-icon name="download" [size]="14" />

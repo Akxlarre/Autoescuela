@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { StudentSummaryBanner, TimeSlot } from '@core/models/ui/enrollment-assignment.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 export interface PublicPaymentSummary {
   studentSummary: StudentSummaryBanner;
@@ -17,7 +18,7 @@ export interface PublicPaymentSummary {
   selector: 'app-public-payment',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent],
+  imports: [IconComponent, StableWidthDirective],
   template: `
     <div class="space-y-5">
       <div>
@@ -161,8 +162,9 @@ export interface PublicPaymentSummary {
         </button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm"
+          class="btn-primary flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm"
           [disabled]="summary().isSubmitting"
+          [appStableWidth]="summary().isSubmitting"
           [style.opacity]="summary().isSubmitting ? '0.7' : '1'"
           data-llm-action="proceed-to-payment"
           data-llm-description="Proceed to Webpay payment for driving school enrollment"

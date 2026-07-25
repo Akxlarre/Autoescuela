@@ -11,6 +11,7 @@ import {
   EvaluationChecklistItem,
   EvaluationFormData,
 } from '@core/models/ui/instructor-portal.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-instructor-evaluacion',
@@ -22,6 +23,7 @@ import {
     EmptyStateComponent,
     SignaturePadComponent,
     EvaluationChecklistComponent,
+    StableWidthDirective,
   ],
   template: `
     <div class="px-6 py-6 pb-20 max-w-4xl mx-auto space-y-6">
@@ -48,18 +50,10 @@ import {
 
       @if (clasesFacade.isLoading()) {
         <div class="flex justify-center p-12">
-          <app-icon
-            name="loader-2"
-            [size]="32"
-            
-            class="animate-spin text-brand"
-          />
+          <app-icon name="loader-2" [size]="32" class="animate-spin text-brand" />
         </div>
       } @else if (clasesFacade.error()) {
-        <div
-          class="card p-4 flex items-start gap-3 bg-error-subtle text-error"
-          
-        >
+        <div class="card p-4 flex items-start gap-3 bg-error-subtle text-error">
           <app-icon name="alert-circle" [size]="20" class="mt-0.5 shrink-0" />
           <p class="text-sm">{{ clasesFacade.error() }}</p>
         </div>
@@ -109,7 +103,7 @@ import {
                 <!-- Nota -->
                 <div>
                   <h3
-                    class="text-base font-semibold text-text-primary mb-1 flex items-center gap-2"
+                    class="text-base font-semibold mb-1 flex items-center gap-2"
                   >
                     <app-icon name="award" [size]="18" class="text-warning" />
                     Nota Global
@@ -135,9 +129,7 @@ import {
                     }
                   </div>
                   @if (evalForm.get('grade')?.invalid && evalForm.get('grade')?.touched) {
-                    <p class="text-xs mt-2 text-error" >
-                      La nota es obligatoria.
-                    </p>
+                    <p class="text-xs mt-2 text-error">La nota es obligatoria.</p>
                   }
                 </div>
 
@@ -193,6 +185,7 @@ import {
                   type="submit"
                   class="btn-primary"
                   [disabled]="evalForm.invalid || isSubmitting()"
+                  [appStableWidth]="isSubmitting()"
                   data-llm-action="save-evaluation"
                 >
                   @if (!isSubmitting()) {

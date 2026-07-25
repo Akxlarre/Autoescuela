@@ -283,7 +283,7 @@
           @if (selectedCategory()) {
             @if (data().courses.length === 0) {
               <div class="flex items-center justify-center gap-2 py-6 text-text-muted">
-                <app-icon name="loader" [size]="16" />
+                <app-icon name="loader-circle" [size]="16" class="animate-spin" />
                 <span class="text-sm">Cargando cursos disponibles...</span>
               </div>
             } @else if (filteredCourses().length === 0) {

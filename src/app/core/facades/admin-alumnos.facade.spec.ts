@@ -196,6 +196,48 @@ describe('AdminAlumnosFacade', () => {
       expect(facade.alumnos().length).toBe(1);
       expect(facade.alumnos()[0].id).toBe('30');
     });
+
+    it('sucursal (fix-064) mapea desde users.branches.name, no desde branch_id', async () => {
+      mockStudents([
+        makeStudent({
+          id: 40,
+          users: makeUser({ branch_id: 2, branches: { name: 'Conductores Chillán' } }),
+        }),
+      ]);
+
+      await facade.initialize();
+
+      expect(facade.alumnos()[0].sucursal).toBe('Conductores Chillán');
+    });
+
+    it('sucursal (fix-064) cae a "—" si no hay branches asociado', async () => {
+      mockStudents([makeStudent({ id: 41, users: makeUser({ branch_id: null, branches: null }) })]);
+
+      await facade.initialize();
+
+      expect(facade.alumnos()[0].sucursal).toBe('—');
+    });
+
+    it('excluye alumnos cuya única matrícula Clase B está en estado draft (fix-066)', async () => {
+      mockStudents([
+        makeStudent({
+          id: 50,
+          users: makeUser({ rut: '50-0' }),
+          enrollments: [makeEnrollment({ status: 'draft', license_group: 'class_b' })],
+        }),
+        makeStudent({
+          id: 51,
+          users: makeUser({ rut: '51-1' }),
+          enrollments: [makeEnrollment({ status: 'active', license_group: 'class_b' })],
+        }),
+      ]);
+
+      await facade.initialize();
+
+      const ids = facade.alumnos().map((a) => a.id);
+      expect(ids).not.toContain('50');
+      expect(ids).toContain('51');
+    });
   });
 
   // ─── fix-027: aislamiento por sede de la secretaria ────────────────────────

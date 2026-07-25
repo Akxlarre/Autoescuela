@@ -13,10 +13,17 @@ import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.compon
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documents.model';
 import type { DocumentType } from '@core/models/ui/enrollment-documents.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-documents-step',
-  imports: [FormsModule, IconComponent, AsyncBtnComponent, SkeletonBlockComponent],
+  imports: [
+    FormsModule,
+    IconComponent,
+    AsyncBtnComponent,
+    SkeletonBlockComponent,
+    StableWidthDirective,
+  ],
   templateUrl: './documents.component.html',
   styleUrl: './documents.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -7,6 +7,7 @@ import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facad
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 @Component({
   selector: 'app-admin-editar-perfil-drawer',
@@ -18,6 +19,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     SkeletonBlockComponent,
     DrawerContentLoaderComponent,
     DrawerFormComponent,
+    StableWidthDirective,
   ],
   template: `
     <app-drawer-form>
@@ -174,13 +176,14 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         </button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary flex items-center justify-center gap-2"
           [disabled]="form.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           (click)="onSubmit()"
           data-llm-action="guardar-perfil-alumno"
         >
           @if (isSaving()) {
-            <app-icon name="loader" [size]="14" class="animate-spin" />
+            <app-icon name="loader-circle" [size]="14" class="animate-spin" />
             Guardando...
           } @else {
             Guardar Cambios

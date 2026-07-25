@@ -265,9 +265,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                         <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
                           >Boleta {{ fila.nBoleta ?? 'S/N' }}</span
                         >
-                        <span class="text-sm font-bold text-text-primary">{{
-                          fila.glosa
-                        }}</span>
+                        <span class="text-sm font-bold text-text-primary">{{ fila.glosa }}</span>
                       </div>
                       <button
                         class="w-8 h-8 rounded-lg flex items-center justify-center text-text-muted hover:text-error transition-colors"
@@ -297,7 +295,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       </div>
                       <div class="flex flex-col items-end">
                         <span class="text-2xs text-text-muted uppercase">Total</span>
-                        <span class="text-base font-black text-text-primary">{{
+                        <span class="text-base font-black">{{
                           clp(fila.total)
                         }}</span>
                       </div>
@@ -679,7 +677,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
               (click)="onGuardarCierre()"
             >
               @if (isSaving()) {
-                <app-icon name="loader" [size]="18" class="animate-spin" />
+                <app-icon name="loader-circle" [size]="18" class="animate-spin" />
                 <span class="tracking-wide">Procesando...</span>
               } @else if (cajaYaCerrada()) {
                 <app-icon name="lock" [size]="18" />

@@ -25,6 +25,7 @@ import type {
   ServiciosEspecialesKpis,
   VentaServicio,
 } from '@core/models/ui/servicios-especiales.model';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 type ServicioColor = 'indigo' | 'orange' | 'green';
 
@@ -46,6 +47,7 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
     FormsModule,
     SelectModule,
     MenuModule,
+    StableWidthDirective,
   ],
   template: `
     <div class="bento-grid" appBentoGridLayout #bentoGrid>
@@ -154,8 +156,9 @@ type ServicioColor = 'indigo' | 'orange' | 'green';
               <div class="relative">
                 <button
                   type="button"
-                  class="btn-secondary h-10 px-4 flex items-center gap-2 disabled:opacity-60"
+                  class="btn-secondary h-10 px-4 flex items-center justify-center gap-2 disabled:opacity-60"
                   [disabled]="isExporting()"
+                  [appStableWidth]="isExporting()"
                   (click)="exportMenuOpen.set(!exportMenuOpen())"
                 >
                   @if (isExporting()) {

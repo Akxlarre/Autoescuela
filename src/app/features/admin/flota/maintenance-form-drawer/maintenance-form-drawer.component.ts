@@ -34,6 +34,7 @@ import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skelet
 import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-loader/drawer-content-loader.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 /**
  * MaintenanceFormDrawerComponent — Contenido dinámico para el LayoutDrawer.
@@ -52,6 +53,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
     InputNumberModule,
     MessageModule,
     TextareaModule,
+    StableWidthDirective,
     DateInputComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -216,8 +218,9 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
         <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
         <button
           type="button"
-          class="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           [disabled]="form.invalid || isSaving()"
+          [appStableWidth]="isSaving()"
           (click)="onSubmit()"
         >
           @if (isSaving()) {

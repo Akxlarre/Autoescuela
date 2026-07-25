@@ -14,13 +14,15 @@ import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service
   selector: 'app-skeleton-block',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[style.width]': 'width()',
+  },
   template: `
     <div
       #block
-      class="relative overflow-hidden rounded-md bg-subtle"
+      class="relative overflow-hidden rounded-md bg-subtle w-full"
       [class.!rounded-full]="variant() === 'circle'"
       [class.!rounded-sm]="variant() === 'text'"
-      [style.width]="width()"
       [style.height]="variant() === 'text' ? '1em' : height()"
       [style.border-radius]="borderRadius()"
       [style.background-color]="'var(--bg-subtle)'"

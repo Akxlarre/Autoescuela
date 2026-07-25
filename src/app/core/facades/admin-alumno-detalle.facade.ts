@@ -344,6 +344,7 @@ export class AdminAlumnoDetalleFacade {
     this._alumno.set({
       ...alumno,
       enrollmentId: id,
+      branchId: summary.branchId,
       enrollments: alumno.enrollments,
       matricula: summary.number ? `#${summary.number}` : '—',
       curso: summary.courseName,
@@ -370,7 +371,7 @@ export class AdminAlumnoDetalleFacade {
           id, status, created_at,
           users!inner(id, rut, first_names, paternal_last_name, maternal_last_name, email, phone),
           enrollments(
-            id, number, created_at, total_paid, pending_balance,
+            id, number, created_at, total_paid, pending_balance, branch_id,
             license_group, promotion_course_id, registration_channel,
             certificate_b_pdf_url, certificate_professional_pdf_url,
             license_initial_url, license_full_url,
@@ -417,6 +418,7 @@ export class AdminAlumnoDetalleFacade {
             id: e.id,
             number: e.number ?? null,
             courseName: cName ?? '—',
+            branchId: (e.branch_id as number | null) ?? null,
             licenseGroup: lg,
             promotionCourseId: (e.promotion_course_id as number | null) ?? null,
             createdAt: e.created_at,
@@ -460,6 +462,7 @@ export class AdminAlumnoDetalleFacade {
         id: s.id,
         userId: u.id,
         enrollmentId,
+        branchId: (lastEnrollment?.branch_id as number | null) ?? null,
         enrollments: summaries,
         nombre: `${u.first_names} ${u.paternal_last_name} ${u.maternal_last_name}`
           .replace(/\s+/g, ' ')
@@ -1095,9 +1098,11 @@ export class AdminAlumnoDetalleFacade {
     this._slotVehicleMap.clear();
   }
 
-  /** Carga todos los instructores activos con vehículo asignado. */
+  /** Carga los instructores activos con vehículo asignado de la sede del alumno. */
   async loadInstructores(): Promise<void> {
-    const { data } = await this.supabase.client
+    const branchId = this._alumno()?.branchId ?? null;
+
+    let query = this.supabase.client
       .from('instructors')
       .select(
         `id,
@@ -1106,6 +1111,12 @@ export class AdminAlumnoDetalleFacade {
       )
       .eq('active', true)
       .is('vehicle_assignments.end_date', null);
+
+    if (branchId !== null) {
+      query = query.eq('users.branch_id', branchId);
+    }
+
+    const { data } = await query;
 
     this._instructores.set(
       (data ?? []).map((row: any) => ({
@@ -1338,7 +1349,7 @@ export class AdminAlumnoDetalleFacade {
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date(ts));
   }
 
-  /** Returns dates where the student already has 3+ classes, excluding the one being rescheduled. */
+  /** Returns dates where the student already has 2+ classes, excluding the one being rescheduled. */
   private computeBlockedDates(): Set<string> {
     const excludeSessionId = this._reprogramarTarget()?.sessionId ?? null;
     const counts = new Map<string, number>();
@@ -1349,7 +1360,7 @@ export class AdminAlumnoDetalleFacade {
     }
     const blocked = new Set<string>();
     for (const [date, count] of counts) {
-      if (count >= 3) blocked.add(date);
+      if (count >= 2) blocked.add(date);
     }
     return blocked;
   }

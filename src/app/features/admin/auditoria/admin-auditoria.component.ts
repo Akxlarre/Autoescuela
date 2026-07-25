@@ -20,6 +20,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { MODULE_OPTIONS } from '@core/models/ui/audit-log-row.model';
 import type { AuditLogRow } from '@core/models/ui/audit-log-row.model';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 const ACTION_OPTIONS = [
   { label: 'Crear', value: 'Crear' },
@@ -41,6 +42,7 @@ const ACTION_OPTIONS = [
     BentoRevealDirective,
     CardHoverDirective,
     DateInputComponent,
+    StableWidthDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
@@ -138,8 +140,9 @@ const ACTION_OPTIONS = [
           <div class="relative">
             <button
               type="button"
-              class="btn-secondary flex items-center gap-2 text-sm disabled:opacity-60"
+              class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60"
               [disabled]="facade.isExporting()"
+              [appStableWidth]="facade.isExporting()"
               (click)="exportMenuOpen.set(!exportMenuOpen())"
               data-llm-action="open-export-menu-auditoria"
             >

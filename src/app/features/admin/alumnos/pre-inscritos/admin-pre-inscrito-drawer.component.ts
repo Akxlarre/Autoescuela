@@ -25,6 +25,7 @@ import { DrawerContentLoaderComponent } from '@shared/components/drawer-content-
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 import type {
   EvaluarTestPayload,
   CompletarMatriculaPayload,
@@ -49,6 +50,7 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
     DrawerContentLoaderComponent,
     DrawerFormComponent,
     DateInputComponent,
+    StableWidthDirective,
   ],
   template: `
     @if (facade.selected(); as p) {
@@ -542,8 +544,9 @@ type DrawerTab = 'datos' | 'test' | 'matricula';
                       } @else {
                         <button
                           type="button"
-                          class="btn-primary text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          class="btn-primary text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           [disabled]="isGeneratingContract()"
+                          [appStableWidth]="isGeneratingContract()"
                           data-llm-action="generate-contract-pdf"
                           (click)="generateContract()"
                         >

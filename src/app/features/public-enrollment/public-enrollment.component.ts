@@ -48,6 +48,7 @@ import type { EnrollmentDocumentsData } from '@core/models/ui/enrollment-documen
 import type { EnrollmentContractData } from '@core/models/ui/enrollment-contract.model';
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
 import type { PublicFlowType } from '@core/facades/public-enrollment.facade';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 const DEFAULT_PERSONAL_DATA: EnrollmentPersonalData = {
   rut: '',
@@ -90,6 +91,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
     PublicPaymentComponent,
     PsychTestComponent,
     PublicConfirmationComponent,
+    StableWidthDirective,
   ],
   template: `
     @if (resolving()) {
@@ -371,6 +373,7 @@ const EMPTY_SUMMARY = { initials: '', fullName: '', courseLabel: '' };
                   type="button"
                   class="btn-secondary flex items-center justify-center gap-2 px-7 py-2.5 rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   [disabled]="facade.isSubmitting()"
+                  [appStableWidth]="facade.isSubmitting()"
                   data-llm-action="skip-psych-test"
                   (click)="onSkipPsychTest()"
                 >

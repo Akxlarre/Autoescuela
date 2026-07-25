@@ -135,7 +135,16 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
       const branchId = this.branchFacade.selectedBranchId();
       if (branchId === null) return; // "Todas las escuelas" no aplica al wizard
 
-      if (untracked(() => this._viewMode()) !== 'wizard') return;
+      const currentView = untracked(() => this._viewMode());
+
+      // Sede elegida desde el topbar mientras se esperaba la elección en branch-gate:
+      // reevaluar la gate (mismo camino que onBranchSelectedFromGate).
+      if (currentView === 'branch-gate') {
+        void this.initWizard();
+        return;
+      }
+
+      if (currentView !== 'wizard') return;
 
       this._step1Form.set(DEFAULT_PERSONAL_DATA);
       void this.enrollment.loadCourses(branchId);
@@ -249,8 +258,8 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
         selectedSlotIds: slotIds,
         requiredCount,
         currentCount: slotIds.length,
-        // Admin/secretaria puede agendar hasta 3 clases por día (vs 1 en flujo público).
-        maxClassesPerDay: 3,
+        // Admin/secretaria puede agendar hasta 2 clases por día (vs 1 en flujo público).
+        maxClassesPerDay: 2,
         isComplete: slotIds.length >= requiredCount,
       },
       promotionId: this.enrollment.selectedPromotionCourseId(),

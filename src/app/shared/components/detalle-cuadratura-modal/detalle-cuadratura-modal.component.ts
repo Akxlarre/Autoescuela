@@ -3,6 +3,7 @@ import { IconComponent } from '@shared/components/icon/icon.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { HistorialCuadraturasFacade } from '@core/facades/historial-cuadraturas.facade';
 import { formatCLP } from '@core/utils/date.utils';
+import { StableWidthDirective } from '@core/directives/stable-width.directive';
 
 // ─── Tipos internos ───────────────────────────────────────────────────────────
 
@@ -19,16 +20,14 @@ interface DenominacionRow {
   selector: 'app-detalle-cuadratura-modal',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [IconComponent, KpiCardVariantComponent],
+  imports: [IconComponent, KpiCardVariantComponent, StableWidthDirective],
   template: `
     <div class="flex flex-col gap-6 p-1">
       @if (facade.cierreSeleccionado(); as d) {
         <!-- 1. Header Information (Non-numeric info in Bento-style cards) -->
         <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
           <div class="card p-3 flex flex-col gap-1 bg-elevated">
-            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
-              >Cajero</span
-            >
+            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider">Cajero</span>
             <span class="text-sm font-bold text-text-primary">{{ d.cajero }}</span>
           </div>
           <div class="card p-3 flex flex-col gap-1 bg-elevated">
@@ -42,9 +41,7 @@ interface DenominacionRow {
             [class.border-success]="d.estadoDiferencia === 'balanced'"
             [class.border-error]="d.estadoDiferencia === 'shortage'"
           >
-            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider"
-              >Estado</span
-            >
+            <span class="text-2xs font-bold text-text-muted uppercase tracking-wider">Estado</span>
             <div class="flex items-center gap-1.5">
               <div
                 class="w-1.5 h-1.5 rounded-full"
@@ -194,7 +191,7 @@ interface DenominacionRow {
                 <app-icon name="coins" [size]="13" class="text-text-muted" />
               </div>
 
-              <div class="divide-y divide-border-muted/30 max-h-[340px] overflow-y-auto">
+              <div class="divide-y divide-border-muted/30 max-h-85 overflow-y-auto">
                 @for (den of denominaciones(); track den.label) {
                   <div
                     class="px-4 py-2.5 flex items-center justify-between hover:bg-subtle/50 transition-colors"
@@ -215,10 +212,8 @@ interface DenominacionRow {
               <div
                 class="p-4 bg-elevated border-t border-border-muted flex justify-between items-center mt-auto"
               >
-                <span class="text-2xs font-black text-text-primary uppercase"
-                  >Total Efectivo</span
-                >
-                <span class="text-base font-black text-brand tabular-nums tracking-tight">{{
+                <span class="text-2xs font-black text-text-primary uppercase">Total Efectivo</span>
+                <span class="text-base font-black tabular-nums tracking-tight">{{
                   formatAmt(d.saldoFisico)
                 }}</span>
               </div>
@@ -234,11 +229,12 @@ interface DenominacionRow {
             <button
               class="w-full sm:w-auto flex items-center justify-center gap-2 text-xs font-bold px-6 py-3.5 rounded-xl transition-all cursor-pointer border border-border-muted bg-surface text-text-secondary hover:bg-subtle"
               [disabled]="facade.isExporting()"
+              [appStableWidth]="facade.isExporting()"
               (click)="exportMenuOpen.set(!exportMenuOpen())"
               data-llm-action="exportar-detalle-cuadratura"
             >
               @if (facade.isExporting()) {
-                <app-icon name="loader" [size]="15" class="animate-spin" />
+                <app-icon name="loader-circle" [size]="15" class="animate-spin" />
                 Generando...
               } @else {
                 <app-icon name="download" [size]="15" />
