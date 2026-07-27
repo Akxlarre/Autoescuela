@@ -20,8 +20,8 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div class="flex items-center justify-between mb-4">
       <div class="flex items-center gap-2">
         <app-icon name="bar-chart-2" [size]="18" color="var(--text-primary)" />
-        <h2 class="text-base font-semibold text-text-primary">
-          Rentabilidad Estimada por Tipo de Curso (RF-040)
+        <h2 class="text-base font-semibold">
+          Rentabilidad Estimada por Tipo de Curso
         </h2>
       </div>
       <span class="text-sm font-medium text-brand">
@@ -124,7 +124,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         style="border-radius: 0 0 6px 6px"
       >
         <div
-          class="flex flex-col lg:grid lg:contents gap-3"
+          class="flex flex-col lg:grid gap-3"
           style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;"
         >
           <div class="flex items-center justify-between lg:block">
@@ -189,7 +189,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 export class RentabilidadCursosComponent {
   protected readonly formatCLP = formatCLP;
 
-  // ── Mock data (RF-040) ─────────────────────────────────────────────────────
+  // ── Mock data ─────────────────────────────────────────────────────
   protected readonly datosRentabilidad = signal<RentabilidadCurso[]>([
     {
       tipoCurso: 'Clase B',

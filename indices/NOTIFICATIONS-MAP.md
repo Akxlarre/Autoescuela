@@ -7,7 +7,7 @@
 > `CertificacionProfesionalFacade` (A3) y la EF `public-enrollment` (B1).
 > **Actualizado 2026-07-10 (Spec 0025 — Ola 2 implementada):** además producen `EnrollmentPaymentFacade`,
 > `PagosFacade`, `CursosSingularesFacade`, `ServiciosEspecialesFacade` (A4), `EvaluacionesProfesionalFacade` (A5),
-> `AnticiosFacade` (A6), `LiquidacionesFacade` (A7) y las EF `student-payment` (B2) y `activate-student-account` (B3).
+> `AnticiposFacade` (A6), `LiquidacionesFacade` (A7) y las EF `student-payment` (B2) y `activate-student-account` (B3).
 > **Actualizado 2026-07-10 (Spec 0026 — Ola 3 implementada):** los últimos 3 productores (C1, C2, D1) ya no
 > dependen de código Angular — son triggers SQL `SECURITY DEFINER` en `class_b_sessions` y `tasks`/`task_replies`
 > (`notify_class_b_completed`, `notify_deposit_reminder`, `notify_task_reply`, `notify_task_completed`).
@@ -51,7 +51,7 @@ Mismo patrón que `TasksFacade.createTask()`: insert fire-and-forget tras la mut
 | A3 | ✅ **Certificado listo** — implementado Spec 0024 (solo generación, no envío por email) | `CertificacionClaseBFacade` / `CertificacionProfesionalFacade` · `notifyCertificateReady()` | Alumno ("tu certificado está disponible") | `certificate` | RF-025 (cercano) | 🔥 Alto |
 | A4 | ✅ **Pago presencial registrado** — implementado Spec 0025 | `EnrollmentPaymentFacade.recordPayment()` · `PagosFacade.registrarNuevoPago()` · `CursosSingularesFacade.marcarEnrollmentPagado()` · `ServiciosEspecialesFacade.registrarCobro()` | Alumno (comprobante in-app). ⚠️ Al admin NO (ruido; dashboard ya tiene F-1) | `payment` | RF-018 (conexo) | Alto |
 | A5 | ✅ **Notas confirmadas** (profesional) — implementado Spec 0025 | `EvaluacionesProfesionalFacade.confirmarNotas()` / `notifyGradesConfirmed()` | Cada alumno del curso; severidad distinta si reprobó (promedio < 75) | `professional_session` | — | Medio-alto |
-| A6 | ✅ **Anticipo registrado** — implementado Spec 0025 | `AnticiosFacade.registrarAnticipo()` (nombre real de la clase, typo pre-existente) | Instructor | `payment` | — | Medio |
+| A6 | ✅ **Anticipo registrado** — implementado Spec 0025 | `AnticiposFacade.registrarAnticipo()` (nombre real de la clase, typo pre-existente) | Instructor | `payment` | — | Medio |
 | A7 | ✅ **Liquidación pagada** — implementado Spec 0025 | `LiquidacionesFacade.registrarPago()` | Instructor (vía `LiquidacionRow.userId`, sin query extra) | `payment` | — | Medio |
 | A8 | **Documento subido a la ficha** | `DmsFacade.uploadStudentDocument()` | Alumno (confirmación de recepción) | `document` (nuevo) | RF-025 | Medio |
 | A9 | **Reasignación de ciclo teórico** | `CiclosTeoricosFacade` (override de ciclo) | Alumno movido | `class_b` | — | Medio |

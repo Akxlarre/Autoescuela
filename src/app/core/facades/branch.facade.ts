@@ -1,7 +1,15 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import type { BranchOption } from '@core/models/ui/branch.model';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+
+const SELECTED_BRANCH_STORAGE_KEY = 'autoescuela:selectedBranchId';
+
+interface PersistedBranch {
+  id: number;
+  name: string;
+}
 
 /**
  * BranchFacade — Fuente única de verdad para la sede activa en el panel admin.
@@ -21,12 +29,23 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
  */
 @Injectable({ providedIn: 'root' })
 export class BranchFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private readonly supabase = inject(SupabaseService);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private readonly supabase = inject(SupabaseService);
+  private readonly platformId = inject(PLATFORM_ID);
 
   // ── 1. ESTADO REACTIVO (Privado) ──────────────────────────────────────────
-  private readonly _branches = signal<BranchOption[]>([]);
-  private readonly _selectedBranchId = signal<number | null>(null);
+  /**
+   * Se inicializa con un "stub" de una sola sede leído de `localStorage` de
+   * forma síncrona (id + nombre), para que `selectedLabel` en
+   * `BranchSelectorComponent` encuentre un match desde el primer render y
+   * pinte el nombre real — sin fallback ni skeleton — mientras `loadBranches()`
+   * resuelve el fetch async. `loadBranches()` reemplaza este stub por la
+   * lista real y corrige/limpia la selección si la sede ya no existe.
+   */
+  private readonly _branches = signal<BranchOption[]>(this.seedBranchesFromPersisted());
+  private readonly _selectedBranchId = signal<number | null>(
+    this.readPersistedBranch()?.id ?? null,
+  );
   private readonly _isLoading = signal(false);
   private readonly _error = signal<string | null>(null);
   /**
@@ -95,10 +114,56 @@ private readonly supabase = inject(SupabaseService);
           hasProfessional: b.has_professional ?? false,
         })),
       );
+      this.validatePersistedBranch();
     } catch (err: any) {
       this._error.set(this.sanitizer.sanitize(err).message ?? 'Error al cargar sedes');
     } finally {
       this._isLoading.set(false);
+    }
+  }
+
+  /** Lee `{id, name}` de sede persistidos en `localStorage`, sin validar. */
+  private readPersistedBranch(): PersistedBranch | null {
+    if (!isPlatformBrowser(this.platformId)) return null;
+    const raw = localStorage.getItem(SELECTED_BRANCH_STORAGE_KEY);
+    if (raw === null) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (typeof parsed?.id === 'number' && typeof parsed?.name === 'string') {
+        return { id: parsed.id, name: parsed.name };
+      }
+    } catch {
+      // Valor corrupto o formato legacy (id numérico plano) — se descarta.
+    }
+    return null;
+  }
+
+  /**
+   * Sede persistida como "stub" de una sola entrada (id + nombre), para que
+   * `selectedLabel` (en `BranchSelectorComponent`) encuentre un match real
+   * desde el primer render, sin depender de `loadBranches()`.
+   */
+  private seedBranchesFromPersisted(): BranchOption[] {
+    const persisted = this.readPersistedBranch();
+    if (!persisted) return [];
+    return [{ id: persisted.id, name: persisted.name, slug: '', hasProfessional: false }];
+  }
+
+  /**
+   * Valida la sede persistida contra la lista real recién cargada de la BD.
+   * Si ya no existe (sede eliminada, o storage manipulado), limpia la
+   * selección y el `localStorage`.
+   */
+  private validatePersistedBranch(): void {
+    const persisted = this.readPersistedBranch();
+    if (!persisted) return;
+
+    const isValid = this._branches().some((b) => b.id === persisted.id);
+    if (!isValid) {
+      this._selectedBranchId.set(null);
+      if (isPlatformBrowser(this.platformId)) {
+        localStorage.removeItem(SELECTED_BRANCH_STORAGE_KEY);
+      }
     }
   }
 
@@ -108,11 +173,23 @@ private readonly supabase = inject(SupabaseService);
    */
   selectBranch(id: number | null): void {
     this._selectedBranchId.set(id);
+    this.persistSelectedBranch(id);
   }
 
   /** Vuelve a "Todas las escuelas" (quita el filtro de sede). */
   reset(): void {
     this._selectedBranchId.set(null);
+    this.persistSelectedBranch(null);
+  }
+
+  private persistSelectedBranch(id: number | null): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    if (id === null) {
+      localStorage.removeItem(SELECTED_BRANCH_STORAGE_KEY);
+      return;
+    }
+    const name = this._branches().find((b) => b.id === id)?.name ?? '';
+    localStorage.setItem(SELECTED_BRANCH_STORAGE_KEY, JSON.stringify({ id, name }));
   }
 
   /**

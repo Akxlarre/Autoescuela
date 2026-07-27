@@ -1,4 +1,4 @@
-/** UI model para una fila de la tabla Rentabilidad Estimada por Tipo de Curso (RF-040). */
+/** UI model para una fila de la tabla Rentabilidad Estimada por Tipo de Curso. */
 export interface RentabilidadCurso {
   tipoCurso: string;
   ingresos: number;

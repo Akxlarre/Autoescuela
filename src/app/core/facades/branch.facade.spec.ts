@@ -15,11 +15,14 @@ function buildSupabaseMock(response: { data: unknown; error: unknown }) {
   return { client: { from: vi.fn().mockReturnValue(builder) } };
 }
 
+const STORAGE_KEY = 'autoescuela:selectedBranchId';
+
 describe('BranchFacade', () => {
   let facade: BranchFacade;
   let supabaseMock: ReturnType<typeof buildSupabaseMock>;
 
   beforeEach(() => {
+    localStorage.clear();
     supabaseMock = buildSupabaseMock({ data: MOCK_BRANCHES, error: null });
 
     TestBed.configureTestingModule({
@@ -140,6 +143,86 @@ describe('BranchFacade', () => {
       facade.selectBranch(2);
       facade.reset();
       expect(facade.selectedBranchLabel()).toBe('Todas las escuelas');
+    });
+  });
+
+  describe('persistencia en localStorage (fix-068/fix-069 / H-026)', () => {
+    it('selectBranch() persiste {id, name}', async () => {
+      await facade.loadBranches();
+      facade.selectBranch(2);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual({
+        id: 2,
+        name: 'Sede Norte',
+      });
+    });
+
+    it('selectBranch(null) limpia la persistencia', () => {
+      facade.selectBranch(2);
+      facade.selectBranch(null);
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('reset() limpia la persistencia', () => {
+      facade.selectBranch(2);
+      facade.reset();
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('loadBranches() mantiene la sede persistida si sigue existiendo', async () => {
+      // El id se persiste ANTES de construir el facade (simula un F5 real) —
+      // reusar la instancia del beforeEach no sirve porque esta ya se
+      // construyó con localStorage vacío.
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: 2, name: 'Sede Norte' }));
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [BranchFacade, { provide: SupabaseService, useValue: supabaseMock }],
+      });
+      const freshFacade = TestBed.inject(BranchFacade);
+
+      await freshFacade.loadBranches();
+      expect(freshFacade.selectedBranchId()).toBe(2);
+      expect(freshFacade.branches()).toEqual(MOCK_BRANCHES);
+    });
+
+    it('loadBranches() ignora y limpia un id persistido que ya no existe entre las sedes', async () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: 999, name: 'Sede Fantasma' }));
+      await facade.loadBranches();
+      expect(facade.selectedBranchId()).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it('loadBranches() sin nada persistido mantiene "Todas las escuelas"', async () => {
+      await facade.loadBranches();
+      expect(facade.selectedBranchId()).toBeNull();
+    });
+
+    it('ignora un valor persistido en el formato legacy (id plano, sin JSON)', () => {
+      localStorage.setItem(STORAGE_KEY, '2');
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [BranchFacade, { provide: SupabaseService, useValue: supabaseMock }],
+      });
+      const freshFacade = TestBed.inject(BranchFacade);
+
+      expect(freshFacade.selectedBranchId()).toBeNull();
+    });
+
+    it('siembra branches() con un stub {id, name} de forma síncrona al construirse, antes de loadBranches() (evita flash de label incorrecto)', () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ id: 2, name: 'Sede Norte' }));
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [BranchFacade, { provide: SupabaseService, useValue: supabaseMock }],
+      });
+      const freshFacade = TestBed.inject(BranchFacade);
+
+      expect(freshFacade.selectedBranchId()).toBe(2);
+      expect(freshFacade.branches()).toEqual([
+        { id: 2, name: 'Sede Norte', slug: '', hasProfessional: false },
+      ]);
+      expect(freshFacade.selectedBranchLabel()).toBe('Sede Norte');
     });
   });
 });

@@ -111,7 +111,7 @@
 | `AdminHorariosFacade` | `features/admin/configuracion-horario` |
 | `AdminPreInscritosFacade` | `features/admin/alumnos/pre-inscritos`, `features/secretaria/alumnos-pre-inscritos` |
 | `AgendaFacade` | `features/admin/agenda`, `features/agenda`, `features/dashboard`, `features/secretaria/agenda`, `features/secretaria/dashboard` |
-| `AnticiosFacade` | `features/admin/contabilidad-anticipos` |
+| `AnticiposFacade` | `features/admin/contabilidad-anticipos` |
 | `ArchivoFacade` | `features/admin/profesional-archivo` |
 | `AsistenciaClaseBFacade` | `features/admin/asistencia`, `features/dashboard`, `features/secretaria/asistencia`, `features/secretaria/dashboard` |
 | `AsistenciaProfesionalFacade` | `features/admin/profesional-asistencia` |

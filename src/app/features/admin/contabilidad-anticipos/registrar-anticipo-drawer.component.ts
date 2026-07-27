@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
-import { AnticiosFacade } from '@core/facades/anticipos.facade';
+import { AnticiposFacade } from '@core/facades/anticipos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
@@ -145,7 +145,7 @@ const MOTIVO_OPTIONS = [
   `,
 })
 export class RegistrarAnticipoDrawerComponent {
-  protected readonly facade = inject(AnticiosFacade);
+  protected readonly facade = inject(AnticiposFacade);
   protected readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly fb = inject(FormBuilder);
 

@@ -1,9 +1,11 @@
 ﻿import { computed, inject, Injectable, signal } from '@angular/core';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { NotificationsFacade } from '@core/facades/notifications.facade';
 import { ToastService } from '@core/services/ui/toast.service';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
+import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import type {
   AnticipoCuentaCorriente,
   AnticipoHistorial,
@@ -23,7 +25,8 @@ const TIPO_LABELS: Record<string, string> = {
 
 export function tipoLabel(tipo: string | null): string {
   if (!tipo) return '—';
-  return TIPO_LABELS[tipo] ?? tipo;
+  const normalizado = tipo.trim().toLowerCase();
+  return TIPO_LABELS[normalizado] ?? tipo;
 }
 
 export function mapStatus(raw: string | null): AdvanceStatus {
@@ -34,10 +37,11 @@ export function mapStatus(raw: string | null): AdvanceStatus {
 // ─── Facade ───────────────────────────────────────────────────────────────────
 
 @Injectable({ providedIn: 'root' })
-export class AnticiosFacade {
+export class AnticiposFacade {
   private readonly sanitizer = inject(ErrorSanitizerService);
   private readonly supabase = inject(SupabaseService);
   private readonly auth = inject(AuthFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly notifications = inject(NotificationsFacade);
   private readonly toast = inject(ToastService);
 
@@ -49,6 +53,7 @@ export class AnticiosFacade {
   private readonly _isSaving = signal<boolean>(false);
   private readonly _error = signal<string | null>(null);
   private _initialized = false;
+  private _lastBranchId: number | null | undefined = undefined;
 
   // ── Estado público ────────────────────────────────────────────────────────
   readonly historial = this._historial.asReadonly();
@@ -76,13 +81,29 @@ export class AnticiosFacade {
     return { totalPendiente, instructoresConSaldo, totalHistorico, totalDescontado };
   });
 
+  /**
+   * Sede activa para el scope de queries (fix-071): admin respeta el selector
+   * del topbar; secretaria queda anclada a su sede (misconfig → ninguna fila).
+   */
+  private getActiveBranchId(): number | null {
+    const user = this.auth.currentUser();
+    return resolveBranchScope(
+      user?.role,
+      user?.branchId,
+      this.branchFacade.selectedBranchId(),
+      user?.canAccessBothBranches,
+    );
+  }
+
   // ── SWR Initialization ────────────────────────────────────────────────────
 
   async initialize(): Promise<void> {
-    if (this._initialized) {
+    const currentBranchId = this.getActiveBranchId();
+    if (this._initialized && currentBranchId === this._lastBranchId) {
       void this.refreshSilently();
       return;
     }
+    this._lastBranchId = currentBranchId;
     this._isLoading.set(true);
     this._error.set(null);
     try {
@@ -106,19 +127,26 @@ export class AnticiosFacade {
   // ── Fetch de datos ────────────────────────────────────────────────────────
 
   private async fetchData(): Promise<void> {
-    const [advancesRes, instructorsRes] = await Promise.all([
-      this.supabase.client
-        .from('instructor_advances')
-        .select(
-          'id, date, amount, reason, description, status, instructor_id, instructors!inner(id, type, users!inner(first_names, paternal_last_name))',
-        )
-        .order('date', { ascending: false }),
-      this.supabase.client
-        .from('instructors')
-        .select('id, type, users!inner(first_names, paternal_last_name)')
-        .eq('active', true)
-        .order('users(paternal_last_name)', { ascending: true }),
-    ]);
+    const branchId = this.getActiveBranchId();
+
+    let advancesQuery = this.supabase.client
+      .from('instructor_advances')
+      .select(
+        'id, date, amount, reason, description, status, instructor_id, instructors!inner(id, type, users!inner(first_names, paternal_last_name, branch_id))',
+      )
+      .order('date', { ascending: false });
+    let instructorsQuery = this.supabase.client
+      .from('instructors')
+      .select('id, type, users!inner(first_names, paternal_last_name, branch_id)')
+      .eq('active', true)
+      .order('users(paternal_last_name)', { ascending: true });
+
+    if (branchId !== null) {
+      advancesQuery = advancesQuery.eq('instructors.users.branch_id', branchId);
+      instructorsQuery = instructorsQuery.eq('users.branch_id', branchId);
+    }
+
+    const [advancesRes, instructorsRes] = await Promise.all([advancesQuery, instructorsQuery]);
 
     if (advancesRes.error) throw advancesRes.error;
 

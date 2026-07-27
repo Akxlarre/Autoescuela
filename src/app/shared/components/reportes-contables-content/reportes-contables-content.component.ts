@@ -608,7 +608,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
         </div>
       }
 
-      <!-- ── Rentabilidad Estimada por Tipo de Curso (RF-040) ───────────────── -->
+      <!-- ── Rentabilidad Estimada por Tipo de Curso ───────────────── -->
       @if (!isLoading()) {
         <div class="bento-banner">
           <div class="card p-6">
@@ -667,8 +667,7 @@ export class ReportesContablesContentComponent {
       {
         id: 'ingresos',
         label: 'Total Ingresos',
-        value: data.totalIngresos,
-        prefix: '$ ',
+        value: this.clp(data.totalIngresos),
         icon: 'trending-up',
         color: 'success',
         subValue: `${data.operacionesIngresos} operaciones en período`,
@@ -676,8 +675,7 @@ export class ReportesContablesContentComponent {
       {
         id: 'gastos',
         label: 'Total Gastos',
-        value: data.totalGastos,
-        prefix: '$ ',
+        value: this.clp(data.totalGastos),
         icon: 'trending-down',
         color: 'error',
         subValue: `${data.operacionesGastos} egresos en período`,
@@ -685,8 +683,7 @@ export class ReportesContablesContentComponent {
       {
         id: 'neto',
         label: 'Total Neto',
-        value: data.totalNeto,
-        prefix: '$ ',
+        value: this.clp(data.totalNeto),
         icon: 'coins',
         color: 'default',
         subValue: 'Ingresos Totales – Gastos Totales',
