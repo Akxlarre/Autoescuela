@@ -53,7 +53,6 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-020 | Fix H-004 + H-005: Anticipos muestra enum crudo "both" sin traducir, KPIs financieros sin separador de miles + "Otros (Sede 0)" sin resolver nombre | m | [fix-070-m-formato-financiero-anticipos-reportes](fix-070-m-formato-financiero-anticipos-reportes/fix.md) | 2026-07-27 |
 
 ---
 
@@ -66,6 +65,7 @@
 | ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |
 | ASG-013 | Fix H-024: "Registrar Pago" con monto mayor al saldo pendiente falla en silencio, sin feedback al usuario | [fix-057-m-registrar-pago-monto-excesivo-silencioso](fix-057-m-registrar-pago-monto-excesivo-silencioso/fix.md) | 2026-07-23 |
 | ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real (statement timeout) al filtrar por sede específica (`v_professional_attendance`) | [fix-060-m-h027-alertas-asistencia-profesional-sede](fix-060-m-h027-alertas-asistencia-profesional-sede/fix.md) | 2026-07-23 |
+| ASG-020 | Fix H-004 + H-005: Anticipos muestra enum crudo "both" sin traducir, KPIs financieros sin separador de miles + "Otros (Sede 0)" sin resolver nombre | [fix-070-m-formato-financiero-anticipos-reportes](fix-070-m-formato-financiero-anticipos-reportes/fix.md) | 2026-07-27 |
 | ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto entre wizard público (1) y wizard interno (3) para la misma operación | [fix-062-m-unificar-limite-clases-dia](fix-062-m-unificar-limite-clases-dia/fix.md) | 2026-07-25 |
 | ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | [fix-068-m-branch-persistencia-localstorage](fix-068-m-branch-persistencia-localstorage/fix.md) | 2026-07-26 |
 

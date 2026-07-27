@@ -79,7 +79,7 @@ Ninguno.
 ### RLS
 
 Sin cambios. Verificado contra `indices/DATABASE.md`:
-- `instructor_advances`, `instructor_monthly_payments`, `payments`, `standalone_course_enrollments`, `special_service_sales`, `professional_module_grades` — todos mutados por facades cuyo actor real es `admin`/`secretary` (verificado: `AnticiosFacade` solo se usa en `features/admin/contabilidad-anticipos/`; `EvaluacionesProfesionalFacade` solo en `features/admin/profesional-evaluaciones/` y `features/secretaria/profesional-notas/`). El INSERT en `notifications` cae dentro de la policy `insert_notifications` (`admin`/`secretary`) sin necesidad de EF.
+- `instructor_advances`, `instructor_monthly_payments`, `payments`, `standalone_course_enrollments`, `special_service_sales`, `professional_module_grades` — todos mutados por facades cuyo actor real es `admin`/`secretary` (verificado: `AnticiposFacade` solo se usa en `features/admin/contabilidad-anticipos/`; `EvaluacionesProfesionalFacade` solo en `features/admin/profesional-evaluaciones/` y `features/secretaria/profesional-notas/`). El INSERT en `notifications` cae dentro de la policy `insert_notifications` (`admin`/`secretary`) sin necesidad de EF.
 - B2 y B3 usan `SUPABASE_SERVICE_ROLE_KEY` (bypass RLS), igual que B1 en Ola 1.
 
 ### Modelos UI/DTO

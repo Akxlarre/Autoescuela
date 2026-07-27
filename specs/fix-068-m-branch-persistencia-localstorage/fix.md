@@ -1,7 +1,8 @@
 # Fix: H-026 — la sede activa no persiste tras F5
 > id: fix-068-m-branch-persistencia-localstorage
 > refs: ASG-026
-> status: in-progress
+> status: done
+> closed: 2026-07-26
 > created: 2026-07-26
 
 ## Root Cause
@@ -21,3 +22,9 @@
 ## Test de Regresión
 
 - Como admin, cambiar el selector de sede a una específica, recargar con F5, y verificar que la sede seleccionada persiste (no vuelve a "Todas las sedes").
+- ✓ Cubierto con tests unitarios en `branch.facade.spec.ts` (simula F5 seteando `localStorage` directamente y volviendo a llamar `loadBranches()`):
+  - `selectBranch()` persiste el id elegido en `localStorage`.
+  - `selectBranch(null)` y `reset()` limpian la persistencia.
+  - `loadBranches()` restaura la sede persistida si sigue existiendo entre las sedes cargadas.
+  - `loadBranches()` ignora y limpia un id persistido que ya no existe (sede eliminada / storage manipulado).
+  - 24/24 tests del facade en verde; suite completa (`npm run test:ci`) 1444/1444 en verde.

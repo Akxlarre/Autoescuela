@@ -1,6 +1,6 @@
 # Asignación ASG-020 — Fix H-004 + H-005: formato financiero (enum crudo + separador de miles)
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

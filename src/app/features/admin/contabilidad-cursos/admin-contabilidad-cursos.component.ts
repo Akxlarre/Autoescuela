@@ -564,17 +564,15 @@ export class AdminContabilidadCursosComponent implements OnInit, AfterViewInit {
     {
       id: 'cobrados',
       label: 'Ingresos Cobrados',
-      value: this.facade.kpis().ingresosCobrados,
+      value: formatCLP(this.facade.kpis().ingresosCobrados),
       icon: 'dollar-sign',
-      prefix: '$',
       color: 'success',
     },
     {
       id: 'por-cobrar',
       label: 'Por Cobrar',
-      value: this.facade.kpis().porCobrar,
+      value: formatCLP(this.facade.kpis().porCobrar),
       icon: 'clock',
-      prefix: '$',
       color: this.facade.kpis().porCobrar > 0 ? 'warning' : 'default',
     },
   ]);

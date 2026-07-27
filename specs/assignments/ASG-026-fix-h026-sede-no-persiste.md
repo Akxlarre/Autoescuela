@@ -1,6 +1,6 @@
 # Asignación ASG-026 — Fix H-026: la sede activa no persiste tras F5
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

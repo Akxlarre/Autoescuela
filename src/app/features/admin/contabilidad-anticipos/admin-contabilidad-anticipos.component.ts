@@ -3,12 +3,13 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
-  OnInit,
   viewChild,
 } from '@angular/core';
-import { AnticiosFacade } from '@core/facades/anticipos.facade';
+import { AnticiposFacade } from '@core/facades/anticipos.facade';
+import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
@@ -332,12 +333,20 @@ function clp(n: number): string {
     }
   `,
 })
-export class AdminContabilidadAnticiposComponent implements OnInit, AfterViewInit {
-  protected readonly facade = inject(AnticiosFacade);
+export class AdminContabilidadAnticiposComponent implements AfterViewInit {
+  protected readonly facade = inject(AnticiposFacade);
+  private readonly branchFacade = inject(BranchFacade);
   private readonly drawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
   private readonly pageRef = viewChild<ElementRef<HTMLElement>>('pageRef');
+
+  constructor() {
+    effect(() => {
+      this.branchFacade.selectedBranchId(); // tracking
+      this.facade.initialize();
+    });
+  }
 
   protected readonly clp = clp;
   protected readonly skeletonRows = [1, 2, 3, 4, 5];
@@ -375,10 +384,6 @@ export class AdminContabilidadAnticiposComponent implements OnInit, AfterViewIni
       color: 'success',
     },
   ]);
-
-  ngOnInit(): void {
-    this.facade.initialize();
-  }
 
   ngAfterViewInit(): void {
     const el = this.pageRef()?.nativeElement;
