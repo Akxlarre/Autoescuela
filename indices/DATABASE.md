@@ -867,10 +867,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
-| delete_enrollments | DELETE | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
-| select_enrollments | SELECT | `auth_user_role() = 'admin' OR (auth_user_role() = 'secretary' AND branch_visi…` | — |
-| insert_enrollments | INSERT | — | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` |
-| update_enrollments | UPDATE | `public.auth_user_role() = 'admin' OR ( public.auth_user_role() = 'secretary' …` | — |
+| select_enrollments | SELECT | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( branch_i…` | — |
+| insert_enrollments | INSERT | — | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( branch_i…` |
+| update_enrollments | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( branch_i…` | — |
+| delete_enrollments | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND ( branch_i…` | — |
 
 **Índices:** `idx_enrollments_branch_date`, `idx_enrollments_expired_drafts`
 
@@ -1460,11 +1460,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `professional_promotions` — 🔒 RLS
 
-> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059).
-> `code`: ID numérico asignado por el MTT (ej. `"156"`) — estrictamente dígitos
-> (`/^\d+$/`). Se asigna vía "Editar Promoción" (fix-053-m); al crear queda
-> `null` hasta que el MTT lo entregue. Al editarlo se propaga a
-> `promotion_courses.code` de todos sus cursos.
+> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059)
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -1582,11 +1578,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `promotion_courses` — 🔒 RLS
 
-> Curso específico (A2/A3/A4/A5) dentro de una promoción, con relator y cupo de 25 (RF-059).
-> `code`: ID de Libro de Clases = `"{professional_promotions.code}.{sufijo licencia}"`
-> (ej. `"156.2"` para un A2 de la promoción 156) — recalculado automáticamente
-> por `PromocionesFacade.editarPromocion()` cada vez que cambia el code de la
-> promoción (fix-053-m). Mostrado en Libro de Clases → Cabecera → "ID".
+> Curso específico (A2/A3/A4/A5) dentro de una promoción, con relator y cupo de 25 (RF-059)
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -1935,10 +1927,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | Policy | Cmd | USING | WITH CHECK |
 |--------|-----|-------|------------|
 | insert_student_documents | INSERT | — | `auth_user_role() IN ('admin', 'secretary') OR (auth_user_role() = 'student' A…` |
-| update_student_documents | UPDATE | `auth_user_role() = 'admin' OR (secretary AND enrollment_id IN sede visible vía branch_visible) OR (auth_user_role() = 'student' AND enrollment_id…` | — |
 | delete_student_documents | DELETE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
-
-**Fix `20260723000000` (fix-054-m, H-028):** `update_student_documents` agrega rama `secretary` con scope de sede (`branch_visible(branch_id)` vía enrollment). Antes solo permitía `admin`/`student`, lo que bloqueaba con 403 el upsert (`on_conflict=enrollment_id,type`) de matrícula Profesional cuando ya existía una fila para ese `(enrollment_id, type)` — el conflicto se resuelve como UPDATE, no INSERT.
+| update_student_documents | UPDATE | `auth_user_role() = 'admin' OR ( auth_user_role() = 'secretary' AND enrollment…` | — |
 
 ### `student_surveys` — 🔒 RLS
 
@@ -2179,8 +2169,8 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 | Vista | Definida en |
 |-------|-------------|
-| `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql`. **⚠️ pendiente:** se acordó ampliar la ventana de 28 días a 4 meses vía nueva migración `20260722000000_widen_class_b_schedule_availability_window.sql` (superset máximo; el límite exacto de 2/3/4 meses se recortaría client-side vía `.lte('slot_start', ...)` leyendo `AgendaSettingsService.maxVisibleDateIso()` en `EnrollmentFacade.loadScheduleGrid()` y `AdminAlumnoDetalleFacade.loadScheduleGrid()`, unificando la regla con el límite de visualización de la Agenda) — **la migración no existe todavía en `supabase/migrations/`**, verificar antes de asumir que el fix ya está aplicado. |
-| `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` — **⚠️ pendiente:** se acordó extender con 2 branches `UNION ALL` más (`source='enrollment_license'`, `type='carnet_inicial'`/`'carnet_completo'`, leyendo `enrollments.license_initial_url`/`license_full_url`) para que el Carnet aparezca en el DMS (antes solo vivía como columnas sueltas en `enrollments`, invisibles para la vista). El SQL fue entregado al humano para ejecutar manualmente en Supabase — **no aplicado aún como archivo de migración versionado**. El código consumidor (`DmsFacade`, `DmsStudentDocRow.source`) ya soporta el nuevo `source` desde esta sesión. |
+| `v_class_b_schedule_availability` | `20260513000001_class_b_schedule_exact_slots.sql` |
+| `v_dms_student_documents` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_professional_attendance` | `20260404120000_academic_alter_remove_redundant_student_id.sql` |
 | `v_student_progress_b` | `20260630000000_class_b_theory_cycles.sql` |
 
@@ -2239,6 +2229,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | `verify_class_b_certificate_enablement` | `()` |
 | `verify_class_b_dropout_rule` | `()` |
 | `verify_professional_certificate_enablement` | `()` |
+
+## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
+
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
 
 
 <!-- AUTO-GENERATED:END -->

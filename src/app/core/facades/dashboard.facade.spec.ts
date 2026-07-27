@@ -96,5 +96,80 @@ describe('DashboardFacade', () => {
       expect(mock.builder.neq).toHaveBeenCalledWith('status', 'cancelled');
       expect(result.every((c) => c.status !== 'cancelled')).toBe(true);
     });
+
+    it('mapea studentId y kmStart desde la fila de class_b_sessions (fix-076)', async () => {
+      const rows = [
+        {
+          id: 5,
+          class_number: 3,
+          scheduled_at: '2026-07-27T11:50:00',
+          status: 'in_progress',
+          km_start: 12000,
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, student_id: 42, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      const [result] = await dashFacade.fetchLiveClasses(1);
+
+      expect(result.studentId).toBe(42);
+      expect(result.kmStart).toBe(12000);
+    });
+
+    it('refreshLiveClassesOnly() (fix-079) actualiza solo liveClasses, sin tocar el resto de data()', async () => {
+      const rows = [
+        {
+          id: 7,
+          class_number: 1,
+          scheduled_at: '2026-07-27T11:50:00',
+          status: 'in_progress',
+          km_start: 1000,
+          vehicles: null,
+          instructors: null,
+          enrollments: { branch_id: 1, student_id: 1, students: { users: null } },
+        },
+      ];
+      const mock = makeSupabaseMock(rows);
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: { currentUser: vi.fn().mockReturnValue(null) } },
+          { provide: BranchFacade, useValue: { selectedBranchId: vi.fn().mockReturnValue(null) } },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+      dashFacade.data.set({
+        kpis: [],
+        activities: [],
+        alerts: [],
+        quickActions: [],
+        systemStatus: [],
+        liveClasses: [],
+      });
+
+      await dashFacade.refreshLiveClassesOnly();
+
+      const data = dashFacade.data();
+      expect(data?.liveClasses?.length).toBe(1);
+      expect(data?.kpis).toEqual([]);
+    });
   });
 });

@@ -155,4 +155,114 @@ describe('InstructoresFacade', () => {
       expect(eq).not.toHaveBeenCalled();
     });
   });
+
+  // ─── fix-072: "Clases activas" como COUNT en vivo (no columna cacheada) ────
+  describe('clases activas en vivo (fix-072)', () => {
+    function mockInstructorsAndSessions(instructorRows: any[], sessionRows: any[]): void {
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'instructors') {
+          return {
+            select: vi.fn().mockReturnValue({
+              is: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: instructorRows, error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'class_b_sessions') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                in: vi.fn().mockReturnValue({
+                  gte: vi.fn().mockReturnValue({
+                    lte: vi.fn().mockResolvedValue({ data: sessionRows, error: null }),
+                  }),
+                }),
+              }),
+            }),
+          };
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+    }
+
+    function buildInstructorRow(id: number): any {
+      return {
+        id,
+        user_id: id * 10,
+        type: 'practice',
+        license_number: 'X',
+        license_class: 'B',
+        license_expiry: null,
+        license_status: 'valid',
+        active: true,
+        registration_date: null,
+        users: {
+          id: id * 10,
+          rut: `${id}`,
+          first_names: 'Juan',
+          paternal_last_name: 'Perez',
+          maternal_last_name: null,
+          email: `instructor${id}@test.cl`,
+          phone: null,
+          active: true,
+          branch_id: 1,
+        },
+        vehicle_assignments: [],
+      };
+    }
+
+    it('activeClassesCount refleja el COUNT en vivo de class_b_sessions en status in_progress', async () => {
+      mockInstructorsAndSessions(
+        [buildInstructorRow(1), buildInstructorRow(2)],
+        [{ instructor_id: 1 }, { instructor_id: 1 }],
+      );
+
+      await facade.initialize();
+
+      const rows = facade.instructores();
+      expect(rows.find((r) => r.id === 1)?.activeClassesCount).toBe(2);
+    });
+
+    it('activeClassesCount es 0 para un instructor sin sesiones in_progress', async () => {
+      mockInstructorsAndSessions([buildInstructorRow(3)], []);
+
+      await facade.initialize();
+
+      expect(facade.instructores()[0].activeClassesCount).toBe(0);
+    });
+
+    it('no cuenta sesiones in_progress de días anteriores (huérfanas): acota la query al día de hoy', async () => {
+      const gte = vi
+        .fn()
+        .mockReturnValue({ lte: vi.fn().mockResolvedValue({ data: [], error: null }) });
+      const inFn = vi.fn().mockReturnValue({ gte });
+      const eq = vi.fn().mockReturnValue({ in: inFn });
+
+      supabaseSpy.client.from = vi.fn((table: string) => {
+        if (table === 'instructors') {
+          return {
+            select: vi.fn().mockReturnValue({
+              is: vi.fn().mockReturnValue({
+                order: vi.fn().mockResolvedValue({ data: [buildInstructorRow(4)], error: null }),
+              }),
+            }),
+          };
+        }
+        if (table === 'class_b_sessions') {
+          return { select: vi.fn().mockReturnValue({ eq }) };
+        }
+        throw new Error(`Tabla inesperada en el test: ${table}`);
+      });
+
+      await facade.initialize();
+
+      const todayStr = new Date().toISOString().slice(0, 10);
+      expect(gte).toHaveBeenCalledWith('scheduled_at', `${todayStr}T00:00:00`);
+      expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith(
+        'scheduled_at',
+        `${todayStr}T23:59:59`,
+      );
+    });
+  });
 });

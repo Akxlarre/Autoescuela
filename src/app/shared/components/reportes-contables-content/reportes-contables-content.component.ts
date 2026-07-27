@@ -193,7 +193,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     `,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--rows-fit" appBentoGridLayout #bentoGrid>
       <!-- ── Hero (banner con degradado azul/morado) ───────────────────────── -->
       <div class="bento-banner relative overflow-visible">
         <app-section-hero

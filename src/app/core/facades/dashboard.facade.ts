@@ -63,7 +63,7 @@ export class DashboardFacade {
     }
   }
 
-  private async refreshLiveClassesOnly(): Promise<void> {
+  async refreshLiveClassesOnly(): Promise<void> {
     try {
       const liveClasses = await this.fetchLiveClasses(this.getActiveBranchId());
       this.data.update((d) => (d ? { ...d, liveClasses } : null));
@@ -333,9 +333,10 @@ export class DashboardFacade {
         class_number,
         scheduled_at,
         status,
+        km_start,
         vehicles(brand, model, license_plate),
         instructors!class_b_sessions_instructor_id_fkey(users(first_names, paternal_last_name)),
-        enrollments!inner(branch_id, students(users(first_names, paternal_last_name)))
+        enrollments!inner(branch_id, student_id, students(users(first_names, paternal_last_name)))
       `,
       )
       .gte('scheduled_at', `${todayStr}T00:00:00`)
@@ -380,6 +381,8 @@ export class DashboardFacade {
           vehicleModel: vehicle?.model,
           vehiclePlate: vehicle?.license_plate,
           scheduledAt: row.scheduled_at,
+          studentId: row.enrollments?.student_id ?? null,
+          kmStart: row.km_start ?? null,
         } as LiveClassModel;
       });
       liveClasses = [...liveClasses, ...mappedPracticas];

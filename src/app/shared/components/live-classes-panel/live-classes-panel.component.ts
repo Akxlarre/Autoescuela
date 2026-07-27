@@ -320,7 +320,13 @@ export class LiveClassesPanelComponent {
     const date = new Date(isoString);
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
-    if (diffMs <= 0) return 'Transcurriendo';
+
+    if (diffMs <= 0) {
+      const elapsedMins = Math.floor(-diffMs / 60000);
+      if (elapsedMins < 60) return `Hace ${elapsedMins} min`;
+      const elapsedHours = Math.floor(elapsedMins / 60);
+      return `Hace ${elapsedHours} h`;
+    }
 
     const diffMins = Math.floor(diffMs / 60000);
     if (diffMins < 60) return `En ${diffMins} min`;
