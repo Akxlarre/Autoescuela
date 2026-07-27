@@ -48,7 +48,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
   ],
   template: `
     <div
-      class="bento-grid p-6 pb-12"
+      class="bento-grid bento-grid--hero-fit p-6 pb-12"
       appBentoGridLayout
       #bentoGrid
       [class.items-start]="!isDrawerOpen()"
@@ -295,9 +295,7 @@ const MONEDAS = DENOMINACIONES.filter((d) => d.tipo === 'moneda');
                       </div>
                       <div class="flex flex-col items-end">
                         <span class="text-2xs text-text-muted uppercase">Total</span>
-                        <span class="text-base font-black">{{
-                          clp(fila.total)
-                        }}</span>
+                        <span class="text-base font-black">{{ clp(fila.total) }}</span>
                       </div>
                     </div>
                   </div>

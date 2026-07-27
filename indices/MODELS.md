@@ -170,6 +170,7 @@ Estructuras de datos puramente visuales, consumidas por los componentes para su 
 | `InstructorDashboardData`, `InstructorDashboardKpis`, `InstructorClassRow`, `InstructorStudentCard`, `InstructorStudentDetail`, `FichaTecnicaRow`, `EvaluationFormData`, `EvaluationChecklistItem`, `ScheduleBlock`, `WeekScheduleKpis`, `ScheduleDay`, `DaySchedule`, `WeekSchedule`, `MonthlyHoursRow`, `LiquidacionKpis`, `SessionDetailRow`, `ExamScoreRow`, `RegisterExamPayload`, `AttendanceClassRow`, `UpcomingDay` | `ui` | `src/app/core/models/ui/instructor-portal.model.ts` |
 | `InstructorType`, `LicenseStatus`, `InstructorTableRow`, `VehicleOption`, `VehicleAssignmentHistory`, `InstructorHoraRow`, `InstructorHorarioSession` | `ui` | `src/app/core/models/ui/instructor-table.model.ts` |
 | `LayoutTier` | `ui` | `src/app/core/models/ui/layout.model.ts` |
+| `LibroClasesSubnavSection` | `ui` | `src/app/core/models/ui/libro-clases-subnav.model.ts` |
 | `LibroCabecera`, `ProfesorModulo`, `AlumnoLibro`, `AlumnoAsistenciaSemanal`, `SemanaAsistencia`, `FilaEvaluacionLibro`, `ResumenAsistenciaLibro`, `ClaseCalendario` | `ui` | `src/app/core/models/ui/libro-de-clases.model.ts` |
 | `LiquidacionRow`, `LiquidacionesKpis`, `PagoInstructorPayload` | `ui` | `src/app/core/models/ui/liquidaciones.model.ts` |
 | `NotificationType`, `NotificationFilter`, `NotificationReferenceType`, `Notification`, `NotificationPanelEntry` | `ui` | `src/app/core/models/ui/notification.model.ts` |

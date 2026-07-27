@@ -9,7 +9,6 @@ import {
   viewChild,
 } from '@angular/core';
 import { TooltipModule } from 'primeng/tooltip';
-import { Router } from '@angular/router';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
@@ -23,6 +22,7 @@ import { DashboardAlertsFacade } from '@core/facades/dashboard-alerts.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { PagosFacade } from '@core/facades/pagos.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import type {
@@ -32,6 +32,7 @@ import type {
 } from '@core/models/ui/section-hero.model';
 import type { LiveClassModel } from '@core/models/ui/dashboard.model';
 import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
+import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils';
 
 @Component({
   selector: 'app-secretaria-dashboard',
@@ -264,9 +265,9 @@ export class SecretariaDashboardComponent implements OnInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
-  private readonly router = inject(Router);
   private readonly agendaFacade = inject(AgendaFacade);
   private readonly asistenciaFacade = inject(AsistenciaClaseBFacade);
+  private readonly pagosFacade = inject(PagosFacade);
 
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
@@ -301,11 +302,11 @@ export class SecretariaDashboardComponent implements OnInit {
   });
 
   readonly heroActions = computed((): SectionHeroAction[] =>
-    this.quickActions().map((a, i) => ({
+    this.quickActions().map((a) => ({
       id: a.id,
       label: a.label,
       icon: a.icon,
-      primary: i === 0,
+      primary: a.id === 'qa1' || a.id === 'qa3',
       route: undefined,
     })),
   );
@@ -351,28 +352,29 @@ export class SecretariaDashboardComponent implements OnInit {
         this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
       });
     } else if (actionId === 'qa3') {
-      void this.router.navigate(['app/secretaria/pagos']);
+      this.pagosFacade.seleccionarParaPago(null);
+      void this.pagosFacade.initialize();
+      void import('../../admin/pagos/registrar-pago-drawer.component').then(
+        ({ RegistrarPagoDrawerComponent }) => {
+          this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
+        },
+      );
     }
   }
 
   async handleLiveClassAction(cls: LiveClassModel): Promise<void> {
-    if (cls.type === 'practical' && cls.status === 'pending') {
-      const localTime = to24hTime(cls.scheduledAt);
-      const row: any = {
-        id: cls.originalId,
-        classNumber: cls.classNumber,
-        alumnoName: cls.studentName,
-        instructorName: cls.instructorName,
-        horaInicio: localTime,
-        status: 'pendiente',
-        vehicleBrand: cls.vehicleBrand,
-        vehicleModel: cls.vehicleModel,
-        vehiclePlate: cls.vehiclePlate,
-      };
-      this.asistenciaFacade.selectPractica(row);
+    const plan = resolveLiveClassActionPlan(cls);
+
+    if (plan.flow === 'iniciar') {
+      this.asistenciaFacade.selectPractica(plan.row as any);
       const { AdminIniciarClaseDrawerComponent } =
         await import('../../admin/asistencia/admin-iniciar-clase-drawer.component');
       this.layoutDrawer.open(AdminIniciarClaseDrawerComponent, 'Iniciar Clase Práctica', 'play');
+    } else if (plan.flow === 'finalizar') {
+      this.asistenciaFacade.selectPractica(plan.row as any);
+      const { AdminFinalizarClaseDrawerComponent } =
+        await import('../../admin/asistencia/admin-finalizar-clase-drawer.component');
+      this.layoutDrawer.open(AdminFinalizarClaseDrawerComponent, 'Finalizar Clase', 'flag');
     } else {
       const startTime = to24hTime(cls.scheduledAt);
       const slot: any = {

@@ -14,11 +14,11 @@ import { FormsModule } from '@angular/forms';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import type { VehicleOption } from '@core/models/ui/asistencia-clase-b.model';
-import { AdminFinalizarClaseDrawerComponent } from './admin-finalizar-clase-drawer.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 
 @Component({
@@ -194,6 +194,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 export class AdminIniciarClaseDrawerComponent implements OnInit {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly dashboardFacade = inject(DashboardFacade);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -263,11 +264,8 @@ export class AdminIniciarClaseDrawerComponent implements OnInit {
     try {
       const vehicleId = this.selectedVehicleId() ?? undefined;
       await this.facade.startClass(cls.id, this.form.value.kmStart, vehicleId);
-      this.layoutDrawer.open(
-        AdminFinalizarClaseDrawerComponent,
-        `Finalizar Clase — ${cls.alumnoName ?? 'Alumno'}`,
-        'flag',
-      );
+      void this.dashboardFacade.refreshLiveClassesOnly();
+      this.layoutDrawer.close();
     } catch {
       this.error.set('No se pudo iniciar la clase. Intenta de nuevo.');
     } finally {

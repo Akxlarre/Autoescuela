@@ -43,5 +43,6 @@
 | `ScrollContainerDirective` | `[appScrollContainer]` | `maxHeight`, `scrollX` | — | `src/app/core/directives/scroll-container.directive.ts` |
 | `ScrollRevealDirective` | `[appScrollReveal]` | `appScrollReveal` | — | `src/app/core/directives/scroll-reveal.directive.ts` |
 | `SearchShortcutDirective` | `[appSearchShortcut]` | — | — | `src/app/core/directives/search-shortcut.directive.ts` |
+| `StableWidthDirective` | `[appStableWidth]` | `appStableWidth` | — | `src/app/core/directives/stable-width.directive.ts` |
 
 <!-- AUTO-GENERATED:END -->

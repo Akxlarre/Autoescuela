@@ -33,7 +33,6 @@
 | ASG-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
 | ASG-017 | Fix H-035 + H-017: Portal Alumno nunca puede mostrar la nota del Examen Final — columna equivocada en la query (mismo bug, 2 hallazgos duplicados) | `b` | fix | Alta | b | Fix simple y acotado: `student-home.facade.ts:174` y `:265`, cambiar `.select('grade, created_at')` → `.select('score, created_at')` |
 | ASG-018 | Fix H-001 + H-002 + H-008: Dashboard admin — KPI "Vehículos" siempre en 0 (status `operational` vs `available`), formato roto en KPI "Ingresos Mes", estados contradictorios en "Clases Actuales" | `b` | fix | Media | b | Archivos: `dashboard.facade.ts:281`, `flota.facade.ts` (`resolveStatus()`). ⚠️ **Coordinar con ASG-005** (mismo `dashboard.component.ts`, cobertura `data-llm-*`) para no pisarse |
-| ASG-019 | Fix H-038: columna "Clases activas" de Instructores siempre muestra 0 — nunca se escribe | `m` | fix | Media | b | Archivo: `instructores.facade.ts:622`. Reemplazar por `COUNT` en vivo en vez de columna cacheada sin mantener |
 | ASG-021 | Fix H-006: Configuración Web usa voseo argentino en vez de español de Chile | `i` | fix | Media | b | Solo copy, sin lógica — buen candidato para alguien nuevo en el repo |
 | ASG-022 | Fix H-007: páginas cargan en blanco varios segundos sin skeleton en Agenda y Libro de Clases | `b` | fix | Media | b | Viola `swr-pattern.md`. ⚠️ **Coordinar con ASG-001** (verificación de skeletons de Benja) para no duplicar trabajo |
 | ASG-034 | Terminar migración de `color-mix()` pendiente: 11 archivos con drift post-mayo (mismo patrón que ya resolvía el script) + 56 archivos con gap de diseño (CSS embebido / bindings dinámicos que el script nunca cubrió) | `b` | fix | Baja | b | Ver `scripts/migrate-color-mix-t4.mjs` (corrió una sola vez el 28-may, commit `673c4bd`). Requiere decisión sobre si `color-mix(var(--token))` embebido es deuda o válido por diseño |
@@ -68,6 +67,7 @@
 | ASG-020 | Fix H-004 + H-005: Anticipos muestra enum crudo "both" sin traducir, KPIs financieros sin separador de miles + "Otros (Sede 0)" sin resolver nombre | [fix-070-m-formato-financiero-anticipos-reportes](fix-070-m-formato-financiero-anticipos-reportes/fix.md) | 2026-07-27 |
 | ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto entre wizard público (1) y wizard interno (3) para la misma operación | [fix-062-m-unificar-limite-clases-dia](fix-062-m-unificar-limite-clases-dia/fix.md) | 2026-07-25 |
 | ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | [fix-068-m-branch-persistencia-localstorage](fix-068-m-branch-persistencia-localstorage/fix.md) | 2026-07-26 |
+| ASG-019 | Fix H-038: columna "Clases activas" de Instructores siempre muestra 0 — nunca se escribe | [fix-072-m-instructores-clases-activas-count](fix-072-m-instructores-clases-activas-count/fix.md) | 2026-07-27 |
 
 ---
 

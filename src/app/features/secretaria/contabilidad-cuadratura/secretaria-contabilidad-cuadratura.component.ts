@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
 import { CuadraturaFacade } from '@core/facades/cuadratura.facade';
+import { PagosFacade } from '@core/facades/pagos.facade';
 import { CuadraturaContentComponent } from '@shared/components/cuadratura-content/cuadratura-content.component';
 import { EgresoModalComponent } from '@shared/components/egreso-modal/egreso-modal.component';
 import { RegistrarPagoDrawerComponent } from '@features/admin/pagos/registrar-pago-drawer.component';
@@ -53,6 +54,7 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   protected readonly facade = inject(CuadraturaFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly pagosFacade = inject(PagosFacade);
 
   protected readonly egresoModalOpen = signal(false);
 
@@ -65,6 +67,8 @@ export class SecretariaContabilidadCuadraturaComponent implements OnInit {
   }
 
   protected openIngresoDrawer(): void {
+    this.pagosFacade.seleccionarParaPago(null);
+    void this.pagosFacade.initialize();
     this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'plus');
   }
 

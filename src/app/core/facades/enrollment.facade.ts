@@ -126,6 +126,10 @@ export class EnrollmentFacade {
   private readonly _instructors = signal<InstructorOption[]>([]);
   private readonly _scheduleGrid = signal<ScheduleGrid | null>(null);
   private readonly _selectedSlotIds = signal<string[]>([]);
+  // Slots que este mismo draft ya persistió en class_b_sessions (status 'reserved')
+  // vía saveAssignment(). Sirve para que la vista de disponibilidad no los reporte
+  // como ocupados por otro alumno cuando el propio INSERT dispara un refetch.
+  private readonly _ownReservedSlotIds = signal<string[]>([]);
   private readonly _paymentMode = signal<PaymentMode | null>(null);
   private readonly _selectedInstructorId = signal<number | null>(null);
   private readonly _promotionGroups = signal<PromotionGroup[]>([]);
@@ -803,6 +807,7 @@ export class EnrollmentFacade {
     this._selectedInstructorId.set(instructorId);
     if (!preserveSlots) {
       this._selectedSlotIds.set([]);
+      this._ownReservedSlotIds.set([]);
     }
     this._scheduleGrid.set(null);
     this._isLoading.set(true);
@@ -830,7 +835,7 @@ export class EnrollmentFacade {
         return;
       }
 
-      this._scheduleGrid.set(this.buildScheduleGrid(data));
+      this._scheduleGrid.set(this.buildScheduleGrid(data, new Set(this._ownReservedSlotIds())));
       this.subscribeToScheduleChanges(instructorId);
     } finally {
       this._isLoading.set(false);
@@ -1027,6 +1032,10 @@ export class EnrollmentFacade {
           );
           return false;
         }
+
+        // Marca estos slots como "propios" para que un refetch posterior de la vista
+        // (realtime o al volver al paso 2) no los reporte como ocupados por otro alumno.
+        this._ownReservedSlotIds.set(sortedSlots);
 
         // Persistir modalidad de pago en enrollment para poder rehidratarla en drafts
         await this.supabase.client
@@ -1817,10 +1826,11 @@ export class EnrollmentFacade {
 
       if (error || !data || data.length === 0) return;
 
-      const newGrid = this.buildScheduleGrid(data);
+      const newGrid = this.buildScheduleGrid(data, new Set(this._ownReservedSlotIds()));
       this._scheduleGrid.set(newGrid);
 
-      // Auto-deseleccionar slots que pasaron a occupied
+      // Auto-deseleccionar slots que pasaron a occupied (por otro alumno; los propios
+      // ya vienen forzados a 'available' por buildScheduleGrid vía ownSlotIds)
       const availableIds = new Set(
         newGrid.slots.filter((s) => s.status === 'available').map((s) => s.id),
       );
@@ -1858,6 +1868,7 @@ export class EnrollmentFacade {
     this._instructors.set([]);
     this._scheduleGrid.set(null);
     this._selectedSlotIds.set([]);
+    this._ownReservedSlotIds.set([]);
     this._paymentMode.set(null);
     this._selectedInstructorId.set(null);
     this._promotionGroups.set([]);
@@ -2236,7 +2247,7 @@ export class EnrollmentFacade {
     return to24hTime(ts);
   }
 
-  private buildScheduleGrid(rawSlots: any[]): ScheduleGrid {
+  private buildScheduleGrid(rawSlots: any[], ownSlotIds?: ReadonlySet<string>): ScheduleGrid {
     // Vista expone slot_start/slot_end (timestamptz); no slot_date
     const dates = [...new Set(rawSlots.map((s) => this.slotDateFromStart(s.slot_start)))].sort();
 
@@ -2274,7 +2285,11 @@ export class EnrollmentFacade {
         date,
         startTime,
         endTime,
-        status: (s.slot_status === 'occupied' ? 'occupied' : 'available') as SlotStatus,
+        // Un slot reservado por el propio draft (ya persistido en class_b_sessions
+        // como 'reserved') no debe leerse como ocupado por otro alumno.
+        status: (s.slot_status === 'occupied' && !ownSlotIds?.has(String(s.slot_start))
+          ? 'occupied'
+          : 'available') as SlotStatus,
       };
     });
 

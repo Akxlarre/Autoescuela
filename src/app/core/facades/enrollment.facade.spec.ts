@@ -22,6 +22,7 @@ function createMockQueryBuilder(responseData: any = null, responseError: any = n
     delete: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     gt: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     lte: vi.fn().mockReturnThis(),
     or: vi.fn().mockReturnThis(),
     like: vi.fn().mockReturnThis(),
@@ -758,6 +759,47 @@ describe('EnrollmentFacade', () => {
 
       // The selected slot should be auto-deselected
       expect(facade.selectedSlotIds()).not.toContain('2026-03-16T09:00:00-03:00');
+
+      vi.useRealTimers();
+    });
+
+    it('should NOT auto-deselect slots that the current draft itself just reserved via saveAssignment', async () => {
+      vi.useFakeTimers();
+      setupScheduleQuery();
+
+      await facade.loadScheduleGrid(INSTRUCTOR_ID);
+
+      facade.toggleSlot('2026-03-16T09:00:00-03:00');
+      facade.toggleSlot('2026-03-16T09:45:00-03:00');
+
+      (facade as any)._draft.set({ enrollmentId: 42, studentId: 1, userId: 1 });
+      (facade as any)._personalData.set({
+        courseCategory: 'non-professional',
+        courseType: 'class_b',
+      });
+
+      const saved = await facade.saveAssignment();
+      expect(saved).toBe(true);
+
+      // La vista ahora reporta esos mismos slots como 'occupied' porque el propio
+      // draft acaba de reservarlos en class_b_sessions.
+      const ownReservationsNowOccupied = mockSlots.map((s) => ({ ...s, slot_status: 'occupied' }));
+      mockSupabase.client.from = vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        lte: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({ data: ownReservationsNowOccupied, error: null }),
+      });
+
+      const callback = mockSupabase._getChannelCallback();
+      callback!();
+      await vi.advanceTimersByTimeAsync(350);
+
+      expect(facade.selectedSlotIds()).toContain('2026-03-16T09:00:00-03:00');
+      expect(facade.selectedSlotIds()).toContain('2026-03-16T09:45:00-03:00');
+      expect(
+        facade.scheduleGrid()?.slots.find((s) => s.id === '2026-03-16T09:00:00-03:00')?.status,
+      ).toBe('available');
 
       vi.useRealTimers();
     });

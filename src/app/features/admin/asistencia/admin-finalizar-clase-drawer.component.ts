@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { DecimalPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
+import { DashboardFacade } from '@core/facades/dashboard.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
@@ -250,6 +251,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 export class AdminFinalizarClaseDrawerComponent implements OnInit {
   protected readonly facade = inject(AsistenciaClaseBFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly dashboardFacade = inject(DashboardFacade);
   private readonly fb = inject(FormBuilder);
 
   protected readonly isSubmitting = signal(false);
@@ -318,6 +320,7 @@ export class AdminFinalizarClaseDrawerComponent implements OnInit {
         instructorSignature: this.instructorSignature,
       };
       await this.facade.finishClass(payload);
+      void this.dashboardFacade.refreshLiveClassesOnly();
       this.layoutDrawer.close();
     } catch {
       this.error.set('No se pudo finalizar la clase. Intenta de nuevo.');

@@ -87,4 +87,6 @@ export interface LiveClassModel {
   vehicleBrand?: string;
   vehicleModel?: string;
   scheduledAt: string; // ISO date string
+  studentId: number | null;
+  kmStart: number | null;
 }

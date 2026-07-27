@@ -45,7 +45,7 @@ const ACTION_OPTIONS = [
     StableWidthDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--hero-fit" appBentoReveal appBentoGridLayout>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"

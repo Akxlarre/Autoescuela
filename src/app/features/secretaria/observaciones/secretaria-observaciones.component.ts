@@ -3,13 +3,14 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   OnInit,
   computed,
   inject,
   signal,
+  viewChild,
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TaskCreateDrawerComponent } from '@features/tareas/task-create-drawer.component';
@@ -17,10 +18,10 @@ import { TasksFacade } from '@core/facades/tasks.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { LayoutService } from '@core/services/ui/layout.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { GsapAnimationsService } from '@core/services/ui/gsap-animations.service';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
-import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
 
@@ -29,51 +30,24 @@ type ObsTab = 'mis-obs' | 'recibidas' | 'instructores';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
-    KpiCardVariantComponent,
     TaskListContentComponent,
     BentoGridLayoutDirective,
-    BentoRevealDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoReveal appBentoGridLayout>
+    <div #bentoGrid class="bento-grid bento-grid--fill-screen" appBentoGridLayout>
       <!-- Hero -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
+        [animateOnInit]="false"
+        [loading]="facade.isLoading()"
         title="Comunicación"
         contextLine="Comunicación operativa con el equipo"
         icon="message-circle"
         [actions]="heroActions"
+        [kpis]="heroKpis()"
         (actionClick)="onHeroAction($event)"
       />
-
-      <!-- KPI -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Mis pendientes"
-          [value]="pendingMineCount()"
-          [loading]="facade.isLoading()"
-          icon="clock"
-          color="warning"
-          [accent]="true"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Recibidas"
-          [value]="facade.receivedTasks().length"
-          [loading]="facade.isLoading()"
-          icon="inbox"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="A instructores"
-          [value]="toInstructorTasks().length"
-          [loading]="facade.isLoading()"
-          icon="users"
-        />
-      </div>
 
       <!-- Lista con tabs + densidad adaptativa (spec 0028/0029) -->
       <app-task-list-content
@@ -98,8 +72,11 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
   private readonly authFacade = inject(AuthFacade);
   private readonly layoutService = inject(LayoutService);
   private readonly drawer = inject(LayoutDrawerFacadeService);
+  private readonly gsap = inject(GsapAnimationsService);
   private readonly destroyRef = inject(DestroyRef);
   protected readonly activeTab = signal<ObsTab>('mis-obs');
+
+  private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   private readonly currentDbId = computed(() => this.authFacade.currentUser()?.dbId);
 
@@ -153,6 +130,28 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     },
   ];
 
+  protected readonly heroKpis = computed((): SectionHeroKpi[] => [
+    {
+      id: 'mis-pendientes',
+      label: 'Mis pendientes',
+      value: this.pendingMineCount(),
+      icon: 'clock',
+      color: 'warning',
+    },
+    {
+      id: 'recibidas',
+      label: 'Recibidas',
+      value: this.facade.receivedTasks().length,
+      icon: 'inbox',
+    },
+    {
+      id: 'instructores',
+      label: 'A instructores',
+      value: this.toInstructorTasks().length,
+      icon: 'users',
+    },
+  ]);
+
   // Densidad adaptativa (spec 0028/0029): sin límite en desktop, acotado
   // en tablet/mobile o con el drawer lateral abierto (tier por contenedor).
   protected readonly maxVisible = computed(() =>
@@ -164,7 +163,10 @@ export class SecretariaObservacionesComponent implements OnInit, AfterViewInit {
     this.destroyRef.onDestroy(() => this.facade.dispose());
   }
 
-  ngAfterViewInit(): void {}
+  ngAfterViewInit(): void {
+    const grid = this.bentoGrid();
+    if (grid) this.gsap.animateBentoGrid(grid.nativeElement);
+  }
 
   protected onHeroAction(id: string): void {
     if (id === 'nueva-comunicacion') {

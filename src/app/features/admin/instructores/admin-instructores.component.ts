@@ -43,7 +43,7 @@ type FilterTab = 'all' | 'active' | 'expiring';
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid" appBentoGridLayout #bentoGrid>
+    <div class="bento-grid bento-grid--hero-fit" appBentoGridLayout #bentoGrid>
       <!-- ── Hero ──────────────────────────────────────────────────────────── -->
       <app-section-hero
         density="slim"

@@ -4,6 +4,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { toISODate } from '@core/utils/date.utils';
 import type {
   InstructorTableRow,
   InstructorHoraRow,
@@ -74,7 +75,6 @@ interface InstructorRow {
   license_class: string | null;
   license_expiry: string | null;
   license_status: string | null;
-  active_classes_count: number;
   active: boolean;
   registration_date: string | null;
   users: {
@@ -235,7 +235,6 @@ export class InstructoresFacade {
         license_class,
         license_expiry,
         license_status,
-        active_classes_count,
         active,
         registration_date,
         users!inner (
@@ -271,7 +270,31 @@ export class InstructoresFacade {
     }
 
     const rows = (data as unknown as InstructorRow[]) ?? [];
-    this._instructores.set(rows.map((r) => this.mapRow(r)));
+    const activeClassesById = await this.fetchActiveClassesCounts(rows.map((r) => r.id));
+    this._instructores.set(rows.map((r) => this.mapRow(r, activeClassesById.get(r.id) ?? 0)));
+  }
+
+  /** COUNT en vivo de `class_b_sessions` en curso ("Transcurriendo") por instructor, acotado a hoy. */
+  private async fetchActiveClassesCounts(instructorIds: number[]): Promise<Map<number, number>> {
+    const counts = new Map<number, number>();
+    if (instructorIds.length === 0) return counts;
+
+    const todayStr = toISODate(new Date());
+
+    const { data, error } = await this.supabase.client
+      .from('class_b_sessions')
+      .select('instructor_id')
+      .eq('status', 'in_progress')
+      .in('instructor_id', instructorIds)
+      .gte('scheduled_at', `${todayStr}T00:00:00`)
+      .lte('scheduled_at', `${todayStr}T23:59:59`);
+
+    if (error) return counts;
+
+    for (const row of (data as { instructor_id: number }[]) ?? []) {
+      counts.set(row.instructor_id, (counts.get(row.instructor_id) ?? 0) + 1);
+    }
+    return counts;
   }
 
   async loadBranches(): Promise<void> {
@@ -586,7 +609,7 @@ export class InstructoresFacade {
     }
   }
 
-  private mapRow(r: InstructorRow): InstructorTableRow {
+  private mapRow(r: InstructorRow, activeClassesCount: number): InstructorTableRow {
     const u = r.users!;
     const nombre = [u.first_names, u.paternal_last_name, u.maternal_last_name ?? '']
       .filter((s) => s.trim().length > 0)
@@ -619,7 +642,7 @@ export class InstructoresFacade {
       licenseExpiry: r.license_expiry ?? null,
       licenseStatus,
       licenseStatusLabel: LICENSE_STATUS_LABELS[licenseStatus] ?? licenseStatus,
-      activeClassesCount: r.active_classes_count,
+      activeClassesCount,
       estado: r.active && u.active ? 'activo' : 'inactivo',
       registrationDate: r.registration_date ?? null,
       vehiclePlate: vehicle?.license_plate ?? null,

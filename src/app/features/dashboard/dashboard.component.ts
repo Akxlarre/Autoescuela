@@ -41,6 +41,7 @@ import { AgendaFacade } from '@core/facades/agenda.facade';
 import { AgendaSlotDetailDrawerComponent } from '@features/agenda/agenda-slot-detail-drawer.component';
 import { AsistenciaClaseBFacade } from '@core/facades/asistencia-clase-b.facade';
 import { to24hTime, addMinutesToTime } from '@core/utils/date.utils';
+import { resolveLiveClassActionPlan } from '@core/utils/live-class-action.utils';
 
 /**
  * DashboardComponent — Página principal de la aplicación.
@@ -443,31 +444,24 @@ export class DashboardComponent {
       this.layoutDrawer.open(AdminAgendaComponent, 'Agenda Semanal', 'calendar-days');
     } else if (actionId === 'qa3') {
       this.pagosFacade.seleccionarParaPago(null);
+      void this.pagosFacade.initialize();
       this.layoutDrawer.open(RegistrarPagoDrawerComponent, 'Registrar Pago', 'credit-card');
     }
   }
 
   async handleLiveClassAction(cls: LiveClassModel) {
-    if (cls.type === 'practical' && cls.status === 'pending') {
-      // Flujo real de Iniciar Clase
-      const localTime = to24hTime(cls.scheduledAt);
+    const plan = resolveLiveClassActionPlan(cls);
 
-      const row: any = {
-        id: cls.originalId,
-        classNumber: cls.classNumber,
-        alumnoName: cls.studentName,
-        instructorName: cls.instructorName,
-        horaInicio: localTime,
-        status: 'pendiente',
-        vehicleBrand: cls.vehicleBrand,
-        vehicleModel: cls.vehicleModel,
-        vehiclePlate: cls.vehiclePlate,
-      };
-
-      this.asistenciaFacade.selectPractica(row);
+    if (plan.flow === 'iniciar') {
+      this.asistenciaFacade.selectPractica(plan.row as any);
       const { AdminIniciarClaseDrawerComponent } =
         await import('../admin/asistencia/admin-iniciar-clase-drawer.component');
       this.layoutDrawer.open(AdminIniciarClaseDrawerComponent, 'Iniciar Clase Práctica', 'play');
+    } else if (plan.flow === 'finalizar') {
+      this.asistenciaFacade.selectPractica(plan.row as any);
+      const { AdminFinalizarClaseDrawerComponent } =
+        await import('../admin/asistencia/admin-finalizar-clase-drawer.component');
+      this.layoutDrawer.open(AdminFinalizarClaseDrawerComponent, 'Finalizar Clase', 'flag');
     } else {
       // Flujo normal informativo
       const startTime = to24hTime(cls.scheduledAt);

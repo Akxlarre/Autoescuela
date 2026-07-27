@@ -136,6 +136,7 @@ Funciones server-side que requieren `SERVICE_ROLE_KEY` o lógica que no puede ej
 | `MenuConfigService` | `AuthFacade` | `src/app/core/services/auth/menu-config.service.ts` |
 | `ErrorSanitizerService` | — | `src/app/core/services/infrastructure/error-sanitizer.service.ts` |
 | `SupabaseService` | — | `src/app/core/services/infrastructure/supabase.service.ts` |
+| `AgendaSettingsService` | `PLATFORM_ID` | `src/app/core/services/ui/agenda-settings.service.ts` |
 | `BreadcrumbService` | `Router`, `MenuConfigService` | `src/app/core/services/ui/breadcrumb.service.ts` |
 | `ConfirmModalService` | — | `src/app/core/services/ui/confirm-modal.service.ts` |
 | `DmsViewerService` | `LayoutDrawerFacadeService` | `src/app/core/services/ui/dms-viewer.service.ts` |

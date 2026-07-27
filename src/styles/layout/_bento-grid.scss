@@ -100,6 +100,29 @@ $bp-lg: 1024px;
       }
     }
 
+    /* Modificador: la primera fila (hero slim / selector superior) se ajusta a su
+       contenido real en vez de heredar el piso `--bento-row-min` (120px+) que
+       usan las filas auto-generadas para que los .bento-square luzcan cuadrados.
+       Sin esto, un hero slim de ~60-90px queda "estirado" a 120px por el
+       `align-items: stretch` por defecto del grid, dejando un espacio vacío
+       visible debajo de la card antes de la siguiente celda (fix-081).
+       Solo afecta la 1ª fila explícita; las filas siguientes (auto-generadas)
+       siguen usando `grid-auto-rows` sin cambios. */
+    &.bento-grid--hero-fit {
+      grid-template-rows: auto;
+    }
+
+    /* Modificador: TODAS las filas se ajustan a su contenido real, sin el piso
+       `--bento-row-min`. Úsalo solo en grids compuestos enteramente por
+       `.bento-banner` (sin `.bento-square`/`.bento-tall`/`.bento-feature`), donde
+       el piso de 120px no cumple ningún propósito (no hay celdas cuadradas que
+       necesiten esa altura mínima) y solo genera espacio vacío en filas cortas
+       (ej: barra de filtros de una sola línea) que no sean necesariamente la
+       primera (fix-081). Más fuerte que `--hero-fit`: no la uses junto a esta. */
+    &.bento-grid--rows-fit {
+      grid-auto-rows: auto;
+    }
+
     /* Variante para Hero + fila de KPIs separada (no embebidos en el hero) + Card
        que llena el resto (spec 0029, ej: Comunicaciones en Secretaria/Instructor).
        Fila 1 = hero (auto, full-width, agota la fila → nada más cabe ahí).
