@@ -1,14 +1,14 @@
 # Asignación ASG-019 — Fix H-038: "Clases activas" de Instructores siempre muestra 0
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-27
+> **resulting_track:** fix-072-m-instructores-clases-activas-count
 
 ---
 
