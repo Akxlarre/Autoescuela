@@ -1,14 +1,14 @@
 # Asignación ASG-020 — Fix H-004 + H-005: formato financiero (enum crudo + separador de miles)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-27
+> **resulting_track:** fix-070-m-formato-financiero-anticipos-reportes
 
 ---
 
