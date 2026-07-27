@@ -1,14 +1,14 @@
 # Asignación ASG-026 — Fix H-026: la sede activa no persiste tras F5
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-26
+> **resulting_track:** fix-068-m-branch-persistencia-localstorage
 
 ---
 

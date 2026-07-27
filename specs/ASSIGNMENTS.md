@@ -40,7 +40,6 @@
 | ASG-034 | Terminar migración de `color-mix()` pendiente: 11 archivos con drift post-mayo (mismo patrón que ya resolvía el script) + 56 archivos con gap de diseño (CSS embebido / bindings dinámicos que el script nunca cubrió) | `b` | fix | Baja | b | Ver `scripts/migrate-color-mix-t4.mjs` (corrió una sola vez el 28-may, commit `673c4bd`). Requiere decisión sobre si `color-mix(var(--token))` embebido es deuda o válido por diseño |
 | ASG-024 | Fix H-031: la búsqueda global (Ctrl+K) no indexa alumnos ni instructores, solo navegación | `b` | fix | Media | b | Extender el índice del buscador a datos de negocio (alumnos por nombre/RUT, instructores) |
 | ASG-025 | Fix H-037: botones y títulos se recortan a mitad de palabra (falta `min-width:0` en hijos flex con `truncate`) | `i` | fix | Media | b | Archivos: `admin-alumno-detalle.component.ts:331-347` (`SectionHeroAction`) + fila de título en Instructores |
-| ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | `m` | fix | Media | b | `BranchFacade.selectedBranchId` vive solo en memoria — persistir en `localStorage` o query param |
 | ASG-027 | Fix H-003: Ex-Alumnos B muestra "2 Egresados" en el hero vs "16" en el Balance Anual — dos fuentes sin conciliar | `i` | fix | Media | b | Investigar las 2 queries distintas que calculan lo mismo en `/app/admin/ex-alumnos` |
 | ASG-028 | Fix H-010 + H-014 + H-018: Agenda muestra "Todos los instructores" pero carga uno específico, texto RBAC "solo visible para admin" se muestra a secretaria, chips "P" ambiguos en asistencia | `i` | fix | Baja | b | 3 fixes cosméticos pequeños y no relacionados entre sí — buen paquete para alguien con poco tiempo |
 | ASG-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
@@ -55,6 +54,7 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | m | [fix-068-m-branch-persistencia-localstorage](fix-068-m-branch-persistencia-localstorage/fix.md) | 2026-07-26 |
 
 ---
 
