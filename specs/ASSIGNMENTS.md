@@ -22,9 +22,7 @@
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-001 | Fase 5 QA visual restante: skeletons en carga real, capturas claro/oscuro/mobile de páginas sin cobertura, regla 3-2-1 de marca | `b` | fix | Media | b | Iteraciones 19-21 de `indices/FLOWS-QA-AUDIT.md` (Fase 5) — bloqueadas por indisponibilidad temporal del clasificador de Playwright, requieren navegador |
 | ASG-003 | Fix H-040: 7 facades con canal Realtime que nunca se limpia + polling prohibido (`setInterval`) en `dashboard.facade.ts` | `i` | fix | Media | b | Ver `indices/FLOWS-QA-AUDIT.md` H-040. Archivos: `dashboard`/`admin-alumnos`/`admin-alumno-detalle`/`flota`/`pagos`/`liquidaciones`/`cuadratura` facades + sus Smart Components |
-| ASG-004 | Cobertura `data-llm-*` — lote 1: Admin Flota + Documentos + Certificados (9 archivos) | `m` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-005/006/007 |
 | ASG-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-004/006/007 |
-| ASG-006 | Cobertura `data-llm-*` — lote 3: shared/components parte 1 (8 archivos) | `m` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-004/005/007 |
 | ASG-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-004/005/006 |
 | ASG-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | `i` | fix | **Crítica** | b | Archivo: `instructor-clases.facade.ts:53`. La rama real ya existe pero tiene 0% cobertura de tests — agregarlos ANTES de activar el flag, no después |
 | ASG-012 | Fix H-020 + H-019 + H-033 + H-034: matrícula pública — overlay bloquea click en foto carnet, landing sin sede con links muertos, retry tras pago rechazado destruye la matrícula, fotos huérfanas en Storage | `b` | fix | Alta | b | Mismo módulo (wizard público de matrícula), 4 hallazgos relacionados. Archivos: `public-enrollment-retorno.component.ts:372-374`, `public-enrollment.facade.ts` (`clearDraft()`), componente de subida de foto carnet |
@@ -51,7 +49,6 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-008 | Decisión de diseño: modificador componible `btn-sm` en el DS + aplicar a los 3 archivos deferidos de ARCH-16 | `m` | [0002-m-decision-btn-sm-modificador](0002-m-decision-btn-sm-modificador/spec.md) | 2026-07-28 |
 
 ---
 
@@ -59,6 +56,9 @@
 
 | ID | Título | Track resultante | Cerrada |
 |----|--------|-------------------|---------|
+| ASG-004 | Cobertura `data-llm-*` — lote 1: Admin Flota + Documentos + Certificados (9 archivos) | [fix-088-m-data-llm-lote-1-flota-documentos](fix-088-m-data-llm-lote-1-flota-documentos/fix.md) | 2026-07-28 |
+| ASG-006 | Cobertura `data-llm-*` — lote 3: shared/components parte 1 (8 archivos) | [fix-087-m-data-llm-lote-3-shared-parte-1](fix-087-m-data-llm-lote-3-shared-parte-1/fix.md) | 2026-07-28 |
+| ASG-008 | Decisión de diseño: modificador componible `btn-sm` en el DS + aplicar a los 3 archivos deferidos de ARCH-16 | [fix-086-m-btn-sm-arch16-restante](fix-086-m-btn-sm-arch16-restante/fix.md) | 2026-07-28 |
 | ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
 | ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 | ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |

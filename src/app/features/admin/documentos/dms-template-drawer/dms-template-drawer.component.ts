@@ -67,6 +67,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 (ngModelChange)="name.set($event)"
                 placeholder="Ej: Contrato Clase B"
                 class="w-full rounded-lg px-3 py-2 text-sm border bg-subtle border-border-subtle text-text-primary outline-none"
+                data-llm-description="input for the template name"
               />
             </div>
 
@@ -79,6 +80,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 rows="2"
                 placeholder="Descripción breve de la plantilla..."
                 class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
+                data-llm-description="input for the template description"
               ></textarea>
             </div>
 
@@ -107,6 +109,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 (dragover)="onDragOver($event)"
                 (dragleave)="isDragOver.set(false)"
                 (drop)="onDrop($event)"
+                data-llm-action="select-template-file"
                 (click)="fileInput.click()"
               >
                 <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
@@ -137,6 +140,7 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
                 type="file"
                 accept=".pdf,.doc,.docx,.xls,.xlsx"
                 class="hidden"
+                data-llm-description="hidden file input for the template document"
                 (change)="onFileChange($event)"
               />
             </div>
@@ -152,12 +156,20 @@ import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanit
       </app-drawer-content-loader>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-secondary"
+          data-llm-action="cancel-create-template"
+          (click)="onClose()"
+        >
+          Cancelar
+        </button>
         <app-async-btn
           label="Guardar plantilla"
           icon="folder"
           [loading]="isSubmitting()"
           [disabled]="!canSubmit()"
+          llmAction="save-template"
           (click)="onSubmit()"
         ></app-async-btn>
       </ng-container>

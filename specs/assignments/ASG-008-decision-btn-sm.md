@@ -1,14 +1,14 @@
 # Asignación ASG-008 — Decisión de diseño: modificador btn-sm + aplicar a 3 archivos ARCH-16
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
-> **tipo_sugerido:** spec
+> **tipo_sugerido:** spec (reasignado a `fix` al reclamar — ver Notas)
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
 > **claimed_by:** m
 > **claimed_at:** 2026-07-28
-> **resulting_track:** 0002-m-decision-btn-sm-modificador
+> **resulting_track:** fix-086-m-btn-sm-arch16-restante
 
 ---
 
@@ -39,3 +39,8 @@ El linter `lint:arch` (regla ARCH-16) detectó que 3 archivos (`asistencia-clase
 
 - Es una decisión de diseño primero, implementación después — por eso el tipo sugerido es `spec`, no `fix` directo.
 - Prioridad baja — es deuda técnica conocida y trackeada, no un bug visible para usuarios.
+- **Reasignado a `fix` al reclamar (2026-07-28, Matías):** el alcance es acotado (1 primitivo CSS
+  + migrar 3 archivos ya identificados), sin stakeholders de producto que ameriten User Stories
+  formales — es la continuación directa de `fix-054-b-arch16-ratchet-btn-utilities`, que dejó
+  estos mismos 3 archivos deferidos. La "decisión de diseño" se documenta en `fix.md` en vez de
+  en `spec.md`.

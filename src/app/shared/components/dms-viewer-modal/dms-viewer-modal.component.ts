@@ -17,7 +17,9 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TooltipModule, CommonModule, IconComponent, SafePipe],
   template: `
-    <div class="flex-1 w-full h-full flex items-center justify-center bg-(--bg-subtle) min-h-0 p-4 sm:p-8">
+    <div
+      class="flex-1 w-full h-full flex items-center justify-center bg-(--bg-subtle) min-h-0 p-4 sm:p-8"
+    >
       @switch (doc()?.type) {
         @case ('image') {
           <div class="relative w-full h-full flex items-center justify-center min-h-0">
@@ -30,7 +32,9 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
           </div>
         }
         @case ('pdf') {
-          <div class="w-full h-full max-w-5xl bg-(--bg-surface) rounded-lg shadow-2xl overflow-hidden">
+          <div
+            class="w-full h-full max-w-5xl bg-(--bg-surface) rounded-lg shadow-2xl overflow-hidden"
+          >
             <iframe
               [src]="doc()?.url | safe: 'resourceUrl'"
               class="w-full h-full border-0"
@@ -53,7 +57,12 @@ import { DmsViewerService } from '@core/services/ui/dms-viewer.service';
                 Este documento no puede visualizarse directamente en el navegador.
               </p>
             </div>
-            <button type="button" class="btn-primary w-full" (click)="onDownload()">
+            <button
+              type="button"
+              class="btn-primary w-full"
+              data-llm-action="download-document"
+              (click)="onDownload()"
+            >
               Descargar para abrir
             </button>
           </div>

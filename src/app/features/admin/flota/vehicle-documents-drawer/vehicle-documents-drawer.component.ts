@@ -156,6 +156,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       </app-badge>
                       <button
                         class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-subtle text-text-muted hover:text-ds-brand transition-colors"
+                        data-llm-action="view-vehicle-document"
                       >
                         <app-icon name="external-link" [size]="14" />
                       </button>
@@ -169,7 +170,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
       </app-drawer-content-loader>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-primary" (click)="onClose()">Cerrar Panel</button>
+        <button
+          type="button"
+          class="btn-primary"
+          data-llm-action="close-vehicle-documents"
+          (click)="onClose()"
+        >
+          Cerrar Panel
+        </button>
       </ng-container>
     </app-drawer-form>
   `,

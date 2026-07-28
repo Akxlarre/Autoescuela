@@ -113,6 +113,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   placeholder="ABC-123"
                   aria-required="true"
                   class="w-full h-11 rounded-xl border-border-subtle hover:border-border-strong focus:border-brand bg-base font-mono uppercase text-lg px-4"
+                  data-llm-description="input for the vehicle license plate"
                 />
                 @if (
                   vehicleForm.controls.license_plate.touched &&
@@ -138,6 +139,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     placeholder="Nissan"
                     aria-required="true"
                     class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                    data-llm-description="input for the vehicle brand"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -154,6 +156,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     placeholder="Versa"
                     aria-required="true"
                     class="w-full h-11 rounded-xl border-border-subtle hover:border-ds-brand bg-base px-4"
+                    data-llm-description="input for the vehicle model"
                   />
                 </div>
               </div>
@@ -174,6 +177,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     placeholder="2024"
                     aria-required="true"
                     inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                    data-llm-description="input for the vehicle year"
                   />
                 </div>
                 <div class="flex flex-col gap-1.5">
@@ -188,6 +192,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                     formControlName="current_km"
                     placeholder="0"
                     inputStyleClass="w-full h-11 rounded-xl border-border-subtle bg-base px-4"
+                    data-llm-description="input for the vehicle current odometer reading"
                   />
                 </div>
               </div>
@@ -206,6 +211,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   [options]="statusOptions"
                   placeholder="Seleccionar estado"
                   styleClass="w-full h-11 rounded-xl border-border-subtle bg-base"
+                  data-llm-description="select for the vehicle status"
                 ></p-select>
               </div>
 
@@ -219,12 +225,20 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
       </app-drawer-content-loader>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-secondary" (click)="onCancel()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-secondary"
+          data-llm-action="cancel-vehicle-form"
+          (click)="onCancel()"
+        >
+          Cancelar
+        </button>
         <button
           type="button"
           class="btn-primary flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           [disabled]="vehicleForm.invalid || isSaving()"
           [appStableWidth]="isSaving()"
+          data-llm-action="save-vehicle"
           (click)="onSubmit()"
         >
           @if (isSaving()) {

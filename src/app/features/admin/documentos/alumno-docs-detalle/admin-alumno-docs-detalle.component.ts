@@ -76,6 +76,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
             type="button"
             class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer transition-all duration-150 border-0 bg-brand"
             style="color: var(--color-primary-text)"
+            data-llm-action="upload-document"
             (click)="openUploadDrawer()"
           >
             <app-icon name="upload" [size]="15" />
@@ -84,12 +85,12 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         </div>
 
         <!-- Split View Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[600px] lg:h-[700px]">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 h-150 lg:h-175">
           <!-- Lista de documentos (Columna Izquierda) -->
           <div class="lg:col-span-4 flex flex-col">
             <div class="bento-card p-0 overflow-hidden flex-1 flex flex-col" appCardHover>
               <div class="px-5 py-4 border-b border-border-subtle bg-surface">
-                <h2 class="text-base font-semibold m-0 text-text-primary">
+                <h2 class="text-base font-semibold m-0">
                   Documentos
                   @if (facade.studentDocs().length > 0) {
                     <span
@@ -117,6 +118,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                     <li
                       class="flex flex-col px-4 py-4 gap-3 transition-colors border-border-subtle cursor-pointer hover:bg-subtle"
                       [class.bg-brand-tint]="selectedDocPath() === doc.fileUrl"
+                      data-llm-action="select-document"
                       (click)="onSelectDocument(doc.fileUrl!, doc.fileName, doc.type)"
                     >
                       <div class="flex items-center gap-3 min-w-0">
@@ -155,6 +157,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                             type="button"
                             class="text-xs shrink-0 w-8 h-8 flex items-center justify-center rounded-md cursor-pointer border-0 bg-transparent text-error hover:bg-error/10"
                             pTooltip="Eliminar"
+                            data-llm-action="delete-document"
                             (click)="$event.stopPropagation(); onDeleteDoc(doc.id, doc.source)"
                           >
                             <app-icon name="trash-2" [size]="16" />
@@ -194,6 +197,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                   <button
                     type="button"
                     class="hidden sm:inline-flex items-center gap-2 h-9 px-3 rounded-lg text-sm font-semibold transition-all duration-150 cursor-pointer border border-border-subtle bg-transparent hover:bg-subtle text-text-primary shrink-0"
+                    data-llm-action="download-document"
                     (click)="onDownloadSelected()"
                   >
                     <app-icon name="download" [size]="14" />
@@ -217,7 +221,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                       @case ('pdf') {
                         <iframe
                           [src]="selectedDoc()?.url | safe: 'resourceUrl'"
-                          class="w-full h-full border-0 rounded bg-white shadow-sm border border-border-subtle"
+                          class="w-full h-full rounded bg-white shadow-sm border border-border-subtle"
                           title="Visor PDF"
                         ></iframe>
                       }
@@ -239,6 +243,7 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
                           <button
                             type="button"
                             class="btn-primary w-full mt-4"
+                            data-llm-action="download-document"
                             (click)="onDownloadSelected()"
                           >
                             Descargar para abrir

@@ -41,6 +41,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
       #btn
       type="button"
       [disabled]="isDisabledOrLoading()"
+      [attr.data-llm-action]="llmAction()"
       [appStableWidth]="activeState() !== 'idle'"
       class="cursor-pointer px-8 py-2.5 text-sm font-semibold rounded-lg shadow-sm
              flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed
@@ -91,6 +92,8 @@ export class AsyncBtnComponent {
   readonly successLabel = input<string>('¡Guardado!');
   /** Texto mientras error = true (2s). */
   readonly errorLabel = input<string>('Error al guardar');
+  /** Identificador semántico de la acción para agentes IA (data-llm-action). Contextual al uso. */
+  readonly llmAction = input<string | null>(null);
 
   // ── State ─────────────────────────────────────────────────────────────────
   readonly isDisabledOrLoading = computed(() => this.disabled() || this.loading());
