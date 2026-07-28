@@ -16,6 +16,7 @@
 
 | ID | Título | Prioridad | Owner | Notas |
 |----|--------|-----------|-------|-------|
+| [0002-m](./0002-m-decision-btn-sm-modificador/spec.md) | Decisión de diseño: modificador btn-sm + aplicar a 3 archivos ARCH-16 deferidos | P2 | Matías | Reclamada desde ASG-008. Deuda técnica trackeada (`docs/BACKLOG-DEUDA-TECNICA.md` línea 86-88), sin impacto visible para usuarios. |
 | [0005](./0005-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./0006-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./0023-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |

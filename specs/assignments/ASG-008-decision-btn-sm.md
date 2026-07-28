@@ -1,14 +1,14 @@
 # Asignación ASG-008 — Decisión de diseño: modificador btn-sm + aplicar a 3 archivos ARCH-16
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-28
+> **resulting_track:** 0002-m-decision-btn-sm-modificador
 
 ---
 
