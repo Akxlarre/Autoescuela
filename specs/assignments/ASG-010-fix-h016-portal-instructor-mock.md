@@ -31,7 +31,19 @@
 - `src/app/core/facades/instructor-clases.facade.ts`
 - `src/app/core/facades/instructor-clases.facade.spec.ts`
 
+## Confirmación desde la reunión con el cliente 2026-07-28
+
+El cliente reportó de forma independiente: *"Vista de instructores tiene muchos datos mock."*
+Es el **mismo problema** visto desde el lado del usuario final — confirma que H-016 ya es
+visible en el uso real, no una deuda interna. Se absorbe acá, sin crear ASG nueva.
+
+Al cerrar este track, verificar explícitamente que **no queden datos mock visibles en ninguna
+vista del portal de instructores**, no solo en las 6 funciones listadas arriba.
+
 ## Notas para quien la reclame
 
 - **Prioridad Crítica** — riesgo real de que un instructor intente operar sobre datos falsos.
+- ⚠️ **Se solapa con ASG-036** (exclusión mutua + cierre automático de clases), que toca
+  `startClass()`/`finishClass()` en este mismo archivo. No tiene sentido validar exclusión mutua
+  contra la rama mock: idealmente esta asignación se cierra primero, o se toman juntas.
 - El riesgo de "arreglar mal" es real: sin tests para la rama real, activar el flag podría reemplazar un bug conocido y visible por uno invisible. No saltarse el paso de tests.
