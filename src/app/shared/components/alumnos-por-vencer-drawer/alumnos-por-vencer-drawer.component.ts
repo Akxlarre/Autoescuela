@@ -57,6 +57,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                   pButton
                   class="p-button-rounded p-button-success p-button-text w-8 h-8 p-0 flex items-center justify-center"
                   pTooltip="Contactar"
+                  data-llm-action="contact-student"
                 >
                   <app-icon name="message-circle" [size]="18" />
                 </button>

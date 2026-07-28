@@ -91,7 +91,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
       <div class="bento-banner card p-0 overflow-hidden shadow-sm" appAnimateIn appCardHover>
         <!-- Header de sección -->
         <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
-          <h2 class="text-base font-bold text-text-primary">Historial Cronológico</h2>
+          <h2 class="text-base font-bold">Historial Cronológico</h2>
           <div class="flex items-center gap-2">
             @if (!facade.isLoading()) {
               <span class="text-xs font-bold text-text-muted uppercase tracking-widest">
@@ -102,6 +102,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
               pButton
               label="Registrar Servicio"
               class="p-button-sm h-9 rounded-xl px-4 font-bold"
+              data-llm-action="register-maintenance"
               (click)="openMaintenanceForm()"
             >
               <app-icon name="plus" [size]="14" class="mr-2" />
@@ -169,7 +170,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                   <span class="font-bold text-sm text-text-primary">{{ m.type }}</span>
                   @if (m.description) {
                     <p
-                      class="text-2xs text-text-muted truncate max-w-[200px]"
+                      class="text-2xs text-text-muted truncate max-w-50"
                       [pTooltip]="m.description"
                       tooltipPosition="top"
                     >
@@ -195,6 +196,7 @@ import { MaintenanceFormDrawerComponent } from '../maintenance-form-drawer/maint
                   <button
                     pButton
                     class="p-button-text p-button-sm p-button-rounded h-8 w-8 p-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:scale-110 active:scale-95"
+                    data-llm-action="edit-maintenance"
                     (click)="openMaintenanceForm(m.id)"
                   >
                     <app-icon name="pencil" [size]="14" />

@@ -95,6 +95,7 @@ import type {
                 [class.text-text-secondary]="activeTab() !== tab.id"
                 [class.border-transparent]="activeTab() !== tab.id"
                 [class.hover:text-text-primary]="activeTab() !== tab.id"
+                data-llm-nav="dms-tab"
                 (click)="setActiveTab(tab.id)"
               >
                 <span class="flex items-center gap-2">
@@ -119,9 +120,7 @@ import type {
                 class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
               >
                 <div>
-                  <h2 class="text-base font-semibold m-0">
-                    Alumnos con documentos
-                  </h2>
+                  <h2 class="text-base font-semibold m-0">Alumnos con documentos</h2>
                   <p class="text-xs text-text-secondary m-0 mt-1">
                     Contratos firmados, fotos de licencias, cédulas y más
                   </p>
@@ -129,6 +128,7 @@ import type {
                 <button
                   type="button"
                   class="btn-primary py-2 px-3 text-xs"
+                  data-llm-action="upload-student-document"
                   (click)="uploadStudentDoc.emit()"
                 >
                   <app-icon name="upload" [size]="14" />
@@ -152,6 +152,7 @@ import type {
                     (ngModelChange)="studentSearch.set($event)"
                     placeholder="Buscar alumno por nombre o RUT..."
                     class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border transition-all duration-200 bg-subtle border-border-subtle text-text-primary outline-none focus:border-brand"
+                    data-llm-description="input for searching students by name or RUT"
                   />
                   @if (studentSearch()) {
                     <button
@@ -222,6 +223,7 @@ import type {
                           <button
                             type="button"
                             class="text-sm font-medium cursor-pointer bg-transparent border-0 transition-colors duration-150 text-brand hover:text-brand-hover"
+                            data-llm-action="view-student-documents"
                             (click)="viewStudentDocs.emit(row.studentId)"
                           >
                             Ver →
@@ -275,6 +277,7 @@ import type {
                           <button
                             type="button"
                             class="text-xs font-medium px-2.5 py-1 rounded-md cursor-pointer border text-text-primary border-border-subtle bg-transparent"
+                            data-llm-action="view-document"
                             (click)="
                               viewDocument.emit({ url: doc.fileUrl!, fileName: doc.fileName })
                             "
@@ -286,6 +289,7 @@ import type {
                           <button
                             type="button"
                             class="text-xs font-medium px-2.5 py-1 rounded-md cursor-pointer border-0 bg-transparent transition-colors duration-150 text-error"
+                            data-llm-action="delete-student-document"
                             (click)="deleteStudentDoc.emit({ id: doc.id, source: doc.source })"
                           >
                             Eliminar
@@ -306,9 +310,7 @@ import type {
                 class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface"
               >
                 <div>
-                  <h2 class="text-base font-semibold m-0">
-                    Documentos institucionales
-                  </h2>
+                  <h2 class="text-base font-semibold m-0">Documentos institucionales</h2>
                   <p class="text-xs text-text-secondary m-0 mt-1">
                     Facturas de folios, resoluciones MTT, decretos y más
                   </p>
@@ -316,6 +318,7 @@ import type {
                 <button
                   type="button"
                   class="btn-primary py-2 px-3 text-xs"
+                  data-llm-action="upload-school-document"
                   (click)="uploadSchoolDoc.emit()"
                 >
                   <app-icon name="upload" [size]="14" />
@@ -362,6 +365,7 @@ import type {
                         <button
                           type="button"
                           class="text-xs font-medium px-2.5 py-1 rounded-md cursor-pointer border text-text-primary border-border-subtle bg-transparent"
+                          data-llm-action="view-document"
                           (click)="
                             viewDocument.emit({ url: doc.storageUrl, fileName: doc.fileName })
                           "
@@ -372,6 +376,7 @@ import type {
                           <button
                             type="button"
                             class="text-xs font-medium px-2.5 py-1 rounded-md cursor-pointer border-0 bg-transparent text-error"
+                            data-llm-action="delete-school-document"
                             (click)="deleteSchoolDoc.emit(doc.id)"
                           >
                             Eliminar
@@ -399,6 +404,7 @@ import type {
                   <button
                     type="button"
                     class="btn-primary py-2 px-3 text-xs"
+                    data-llm-action="upload-template"
                     (click)="uploadTemplate.emit()"
                   >
                     <app-icon name="upload" [size]="14" />
@@ -418,6 +424,7 @@ import type {
                     [class.bg-subtle]="categoryFilter() !== cat.id"
                     [class.text-text-secondary]="categoryFilter() !== cat.id"
                     [class.hover:bg-border-subtle]="categoryFilter() !== cat.id"
+                    data-llm-action="filter-templates-by-category"
                     (click)="setCategoryFilter(cat.id)"
                   >
                     {{ cat.label }}
@@ -478,6 +485,7 @@ import type {
                             <button
                               type="button"
                               class="text-xs font-medium cursor-pointer border-0 bg-transparent text-error"
+                              data-llm-action="delete-template"
                               (click)="deleteTemplate.emit(tpl.id)"
                             >
                               Eliminar
@@ -486,6 +494,7 @@ import type {
                           <button
                             type="button"
                             class="inline-flex items-center gap-1 text-xs font-semibold cursor-pointer border-0 bg-transparent transition-colors duration-150 text-brand"
+                            data-llm-action="download-template"
                             (click)="downloadTemplate.emit(tpl)"
                           >
                             <app-icon name="download" [size]="13" />
