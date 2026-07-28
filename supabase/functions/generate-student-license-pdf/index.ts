@@ -18,10 +18,9 @@ const corsHeaders = {
 
 const SCHOOL = {
   name: 'CONDUCTORES CHILL\xC1N',
-  tagline: 'U\xF3nete a nosotros... \xFAnete a la vida',
+  tagline: '\xDAnete a nosotros... \xFAnete a la vida',
   address: 'CARRERA 74, FONO: 42- 2244030',
   email: 'conductorchillan@gmail.com',
-  website: 'www.conductoreschillan.cl',
 };
 
 const LOGO_URL =
@@ -41,7 +40,7 @@ Deno.serve(async (req: Request) => {
     if (!enrollment_id || typeof enrollment_id !== 'number') {
       return jsonRes({ error: 'enrollment_id (number) is required' }, 400);
     }
-    // 'initial' → carnet de 6 clases (amarillo); 'full' → carnet de 12 clases (verde).
+    // 'initial' → carnet de 6 clases; 'full' → carnet de 12 clases.
     const variant: 'initial' | 'full' = rawVariant === 'full' ? 'full' : 'initial';
 
     const supabase = createClient(
@@ -252,27 +251,30 @@ interface CarnetData {
 }
 
 function buildCarnetPdf(d: CarnetData): Uint8Array {
-  // A5 landscape: más ancho y menos alto, igual que el carnet físico
-  const W = 595,
-    H = 421;
+  // 8.50 × 5.90 in landscape (igual al carnet físico impreso): 612 × 425 pt
+  const W = 612,
+    H = 425;
 
   // Columnas
-  const LEFT_X = 10;
-  const DIV_X = 293;
-  const RIGHT_X = 300;
-  const RIGHT_END = 585;
-  const CX_R = Math.round((RIGHT_X + RIGHT_END) / 2); // 442
+  const LEFT_X = 14;
+  const RIGHT_X = 315;
+  const RIGHT_END = 600;
+  const CX_R = Math.round((RIGHT_X + RIGHT_END) / 2); // 458
 
-  // Tabla (columna izquierda)
+  // Tabla (columna izquierda) — más angosta que antes; columnas de horario y
+  // "Firma Instructor" con anchos parejos, como el carnet físico (ahí la
+  // columna de firma NO es mucho más ancha que las de hora).
   const TBL_L = LEFT_X;
-  const TBL_R = 285;
-  const COL_NRO = TBL_L + 22; // 32
-  const COL_DIA = COL_NRO + 46; // 78
-  const COL_HI = COL_DIA + 54; // 132
-  const COL_HT = COL_HI + 54; // 186
+  const TBL_R = 270;
+  const COL_NRO = TBL_L + 33; // 47
+  const COL_DIA = COL_NRO + 44; // 91
+  const COL_HI = COL_DIA + 59; // 150
+  const COL_HT = COL_HI + 59; // 209
 
-  const HDR_H = 12;
-  const ROW_H = 15;
+  // Encabezado con más aire debajo del texto; filas de datos grandes y en
+  // negrita, apretadas contra los bordes de la celda como en el carnet físico.
+  const HDR_H = 20;
+  const ROW_H = 16;
 
   let ops = '';
 
@@ -302,27 +304,20 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
   }
 
   // ════════════════════════════════════════════════
-  // FONDO PASTEL (según variante) — se pinta primero para quedar detrás de
-  // bordes, textos, logo y foto. Tonos claros para no afectar legibilidad.
-  //   initial (6 clases)  → amarillo pastel
-  //   full    (12 clases) → verde pastel
-  // ════════════════════════════════════════════════
-  const bgColor = d.variant === 'full' ? '0.85 0.94 0.82' : '1 0.97 0.78';
-  ops += `${bgColor} rg 0 0 ${W} ${H} re f\n0 g\n`;
-
-  // ════════════════════════════════════════════════
   // COLUMNA IZQUIERDA
   // ════════════════════════════════════════════════
 
-  let y = H - 14; // y=407
+  let y = H - 16; // y=409
 
   // "V.- CLASES PRÁCTICAS" (negrita, subrayado)
   const hdrTxt = 'V.- CLASES PR\xC1CTICAS';
-  T(LEFT_X, y, hdrTxt, 'F2', 7);
-  const hdrW = tw(hdrTxt, 7, true);
-  ops += `0.4 w ${r(LEFT_X)} ${r(y - 1)} m ${r(LEFT_X + hdrW)} ${r(y - 1)} l S\n`;
+  T(LEFT_X, y, hdrTxt, 'F2', 9);
+  // +2pt de margen: los anchos de Helvetica-Bold son un estimado, así que se
+  // agranda un poco el trazo para asegurar que cubra el texto completo.
+  const hdrW = tw(hdrTxt, 9, true) + 2;
+  ops += `0.4 w ${r(LEFT_X)} ${r(y - 2)} m ${r(LEFT_X + hdrW)} ${r(y - 2)} l S\n`;
 
-  y -= 8; // y=399 = tblTopY
+  y -= 10; // y=399 = tblTopY
 
   const tblTopY = y;
   const dataStartY = y - HDR_H;
@@ -336,110 +331,128 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
   VLINE(COL_HT, tblBotY, tblTopY);
   HLINE(TBL_L, TBL_R, tblTopY - HDR_H, 0.8);
 
-  const hdrY = tblTopY - HDR_H + 3;
+  // Encabezados de columna centrados vertical y horizontalmente dentro de la
+  // celda de header; los que no caben en una línea se parten en dos, igual
+  // que en el carnet físico ("Hora" / "inicio", "Firma" / "Instructor").
+  const HDR_FONT = 6.5;
+  const HDR_LINE_H = HDR_FONT + 2.5;
+  const cellMidY = tblTopY - HDR_H / 2;
+
+  const drawHeaderCell = (cx: number, lines: string[]) => {
+    const blockH = lines.length * HDR_LINE_H;
+    let lineY = cellMidY + blockH / 2 - HDR_LINE_H / 2 - HDR_FONT * 0.3;
+    for (const line of lines) {
+      TC(cx, lineY, line, 'F2', HDR_FONT);
+      lineY -= HDR_LINE_H;
+    }
+  };
+
   const colHeaders = [
-    { text: 'N\xBA', cx: (TBL_L + COL_NRO) / 2 },
-    { text: 'D\xEDa', cx: (COL_NRO + COL_DIA) / 2 },
-    { text: 'Hora inicio', cx: (COL_DIA + COL_HI) / 2 },
-    { text: 'Hora T\xE9rmino', cx: (COL_HI + COL_HT) / 2 },
-    { text: 'Firma Instructor', cx: (COL_HT + TBL_R) / 2 },
+    { lines: ['N\xBA'], cx: (TBL_L + COL_NRO) / 2 },
+    { lines: ['D\xEDa'], cx: (COL_NRO + COL_DIA) / 2 },
+    { lines: ['Hora', 'inicio'], cx: (COL_DIA + COL_HI) / 2 },
+    { lines: ['Hora', 'T\xE9rmino'], cx: (COL_HI + COL_HT) / 2 },
+    { lines: ['Firma', 'Instructor'], cx: (COL_HT + TBL_R) / 2 },
   ];
   for (const h of colHeaders) {
-    TC(h.cx, hdrY, h.text, 'F2', 5.5);
+    drawHeaderCell(h.cx, h.lines);
   }
 
   const sesMap = new Map<number, any>();
   for (const s of d.sesiones) sesMap.set(Number(s.class_number), s);
 
+  // Contenido de fila grande y en negrita, apretado contra la celda — igual
+  // que el carnet físico.
+  const ROW_FONT = 9.5;
   for (let i = 0; i < d.totalClases; i++) {
     const rowTopY = dataStartY - i * ROW_H;
     const rowBotY = rowTopY - ROW_H;
-    const textY = rowBotY + (ROW_H - 6) / 2 + 1;
+    const textY = rowBotY + (ROW_H - ROW_FONT) / 2 + 1;
     const ses = sesMap.get(i + 1);
 
     HLINE(TBL_L, TBL_R, rowBotY);
-    TC((TBL_L + COL_NRO) / 2, textY, String(i + 1), 'F1', 6);
+    TC((TBL_L + COL_NRO) / 2, textY, String(i + 1), 'F2', ROW_FONT);
 
     if (ses?.scheduled_at) {
-      TC((COL_NRO + COL_DIA) / 2, textY, fmtDaySantiago(ses.scheduled_at), 'F1', 6);
-      TC((COL_DIA + COL_HI) / 2, textY, fmtTimeSantiago(ses.scheduled_at), 'F1', 6);
-      TC((COL_HI + COL_HT) / 2, textY, addMinutes(ses.scheduled_at, 45), 'F1', 6);
+      TC((COL_NRO + COL_DIA) / 2, textY, fmtDaySantiago(ses.scheduled_at), 'F2', ROW_FONT);
+      TC((COL_DIA + COL_HI) / 2, textY, fmtTimeSantiago(ses.scheduled_at), 'F2', ROW_FONT);
+      TC((COL_HI + COL_HT) / 2, textY, addMinutes(ses.scheduled_at, 45), 'F2', ROW_FONT);
     }
 
-    // Carnet completo (12 clases): las clases 1-6 ya fueron cursadas en el carnet
-    // inicial, así que no requieren firma del instructor. En su lugar se marca
-    // "Completada" en la columna de firma.
-    if (d.variant === 'full' && i < 6) {
-      TC((COL_HT + TBL_R) / 2, textY, 'Completada', 'F1', 5.5);
-    }
+    // La columna "Firma Instructor" queda siempre en blanco para que el
+    // instructor la firme a mano — incluso en las clases 1-6 del carnet
+    // completo (12 clases), que ya fueron firmadas en el carnet inicial
+    // físico pero no llevan marca impresa aquí.
   }
 
-  y = tblBotY - 8;
+  y = tblBotY - 20; // separado de la tabla, no pegado al borde
 
   if (d.totalClases === 6) {
-    T(LEFT_X, y, 'APROBADO', 'F2', 6.5);
-    RECT(LEFT_X + 50, y - 1, 10, 9);
-    T(LEFT_X + 68, y, 'REPROBADO', 'F2', 6.5);
-    RECT(LEFT_X + 115, y - 1, 10, 9);
-    y -= 16;
+    const aprobadoTxt = 'APROBADO';
+    T(LEFT_X, y, aprobadoTxt, 'F2', 8);
+    const aprobadoW = tw(aprobadoTxt, 8, true);
+    const box1X = LEFT_X + aprobadoW + 8;
+    RECT(box1X, y - 2, 13, 12);
+
+    const reprobadoTxt = 'REPROBADO';
+    const reprobadoX = box1X + 13 + 14;
+    T(reprobadoX, y, reprobadoTxt, 'F2', 8);
+    const reprobadoW = tw(reprobadoTxt, 8, true);
+    const box2X = reprobadoX + reprobadoW + 8;
+    RECT(box2X, y - 2, 13, 12);
+
+    y -= 22;
   }
 
-  y -= 6;
-  T(LEFT_X, y, 'P\xC1GINAS WEB PARA PRACTICAR EXAMEN TE\xD3RICO:', 'F2', 5.5);
-  y -= 9;
+  y -= 8;
+  T(LEFT_X, y, 'P\xC1GINAS WEB PARA PRACTICAR EXAMEN TE\xD3RICO:', 'F2', 9.5);
+  y -= 15;
   for (const url of WEB_URLS) {
-    T(LEFT_X, y, url, 'F1', 5);
-    y -= 8;
+    T(LEFT_X, y, url, 'F1', 8.5);
+    y -= 12;
   }
-
-  // ════════════════════════════════════════════════
-  // LÍNEA DIVISORIA
-  // ════════════════════════════════════════════════
-  VLINE(DIV_X, 13, H - 11, 0.6);
 
   // ════════════════════════════════════════════════
   // COLUMNA DERECHA
   // ════════════════════════════════════════════════
 
   // Centros de columna derecha
-  const CX_SCHOOL = 502; // texto del colegio más a la derecha
-  const CX_PHOTO_MATRIC = 512; // foto + matrícula más a la derecha
+  const CX_SCHOOL = 517; // texto del colegio más a la derecha
+  const CX_PHOTO_MATRIC = 515; // foto + matrícula, levemente más a la izquierda
 
-  let ry = H - 14; // 407
+  const TOP_R_Y = H - 34; // más margen respecto al borde superior que antes
+  let ry = TOP_R_Y;
 
   // Logo en la esquina superior izquierda de la mitad derecha
-  const logoH = 52;
+  const logoH = 60;
   const logo = d.logo;
   if (logo) {
     const logoW = Math.round((logo.width / logo.height) * logoH);
-    const logoX = RIGHT_X + 4; // 304 — esquina izquierda de la mitad derecha
-    const logoY = ry - logoH; // 421-14-52 = 355
+    const logoX = RIGHT_X + 4; // esquina izquierda de la mitad derecha
+    const logoY = ry - logoH;
     ops += `q ${r(logoW)} 0 0 ${r(logoH)} ${r(logoX)} ${r(logoY)} cm /Im1 Do Q\n`;
   }
 
   // Texto del colegio centrado más a la derecha, al lado del logo
-  TC(CX_SCHOOL, ry, SCHOOL.name, 'F2', 9);
+  TC(CX_SCHOOL, ry, SCHOOL.name, 'F2', 11);
+  ry -= 14;
+
+  TC(CX_SCHOOL, ry, SCHOOL.tagline, 'F2', 8);
   ry -= 12;
 
-  TC(CX_SCHOOL, ry, SCHOOL.tagline, 'F1', 6.5);
-  ry -= 10;
+  TC(CX_SCHOOL, ry, SCHOOL.address, 'F1', 8);
+  ry -= 12;
 
-  TC(CX_SCHOOL, ry, SCHOOL.address, 'F1', 6.5);
-  ry -= 9;
-
-  TC(CX_SCHOOL, ry, SCHOOL.email, 'F1', 6.5);
-  ry -= 9;
-
-  TC(CX_SCHOOL, ry, SCHOOL.website, 'F1', 6.5);
+  TC(CX_SCHOOL, ry, SCHOOL.email, 'F2', 8);
 
   // Reposicionar debajo del logo (más alto que el texto del colegio)
-  ry = H - 14 - logoH - 8; // 421 - 14 - 52 - 8 = 347
+  ry = TOP_R_Y - logoH - 10;
 
   // Foto del alumno (más a la derecha)
-  const photoW = 54,
-    photoH = 66;
+  const photoW = 64,
+    photoH = 78;
   const photoX = CX_PHOTO_MATRIC - photoW / 2;
-  const photoY = ry - photoH; // 347 - 66 = 281
+  const photoY = ry - photoH;
 
   if (d.photo) {
     // Center-fill: scale image so the shorter side fits the box, clip the overflow.
@@ -460,24 +473,24 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
   } else {
     RECT(photoX, photoY, photoW, photoH, 0.4);
   }
-  ry = photoY - 12; // mayor separación entre foto y etiqueta MATRICULA
+  ry = photoY - 14; // mayor separación entre foto y etiqueta MATRICULA
 
   // MATRICULA (más a la derecha)
-  TC(CX_PHOTO_MATRIC, ry, 'MATRICULA', 'F2', 8);
-  ry -= 4;
+  TC(CX_PHOTO_MATRIC, ry, 'MATRICULA', 'F2', 10);
+  ry -= 5;
 
-  const boxW = 66,
-    boxH = 20;
+  const boxW = 78,
+    boxH = 24;
   const boxX = CX_PHOTO_MATRIC - boxW / 2;
   const boxY = ry - boxH;
   RECT(boxX, boxY, boxW, boxH, 1.0);
-  TC(CX_PHOTO_MATRIC, boxY + (boxH - 13) / 2 + 1, d.matriculaNum, 'F2', 13);
-  ry = boxY - 10;
+  TC(CX_PHOTO_MATRIC, boxY + (boxH - 16) / 2 + 1, d.matriculaNum, 'F2', 16);
+  ry = boxY - 12;
 
   // Datos del alumno (más arriba por el nuevo layout)
-  const infoX = RIGHT_X + 5;
-  const infoSize = 7;
-  const infoLead = 11;
+  const infoX = RIGHT_X + 6;
+  const infoSize = 9;
+  const infoLead = 14;
   T(infoX, ry, `Nombres: ${d.firstName.toUpperCase()}`, 'F2', infoSize);
   ry -= infoLead;
   T(infoX, ry, `Apellidos: ${d.lastNames.toUpperCase()}`, 'F2', infoSize);
@@ -485,19 +498,19 @@ function buildCarnetPdf(d: CarnetData): Uint8Array {
   T(infoX, ry, `C. Identidad: ${d.rut}`, 'F2', infoSize);
   ry -= infoLead;
   T(infoX, ry, `INSTRUCTOR: ${d.instructorName}`, 'F2', infoSize);
-  ry -= 14;
+  ry -= 16;
 
   // Nota + CURSO CLASE B en azul (más arriba por el nuevo layout)
   ops += `0 0 0.8 rg\n`;
 
   const noteLine1 = 'No olvide llevar consigo este carnet durante';
   const noteLine2 = 'las clases pr\xE1cticas';
-  ops += `BT /F1 6.5 Tf 1 0 0.2 1 ${r(CX_R - tw(noteLine1, 6.5, false) / 2)} ${r(ry)} Tm (${esc(noteLine1)}) Tj ET\n`;
-  ry -= 9;
-  ops += `BT /F1 6.5 Tf 1 0 0.2 1 ${r(CX_R - tw(noteLine2, 6.5, false) / 2)} ${r(ry)} Tm (${esc(noteLine2)}) Tj ET\n`;
+  ops += `BT /F2 9.5 Tf 1 0 0.2 1 ${r(CX_R - tw(noteLine1, 9.5, true) / 2)} ${r(ry)} Tm (${esc(noteLine1)}) Tj ET\n`;
   ry -= 13;
+  ops += `BT /F2 9.5 Tf 1 0 0.2 1 ${r(CX_R - tw(noteLine2, 9.5, true) / 2)} ${r(ry)} Tm (${esc(noteLine2)}) Tj ET\n`;
+  ry -= 17;
 
-  TC(CX_R, ry, 'CURSO CLASE B', 'F2', 11);
+  TC(CX_R, ry, 'CURSO CLASE B', 'F2', 14);
 
   ops += `0 g\n`; // reset a negro
 

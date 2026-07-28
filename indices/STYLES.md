@@ -192,8 +192,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 472 | `#38bdf8` |
-| `--text-muted` | 406 | `rgba(255, 255, 255, 0.55)` |
+| `--ds-brand` | 475 | `#38bdf8` |
+| `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 266 | `var(--color-primary-text)` |
 | `--text-secondary` | 227 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
@@ -203,10 +203,10 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--color-primary` | 158 | `#38bdf8` |
 | `--border-default` | 134 | `rgba(255, 255, 255, 0.28)` |
 | `--state-warning` | 124 | `#fbbf24` |
-| `--bg-elevated` | 80 | `#27272a` |
+| `--bg-elevated` | 83 | `#27272a` |
+| `--duration-fast` | 67 | `200ms` |
 | `--text-sm` | 65 | `0.875rem` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
-| `--duration-fast` | 64 | `200ms` |
 | `--radius-md` | 57 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 51 | `var(--border-subtle)` |
@@ -215,7 +215,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--text-xs` | 45 | `0.75rem` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--color-success` | 39 | `—` |
-| `--radius-full` | 31 | `9999px` |
+| `--radius-full` | 34 | `9999px` |
 | `--state-success-bg` | 27 | `rgba(74, 222, 128, 0.1)` |
 
 ## Clases semánticas del Design System

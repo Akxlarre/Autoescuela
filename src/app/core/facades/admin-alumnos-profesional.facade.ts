@@ -37,8 +37,11 @@ interface RawProEnrollment {
 
 // ─── Facade ──────────────────────────────────────────────────────────────────
 
-/** Estados de matrícula considerados "matriculados" en la Base Profesional. */
-const ENROLLED_STATUSES = ['active', 'completed', 'inactive'];
+/**
+ * Estados de matrícula considerados "matriculados" en la Base Profesional.
+ * 'completed' queda fuera: esos alumnos ya son Ex-Alumnos y solo se listan ahí.
+ */
+const ENROLLED_STATUSES = ['active', 'inactive'];
 
 @Injectable({ providedIn: 'root' })
 export class AdminAlumnosProfesionalFacade {

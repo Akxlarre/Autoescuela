@@ -46,12 +46,23 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
  * tipo de matrícula del alumno cargado. `licenseGroup` es `undefined` en
  * estado de carga/error (ficha aún no resuelta) — cae al listado por defecto
  * del rol (class_b), que es el caso más común.
+ *
+ * `cameFromExAlumnos` (fix-084): si se llegó a la ficha desde Ex-Alumnos (los
+ * alumnos Finalizados ya no aparecen en Base Alumnos), "volver" debe apuntar
+ * al listado de Ex-Alumnos correspondiente, no a Base Alumnos.
  */
 export function resolveListadoRoute(
   isAdmin: boolean,
   licenseGroup: 'class_b' | 'professional' | undefined,
+  cameFromExAlumnos = false,
 ): string {
   const esProfesional = licenseGroup === 'professional';
+  if (cameFromExAlumnos) {
+    if (isAdmin) {
+      return esProfesional ? '/app/admin/ex-alumnos-profesional' : '/app/admin/ex-alumnos';
+    }
+    return esProfesional ? '/app/secretaria/ex-alumnos-profesional' : '/app/secretaria/ex-alumnos';
+  }
   if (isAdmin) {
     return esProfesional ? '/app/admin/clase-profesional/alumnos' : '/app/admin/alumnos';
   }
@@ -59,7 +70,13 @@ export function resolveListadoRoute(
 }
 
 /** Etiqueta legible del listado de "volver", acorde al tipo de matrícula. */
-export function resolveListadoLabel(licenseGroup: 'class_b' | 'professional' | undefined): string {
+export function resolveListadoLabel(
+  licenseGroup: 'class_b' | 'professional' | undefined,
+  cameFromExAlumnos = false,
+): string {
+  if (cameFromExAlumnos) {
+    return licenseGroup === 'professional' ? 'Ex-Alumnos Profesional' : 'Ex-Alumnos B';
+  }
   return licenseGroup === 'professional'
     ? 'Listado de Alumnos Profesionales'
     : 'Listado de Alumnos';
@@ -1021,21 +1038,27 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
 
   protected readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
 
-  // Ruta de "volver" consciente del contexto: depende del rol (admin/secretaria)
-  // Y del tipo de matrícula del alumno (class_b/professional) — cada combinación
-  // tiene un listado distinto. Antes era un routerLink estático a
-  // /app/admin/alumnos, así que un alumno profesional siempre te devolvía al
-  // listado de Clase B.
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  // fix-084: los alumnos Finalizados ya no aparecen en Base Alumnos, solo en
+  // Ex-Alumnos. Si se llegó a esta ficha desde ahí (?from=ex-alumnos), "volver"
+  // debe apuntar al listado de Ex-Alumnos correspondiente, no a Base Alumnos.
+  protected readonly cameFromExAlumnos =
+    this.route.snapshot.queryParamMap.get('from') === 'ex-alumnos';
+
+  // Ruta de "volver" consciente del contexto: depende del rol (admin/secretaria),
+  // del tipo de matrícula del alumno (class_b/professional) y de si se llegó
+  // desde Ex-Alumnos — cada combinación tiene un listado distinto. Antes era un
+  // routerLink estático a /app/admin/alumnos, así que un alumno profesional
+  // siempre te devolvía al listado de Clase B.
   protected readonly listadoRoute = computed<string>(() =>
-    resolveListadoRoute(this.isAdmin(), this.facade.alumno()?.licenseGroup),
+    resolveListadoRoute(this.isAdmin(), this.facade.alumno()?.licenseGroup, this.cameFromExAlumnos),
   );
 
   protected readonly listadoLabel = computed<string>(() =>
-    resolveListadoLabel(this.facade.alumno()?.licenseGroup),
+    resolveListadoLabel(this.facade.alumno()?.licenseGroup, this.cameFromExAlumnos),
   );
-
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   private readonly gsap = inject(GsapAnimationsService);
 
