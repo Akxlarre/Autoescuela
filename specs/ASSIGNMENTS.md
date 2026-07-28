@@ -42,7 +42,6 @@
 | ASG-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
 | ASG-030 | Fix H-023: Caja Diaria muestra la glosa cruda del origen del pago ("online"/"enrollment") en vez de un concepto legible | `b` | fix | Baja | b | Mapeo ya existe en la página Pagos — reutilizar el mismo mapeo en Caja Diaria |
 | ASG-031 | Fix H-032: el formulario "Recuperar Contraseña" sigue mostrando el campo de Contraseña del login normal | `b` | fix | Baja | b | Solo ocultar/limpiar el campo al cambiar de modo — el envío del enlace ya funciona bien |
-| ASG-032 | Fix H-036: flash de texto incorrecto ("matrícula profesional") en la página Pagos de un alumno de Clase B mientras carga | `b` | fix | Baja | b | Archivo: `alumno-pagos.component.ts:205-212` — cambiar el valor por defecto de `heroSubtitle` |
 | ASG-033 | Portal alumno no muestra matrículas múltiples: con 2+ matrículas activas, Pagos y el KPI del Dashboard solo muestran una, ocultando la otra aunque esté pagada y activa | `b` | spec | Media | b | Hallado al verificar fix-058-b (H-039) en vivo. Admin ya resuelve esto con tabs por matrícula; portal alumno no. Ver `specs/fix-058-b-pago-multiples-matriculas/fix.md` |
 
 ### Tanda reunión con el cliente — 2026-07-28
@@ -90,6 +89,7 @@
 | ID | Título | Track resultante | Cerrada |
 |----|--------|-------------------|---------|
 | ASG-017 | Fix H-035 + H-017: Portal Alumno nunca puede mostrar la nota del Examen Final — columna equivocada en la query (mismo bug, 2 hallazgos duplicados) | [fix-059-b-nota-examen-final](fix-059-b-nota-examen-final/fix.md) | 2026-07-28 |
+| ASG-032 | Fix H-036: flash de texto incorrecto ("matrícula profesional") en la página Pagos de un alumno de Clase B mientras carga | [fix-060-b-flash-texto-pagos-clase-b](fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
 | ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
 | ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 | ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |

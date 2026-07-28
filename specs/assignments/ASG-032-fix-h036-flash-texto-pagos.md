@@ -1,14 +1,14 @@
 # Asignación ASG-032 — Fix H-036: flash de texto incorrecto en Pagos de alumno Clase B
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-060-b-flash-texto-pagos-clase-b
 
 ---
 

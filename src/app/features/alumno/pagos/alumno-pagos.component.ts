@@ -203,8 +203,12 @@ export class AlumnoPagosComponent implements OnInit {
   protected readonly clp = (amount: number) => formatCLP(amount);
 
   protected readonly heroSubtitle = computed(() => {
+    const enroll = this.facade.enrollment();
+    if (!enroll) {
+      return 'Cargando información de tu matrícula…';
+    }
     if (!this.facade.isClassB()) {
-      return this.facade.enrollment()?.pendingBalance
+      return enroll.pendingBalance
         ? 'Regulariza tu pago directamente en la secretaría'
         : 'Resumen de pagos de tu matrícula profesional';
     }
