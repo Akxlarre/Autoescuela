@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { CuadraturaFacade, mapSingularSaleToIngreso } from './cuadratura.facade';
+import {
+  CuadraturaFacade,
+  mapPaymentToIngreso,
+  mapSingularSaleToIngreso,
+} from './cuadratura.facade';
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { ToastService } from '@core/services/ui/toast.service';
@@ -206,6 +210,39 @@ describe('CuadraturaFacade', () => {
 
   it('isSaving debe inicializar en false', () => {
     expect(facade.isSaving()).toBe(false);
+  });
+});
+
+// ─── Regresión H-023: glosa traducida, no código crudo ────────────────────────
+
+describe('mapPaymentToIngreso', () => {
+  const basePayment = {
+    id: 1,
+    enrollment_id: 42,
+    document_number: '10003',
+    cash_amount: 90_000,
+    transfer_amount: 0,
+    card_amount: 0,
+    voucher_amount: 0,
+    total_amount: 90_000,
+  };
+
+  it('traduce type "enrollment" a "Matrícula" en glosa (H-023)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = mapPaymentToIngreso({ ...basePayment, type: 'enrollment' } as any);
+    expect(row.glosa).toBe('Matrícula');
+  });
+
+  it('traduce type "online" a "Online" en glosa (H-023)', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = mapPaymentToIngreso({ ...basePayment, type: 'online' } as any);
+    expect(row.glosa).toBe('Online');
+  });
+
+  it('cae al placeholder "—" si type es null', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row = mapPaymentToIngreso({ ...basePayment, type: null } as any);
+    expect(row.glosa).toBe('—');
   });
 });
 

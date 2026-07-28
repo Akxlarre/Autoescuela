@@ -6,6 +6,7 @@ import { ToastService } from '@core/services/ui/toast.service';
 import { toISODate, getChileDateTimeRange } from '@core/utils/date.utils';
 import { downloadExcel } from '@core/utils/excel.utils';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { mapConcepto } from '@core/utils/payment-concept.utils';
 import type {
   IngresoRow,
   EgresoRow,
@@ -19,13 +20,13 @@ import type { CashClosing } from '@core/models/dto/cash-closing.model';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
 
-function mapPaymentToIngreso(p: Payment): IngresoRow {
+export function mapPaymentToIngreso(p: Payment): IngresoRow {
   return {
     id: p.id,
     source: 'payment',
     enrollmentId: p.enrollment_id ?? null,
     nBoleta: p.document_number ?? null,
-    glosa: p.type ?? '—',
+    glosa: mapConcepto(p.type) ?? '—',
     claseB: p.cash_amount ?? 0,
     claseA: p.transfer_amount ?? 0,
     sence: p.voucher_amount ?? 0,

@@ -2232,7 +2232,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
 
 
 <!-- AUTO-GENERATED:END -->

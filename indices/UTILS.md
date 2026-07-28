@@ -37,6 +37,7 @@
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
+| `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional` |
