@@ -399,7 +399,11 @@ export class AdminAlumnosFacade {
         return true;
       });
 
-      const rows = validStudents.map((s) => this.mapToAlumnoTableRow(s));
+      // Los alumnos Finalizados (enrollment completed) ya no se listan en la Base:
+      // viven exclusivamente en Ex-Alumnos.
+      const rows = validStudents
+        .map((s) => this.mapToAlumnoTableRow(s))
+        .filter((r) => r.status !== 'Finalizado');
       this._alumnos.set(rows);
     } catch (err) {
       this._error.set(

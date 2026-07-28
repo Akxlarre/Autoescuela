@@ -126,6 +126,20 @@ export const HV_REG: Record<string, number> = {
   x: 556,
   y: 556,
   z: 500,
+  Á: 667,
+  É: 667,
+  Í: 278,
+  Ó: 778,
+  Ú: 722,
+  Ñ: 722,
+  Ü: 722,
+  á: 556,
+  é: 556,
+  í: 278,
+  ó: 611,
+  ú: 611,
+  ñ: 611,
+  ü: 611,
 };
 
 export const HV_BOLD: Record<string, number> = {
@@ -199,6 +213,20 @@ export const HV_BOLD: Record<string, number> = {
   x: 611,
   y: 556,
   z: 500,
+  Á: 722,
+  É: 667,
+  Í: 278,
+  Ó: 778,
+  Ú: 722,
+  Ñ: 722,
+  Ü: 722,
+  á: 556,
+  é: 556,
+  í: 278,
+  ó: 611,
+  ú: 611,
+  ñ: 611,
+  ü: 611,
 };
 
 export function textWidth(text: string, size: number, bold: boolean): number {

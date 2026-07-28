@@ -536,7 +536,6 @@ export class AlumnosProfesionalListContentComponent implements AfterViewInit {
   ];
   readonly estadoOptions = [
     { label: 'Activo', value: 'Activo' },
-    { label: 'Finalizado', value: 'Finalizado' },
     { label: 'Inactivo', value: 'Inactivo' },
     { label: 'Retirado', value: 'Retirado' },
   ];

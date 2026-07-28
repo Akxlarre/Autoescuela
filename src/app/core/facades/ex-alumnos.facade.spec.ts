@@ -51,12 +51,16 @@ describe('ExAlumnosFacade', () => {
   it('separa egresados por grupo de licencia (AC11)', () => {
     const mk = (id: number, licenseGroup: 'class_b' | 'professional') => ({
       id,
+      studentId: String(id),
       nombre: 'X',
       rut: '1-1',
+      correo: 'x@x.cl',
+      nroExpediente: null,
       licencia: licenseGroup === 'class_b' ? 'Clase B' : 'A4',
       licenseGroup,
       anio: 2026,
       sede: 'Sede',
+      branchId: 1,
       nroCertificado: null,
       saldoPendiente: 0,
     });
@@ -66,5 +70,79 @@ describe('ExAlumnosFacade', () => {
     expect(facade.egresadosProfesionalList().map((e) => e.id)).toEqual([2]);
     expect(facade.egresadosClaseB()).toBe(2);
     expect(facade.egresadosProfesional()).toBe(1);
+  });
+
+  it('mapea studentId, correo y nroExpediente desde la query (AC-1)', async () => {
+    const row = {
+      id: 99,
+      number: 'EXP-123',
+      pending_balance: 0,
+      updated_at: '2026-01-15T00:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: 7, name: 'Sede Central' },
+      students: {
+        id: 42,
+        users: {
+          first_names: 'Ana',
+          paternal_last_name: 'Soto',
+          maternal_last_name: null,
+          rut: '11.111.111-1',
+          email: 'ana@correo.cl',
+        },
+      },
+    };
+    (supabaseSpy as any).client = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [row], error: null }),
+          }),
+        }),
+      }),
+    };
+
+    await facade.loadEgresados();
+
+    const egresado = facade.egresadosClaseBList()[0];
+    expect(egresado.studentId).toBe('42');
+    expect(egresado.correo).toBe('ana@correo.cl');
+    expect(egresado.nroExpediente).toBe('EXP-123');
+  });
+
+  it('mapea branchId desde branches.id (fix-085-m)', async () => {
+    const row = {
+      id: 100,
+      number: 'EXP-200',
+      pending_balance: 0,
+      updated_at: '2026-01-15T00:00:00Z',
+      license_group: 'class_b',
+      courses: { name: 'Clase B', code: 'B' },
+      branches: { id: 3, name: 'Sede Norte' },
+      students: {
+        id: 55,
+        users: {
+          first_names: 'Luis',
+          paternal_last_name: 'Pérez',
+          maternal_last_name: null,
+          rut: '22.222.222-2',
+          email: 'luis@correo.cl',
+        },
+      },
+    };
+    (supabaseSpy as any).client = {
+      from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [row], error: null }),
+          }),
+        }),
+      }),
+    };
+
+    await facade.loadEgresados();
+
+    const egresado = facade.egresadosClaseBList()[0];
+    expect(egresado.branchId).toBe(3);
   });
 });

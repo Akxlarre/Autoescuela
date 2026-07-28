@@ -6,18 +6,23 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { AdminExAlumnosTasasDrawerComponent } from './components/stats/admin-ex-alumnos-tasas-drawer.component';
 import { AdminExAlumnosComentariosDrawerComponent } from './components/comments/admin-ex-alumnos-comentarios-drawer.component';
@@ -28,6 +33,8 @@ import type {
 } from '@core/models/ui/section-hero.model';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
+import { sliceByBudget } from '@core/utils/layout-tier.utils';
+import { getInitialsFromDisplayName } from '@core/models/ui/user.model';
 
 @Component({
   selector: 'app-admin-ex-alumnos',
@@ -38,8 +45,13 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
     FormsModule,
     SelectModule,
     TagModule,
+    TooltipModule,
+    TableModule,
+    ButtonModule,
+    RouterLink,
     IconComponent,
     SkeletonBlockComponent,
+    EmptyStateComponent,
     SectionHeroComponent,
     BentoGridLayoutDirective,
     CardHoverDirective,
@@ -60,219 +72,340 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
         (actionClick)="handleHeroAction($event)"
       />
 
-      <!-- Archivo Histórico — full width, celda app-like (scroll interno en desktop) -->
+      <!-- Archivo Histórico — mismo patrón visual que app-alumnos-list-content:
+           toolbar (buscador + selects) + p-table con paginador + tarjetas mobile. -->
       <div
-        class="bento-banner bento-fill card p-0! overflow-hidden flex flex-col dual-viewport-container w-full h-full"
+        class="bento-banner bento-fill card p-0 overflow-hidden shadow-sm dual-viewport-container flex flex-col w-full h-full"
         appCardHover
       >
-        <!-- Header -->
-        <div class="flex items-center justify-between p-5 border-b border-border-subtle bg-surface">
-          <div class="flex items-center gap-3">
-            <div
-              class="w-8 h-8 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand"
-            >
-              <app-icon name="archive" [size]="18" />
-            </div>
-            <h2 class="text-sm font-bold text-text-primary m-0">Registro Histórico</h2>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <div class="hidden lg:flex items-center gap-2">
-              <p-select
-                [options]="yearSelectOptions()"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Todos los años"
-                [ngModel]="filtroAnio()"
-                (ngModelChange)="filtroAnio.set($event)"
-                styleClass="w-44"
-                appendTo="body"
-                data-llm-description="filter ex-students by graduation year"
-              />
-            </div>
-            <div class="w-px h-6 bg-border-subtle mx-1 hidden lg:block"></div>
-            <button
-              type="button"
-              class="p-2 rounded-lg text-text-muted hover:text-text-primary transition-colors flex items-center justify-center cursor-pointer"
-              style="--hover-color: var(--ds-brand)"
-              (click)="clearFilters()"
-              pTooltip="Limpiar Filtros"
-              aria-label="Limpiar todos los filtros"
-            >
-              <app-icon name="filter-x" [size]="16" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Búsqueda -->
-        <div class="px-5 py-4 border-b border-border-subtle bg-surface">
-          <div class="relative w-full max-w-md">
-            <span
-              class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
-            >
-              <app-icon name="search" [size]="14" />
-            </span>
+        <!-- Toolbar -->
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-border-default">
+          <div class="relative flex-1 min-w-52 max-w-xs">
+            <app-icon
+              name="search"
+              [size]="15"
+              class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted"
+            />
             <input
               type="text"
-              class="search-input"
-              placeholder="Buscar por Nombre o RUT..."
+              placeholder="Buscar por nombre, RUT o Nº Expediente..."
+              class="w-full h-9 pl-8 pr-3 text-sm rounded-lg border border-border-default bg-surface text-text-primary outline-none transition-colors"
+              data-llm-description="Search graduates by name, RUT or file number"
               [ngModel]="searchTerm()"
               (ngModelChange)="searchTerm.set($event)"
             />
           </div>
+          <p-select
+            [options]="yearSelectOptions()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Todos los años"
+            class="h-9"
+            [ngModel]="filtroAnio()"
+            (ngModelChange)="filtroAnio.set($event)"
+            data-llm-description="Filter graduates by year"
+          />
         </div>
 
-        <!-- Tabla / Tarjetas (Dual-Viewport, mismo patrón que app-alumnos-list-content) -->
-        <div class="desktop-view hide-on-squeeze flex-1 min-h-0 overflow-x-auto">
-          <table class="w-full border-collapse text-sm">
-            <thead>
-              <tr class="bg-surface">
-                <th class="th-col">EGRESADO</th>
-                <th class="th-col">LICENCIA</th>
-                <th class="th-col">AÑO / SEDE</th>
-                <th class="th-col">ESTADO CUENTA</th>
-                <th class="w-10"></th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-border-subtle">
-              @if (facade.isLoading()) {
-                @for (_ of [1, 2, 3, 4, 5]; track $index) {
-                  <tr>
-                    <td class="py-4 px-5">
-                      <app-skeleton-block variant="text" width="160px" height="12px" />
-                    </td>
-                    <td class="py-4 px-5">
-                      <app-skeleton-block variant="rect" width="60px" height="24px" />
-                    </td>
-                    <td class="py-4 px-5">
-                      <app-skeleton-block variant="text" width="100px" height="12px" />
-                    </td>
-                    <td class="py-4 px-5">
-                      <app-skeleton-block variant="rect" width="80px" height="24px" />
-                    </td>
-                    <td></td>
+        <!-- Tabla -->
+        @if (facade.isLoading()) {
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+            <div
+              class="desktop-view hide-on-squeeze p-4 space-y-0 flex flex-col flex-1 min-h-0 h-full w-full"
+            >
+              <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                <app-skeleton-block variant="text" width="22%" height="11px" />
+                <app-skeleton-block variant="text" width="10%" height="11px" />
+                <app-skeleton-block variant="text" width="8%" height="11px" />
+                <app-skeleton-block variant="text" width="8%" height="11px" />
+                <app-skeleton-block variant="text" width="12%" height="11px" />
+                <app-skeleton-block variant="text" width="10%" height="11px" />
+              </div>
+              @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+                <div class="flex items-center gap-4 py-3 border-b border-border-subtle">
+                  <div class="flex items-center gap-3 w-[22%]">
+                    <app-skeleton-block variant="circle" width="36px" height="36px" />
+                    <div class="flex flex-col gap-1.5 flex-1">
+                      <app-skeleton-block variant="text" width="75%" height="12px" />
+                      <app-skeleton-block variant="text" width="55%" height="10px" />
+                    </div>
+                  </div>
+                  <app-skeleton-block variant="text" width="10%" height="12px" />
+                  <app-skeleton-block variant="text" width="8%" height="12px" />
+                  <app-skeleton-block variant="rect" width="60px" height="24px" />
+                  <app-skeleton-block variant="text" width="12%" height="12px" />
+                  <app-skeleton-block variant="rect" width="80px" height="24px" />
+                  <div class="flex items-center gap-1 ml-auto">
+                    <app-skeleton-block variant="circle" width="28px" height="28px" />
+                    <app-skeleton-block variant="circle" width="28px" height="28px" />
+                  </div>
+                </div>
+              }
+            </div>
+            <div class="mobile-view show-on-squeeze p-4 space-y-2">
+              @for (card of [1, 2, 3, 4]; track card) {
+                <app-skeleton-block variant="rect" width="100%" height="120px" />
+              }
+            </div>
+          </div>
+        } @else {
+          <div class="viewport-content bg-surface flex flex-col flex-1 min-h-0 h-full w-full">
+            <!-- VISTA 1: TABLA (Oculta cuando se comprime) -->
+            <div class="desktop-view hide-on-squeeze flex flex-col flex-1 min-h-0 h-full w-full">
+              <p-table
+                [value]="filteredEgresados()"
+                [rows]="10"
+                [paginator]="true"
+                [scrollable]="true"
+                scrollHeight="flex"
+                responsiveLayout="scroll"
+                styleClass="p-datatable-sm p-datatable-striped h-full flex flex-col"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} egresados"
+              >
+                <ng-template pTemplate="header">
+                  <tr
+                    class="bg-subtle text-text-muted uppercase text-xs tracking-wider font-medium text-left"
+                  >
+                    <th class="pl-6 py-4">Alumno</th>
+                    <th>RUT</th>
+                    <th>Nº Exp.</th>
+                    <th>Licencia</th>
+                    <th>Año / Sede</th>
+                    <th>Estado cuenta</th>
+                    <th class="pr-6 text-right">Acciones</th>
                   </tr>
-                }
-              } @else {
-                @for (egresado of filteredEgresados(); track egresado.id) {
-                  <tr class="table-row group">
-                    <td class="py-4 px-5">
-                      <div class="flex flex-col gap-0.5">
-                        <span class="font-bold text-text-primary">{{ egresado.nombre }}</span>
-                        <span class="text-xs text-text-muted">{{ egresado.rut }}</span>
+                </ng-template>
+                <ng-template pTemplate="body" let-egresado>
+                  <tr class="hover:bg-subtle transition-colors border-b border-border-subtle">
+                    <td class="pl-6 py-4">
+                      <div class="flex items-center gap-3">
+                        <div
+                          class="w-9 h-9 rounded-full bg-elevated flex items-center justify-center border border-border-subtle text-text-secondary font-bold text-xs uppercase"
+                        >
+                          {{ initials(egresado.nombre) }}
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="font-bold text-sm text-text-primary">{{
+                            egresado.nombre
+                          }}</span>
+                          <span class="text-xs text-text-muted">{{ egresado.correo }}</span>
+                        </div>
                       </div>
                     </td>
-                    <td class="py-4 px-5">
-                      <span class="inas-badge" [attr.data-licencia]="egresado.licencia">
-                        {{ egresado.licencia }}
-                      </span>
+                    <td class="text-xs font-medium text-text-secondary font-mono">
+                      {{ egresado.rut }}
                     </td>
-                    <td class="py-4 px-5">
-                      <div class="flex flex-col gap-0.5 text-xs">
+                    <td class="text-xs text-text-muted font-mono">
+                      {{ egresado.nroExpediente ?? '—' }}
+                    </td>
+                    <td>
+                      <span class="inas-badge" [attr.data-licencia]="egresado.licencia">{{
+                        egresado.licencia
+                      }}</span>
+                    </td>
+                    <td class="text-xs text-text-secondary">
+                      <div class="flex flex-col">
                         <span class="font-bold text-text-primary">{{ egresado.anio }}</span>
                         <span class="text-text-muted italic">{{ egresado.sede }}</span>
                       </div>
                     </td>
-                    <td class="py-4 px-5">
+                    <td>
                       @if (egresado.saldoPendiente > 0) {
-                        <span class="status-chip status-chip--warn">
-                          Debe
-                          {{ egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0' }}
-                        </span>
+                        <p-tag
+                          [value]="
+                            'Debe ' +
+                            (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
+                          "
+                          severity="warn"
+                          styleClass="text-xs font-bold px-2 py-0.5"
+                        ></p-tag>
                       } @else {
-                        <span class="status-chip status-chip--success">
-                          <app-icon name="check" [size]="10" class="mr-1" /> Al día
-                        </span>
+                        <p-tag
+                          value="Al día"
+                          severity="success"
+                          styleClass="text-xs font-bold px-2 py-0.5"
+                        ></p-tag>
                       }
                     </td>
-                    <td class="py-4 px-5 text-right">
-                      <button
-                        type="button"
-                        class="rematricular-btn"
-                        (click)="reEnroll(egresado)"
-                        data-llm-action="re-enroll-student"
-                        [attr.aria-label]="'Re-matricular a ' + egresado.nombre"
+                    <td class="pr-6 text-right">
+                      <div
+                        class="inline-flex items-center justify-end gap-0.5 p-0.5 rounded-lg hover:bg-elevated hover:shadow-sm border border-transparent transition-all"
                       >
-                        <app-icon name="user-plus" [size]="14" />
-                        <span>Re-matricular</span>
-                      </button>
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="5" class="py-20 text-center">
-                      <div class="flex flex-col items-center gap-3 opacity-30">
-                        <app-icon name="search-x" [size]="48" />
-                        <p class="text-sm font-medium text-text-secondary">
-                          No se encontraron egresados con estos criterios
-                        </p>
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+                          pTooltip="Ver ficha"
+                          [routerLink]="['/app/admin/alumnos', egresado.studentId]"
+                          [queryParams]="{ from: 'ex-alumnos' }"
+                          data-llm-action="view-student-detail"
+                        >
+                          <app-icon name="eye" [size]="16" />
+                        </button>
+                        <button
+                          pButton
+                          class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform text-brand"
+                          pTooltip="Re-matricular"
+                          (click)="reEnroll(egresado)"
+                          data-llm-action="re-enroll-student"
+                        >
+                          <app-icon name="user-plus" [size]="16" />
+                        </button>
                       </div>
                     </td>
                   </tr>
-                }
-              }
-            </tbody>
-          </table>
-        </div>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="7" class="p-0">
+                      <app-empty-state
+                        icon="search"
+                        message="No se encontraron egresados"
+                        subtitle="Intenta ajustar los criterios de búsqueda o filtros."
+                        actionLabel="Limpiar filtros"
+                        actionIcon="refresh-cw"
+                        (action)="clearFilters()"
+                      />
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
 
-        <!-- VISTA TARJETAS (Visible cuando se comprime) -->
-        <div class="mobile-view show-on-squeeze flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
-          @if (facade.isLoading()) {
-            @for (_ of [1, 2, 3, 4]; track $index) {
-              <app-skeleton-block variant="rect" width="100%" height="76px" />
-            }
-          } @else {
-            @for (egresado of filteredEgresados(); track egresado.id) {
-              <div class="flex flex-col gap-2 p-3 rounded-lg border border-border-subtle bg-base">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-bold text-text-primary truncate">
-                      {{ egresado.nombre }}
-                    </p>
-                    <p class="text-xs text-text-muted font-mono truncate">{{ egresado.rut }}</p>
+            <!-- VISTA 2: TARJETAS (Visible cuando se comprime) -->
+            <div class="mobile-view show-on-squeeze p-4 md:p-6 bg-surface">
+              <div class="bento-grid">
+                @for (egresado of visibleCards(); track egresado.id) {
+                  <div
+                    class="flex flex-col bg-base border border-border-subtle rounded-xl overflow-hidden shadow-sm bento-wide"
+                    appCardHover
+                    data-col-span="4"
+                  >
+                    <!-- Header -->
+                    <div
+                      class="p-4 border-b border-border-subtle flex items-start justify-between gap-3"
+                    >
+                      <div class="flex items-center gap-3 min-w-0">
+                        <div
+                          class="shrink-0 w-10 h-10 rounded-full bg-surface shadow-sm flex items-center justify-center border border-border-default text-text-primary font-black text-sm uppercase"
+                        >
+                          {{ initials(egresado.nombre) }}
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                          <span
+                            class="font-bold text-sm text-text-primary truncate"
+                            [pTooltip]="egresado.nombre"
+                            tooltipPosition="top"
+                            >{{ egresado.nombre }}</span
+                          >
+                          <span
+                            class="text-xs text-text-muted truncate"
+                            [pTooltip]="egresado.correo"
+                            tooltipPosition="top"
+                            >{{ egresado.correo }}</span
+                          >
+                        </div>
+                      </div>
+                      <span class="inas-badge shrink-0" [attr.data-licencia]="egresado.licencia">{{
+                        egresado.licencia
+                      }}</span>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="p-4 grid grid-cols-2 gap-y-5 gap-x-4 text-sm bg-surface">
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">RUT</span>
+                        <span class="font-medium text-text-secondary font-mono text-xs">{{
+                          egresado.rut
+                        }}</span>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">Nº Exp.</span>
+                        <span class="font-medium text-text-secondary font-mono text-xs">{{
+                          egresado.nroExpediente ?? '—'
+                        }}</span>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">Año / Sede</span>
+                        <span class="font-medium text-text-secondary text-xs"
+                          >{{ egresado.anio }} · {{ egresado.sede }}</span
+                        >
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-2xs text-text-muted mb-0.5">Estado cuenta</span>
+                        @if (egresado.saldoPendiente > 0) {
+                          <p-tag
+                            [value]="
+                              'Debe ' +
+                              (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
+                            "
+                            severity="warn"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5 w-fit"
+                          ></p-tag>
+                        } @else {
+                          <p-tag
+                            value="Al día"
+                            severity="success"
+                            styleClass="text-2xs font-bold px-1.5 py-0.5 w-fit"
+                          ></p-tag>
+                        }
+                      </div>
+                    </div>
+
+                    <!-- Footer Actions -->
+                    <div
+                      class="p-2 bg-transparent border-t border-border-subtle flex items-center justify-end gap-0.5"
+                    >
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                        pTooltip="Ver ficha"
+                        [routerLink]="['/app/admin/alumnos', egresado.studentId]"
+                        data-llm-action="view-student-detail-card"
+                      >
+                        <app-icon name="eye" [size]="16" />
+                      </button>
+                      <button
+                        pButton
+                        class="p-button-rounded p-button-text p-button-sm w-8 h-8 p-0 flex items-center justify-center text-text-muted hover:text-brand hover:bg-elevated hover:scale-110 active:scale-95 transition-all"
+                        pTooltip="Re-matricular"
+                        (click)="reEnroll(egresado)"
+                        data-llm-action="re-enroll-student-card"
+                      >
+                        <app-icon name="user-plus" [size]="16" />
+                      </button>
+                    </div>
                   </div>
-                  <span class="inas-badge shrink-0" [attr.data-licencia]="egresado.licencia">
-                    {{ egresado.licencia }}
-                  </span>
-                </div>
-                <div class="flex items-center justify-between gap-2">
-                  <div class="text-xs">
-                    <span class="font-bold text-text-primary">{{ egresado.anio }}</span>
-                    <span class="text-text-muted italic"> · {{ egresado.sede }}</span>
-                  </div>
-                  @if (egresado.saldoPendiente > 0) {
-                    <p-tag
-                      [value]="
-                        'Debe ' + (egresado.saldoPendiente | currency: 'CLP' : 'symbol' : '1.0-0')
-                      "
-                      severity="warn"
-                      styleClass="text-2xs shrink-0"
+                } @empty {
+                  <div class="col-span-full py-8">
+                    <app-empty-state
+                      icon="search"
+                      message="No se encontraron egresados"
+                      subtitle="Intenta ajustar los criterios de búsqueda o filtros."
+                      actionLabel="Limpiar filtros"
+                      actionIcon="refresh-cw"
+                      (action)="clearFilters()"
                     />
-                  } @else {
-                    <p-tag value="Al día" severity="success" styleClass="text-2xs shrink-0" />
-                  }
-                </div>
-                <button
-                  type="button"
-                  class="rematricular-btn w-full justify-center"
-                  (click)="reEnroll(egresado)"
-                  data-llm-action="re-enroll-student-card"
-                  [attr.aria-label]="'Re-matricular a ' + egresado.nombre"
-                >
-                  <app-icon name="user-plus" [size]="14" />
-                  <span>Re-matricular</span>
-                </button>
+                  </div>
+                }
+
+                @if (remainingCards() > 0) {
+                  <div class="col-span-full pt-1">
+                    <button
+                      type="button"
+                      class="btn-ghost w-full flex items-center justify-center gap-2 font-medium transition-colors cursor-pointer"
+                      (click)="loadMoreCards()"
+                      data-llm-action="load-more-egresados"
+                    >
+                      <app-icon name="chevron-down" [size]="16" />
+                      Cargar más ({{ remainingCards() }} restantes)
+                    </button>
+                  </div>
+                }
               </div>
-            } @empty {
-              <div class="flex flex-col items-center gap-3 opacity-30 py-16">
-                <app-icon name="search-x" [size]="40" />
-                <p class="text-sm font-medium text-text-secondary">
-                  No se encontraron egresados con estos criterios
-                </p>
-              </div>
-            }
-          }
-        </div>
+            </div>
+          </div>
+        }
       </div>
     </div>
   `,
@@ -297,40 +430,6 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       }
     }
 
-    .search-input {
-      width: 100%;
-      padding: 9px 12px 9px 36px;
-      border-radius: var(--radius-full);
-      border: 1px solid var(--border-default);
-      background: var(--bg-surface);
-      color: var(--text-primary);
-      font-size: var(--text-sm);
-      outline: none;
-      transition: all var(--duration-fast);
-    }
-    .search-input:focus {
-      border-color: var(--ds-brand);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ds-brand) 12%, transparent);
-    }
-
-    .th-col {
-      text-align: left;
-      padding: 12px 20px;
-      color: var(--text-muted);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .table-row {
-      transition: background var(--duration-fast);
-      cursor: pointer;
-    }
-    .table-row:hover {
-      background: var(--bg-elevated);
-    }
-
     .inas-badge {
       display: inline-flex;
       padding: 2px 8px;
@@ -350,51 +449,13 @@ import { CardHoverDirective } from '@core/directives/card-hover.directive';
       background: var(--state-warning-bg);
       border-color: var(--state-warning-border);
     }
-
-    .status-chip {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 10px;
-      border-radius: var(--radius-full);
-      font-size: 11px;
-      font-weight: 700;
-    }
-    .status-chip--warn {
-      color: var(--state-warning);
-      background: var(--state-warning-bg);
-      border: 1px solid var(--state-warning-border);
-    }
-    .status-chip--success {
-      color: var(--state-success);
-      background: var(--state-success-bg);
-      border: 1px solid var(--state-success-border);
-    }
-
-    .rematricular-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: var(--radius-full);
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--ds-brand);
-      background: var(--color-primary-tint);
-      border: 1px solid color-mix(in srgb, var(--ds-brand) 25%, transparent);
-      transition: all var(--duration-fast);
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .rematricular-btn:hover {
-      background: var(--ds-brand);
-      color: var(--color-primary-text);
-    }
   `,
 })
 export class AdminExAlumnosComponent {
   protected readonly facade = inject(ExAlumnosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly confirmModal = inject(ConfirmModalService);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
@@ -441,7 +502,6 @@ export class AdminExAlumnosComponent {
   // ── Filtros locales ──────────────────────────────────────────────────────────
   protected readonly searchTerm = signal('');
   protected readonly filtroAnio = signal('');
-  protected readonly filtroEstado = signal('');
 
   // ── Lista filtrada (cliente) ─────────────────────────────────────────────────
   protected readonly filteredEgresados = computed<EgresadoTableRow[]>(() => {
@@ -453,7 +513,7 @@ export class AdminExAlumnosComponent {
         (e: EgresadoTableRow) =>
           e.nombre.toLowerCase().includes(term) ||
           e.rut.toLowerCase().includes(term) ||
-          (e.nroCertificado?.toLowerCase().includes(term) ?? false),
+          (e.nroExpediente?.toLowerCase().includes(term) ?? false),
       );
     }
     if (this.filtroAnio()) {
@@ -461,6 +521,24 @@ export class AdminExAlumnosComponent {
     }
     return results;
   });
+
+  // ── Densidad incremental de la vista tarjetas (mismo patrón que app-alumnos-list-content) ──
+  private static readonly CARDS_STEP = 6;
+  protected readonly mobileShown = signal(AdminExAlumnosComponent.CARDS_STEP);
+  protected readonly visibleCards = computed(() =>
+    sliceByBudget(this.filteredEgresados(), this.mobileShown()),
+  );
+  protected readonly remainingCards = computed(() =>
+    Math.max(0, this.filteredEgresados().length - this.mobileShown()),
+  );
+
+  protected loadMoreCards(): void {
+    this.mobileShown.update((n) => n + AdminExAlumnosComponent.CARDS_STEP);
+  }
+
+  protected initials(nombre: string): string {
+    return getInitialsFromDisplayName(nombre);
+  }
 
   // ── Opciones de filtros dinámicas ────────────────────────────────────────────
   readonly yearSelectOptions = computed(() =>
@@ -492,9 +570,15 @@ export class AdminExAlumnosComponent {
       cancelLabel: 'Cancelar',
     });
     if (!confirmed) return;
-    void this.router.navigate(['/app/admin/matricula'], {
+    if (egresado.branchId !== null) {
+      this.branchFacade.selectBranch(egresado.branchId);
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
       queryParams: { rut: egresado.rut },
+      queryParamsHandling: 'merge',
     });
+    this.layoutDrawer.open(SecretariaMatriculaComponent, 'Nueva Matrícula', 'plus');
   }
 
   protected readonly heroKpis = computed((): SectionHeroKpi[] => [
@@ -516,6 +600,6 @@ export class AdminExAlumnosComponent {
   protected clearFilters(): void {
     this.searchTerm.set('');
     this.filtroAnio.set('');
-    this.filtroEstado.set('');
+    this.mobileShown.set(AdminExAlumnosComponent.CARDS_STEP);
   }
 }

@@ -21,6 +21,27 @@ describe('resolveListadoRoute — botón "volver" consciente del contexto', () =
     expect(resolveListadoRoute(true, undefined)).toBe('/app/admin/alumnos');
     expect(resolveListadoRoute(false, undefined)).toBe('/app/secretaria/alumnos');
   });
+
+  // ─── fix-084: llegó desde Ex-Alumnos → "volver" va a Ex-Alumnos, no a Base Alumnos ──
+  it('admin + class_b + cameFromExAlumnos vuelve a Ex-Alumnos B (admin)', () => {
+    expect(resolveListadoRoute(true, 'class_b', true)).toBe('/app/admin/ex-alumnos');
+  });
+
+  it('admin + professional + cameFromExAlumnos vuelve a Ex-Alumnos Profesional (admin)', () => {
+    expect(resolveListadoRoute(true, 'professional', true)).toBe(
+      '/app/admin/ex-alumnos-profesional',
+    );
+  });
+
+  it('secretaria + class_b + cameFromExAlumnos vuelve a Ex-Alumnos B (secretaria)', () => {
+    expect(resolveListadoRoute(false, 'class_b', true)).toBe('/app/secretaria/ex-alumnos');
+  });
+
+  it('secretaria + professional + cameFromExAlumnos vuelve a Ex-Alumnos Profesional (secretaria)', () => {
+    expect(resolveListadoRoute(false, 'professional', true)).toBe(
+      '/app/secretaria/ex-alumnos-profesional',
+    );
+  });
 });
 
 describe('resolveListadoLabel', () => {
@@ -31,5 +52,10 @@ describe('resolveListadoLabel', () => {
   it('etiqueta "Listado de Alumnos" para class_b o sin resolver', () => {
     expect(resolveListadoLabel('class_b')).toBe('Listado de Alumnos');
     expect(resolveListadoLabel(undefined)).toBe('Listado de Alumnos');
+  });
+
+  it('cameFromExAlumnos: etiqueta "Ex-Alumnos B" / "Ex-Alumnos Profesional" (fix-084)', () => {
+    expect(resolveListadoLabel('class_b', true)).toBe('Ex-Alumnos B');
+    expect(resolveListadoLabel('professional', true)).toBe('Ex-Alumnos Profesional');
   });
 });
