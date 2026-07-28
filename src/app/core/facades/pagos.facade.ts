@@ -16,20 +16,9 @@ import { toISODate } from '@core/utils/date.utils';
 import { roundPercentagesTo100 } from '@core/utils/percentage.utils';
 import { ErrorSanitizerService } from '@core/services/infrastructure/error-sanitizer.service';
 import { buildStudentDisplayName } from '@core/utils/student-name.util';
+import { mapConcepto } from '@core/utils/payment-concept.utils';
 
 // ─── Helpers puros ────────────────────────────────────────────────────────────
-
-function mapConcepto(type: string | null): string | null {
-  if (!type) return null;
-  switch (type.toLowerCase()) {
-    case 'enrollment':
-      return 'Matrícula';
-    case 'online':
-      return 'Online';
-    default:
-      return type;
-  }
-}
 
 function mapEstado(status: string | null): string | null {
   if (!status) return null;

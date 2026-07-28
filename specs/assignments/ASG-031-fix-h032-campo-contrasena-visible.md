@@ -1,14 +1,14 @@
 # Asignación ASG-031 — Fix H-032: campo Contraseña visible en "Recuperar Contraseña"
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-061-b-password-field-inert-reset-mode
 
 ---
 

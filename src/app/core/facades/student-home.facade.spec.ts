@@ -41,14 +41,16 @@ function mockEnrollmentRow(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function buildSupabaseMock(enrollmentRow: unknown | null = mockEnrollmentRow()) {
+function buildSupabaseMock(
+  enrollmentRow: unknown | null = mockEnrollmentRow(),
+  examData: unknown | null = null,
+) {
   const progressData = { completed_practices: 8 };
   const sessionsData = Array.from({ length: 8 }, (_, i) => ({
     id: i + 1,
     scheduled_at: new Date(Date.now() - (8 - i) * 86400000).toISOString(),
     class_b_practice_attendance: [{ status: i < 7 ? 'present' : 'absent' }],
   }));
-  const examData = null;
   const certData = null;
   const nextClassData = null;
 
@@ -204,6 +206,37 @@ describe('StudentHomeFacade — sin enrollment activo', () => {
     await f.initialize();
     expect(f.snapshot()).toBeNull();
     expect(f.error()).toBeNull();
+  });
+});
+
+describe('StudentHomeFacade — nota de examen final (regresión H-017 / H-035)', () => {
+  it('expone finalExamGrade cuando class_b_exam_scores trae una nota real (columna score)', async () => {
+    const supabaseMock = buildSupabaseMock(mockEnrollmentRow(), {
+      score: 85,
+      created_at: '2026-07-01T12:00:00Z',
+    });
+
+    TestBed.configureTestingModule({
+      providers: [
+        StudentHomeFacade,
+        {
+          provide: AuthFacade,
+          useValue: {
+            currentUser: vi.fn().mockReturnValue({ dbId: 1, name: 'Benjamín', role: 'alumno' }),
+          },
+        },
+        { provide: SupabaseService, useValue: supabaseMock },
+        { provide: ToastService, useValue: toastMock },
+        { provide: StudentEnrollmentContextFacade, useValue: contextMock },
+      ],
+    });
+
+    const f = TestBed.inject(StudentHomeFacade);
+    await f.initialize();
+
+    expect(f.grades()?.finalExamGrade).toBe(85);
+    expect(f.grades()?.finalExamDate).toBe('2026-07-01T12:00:00Z');
+    expect(f.grades()?.passed).toBe(true);
   });
 });
 

@@ -28,7 +28,6 @@
 | ASG-012 | Fix H-020 + H-019 + H-033 + H-034: matrícula pública — overlay bloquea click en foto carnet, landing sin sede con links muertos, retry tras pago rechazado destruye la matrícula, fotos huérfanas en Storage | `b` | fix | Alta | b | Mismo módulo (wizard público de matrícula), 4 hallazgos relacionados. Archivos: `public-enrollment-retorno.component.ts:372-374`, `public-enrollment.facade.ts` (`clearDraft()`), componente de subida de foto carnet |
 | ASG-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
 | ASG-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
-| ASG-017 | Fix H-035 + H-017: Portal Alumno nunca puede mostrar la nota del Examen Final — columna equivocada en la query (mismo bug, 2 hallazgos duplicados) | `b` | fix | Alta | b | Fix simple y acotado: `student-home.facade.ts:174` y `:265`, cambiar `.select('grade, created_at')` → `.select('score, created_at')` |
 | ASG-018 | Fix H-001 + H-002 + H-008: Dashboard admin — KPI "Vehículos" siempre en 0 (status `operational` vs `available`), formato roto en KPI "Ingresos Mes", estados contradictorios en "Clases Actuales" | `b` | fix | Media | b | Archivos: `dashboard.facade.ts:281`, `flota.facade.ts` (`resolveStatus()`). ⚠️ **Coordinar con ASG-005** (mismo `dashboard.component.ts`, cobertura `data-llm-*`) para no pisarse |
 | ASG-021 | Fix H-006: Configuración Web usa voseo argentino en vez de español de Chile | `i` | fix | Media | b | Solo copy, sin lógica — buen candidato para alguien nuevo en el repo |
 | ASG-022 | Fix H-007: páginas cargan en blanco varios segundos sin skeleton en Agenda y Libro de Clases | `b` | fix | Media | b | Viola `swr-pattern.md`. ⚠️ **Coordinar con ASG-001** (verificación de skeletons de Benja) para no duplicar trabajo |
@@ -38,10 +37,38 @@
 | ASG-027 | Fix H-003: Ex-Alumnos B muestra "2 Egresados" en el hero vs "16" en el Balance Anual — dos fuentes sin conciliar | `i` | fix | Media | b | Investigar las 2 queries distintas que calculan lo mismo en `/app/admin/ex-alumnos` |
 | ASG-028 | Fix H-010 + H-014 + H-018: Agenda muestra "Todos los instructores" pero carga uno específico, texto RBAC "solo visible para admin" se muestra a secretaria, chips "P" ambiguos en asistencia | `i` | fix | Baja | b | 3 fixes cosméticos pequeños y no relacionados entre sí — buen paquete para alguien con poco tiempo |
 | ASG-029 | Fix H-022 + H-030: vista previa del contrato no coincide con el PDF real (fecha vacía) + mismo texto genérico para Clase B y Profesional | `i` | fix | Baja | b | Mismo módulo (generación de contrato). El PDF real ya está bien — el problema es el HTML de preview + falta de contenido específico para Profesional |
-| ASG-030 | Fix H-023: Caja Diaria muestra la glosa cruda del origen del pago ("online"/"enrollment") en vez de un concepto legible | `b` | fix | Baja | b | Mapeo ya existe en la página Pagos — reutilizar el mismo mapeo en Caja Diaria |
-| ASG-031 | Fix H-032: el formulario "Recuperar Contraseña" sigue mostrando el campo de Contraseña del login normal | `b` | fix | Baja | b | Solo ocultar/limpiar el campo al cambiar de modo — el envío del enlace ya funciona bien |
-| ASG-032 | Fix H-036: flash de texto incorrecto ("matrícula profesional") en la página Pagos de un alumno de Clase B mientras carga | `b` | fix | Baja | b | Archivo: `alumno-pagos.component.ts:205-212` — cambiar el valor por defecto de `heroSubtitle` |
 | ASG-033 | Portal alumno no muestra matrículas múltiples: con 2+ matrículas activas, Pagos y el KPI del Dashboard solo muestran una, ocultando la otra aunque esté pagada y activa | `b` | spec | Media | b | Hallado al verificar fix-058-b (H-039) en vivo. Admin ya resuelve esto con tabs por matrícula; portal alumno no. Ver `specs/fix-058-b-pago-multiples-matriculas/fix.md` |
+
+### Tanda reunión con el cliente — 2026-07-28
+
+> 27 anotaciones crudas de la reunión, validadas una por una antes de entrar acá. 17 se
+> volvieron asignación, 3 se absorbieron en asignaciones existentes (R18→ASG-024,
+> R25→ASG-010, R26→ASG-001) y el resto se agrupó por nudo para no repetir la misma
+> conversación con el cliente en tres tracks distintos.
+>
+> **🔴 BLOQUEADA = no se puede ni estimar sin respuesta del cliente.** Cada una lleva las
+> preguntas ya redactadas en su sección "Preguntas abiertas" — llevarlas a la reunión tal
+> como están, no reformularlas de memoria.
+
+| ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
+|----|--------|-----------|---------------|-----------|------------|-------|
+| ASG-035 | 🔴 Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | spec | **Alta** | b | **BLOQUEADA.** Conflicto: `DATABASE.md` dice "período de 30 días" (RF-059), el cliente dice "empiezan cada 15". Cadencia ≠ duración. Agrupa 3 anotaciones |
+| ASG-036 | 🔴 Ciclo de vida de la clase: exclusión mutua, cierre automático y aviso | `i` | spec | **Alta** | b | **BLOQUEADA.** Hallazgo verificado: `startClass()` no valida nada y una clase `in_progress` **nunca se cierra sola** (el cron solo toca `scheduled`). Agrupa 4 anotaciones. ⚠️ Solapa con ASG-010 |
+| ASG-037 | 🔴 Cuadratura editable + egresos de combustible por vehículo | `i` | spec | Media | b | **BLOQUEADA.** `cuadratura.facade.ts:289` clava los egresos a `today` y guarda snapshot. La cuadratura es un **arqueo físico**: sobrescribirla borra la evidencia del descuadre |
+| ASG-038 | 🔴 Matrícula de refuerzo (6 clases) sin romper el modelo de Clase B | `cualquiera` | spec | Media | b | **BLOQUEADA.** Choca con `CHECK (class_number BETWEEN 1 AND 12)` y el gate del certificado. ⚠️ Coordinar con ASG-014 |
+| ASG-039 | Botón "Registrar egreso" accesible + atajo para carga de combustible | `i` | fix | Media | b | Sin migración: `expenses` ya tiene todo y RLS permite secretaria de su sede. ⚠️ Crea el formulario reutilizable que ASG-037 consume |
+| ASG-040 | Razones de reagendamiento (enum + "otro") | `i` | fix | Media | b | Reagendar recicla la fila in-place → no hay dónde guardar la razón. Recomendado: tabla de historial. Falta la lista de razones (pregunta liviana, no bloquea) |
+| ASG-041 | Fecha de obtención de licencia B + advertencia de los 2 años (Profesional) | `m` | fix | Media | b | `students.license_obtained_date` **ya existe**. Advertir, no bloquear. Los 2 años se cuentan hasta la fecha de **inicio del curso** (decidido con el owner) |
+| ASG-042 | Repositorio de documentos: sección Instructores + poder abrir el archivo | `m` | spec | Media | b | Incluye como entregable la pregunta legal: **¿qué documentos necesitamos de los instructores para cumplir la ley?** El visor (`createSignedUrl`) ya existe en `dms.facade.ts:171` |
+| ASG-043 | Drawers muestran datos de todas las sedes en vez de una | `m` | fix | Media | b | **La auditoría de cuáles drawers es parte de la tarea.** Reusar `resolveBranchScope()` de fix-027, no escribir uno nuevo. Ojo con la regresión inversa (fix-002-b) |
+| ASG-044 | Alerta a secretaría cuando un instructor cierra una clase | `m` | fix | Baja | b | Extender `notify_class_b_completed()`, que ya notifica al alumno. ⚠️ Coordinar con ASG-036 (¿el cierre automático también alerta?) |
+| ASG-045 | Imprimir lista de alumnos (réplica del libro de Registro de Alumnos) | `m` | fix | Baja | b | Pedir foto del libro físico antes de diseñar el formato — puede estar reglamentado. ⚠️ Solapa con ASG-049 |
+| ASG-046 | Integración con Zoom API para clases teóricas Profesional | `cualquiera` | spec | Baja | b | **Ya se difirió una vez** en spec 0027 ("fork de `pg_net` sin precedente"). Leer ese cierre antes de rediseñar. Recomendado: Edge Function, no `pg_net` |
+| ASG-047 | Dígito verificador del RUT automático en Matrícula | `cualquiera` | fix | Baja | b | Módulo 11, función pura en `core/utils/` con su spec. Aplicar en todos los formularios con RUT, no solo matrícula. Buen primer track |
+| ASG-048 | Secretaría no debe ver calificación ni aspectos a evaluar en Iniciar Clase | `cualquiera` | fix | Baja | b | ⚠️ Ocultar en UI **no** lo esconde de la API (la policy entrega la fila completa). Decidirlo a conciencia. Solapa con ASG-036 |
+| ASG-049 | El número de matrícula debe ser más principal que el nombre del alumno | `cualquiera` | fix | Baja | b | Usar `.kpi-value`/`.kpi-label`, no tamaños ad-hoc. ⚠️ Solapa con ASG-024 (el buscador debe encontrar por número) y ASG-045 |
+| ASG-050 | Poder borrar (¿o anular?) Servicios Especiales | `cualquiera` | fix | Baja | b | La policy DELETE **ya existe** — falta el botón. ⚠️ Pero es una **venta** con `paid`: recomendado anular si está pagada. Mismo criterio que ASG-037 |
+| ASG-051 | Poder cambiar el código de autorización del libro de clases | `cualquiera` | fix | Baja | b | `class_book.sence_code` ya existe. **Confirmar que es ese el código** antes de estimar. ¿Se puede cambiar con el libro ya cerrado? |
 
 ---
 
@@ -59,6 +86,10 @@
 | ASG-004 | Cobertura `data-llm-*` — lote 1: Admin Flota + Documentos + Certificados (9 archivos) | [fix-088-m-data-llm-lote-1-flota-documentos](fix-088-m-data-llm-lote-1-flota-documentos/fix.md) | 2026-07-28 |
 | ASG-006 | Cobertura `data-llm-*` — lote 3: shared/components parte 1 (8 archivos) | [fix-087-m-data-llm-lote-3-shared-parte-1](fix-087-m-data-llm-lote-3-shared-parte-1/fix.md) | 2026-07-28 |
 | ASG-008 | Decisión de diseño: modificador componible `btn-sm` en el DS + aplicar a los 3 archivos deferidos de ARCH-16 | [fix-086-m-btn-sm-arch16-restante](fix-086-m-btn-sm-arch16-restante/fix.md) | 2026-07-28 |
+| ASG-017 | Fix H-035 + H-017: Portal Alumno nunca puede mostrar la nota del Examen Final — columna equivocada en la query (mismo bug, 2 hallazgos duplicados) | [fix-059-b-nota-examen-final](fix-059-b-nota-examen-final/fix.md) | 2026-07-28 |
+| ASG-032 | Fix H-036: flash de texto incorrecto ("matrícula profesional") en la página Pagos de un alumno de Clase B mientras carga | [fix-060-b-flash-texto-pagos-clase-b](fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
+| ASG-031 | Fix H-032: el formulario "Recuperar Contraseña" sigue mostrando el campo de Contraseña del login normal | [fix-061-b-password-field-inert-reset-mode](fix-061-b-password-field-inert-reset-mode/fix.md) | 2026-07-28 |
+| ASG-030 | Fix H-023: Caja Diaria muestra la glosa cruda del origen del pago ("online"/"enrollment") en vez de un concepto legible | [fix-062-b-glosa-cruda-cuadratura](fix-062-b-glosa-cruda-cuadratura/fix.md) | 2026-07-28 |
 | ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
 | ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
 | ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |

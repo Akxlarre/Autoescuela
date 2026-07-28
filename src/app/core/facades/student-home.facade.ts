@@ -171,7 +171,7 @@ export class StudentHomeFacade {
         // Nota examen final
         this.supabase.client
           .from('class_b_exam_scores')
-          .select('grade, created_at')
+          .select('score, created_at')
           .eq('enrollment_id', enrollmentId)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -262,7 +262,7 @@ export class StudentHomeFacade {
       recentSessions,
     };
 
-    const examGrade = examResult.data?.grade ? Number(examResult.data.grade) : null;
+    const examGrade = examResult.data?.score ? Number(examResult.data.score) : null;
     const grades: StudentHomeGrades = {
       finalExamGrade: examGrade,
       finalExamDate: examResult.data?.created_at ?? null,

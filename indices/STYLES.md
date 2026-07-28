@@ -200,37 +200,37 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 475 | `#38bdf8` |
-| `--text-muted` | 409 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 266 | `var(--color-primary-text)` |
+| `--ds-brand` | 455 | `#38bdf8` |
+| `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--text-secondary` | 227 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 214 | `#f87171` |
-| `--bg-surface` | 203 | `#18181b` |
-| `--state-success` | 175 | `#4ade80` |
+| `--bg-surface` | 201 | `#18181b` |
+| `--state-success` | 173 | `#4ade80` |
 | `--color-primary` | 158 | `#38bdf8` |
-| `--border-default` | 134 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 124 | `#fbbf24` |
-| `--bg-elevated` | 83 | `#27272a` |
-| `--duration-fast` | 67 | `200ms` |
-| `--text-sm` | 65 | `0.875rem` |
+| `--border-default` | 132 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 122 | `#fbbf24` |
+| `--bg-elevated` | 78 | `#27272a` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
+| `--text-sm` | 63 | `0.875rem` |
+| `--duration-fast` | 57 | `200ms` |
 | `--radius-md` | 57 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 51 | `var(--border-subtle)` |
-| `--color-primary-text` | 48 | `#ffffff` |
 | `--bg-base` | 46 | `#09090b` |
+| `--color-primary-text` | 45 | `#ffffff` |
 | `--text-xs` | 45 | `0.75rem` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--color-success` | 39 | `—` |
-| `--radius-full` | 34 | `9999px` |
-| `--state-success-bg` | 27 | `rgba(74, 222, 128, 0.1)` |
+| `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
+| `--state-success-bg` | 25 | `rgba(74, 222, 128, 0.1)` |
 
 ## Clases semánticas del Design System
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 230 | `src/styles/tokens/_variables.scss` |
+| `.card` | 234 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
@@ -333,7 +333,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 57 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1182 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1191 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -342,10 +342,10 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | Repeticiones | Cluster |
 |--------------|---------|
 | 54 | `text-sm font-semibold text-text-primary` |
-| 37 | `text-sm font-bold text-text-primary` |
+| 40 | `text-sm font-bold text-text-primary` |
 | 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
-| 15 | `text-sm font-bold text-text-primary truncate` |
+| 15 | `font-bold text-sm text-text-primary truncate` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
