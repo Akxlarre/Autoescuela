@@ -32,6 +32,21 @@ Las iteraciones 19-21 de la Fase 5 del audit (`indices/FLOWS-QA-AUDIT.md`) reque
 
 - Ninguno declarado — cobertura QA visual transversal (varias páginas), no un archivo puntual.
 
+## Ampliación — reunión con el cliente 2026-07-28
+
+El cliente reportó: *"En Instructores y Alumnos se usa aún el hero azul antiguo en algunas
+vistas, cambiar al diseño nuevo."*
+
+Es un hallazgo de consistencia visual del mismo tipo que esta asignación ya cubre, así que se
+absorbe acá en vez de crear una ASG nueva. Concretamente, agregar al alcance:
+
+- Barrer **todas** las vistas de Instructores y Alumnos y detectar cuáles siguen usando el hero
+  antiguo.
+- Migrarlas al hero/`app-section-hero` canónico dentro de `.bento-hero`, según
+  `.claude/rules/visual-system.md` § Bento Grid.
+- Referencia útil de qué está desalineado: `indices/UI-HOMOGENEITY-AUDIT.md` ya documenta el
+  patrón "hero en `bento-banner` vs `bento-hero`" y los 14 stubs con `p-6`.
+
 ## Notas para quien la reclame
 
 - Reservada para Benjamín porque requiere el entorno de navegador local — si alguien más quiere tomarla, coordinar primero.
