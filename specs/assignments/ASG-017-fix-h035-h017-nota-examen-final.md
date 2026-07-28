@@ -1,14 +1,14 @@
 # Asignación ASG-017 — Fix H-035 + H-017: Portal Alumno nunca muestra la nota del Examen Final
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-059-b-nota-examen-final
 
 ---
 
