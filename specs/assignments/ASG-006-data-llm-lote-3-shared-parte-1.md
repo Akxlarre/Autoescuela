@@ -1,14 +1,14 @@
 # Asignación ASG-006 — Cobertura data-llm-* — Lote 3: shared/components parte 1
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** m
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-087-m-data-llm-lote-3-shared-parte-1
 
 ---
 

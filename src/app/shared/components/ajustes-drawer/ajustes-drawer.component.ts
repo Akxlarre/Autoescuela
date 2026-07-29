@@ -154,6 +154,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       [(ngModel)]="newPassword"
                       (ngModelChange)="markDirty()"
                       placeholder="Min. 6 caracteres"
+                      data-llm-description="input for the new account password"
                     />
                   </div>
                   <div class="space-y-1">
@@ -166,6 +167,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       [(ngModel)]="confirmPassword"
                       (ngModelChange)="markDirty()"
                       placeholder="Repite tu contraseña"
+                      data-llm-description="input to confirm the new account password"
                     />
                   </div>
                   <button
@@ -174,6 +176,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     [disabled]="
                       isSaving() || newPassword().length < 6 || newPassword() !== confirmPassword()
                     "
+                    data-llm-action="update-password"
                     (click)="updatePassword()"
                   >
                     {{ isSaving() ? 'Actualizando...' : 'Cambiar Contraseña' }}
@@ -200,6 +203,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <button
                 type="button"
                 class="cursor-pointer flex h-8 w-8 items-center justify-center rounded-lg border border-border-default bg-surface hover:bg-subtle text-text-secondary"
+                data-llm-action="toggle-color-mode"
                 (click)="theme.cycleColorMode($event)"
               >
                 <app-icon [name]="theme.darkMode() ? 'sun' : 'moon'" [size]="16" />
@@ -239,6 +243,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <button
                 type="button"
                 class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-brand bg-brand-muted py-2 text-xs font-semibold text-brand transition-colors hover:bg-brand hover:text-brand-text"
+                data-llm-nav="config-web-editor"
                 (click)="navigateToConfigWeb()"
               >
                 <app-icon name="globe" [size]="14" />
@@ -258,6 +263,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 <button
                   type="button"
                   class="w-full cursor-pointer flex items-center justify-center gap-2 rounded-lg border border-border-default bg-surface py-2 text-xs font-semibold text-text-primary transition-colors hover:bg-subtle"
+                  data-llm-action="open-schedule-generator"
                   (click)="abrirGeneradorHorario()"
                 >
                   <app-icon name="calendar-clock" [size]="14" />
@@ -286,6 +292,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                       [class.bg-surface]="branchFacade.selectedBranchId() !== branch.id"
                       [class.border-border-default]="branchFacade.selectedBranchId() !== branch.id"
                       [class.text-text-secondary]="branchFacade.selectedBranchId() !== branch.id"
+                      data-llm-action="select-branch"
                       (click)="branchFacade.selectBranch(branch.id)"
                     >
                       <span>{{ branch.name }}</span>
@@ -308,6 +315,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                     [class.bg-surface]="branchFacade.selectedBranchId() !== null"
                     [class.border-border-default]="branchFacade.selectedBranchId() !== null"
                     [class.text-text-secondary]="branchFacade.selectedBranchId() !== null"
+                    data-llm-action="select-all-branches"
                     (click)="branchFacade.selectBranch(null)"
                   >
                     <span>Todas las escuelas</span>
@@ -329,6 +337,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
               <button
                 type="button"
                 class="cursor-pointer flex items-center gap-1 rounded-lg border border-border-default bg-surface hover:bg-subtle px-3 py-1.5 text-xs font-semibold text-text-secondary"
+                data-llm-nav="auditoria-logs"
                 (click)="navigateToAuditoria()"
               >
                 <app-icon name="shield-check" [size]="12" />

@@ -58,14 +58,14 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
   template: `
     <!-- Barra de acento izquierda — comunica severidad al instante -->
     <div
-      class="absolute left-0 top-0 h-full w-[3px]"
+      class="absolute left-0 top-0 h-full w-0.75"
       [style.background]="accentColor()"
       aria-hidden="true"
     ></div>
 
     <!-- Ícono en contenedor de color suave -->
     <div
-      class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg mt-0.5"
+      class="shrink-0 flex items-center justify-center w-8 h-8 rounded-lg mt-0.5"
       [style.background]="iconBg()"
       aria-hidden="true"
     >
@@ -87,6 +87,7 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
           class="self-start mt-0.5 text-xs font-semibold cursor-pointer border-none bg-transparent p-0 underline-offset-2 hover:underline"
           [style.color]="accentColor()"
           [appPressFeedback]="'press'"
+          [attr.data-llm-action]="llmAction()"
           (click)="action.emit()"
         >
           {{ actionLabel() }}
@@ -98,9 +99,10 @@ export type AlertSeverity = 'error' | 'warning' | 'info' | 'success';
     @if (dismissible()) {
       <button
         type="button"
-        class="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer border-none bg-transparent p-0 self-start text-text-muted"
+        class="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg cursor-pointer border-none bg-transparent p-0 self-start text-text-muted"
         [appPressFeedback]="'press'"
         aria-label="Cerrar"
+        data-llm-action="dismiss-alert"
         (click)="dismissed.emit()"
       >
         <app-icon name="x" [size]="14" />
@@ -120,6 +122,9 @@ export class AlertCardComponent {
 
   /** Si true, muestra el botón X de descarte en la esquina superior derecha. */
   readonly dismissible = input<boolean>(false);
+
+  /** Identificador semántico del botón de acción para agentes IA (data-llm-action). Contextual al uso. */
+  readonly llmAction = input<string | null>(null);
 
   /** Emitido al hacer clic en el botón de acción. */
   readonly action = output<void>();

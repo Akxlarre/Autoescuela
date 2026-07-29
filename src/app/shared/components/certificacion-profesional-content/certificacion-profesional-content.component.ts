@@ -190,7 +190,7 @@ const PAGE_SIZE = 10;
 
             @if (pendientesCount() > 0) {
               <button
-                class="btn-primary flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn-primary flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 data-llm-action="open-generate-pending-professional-certificates-drawer"
                 [disabled]="isGeneratingPendientes()"
                 [appStableWidth]="isGeneratingPendientes()"
@@ -208,7 +208,7 @@ const PAGE_SIZE = 10;
 
             @if (alumnosParaEnvioMasivo().length > 0) {
               <button
-                class="btn-secondary flex items-center justify-center gap-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                class="btn-secondary flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 data-llm-action="open-send-bulk-emails-professional-drawer"
                 [disabled]="sendingMasivo()"
                 [appStableWidth]="sendingMasivo()"
@@ -225,7 +225,7 @@ const PAGE_SIZE = 10;
             }
 
             <button
-              class="btn-secondary flex items-center justify-center gap-2 text-sm ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
+              class="btn-secondary flex items-center justify-center gap-2 ml-auto disabled:opacity-60 disabled:cursor-not-allowed"
               data-llm-action="export-professional-certificates"
               [disabled]="isExporting()"
               [appStableWidth]="isExporting()"
@@ -428,7 +428,7 @@ const PAGE_SIZE = 10;
                         <div class="flex items-center justify-end gap-2">
                           @if (alumno.certificadoStatus === 'pendiente') {
                             <button
-                              class="group inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                              class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                               data-llm-action="generate-professional-certificate"
                               [disabled]="generatingId() !== null || !alumno.elegible"
                               [appStableWidth]="generatingId() === alumno.enrollmentId"
@@ -453,7 +453,7 @@ const PAGE_SIZE = 10;
                             </button>
                           } @else {
                             <button
-                              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary"
+                              class="inline-flex items-center font-semibold transition-colors btn-secondary btn-sm"
                               data-llm-action="view-professional-certificate-pdf"
                               (click)="
                                 verCertificado.emit({
@@ -466,7 +466,7 @@ const PAGE_SIZE = 10;
                               Ver
                             </button>
                             <button
-                              class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
+                              class="inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                               data-llm-action="send-professional-certificate-email"
                               [disabled]="sendingEmailId() === alumno.enrollmentId"
                               [appStableWidth]="sendingEmailId() === alumno.enrollmentId"
@@ -510,7 +510,7 @@ const PAGE_SIZE = 10;
                             </p>
                             <div class="flex items-center gap-2 shrink-0">
                               <button
-                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary"
+                                class="inline-flex items-center font-semibold transition-all active:scale-95 btn-primary btn-sm"
                                 data-llm-action="confirm-send-professional-certificate-email"
                                 (click)="confirmarEmail()"
                               >
@@ -518,7 +518,7 @@ const PAGE_SIZE = 10;
                                 Confirmar envío
                               </button>
                               <button
-                                class="btn-ghost text-xs"
+                                class="btn-ghost btn-sm"
                                 data-llm-action="cancel-send-professional-certificate-email"
                                 (click)="cancelarEmail()"
                               >
@@ -553,7 +553,7 @@ const PAGE_SIZE = 10;
                             </p>
                             <div class="flex items-center gap-2 shrink-0">
                               <button
-                                class="group inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
+                                class="group inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
                                 data-llm-action="confirm-generate-professional-certificate-partial-practice"
                                 [disabled]="generatingId() !== null"
                                 [appStableWidth]="generatingId() === pendingConfirmId()"
@@ -574,7 +574,7 @@ const PAGE_SIZE = 10;
                                 }
                               </button>
                               <button
-                                class="btn-ghost text-xs"
+                                class="btn-ghost btn-sm"
                                 data-llm-action="cancel-generate-professional-certificate"
                                 (click)="cancelarGenerar()"
                               >
@@ -679,7 +679,7 @@ const PAGE_SIZE = 10;
                   >
                     @if (alumno.certificadoStatus === 'pendiente') {
                       <button
-                        class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                        class="flex-1 inline-flex items-center justify-center font-semibold transition-all active:scale-95 btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         data-llm-action="generate-professional-certificate"
                         [disabled]="generatingId() !== null || !alumno.elegible"
                         [title]="!alumno.elegible ? 'El alumno no cumple todos los requisitos' : ''"
@@ -695,7 +695,7 @@ const PAGE_SIZE = 10;
                       </button>
                     } @else {
                       <button
-                        class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary"
+                        class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm"
                         data-llm-action="view-professional-certificate-pdf"
                         (click)="
                           verCertificado.emit({
@@ -708,7 +708,7 @@ const PAGE_SIZE = 10;
                         Ver
                       </button>
                       <button
-                        class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
+                        class="flex-1 inline-flex items-center justify-center font-semibold transition-colors btn-secondary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                         data-llm-action="send-professional-certificate-email"
                         [disabled]="sendingEmailId() === alumno.enrollmentId"
                         (click)="onClickEmail(alumno)"
@@ -744,16 +744,14 @@ const PAGE_SIZE = 10;
                       </p>
                       <div class="flex items-center gap-2">
                         <button
-                          class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold btn-primary"
+                          class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm"
                           data-llm-action="confirm-send-professional-certificate-email"
                           (click)="confirmarEmail()"
                         >
                           <app-icon name="send" [size]="12" />
                           Confirmar envío
                         </button>
-                        <button class="btn-ghost text-xs" (click)="cancelarEmail()">
-                          Cancelar
-                        </button>
+                        <button class="btn-ghost btn-sm" (click)="cancelarEmail()">Cancelar</button>
                       </div>
                     </div>
                   }
@@ -770,7 +768,7 @@ const PAGE_SIZE = 10;
                       </p>
                       <div class="flex items-center gap-2">
                         <button
-                          class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                          class="flex-1 inline-flex items-center justify-center font-semibold btn-primary btn-sm disabled:opacity-60 disabled:cursor-not-allowed"
                           data-llm-action="confirm-generate-professional-certificate-partial-practice"
                           [disabled]="generatingId() !== null"
                           (click)="confirmarGenerar()"
@@ -783,7 +781,7 @@ const PAGE_SIZE = 10;
                             Confirmar
                           }
                         </button>
-                        <button class="btn-ghost text-xs" (click)="cancelarGenerar()">
+                        <button class="btn-ghost btn-sm" (click)="cancelarGenerar()">
                           Cancelar
                         </button>
                       </div>

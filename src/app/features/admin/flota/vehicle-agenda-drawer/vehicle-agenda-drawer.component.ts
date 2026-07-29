@@ -172,7 +172,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
       </app-drawer-content-loader>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-primary" (click)="onClose()">Cerrar Agenda</button>
+        <button
+          type="button"
+          class="btn-primary"
+          data-llm-action="close-vehicle-agenda"
+          (click)="onClose()"
+        >
+          Cerrar Agenda
+        </button>
       </ng-container>
     </app-drawer-form>
   `,

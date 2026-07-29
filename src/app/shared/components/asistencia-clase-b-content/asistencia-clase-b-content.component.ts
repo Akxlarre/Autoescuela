@@ -258,7 +258,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                         @if (alerta.nivel === 'danger') {
                           @if (alerta.horarioActivo) {
                             <button
-                              class="btn-primary text-xs px-2.5 py-1"
+                              class="btn-primary btn-sm"
                               [disabled]="isSaving()"
                               data-llm-action="remove-schedule"
                               (click)="removeSchedule.emit(alerta.enrollmentId)"
@@ -267,7 +267,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             </button>
                           } @else {
                             <button
-                              class="btn-secondary text-xs px-2.5 py-1"
+                              class="btn-secondary btn-sm"
                               [disabled]="isSaving()"
                               data-llm-action="reactivate-schedule"
                               (click)="reactivateSchedule.emit(alerta.enrollmentId)"
@@ -277,7 +277,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                           }
                         } @else {
                           <button
-                            class="btn-secondary text-xs px-2.5 py-1"
+                            class="btn-secondary btn-sm"
                             [disabled]="isSaving()"
                             data-llm-action="send-reminder"
                             (click)="sendReminder.emit(alerta.enrollmentId)"
@@ -323,7 +323,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                   }
                 </div>
                 <button
-                  class="btn-primary text-sm px-3 py-2 flex items-center gap-1.5"
+                  class="btn-primary btn-sm flex items-center"
                   data-llm-action="refresh-attendance"
                   (click)="refreshRequested.emit()"
                 >
@@ -545,7 +545,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               >
                               <!-- Finalizar clase -->
                               <button
-                                class="btn-success-soft text-xs font-semibold px-2.5 py-1 rounded-lg border flex items-center gap-1 cursor-pointer"
+                                class="btn-success-soft btn-sm font-semibold border flex items-center cursor-pointer"
                                 [disabled]="isSaving()"
                                 pTooltip="Finalizar clase"
                                 tooltipPosition="top"
@@ -558,7 +558,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.status === 'ausente' && !row.justificacion) {
                               <button
-                                class="btn-ghost text-xs px-2 py-1"
+                                class="btn-ghost btn-sm"
                                 [disabled]="isSaving()"
                                 data-llm-action="justify-absence"
                                 (click)="openJustifyModal(row.id)"
@@ -568,7 +568,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                             }
                             @if (row.justificacion) {
                               <button
-                                class="btn-ghost text-xs px-2 py-1 flex items-center gap-1"
+                                class="btn-ghost btn-sm flex items-center"
                                 [pTooltip]="row.justificacion"
                                 tooltipPosition="top"
                                 data-llm-action="view-justification"
@@ -579,9 +579,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                               </button>
                             }
                             @if (row.status === 'presente') {
-                              <span class="text-xs font-medium text-success">
-                                Finalizada
-                              </span>
+                              <span class="text-xs font-medium text-success"> Finalizada </span>
                             }
                           </div>
                         </td>
@@ -675,11 +673,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
               (input)="justifyReason.set($any($event.target).value)"
             ></textarea>
             <div class="flex justify-end gap-2">
-              <button class="btn-secondary text-sm px-4 py-2" (click)="closeJustifyModal()">
-                Cancelar
-              </button>
+              <button class="btn-secondary btn-sm" (click)="closeJustifyModal()">Cancelar</button>
               <button
-                class="btn-primary text-sm px-4 py-2"
+                class="btn-primary btn-sm"
                 [disabled]="!justifyReason().trim() || isSaving()"
                 data-llm-action="submit-justification"
                 (click)="submitJustification()"
@@ -691,7 +687,7 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
         </div>
       }
     </div>
-    
+
     <!-- Modal para ver el motivo de justificación -->
     <div [appModalOverlay]="viewMotivoModalOpen()">
       @if (viewMotivoModalOpen()) {
@@ -720,11 +716,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
                 <app-icon name="x" [size]="18" />
               </button>
             </div>
-            <div class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap">
+            <div
+              class="bg-surface border border-border-subtle rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-text-secondary whitespace-pre-wrap"
+            >
               {{ viewMotivoText() }}
             </div>
             <div class="flex justify-end pt-2">
-              <button class="btn-secondary text-sm px-4 py-2 cursor-pointer" (click)="closeViewMotivo()">
+              <button class="btn-secondary btn-sm cursor-pointer" (click)="closeViewMotivo()">
                 Cerrar
               </button>
             </div>
@@ -1067,12 +1065,12 @@ export class AsistenciaClaseBContentComponent implements AfterViewInit {
     this.justifySessionId.set(null);
     this.justifyReason.set('');
   }
-  
+
   protected openViewMotivo(motivo: string): void {
     this.viewMotivoText.set(motivo);
     this.viewMotivoModalOpen.set(true);
   }
-  
+
   protected closeViewMotivo(): void {
     this.viewMotivoModalOpen.set(false);
     this.viewMotivoText.set('');
