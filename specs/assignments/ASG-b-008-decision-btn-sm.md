@@ -26,7 +26,7 @@ El linter `lint:arch` (regla ARCH-16) detectó que 3 archivos (`asistencia-clase
 
 - `docs/BACKLOG-DEUDA-TECNICA.md`, línea 86-88 (ya documenta esta necesidad).
 - `indices/FLOWS-QA-AUDIT.md`, Fase 5, iteración 17 (detalle de por qué se deferieron estos 3 archivos).
-- `specs/fix-054-b-arch16-ratchet-btn-utilities/fix.md` (el fix que sí resolvió los otros 3 archivos "limpios" de la misma regresión ARCH-16).
+- `specs/fixes/fix-054-b-arch16-ratchet-btn-utilities/fix.md` (el fix que sí resolvió los otros 3 archivos "limpios" de la misma regresión ARCH-16).
 
 ## Archivos involucrados (opcional, para detectar solapes)
 

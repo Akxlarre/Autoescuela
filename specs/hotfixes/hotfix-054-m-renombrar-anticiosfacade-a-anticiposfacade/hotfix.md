@@ -20,5 +20,5 @@ en 11 archivos (código de producción, tests, índices y una spec histórica).
 - **Archivo:** `indices/FACADES.md` — referencias documentales
 - **Archivo:** `indices/USAGE-MAP.md` — referencias documentales
 - **Archivo:** `indices/NOTIFICATIONS-MAP.md` — referencias documentales
-- **Archivo:** `specs/0025-b-notificaciones-ola-2/plan.md` — referencia histórica (se corrige por consistencia, es texto congelado de una spec ya cerrada)
-- **Archivo:** `specs/fix-071-m-anticipos-no-reactivo-a-sede/fix.md` — referencia histórica (fix ya cerrado, se corrige por consistencia)
+- **Archivo:** `specs/specs/0025-b-notificaciones-ola-2/plan.md` — referencia histórica (se corrige por consistencia, es texto congelado de una spec ya cerrada)
+- **Archivo:** `specs/fixes/fix-071-m-anticipos-no-reactivo-a-sede/fix.md` — referencia histórica (fix ya cerrado, se corrige por consistencia)

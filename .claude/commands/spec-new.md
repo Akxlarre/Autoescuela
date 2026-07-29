@@ -41,7 +41,7 @@ ls specs/
 ### 4. Crear estructura de carpetas
 
 ```
-specs/NNNN-slug/
+specs/specs/NNNN-slug/
 ├── spec.md          (copiar desde .claude/skills/sdd/templates/spec.md)
 ├── plan.md          (vacío todavía — se genera con /spec-plan)
 ├── tasks.md         (vacío todavía — se genera con /spec-tasks)
@@ -73,7 +73,7 @@ Agrega una fila a la tabla "Backlog" con el nuevo ID, título, prioridad y dueñ
 Imprime:
 
 ```
-✅ Spec NNNN-slug creada en specs/NNNN-slug/
+✅ Spec NNNN-slug creada en specs/specs/NNNN-slug/
 
 Archivos:
   - spec.md (plantilla lista para completar)

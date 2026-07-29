@@ -107,7 +107,7 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 
 #### Si es `spec`:
 
-- Crear `specs/NNNN-<mi_codigo>-slug/` con `spec.md`, `plan.md`, `tasks.md`, `acceptance.md` — mismo scaffold que `/spec-new`.
+- Crear `specs/specs/NNNN-<mi_codigo>-slug/` con `spec.md`, `plan.md`, `tasks.md`, `acceptance.md` — mismo scaffold que `/spec-new`.
 - En `spec.md`, la sección **"1. Contexto de negocio"** se pre-llena con el Contexto/Objetivo de la Asignación (no la dejes en placeholder — ya tienes contenido real). El resto (User Stories, AC, Out of scope, etc.) queda con placeholders — eso lo escribe quien reclamó, no tú.
 - Agrega al final de "9. Notas / decisiones abiertas": `- Originado de Asignación ASG-X-NNN (specs/assignments/ASG-X-NNN-slug.md)`.
 - Actualiza `specs/ROADMAP.md`: agrega fila a "Backlog" con el owner = quien reclamó.
@@ -115,14 +115,14 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 
 #### Si es `fix`:
 
-- Crear `specs/fix-NNN-<mi_codigo>-slug/fix.md` (mismo template que `/fix-new`).
+- Crear `specs/fixes/fix-NNN-<mi_codigo>-slug/fix.md` (mismo template que `/fix-new`).
 - La sección **"Root Cause"** se pre-llena con el Contexto/Objetivo de la Asignación, marcado explícitamente como hipótesis heredada: prefíjalo con `[Heredado de ASG-X-NNN, a confirmar]:` antes del texto.
 - El campo `refs:` del frontmatter apunta a `ASG-X-NNN` si no hay spec relacionada más específica.
 - **Sí** escribes `specs/.active` con el nuevo ID (igual que `/fix-new`).
 
 #### Si es `hotfix`:
 
-- Crear `specs/fixes/hotfixes/hotfix-NNN-<mi_codigo>-slug/hotfix.md` (mismo template que `/hotfix`).
+- Crear `specs/hotfixes/hotfix-NNN-<mi_codigo>-slug/hotfix.md` (mismo template que `/hotfix`).
 - La sección **"Problema"** se pre-llena igual, con el mismo prefijo `[Heredado de ASG-X-NNN, a confirmar]:`.
 - El campo `refs:` del frontmatter apunta a `ASG-X-NNN`.
 - **Sí** escribes `specs/.active` con el nuevo ID (igual que `/hotfix`).
@@ -147,7 +147,7 @@ git branch --show-current
 - **Si la rama actual es `main`/`master`** (la rama principal detectada en el paso 2): stagea **solo** estos paths exactos (nunca `-A` ni `.`):
   - `specs/ASSIGNMENTS.md`
   - `specs/assignments/ASG-X-NNN-slug.md`
-  - el path nuevo del track (`specs/fix-NNN-<codigo>-slug/`, `specs/NNNN-<codigo>-slug/` o `specs/fixes/hotfixes/hotfix-NNN-<codigo>-slug/`)
+  - el path nuevo del track (`specs/fixes/fix-NNN-<codigo>-slug/`, `specs/specs/NNNN-<codigo>-slug/` o `specs/hotfixes/hotfix-NNN-<codigo>-slug/`)
 
   Luego haz commit con `chore(assign): reclamar ASG-X-NNN → <track-id>` y push directo (`git push`), sin pedir confirmación — el usuario ya autorizó este flujo de forma durable. Si el push falla (conflicto con otro push en paralelo), NO fuerces: haz `git pull --rebase` una vez y reintenta; si vuelve a fallar, avisa al usuario en el reporte en vez de insistir.
 - **Si la rama actual NO es la principal:** no intentes pushear a main desde ahí (cambiar de rama con cambios de otro feature en curso es más riesgoso y no fue lo que se autorizó). Haz commit igual de esos mismos paths puntuales en la rama actual como respaldo local, y en el reporte avisa que falta llevar `specs/ASSIGNMENTS.md` + el track nuevo a `main` a mano (ej. cherry-pick o pasar a `main` antes de seguir).

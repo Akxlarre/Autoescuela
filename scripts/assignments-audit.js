@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * assignments-audit.js — Auditor de integridad entre specs/ASSIGNMENTS.md y los
- * tracks reales en el filesystem (specs/fix-*, specs/fixes/hotfixes/*, specs/*).
+ * tracks reales en el filesystem (specs/fixes/fix-*, specs/hotfixes/*, specs/*).
  *
  * Solo reporta — no escribe nada. Ver specs/AUTHORS.md y specs/ASSIGNMENTS.md.
  *
@@ -25,7 +25,9 @@ import path from 'path';
 
 const ROOT = process.cwd();
 const SPECS_DIR = path.join(ROOT, 'specs');
-const HOTFIX_DIR = path.join(SPECS_DIR, 'fixes', 'hotfixes');
+const SPEC_TRACKS_DIR = path.join(SPECS_DIR, 'specs');
+const FIX_TRACKS_DIR = path.join(SPECS_DIR, 'fixes');
+const HOTFIX_DIR = path.join(SPECS_DIR, 'hotfixes');
 const ASSIGNMENTS_MD = path.join(SPECS_DIR, 'ASSIGNMENTS.md');
 const AUTHORS_MD = path.join(SPECS_DIR, 'AUTHORS.md');
 
@@ -154,17 +156,25 @@ function main() {
     }
   }
 
-  for (const dir of listDirs(SPECS_DIR)) {
-    if (dir === 'fixes' || dir === 'assignments') continue;
-    const fullPath = path.join(SPECS_DIR, dir);
-    if (dir.startsWith('fix-')) {
-      processTrack('fix', 'fix', 3, dir, fullPath, 'fix.md');
-    } else if (/^\d/.test(dir)) {
-      processTrack('spec', '', 4, dir, fullPath, 'spec.md');
-    }
+  for (const dir of listDirs(SPEC_TRACKS_DIR)) {
+    processTrack('spec', '', 4, dir, path.join(SPEC_TRACKS_DIR, dir), 'spec.md');
+  }
+  for (const dir of listDirs(FIX_TRACKS_DIR)) {
+    processTrack('fix', 'fix', 3, dir, path.join(FIX_TRACKS_DIR, dir), 'fix.md');
   }
   for (const dir of listDirs(HOTFIX_DIR)) {
     processTrack('hotfix', 'hotfix', 3, dir, path.join(HOTFIX_DIR, dir), 'hotfix.md');
+  }
+
+  // Tracks sueltos en la raíz de specs/ — no deberían existir tras la migración
+  // a estructura anidada (specs/{specs,fixes,hotfixes}/).
+  for (const dir of listDirs(SPECS_DIR)) {
+    if (['specs', 'fixes', 'hotfixes', 'assignments'].includes(dir)) continue;
+    namingViolations.push({
+      type: 'raíz',
+      dir,
+      reason: 'track suelto en specs/ — debe vivir en specs/{specs,fixes,hotfixes}/',
+    });
   }
 
   // Asignaciones: mismo contrato de naming/colisión que los tracks (contador por autor).

@@ -38,9 +38,9 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 
 | Track | Cuándo | ID format | Contrato |
 |-------|--------|-----------|---------|
-| **Spec** | Feature nueva | `NNNN-X-slug` | `specs/<id>/spec.md` con ACs |
-| **Fix** | Bug con ACs afectados | `fix-NNN-X-slug` | `specs/<id>/fix.md` |
-| **Hotfix** | Fix urgente simple | `hotfix-NNN-X-slug` | Auto-cerrado por hook |
+| **Spec** | Feature nueva | `NNNN-X-slug` | `specs/specs/<id>/spec.md` con ACs |
+| **Fix** | Bug con ACs afectados | `fix-NNN-X-slug` | `specs/fixes/<id>/fix.md` |
+| **Hotfix** | Fix urgente simple | `hotfix-NNN-X-slug` | `specs/hotfixes/<id>/hotfix.md` — auto-cerrado por hook |
 
 `X` = código de autor de una letra (ver `specs/AUTHORS.md`). `specs/` se commitea al
 repo — cada autor numera de forma independiente por track (el contador de Benjamín no
@@ -49,12 +49,12 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 
 ### Slash commands globales
 
-- `/spec-new` → crea `specs/<id>/spec.md`
+- `/spec-new` → crea `specs/specs/<id>/spec.md`
 - `/spec-activate <id>` → activa el track (escribe en `specs/.active`)
-- `/spec-plan` → genera `specs/<id>/plan.md` desde la spec
+- `/spec-plan` → genera `specs/specs/<id>/plan.md` desde la spec
 - `/spec-tasks` → desglosa el plan en tareas atómicas
 - `/spec-verify` → muestra ACs abiertos vs cumplidos
-- `/fix-new <desc>` → crea track fix con `fix.md`
+- `/fix-new <desc>` → crea `specs/fixes/<id>/fix.md`
 - `/fix-close` → cierra el track tras verificar test de regresión
 
 ### Flujo Feature nueva

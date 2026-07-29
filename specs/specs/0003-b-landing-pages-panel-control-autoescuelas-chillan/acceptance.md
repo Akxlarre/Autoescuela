@@ -1,6 +1,6 @@
 # Criterios de Aceptación y Verificación — Spec 0003-b
 
-Este documento detalla la validación y conformidad de los Criterios de Aceptación (AC) definidos en la especificación de negocio [Spec 0003-b](file:///C:/Users/Akxlarre/Autoescuela/specs/0003-b-landing-pages-panel-control-autoescuelas-chillan/spec.md).
+Este documento detalla la validación y conformidad de los Criterios de Aceptación (AC) definidos en la especificación de negocio [Spec 0003-b](file:///C:/Users/Akxlarre/Autoescuela/specs/specs/0003-b-landing-pages-panel-control-autoescuelas-chillan/spec.md).
 
 ## Tabla de Conformidad
 

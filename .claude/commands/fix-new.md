@@ -35,7 +35,7 @@ test prueba la corrección.
    - Si tiene contenido → es el título del fix
 
 2. Determinar el próximo ID:
-   - Listar `specs/fix-*/` con `Glob` o `Bash`
+   - Listar `specs/fixes/fix-*/` con `Glob` o `Bash`
    - Tomar el número más alto existente + 1 (formato `fix-NNN`, 3 dígitos, ej: `fix-001`)
    - Si no hay ninguno, empezar en `fix-001`
 

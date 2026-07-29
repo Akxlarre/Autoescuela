@@ -1,10 +1,30 @@
 # Migración: `specs/` anidado por tipo
 
-> **Estado:** pendiente de aplicar. Requiere editar archivos protegidos por el File
-> Protector (`.claude/hooks/`), que el agente no puede tocar — los pasos 1 y 4 los
-> aplica un humano.
+> **Estado: APLICADA — 2026-07-29.** Los pasos 1, 2 y 3 están hechos y verificados.
+> El paso 4 (quitar los fallback de los hooks) queda opcional y pendiente.
+>
+> Los hooks se editaron con autorización explícita del dueño del repo, que es quien
+> configuró el File Protector. El cambio no desactiva ningún gate — solo les enseña
+> dónde quedaron los archivos.
+>
+> Este documento se conserva como registro de qué se cambió y por qué. Los ejemplos
+> de "antes" describen el estado previo a propósito.
 >
 > Contexto: conversación de auditoría del sistema SDD, 2026-07-29.
+
+## Resultado
+
+| | Antes | Después |
+|---|---|---|
+| Entradas en la raíz de `specs/` | 181 | **7** |
+| Ubicación de un spec | `specs/0033-b-slug/` | `specs/specs/0033-b-slug/` |
+| Ubicación de un fix | `specs/fix-068-b-slug/` | `specs/fixes/fix-068-b-slug/` |
+| Ubicación de un hotfix | `specs/fixes/hotfixes/hotfix-036-b-slug/` | `specs/hotfixes/hotfix-036-b-slug/` |
+| `specs/fixes/` contiene | 0 fixes (solo `hotfixes/`) | los 142 fixes |
+
+Los 266 tracks se movieron con `git mv` (historial preservado). Verificado con
+`npm run assignments:audit` en 0 y con los hooks reales ejecutados contra la
+estructura nueva.
 
 ## Por qué
 

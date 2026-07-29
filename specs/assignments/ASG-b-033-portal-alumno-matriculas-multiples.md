@@ -39,7 +39,7 @@ prioriza, pero no resuelve que la otra quede oculta.
 ## Referencias
 
 - `indices/FLOWS-QA-AUDIT.md`, hallazgo H-039.
-- `specs/fix-058-b-pago-multiples-matriculas/fix.md` — root cause y verificación E2E del
+- `specs/fixes/fix-058-b-pago-multiples-matriculas/fix.md` — root cause y verificación E2E del
   bug de selección de matrícula que motivó este hallazgo colateral.
 - `specs/assignments/ASG-b-002-fix-h039-pago-dos-matriculas.md` — ya mencionaba esta
   alternativa ("selector de matrícula en Pagos, igual al del Dashboard") como fuera de

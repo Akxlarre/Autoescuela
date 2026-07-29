@@ -59,7 +59,7 @@ Antes de crear un track nuevo, Claude debe:
 1. Leer el código de autor desde `.claude/author.local.json` (gitignored, uno por
    máquina/dev). Si no existe, preguntarle al humano su código y crearlo a partir de
    `.claude/author.local.json.example`.
-2. Listar las carpetas existentes bajo `specs/` (y `specs/fixes/hotfixes/` para
+2. Listar las carpetas existentes bajo `specs/` (y `specs/hotfixes/` para
    hotfixes) y filtrar solo las que correspondan a ese autor: el segmento de autor
    coincide con el código (ej. para `m` → `fix-NNN-m-*`, `NNNN-m-*`).
 3. Tomar el número más alto encontrado para ESE autor en ESE track y sumarle 1.

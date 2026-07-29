@@ -45,7 +45,7 @@ es **marcado manual**, RF-078)? Lo segundo es mucho más valioso y mucho más ca
 
 ## Referencias
 
-- `specs/0027-b-notificaciones-ola-4/` — cierre con el diferimiento de D2 documentado
+- `specs/specs/0027-b-notificaciones-ola-4/` — cierre con el diferimiento de D2 documentado
 - `indices/DATABASE.md` → `professional_theory_sessions` (`zoom_link`),
   `professional_theory_attendance` (marcado manual)
 - Recordar la preferencia del proyecto: **cero dependencias externas que el cliente deba

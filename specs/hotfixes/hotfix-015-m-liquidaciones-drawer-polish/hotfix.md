@@ -16,7 +16,7 @@ masivo fix-025/026 que propagó el shell `app-drawer-form` a los drawers de form
 un `<div class="flex flex-col h-full">` con footer custom en vez del shell canónico.
 
 ## Fix 2
-Aplicar la receta mecánica de fix-025 (`specs/fix-025.../fix.md` §"Receta mecánica"):
+Aplicar la receta mecánica de fix-025 (`specs/fixes/fix-025.../fix.md` §"Receta mecánica"):
 - Importar y usar `DrawerFormComponent` envolviendo el contenido (Patrón B, sin content-loader).
 - Footer proyectado vía `ngProjectAs="[drawer-form-footer]"` con botones canónicos
   `btn-secondary` (Cancelar) + `btn-primary flex items-center gap-2` (Confirmar Pago).

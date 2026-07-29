@@ -30,12 +30,12 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 | Fase | Comando | Artefacto | Responsable |
 |------|---------|-----------|-------------|
-| 1. Spec | `/spec-new "título"` | `specs/NNNN-slug/spec.md` | Usuario aprueba; Claude puede redactar borrador |
+| 1. Spec | `/spec-new "título"` | `specs/specs/NNNN-slug/spec.md` | Usuario aprueba; Claude puede redactar borrador |
 | 2. Activar | `/spec-activate NNNN` | `specs/.active` | Usuario |
-| 3. Plan | `/spec-plan` | `specs/NNNN-slug/plan.md` | Claude redacta basado en spec + índices |
-| 4. Tareas | `/spec-tasks` | `specs/NNNN-slug/tasks.md` | Claude descompone plan en checklist atómico |
+| 3. Plan | `/spec-plan` | `specs/specs/NNNN-slug/plan.md` | Claude redacta basado en spec + índices |
+| 4. Tareas | `/spec-tasks` | `specs/specs/NNNN-slug/tasks.md` | Claude descompone plan en checklist atómico |
 | 5. Implementar | (libre) | código + tests | Claude ejecuta tareas; hooks validan |
-| 6. Verificar | `/spec-verify` | `specs/NNNN-slug/acceptance.md` | AC verifier (Haiku) marca AC con evidencia |
+| 6. Verificar | `/spec-verify` | `specs/specs/NNNN-slug/acceptance.md` | AC verifier (Haiku) marca AC con evidencia |
 
 ## Estructura canónica de un proyecto con SDD activo
 
@@ -46,12 +46,19 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 │   ├── ASSIGNMENTS.md          # tablero de Asignaciones de equipo (previo a un track) — opcional
 │   ├── assignments/
 │   │   └── ASG-X-NNN-slug.md     # brief de una Asignación (contexto para quien la reclame)
-│   ├── .active                 # contiene el ID de la spec en ejecución, o vacío
-│   └── NNNN-slug/
-│       ├── spec.md             # QUÉ + POR QUÉ + AC + out-of-scope
-│       ├── plan.md             # CÓMO técnicamente
-│       ├── tasks.md            # checklist atomizado con DoD
-│       └── acceptance.md       # AC marcados con evidencia (commit, test, screenshot)
+│   ├── .active                 # contiene el ID del track en ejecución, o vacío
+│   ├── specs/
+│   │   └── NNNN-X-slug/
+│   │       ├── spec.md         # QUÉ + POR QUÉ + AC + out-of-scope
+│   │       ├── plan.md         # CÓMO técnicamente
+│   │       ├── tasks.md        # checklist atomizado con DoD
+│   │       └── acceptance.md   # AC marcados con evidencia (commit, test, screenshot)
+│   ├── fixes/
+│   │   └── fix-NNN-X-slug/
+│   │       └── fix.md          # Root Cause + ACs afectados + test de regresión
+│   └── hotfixes/
+│       └── hotfix-NNN-X-slug/
+│           └── hotfix.md       # Problema + Cambios (auto-cerrado al fin de sesión)
 └── .claude/
     └── settings.json           # engancha los 3 hooks SDD globales
 ```

@@ -335,7 +335,7 @@ y sea accesible para lectores de pantalla.
   Componente Dumb compartido en `shared/components/phone-input/` — el flujo admin lo adopta
   en una spec posterior sin trabajo extra aquí.
 
-- [ ] **[VERIFICACIÓN PREVIA AL PLAN]** Revisar `specs/fix-001-public-personal-data-validaciones/`
+- [ ] **[VERIFICACIÓN PREVIA AL PLAN]** Revisar `specs/fixes/fix-001-public-personal-data-validaciones/`
   para confirmar qué ya se implementó y no duplicar trabajo.
 
 ---

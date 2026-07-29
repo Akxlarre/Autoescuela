@@ -16,7 +16,7 @@ allowed-tools: Read, Write, Bash, Glob
 
 `/spec-activate 0001-pre-inscripcion-profesional`
 
-- Verifica que `specs/0001-pre-inscripcion-profesional/spec.md` exista
+- Verifica que `specs/specs/0001-pre-inscripcion-profesional/spec.md` exista
 - Escribe el ID en `specs/.active` (sobrescribe lo que haya)
 - Si la spec no tiene `plan.md`, avisa que el usuario debe correr `/spec-plan` antes de poder tocar código
 

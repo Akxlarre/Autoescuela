@@ -31,7 +31,7 @@ Archivos de este lote (ninguno se superpone con ASG-b-004/006/007):
 
 - `indices/FLOWS-QA-AUDIT.md`, Fase 5.9 (iteración 25).
 - `.claude/rules/ai-readability.md`.
-- `specs/fix-055-b-ai-readability-data-llm-coverage/fix.md` — fix ya cerrado que hizo los primeros 3 archivos completos + el arranque de `hero-tab`, útil como referencia de convención exacta usada.
+- `specs/fixes/fix-055-b-ai-readability-data-llm-coverage/fix.md` — fix ya cerrado que hizo los primeros 3 archivos completos + el arranque de `hero-tab`, útil como referencia de convención exacta usada.
 
 ## Archivos involucrados (opcional, para detectar solapes)
 

@@ -66,14 +66,14 @@ en `.claude/author.local.json.example`) con tu código.
 | `/spec-plan` | Claude analiza la spec activa y genera `specs/<id>/plan.md` |
 | `/spec-tasks` | Claude desglosa el plan en tareas atomicas |
 | `/spec-verify` | Claude revisa cuales ACs quedan abiertos |
-| `/fix-new <descripcion>` | Crea `specs/fix-NNN-X-slug/fix.md` con ACs afectados (X = tu autor) |
+| `/fix-new <descripcion>` | Crea `specs/fixes/fix-NNN-X-slug/fix.md` con ACs afectados (X = tu autor) |
 | `/fix-close` | Cierra el track fix tras verificar el test de regresion |
 
 ### Flujo tipico para una Feature nueva
 
 ```
 1. /spec-new            → Claude lee specs/AUTHORS.md, calcula tu siguiente numero
-                           y crea specs/0002-m-mi-feature/spec.md
+                           y crea specs/specs/0002-m-mi-feature/spec.md
 2. (Editas spec.md con los ACs)
 3. /spec-activate 0002-m-mi-feature
 4. /spec-plan           → Claude genera plan.md
@@ -87,7 +87,7 @@ en `.claude/author.local.json.example`) con tu código.
 ```
 1. /fix-new "calculo de mora incorrecto"
    → Claude calcula tu siguiente numero segun specs/AUTHORS.md y crea
-     specs/fix-052-m-calculo-mora/fix.md con ACs afectados
+     specs/fixes/fix-052-m-calculo-mora/fix.md con ACs afectados
 2. /spec-activate fix-052-m-calculo-mora
 3. Claude corrige el codigo
 4. npm run test:ci      → Verifica test de regresion en verde

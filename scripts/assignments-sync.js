@@ -19,7 +19,6 @@ import path from 'path';
 const ROOT = process.cwd();
 const SPECS_DIR = path.join(ROOT, 'specs');
 const ASSIGNMENTS_DIR = path.join(SPECS_DIR, 'assignments');
-const HOTFIX_DIR = path.join(SPECS_DIR, 'fixes', 'hotfixes');
 const ASSIGNMENTS_MD = path.join(SPECS_DIR, 'ASSIGNMENTS.md');
 
 const green = (s) => `\x1b[32m${s}\x1b[0m`;
@@ -40,15 +39,15 @@ function readTrackField(content, field) {
 /** Busca el track (fix/hotfix/spec) por ID en las 3 ubicaciones posibles. */
 function locateTrack(trackId) {
   const candidates = [
-    { dir: path.join(SPECS_DIR, trackId), file: 'fix.md' },
-    { dir: path.join(SPECS_DIR, trackId), file: 'spec.md' },
-    { dir: path.join(HOTFIX_DIR, trackId), file: 'hotfix.md' },
+    { sub: 'fixes', file: 'fix.md' },
+    { sub: 'specs', file: 'spec.md' },
+    { sub: 'hotfixes', file: 'hotfix.md' },
   ];
   for (const c of candidates) {
-    const filePath = path.join(c.dir, c.file);
+    const filePath = path.join(SPECS_DIR, c.sub, trackId, c.file);
     if (fs.existsSync(filePath)) {
-      const isHotfix = c.file === 'hotfix.md';
-      const linkPath = isHotfix ? `fixes/hotfixes/${trackId}/${c.file}` : `${trackId}/${c.file}`;
+      // Relativo a specs/, que es donde vive ASSIGNMENTS.md
+      const linkPath = `${c.sub}/${trackId}/${c.file}`;
       return { filePath, linkPath, content: fs.readFileSync(filePath, 'utf-8') };
     }
   }
