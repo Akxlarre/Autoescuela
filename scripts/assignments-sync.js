@@ -32,7 +32,10 @@ function readFrontmatterField(content, field) {
 }
 
 function readTrackField(content, field) {
-  const m = content.match(new RegExp(`^>\\s*${field}:\\s*(.+)$`, 'm'));
+  // Acepta ambos formatos de frontmatter usados por los tracks:
+  //   fix.md / hotfix.md → "> status: done"       (sin negrita, minúscula)
+  //   spec.md            → "> **Status:** done"   (negrita, mayúscula)
+  const m = content.match(new RegExp(`^>\\s*\\*{0,2}${field}:\\*{0,2}\\s*(.+)$`, 'im'));
   return m ? m[1].trim() : null;
 }
 
