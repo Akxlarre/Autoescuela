@@ -1,12 +1,17 @@
 # Asignación ASG-b-035 — Promociones automáticas: cadencia, convalidaciones y matrícula tardía
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P1
 > **created:** 2026-07-28
 > **created_by:** b
-> **bloqueada_por:** respuesta del cliente (ver "Preguntas abiertas")
+> **claimed_by:** m
+> **claimed_at:** 2026-07-28
+> **resulting_track:** [0002-m-promociones-cadencia-automatica](../specs/0002-m-promociones-cadencia-automatica/spec.md)
+> **bloqueada_por:** respuesta del cliente sobre convalidaciones (pregunta 3 — cadencia y
+> solapamiento ya confirmados por Matías, ver nota 2026-07-28 más abajo). No bloquea el resto
+> del alcance, que ya quedó fuera del scope de la spec activa.
 
 ---
 
@@ -23,29 +28,27 @@ Agrupa 3 anotaciones de la reunión con el cliente (2026-07-28) que son un solo 
    promociones transcurriendo o ya finalizadas. Máximo 3 días después de haber comenzado.
    Dar la mayor flexibilidad para añadir alumnos."*
 
-**Conflicto detectado con el modelo actual:** `indices/DATABASE.md` documenta
-`professional_promotions` como *"Período de **30 días** que agrupa hasta 4 cursos profesionales
-en paralelo (RF-059)"*. La nota del cliente dice *"empiezan cada 15 días"*. Eso es una
-**cadencia**, no una duración — las dos cosas solo conviven si las promociones **se solapan**
-(≈2 vivas al mismo tiempo).
+**Actualización 2026-07-28 (Matías):** el "conflicto" con `DATABASE.md` (RF-059 decía "período
+de 30 días") era vacío documental, no una discrepancia real — desde el inicio del proyecto se
+sabe que las promociones se solapan y que arrancan cada 14 días (siempre lunes, técnicamente
+cada 2 semanas, no cada 15 — el "15" de la nota de reunión era redondeo). Ese conocimiento nunca
+quedó escrito en `indices/`, por eso Benjamín no tenía cómo saberlo al procesar la anotación.
+`DATABASE.md` ya se corrigió para reflejar los 14 días y el solapamiento esperado.
 
-Esa hipótesis además explica el punto 2: si la promoción padre dura 30 días y la convalidación
-~15, entonces "sale a la mitad del libro del padre" es exactamente cuando arranca la promoción
-siguiente. Pero es una hipótesis, no un hecho confirmado.
+Lo de las convalidaciones (punto 2) sigue siendo un tema aparte, genuinamente sin definir — no
+se sabe si la fecha de inicio de la convalidación es una regla fija derivada del padre o se
+decide caso a caso.
 
 ## Preguntas abiertas (BLOQUEANTE — preguntar al cliente antes de codear)
 
-1. **¿Cuánto dura una promoción de punta a punta?** ¿Siguen siendo 30 días como documenta
-   RF-059, o cambió a 15?
-2. **¿Cuántas promociones pueden estar vivas al mismo tiempo?** Si duran 30 días y arrancan
-   cada 15, hay 2 solapadas de forma permanente — el selector de matrícula tiene que listar
-   varias activas, no una.
+~~1. ¿Cuánto dura una promoción de punta a punta?~~ **Resuelto:** cadencia cada 14 días
+   (2 lunes), pueden convivir varias promociones vivas simultáneamente. No es un tope fijo de
+   30 días.
+~~2. ¿Cuántas promociones pueden estar vivas al mismo tiempo?~~ **Resuelto:** sí se solapan,
+   el selector de matrícula debe listar varias promociones activas a la vez, no una.
 3. **¿La convalidación arranca a la mitad del libro padre por regla fija, o se decide caso a
    caso?** Si es fija, se puede derivar automáticamente; si es caso a caso, necesita fecha
-   manual al crearla.
-
-⚠️ No asumir la respuesta. Si se implementa la cadencia al revés, arrastra el libro de clases,
-las convalidaciones y la elegibilidad de matrícula con ella.
+   manual al crearla. **Sigue bloqueante.**
 
 ## Alcance sugerido
 
