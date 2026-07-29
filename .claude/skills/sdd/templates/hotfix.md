@@ -1,5 +1,6 @@
 # Hotfix: {TÍTULO}
 > id: {ID}
+> refs: (ASG-NNN si viene de una Asignación, o "—" si es independiente)
 > status: in_progress
 > created: {FECHA_HOY}
 

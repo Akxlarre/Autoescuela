@@ -124,6 +124,7 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 
 - Crear `specs/fixes/hotfixes/hotfix-NNN-<mi_codigo>-slug/hotfix.md` (mismo template que `/hotfix`).
 - La sección **"Problema"** se pre-llena igual, con el mismo prefijo `[Heredado de ASG-NNN, a confirmar]:`.
+- El campo `refs:` del frontmatter apunta a `ASG-NNN`.
 - **Sí** escribes `specs/.active` con el nuevo ID (igual que `/hotfix`).
 
 ### 9. Actualizar `specs/ASSIGNMENTS.md`
