@@ -67,7 +67,7 @@ Un hotfix aplica cuando **TODAS** estas condiciones se cumplen:
 ```markdown
 # Hotfix: {TÍTULO}
 > id: {ID}
-> refs: (ASG-NNN si viene de una Asignación, o "—" si es independiente)
+> refs: (ASG-X-NNN si viene de una Asignación, o "—" si es independiente)
 > status: in_progress
 > created: {FECHA_HOY}
 

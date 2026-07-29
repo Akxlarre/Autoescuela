@@ -39,12 +39,16 @@
 
 ## Convenciones
 
-- **IDs:** `ASG-NNN`, 3 dígitos, contador **global** (no por autor) — secuencial, nunca se reutiliza.
+- **IDs:** `ASG-<autor>-NNN` (ej. `ASG-b-052`), 3 dígitos, contador **por autor** — igual que
+  spec/fix/hotfix (ver `specs/AUTHORS.md`). Cada autor numera independiente: si un dev va en
+  `ASG-b-051`, la primera de otro es `ASG-m-001`, **no** `ASG-b-052`. Nunca se reutiliza.
+  Un contador global hace que dos personas en ramas distintas saquen el mismo ID y que git
+  auto-resuelva el merge sin conflicto, dejando dos asignaciones homónimas.
 - **`Asignado a`:** código de autor de `specs/AUTHORS.md` (ej. `m`, `b`, `i`), o `cualquiera` si es un pool abierto para quien la tome primero.
 - **`Tipo sugerido`:** `spec` (feature nueva) / `fix` (bug con AC afectados) / `hotfix` (fix urgente simple) — quien reclama puede cambiarlo con `--as=` si al leer el contexto no coincide.
 - **Reclamar:** solo se puede reclamar una asignación con `Asignado a: cualquiera`, o una asignada específicamente a tu propio código de autor. Una vez `Reclamada`, nadie más puede tomarla.
 - **Cerrar:** marcar como `Completada` es **manual** — se mueve la fila cuando el track resultante (spec/fix/hotfix) llega a `done`/se cierra. No se sincroniza automáticamente con `/spec-verify` ni `/fix-close`.
-- **Archivos involucrados:** cada `ASG-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapás con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
+- **Archivos involucrados:** cada `ASG-X-NNN-*.md` tiene una sección opcional "Archivos involucrados". Si se completa, `/assign-claim` la usa para avisar (no bloquear) si te solapás con otra asignación ya reclamada que declaró los mismos archivos — señal de alerta, no enforcement duro.
 
 ### Conflictos entre ramas
 

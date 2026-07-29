@@ -11,9 +11,9 @@
  *                    sin código de autor — corregido a mano, este check evita que se repita.)
  *   2. Colisiones — dos tracks del MISMO autor con el MISMO número (la numeración
  *                    es independiente por autor, así que esto sí sería un choque real).
- *   3. Refs colgantes — `> refs: ASG-NNN` en un fix/hotfix que no existe en
+ *   3. Refs colgantes — `> refs: ASG-X-NNN` en un fix/hotfix que no existe en
  *                    specs/assignments/ ni en ninguna tabla de ASSIGNMENTS.md.
- *   4. Filas stale — track con `status: done` y `refs: ASG-NNN`, pero esa fila
+ *   4. Filas stale — track con `status: done` y `refs: ASG-X-NNN`, pero esa fila
  *                    sigue en la tabla "Pendientes" de ASSIGNMENTS.md (nunca se movió
  *                    a Completadas).
  *
@@ -66,10 +66,13 @@ function readField(content, field) {
   return m ? m[1].trim() : null;
 }
 
+/** ASG-<autor>-<NNN> — contador por autor, igual que los tracks (ver specs/AUTHORS.md). */
+const ASG_ID_RE = /ASG-[a-z]+-\d+/;
+
 function extractAsgRef(refsValue) {
   if (!refsValue) return null;
-  const m = refsValue.match(/ASG-(\d+)/);
-  return m ? `ASG-${m[1]}` : null;
+  const m = refsValue.match(ASG_ID_RE);
+  return m ? m[0] : null;
 }
 
 function extractAsgIdsFromSection(md, sectionHeader, nextHeaders) {
@@ -82,9 +85,9 @@ function extractAsgIdsFromSection(md, sectionHeader, nextHeaders) {
   }
   const section = md.slice(startIdx, endIdx);
   const ids = new Set();
-  const re = /ASG-(\d+)/g;
+  const re = new RegExp(ASG_ID_RE.source, 'g');
   let m;
-  while ((m = re.exec(section)) !== null) ids.add(`ASG-${m[1]}`);
+  while ((m = re.exec(section)) !== null) ids.add(m[0]);
   return ids;
 }
 
@@ -162,6 +165,24 @@ function main() {
   }
   for (const dir of listDirs(HOTFIX_DIR)) {
     processTrack('hotfix', 'hotfix', 3, dir, path.join(HOTFIX_DIR, dir), 'hotfix.md');
+  }
+
+  // Asignaciones: mismo contrato de naming/colisión que los tracks (contador por autor).
+  const asgDir = path.join(SPECS_DIR, 'assignments');
+  if (fs.existsSync(asgDir)) {
+    for (const f of fs.readdirSync(asgDir).filter((x) => x.endsWith('.md'))) {
+      const m = f.match(/^ASG-([a-z]+)-(\d{3})-(.+)\.md$/);
+      if (!m) {
+        namingViolations.push({ type: 'asg', dir: f, reason: 'no matchea ASG-<autor>-NNN-slug.md' });
+        continue;
+      }
+      if (!validAuthors.has(m[1])) {
+        namingViolations.push({ type: 'asg', dir: f, reason: `autor '${m[1]}' no está en specs/AUTHORS.md` });
+      }
+      const key = `asg:${m[1]}:${m[2]}`;
+      if (!seen.has(key)) seen.set(key, []);
+      seen.get(key).push(f);
+    }
   }
 
   for (const [key, dirs] of seen) {

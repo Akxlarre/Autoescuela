@@ -68,7 +68,7 @@ test prueba la corrección.
 ```markdown
 # Fix: {TÍTULO}
 > id: {ID}
-> refs: (spec relacionada ej: 0001-sistema-de-tareas-multi-rol, o ASG-NNN si viene de una Asignación, o "—" si es independiente)
+> refs: (spec relacionada ej: 0001-sistema-de-tareas-multi-rol, o ASG-X-NNN si viene de una Asignación, o "—" si es independiente)
 > status: in_progress
 > created: {FECHA_HOY}
 

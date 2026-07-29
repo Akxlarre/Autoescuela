@@ -1,12 +1,12 @@
 # Fix: Portal Alumno nunca muestra la nota del Examen Final
 > id: fix-059-b-nota-examen-final
-> refs: ASG-017 (specs/assignments/ASG-017-fix-h035-h017-nota-examen-final.md)
+> refs: ASG-b-017 (specs/assignments/ASG-b-017-fix-h035-h017-nota-examen-final.md)
 > status: done
 > closed: 2026-07-28
 > created: 2026-07-28
 
 ## Root Cause
-**[Heredado de ASG-017, a confirmar]:** Mismo bug encontrado 2 veces en iteraciones distintas
+**[Heredado de ASG-b-017, a confirmar]:** Mismo bug encontrado 2 veces en iteraciones distintas
 del audit (H-017 en Fase 1, H-035 con causa raíz confirmada en Fase 3). Consola muestra `400`
 permanente: `GET .../class_b_exam_scores?select=grade,created_at&enrollment_id=eq.90`.
 `student-home.facade.ts:174` pide la columna `grade`, pero la tabla
@@ -30,6 +30,6 @@ Ninguno — fix autónomo (bug real detectado en Auditoría QA de Flujos, hallaz
   H-035/H-017 donde una nota registrada quedaba invisible por el nombre de columna incorrecto.
 
 ## Notas
-- Asignación original ASG-017 marcaba el valor principal de esta tarea como la verificación en
+- Asignación original ASG-b-017 marcaba el valor principal de esta tarea como la verificación en
   vivo (bug 100% reproducible y silencioso). Se agrega también test unitario de regresión
   porque `core/facades/` es capa obligatoria de tests (`.claude/rules/testing-tdd.md`).

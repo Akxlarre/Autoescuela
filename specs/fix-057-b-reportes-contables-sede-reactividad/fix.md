@@ -1,6 +1,6 @@
 # Fix: Reportes Contables no refresca al cambiar de sede
 > id: fix-057-b-reportes-contables-sede-reactividad
-> refs: ASG-009 (hallazgo colateral encontrado al verificar fix-056 con Playwright)
+> refs: ASG-b-009 (hallazgo colateral encontrado al verificar fix-056 con Playwright)
 > status: done
 > closed: 2026-07-23
 > created: 2026-07-23
@@ -35,7 +35,7 @@ fix-056, no capturado como hallazgo propio en `indices/FLOWS-QA-AUDIT.md`).
   refrescan en silencio vía `fetchReporte()`.
 
 ## Nota de coordinación
-`ASG-028` (asignada a Ignacio, sin reclamar) declara
+`ASG-b-028` (asignada a Ignacio, sin reclamar) declara
 `secretaria-contabilidad-reportes.component.ts` como archivo involucrado para H-014 (texto
 "solo visible para admin" mal mostrado a secretaría) — cambio de texto/RBAC, no relacionado
 con este `effect()`. Sin solape de líneas esperado, pero queda documentado por si coincide

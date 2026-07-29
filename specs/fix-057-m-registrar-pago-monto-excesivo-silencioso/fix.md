@@ -1,6 +1,6 @@
 # Fix: Registrar Pago con monto excesivo falla en silencio
 > id: fix-057-m-registrar-pago-monto-excesivo-silencioso
-> refs: ASG-013
+> refs: ASG-b-013
 > status: done
 > closed: 2026-07-23
 > created: 2026-07-23

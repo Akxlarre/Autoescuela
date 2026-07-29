@@ -1,12 +1,12 @@
 # Fix: Campo Contraseña sigue accesible (a11y + valor viejo) en modo "Recuperar Contraseña"
 > id: fix-061-b-password-field-inert-reset-mode
-> refs: ASG-031 (specs/assignments/ASG-031-fix-h032-campo-contrasena-visible.md)
+> refs: ASG-b-031 (specs/assignments/ASG-b-031-fix-h032-campo-contrasena-visible.md)
 > status: done
 > closed: 2026-07-28
 > created: 2026-07-28
 
 ## Root Cause
-**Hipótesis original de ASG-031 (heredada) descartada tras verificar en vivo con Playwright:**
+**Hipótesis original de ASG-b-031 (heredada) descartada tras verificar en vivo con Playwright:**
 la asignación decía que el campo "Contraseña" quedaba visible sin ocultarse. En la práctica,
 `login-card.component.ts` **ya** anima `#passwordWrapRef` con GSAP (`height`/`opacity` → 0) al
 entrar en modo `reset` — visualmente el campo desaparece correctamente (confirmado con

@@ -1,12 +1,12 @@
 # Fix: Dígito verificador del RUT automático en todos los formularios
 > id: fix-064-b-rut-dv-automatico
-> refs: ASG-047 (specs/assignments/ASG-047-rut-digito-verificador-automatico.md)
+> refs: ASG-b-047 (specs/assignments/ASG-b-047-rut-digito-verificador-automatico.md)
 > status: done
 > closed: 2026-07-29
 > created: 2026-07-28
 
 ## Root Cause
-**[Heredado de ASG-047]:** hoy quien completa cualquier formulario con RUT debe teclear también
+**[Heredado de ASG-b-047]:** hoy quien completa cualquier formulario con RUT debe teclear también
 el dígito verificador (DV) a mano — es 100% calculable (módulo 11), cero decisión de negocio.
 `rut.utils.ts` ya tiene `validateRut()` con el algoritmo módulo 11 completo, pero **inline**, sin
 exponer una función que calcule/autocomplete el DV — solo valida un RUT ya completo.

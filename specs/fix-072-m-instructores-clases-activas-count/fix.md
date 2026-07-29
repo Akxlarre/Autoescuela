@@ -1,14 +1,14 @@
 ---
 # Fix: "Clases activas" de Instructores siempre muestra 0
 > id: fix-072-m-instructores-clases-activas-count
-> refs: ASG-019
+> refs: ASG-b-019
 > status: done
 > closed: 2026-07-27
 > created: 2026-07-27
 
 ## Root Cause
 
-[Heredado de ASG-019, a confirmar]: Los 6 instructores muestran "0" en la columna/KPI "Clases
+[Heredado de ASG-b-019, a confirmar]: Los 6 instructores muestran "0" en la columna/KPI "Clases
 activas", sin excepción — incluso los que en ese momento tenían clases "Transcurriendo" según el
 Dashboard. `instructores.facade.ts:622` lee `activeClassesCount: r.active_classes_count`
 directamente de la columna `instructors.active_classes_count` (`DEFAULT 0`), pero esa columna nunca

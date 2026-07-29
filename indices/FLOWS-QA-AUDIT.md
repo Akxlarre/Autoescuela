@@ -30,13 +30,13 @@
 | 16 | Fase 4 — Cerrar las 2 brechas de cobertura honesta (`first_login` real y pago del alumno con saldo pendiente real), a pedido explícito del owner, usando acceso admin a la BD vía Supabase CLI (`db query --linked`, sin tocar la clave `service_role`) + el correo real del owner para completar las invitaciones/recuperación de contraseña | 4 | ✅ Hecha (2026-07-22) |
 | 17 | Fase 5.1 — Limpiar las 6 regresiones ARCH-16 (ratchet DS) encontradas por `lint:arch` tras correrlo por primera vez en este audit | 5 | ✅ Hecha (2026-07-22, parcial 3/6 — ver detalle) |
 | 18 | Fase 5.2 — Re-testear Asistencia Prof. (commit `19a2499`, spec 0033-b) | 5 | ✅ Hecha (2026-07-22) — **corrección**: ya estaba probado a fondo en `acceptance.md` de la propia spec (10/10 AC + 4/4 edge cases + 3 bugs encontrados/corregidos + visto bueno del owner). No era un hueco real, solo un caso que el audit cruzó a medio desarrollo y no volvió a mirar. Único resto: vista con `secretaria2` sin capturar (ya marcada "deuda opcional" en el propio acceptance.md) |
-| 19 | Fase 5.3 — Verificar skeletons en carga real (throttle de red) en 3-4 páginas | 5 | 📋 Convertida en tarea de equipo — **ASG-001** (`b`), ver `specs/ASSIGNMENTS.md` |
-| 20 | Fase 5.4 — Verificación visual (capturas reales claro/oscuro/mobile) de páginas sin cobertura previa | 5 | 📋 Convertida en tarea de equipo — **ASG-001** (`b`), ver `specs/ASSIGNMENTS.md` |
-| 21 | Fase 5.5 — Regla 3-2-1 de marca en las mismas páginas del punto 20 | 5 | 📋 Convertida en tarea de equipo — **ASG-001** (`b`), ver `specs/ASSIGNMENTS.md` |
-| 22 | Fase 5.6 — Auditoría de código: cumplimiento del patrón SWR en facades | 5 | ✅ Hecha (2026-07-22) — ver H-040. Fix real → **ASG-003** |
+| 19 | Fase 5.3 — Verificar skeletons en carga real (throttle de red) en 3-4 páginas | 5 | 📋 Convertida en tarea de equipo — **ASG-b-001** (`b`), ver `specs/ASSIGNMENTS.md` |
+| 20 | Fase 5.4 — Verificación visual (capturas reales claro/oscuro/mobile) de páginas sin cobertura previa | 5 | 📋 Convertida en tarea de equipo — **ASG-b-001** (`b`), ver `specs/ASSIGNMENTS.md` |
+| 21 | Fase 5.5 — Regla 3-2-1 de marca en las mismas páginas del punto 20 | 5 | 📋 Convertida en tarea de equipo — **ASG-b-001** (`b`), ver `specs/ASSIGNMENTS.md` |
+| 22 | Fase 5.6 — Auditoría de código: cumplimiento del patrón SWR en facades | 5 | ✅ Hecha (2026-07-22) — ver H-040. Fix real → **ASG-b-003** |
 | 23 | Fase 5.7 — Auditoría de código: reglas de arquitectura del sistema de Notificaciones | 5 | ✅ Hecha (2026-07-22) — limpio, 0 hallazgos |
 | 24 | Fase 5.8 — Medir rollout real del patrón app-like/bento en páginas Smart | 5 | ✅ Hecha (2026-07-22) — buena noticia, backlog viejo mayormente cerrado |
-| 25 | Fase 5.9 — Completar cobertura `data-llm-*` en archivos con botones/inputs sin ella | 5 | ⚠️ Parcial: 3/35 completos + 1/35 parcial (`fix-055-b`, ver detalle). Resto repartido en **ASG-004 a ASG-007**, ver `specs/ASSIGNMENTS.md` |
+| 25 | Fase 5.9 — Completar cobertura `data-llm-*` en archivos con botones/inputs sin ella | 5 | ⚠️ Parcial: 3/35 completos + 1/35 parcial (`fix-055-b`, ver detalle). Resto repartido en **ASG-b-004 a ASG-b-007**, ver `specs/ASSIGNMENTS.md` |
 
 **Reglas del loop**: cada iteración ejecuta UN bloque, registra hallazgos aquí mismo, marca su fila y agenda la siguiente. Si una iteración descubre un flujo no contemplado, se agrega a la cola en vez de improvisarlo. El loop se detiene solo al completar la fila 10 (Fase 1-3) — la Fase 4 y Fase 5 se agregaron después, a pedido del owner, y se detienen al completar sus respectivas filas.
 
@@ -773,56 +773,56 @@ Un grep exhaustivo de `<button>`/`<input>` sin ningún atributo `data-llm-action
 
 **Reparto de los 31 archivos restantes** (sin superposición entre lotes, para que cualquiera pueda tomar uno sin pisar a otro):
 
-- **ASG-004 — Lote 1: Admin Flota + Documentos + Certificados (9 archivos)**
+- **ASG-b-004 — Lote 1: Admin Flota + Documentos + Certificados (9 archivos)**
   `admin-alumno-docs-detalle.component.ts`, `dms-template-drawer.component.ts`, `dms-upload-drawer.component.ts`, `route-sheet.component.ts`, `vehicle-agenda-drawer.component.ts`, `vehicle-documents-drawer.component.ts`, `vehicle-form-drawer.component.ts`, `vehicle-maintenances.component.ts`, `historial-emisiones-prof-drawer.component.ts`.
 
-- **ASG-005 — Lote 2: terminar hero-tab + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos)**
+- **ASG-b-005 — Lote 2: terminar hero-tab + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos)**
   `hero-tab.component.ts` (terminar los ~19 elementos restantes), `promo-tab.component.ts`, `admin-secretarias.component.ts`, `force-password-change.component.ts`, `dashboard.component.ts`, `instructor-clase-detail.component.ts`, `instructor-notificaciones.component.ts`.
 
-- **ASG-006 — Lote 3: shared/components parte 1 (8 archivos)**
+- **ASG-b-006 — Lote 3: shared/components parte 1 (8 archivos)**
   `ajustes-drawer.component.ts`, `alert-card.component.ts`, `alumnos-por-vencer-drawer.component.ts`, `async-btn.component.ts`, `daily-schedule-timeline.component.ts`, `dms-list-content.component.ts`, `dms-viewer-modal.component.ts`, `drawer-form.component.ts`.
 
-- **ASG-007 — Lote 4: shared/components parte 2 (9 archivos)**
+- **ASG-b-007 — Lote 4: shared/components parte 2 (9 archivos)**
   `empty-state.component.ts`, `evaluation-checklist.component.ts`, `flota-list-content.component.ts`, `media-upload-control.component.ts`, `public-contract.component.ts` (public-enrollment-steps), `agregar-servicio-drawer.component.ts` (servicios-especiales-content), `signature-pad.component.ts`, `tabs.component.ts`, `user-panel.component.ts`.
 
 ## Cierre del audit — pivote a tablero de equipo (todos los hallazgos, no solo Fase 5)
 
-A pedido del owner, **todos los hallazgos reales del audit completo** (no solo los huecos de la Fase 5) se convirtieron en asignaciones de equipo en **`specs/ASSIGNMENTS.md`**, agrupadas por módulo/archivo para minimizar que dos personas se pisen. De los 40 hallazgos numerados (H-001 a H-040): 2 quedan fuera (H-011 y H-015, retractados en iteración 9 — no eran bugs reales), y los 38 restantes están repartidos en **32 asignaciones** (`ASG-001` a `ASG-032`, algunos hallazgos relacionados se agruparon en la misma tarea por tocar el mismo archivo/módulo). Tabla resumen (ver `specs/ASSIGNMENTS.md` para el detalle completo, notas y estado actualizado — cualquiera puede reclamar una con `/assign-claim ASG-NNN`):
+A pedido del owner, **todos los hallazgos reales del audit completo** (no solo los huecos de la Fase 5) se convirtieron en asignaciones de equipo en **`specs/ASSIGNMENTS.md`**, agrupadas por módulo/archivo para minimizar que dos personas se pisen. De los 40 hallazgos numerados (H-001 a H-040): 2 quedan fuera (H-011 y H-015, retractados en iteración 9 — no eran bugs reales), y los 38 restantes están repartidos en **32 asignaciones** (`ASG-b-001` a `ASG-b-032`, algunos hallazgos relacionados se agruparon en la misma tarea por tocar el mismo archivo/módulo). Tabla resumen (ver `specs/ASSIGNMENTS.md` para el detalle completo, notas y estado actualizado — cualquiera puede reclamar una con `/assign-claim ASG-X-NNN`):
 
 | ASG | Hallazgos | Título | Asignado a | Prioridad |
 |-----|-----------|--------|-----------|-----------|
-| ASG-001 | it. 19-21 | QA visual restante: skeletons en carga real, capturas claro/oscuro/mobile, regla 3-2-1 de marca | `b` | Media |
-| ASG-002 | H-039 | Alumno con 2+ matrículas no puede pagar su saldo real | `cualquiera` | Alta |
-| ASG-003 | H-040 | 7 facades con Realtime sin limpiar + polling prohibido en Dashboard | `cualquiera` | Media |
-| ASG-004 a 007 | — | Cobertura `data-llm-*` restante (31 archivos, 4 lotes) | `cualquiera` | Baja |
-| ASG-008 | — | Decisión de diseño `btn-sm` + aplicar a 3 archivos ARCH-16 | `cualquiera` | Baja |
-| ASG-009 | H-013 | Reportes Contables no cuenta pagos reales (descuadre financiero) | `cualquiera` | **Crítica** |
-| ASG-010 | H-016 | Portal Instructor con datos MOCK + falta cobertura de tests en rama real | `cualquiera` | **Crítica** |
-| ASG-011 | H-028 | RLS bloquea a secretaria subir documentos en matrícula Profesional | `cualquiera` | **Crítica** |
-| ASG-012 | H-019, H-020, H-033, H-034 | Matrícula pública: overlay bloquea foto carnet, landing sin sede, retry tras pago rechazado, fotos huérfanas | `cualquiera` | Alta |
-| ASG-013 | H-024 | "Registrar Pago" con monto mayor al saldo falla en silencio | `cualquiera` | Alta |
-| ASG-014 | H-025, H-012 | Certificado B sin validar 12 prácticas (server-side) + falta indicador de criterio distinto admin/secretaría | `cualquiera` | Alta |
-| ASG-015 | H-027 | 500 real en alertas de asistencia Profesional al filtrar por sede | `cualquiera` | Alta |
-| ASG-016 | H-029 | Precio Profesional A2 incorrecto ($180K vs $800K) | `cualquiera` | Alta |
-| ASG-017 | H-035, H-017 | Portal Alumno nunca muestra nota de Examen Final (columna equivocada, mismo bug 2 veces) | `cualquiera` | Alta |
-| ASG-018 | H-001, H-002, H-008 | Dashboard: KPI Vehículos en 0, formato roto Ingresos Mes, estados contradictorios | `cualquiera` | Media |
-| ASG-019 | H-038 | "Clases activas" de Instructores siempre 0 | `cualquiera` | Media |
-| ASG-020 | H-004, H-005 | Anticipos con enum crudo + KPIs sin separador de miles + sede sin resolver | `cualquiera` | Media |
-| ASG-021 | H-006 | Voseo argentino en Configuración Web | `cualquiera` | Media |
-| ASG-022 | H-007 | Skeletons faltantes en Agenda y Libro de Clases | `cualquiera` | Media |
-| ASG-023 | H-021 | Decisión de producto: límite de clases/día distinto público vs interno | `cualquiera` | Media |
-| ASG-024 | H-031 | Buscador global no indexa alumnos ni instructores | `cualquiera` | Media |
-| ASG-025 | H-037 | Botones y títulos recortados (falta `min-width:0`) | `cualquiera` | Media |
-| ASG-026 | H-026 | Sede activa no persiste tras F5 | `cualquiera` | Media |
-| ASG-027 | H-003 | Ex-Alumnos B: conteo de egresados discrepante (2 vs 16) | `cualquiera` | Media |
-| ASG-028 | H-010, H-014, H-018 | 3 fixes cosméticos: label Agenda, texto RBAC visible a secretaria, chips "P" ambiguos | `cualquiera` | Baja |
-| ASG-029 | H-022, H-030 | Vista previa de contrato no coincide con PDF + contrato genérico sin especializar Profesional | `cualquiera` | Baja |
-| ASG-030 | H-023 | Glosa cruda en Caja Diaria | `cualquiera` | Baja |
-| ASG-031 | H-032 | Campo Contraseña visible en "Recuperar Contraseña" | `cualquiera` | Baja |
-| ASG-032 | H-036 | Flash de texto incorrecto en Pagos de alumno Clase B | `cualquiera` | Baja |
+| ASG-b-001 | it. 19-21 | QA visual restante: skeletons en carga real, capturas claro/oscuro/mobile, regla 3-2-1 de marca | `b` | Media |
+| ASG-b-002 | H-039 | Alumno con 2+ matrículas no puede pagar su saldo real | `cualquiera` | Alta |
+| ASG-b-003 | H-040 | 7 facades con Realtime sin limpiar + polling prohibido en Dashboard | `cualquiera` | Media |
+| ASG-b-004 a 007 | — | Cobertura `data-llm-*` restante (31 archivos, 4 lotes) | `cualquiera` | Baja |
+| ASG-b-008 | — | Decisión de diseño `btn-sm` + aplicar a 3 archivos ARCH-16 | `cualquiera` | Baja |
+| ASG-b-009 | H-013 | Reportes Contables no cuenta pagos reales (descuadre financiero) | `cualquiera` | **Crítica** |
+| ASG-b-010 | H-016 | Portal Instructor con datos MOCK + falta cobertura de tests en rama real | `cualquiera` | **Crítica** |
+| ASG-b-011 | H-028 | RLS bloquea a secretaria subir documentos en matrícula Profesional | `cualquiera` | **Crítica** |
+| ASG-b-012 | H-019, H-020, H-033, H-034 | Matrícula pública: overlay bloquea foto carnet, landing sin sede, retry tras pago rechazado, fotos huérfanas | `cualquiera` | Alta |
+| ASG-b-013 | H-024 | "Registrar Pago" con monto mayor al saldo falla en silencio | `cualquiera` | Alta |
+| ASG-b-014 | H-025, H-012 | Certificado B sin validar 12 prácticas (server-side) + falta indicador de criterio distinto admin/secretaría | `cualquiera` | Alta |
+| ASG-b-015 | H-027 | 500 real en alertas de asistencia Profesional al filtrar por sede | `cualquiera` | Alta |
+| ASG-b-016 | H-029 | Precio Profesional A2 incorrecto ($180K vs $800K) | `cualquiera` | Alta |
+| ASG-b-017 | H-035, H-017 | Portal Alumno nunca muestra nota de Examen Final (columna equivocada, mismo bug 2 veces) | `cualquiera` | Alta |
+| ASG-b-018 | H-001, H-002, H-008 | Dashboard: KPI Vehículos en 0, formato roto Ingresos Mes, estados contradictorios | `cualquiera` | Media |
+| ASG-b-019 | H-038 | "Clases activas" de Instructores siempre 0 | `cualquiera` | Media |
+| ASG-b-020 | H-004, H-005 | Anticipos con enum crudo + KPIs sin separador de miles + sede sin resolver | `cualquiera` | Media |
+| ASG-b-021 | H-006 | Voseo argentino en Configuración Web | `cualquiera` | Media |
+| ASG-b-022 | H-007 | Skeletons faltantes en Agenda y Libro de Clases | `cualquiera` | Media |
+| ASG-b-023 | H-021 | Decisión de producto: límite de clases/día distinto público vs interno | `cualquiera` | Media |
+| ASG-b-024 | H-031 | Buscador global no indexa alumnos ni instructores | `cualquiera` | Media |
+| ASG-b-025 | H-037 | Botones y títulos recortados (falta `min-width:0`) | `cualquiera` | Media |
+| ASG-b-026 | H-026 | Sede activa no persiste tras F5 | `cualquiera` | Media |
+| ASG-b-027 | H-003 | Ex-Alumnos B: conteo de egresados discrepante (2 vs 16) | `cualquiera` | Media |
+| ASG-b-028 | H-010, H-014, H-018 | 3 fixes cosméticos: label Agenda, texto RBAC visible a secretaria, chips "P" ambiguos | `cualquiera` | Baja |
+| ASG-b-029 | H-022, H-030 | Vista previa de contrato no coincide con PDF + contrato genérico sin especializar Profesional | `cualquiera` | Baja |
+| ASG-b-030 | H-023 | Glosa cruda en Caja Diaria | `cualquiera` | Baja |
+| ASG-b-031 | H-032 | Campo Contraseña visible en "Recuperar Contraseña" | `cualquiera` | Baja |
+| ASG-b-032 | H-036 | Flash de texto incorrecto en Pagos de alumno Clase B | `cualquiera` | Baja |
 
 **Notas de coordinación** (para evitar choques con tareas ya repartidas):
-- **ASG-018** toca `dashboard.component.ts`, el mismo archivo que **ASG-005** (`data-llm-*`) — coordinar antes de tomar ambas en paralelo.
-- **ASG-022** (skeletons Agenda/Libro de Clases) se relaciona con **ASG-001** (verificación de skeletons de Benja) — coordinar para no duplicar el diagnóstico.
+- **ASG-b-018** toca `dashboard.component.ts`, el mismo archivo que **ASG-b-005** (`data-llm-*`) — coordinar antes de tomar ambas en paralelo.
+- **ASG-b-022** (skeletons Agenda/Libro de Clases) se relaciona con **ASG-b-001** (verificación de skeletons de Benja) — coordinar para no duplicar el diagnóstico.
 
 **Estado final de la auditoría**: Fases 1-4 cerradas y verificadas. Fase 5 diagnosticó 9 huecos reales (2 resultaron falsos positivos honestos), encontró 2 hallazgos nuevos (H-039, H-040), corrigió parcialmente una regresión de disciplina DS (3/6 archivos + 3/35 de `data-llm-*`). **Los 38 hallazgos reales del audit completo (Fases 1-5) están 100% repartidos en 32 asignaciones de equipo en `specs/ASSIGNMENTS.md`** — nada quedó suelto sin dueño o sin `cualquiera` disponible para reclamarlo.

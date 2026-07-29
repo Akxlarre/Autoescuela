@@ -1,13 +1,13 @@
 # Fix: H-028 — RLS bloquea a la secretaria en matrícula Profesional (403)
 > id: fix-054-m-h028-rls-secretaria-documentos-profesional
-> refs: ASG-011
+> refs: ASG-b-011
 > status: done
 > closed: 2026-07-23
 > created: 2026-07-23
 
 ## Root Cause
 
-[Heredado de ASG-011, confirmado y corregido tras revisar las policies reales]: La secretaria de una sede CON Academia Profesional no puede completar NINGUNA matrícula profesional: al llegar al paso de subir la foto de carnet, la consola muestra `403 Forbidden` en `POST/PATCH /rest/v1/student_documents?on_conflict=enrollment_id,type` y la UI queda congelada en "Subiendo foto..." para siempre, sin avisar el error.
+[Heredado de ASG-b-011, confirmado y corregido tras revisar las policies reales]: La secretaria de una sede CON Academia Profesional no puede completar NINGUNA matrícula profesional: al llegar al paso de subir la foto de carnet, la consola muestra `403 Forbidden` en `POST/PATCH /rest/v1/student_documents?on_conflict=enrollment_id,type` y la UI queda congelada en "Subiendo foto..." para siempre, sin avisar el error.
 
 La hipótesis original (INSERT excluye `secretary`) era incorrecta: `insert_student_documents` (`supabase/migrations/20260301000011_10_rls_policies.sql:850-855`) sí incluye `'secretary'`. La causa real está en `update_student_documents` (mismo archivo, líneas 856-861), que solo permite `admin` o `student` (dueño):
 
@@ -23,7 +23,7 @@ El endpoint hace un **upsert** (`on_conflict=enrollment_id,type`). Si ya existe 
 
 ## ACs Afectados
 
-- Ninguno — fix autónomo (originado de Asignación ASG-011, no de una spec previa).
+- Ninguno — fix autónomo (originado de Asignación ASG-b-011, no de una spec previa).
 
 ## Cambio
 

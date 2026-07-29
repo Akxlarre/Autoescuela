@@ -1,12 +1,12 @@
 # Fix: Modificador btn-sm + resolver los 3 archivos deferidos de ARCH-16
 > id: fix-086-m-btn-sm-arch16-restante
-> refs: ASG-008, fix-054-b-arch16-ratchet-btn-utilities
+> refs: ASG-b-008, fix-054-b-arch16-ratchet-btn-utilities
 > status: done
 > closed: 2026-07-28
 > created: 2026-07-28
 
 ## Root Cause
-[Heredado de ASG-008, a confirmar]: El linter `lint:arch` (regla ARCH-16) detectó que 3
+[Heredado de ASG-b-008, a confirmar]: El linter `lint:arch` (regla ARCH-16) detectó que 3
 archivos (`asistencia-clase-b-content.component.ts`, `certificacion-clase-b-content.component.ts`,
 `certificacion-profesional-content.component.ts`) montan utilities de tamaño de Tailwind
 directamente sobre clases `btn-*`, lo cual está prohibido por el Design System. El patrón está

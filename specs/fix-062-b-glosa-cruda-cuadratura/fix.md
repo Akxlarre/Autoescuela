@@ -1,6 +1,6 @@
 # Fix: Caja Diaria muestra glosa cruda del pago ("online"/"enrollment")
 > id: fix-062-b-glosa-cruda-cuadratura
-> refs: ASG-030 (specs/assignments/ASG-030-fix-h023-glosa-cruda-caja.md)
+> refs: ASG-b-030 (specs/assignments/ASG-b-030-fix-h023-glosa-cruda-caja.md)
 > status: done
 > closed: 2026-07-28
 > created: 2026-07-28

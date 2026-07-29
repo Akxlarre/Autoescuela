@@ -92,7 +92,7 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 
 > **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
 
-**Modificador de tamaño — `btn-sm`** (fix-086-m/ASG-008): componible con **cualquiera** de los
+**Modificador de tamaño — `btn-sm`** (fix-086-m/ASG-b-008): componible con **cualquiera** de los
 `btn-*` de arriba (`class="btn-primary btn-sm"`, `class="btn-ghost btn-sm"`, etc.) — no crea
 variantes por tipo (`btn-primary-sm` no existe). Aplica `padding: 0.375rem 0.75rem; gap: 0.375rem;
 font-size: var(--text-xs)`. **Declarado en `src/tailwind.css` DESPUÉS de todas las utilities `btn-*`

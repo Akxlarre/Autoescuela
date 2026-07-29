@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * assignments-sync.js — Regenera las tablas "Reclamadas / En curso" y "Completadas"
- * de specs/ASSIGNMENTS.md desde el frontmatter real de specs/assignments/ASG-NNN-*.md,
+ * de specs/ASSIGNMENTS.md desde el frontmatter real de specs/assignments/ASG-X-NNN-*.md,
  * cruzado con el `status`/`closed` del track resultante (fuente de verdad de si
  * "está terminado", no el campo `status` de la propia Asignación — ese lo escribe
  * un humano a mano y es exactamente el campo que se queda desactualizado).
@@ -56,11 +56,12 @@ function locateTrack(trackId) {
 }
 
 function parseAssignment(fileName) {
-  const idMatch = fileName.match(/^(ASG-\d+)-/);
+  // ASG-<autor>-<NNN>-slug — contador por autor, igual que los tracks (ver specs/AUTHORS.md)
+  const idMatch = fileName.match(/^(ASG-[a-z]+-\d+)-/);
   if (!idMatch) return null;
   const id = idMatch[1];
   const content = fs.readFileSync(path.join(ASSIGNMENTS_DIR, fileName), 'utf-8');
-  const titleMatch = content.match(/^#\s*Asignación\s+ASG-\d+\s*—\s*(.+)$/m);
+  const titleMatch = content.match(/^#\s*Asignación\s+ASG-[a-z]+-\d+\s*—\s*(.+)$/m);
   return {
     id,
     title: titleMatch ? titleMatch[1].trim() : '(sin título)',

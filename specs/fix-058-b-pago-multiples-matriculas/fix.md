@@ -1,6 +1,6 @@
 # Fix: Alumno con 2+ matrículas no puede pagar su saldo real
 > id: fix-058-b-pago-multiples-matriculas
-> refs: ASG-002 (specs/assignments/ASG-002-fix-h039-pago-dos-matriculas.md)
+> refs: ASG-b-002 (specs/assignments/ASG-b-002-fix-h039-pago-dos-matriculas.md)
 > status: done
 > closed: 2026-07-23
 > created: 2026-07-23
@@ -97,7 +97,7 @@ se tocó ninguna cuenta real):
   - Consola sin errores ni warnings.
 - Hallazgo colateral de esta verificación: la matrícula #0024 (Profesional, pagada) queda
   invisible para el alumno fuera del Dashboard (que sí tiene tabs) — Pagos no tiene
-  selector/tabs de matrícula. Registrado como `ASG-033` (spec nueva, fuera de alcance de
+  selector/tabs de matrícula. Registrado como `ASG-b-033` (spec nueva, fuera de alcance de
   este fix), no se toca acá.
 
 ## Limpieza post-verificación

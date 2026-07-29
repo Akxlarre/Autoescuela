@@ -45,10 +45,10 @@ Si hay resultados (modo default):
 ```
 📋 Asignaciones pendientes para ti (<código>) o abiertas para cualquiera:
 
-  ASG-003 · Migrar selects de Liquidaciones · asignada a ti · fix · P1
-  ASG-005 · Rediseño de X · cualquiera · spec · P2
+  ASG-b-003 · Migrar selects de Liquidaciones · asignada a ti · fix · P1
+  ASG-b-005 · Rediseño de X · cualquiera · spec · P2
 
-Para tomar una: /assign-claim ASG-003
+Para tomar una: /assign-claim ASG-b-003
 ```
 
 Si no hay ninguna:

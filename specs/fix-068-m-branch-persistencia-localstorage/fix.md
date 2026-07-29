@@ -1,17 +1,17 @@
 # Fix: H-026 — la sede activa no persiste tras F5
 > id: fix-068-m-branch-persistencia-localstorage
-> refs: ASG-026
+> refs: ASG-b-026
 > status: done
 > closed: 2026-07-26
 > created: 2026-07-26
 
 ## Root Cause
 
-[Heredado de ASG-026, a confirmar]: Como admin, si se cambia el selector de sede a una específica (ej. "Conductores Chillán") y luego se recarga la página completa (F5), el selector vuelve a "Todas las sedes" sin aviso. La navegación normal dentro de la app (clic en links del sidebar) SÍ preserva la sede correctamente — el problema es específico de una recarga completa del navegador. `BranchFacade.selectedBranchId` vive solo en memoria (signal), no en `localStorage` ni query param.
+[Heredado de ASG-b-026, a confirmar]: Como admin, si se cambia el selector de sede a una específica (ej. "Conductores Chillán") y luego se recarga la página completa (F5), el selector vuelve a "Todas las sedes" sin aviso. La navegación normal dentro de la app (clic en links del sidebar) SÍ preserva la sede correctamente — el problema es específico de una recarga completa del navegador. `BranchFacade.selectedBranchId` vive solo en memoria (signal), no en `localStorage` ni query param.
 
 ## ACs Afectados
 
-- Ninguno — fix autónomo (originado de Asignación ASG-026, no de una spec previa).
+- Ninguno — fix autónomo (originado de Asignación ASG-b-026, no de una spec previa).
 
 ## Cambio
 

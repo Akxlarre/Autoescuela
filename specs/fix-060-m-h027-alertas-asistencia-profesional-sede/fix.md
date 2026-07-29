@@ -1,7 +1,7 @@
 # Fix: 500 real en alertas de asistencia Profesional al filtrar por sede
 
 > id: fix-060-m-h027-alertas-asistencia-profesional-sede
-> refs: ASG-015
+> refs: ASG-b-015
 > status: done
 > closed: 2026-07-23
 > created: 2026-07-23
@@ -24,7 +24,7 @@ Las políticas RLS de `enrollments` para `secretary` llaman `branch_visible(bran
 
 ## Progreso de la sesión (2026-07-23)
 
-**No reproducido localmente todavía.** Se levantó Supabase local desde cero (`npx supabase start`) para poder testear la vista bajo RLS real, lo que reveló y corrigió 5 problemas de infraestructura no relacionados con ASG-015, encadenados uno tras otro (cada uno bloqueaba el replay completo de migraciones):
+**No reproducido localmente todavía.** Se levantó Supabase local desde cero (`npx supabase start`) para poder testear la vista bajo RLS real, lo que reveló y corrigió 5 problemas de infraestructura no relacionados con ASG-b-015, encadenados uno tras otro (cada uno bloqueaba el replay completo de migraciones):
 
 - `hotfix-041-m`: orden invertido `DROP COLUMN` antes de `DROP VIEW` en `20260308120000_schedule_from_courses_not_instructors.sql`.
 - `hotfix-042-m`: ninguna migración habilitaba `pg_cron` (se hace vía Dashboard en producción) — se agregó `CREATE EXTENSION IF NOT EXISTS pg_cron;` idempotente.

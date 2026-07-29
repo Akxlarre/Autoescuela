@@ -1,12 +1,12 @@
 # Fix: Flash de texto incorrecto en Pagos de alumno Clase B
 > id: fix-060-b-flash-texto-pagos-clase-b
-> refs: ASG-032 (specs/assignments/ASG-032-fix-h036-flash-texto-pagos.md)
+> refs: ASG-b-032 (specs/assignments/ASG-b-032-fix-h036-flash-texto-pagos.md)
 > status: done
 > closed: 2026-07-28
 > created: 2026-07-28
 
 ## Root Cause
-**[Heredado de ASG-032, a confirmar]:** Al navegar a "Pagos y Clases" como alumno de Clase B
+**[Heredado de ASG-b-032, a confirmar]:** Al navegar a "Pagos y Clases" como alumno de Clase B
 justo tras el login, por una fracción de segundo se ve el subtítulo "Resumen de pagos de tu
 matrícula profesional" (el valor por defecto de `heroSubtitle` en `alumno-pagos.component.ts`,
 que depende de `facade.isClassB()` — falso mientras la matrícula no ha cargado) antes de

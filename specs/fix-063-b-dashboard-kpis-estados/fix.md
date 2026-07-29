@@ -1,6 +1,6 @@
 # Fix: Dashboard admin — KPI Vehículos en 0, formato roto Ingresos Mes, estados contradictorios
 > id: fix-063-b-dashboard-kpis-estados
-> refs: ASG-018 (specs/assignments/ASG-018-dashboard-kpis-vehiculos-ingresos.md)
+> refs: ASG-b-018 (specs/assignments/ASG-b-018-dashboard-kpis-vehiculos-ingresos.md)
 > status: done
 > closed: 2026-07-28
 > created: 2026-07-28

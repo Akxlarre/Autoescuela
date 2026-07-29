@@ -1,12 +1,12 @@
 # Fix: Reportes Contables no cuenta pagos reales de la sede (descuadre financiero)
 > id: fix-056-b-reportes-contables-branch-id
-> refs: ASG-009 (specs/assignments/ASG-009-fix-h013-reportes-contables-descuadre.md)
+> refs: ASG-b-009 (specs/assignments/ASG-b-009-fix-h013-reportes-contables-descuadre.md)
 > status: done
 > closed: 2026-07-23
 > created: 2026-07-23
 
 ## Root Cause
-**Confirmado (refina la hipótesis heredada de ASG-009):** no es un problema de escritura
+**Confirmado (refina la hipótesis heredada de ASG-b-009):** no es un problema de escritura
 (`branch_id` sí se graba bien en `enrollments`) ni del pipeline de pago — es un bug de tipos
 en `reportes-contables.utils.ts`. `payments.enrollment_id → enrollments.id` es una relación
 **many-to-one**, así que Supabase/PostgREST devuelve `enrollments` como **objeto plano**
