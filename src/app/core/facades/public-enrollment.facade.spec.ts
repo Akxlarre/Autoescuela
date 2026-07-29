@@ -800,6 +800,132 @@ describe('PublicEnrollmentFacade', () => {
       expect(freshFacade.hasDraftToRestore()).toBe(false);
       expect(freshFacade.sessionToken()).not.toBe('old-token');
     });
+
+    // ────────────────────────────────────────────────────────────────────────
+    // fix-070 (ASG-b-052): la firma del contrato debe sobrevivir al resume,
+    // y si ya estaba firmado no se debe repetir el paso "contract".
+    // ────────────────────────────────────────────────────────────────────────
+
+    it('restaura la firma y se queda en "contract" si el draft NO tenía firma todavía', async () => {
+      const freshFacade = freshFacadeWithDraft({
+        version: 1,
+        sessionToken: 'no-signature-token',
+        savedAt: new Date().toISOString(),
+        flowType: 'class_b',
+        branchId: 1,
+        branchSlug: 'test',
+        branchName: 'Sede Test',
+        branchAddress: '',
+        currentStep: 'contract',
+        personalData: null,
+        paymentMode: 'total',
+        instructorId: null,
+        selectedSlotIds: [],
+        selectedCourseType: null,
+        convalidatesSimultaneously: false,
+        carnetStoragePath: null,
+        contractSignatureBase64: null,
+      });
+
+      await freshFacade.restoreDraft();
+
+      expect(freshFacade.currentStep()).toBe('contract');
+      expect(freshFacade.contractSignatureBase64()).toBeNull();
+    });
+
+    it('restaura la firma y AVANZA a "payment" si el draft ya tenía el contrato firmado (fix-070)', async () => {
+      const freshFacade = freshFacadeWithDraft({
+        version: 1,
+        sessionToken: 'signed-token',
+        savedAt: new Date().toISOString(),
+        flowType: 'class_b',
+        branchId: 1,
+        branchSlug: 'test',
+        branchName: 'Sede Test',
+        branchAddress: '',
+        currentStep: 'contract',
+        personalData: null,
+        paymentMode: 'total',
+        instructorId: null,
+        selectedSlotIds: [],
+        selectedCourseType: null,
+        convalidatesSimultaneously: false,
+        carnetStoragePath: null,
+        contractSignatureBase64: 'data:image/png;base64,firma-de-prueba',
+      });
+
+      await freshFacade.restoreDraft();
+
+      expect(freshFacade.contractSignatureBase64()).toBe('data:image/png;base64,firma-de-prueba');
+      expect(freshFacade.currentStep()).toBe('payment');
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // initiatePayment / confirmPayment — fix-069 (H-033): el draft debe sobrevivir
+  // a un pago rechazado. Solo se limpia cuando Webpay confirma de verdad.
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  describe('initiatePayment / confirmPayment draft lifecycle (fix-069, H-033)', () => {
+    const setupClaseBReadyToPay = () => {
+      facade.selectFlowType('class_b');
+      facade.confirmLicenseType();
+      facade['_selectedBranch'].set(sampleBranches[0] as never);
+      facade['_personalData'].set(samplePersonalData as never);
+      facade['saveDraft']();
+    };
+
+    it('no borra el draft local al iniciar el pago, aunque la Edge Function responda éxito', async () => {
+      setupClaseBReadyToPay();
+      expect(localStorageMock.getItem('pec_draft')).not.toBeNull();
+
+      // Sin webpayUrl/webpayToken → no dispara form.submit(), solo ejercita el tramo
+      // que antes limpiaba el draft prematuramente.
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue({
+        data: { success: true, enrollmentId: 555 },
+        error: null,
+      });
+
+      await facade.initiatePayment();
+
+      expect(localStorageMock.getItem('pec_draft')).not.toBeNull();
+    });
+
+    it('borra el draft local recién cuando confirmPayment confirma el pago exitosamente', async () => {
+      setupClaseBReadyToPay();
+      expect(localStorageMock.getItem('pec_draft')).not.toBeNull();
+
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue({
+        data: {
+          success: true,
+          enrollmentNumber: '0099',
+          enrollmentId: 555,
+          branchName: 'Autoescuela Azul',
+          courseName: 'Clase B',
+          amountPaid: 180000,
+          sessionCount: 12,
+          paymentMode: 'total',
+        },
+        error: null,
+      });
+
+      await facade.confirmPayment('tok-123');
+
+      expect(localStorageMock.getItem('pec_draft')).toBeNull();
+    });
+
+    it('NO borra el draft si el banco rechaza el pago (para poder reintentar sin perder el trabajo)', async () => {
+      setupClaseBReadyToPay();
+
+      mockSupabaseClient.functions.invoke = vi.fn().mockResolvedValue({
+        data: { success: false, rejected: true, message: 'Rechazado por el banco' },
+        error: null,
+      });
+
+      await facade.confirmPayment('tok-456');
+
+      expect(localStorageMock.getItem('pec_draft')).not.toBeNull();
+    });
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
