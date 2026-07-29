@@ -1,6 +1,8 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { SupabaseService } from '@core/services/infrastructure/supabase.service';
+import { AuthFacade } from './auth.facade';
+import { StudentEnrollmentContextFacade } from './student-enrollment-context.facade';
 import type {
   StudentPaymentEnrollmentInfo,
   StudentPaymentHistoryItem,
@@ -24,11 +26,16 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class StudentPaymentFacade {
   private readonly supabase = inject(SupabaseService);
+  private readonly auth = inject(AuthFacade);
+  private readonly context = inject(StudentEnrollmentContextFacade);
 
   // ─── Estado reactivo privado ───
 
   /** SWR guard: evita re-fetch con skeleton en re-visitas. */
   private _initialized = false;
+
+  /** spec-0034: última matrícula cargada, para detectar cambios de tab y resetear el step. */
+  private lastEnrollmentId: number | null = null;
 
   private readonly _step = signal<StudentPaymentStep>(1);
   private readonly _status = signal<StudentPaymentStatus | null>(null);
@@ -103,11 +110,32 @@ export class StudentPaymentFacade {
   }
 
   private async fetchStatus(): Promise<void> {
+    // spec-0034: resolver la matrícula ACTIVA del contexto compartido (mismo patrón
+    // que StudentClasesFacade/StudentHomeFacade/StudentHorarioFacade), no dejar que
+    // el Edge Function adivine sola con pickEnrollmentToShow().
+    const dbId = this.auth.currentUser()?.dbId;
+    if (!dbId) throw new Error('Usuario no autenticado');
+    await this.context.initialize(dbId);
+    const enrollmentId = this.context.activeEnrollmentId();
+
     const { data, error } = await this.supabase.client.functions.invoke('student-payment', {
-      body: { action: 'load-enrollment-status' },
+      body: { action: 'load-enrollment-status', enrollmentId },
     });
     if (error) throw error;
     const status = data as StudentPaymentStatus;
+
+    // Si cambiamos de matrícula respecto a la última carga, no arrastrar el step
+    // del wizard de la matrícula anterior (ej. no mostrar "confirmar pago" de otra
+    // matrícula al cambiar de tab).
+    if (
+      this.lastEnrollmentId !== null &&
+      enrollmentId !== null &&
+      enrollmentId !== this.lastEnrollmentId
+    ) {
+      this._step.set(1);
+    }
+    this.lastEnrollmentId = enrollmentId;
+
     this._status.set(status);
     this._payments.set(status.payments ?? []);
   }
