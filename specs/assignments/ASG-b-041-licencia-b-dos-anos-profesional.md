@@ -1,11 +1,14 @@
 # Asignación ASG-b-041 — Fecha de obtención de licencia B + advertencia de los 2 años (Profesional)
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** m
+> **claimed_at:** 2026-07-29
+> **resulting_track:** fix-089-m-licencia-b-dos-anos-profesional
 
 ---
 
