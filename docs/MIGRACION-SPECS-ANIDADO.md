@@ -169,9 +169,16 @@ nueva. No es urgente: el fallback es barato y protege ante un clone viejo.
 
 ---
 
-## Nota aparte: `.claude/settings.json`
+## Nota aparte: `.claude/settings.json` — **hecho**
 
-El prompt del Stop hook de asignaciones menciona `specs/assignments/ASG-NNN-*.md`.
-Tras la migración del contador por autor (2026-07-29) el patrón real es
-`ASG-<autor>-NNN-*.md`. Es prosa para un checker LLM, así que sigue funcionando,
-pero conviene actualizarlo cuando se toque el archivo (también protegido).
+El prompt del Stop hook "Assignments Board sync-checker" estaba desactualizado en dos
+cosas, y la segunda importaba más que la primera:
+
+1. Mencionaba `ASG-NNN`, cuando el patrón real ya es `ASG-<autor>-NNN`.
+2. **Prescribía el remedio equivocado:** pedía mover las filas a "Completadas" a mano y
+   editar el frontmatter. Pero esas dos tablas ahora las regenera
+   `npm run assignments:sync` — una edición manual se pisa en el próximo sync.
+
+El prompt se reescribió para que detecte la condición correcta (track cerrado sin haber
+corrido el sync) y pida correr el sync. Se editó solo esa cadena: `git diff` reporta
+1 línea, y `permissions` y los comandos de los hooks quedaron byte-idénticos.
