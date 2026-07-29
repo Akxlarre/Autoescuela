@@ -6,7 +6,37 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { ScheduleGridComponent } from '@shared/components/schedule-grid/schedule-grid.component';
-import { EnrollmentAssignmentData } from '@core/models/ui/enrollment-assignment.model';
+import {
+  EnrollmentAssignmentData,
+  PromotionGroup,
+  PromotionOption,
+} from '@core/models/ui/enrollment-assignment.model';
+import type { LicenseValidation } from '@core/models/ui/enrollment-personal-data.model';
+import { calcLicenseSeniority } from '@core/utils/license-seniority.utils';
+
+/** Busca la promoción seleccionada (por id) dentro de los grupos agrupados por promoción. */
+export function findSelectedPromotion(
+  groups: PromotionGroup[],
+  promotionId: number | null,
+): PromotionOption | null {
+  if (promotionId === null) return null;
+  for (const group of groups) {
+    const found = group.options.find((o) => o.id === promotionId);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Advertencia de antigüedad de licencia clase B contra la fecha de inicio de la
+ * promoción elegida (no bloqueante — fix-089). Solo aplica en la vista profesional.
+ */
+export function licenseWarningFn(data: EnrollmentAssignmentData): LicenseValidation | null {
+  if (data.view !== 'professional') return null;
+  const promotion = findSelectedPromotion(data.promotionGroups, data.promotionId);
+  if (!promotion) return null;
+  return calcLicenseSeniority(data.licenseObtainedDate, promotion.startDate);
+}
 
 @Component({
   selector: 'app-assignment-step',
@@ -43,6 +73,9 @@ export class AssignmentComponent {
     if (d.view === 'professional') return d.promotionId !== null;
     return true; // singular
   });
+
+  /** Advertencia de antigüedad de licencia clase B (no bloqueante — fix-089). */
+  readonly licenseWarning = computed<LicenseValidation | null>(() => licenseWarningFn(this.data()));
 
   /** Emite copia con campo actualizado — SIN mutar el input. */
   emitField<K extends keyof EnrollmentAssignmentData>(

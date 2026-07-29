@@ -271,6 +271,7 @@ export class SecretariaMatriculaComponent implements OnInit, OnDestroy {
           : pd?.convalidatesSimultaneously && pd.courseType === 'professional_a5'
             ? 'A3'
             : null,
+      licenseObtainedDate: pd?.licenseDate ?? null,
     };
   });
 

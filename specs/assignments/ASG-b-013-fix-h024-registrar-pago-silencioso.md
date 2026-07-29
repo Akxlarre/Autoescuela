@@ -1,6 +1,6 @@
 # Asignación ASG-b-013 — Fix H-024: Registrar Pago con monto excesivo falla en silencio
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P1

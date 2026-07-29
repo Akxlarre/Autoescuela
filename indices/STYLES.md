@@ -333,7 +333,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 57 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1191 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1193 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -355,7 +355,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
 | 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
-| 10 | `text-text-muted mb-0.5 uppercase tracking-tighter font-bold` |
+| 10 | `text-sm font-bold text-warning` |
 
 
 <!-- AUTO-GENERATED:END -->

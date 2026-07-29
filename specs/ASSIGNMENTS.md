@@ -75,7 +75,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-b-041 | Fecha de obtención de licencia B + advertencia de los 2 años (Profesional) | `m` | [fix-089-m-licencia-b-dos-anos-profesional](fixes/fix-089-m-licencia-b-dos-anos-profesional/fix.md) | 2026-07-29 |
+| ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -107,6 +107,7 @@
 | ASG-b-031 | Fix H-032: campo Contraseña visible en "Recuperar Contraseña" | [fix-061-b-password-field-inert-reset-mode](fixes/fix-061-b-password-field-inert-reset-mode/fix.md) | 2026-07-28 |
 | ASG-b-032 | Fix H-036: flash de texto incorrecto en Pagos de alumno Clase B | [fix-060-b-flash-texto-pagos-clase-b](fixes/fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
 | ASG-b-012 | Matrícula pública: overlay, landing sin sede, retry roto, storage huérfano | [fix-069-b-matricula-publica-varios](fixes/fix-069-b-matricula-publica-varios/fix.md) | 2026-07-29 |
+| ASG-b-041 | Fecha de obtención de licencia B + advertencia de los 2 años (Profesional) | [fix-089-m-licencia-b-dos-anos-profesional](fixes/fix-089-m-licencia-b-dos-anos-profesional/fix.md) | 2026-07-29 |
 | ASG-b-047 | Dígito verificador del RUT automático en Matrícula | [fix-064-b-rut-dv-automatico](fixes/fix-064-b-rut-dv-automatico/fix.md) | 2026-07-29 |
 | ASG-b-052 | Firma del contrato no se persiste en el draft de matrícula pública | [fix-070-b-firma-contrato-no-persistida-draft](fixes/fix-070-b-firma-contrato-no-persistida-draft/fix.md) | 2026-07-29 |
 <!-- AUTO-GENERATED:END -->

@@ -667,6 +667,7 @@ export class PublicEnrollmentComponent {
       promotionGroups: [],
       convalidatesSimultaneously: false,
       convalidatedLicense: null,
+      licenseObtainedDate: null,
     };
   });
 
