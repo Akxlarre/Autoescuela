@@ -19,7 +19,7 @@
 | [0005](./specs/0005-b-publicacion-automatica-cpanel-self-hosted/spec.md) | Publicación Estática Automática en cPanel Self-Hosted | P1 | Akxlarre | Desactivada por ahora; se implementará tras finalizar el desarrollo visual. |
 | [0006](./specs/0006-b-borrado-mensajes-modulo-comunicacion/spec.md) | Borrado de mensajes en módulo de comunicación | P1 | Akxlarre | Criterios acordados. Botón eliminar + filtro 90 días para completadas. |
 | [0023](./specs/0023-b-bash-guard-hardening-file-protector/spec.md) | Hardening Bash Guard: File Protector para canal shell | P2 | Akxlarre | Draft. Modelo sugerido: **Fable 5**. El humano aplica el diff (hooks protegidos). Origen: bypass demostrado 2026-07-01. Excluida del batch del 2026-07-01 por decisión del owner. |
-| [0002-m](./specs/0002-m-promociones-cadencia-automatica/spec.md) | Promociones automáticas: cadencia, matrícula tardía y convalidaciones | P1 | m | Draft. Originada de ASG-035. Cadencia de 14 días y solapamiento ya confirmados por el owner; convalidaciones quedan fuera de scope (bloqueadas por respuesta del cliente). |
+| [0002-m](./specs/0002-m-promociones-cadencia-automatica/spec.md) | Promociones automáticas: cadencia, matrícula tardía y convalidaciones | P1 | m | **BLOQUEADA (2026-07-28).** Originada de ASG-035. Cadencia de 14 días y solapamiento ya confirmados; convalidaciones fuera de scope. Pausada de nuevo: falta confirmar con el cliente si las clases son L-V o L-S (código actual dice L-S, contradice recuerdo del owner) y cómo manejar feriados en la creación automática (hoy el descuento de feriados es un `fetch()` client-side, no algo que un cron SQL pueda replicar directo). |
 
 ---
 
