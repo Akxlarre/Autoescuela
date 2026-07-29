@@ -1,6 +1,6 @@
 # Asignación ASG-010 — Fix H-016: Portal Instructor corre sobre datos MOCK
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P0

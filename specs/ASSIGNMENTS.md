@@ -51,7 +51,6 @@
 
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
-| ASG-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | `i` | [fix-001-i-portal-instructor-datos-mock](fix-001-i-portal-instructor-datos-mock/fix.md) | 2026-07-28 |
 
 ---
 
@@ -68,6 +67,7 @@
 | ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto entre wizard público (1) y wizard interno (3) para la misma operación | [fix-062-m-unificar-limite-clases-dia](fix-062-m-unificar-limite-clases-dia/fix.md) | 2026-07-25 |
 | ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | [fix-068-m-branch-persistencia-localstorage](fix-068-m-branch-persistencia-localstorage/fix.md) | 2026-07-26 |
 | ASG-019 | Fix H-038: columna "Clases activas" de Instructores siempre muestra 0 — nunca se escribe | [fix-072-m-instructores-clases-activas-count](fix-072-m-instructores-clases-activas-count/fix.md) | 2026-07-27 |
+| ASG-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | [fix-001-i-portal-instructor-datos-mock](fix-001-i-portal-instructor-datos-mock/fix.md) | 2026-07-29 |
 
 ---
 
