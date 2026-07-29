@@ -198,6 +198,11 @@
 - **Realidad:** BD y RLS usan `'secretary'`/`'student'`; el frontend usa `'secretaria'`/`'alumno'`. Ambos conviven sin glosario formal que los mapee — terreno fértil para bugs de autorización silenciosos.
 - **Fuente:** `specs/hotfixes/hotfix-019-b-limpieza-deuda-rbac-roleservice-hasrole`
 
+### DG-037 — Los 2 años de antigüedad de licencia B (Profesional) se cuentan hasta el inicio del curso, NO hasta la fecha de matrícula
+- **Trampa:** validar `students.license_obtained_date` contra `today()` o contra la fecha en que se crea el `enrollment`, pensando que es "la fecha de matrícula" lo relevante.
+- **Realidad:** decisión de negocio confirmada explícitamente con el owner (2026-07-28): la referencia legal es `professional_promotions.start_date` de la promoción elegida en el wizard — un alumno puede matricularse **antes** de cumplir los 2 años si, para cuando arranca su promoción, ya los tendrá. Es una **advertencia no bloqueante** (la secretaría puede matricular igual bajo su criterio), no un bloqueo duro. `core/utils/license-seniority.utils.ts` (`calcLicenseSeniority`) implementa el cálculo; el wizard además muestra una estimación temprana en Step 1 contra la fecha de hoy, aclarando que se recalcula contra la promoción real en Step 2 — no reemplaza el chequeo definitivo.
+- **Fuente:** `specs/fixes/fix-089-m-licencia-b-dos-anos-profesional`, `specs/assignments/ASG-b-041-licencia-b-dos-anos-profesional.md`
+
 ---
 
 ## Convención para agregar una entrada nueva

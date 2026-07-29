@@ -32,6 +32,7 @@
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
+| `src/app/core/utils/license-seniority.utils.ts` | `calcLicenseSeniority` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |

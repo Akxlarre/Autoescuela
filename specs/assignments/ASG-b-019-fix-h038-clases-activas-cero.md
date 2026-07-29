@@ -1,6 +1,6 @@
 # Asignación ASG-b-019 — Fix H-038: "Clases activas" de Instructores siempre muestra 0
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** fix
 > **priority:** P2

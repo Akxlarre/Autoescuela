@@ -223,6 +223,64 @@
           </div>
         }
 
+        <!-- Licencia clase B previa (solo Profesional) -->
+        @if (selectedCategory() === 'professional') {
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-sm font-medium text-text-secondary" for="currentLicense">
+                Licencia previa
+              </label>
+              <p-select
+                inputId="currentLicense"
+                name="currentLicense"
+                [ngModel]="data().currentLicense"
+                (ngModelChange)="emitField('currentLicense', $event)"
+                [options]="currentLicenseOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Seleccionar"
+                styleClass="w-full"
+                data-llm-description="Student's previously held driver's license class before enrolling in a professional course"
+              />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <app-date-input
+                label="Fecha de obtención licencia B"
+                [value]="data().licenseDate ?? ''"
+                (valueChange)="emitField('licenseDate', $event)"
+                data-llm-description="Date the student obtained their class B driver's license, used to warn if under 2 years before the professional course starts"
+              />
+            </div>
+          </div>
+
+          <!-- Advertencia temprana (estimada a hoy) — el chequeo definitivo va contra la
+               fecha de inicio de la promoción, en el paso siguiente (fix-089) -->
+          @if (earlyLicenseWarning(); as earlyWarning) {
+            @if (!earlyWarning.valid) {
+              <div
+                class="p-4 rounded-xl border-2 border-warning-border bg-warning-subtle flex gap-3 items-start"
+                data-llm-description="early license seniority estimate — non-blocking, will be recalculated with the actual promotion start date"
+              >
+                <app-icon
+                  name="alert-triangle"
+                  [size]="20"
+                  class="text-warning mt-0.5 shrink-0"
+                  [ariaHidden]="true"
+                />
+                <div>
+                  <p class="text-sm font-bold text-warning">
+                    Licencia clase B con menos de 2 años de antigüedad (estimado a hoy)
+                  </p>
+                  <p class="text-xs text-text-secondary mt-1">
+                    {{ earlyWarning.message }} Este cálculo es referencial — se recalculará contra
+                    la fecha de inicio de la promoción que elijas en el siguiente paso.
+                  </p>
+                </div>
+              </div>
+            }
+          }
+        }
+
         <!-- Ubicación -->
         <div class="flex flex-col gap-1.5">
           <label class="text-sm font-medium text-text-secondary" for="address">Dirección</label>

@@ -884,7 +884,7 @@ export class EnrollmentFacade {
          max_students,
          status,
          courses!inner(code, name, license_class),
-         professional_promotions!promotion_id(code, name, status, branch_id)`,
+         professional_promotions!promotion_id(code, name, status, branch_id, start_date)`,
       )
       .eq('courses.license_class', licenseClass)
       .eq('professional_promotions.branch_id', branchId)
@@ -940,6 +940,7 @@ export class EnrollmentFacade {
         enrolledCount: enrolledCounts[row.id] ?? 0,
         maxCapacity: row.max_students,
         status: row.status === 'planned' || row.status === 'in_progress' ? 'open' : 'finished',
+        startDate: promo.start_date ?? null,
       };
 
       const existing = groupMap.get(groupKey) ?? [];

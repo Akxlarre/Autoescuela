@@ -8,7 +8,7 @@
 > **created_by:** b
 > **claimed_by:** m
 > **claimed_at:** 2026-07-28
-> **resulting_track:** [0002-m-promociones-cadencia-automatica](../specs/0002-m-promociones-cadencia-automatica/spec.md)
+> **resulting_track:** 0002-m-promociones-cadencia-automatica
 > **bloqueada_por:** respuesta del cliente sobre convalidaciones (pregunta 3 — cadencia y
 > solapamiento ya confirmados por Matías, ver nota 2026-07-28 más abajo). No bloquea el resto
 > del alcance, que ya quedó fuera del scope de la spec activa.

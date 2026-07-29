@@ -87,6 +87,7 @@ export class AdminReagendarHorariosDrawerComponent implements OnInit {
       promotionGroups: [],
       convalidatesSimultaneously: false,
       convalidatedLicense: null,
+      licenseObtainedDate: null,
     };
   });
 
