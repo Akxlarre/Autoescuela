@@ -18,7 +18,7 @@ import type {
   AgeAlertStatus,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
-import { formatRut, validateRut } from '@core/utils/rut.utils';
+import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { calcAge, getAgeStatus } from '@core/utils/age.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
@@ -180,10 +180,17 @@ export class PersonalDataComponent {
     }
   }
 
-  /** Al perder el foco cancela el timer (ya se emitirá aquí si el RUT es válido). */
+  /**
+   * Al perder el foco: autocompleta el DV (módulo 11, ASG-047) y cancela el timer
+   * (ya se emitirá aquí si el RUT resultante es válido).
+   */
   onRutBlur(): void {
     clearTimeout(this._rutPrefillTimer);
-    if (this.rutValid()) this.rutBlur.emit(this.data().rut);
+    const corrected = autocompleteRutDv(this.data().rut);
+    if (corrected !== this.data().rut) {
+      this.dataChange.emit({ ...this.data(), rut: corrected });
+    }
+    if (validateRut(corrected)) this.rutBlur.emit(corrected);
   }
 
   emitField<K extends keyof EnrollmentPersonalData>(

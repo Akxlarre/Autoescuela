@@ -1,11 +1,14 @@
 # Asignación ASG-047 — Dígito verificador del RUT automático en Matrícula
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** cualquiera
 > **tipo_sugerido:** fix
 > **priority:** P3
 > **created:** 2026-07-28
 > **created_by:** b
+> **claimed_by:** b
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-064-b-rut-dv-automatico
 
 ---
 
