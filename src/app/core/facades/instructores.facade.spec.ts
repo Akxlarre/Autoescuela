@@ -4,6 +4,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { ToastService } from '@core/services/ui/toast.service';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
+import { toISODate } from '@core/utils/date.utils';
 
 describe('InstructoresFacade', () => {
   let facade: InstructoresFacade;
@@ -257,7 +258,9 @@ describe('InstructoresFacade', () => {
 
       await facade.initialize();
 
-      const todayStr = new Date().toISOString().slice(0, 10);
+      // Mismo cómputo de fecha que usa la facade (toISODate = huso Chile) — comparar
+      // contra new Date().toISOString() (UTC) es flaky en el borde del día UTC/Chile.
+      const todayStr = toISODate(new Date());
       expect(gte).toHaveBeenCalledWith('scheduled_at', `${todayStr}T00:00:00`);
       expect(gte.mock.results[0].value.lte).toHaveBeenCalledWith(
         'scheduled_at',
