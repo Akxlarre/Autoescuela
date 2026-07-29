@@ -32,6 +32,11 @@ allowed-tools: Read, Write, Bash, Glob
 5. Limpiar `specs/.active`:
    - Escribir contenido vacío (una línea en blanco)
 
+5.5. Si `fix.md` tiene `refs: ASG-NNN` (viene de una Asignación reclamada):
+   - Correr `npm run assignments:sync` para que `specs/ASSIGNMENTS.md` refleje el cierre
+     en la tabla "Completadas" (se deriva del `status: done` que acabas de escribir, no
+     hace falta editar la tabla a mano).
+
 6. Imprimir confirmación:
    ```
    ✅ Fix <id> cerrado.

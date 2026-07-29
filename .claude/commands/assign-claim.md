@@ -129,9 +129,12 @@ que correspondan a tu código, tomar el máximo + 1; si no hay ninguno, empezar 
 
 ### 9. Actualizar `specs/ASSIGNMENTS.md`
 
-- Quita la fila de "Pendientes".
-- Agrégala a "Reclamadas / En curso": ID, título, quién reclamó (mi código), track resultante (ID + link relativo), fecha de hoy.
-- Actualiza también el frontmatter de `specs/assignments/ASG-NNN-slug.md`: `status: reclamada`, `claimed_by`, `claimed_at`, `resulting_track`.
+- Quita la fila de "Pendientes" (esa tabla sigue siendo manual).
+- Actualiza el frontmatter de `specs/assignments/ASG-NNN-slug.md`: `status: reclamada`, `claimed_by`, `claimed_at`, `resulting_track`.
+- Corre `npm run assignments:sync` — regenera las tablas "Reclamadas / En curso" y "Completadas"
+  desde ese frontmatter (cruzado con el `status`/`closed` del track). No edites esas dos tablas a
+  mano: se sobrescriben en el próximo sync y el script es la fuente de verdad desde `fix-065-b-...`
+  (auditoría de integridad de specs/, 2026-07-29).
 
 ### 10. Commit + push automático de la reclamación (sin confirmar — decisión explícita del equipo)
 

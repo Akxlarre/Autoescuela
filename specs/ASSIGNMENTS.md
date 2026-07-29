@@ -72,33 +72,44 @@
 
 ## Reclamadas / En curso
 
+> Generado automáticamente por `npm run assignments:sync` desde el frontmatter de
+> `specs/assignments/ASG-NNN-*.md`. No editar a mano — se sobrescribe en el próximo sync.
+
+<!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+<!-- AUTO-GENERATED:END -->
 
 ---
 
 ## Completadas
 
+> Generado automáticamente por `npm run assignments:sync` desde el frontmatter de
+> `specs/assignments/ASG-NNN-*.md` (cruzado con el `> closed:` del track resultante).
+> No editar a mano — se sobrescribe en el próximo sync.
+
+<!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Track resultante | Cerrada |
 |----|--------|-------------------|---------|
-| ASG-004 | Cobertura `data-llm-*` — lote 1: Admin Flota + Documentos + Certificados (9 archivos) | [fix-088-m-data-llm-lote-1-flota-documentos](fix-088-m-data-llm-lote-1-flota-documentos/fix.md) | 2026-07-28 |
-| ASG-006 | Cobertura `data-llm-*` — lote 3: shared/components parte 1 (8 archivos) | [fix-087-m-data-llm-lote-3-shared-parte-1](fix-087-m-data-llm-lote-3-shared-parte-1/fix.md) | 2026-07-28 |
-| ASG-008 | Decisión de diseño: modificador componible `btn-sm` en el DS + aplicar a los 3 archivos deferidos de ARCH-16 | [fix-086-m-btn-sm-arch16-restante](fix-086-m-btn-sm-arch16-restante/fix.md) | 2026-07-28 |
-| ASG-017 | Fix H-035 + H-017: Portal Alumno nunca puede mostrar la nota del Examen Final — columna equivocada en la query (mismo bug, 2 hallazgos duplicados) | [fix-059-b-nota-examen-final](fix-059-b-nota-examen-final/fix.md) | 2026-07-28 |
-| ASG-032 | Fix H-036: flash de texto incorrecto ("matrícula profesional") en la página Pagos de un alumno de Clase B mientras carga | [fix-060-b-flash-texto-pagos-clase-b](fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
-| ASG-031 | Fix H-032: el formulario "Recuperar Contraseña" sigue mostrando el campo de Contraseña del login normal | [fix-061-b-password-field-inert-reset-mode](fix-061-b-password-field-inert-reset-mode/fix.md) | 2026-07-28 |
-| ASG-030 | Fix H-023: Caja Diaria muestra la glosa cruda del origen del pago ("online"/"enrollment") en vez de un concepto legible | [fix-062-b-glosa-cruda-cuadratura](fix-062-b-glosa-cruda-cuadratura/fix.md) | 2026-07-28 |
-| ASG-018 | Fix H-001 + H-002 + H-008: Dashboard admin — KPI "Vehículos" siempre en 0, formato roto en KPI "Ingresos Mes", estados contradictorios en "Clases Actuales" | [fix-063-b-dashboard-kpis-estados](fix-063-b-dashboard-kpis-estados/fix.md) | 2026-07-28 |
+| ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
+| ASG-009 | Fix H-013: Reportes Contables no cuenta pagos reales (descuadre financiero) | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
+| ASG-011 | Fix H-028: RLS bloquea a la secretaria en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |
+| ASG-013 | Fix H-024: Registrar Pago con monto excesivo falla en silencio | [fix-057-m-registrar-pago-monto-excesivo-silencioso](fix-057-m-registrar-pago-monto-excesivo-silencioso/fix.md) | 2026-07-23 |
+| ASG-015 | Fix H-027: 500 real en alertas de asistencia Profesional con filtro de sede | [fix-060-m-h027-alertas-asistencia-profesional-sede](fix-060-m-h027-alertas-asistencia-profesional-sede/fix.md) | 2026-07-23 |
+| ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto público vs interno | [fix-062-m-unificar-limite-clases-dia](fix-062-m-unificar-limite-clases-dia/fix.md) | 2026-07-25 |
+| ASG-026 | Fix H-026: la sede activa no persiste tras F5 | [fix-068-m-branch-persistencia-localstorage](fix-068-m-branch-persistencia-localstorage/fix.md) | 2026-07-26 |
+| ASG-019 | Fix H-038: "Clases activas" de Instructores siempre muestra 0 | [fix-072-m-instructores-clases-activas-count](fix-072-m-instructores-clases-activas-count/fix.md) | 2026-07-27 |
+| ASG-020 | Fix H-004 + H-005: formato financiero (enum crudo + separador de miles) | [fix-070-m-formato-financiero-anticipos-reportes](fix-070-m-formato-financiero-anticipos-reportes/fix.md) | 2026-07-27 |
+| ASG-004 | Cobertura data-llm-* — Lote 1: Admin Flota + Documentos + Certificados | [fix-088-m-data-llm-lote-1-flota-documentos](fix-088-m-data-llm-lote-1-flota-documentos/fix.md) | 2026-07-28 |
+| ASG-006 | Cobertura data-llm-* — Lote 3: shared/components parte 1 | [fix-087-m-data-llm-lote-3-shared-parte-1](fix-087-m-data-llm-lote-3-shared-parte-1/fix.md) | 2026-07-28 |
+| ASG-008 | Decisión de diseño: modificador btn-sm + aplicar a 3 archivos ARCH-16 | [fix-086-m-btn-sm-arch16-restante](fix-086-m-btn-sm-arch16-restante/fix.md) | 2026-07-28 |
+| ASG-017 | Fix H-035 + H-017: Portal Alumno nunca muestra la nota del Examen Final | [fix-059-b-nota-examen-final](fix-059-b-nota-examen-final/fix.md) | 2026-07-28 |
+| ASG-018 | Fix H-001 + H-002 + H-008: Dashboard admin — KPIs y estados | [fix-063-b-dashboard-kpis-estados](fix-063-b-dashboard-kpis-estados/fix.md) | 2026-07-28 |
+| ASG-030 | Fix H-023: Caja Diaria muestra glosa cruda del pago | [fix-062-b-glosa-cruda-cuadratura](fix-062-b-glosa-cruda-cuadratura/fix.md) | 2026-07-28 |
+| ASG-031 | Fix H-032: campo Contraseña visible en "Recuperar Contraseña" | [fix-061-b-password-field-inert-reset-mode](fix-061-b-password-field-inert-reset-mode/fix.md) | 2026-07-28 |
+| ASG-032 | Fix H-036: flash de texto incorrecto en Pagos de alumno Clase B | [fix-060-b-flash-texto-pagos-clase-b](fix-060-b-flash-texto-pagos-clase-b/fix.md) | 2026-07-28 |
 | ASG-047 | Dígito verificador del RUT automático en Matrícula | [fix-064-b-rut-dv-automatico](fix-064-b-rut-dv-automatico/fix.md) | 2026-07-29 |
-| ASG-009 | Fix H-013 (Crítica): Reportes Contables no cuenta pagos reales de la sede — descuadre financiero | [fix-056-b-reportes-contables-branch-id](fix-056-b-reportes-contables-branch-id/fix.md) | 2026-07-23 |
-| ASG-002 | Fix H-039: alumno con 2+ matrículas no puede pagar su saldo real (`student-payment` trae siempre la matrícula más reciente) | [fix-058-b-pago-multiples-matriculas](fix-058-b-pago-multiples-matriculas/fix.md) | 2026-07-23 |
-| ASG-011 | Fix H-028 (Crítica): RLS bloquea a la secretaria subir documentos en matrícula Profesional (403) | [fix-054-m-h028-rls-secretaria-documentos-profesional](fix-054-m-h028-rls-secretaria-documentos-profesional/fix.md) | 2026-07-23 |
-| ASG-013 | Fix H-024: "Registrar Pago" con monto mayor al saldo pendiente falla en silencio, sin feedback al usuario | [fix-057-m-registrar-pago-monto-excesivo-silencioso](fix-057-m-registrar-pago-monto-excesivo-silencioso/fix.md) | 2026-07-23 |
-| ASG-015 | Fix H-027: alertas de asistencia Profesional fallan con 500 real (statement timeout) al filtrar por sede específica (`v_professional_attendance`) | [fix-060-m-h027-alertas-asistencia-profesional-sede](fix-060-m-h027-alertas-asistencia-profesional-sede/fix.md) | 2026-07-23 |
-| ASG-020 | Fix H-004 + H-005: Anticipos muestra enum crudo "both" sin traducir, KPIs financieros sin separador de miles + "Otros (Sede 0)" sin resolver nombre | [fix-070-m-formato-financiero-anticipos-reportes](fix-070-m-formato-financiero-anticipos-reportes/fix.md) | 2026-07-27 |
-| ASG-023 | Decisión de producto + fix H-021: límite de clases/día distinto entre wizard público (1) y wizard interno (3) para la misma operación | [fix-062-m-unificar-limite-clases-dia](fix-062-m-unificar-limite-clases-dia/fix.md) | 2026-07-25 |
-| ASG-026 | Fix H-026: la sede activa no persiste tras F5 / recarga completa | [fix-068-m-branch-persistencia-localstorage](fix-068-m-branch-persistencia-localstorage/fix.md) | 2026-07-26 |
-| ASG-019 | Fix H-038: columna "Clases activas" de Instructores siempre muestra 0 — nunca se escribe | [fix-072-m-instructores-clases-activas-count](fix-072-m-instructores-clases-activas-count/fix.md) | 2026-07-27 |
+<!-- AUTO-GENERATED:END -->
 
 ---
 
