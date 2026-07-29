@@ -1,14 +1,14 @@
 # Asignación ASG-018 — Fix H-001 + H-002 + H-008: Dashboard admin — KPIs y estados
 
-> **status:** pendiente
+> **status:** completada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-28
+> **resulting_track:** fix-063-b-dashboard-kpis-estados
 
 ---
 

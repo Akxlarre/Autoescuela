@@ -5,6 +5,7 @@ import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
 import { DashboardModel, LiveClassModel } from '@core/models/ui/dashboard.model';
 import { toISODate } from '@core/utils/date.utils';
+import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardFacade {
@@ -272,13 +273,14 @@ export class DashboardFacade {
           suffix: 'M',
           trend: revenueTrend,
           trendLabel: 'vs mes pasado',
+          trendSuffix: '%',
           icon: 'credit-card',
           color: 'default',
         },
         {
           id: 'vehicles',
           label: 'Vehículos',
-          value: vehicles.filter((v: any) => v.status === 'available').length,
+          value: vehicles.filter((v: any) => resolveVehicleStatus(v.status) === 'available').length,
           subValue: `Total flota: ${vehicles.length}`,
           icon: 'truck',
           color: 'warning',

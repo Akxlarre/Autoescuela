@@ -11,7 +11,6 @@
 
 | Componente | Usado en |
 |------------|----------|
-| `app-action-kpi-card` | `shared/components/flota-list-content` |
 | `app-agenda-semanal` | `features/admin/agenda`, `features/secretaria/agenda` |
 | `app-agenda-slot` | `shared/components/agenda-semanal` |
 | `app-alert-card` | `features/admin/asistencia`, `features/admin/contabilidad-anticipos`, `features/admin/documentos/dms-template-drawer`, `features/admin/documentos/dms-upload-drawer`, `features/alumno/clases`, `features/alumno/dashboard`, `features/instructor/clase`, `features/instructor/clase-detail`, `features/instructor/dashboard`, `features/instructor/ensayos-teoricos`, `features/instructor/ficha`, `features/instructor/liquidacion`, `shared/components/dms-list-content` |
@@ -362,6 +361,7 @@
 | `app-detalle-cuadratura-modal` | componente | `src/app/shared/components/detalle-cuadratura-modal/detalle-cuadratura-modal.component.ts` |
 | `app-dms-viewer-modal` | componente | `src/app/shared/components/dms-viewer-modal/dms-viewer-modal.component.ts` |
 | `app-drawer` | componente | `src/app/shared/components/drawer/drawer.component.ts` |
+| `app-action-kpi-card` | componente | `src/app/shared/components/kpi-card/action-kpi-card.component.ts` |
 | `app-kpi-card` | componente | `src/app/shared/components/kpi-card/kpi-card.component.ts` |
 | `app-pago-instructor-drawer` | componente | `src/app/shared/components/pago-instructor-modal/pago-instructor-modal.component.ts` |
 | `app-registrar-gasto-fijo-drawer` | componente | `src/app/shared/components/registrar-gasto-fijo-drawer/registrar-gasto-fijo-drawer.component.ts` |

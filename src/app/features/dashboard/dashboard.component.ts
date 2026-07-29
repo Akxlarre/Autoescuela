@@ -409,6 +409,7 @@ export class DashboardComponent {
       prefix: k.prefix,
       suffix: k.suffix,
       trend: k.trend,
+      trendSuffix: k.trendSuffix,
       trendLabel: k.trendLabel,
       color: k.color as SectionHeroKpi['color'],
       icon: k.icon,

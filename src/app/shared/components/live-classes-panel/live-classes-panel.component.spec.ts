@@ -31,14 +31,14 @@ describe('LiveClassesPanelComponent', () => {
       expect(component.getRelativeTime(future, 'pending')).toBe('En 3 h');
     });
 
-    it('clase pending con hora ya pasada (no iniciada) → "Hace X min"', () => {
+    it('clase pending con hora ya pasada (no iniciada) → "Debía iniciar hace X min" (H-008)', () => {
       const past = new Date(NOW - 10 * 60000).toISOString();
-      expect(component.getRelativeTime(past, 'pending')).toBe('Hace 10 min');
+      expect(component.getRelativeTime(past, 'pending')).toBe('Debía iniciar hace 10 min');
     });
 
-    it('clase pending con hora pasada hace más de 1h → "Hace X h"', () => {
+    it('clase pending con hora pasada hace más de 1h → "Debía iniciar hace X h" (H-008)', () => {
       const past = new Date(NOW - 2 * 3600000).toISOString();
-      expect(component.getRelativeTime(past, 'pending')).toBe('Hace 2 h');
+      expect(component.getRelativeTime(past, 'pending')).toBe('Debía iniciar hace 2 h');
     });
 
     it('clase in_progress → "Transcurriendo" sin importar la hora', () => {

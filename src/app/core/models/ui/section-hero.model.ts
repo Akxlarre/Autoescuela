@@ -34,6 +34,9 @@ export interface SectionHeroKpi {
   suffix?: string;
   /** Positivo = verde (▲), negativo = rojo (▼). */
   trend?: number;
+  /** Sufijo unitario pegado al valor del trend sin espacio (ej: '%'). */
+  trendSuffix?: string;
+  /** Frase descriptiva separada del trend por un espacio (ej: 'vs mes pasado'). */
   trendLabel?: string;
   /** Texto adicional (ej: '3 operaciones') renderizado bajo o junto al valor. */
   subValue?: string;

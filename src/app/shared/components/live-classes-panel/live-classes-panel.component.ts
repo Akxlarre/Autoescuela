@@ -322,10 +322,13 @@ export class LiveClassesPanelComponent {
     const diffMs = date.getTime() - now.getTime();
 
     if (diffMs <= 0) {
+      // status === 'pending' con hora ya pasada: la clase debía iniciar pero
+      // nadie la marcó in_progress. "Hace X" a secas se lee como si ya
+      // estuviera transcurriendo — contradice la etiqueta "Por Iniciar" (H-008).
       const elapsedMins = Math.floor(-diffMs / 60000);
-      if (elapsedMins < 60) return `Hace ${elapsedMins} min`;
+      if (elapsedMins < 60) return `Debía iniciar hace ${elapsedMins} min`;
       const elapsedHours = Math.floor(elapsedMins / 60);
-      return `Hace ${elapsedHours} h`;
+      return `Debía iniciar hace ${elapsedHours} h`;
     }
 
     const diffMins = Math.floor(diffMs / 60000);
