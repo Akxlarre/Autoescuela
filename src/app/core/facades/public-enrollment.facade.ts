@@ -132,6 +132,8 @@ interface PublicEnrollmentDraft {
   psychTestAnswers: (boolean | null)[];
   /** Ruta en Storage (bucket 'documents') de la foto temporal subida en el paso documents. */
   carnetStoragePath: string | null;
+  /** fix-070 (ASG-b-052): firma del contrato ya realizada, para no pedirla de nuevo al reanudar. */
+  contractSignatureBase64: string | null;
 }
 
 /**
@@ -937,8 +939,9 @@ export class PublicEnrollmentFacade {
         return { success: false, message: msg };
       }
 
-      // Reemplazar draft completo por referencia mínima en localStorage
-      this.clearDraft();
+      // fix-069 (H-033): el draft NO se borra acá. Si Webpay rechaza el pago, el alumno
+      // necesita poder reintentar sin perder datos/clases/foto/firma. Solo se limpia en
+      // confirmPayment() cuando el pago se confirma de verdad.
       this.savePendingPaymentRef({
         sessionToken: this._sessionToken(),
         enrollmentId: data.enrollmentId,
@@ -1012,6 +1015,9 @@ export class PublicEnrollmentFacade {
       };
       this._result.set(result);
       this.clearPendingPaymentRef();
+      // fix-069 (H-033): recién acá el pago está confirmado de verdad — es seguro
+      // borrar el draft recuperable (antes se borraba en initiatePayment, prematuro).
+      this.clearDraft();
       return result;
     } catch {
       this._error.set('Error inesperado al confirmar el pago');
@@ -1315,13 +1321,22 @@ export class PublicEnrollmentFacade {
     this._convalidatesSimultaneously.set(draft.convalidatesSimultaneously);
     this._psychTestAnswers.set(draft.psychTestAnswers ?? Array(81).fill(null));
     this._carnetStoragePath.set(draft.carnetStoragePath ?? null);
+    this._contractSignatureBase64.set(draft.contractSignatureBase64 ?? null);
+
+    // fix-070 (ASG-b-052): si el draft quedó en "contract" con la firma ya hecha (ej.
+    // un pago rechazado justo después de firmar), no repetir el trámite — saltar
+    // directo a "payment", el mismo salto que hace confirmContract().
+    const resumeStep: PublicWizardStep =
+      draft.currentStep === 'contract' && draft.contractSignatureBase64
+        ? 'payment'
+        : draft.currentStep;
 
     // Restaurar paso actual y marcar anteriores como completados.
     // psych-test-intro es una pantalla intermedia sin entrada en el steps array;
     // se trata como equivalente a psych-test para el cálculo del progreso.
     const effectiveStep: PublicWizardStep =
-      draft.currentStep === 'psych-test-intro' ? 'psych-test' : draft.currentStep;
-    this._currentStep.set(draft.currentStep);
+      resumeStep === 'psych-test-intro' ? 'psych-test' : resumeStep;
+    this._currentStep.set(resumeStep);
     const stepOrder: PublicWizardStep[] =
       draft.flowType === 'professional'
         ? ['license-type', 'personal-data', 'psych-test', 'pre-confirmation']
@@ -1340,7 +1355,7 @@ export class PublicEnrollmentFacade {
       steps.map((s) => {
         const idx = stepOrder.indexOf(s.id);
         if (idx < currentIdx) return { ...s, status: 'completed' };
-        if (s.id === draft.currentStep) return { ...s, status: 'active' };
+        if (s.id === resumeStep) return { ...s, status: 'active' };
         return s;
       }),
     );
@@ -1586,6 +1601,7 @@ export class PublicEnrollmentFacade {
       convalidatesSimultaneously: this._convalidatesSimultaneously(),
       psychTestAnswers: this._psychTestAnswers(),
       carnetStoragePath: this._carnetStoragePath(),
+      contractSignatureBase64: this._contractSignatureBase64(),
     };
 
     try {
