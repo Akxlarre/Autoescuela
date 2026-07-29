@@ -1,7 +1,8 @@
 # Fix: Portal Instructor corre sobre datos MOCK
 > id: fix-001-i-portal-instructor-datos-mock
 > refs: ASG-010
-> status: in_progress
+> status: done
+> closed: 2026-07-29
 > created: 2026-07-28
 
 ## Root Cause
@@ -17,4 +18,8 @@ Ninguno — fix autónomo (originado de Asignación de equipo, no de una spec).
 - **Qué cambia:** agregar tests para la rama real de Supabase (actualmente 0% de cobertura — solo testea el modo mock) ANTES de activar el flag, siguiendo `.claude/rules/testing-tdd.md`.
 
 ## Test de Regresión
-- `src/app/core/facades/instructor-clases.facade.spec.ts` — cobertura nueva de la rama real (`useMock=false`) para `fetchTodayClasses`, `loadClassDetail`, `startClass`, `finishClass`, `saveEvaluation`, `fetchUpcomingDays` — pendiente de escribir.
+- `src/app/core/facades/instructor-clases.facade.spec.ts > modo real (useMock=false)` — 17 tests cubriendo `fetchTodayClasses`, `loadClassDetail`, `startClass`, `finishClass`, `saveEvaluation`, `fetchUpcomingDays` (mapeo, error handling, no-op sin instructorId). ✓
+- Tests legacy de `startClass`/`finishClass` (mock mode) actualizados para forzar `useMock=true` explícitamente, ya que dejó de ser el valor por defecto. ✓
+- Suite completa: 19/19 verde. `tsc --noEmit`, `ng build --configuration=development` y `npm run lint:arch` sin hallazgos nuevos.
+- Confirmado en vivo: el Dashboard del Portal Instructor ("Mis Clases de Hoy") consume `InstructorClasesFacade.todayClasses()` directamente (`instructor-dashboard.component.ts`) — no hay mock separado en esa vista; el flag de este facade la cubre por completo.
+- **Nota de proceso:** un primer intento de este mismo fix se implementó y validó pero nunca se comiteó — se perdió al sincronizar con el remoto y el instructor siguió viendo datos mock en producción. Esta vez el cambio se comitea inmediatamente tras cerrar el track.

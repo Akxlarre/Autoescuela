@@ -13,8 +13,8 @@ import type {
   providedIn: 'root',
 })
 export class InstructorClasesFacade {
-    private readonly sanitizer = inject(ErrorSanitizerService);
-private profileFacade = inject(InstructorProfileFacade);
+  private readonly sanitizer = inject(ErrorSanitizerService);
+  private profileFacade = inject(InstructorProfileFacade);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
 
@@ -49,8 +49,9 @@ private profileFacade = inject(InstructorProfileFacade);
     return classes.find((c) => c.status === 'scheduled') || null;
   });
 
-  // Mock switch para revisión de flujo
-  private readonly useMock = true;
+  // Mock switch para revisión de flujo — desactivado (fix-001-i): la rama real
+  // ya tiene cobertura de tests (instructor-clases.facade.spec.ts).
+  private readonly useMock = false;
 
   async initialize(): Promise<void> {
     if (this._initialized) {
@@ -354,12 +355,12 @@ private profileFacade = inject(InstructorProfileFacade);
 
     try {
       // Solo subimos si hay firma (dataUrl no es nulo)
-      const studentSignatureUrl = data.studentSignature 
-        ? await this.uploadSignature(data.sessionId, 'student', data.studentSignature) 
+      const studentSignatureUrl = data.studentSignature
+        ? await this.uploadSignature(data.sessionId, 'student', data.studentSignature)
         : null;
-      
-      const instructorSignatureUrl = data.instructorSignature 
-        ? await this.uploadSignature(data.sessionId, 'instructor', data.instructorSignature) 
+
+      const instructorSignatureUrl = data.instructorSignature
+        ? await this.uploadSignature(data.sessionId, 'instructor', data.instructorSignature)
         : null;
 
       // Actualizamos la sesión con todos los datos legales
@@ -373,12 +374,12 @@ private profileFacade = inject(InstructorProfileFacade);
           student_signature_url: studentSignatureUrl,
           instructor_signature_url: instructorSignatureUrl,
           km_end: data.kmEnd, // Reforzamos el guardado de KM final aquí también
-          status: 'completed'
+          status: 'completed',
         })
         .eq('id', data.sessionId);
 
       if (updateError) throw updateError;
-      
+
       await this.refreshSilently();
     } catch (err: any) {
       console.error('Error saving evaluation:', err);
@@ -389,12 +390,16 @@ private profileFacade = inject(InstructorProfileFacade);
   /**
    * Helper privado para convertir Base64 a Blob y subir a Supabase Storage
    */
-  private async uploadSignature(sessionId: number, role: 'student' | 'instructor', base64: string): Promise<string> {
+  private async uploadSignature(
+    sessionId: number,
+    role: 'student' | 'instructor',
+    base64: string,
+  ): Promise<string> {
     const base64Data = base64.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: 'image/png' });
@@ -404,7 +409,7 @@ private profileFacade = inject(InstructorProfileFacade);
       .from('documents')
       .upload(fileName, blob, {
         contentType: 'image/png',
-        upsert: true
+        upsert: true,
       });
 
     if (error) {
