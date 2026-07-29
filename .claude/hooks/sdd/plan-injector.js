@@ -63,13 +63,31 @@ process.stdin.on('end', () => {
     const activeId = fs.readFileSync(activeFile, 'utf8').trim().split('\n')[0].trim();
     if (!activeId || activeId.startsWith('--bypass')) return process.exit(0);
 
-    const itemDir = path.join(specsDir, activeId);
+    const subdir = activeId.startsWith('hotfix-')
+      ? 'hotfixes'
+      : activeId.startsWith('fix-')
+        ? 'fixes'
+        : 'specs';
+    const itemDir =
+      [
+        path.join(specsDir, subdir, activeId),
+        path.join(specsDir, activeId), // legacy spec/fix
+        path.join(specsDir, 'fixes', 'hotfixes', activeId), // legacy hotfix
+      ].find((d) => fs.existsSync(d)) || path.join(specsDir, subdir, activeId);
     if (!fs.existsSync(itemDir)) return process.exit(0);
 
     let context;
 
-    // Fix track: inyectar solo fix.md (sin spec/plan/tasks)
-    if (activeId.startsWith('fix-')) {
+    // Hotfix track: inyectar solo hotfix.md (no tiene spec/plan/tasks)
+    if (activeId.startsWith('hotfix-')) {
+      context = '\u{1F525} HOTFIX TRACK - Hotfix activo: ' + activeId;
+      context += readCapped(path.join(itemDir, 'hotfix.md'), 'HOTFIX (contrato)');
+      context += '\n\n----- INSTRUCCIONES -----\n' +
+        '1. El cambio debe limitarse a lo declarado en hotfix.md (Problema + Cambios).\n' +
+        '2. Un hotfix es para cuando el \"como\" es obvio. Si aparece una decision de diseno -> DETENETE y abri /fix-new o /spec-new.\n' +
+        '3. No cambia contratos publicos ni BD. Si tu cambio los toca, no es un hotfix.\n' +
+        '4. Este track se auto-cierra al terminar la sesion.\n';
+    } else if (activeId.startsWith('fix-')) {
       context = '\u{1F527} FIX TRACK - Fix activo: ' + activeId;
       context += readCapped(path.join(itemDir, 'fix.md'), 'FIX (contrato)');
       context += '\n\n----- INSTRUCCIONES -----\n' +
