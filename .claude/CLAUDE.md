@@ -80,7 +80,7 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 ## Flujo obligatorio y Estado Cero (6 pasos)
 
 0. **CONTEXT SEEDING (Día 0)** — Si es un proyecto/módulo nuevo, DEBES establecer el Lenguaje Ubicuo (`indices/DOMAIN_DICTIONARY.md`) y el modelo de datos (`indices/DATABASE.md`) ANTES de codificar. Si te falta contexto, pídeselo al humano (el Context Guard te obligará a hacerlo si lo olvidas).
-1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. **El Discovery Gate te bloqueará si no lo haces.**
+1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. Si vas a tocar lógica de negocio, RLS, o una query nueva, lee también `indices/DOMAIN-GOTCHAS.md`. **El Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR** — Define qué vas a tocar sin violar las reglas de arquitectura.
 3. **EJECUTAR** — Escribe el código. Reutiliza siempre lo existente primero. Los hooks validarán cada escritura en tiempo real. **Si hay lógica nueva, escribe el `.spec.ts` primero (TDD).**
 4. **VALIDAR** — Corre `npm run lint:arch` para auditoría arquitectónica y `npm run test:ci` para tests. **Para cambios de UI, ejecutar también `/verify` (Playwright) para confirmar renderizado real en el navegador.**

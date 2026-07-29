@@ -37,6 +37,12 @@ allowed-tools: Read, Write, Bash, Glob
      en la tabla "Completadas" (se deriva del `status: done` que acabas de escribir, no
      hace falta editar la tabla a mano).
 
+5.6. Si el "Root Cause" de este fix reveló un gotcha de **dominio/esquema/RLS/regla de
+   negocio no obvia** (no visual — eso es `indices/ANTI-PATTERNS.md`) que alguien sin
+   contexto de este fix volvería a pisar, agrega una entrada `DG-NNN` a
+   `indices/DOMAIN-GOTCHAS.md` (ver convención al final de ese archivo). Si el fix fue
+   puramente visual/UI o no dejó ningún hallazgo reutilizable, sáltalo.
+
 6. Imprimir confirmación:
    ```
    ✅ Fix <id> cerrado.
