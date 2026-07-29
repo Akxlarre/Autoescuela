@@ -25,7 +25,6 @@
 | ASG-b-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/006/007 |
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
 | ASG-b-010 | Fix H-016 (Crítica): Portal Instructor corre sobre datos MOCK (`useMock=true` hardcodeado) + agregar tests para la rama real | `i` | fix | **Crítica** | b | Archivo: `instructor-clases.facade.ts:53`. La rama real ya existe pero tiene 0% cobertura de tests — agregarlos ANTES de activar el flag, no después |
-| ASG-b-012 | Fix H-020 + H-019 + H-033 + H-034: matrícula pública — overlay bloquea click en foto carnet, landing sin sede con links muertos, retry tras pago rechazado destruye la matrícula, fotos huérfanas en Storage | `b` | fix | Alta | b | Mismo módulo (wizard público de matrícula), 4 hallazgos relacionados. Archivos: `public-enrollment-retorno.component.ts:372-374`, `public-enrollment.facade.ts` (`clearDraft()`), componente de subida de foto carnet |
 | ASG-b-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
 | ASG-b-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
 | ASG-b-021 | Fix H-006: Configuración Web usa voseo argentino en vez de español de Chile | `i` | fix | Media | b | Solo copy, sin lógica — buen candidato para alguien nuevo en el repo |
@@ -78,6 +77,7 @@
 <!-- AUTO-GENERATED:BEGIN -->
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
+| ASG-b-012 | Matrícula pública: overlay, landing sin sede, retry roto, storage huérfano | b | [fix-069-b-matricula-publica-varios](fixes/fix-069-b-matricula-publica-varios/fix.md) | 2026-07-29 |
 <!-- AUTO-GENERATED:END -->
 
 ---
