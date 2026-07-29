@@ -189,6 +189,19 @@ function main() {
     if (dirs.length > 1) collisions.push({ key, dirs });
   }
 
+  // Links muertos en ROADMAP.md — 32/33 apuntaban a nombres previos al rename de
+  // julio (sin código de autor) y el archivo renderizaba perfecto igual.
+  const deadLinks = [];
+  const roadmapMd = path.join(SPECS_DIR, 'ROADMAP.md');
+  if (fs.existsSync(roadmapMd)) {
+    const rm = fs.readFileSync(roadmapMd, 'utf-8');
+    const re = /\]\(\.\/([^)]+)\)/g;
+    let m;
+    while ((m = re.exec(rm)) !== null) {
+      if (!fs.existsSync(path.join(SPECS_DIR, m[1]))) deadLinks.push(m[1]);
+    }
+  }
+
   console.log(bold('\n=== assignments-audit ===\n'));
 
   console.log(bold(`Naming violations (${namingViolations.length})`));
@@ -215,9 +228,14 @@ function main() {
     console.log(yellow(`  ${s.asgRef} sigue en "Pendientes" pero ${s.track} ya está status:done`));
   }
 
+  console.log(bold(`\nLinks muertos en ROADMAP.md (${deadLinks.length})`));
+  if (deadLinks.length === 0) console.log(green('  ninguno'));
+  for (const d of deadLinks) console.log(red(`  ./${d} no existe`));
+
   console.log(dim('\n(Solo reporte — no se modificó ningún archivo)\n'));
 
-  const totalIssues = namingViolations.length + collisions.length + staleRows.length;
+  const totalIssues =
+    namingViolations.length + collisions.length + staleRows.length + deadLinks.length;
   process.exit(totalIssues > 0 ? 1 : 0);
 }
 
