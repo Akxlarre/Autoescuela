@@ -1,7 +1,8 @@
 # Fix: Matrícula pública — overlay bloquea foto carnet, landing sin sede, retry roto, storage huérfano
 > id: fix-069-b-matricula-publica-varios
 > refs: ASG-b-012
-> status: in_progress
+> status: done
+> closed: 2026-07-29
 > created: 2026-07-29
 
 ## Root Cause
@@ -19,11 +20,49 @@ Alcance sugerido (de la Asignación):
 ## ACs Afectados
 Ninguno — fix autónomo. Hallazgos de auditoría: H-019, H-020, H-033, H-034 (ver `indices/FLOWS-QA-AUDIT.md`).
 
+## Investigación (Playwright + código, previa a implementar)
+
+- **H-033**: causa raíz confirmada en código — `initiatePayment()` (facade, entonces línea 941)
+  llamaba `clearDraft()` antes del redirect a Webpay, no después de la confirmación. El link
+  de retry en `public-enrollment-retorno.component.ts:372-374` armaba `{ resume: true }` sin
+  `branchId`, cayendo en el callejón sin salida de H-019 aunque hubiera borrador.
+- **H-019**: causa raíz confirmada (`public-enrollment.component.ts:543`, `url: '#'` — TODO
+  pendiente de config real). **Bloqueado**: `branches` no tiene columna de URL en el esquema
+  (`indices/DATABASE.md`); requiere que el negocio entregue las URLs reales de las landings
+  Astro de cada sede. No se implementó — fuera del alcance de este fix sin esa info.
+- **H-020**: reproducido con Playwright (`elementFromPoint` + click real sobre el
+  `<div aria-hidden="true">`) y **no se reprodujo el bloqueo** — el `<input>` se abrió
+  correctamente. No se tocó código para este hallazgo; ver sección "Hallazgos adicionales".
+- **H-034**: confirmado como gap de diseño — no existe job de limpieza de
+  `public-uploads/carnet/`. No se implementó (requiere decidir cron SQL vs mover upload
+  post-pago) — fuera del alcance de este fix.
+
 ## Cambio
-<!-- Archivo tocado y descripción en una línea. Un fix = un cambio puntual. -->
-- **Archivo:** `ruta/al/archivo.ts`
-- **Qué cambia:** descripción en una línea
+- **Archivo:** `src/app/core/facades/public-enrollment.facade.ts`
+  **Qué cambia:** `initiatePayment()` ya no llama `clearDraft()` (solo `savePendingPaymentRef()`);
+  `confirmPayment()` llama `clearDraft()` únicamente en el path de éxito real, después de
+  `clearPendingPaymentRef()`.
+- **Archivo:** `src/app/features/public-enrollment/retorno/public-enrollment-retorno.component.ts`
+  **Qué cambia:** nuevo `computed retryQueryParams()` que arma `{ resume: true, branchId }`
+  desde el `branchId` ya leído de `pec_pending` (sessionStorage); el link de retry usa
+  `[queryParams]="retryQueryParams()"` en vez del `{ resume: true }` hardcodeado.
+
+## Verificación end-to-end (Playwright, datos reales — no sintéticos)
+
+Flujo completo real: formulario (Ana Torres Rojas, RUT 19.222.333-4) → 12 clases reales →
+foto real subida → firma real (PointerEvents en canvas) → **pago real en Transbank sandbox**
+→ "Anular compra y volver" (cancelación real) → retorno a `/inscripcion/retorno` con
+`TBK_TOKEN` real → link de retry `= /inscripcion?resume=true&branchId=1` → wizard resume
+correctamente en el paso "Contrato" con nombre, curso, 12 clases y foto intactos.
+
+**Hallazgo adicional (fuera de alcance, no corregido en este fix):** el draft persistido
+(`saveDraft()`) no incluye `contractSignatureBase64` — al reanudar, el alumno debe re-marcar
+el checkbox y volver a firmar el contrato (los demás datos sí sobreviven). Confirmado tanto
+en código como en vivo. Candidato a un fix propio si se decide corregirlo.
 
 ## Test de Regresión
-<!-- El test que prueba que el fix funciona. Debe quedar verde post-fix. -->
-- `ruta/archivo.spec.ts > nombre del test` ✓
+- `src/app/core/facades/public-enrollment.facade.spec.ts > initiatePayment / confirmPayment draft lifecycle (fix-069, H-033) > no borra el draft local al iniciar el pago, aunque la Edge Function responda éxito` ✓
+- `src/app/core/facades/public-enrollment.facade.spec.ts > initiatePayment / confirmPayment draft lifecycle (fix-069, H-033) > borra el draft local recién cuando confirmPayment confirma el pago exitosamente` ✓
+- `src/app/core/facades/public-enrollment.facade.spec.ts > initiatePayment / confirmPayment draft lifecycle (fix-069, H-033) > NO borra el draft si el banco rechaza el pago (para poder reintentar sin perder el trabajo)` ✓
+- Suite completa: `npm run test:ci` → 1521 passed, 0 failed (2026-07-29)
+- Verificación visual/E2E real con Playwright (ver sección arriba) ✓

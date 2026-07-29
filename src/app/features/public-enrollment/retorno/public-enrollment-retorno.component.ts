@@ -371,7 +371,7 @@ function readPendingBranchId(): number | null {
               <div class="flex flex-col gap-3 w-full">
                 <a
                   [routerLink]="['/inscripcion']"
-                  [queryParams]="{ resume: true }"
+                  [queryParams]="retryQueryParams()"
                   class="btn-primary flex items-center justify-center gap-2 w-full rounded-xl py-3 font-semibold"
                   data-llm-nav="public-enrollment-retry"
                   data-llm-action="retry-enrollment"
@@ -466,6 +466,16 @@ export class PublicEnrollmentRetornoComponent implements OnInit {
   /** Tema de sede desde el PendingPaymentRef guardado antes del redirect a Webpay. */
   private readonly _branchId = signal<number | null>(readPendingBranchId());
   readonly theme = computed<SedeTheme>(() => branchIdToTheme(this._branchId()));
+
+  /**
+   * Query params para el link de retry tras un pago rechazado (fix-069, H-033).
+   * Sin branchId, `/inscripcion` no puede resolver la sede y muestra el callejón
+   * sin salida de H-019 — perdiendo además la posibilidad de retomar el draft.
+   */
+  readonly retryQueryParams = computed<Record<string, unknown>>(() => {
+    const branchId = this._branchId();
+    return branchId !== null ? { resume: true, branchId } : { resume: true };
+  });
 
   /**
    * URL de WhatsApp de la sede.
