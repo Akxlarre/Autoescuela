@@ -81,12 +81,28 @@ Ninguno — fix autónomo (bug real detectado en Auditoría QA de Flujos, hallaz
   %), "Alumnos Activos"/"Clases Hoy" siguen sin `%` (correcto, son conteos) con espacio correcto,
   "Clases Actuales" ya no muestra "Por Iniciar" + "Hace X h" contradictorio (ahora "Debía iniciar
   hace 6 h" / "Debía iniciar hace 5 h").
-- Liquidaciones (caso `trendSuffix: '%'` sin `trendLabel`, migrado del hack `trendLabel: '%'`): el
-  KPI "Pagados" tenía 0/4 pagados hoy (`trend=0`), por lo que el badge de trend no se renderiza en
-  absoluto (`@if trend!==0`, comportamiento preexistente, no probado visualmente por falta de dato).
-  Se da por verificado por código: la misma rama de template (`trendSuffix` pegado sin espacio,
-  `trendLabel` con espacio solo si existe) ya se confirmó visualmente en "Ingresos Mes" de arriba —
-  no se mutó nómina real de instructores para forzar el caso.
+- **Liquidaciones (caso `trendSuffix: '%'` sin `trendLabel`, migrado del hack `trendLabel: '%'`) —
+  verificado en vivo (post-cierre, a pedido del owner):** el flujo real "Pagar" → "Deshacer" ya
+  existe en la UI (`registrarPago()`/`deshacerPago()` en `liquidaciones.facade.ts`), así que se usó
+  ese mecanismo oficial en vez de mutar `instructor_monthly_payments` por SQL directo. Se pagó a
+  Julio Verstappen (efectivo, $4.000) → KPI "Pagados" pasó de "0 / 4" (sin badge, `trend=0`) a
+  **"1 / 4 — ▲ 25%"** (sin espacio antes del `%`, igual que "Ingresos Mes"). Confirmado visualmente
+  y sin errores de consola. Se deshizo el pago inmediatamente con el botón "Deshacer" → volvió a
+  "0 / 4", fila de Julio Verstappen de nuevo en "Pendiente" con botón "Pagar" — estado restaurado
+  sin residuos.
+- **H-008 — auditoría exhaustiva de combinaciones (a pedido del owner, no solo el caso observado):**
+  `LiveClassModel.status` está tipado a exactamente 3 valores (`'pending' | 'in_progress' |
+  'completed'`); `dashboard.facade.ts:362-364` confirma que el mapeo desde `class_b_sessions.status`
+  crudo colapsa todo a esos 3 (más `no_show`→`completed`), y `'cancelled'` se filtra antes de llegar
+  a la UI (`.neq('status','cancelled')`) — nunca renderiza. Se auditaron las 4 combinaciones posibles
+  de `statusLabel()` + `getRelativeTime()` + ícono/color (`live-classes-panel.component.ts:117-202`):
+  - `pending` + hora futura → "Por Iniciar" + "En X min/h" — consistente.
+  - `pending` + hora pasada → "Por Iniciar" + "Debía iniciar hace X min/h" — **era el bug, ya
+    corregido**.
+  - `in_progress` (cualquier hora) → "En Curso" + "Transcurriendo", ícono `play` pulsante — consistente.
+  - `completed` (cualquier hora) → "Finalizada" + "Concluida", ícono `chevron-right` — consistente.
+  No queda ninguna combinación adicional posible dado el dominio de 3 valores — el único caso
+  contradictorio era el ya corregido.
 
 ## Notas
 - H-008 puede terminar siendo "sin bug reproducible hoy" si los datos de clases ya no reproducen
