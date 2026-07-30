@@ -114,7 +114,7 @@ Los Facades son el **único punto de entrada** permitido para que la UI interact
 | `StudentEnrollmentContextFacade` | `SupabaseService` | — | `src/app/core/facades/student-enrollment-context.facade.ts` |
 | `StudentHomeFacade` | `SupabaseService`, `AuthFacade`, `ToastService`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-home.facade.ts` |
 | `StudentHorarioFacade` | `SupabaseService`, `AuthFacade`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-horario.facade.ts` |
-| `StudentPaymentFacade` | `SupabaseService` | — | `src/app/core/facades/student-payment.facade.ts` |
+| `StudentPaymentFacade` | `SupabaseService`, `AuthFacade`, `StudentEnrollmentContextFacade` | — | `src/app/core/facades/student-payment.facade.ts` |
 | `TasksFacade` | `SupabaseService`, `AuthFacade`, `BranchFacade`, `NotificationsFacade`, `ToastService` | — | `src/app/core/facades/tasks.facade.ts` |
 | `WebsiteConfigFacade` | `SupabaseService`, `ToastService`, `CoursesFacade` | — | `src/app/core/facades/website-config.facade.ts` |
 
