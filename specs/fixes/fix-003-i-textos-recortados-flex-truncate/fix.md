@@ -1,7 +1,8 @@
 # Fix: botones y títulos se recortan a mitad de palabra
 > id: fix-003-i-textos-recortados-flex-truncate
 > refs: ASG-b-025
-> status: in_progress
+> status: done
+> closed: 2026-07-30
 > created: 2026-07-30
 
 ## Root Cause
