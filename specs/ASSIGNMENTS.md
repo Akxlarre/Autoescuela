@@ -26,7 +26,6 @@
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
 | ASG-b-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
 | ASG-b-016 | Fix H-029: precio del curso Profesional A2 muestra $180.000 en vez de $800.000 del seed | `i` | fix | Alta | b | Error de cobro real — 4.4× menos de lo que corresponde por matrícula. Investigar de dónde toma el precio el wizard de matrícula Profesional |
-| ASG-b-021 | Fix H-006: Configuración Web usa voseo argentino en vez de español de Chile | `i` | fix | Media | b | Solo copy, sin lógica — buen candidato para alguien nuevo en el repo |
 | ASG-b-022 | Fix H-007: páginas cargan en blanco varios segundos sin skeleton en Agenda y Libro de Clases | `b` | fix | Media | b | Viola `swr-pattern.md`. ⚠️ **Coordinar con ASG-b-001** (verificación de skeletons de Benja) para no duplicar trabajo |
 | ASG-b-034 | Terminar migración de `color-mix()` pendiente: 11 archivos con drift post-mayo (mismo patrón que ya resolvía el script) + 56 archivos con gap de diseño (CSS embebido / bindings dinámicos que el script nunca cubrió) | `b` | fix | Baja | b | Ver `scripts/migrate-color-mix-t4.mjs` (corrió una sola vez el 28-may, commit `673c4bd`). Requiere decisión sobre si `color-mix(var(--token))` embebido es deuda o válido por diseño |
 | ASG-b-024 | Fix H-031: la búsqueda global (Ctrl+K) no indexa alumnos ni instructores, solo navegación | `b` | fix | Media | b | Extender el índice del buscador a datos de negocio (alumnos por nombre/RUT, instructores) |
@@ -110,6 +109,7 @@
 | ASG-b-041 | Fecha de obtención de licencia B + advertencia de los 2 años (Profesional) | [fix-089-m-licencia-b-dos-anos-profesional](fixes/fix-089-m-licencia-b-dos-anos-profesional/fix.md) | 2026-07-29 |
 | ASG-b-047 | Dígito verificador del RUT automático en Matrícula | [fix-064-b-rut-dv-automatico](fixes/fix-064-b-rut-dv-automatico/fix.md) | 2026-07-29 |
 | ASG-b-052 | Firma del contrato no se persiste en el draft de matrícula pública | [fix-070-b-firma-contrato-no-persistida-draft](fixes/fix-070-b-firma-contrato-no-persistida-draft/fix.md) | 2026-07-29 |
+| ASG-b-021 | Fix H-006: Configuración Web usa voseo argentino | [fix-002-i-voseo-configuracion-web](fixes/fix-002-i-voseo-configuracion-web/fix.md) | 2026-07-30 |
 <!-- AUTO-GENERATED:END -->
 
 ---

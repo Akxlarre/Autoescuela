@@ -109,10 +109,10 @@ type ConfigTab = 'general' | 'hero' | 'cursos' | 'promo' | 'contacto' | 'faqs';
             <div class="flex flex-col items-center justify-center gap-4 py-20 text-center">
               <app-icon name="building-2" [size]="40" class="text-text-muted" />
               <p class="text-sm font-semibold text-text-secondary">
-                Seleccioná una sede en el menú superior
+                Selecciona una sede en el menú superior
               </p>
               <p class="text-xs text-text-muted max-w-xs">
-                Usá el selector de sede del topbar para elegir qué configuración web querés editar.
+                Usa el selector de sede del topbar para elegir qué configuración web quieres editar.
               </p>
             </div>
           } @else if (facade.isLoading()) {
