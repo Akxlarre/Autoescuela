@@ -31,6 +31,7 @@
 | `discounts` | M3 - Finanzas | `id`, `name` | `created_by` | Admin: CRUD, Sec: R | ✅ Definida |
 | `discount_applications` | M3 - Finanzas | `id`, `discount_id`| `discount_id`, `enrollment_id`, `applied_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructors` | M4 - Acad. B | `id`, `user_id` | `user_id` | Admin: CRUD, Sec: **R por sede** (SELECT `branch_visible` sobre la sede del user dueño — spec 0017; honra `can_access_both_branches`), Inst: R (self) | ✅ Definida · `20260624120000` scope SELECT por sede |
+| `instructor_documents` | M4 - Acad. B | `id`, `instructor_id`, `type`, `status` (def `'pending'`) | `instructor_id`→instructors, `uploaded_by`→users | Admin: CRUD, Sec: CRU **por sede** (`branch_visible` sobre la sede del user dueño del instructor, vía join `instructors.user_id`) | ✅ Definida · `20260729120000` (spec 0003-m) |
 | `vehicle_assignments` | M4 - Acad. B | `id`, `vehicle_id` | `instructor_id`, `vehicle_id`, `assigned_by` | Admin: CRUD, Sec: CRUD, Inst: R (self) | ✅ Definida |
 | `instructor_replacements` | M4 - Acad. B | `id`, `date` | `absent_instructor_id`, `replacement_instructor_id`, `registered_by` | Admin: CRUD, Sec: CRUD | ✅ Definida |
 | `instructor_monthly_hours` | M4 - Acad. B | `id`, `period` | `instructor_id` | Admin: CRUD, Sec: R, Inst: R (self) | ✅ Definida |
@@ -181,7 +182,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 > esta sección refleja el SQL real.
 
 <!-- AUTO-GENERATED:BEGIN -->
-## Esquema efectivo (76 tablas, acumulado de las migraciones)
+## Esquema efectivo (77 tablas, acumulado de las migraciones)
 
 ### `absence_evidence` — 🔒 RLS
 
@@ -949,6 +950,27 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 | update_instructor_advances | UPDATE | `auth_user_role() = 'admin'` | — |
 | delete_instructor_advances | DELETE | `auth_user_role() = 'admin'` | — |
 
+### `instructor_documents` — 🔒 RLS
+
+> Documentos del expediente del instructor (Clase B): antecedentes, HVC, credencial SEMEP, licencia, etc. (spec 0003-m)
+
+| Columna | Tipo | Null | Default | FK |
+|---------|------|------|---------|----|
+| `id` PK | SERIAL | NO | — | — |
+| `instructor_id` | INT | NO | — | → `instructors.id` |
+| `type` | TEXT | NO | — | — |
+| `file_name` | TEXT | NO | — | — |
+| `storage_url` | TEXT | NO | — | — |
+| `status` | TEXT | NO | `'pending'` | — |
+| `uploaded_by` | INT | sí | — | → `users.id` |
+| `created_at` | TIMESTAMPTZ | NO | `NOW()` | — |
+
+**Policies:**
+
+| Policy | Cmd | USING | WITH CHECK |
+|--------|-----|-------|------------|
+| delete_instructor_documents | DELETE | `auth_user_role() = 'admin'` | — |
+
 ### `instructor_monthly_hours` — 🔒 RLS
 
 > Cálculo de horas teóricas + prácticas (×1.5) por mes por instructor (RF-047)
@@ -1460,10 +1482,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `professional_promotions` — 🔒 RLS
 
-> Se crea una promoción nueva cada 14 días (cada 2 lunes), agrupando hasta 4 cursos
-> profesionales en paralelo (RF-059). Por la cadencia de 14 días, es normal tener 2
-> promociones vivas simultáneamente (solapadas) — el `start_date`/`end_date` de cada
-> fila define su duración real, no hay un valor fijo global.
+> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059)
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -2235,7 +2254,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
 
 
 <!-- AUTO-GENERATED:END -->

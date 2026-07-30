@@ -1,6 +1,6 @@
 # Asignación ASG-b-042 — Repositorio de documentos: sección Instructores + poder abrir el archivo
 
-> **status:** reclamada
+> **status:** completada
 > **owner:** m
 > **tipo_sugerido:** spec
 > **priority:** P2

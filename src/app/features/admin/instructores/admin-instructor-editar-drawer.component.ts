@@ -13,6 +13,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
+import { DmsFacade } from '@core/facades/dms.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
@@ -121,7 +122,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               >
                 {{ inst.initials }}
               </div>
-              <div class="min-w-0">
+              <div class="min-w-0 flex-1">
                 <p class="text-sm font-semibold truncate text-text-primary">
                   {{ inst.nombre }}
                 </p>
@@ -266,7 +267,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
             </div>
 
             <!-- ── Información de Licencia ─────────────────────────────────────── -->
-            <h3 class="section-title">Información de Licencia</h3>
+            <!-- Sin selector de clase: instructors es exclusivamente Clase B (los relatores
+                 Profesional son la tabla lecturers, aparte) — se guarda 'B' fijo al enviar. -->
+            <h3 class="section-title">Licencia Clase B</h3>
             <div class="flex flex-col gap-4 mb-6">
               <!-- Número de licencia -->
               <div class="flex flex-col gap-1.5">
@@ -280,25 +283,6 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   (ngModelChange)="licenseNumber.set($event)"
                   data-llm-description="Número de licencia del instructor"
                 />
-              </div>
-
-              <!-- Clase de licencia -->
-              <div class="flex flex-col gap-1.5">
-                <label class="field-label" for="e-license-class">Clase de licencia *</label>
-                <p-select
-                  inputId="e-license-class"
-                  [options]="licenseClassOptions"
-                  [(ngModel)]="licenseClassModel"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Seleccione clase"
-                  styleClass="w-full"
-                  aria-required="true"
-                  data-llm-description="Clase de licencia del instructor"
-                />
-                @if (licenseClassTouched() && !licenseClassValido()) {
-                  <span class="field-error">Selecciona la clase de licencia</span>
-                }
               </div>
 
               <!-- Fecha de vencimiento -->
@@ -324,6 +308,20 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                   </span>
                 </div>
               }
+            </div>
+
+            <!-- ── Documentos ───────────────────────────────────────────────────── -->
+            <h3 class="section-title">Documentos</h3>
+            <div class="mb-6">
+              <button
+                type="button"
+                class="btn-secondary w-full flex items-center justify-center gap-2"
+                data-llm-action="ver-documentos-instructor"
+                (click)="verDocumentos(inst)"
+              >
+                <app-icon name="shield-check" [size]="15" />
+                Ver y subir documentos
+              </button>
             </div>
 
             <!-- ── Tipo de Instructor ──────────────────────────────────────────── -->
@@ -529,6 +527,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
 })
 export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly facade = inject(InstructoresFacade);
+  protected readonly dmsFacade = inject(DmsFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
   protected readonly branchFacade = inject(BranchFacade);
 
@@ -539,7 +538,6 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly email = signal('');
   protected readonly telefono = signal('');
   protected readonly licenseNumber = signal('');
-  protected readonly licenseClass = signal<string | null>(null);
   protected readonly licenseExpiry = signal<Date | null>(null);
   protected readonly tipo = signal<InstructorType | null>(null);
   protected readonly vehicleId = signal<number | null>(null);
@@ -554,7 +552,6 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly paternoTouched = signal(false);
   protected readonly maternoTouched = signal(false);
   protected readonly emailTouched = signal(false);
-  protected readonly licenseClassTouched = signal(false);
   protected readonly licenseExpiryTouched = signal(false);
   protected readonly tipoTouched = signal(false);
 
@@ -565,7 +562,6 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   protected readonly emailValido = computed(() =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim()),
   );
-  protected readonly licenseClassValido = computed(() => !!this.licenseClass());
   protected readonly licenseExpiryValido = computed(() => !!this.licenseExpiry());
   protected readonly tipoValido = computed(() => !!this.tipo());
 
@@ -596,20 +592,11 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       this.paternoValido() &&
       this.maternoValido() &&
       this.emailValido() &&
-      this.licenseClassValido() &&
       this.licenseExpiryValido() &&
       this.tipoValido(),
   );
 
   // ── Options ────────────────────────────────────────────────────────────────
-  protected readonly licenseClassOptions = [
-    { label: 'Clase B (Automóviles)', value: 'B' },
-    { label: 'Clase A2 (Taxi básico)', value: 'A2' },
-    { label: 'Clase A3 (Ambulancia)', value: 'A3' },
-    { label: 'Clase A4 (Buses)', value: 'A4' },
-    { label: 'Clase A5 (Camiones)', value: 'A5' },
-  ];
-
   protected readonly typeOptions = [
     { label: 'Práctico', value: 'practice' },
     { label: 'Teórico', value: 'theory' },
@@ -639,13 +626,6 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
   }
 
   // ── p-select models ────────────────────────────────────────────────────────
-  protected get licenseClassModel(): string | null {
-    return this.licenseClass();
-  }
-  protected set licenseClassModel(v: string | null) {
-    this.licenseClass.set(v);
-  }
-
   protected get licenseExpiryIso(): string {
     const d = this.licenseExpiry();
     if (!d) return '';
@@ -692,7 +672,6 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
         this.currentEmail = inst.email;
         this.telefono.set(inst.phone);
         this.licenseNumber.set(inst.licenseNumber);
-        this.licenseClass.set(inst.licenseClass || null);
         this.tipo.set(inst.tipo);
         this.vehicleId.set(inst.vehicleId);
         this.currentVehicleId.set(inst.vehicleId);
@@ -719,12 +698,15 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
     this.facade.loadVehicles();
   }
 
+  protected verDocumentos(inst: { id: number; nombre: string }): void {
+    this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
+  }
+
   protected async submit(instructorId: number, userId: number): Promise<void> {
     this.nombresTouched.set(true);
     this.paternoTouched.set(true);
     this.maternoTouched.set(true);
     this.emailTouched.set(true);
-    this.licenseClassTouched.set(true);
     this.licenseExpiryTouched.set(true);
     this.tipoTouched.set(true);
 
@@ -744,7 +726,7 @@ export class AdminInstructorEditarDrawerComponent implements OnInit {
       currentEmail: this.currentEmail,
       type: this.tipo() ?? 'practice',
       licenseNumber: this.licenseNumber(),
-      licenseClass: this.licenseClass() ?? '',
+      licenseClass: 'B', // instructors es exclusivamente Clase B
       licenseExpiry: expiryStr,
       active: this.activo(),
       vehicleId: this.vehicleId(),

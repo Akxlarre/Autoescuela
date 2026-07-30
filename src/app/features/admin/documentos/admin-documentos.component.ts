@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
 import { DmsFacade } from '@core/facades/dms.facade';
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
@@ -21,14 +20,18 @@ import type { TemplateCard } from '@core/models/ui/dms.model';
       basePath="/app/admin/documentos"
       [studentsWithDocs]="facade.studentsWithDocs()"
       [recentDocs]="facade.recentDocs()"
+      [instructorsWithDocs]="facade.instructorsWithDocs()"
       [schoolDocs]="facade.schoolDocs()"
       [templates]="facade.templates()"
       [isLoading]="facade.isLoading()"
       [isAdmin]="isAdmin()"
+      [showSedeColumn]="showSedeColumn()"
       (uploadStudentDoc)="openUploadStudentDrawer()"
+      (uploadInstructorDoc)="openUploadInstructorDrawer()"
       (uploadSchoolDoc)="openUploadSchoolDrawer()"
       (uploadTemplate)="facade.openTemplate()"
       (viewStudentDocs)="onViewStudentDocs($event)"
+      (viewInstructorDocs)="onViewInstructorDocs($event)"
       (viewDocument)="onViewDocument($event.url, $event.fileName)"
       (deleteStudentDoc)="onDeleteStudentDoc($event)"
       (deleteSchoolDoc)="onDeleteSchoolDoc($event)"
@@ -41,11 +44,12 @@ export class AdminDocumentosComponent {
   readonly facade = inject(DmsFacade);
   private readonly authFacade = inject(AuthFacade);
   private readonly branchFacade = inject(BranchFacade);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
 
   // ── Computed ──────────────────────────────────────────────────────────────
   readonly isAdmin = computed(() => this.authFacade.currentUser()?.role === 'admin');
+  readonly showSedeColumn = computed(
+    () => this.isAdmin() && this.branchFacade.selectedBranchId() === null,
+  );
 
   constructor() {
     effect(() => {
@@ -60,12 +64,22 @@ export class AdminDocumentosComponent {
     this.facade.openUpload('student', studentId);
   }
 
+  openUploadInstructorDrawer(instructorId?: number): void {
+    this.facade.openUpload('instructor', instructorId);
+  }
+
   openUploadSchoolDrawer(): void {
     this.facade.openUpload('school');
   }
 
   onViewStudentDocs(studentId: number): void {
-    void this.router.navigate(['alumnos', studentId], { relativeTo: this.route });
+    const row = this.facade.studentsWithDocs().find((s) => s.studentId === studentId);
+    this.facade.openStudentDocsDrawer(studentId, row?.name ?? 'Alumno');
+  }
+
+  onViewInstructorDocs(instructorId: number): void {
+    const row = this.facade.instructorsWithDocs().find((i) => i.instructorId === instructorId);
+    this.facade.openInstructorDocsDrawer(instructorId, row?.name ?? 'Instructor');
   }
 
   onViewDocument(url: string, fileName?: string): void {
