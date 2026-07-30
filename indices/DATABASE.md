@@ -1460,7 +1460,10 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ### `professional_promotions` — 🔒 RLS
 
-> Período de 30 días que agrupa hasta 4 cursos profesionales en paralelo (RF-059)
+> Se crea una promoción nueva cada 14 días (cada 2 lunes), agrupando hasta 4 cursos
+> profesionales en paralelo (RF-059). Por la cadencia de 14 días, es normal tener 2
+> promociones vivas simultáneamente (solapadas) — el `start_date`/`end_date` de cada
+> fila define su duración real, no hay un valor fijo global.
 
 | Columna | Tipo | Null | Default | FK |
 |---------|------|------|---------|----|
@@ -2232,7 +2235,7 @@ Desde el 30 de Octubre 2026, Supabase elimina los permisos implícitos sobre tab
 
 ## ⚠ Sentencias no parseadas (AC7 — revisar a mano)
 
-- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS rn"
+- sentencia no entendida en 20260722000000_backfill_promotion_codes.sql: "WITH ordered AS ( SELECT id, ROW_NUMBER() OVER (ORDER BY start_date, id) AS r"
 
 
 <!-- AUTO-GENERATED:END -->

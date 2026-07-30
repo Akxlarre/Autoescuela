@@ -17,7 +17,12 @@ import { DateInputComponent } from '@shared/components/date-input/date-input.com
 import { AsyncBtnComponent } from '@shared/components/async-btn/async-btn.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
-import { formatRut, validateRut, normalizeRutForStorage } from '@core/utils/rut.utils';
+import {
+  formatRut,
+  validateRut,
+  normalizeRutForStorage,
+  autocompleteRutDv,
+} from '@core/utils/rut.utils';
 import { calcAge } from '@core/utils/age.utils';
 import { formatCLP } from '@core/utils/date.utils';
 import type {
@@ -145,6 +150,7 @@ const PAYMENT_METHODS: {
                   type="text"
                   [(ngModel)]="rutInput"
                   (ngModelChange)="onRutChange($event)"
+                  (blur)="onRutBlur()"
                   placeholder="12.345.678-9"
                   maxlength="12"
                   class="flex-1 h-10 px-3 text-sm rounded-lg border transition-colors bg-base text-text-primary"
@@ -641,6 +647,13 @@ export class AdminCursoSingularInscribirDrawerComponent implements OnInit {
 
   ngOnInit(): void {
     this.facade.resetWizard();
+  }
+
+  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  protected onRutBlur(): void {
+    const corrected = autocompleteRutDv(this.rutInput());
+    this.rutInput.set(corrected);
+    this.patchForm('rut', normalizeRutForStorage(corrected));
   }
 
   protected onRutChange(raw: string): void {

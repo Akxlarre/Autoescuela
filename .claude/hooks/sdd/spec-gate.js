@@ -100,7 +100,12 @@ process.stdin.on('end', () => {
 
     // GATE 3.6 - Hotfix track (solo requiere hotfix.md, auto-close al terminar sesión)
     if (activeId.startsWith('hotfix-')) {
-      const hotfixMd = path.join(specsDir, 'fixes', 'hotfixes', activeId, 'hotfix.md');
+      const hotfixMd =
+        [
+          path.join(specsDir, 'hotfixes', activeId, 'hotfix.md'),
+          path.join(specsDir, 'fixes', 'hotfixes', activeId, 'hotfix.md'), // legacy pre-migracion
+        ].find((p) => fs.existsSync(p)) ||
+        path.join(specsDir, 'hotfixes', activeId, 'hotfix.md');
       if (!fs.existsSync(hotfixMd)) {
         process.stderr.write(
           '\u{1F6E1}\u{FE0F} SPEC GATE: El hotfix track "' + activeId + '" no tiene hotfix.md.\n' +
@@ -116,7 +121,10 @@ process.stdin.on('end', () => {
 
     // GATE 3.7 - Fix track (solo requiere fix.md, no plan.md)
     if (activeId.startsWith('fix-')) {
-      const fixDir = path.join(specsDir, activeId);
+      const fixDir =
+        [path.join(specsDir, 'fixes', activeId), path.join(specsDir, activeId)].find((d) =>
+          fs.existsSync(path.join(d, 'fix.md')),
+        ) || path.join(specsDir, 'fixes', activeId);
       const fixMd = path.join(fixDir, 'fix.md');
       if (!fs.existsSync(fixMd)) {
         process.stderr.write(
@@ -132,7 +140,10 @@ process.stdin.on('end', () => {
     }
 
     // GATE 4 - Spec + plan existen?
-    const specDir = path.join(specsDir, activeId);
+    const specDir =
+      [path.join(specsDir, 'specs', activeId), path.join(specsDir, activeId)].find((d) =>
+        fs.existsSync(path.join(d, 'spec.md')),
+      ) || path.join(specsDir, 'specs', activeId);
     const specMd = path.join(specDir, 'spec.md');
     const planMd = path.join(specDir, 'plan.md');
 

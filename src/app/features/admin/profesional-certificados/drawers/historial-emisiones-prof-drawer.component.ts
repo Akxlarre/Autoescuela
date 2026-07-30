@@ -86,6 +86,7 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
                 <button
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() === 0"
+                  data-llm-action="previous-page"
                   (click)="prevPage()"
                 >
                   <app-icon name="chevron-left" [size]="16" />
@@ -96,6 +97,7 @@ import { ACCION_LABELS_PROF } from '@core/models/ui/certificacion-profesional.mo
                 <button
                   class="p-1.5 rounded-lg transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed text-text-secondary"
                   [disabled]="currentPage() >= totalPages() - 1"
+                  data-llm-action="next-page"
                   (click)="nextPage()"
                 >
                   <app-icon name="chevron-right" [size]="16" />

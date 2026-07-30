@@ -21,7 +21,7 @@ import type {
 } from '@core/models/ui/enrollment-personal-data.model';
 
 import type { PublicEnrollmentContext } from '@core/models/ui/public-enrollment-context.model';
-import { validateRut, formatRut } from '@core/utils/rut.utils';
+import { validateRut, formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { getAgeStatus, isInvalidDate } from '@core/utils/age.utils';
 import { validateName, stripInvalidNameChars } from '@core/utils/name.utils';
@@ -126,7 +126,7 @@ const GENDER_OPTIONS: { value: Exclude<Gender, ''>; label: string }[] = [
             (change)="onRutInput($any($event.target).value)"
             (keydown)="onRutKeydown($event)"
             (paste)="onRutPaste($event)"
-            (blur)="onRutInput($any($event.target).value); markDirty('rut')"
+            (blur)="onRutBlur()"
             autocomplete="off"
             aria-required="true"
             [attr.aria-invalid]="isDirty('rut') && !rutValid()"
@@ -593,6 +593,12 @@ export class PublicPersonalDataComponent {
   // RUT handlers
   protected onRutInput(raw: string): void {
     this.patch('rut', formatRut(raw));
+  }
+
+  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  protected onRutBlur(): void {
+    this.patch('rut', autocompleteRutDv(this.formData().rut));
+    this.markDirty('rut');
   }
 
   protected onRutKeydown(event: KeyboardEvent): void {

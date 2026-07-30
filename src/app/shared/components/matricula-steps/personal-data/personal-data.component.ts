@@ -16,11 +16,14 @@ import type {
   CourseCategory,
   CourseOption,
   AgeAlertStatus,
+  LicenseValidation,
 } from '@core/models/ui/enrollment-personal-data.model';
 import type { BranchOption } from '@core/models/ui/branch.model';
-import { formatRut, validateRut } from '@core/utils/rut.utils';
+import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
 import { validateEmail } from '@core/utils/email.utils';
 import { calcAge, getAgeStatus } from '@core/utils/age.utils';
+import { calcLicenseSeniority } from '@core/utils/license-seniority.utils';
+import { todayIso } from '@core/utils/date.utils';
 import { EmailInputComponent } from '@shared/components/email-input/email-input.component';
 import { DateInputComponent } from '@shared/components/date-input/date-input.component';
 
@@ -29,6 +32,20 @@ interface CategoryMeta {
   label: string;
   description: string;
   icon: string;
+}
+
+/**
+ * Advertencia temprana (no bloqueante) de antigüedad de licencia clase B, estimada
+ * contra la fecha de HOY — solo para dar feedback inmediato en este paso. El chequeo
+ * definitivo (contra la fecha de inicio de la promoción elegida) ocurre en el Step 2
+ * (fix-089).
+ */
+export function earlyLicenseWarningFn(
+  category: CourseCategory | null,
+  licenseDate: string | null,
+): LicenseValidation | null {
+  if (category !== 'professional') return null;
+  return calcLicenseSeniority(licenseDate, todayIso());
 }
 
 @Component({
@@ -51,6 +68,13 @@ export class PersonalDataComponent {
   readonly genderOptions = [
     { label: 'Masculino', value: 'M' },
     { label: 'Femenino', value: 'F' },
+  ];
+  readonly currentLicenseOptions = [
+    { label: 'Clase B', value: 'B' },
+    { label: 'A2', value: 'A2' },
+    { label: 'A3', value: 'A3' },
+    { label: 'A4', value: 'A4' },
+    { label: 'A5', value: 'A5' },
   ];
 
   data = input.required<EnrollmentPersonalData>();
@@ -107,6 +131,11 @@ export class PersonalDataComponent {
 
   readonly ageStatus = computed(
     (): AgeAlertStatus => getAgeStatus(this.data().birthDate, this.data().courseType),
+  );
+
+  /** Advertencia temprana de antigüedad de licencia B, estimada a hoy (fix-089). */
+  readonly earlyLicenseWarning = computed<LicenseValidation | null>(() =>
+    earlyLicenseWarningFn(this.selectedCategory(), this.data().licenseDate),
   );
 
   readonly courseMeta = computed<CourseOption | null>(
@@ -180,10 +209,17 @@ export class PersonalDataComponent {
     }
   }
 
-  /** Al perder el foco cancela el timer (ya se emitirá aquí si el RUT es válido). */
+  /**
+   * Al perder el foco: autocompleta el DV (módulo 11, ASG-047) y cancela el timer
+   * (ya se emitirá aquí si el RUT resultante es válido).
+   */
   onRutBlur(): void {
     clearTimeout(this._rutPrefillTimer);
-    if (this.rutValid()) this.rutBlur.emit(this.data().rut);
+    const corrected = autocompleteRutDv(this.data().rut);
+    if (corrected !== this.data().rut) {
+      this.dataChange.emit({ ...this.data(), rut: corrected });
+    }
+    if (validateRut(corrected)) this.rutBlur.emit(corrected);
   }
 
   emitField<K extends keyof EnrollmentPersonalData>(

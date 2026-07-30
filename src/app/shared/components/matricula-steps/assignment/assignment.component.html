@@ -247,6 +247,31 @@
             </div>
           }
 
+          <!-- Advertencia: licencia clase B con menos de 2 años a la fecha de inicio (fix-089) -->
+          @if (licenseWarning(); as warning) {
+            @if (!warning.valid) {
+              <div
+                class="p-4 rounded-xl border-2 border-warning-border bg-warning-subtle flex gap-3 items-start"
+                data-llm-description="license seniority warning banner — non-blocking"
+              >
+                <app-icon
+                  name="alert-triangle"
+                  [size]="20"
+                  class="text-warning mt-0.5 shrink-0"
+                  [ariaHidden]="true"
+                />
+                <div>
+                  <p class="text-sm font-bold text-warning">
+                    Licencia clase B con menos de 2 años de antigüedad
+                  </p>
+                  <p class="text-xs text-text-secondary mt-1">
+                    {{ warning.message }} La secretaría puede matricular igual bajo su criterio.
+                  </p>
+                </div>
+              </div>
+            }
+          }
+
           <div class="p-4 bg-info-subtle border border-info-border rounded-xl flex gap-3">
             <app-icon name="users" [size]="20" class="text-info mt-0.5 shrink-0" />
             <div>

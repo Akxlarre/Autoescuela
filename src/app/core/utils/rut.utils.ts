@@ -43,15 +43,8 @@ export function normalizeRutForStorage(rut: string): string {
   return formatRut(rut);
 }
 
-/** Validates a Chilean RUT using the modulo-11 algorithm. */
-export function validateRut(rut: string): boolean {
-  const cleaned = cleanRut(rut);
-  if (cleaned.length < 2) return false;
-
-  const body = cleaned.slice(0, -1);
-  if (!/^\d+$/.test(body)) return false;
-
-  const dv = cleaned.slice(-1).toUpperCase();
+/** Calcula el dígito verificador (módulo 11) para el cuerpo numérico de un RUT. */
+export function calculateRutDv(body: string): string {
   let sum = 0;
   let multiplier = 2;
 
@@ -61,6 +54,33 @@ export function validateRut(rut: string): boolean {
   }
 
   const rem = sum % 11;
-  const expected = rem === 0 ? '0' : rem === 1 ? 'K' : String(11 - rem);
-  return dv === expected;
+  return rem === 0 ? '0' : rem === 1 ? 'K' : String(11 - rem);
+}
+
+/** Validates a Chilean RUT using the modulo-11 algorithm. */
+export function validateRut(rut: string): boolean {
+  const cleaned = cleanRut(rut);
+  if (cleaned.length < 2) return false;
+
+  const body = cleaned.slice(0, -1);
+  if (!/^\d+$/.test(body)) return false;
+
+  const dv = cleaned.slice(-1).toUpperCase();
+  return dv === calculateRutDv(body);
+}
+
+/**
+ * Recalcula y reemplaza el dígito verificador de un RUT ya tecleado (formateado o no),
+ * usando el mismo criterio que `validateRut`: el último carácter es el DV, todo lo anterior
+ * es el cuerpo. Si no hay suficientes caracteres o el cuerpo no es numérico, devuelve el
+ * input sin modificar (todavía no hay nada que calcular).
+ */
+export function autocompleteRutDv(rut: string): string {
+  const cleaned = cleanRut(rut);
+  if (cleaned.length < 2) return rut;
+
+  const body = cleaned.slice(0, -1);
+  if (!/^\d+$/.test(body)) return rut;
+
+  return formatRut(`${body}${calculateRutDv(body)}`);
 }

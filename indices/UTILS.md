@@ -32,11 +32,13 @@
 | `src/app/core/utils/image.utils.ts` | `normalizePhoto` |
 | `src/app/core/utils/kpi-display-value.util.ts` | `kpiDisplayValue` |
 | `src/app/core/utils/layout-tier.utils.ts` | `widthToTier`, `sliceByBudget`, `LoadMoreState`, `visibleWithLoadMore` |
+| `src/app/core/utils/license-seniority.utils.ts` | `calcLicenseSeniority` |
 | `src/app/core/utils/license-suffix.utils.ts` | `licenseClassToSuffix` |
 | `src/app/core/utils/live-class-action.utils.ts` | `ClasePracticaActionRow`, `LiveClassActionPlan`, `resolveLiveClassActionPlan` |
 | `src/app/core/utils/name.utils.ts` | `stripInvalidNameChars`, `validateName` |
 | `src/app/core/utils/notification.utils.ts` | `mapReferenceToNotificationType`, `mapNotificationDtoToUi`, `groupNotifications` |
 | `src/app/core/utils/odometer.utils.ts` | `OdometerFontTier`, `odometerDigitCount`, `odometerFontTier` |
+| `src/app/core/utils/payment-concept.utils.ts` | `mapConcepto` |
 | `src/app/core/utils/percentage.utils.ts` | `roundPercentagesTo100` |
 | `src/app/core/utils/phone.utils.ts` | `DialCode`, `DIAL_CODES`, `validatePhone`, `normalizePhone` |
 | `src/app/core/utils/professional-access.utils.ts` | `BranchProfessionalFlag`, `canAccessProfessional` |
@@ -44,7 +46,7 @@
 | `src/app/core/utils/professional-specializations.ts` | `SPEC_COLORS`, `SPEC_LABELS`, `SPECIALIZATION_OPTIONS`, `getSpecColor`, `getSpecLabel` |
 | `src/app/core/utils/reenrollment.utils.ts` | `EnrollmentStatus`, `ReenrollmentVerdict`, `BLOCKING_STATUSES`, `HISTORICAL_STATUSES`, `evaluateReenrollment` |
 | `src/app/core/utils/reportes-contables.utils.ts` | `PaymentRow`, `ExpenseRow`, `SingularSaleReportDto`, `mapSingularSaleToPaymentRow`, `filterPaymentsByBranch`, `computeKpis`, `computeIngresosCategoria`, `computeGastosCategoria`, `computeEvolucionMensual`, `computeDetalleDiario`, `buildReporte` |
-| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `validateRut` |
+| `src/app/core/utils/rut.utils.ts` | `cleanRut`, `formatRut`, `normalizeRutForStorage`, `calculateRutDv`, `validateRut`, `autocompleteRutDv` |
 | `src/app/core/utils/schedule-status.utils.ts` | `SessionStatus`, `StatusVisual`, `getStatusVisual`, `getStatusLabel`, `getDotStyle` |
 | `src/app/core/utils/search-filter.utils.ts` | `normalizeSearchText`, `matchesSearch`, `filterBySearch` |
 | `src/app/core/utils/search-intents.ts` | `INTENT_ENTRIES`, `getActionResults` |
@@ -55,5 +57,6 @@
 | `src/app/core/utils/subnav-tier.utils.ts` | `SubnavTier`, `pickSubnavTier` |
 | `src/app/core/utils/task.utils.ts` | `canSendTo`, `isOverdue`, `canEditTask`, `canDeleteTask`, `canChangeStatus`, `formatTaskAge`, `mapTaskDtoToRow` |
 | `src/app/core/utils/theory-cycle.ts` | `cycleStartMonday`, `cycleEnd`, `cycleClassDates`, `formatCycleLabel` |
+| `src/app/core/utils/vehicle-status.utils.ts` | `resolveVehicleStatus` |
 
 <!-- AUTO-GENERATED:END -->

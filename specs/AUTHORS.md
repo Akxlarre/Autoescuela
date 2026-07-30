@@ -23,7 +23,7 @@ Antes de que alguien escriba su propia spec/fix, el trabajo se designa vía el t
 `specs/ASSIGNMENTS.md` (capa previa a un track, no reemplaza nada de lo de abajo):
 
 ```
-/assign-new "título"    → lo agrega a specs/ASSIGNMENTS.md, asignado a un código de autor (o "cualquiera")
+/assign-new "título"    → crea ASG-<tu_codigo>-NNN y lo agrega a specs/ASSIGNMENTS.md, asignado a alguien (o "cualquiera")
 /assign-list             → cada quien ve qué le toca a él
 /assign-claim <ASG-ID>   → genera SU spec/fix/hotfix (numerado con su propio código, según las reglas de abajo)
 ```
@@ -32,11 +32,18 @@ Ver `specs/ASSIGNMENTS.md` para el tablero actual y las convenciones completas.
 
 ## Formato de ID (con autor)
 
-| Track      | Formato          | Ejemplo                        |
-| ---------- | ---------------- | ------------------------------- |
-| **Spec**   | `NNNN-X-slug`    | `0004-m-flujo-pago`             |
-| **Fix**    | `fix-NNN-X-slug` | `fix-052-m-select-default`      |
-| **Hotfix** | `hotfix-NNN-X-slug` | `hotfix-003-b-crash-login`   |
+| Track          | Formato             | Ejemplo                      |
+| -------------- | ------------------- | ---------------------------- |
+| **Spec**       | `NNNN-X-slug`       | `0004-m-flujo-pago`          |
+| **Fix**        | `fix-NNN-X-slug`    | `fix-052-m-select-default`   |
+| **Hotfix**     | `hotfix-NNN-X-slug` | `hotfix-003-b-crash-login`   |
+| **Asignación** | `ASG-X-NNN-slug`    | `ASG-b-052-rut-dv-automatico` |
+
+> ⚠️ Ojo con la posición del código de autor: en los tres tracks va **después** del número
+> (`fix-052-m-…`), en las Asignaciones va **antes** (`ASG-b-052-…`). No es un error de tipeo —
+> las Asignaciones adoptaron el contador por autor después (2026-07-29) y se eligió esa forma
+> porque agrupa visualmente por persona al listar el directorio. `npm run assignments:audit`
+> valida ambos formatos.
 
 `X` = código de autor (tabla arriba, una sola letra). `NNN` / `NNNN` es el contador
 **propio de ese autor en ese track** — no es un contador global del repo.
@@ -52,7 +59,7 @@ Antes de crear un track nuevo, Claude debe:
 1. Leer el código de autor desde `.claude/author.local.json` (gitignored, uno por
    máquina/dev). Si no existe, preguntarle al humano su código y crearlo a partir de
    `.claude/author.local.json.example`.
-2. Listar las carpetas existentes bajo `specs/` (y `specs/fixes/hotfixes/` para
+2. Listar las carpetas existentes bajo `specs/` (y `specs/hotfixes/` para
    hotfixes) y filtrar solo las que correspondan a ese autor: el segmento de autor
    coincide con el código (ej. para `m` → `fix-NNN-m-*`, `NNNN-m-*`).
 3. Tomar el número más alto encontrado para ESE autor en ESE track y sumarle 1.

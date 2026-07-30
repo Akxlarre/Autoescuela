@@ -32,6 +32,17 @@ allowed-tools: Read, Write, Bash, Glob
 5. Limpiar `specs/.active`:
    - Escribir contenido vacío (una línea en blanco)
 
+5.5. Si `fix.md` tiene `refs: ASG-X-NNN` (viene de una Asignación reclamada):
+   - Correr `npm run assignments:sync` para que `specs/ASSIGNMENTS.md` refleje el cierre
+     en la tabla "Completadas" (se deriva del `status: done` que acabas de escribir, no
+     hace falta editar la tabla a mano).
+
+5.6. Si el "Root Cause" de este fix reveló un gotcha de **dominio/esquema/RLS/regla de
+   negocio no obvia** (no visual — eso es `indices/ANTI-PATTERNS.md`) que alguien sin
+   contexto de este fix volvería a pisar, agrega una entrada `DG-NNN` a
+   `indices/DOMAIN-GOTCHAS.md` (ver convención al final de ese archivo). Si el fix fue
+   puramente visual/UI o no dejó ningún hallazgo reutilizable, sáltalo.
+
 6. Imprimir confirmación:
    ```
    ✅ Fix <id> cerrado.

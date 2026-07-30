@@ -80,6 +80,9 @@ export interface PromotionOption {
   enrolledCount: number;
   maxCapacity: number;
   status: PromotionStatus;
+  /** Fecha de inicio de la promoción (professional_promotions.start_date), para validar
+   *  antigüedad de licencia clase B (fix-089). */
+  startDate: string | null;
 }
 
 export interface PromotionGroup {
@@ -116,5 +119,8 @@ export interface EnrollmentAssignmentData {
   convalidatesSimultaneously: boolean;
   /** Licencia que se convalida: 'A4' (cuando madre=A2) o 'A3' (cuando madre=A5). */
   convalidatedLicense: 'A4' | 'A3' | null;
+  /** Fecha de obtención de la licencia clase B del alumno (Step 1), para validar
+   *  la antigüedad de 2 años contra la fecha de inicio de la promoción (fix-089). */
+  licenseObtainedDate: string | null;
   // Singular has no extra fields (informational only)
 }

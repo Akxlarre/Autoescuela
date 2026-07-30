@@ -849,7 +849,6 @@ export class AlumnosListContentComponent implements AfterViewInit {
   ];
   readonly estados = [
     { label: 'Activo', value: 'Activo' },
-    { label: 'Finalizado', value: 'Finalizado' },
     { label: 'Retirado', value: 'Retirado' },
     { label: 'Pre-inscrito', value: 'Pre-inscrito' },
     { label: 'Pendiente Pago', value: 'Pendiente Pago' },

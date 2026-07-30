@@ -238,6 +238,27 @@ describe('AdminAlumnosFacade', () => {
       expect(ids).not.toContain('50');
       expect(ids).toContain('51');
     });
+
+    it('excluye alumnos Finalizados (enrollment completed) — ya son Ex-Alumnos (fix-084)', async () => {
+      mockStudents([
+        makeStudent({
+          id: 60,
+          users: makeUser({ rut: '60-0' }),
+          enrollments: [makeEnrollment({ status: 'completed', license_group: 'class_b' })],
+        }),
+        makeStudent({
+          id: 61,
+          users: makeUser({ rut: '61-1' }),
+          enrollments: [makeEnrollment({ status: 'active', license_group: 'class_b' })],
+        }),
+      ]);
+
+      await facade.initialize();
+
+      const ids = facade.alumnos().map((a) => a.id);
+      expect(ids).not.toContain('60');
+      expect(ids).toContain('61');
+    });
   });
 
   // ─── fix-027: aislamiento por sede de la secretaria ────────────────────────

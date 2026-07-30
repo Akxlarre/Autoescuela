@@ -603,7 +603,8 @@ import type {
                             [style.color]="getTrendColor(kpi.trend)"
                           >
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
-                            }}{{ kpi.trendLabel ?? '' }}
+                            }}{{ kpi.trendSuffix ?? ''
+                            }}{{ kpi.trendLabel ? ' ' + kpi.trendLabel : '' }}
                           </span>
                         }
                         @if (kpi.subValue) {
@@ -642,7 +643,8 @@ import type {
                             [style.color]="getTrendColor(kpi.trend)"
                           >
                             {{ kpi.trend > 0 ? '▲' : '▼' }} {{ getTrendDisplay(kpi.trend)
-                            }}{{ kpi.trendLabel ?? '' }}
+                            }}{{ kpi.trendSuffix ?? ''
+                            }}{{ kpi.trendLabel ? ' ' + kpi.trendLabel : '' }}
                           </span>
                         }
                         @if (kpi.subValue) {

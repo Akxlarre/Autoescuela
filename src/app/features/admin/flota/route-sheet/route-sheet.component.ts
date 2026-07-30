@@ -35,12 +35,14 @@ const ROUTE_HOURS = Array.from({ length: 11 }, (_, i) => {
     <div class="no-print fixed top-4 right-4 z-50 flex gap-2">
       <button
         class="px-4 py-2 bg-base border border-border-subtle rounded-lg text-sm font-medium text-text-primary hover:bg-elevated transition-colors shadow-sm"
+        data-llm-action="print-route-sheet"
         onclick="window.print()"
       >
         Imprimir
       </button>
       <button
         class="px-4 py-2 bg-base border border-border-subtle rounded-lg text-sm font-medium text-text-muted hover:bg-elevated transition-colors shadow-sm"
+        data-llm-action="close-route-sheet"
         onclick="window.close()"
       >
         Cerrar

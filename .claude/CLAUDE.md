@@ -38,9 +38,9 @@ Detalle completo: @docs/HOOKS-SYSTEM.md
 
 | Track | Cuándo | ID format | Contrato |
 |-------|--------|-----------|---------|
-| **Spec** | Feature nueva | `NNNN-X-slug` | `specs/<id>/spec.md` con ACs |
-| **Fix** | Bug con ACs afectados | `fix-NNN-X-slug` | `specs/<id>/fix.md` |
-| **Hotfix** | Fix urgente simple | `hotfix-NNN-X-slug` | Auto-cerrado por hook |
+| **Spec** | Feature nueva | `NNNN-X-slug` | `specs/specs/<id>/spec.md` con ACs |
+| **Fix** | Bug con ACs afectados | `fix-NNN-X-slug` | `specs/fixes/<id>/fix.md` |
+| **Hotfix** | Fix urgente simple | `hotfix-NNN-X-slug` | `specs/hotfixes/<id>/hotfix.md` — auto-cerrado por hook |
 
 `X` = código de autor de una letra (ver `specs/AUTHORS.md`). `specs/` se commitea al
 repo — cada autor numera de forma independiente por track (el contador de Benjamín no
@@ -49,12 +49,12 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 
 ### Slash commands globales
 
-- `/spec-new` → crea `specs/<id>/spec.md`
+- `/spec-new` → crea `specs/specs/<id>/spec.md`
 - `/spec-activate <id>` → activa el track (escribe en `specs/.active`)
-- `/spec-plan` → genera `specs/<id>/plan.md` desde la spec
+- `/spec-plan` → genera `specs/specs/<id>/plan.md` desde la spec
 - `/spec-tasks` → desglosa el plan en tareas atómicas
 - `/spec-verify` → muestra ACs abiertos vs cumplidos
-- `/fix-new <desc>` → crea track fix con `fix.md`
+- `/fix-new <desc>` → crea `specs/fixes/<id>/fix.md`
 - `/fix-close` → cierra el track tras verificar test de regresión
 
 ### Flujo Feature nueva
@@ -80,7 +80,7 @@ obtener tu código y calcular el siguiente número correcto para TU autor en ESE
 ## Flujo obligatorio y Estado Cero (6 pasos)
 
 0. **CONTEXT SEEDING (Día 0)** — Si es un proyecto/módulo nuevo, DEBES establecer el Lenguaje Ubicuo (`indices/DOMAIN_DICTIONARY.md`) y el modelo de datos (`indices/DATABASE.md`) ANTES de codificar. Si te falta contexto, pídeselo al humano (el Context Guard te obligará a hacerlo si lo olvidas).
-1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. **El Discovery Gate te bloqueará si no lo haces.**
+1. **DESCUBRIR** — Lee `indices/COMPONENTS.md`, `indices/SERVICES.md`, `indices/DIRECTIVES.md`, `indices/STYLES.md` antes de escribir código. Si vas a tocar lógica de negocio, RLS, o una query nueva, lee también `indices/DOMAIN-GOTCHAS.md`. **El Discovery Gate te bloqueará si no lo haces.**
 2. **PLANIFICAR** — Define qué vas a tocar sin violar las reglas de arquitectura.
 3. **EJECUTAR** — Escribe el código. Reutiliza siempre lo existente primero. Los hooks validarán cada escritura en tiempo real. **Si hay lógica nueva, escribe el `.spec.ts` primero (TDD).**
 4. **VALIDAR** — Corre `npm run lint:arch` para auditoría arquitectónica y `npm run test:ci` para tests. **Para cambios de UI, ejecutar también `/verify` (Playwright) para confirmar renderizado real en el navegador.**

@@ -105,6 +105,7 @@ type UploadMode = 'student' | 'school';
                   rows="2"
                   placeholder="Descripción opcional..."
                   class="w-full rounded-lg px-3 py-2 text-sm resize-none border bg-subtle border-border-subtle text-text-primary outline-none"
+                  data-llm-description="input for the school document description"
                 ></textarea>
               </div>
             }
@@ -120,6 +121,7 @@ type UploadMode = 'student' | 'school';
               (dragover)="onDragOver($event)"
               (dragleave)="isDragOver.set(false)"
               (drop)="onDrop($event)"
+              data-llm-action="select-document-file"
               (click)="fileInput.click()"
             >
               <div class="w-12 h-12 rounded-xl flex items-center justify-center bg-surface">
@@ -147,6 +149,7 @@ type UploadMode = 'student' | 'school';
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.webp"
               class="hidden"
+              data-llm-description="hidden file input for the document to upload"
               (change)="onFileChange($event)"
             />
 
@@ -168,12 +171,20 @@ type UploadMode = 'student' | 'school';
       </app-drawer-content-loader>
 
       <ng-container ngProjectAs="[drawer-form-footer]">
-        <button type="button" class="btn-secondary" (click)="onClose()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-secondary"
+          data-llm-action="cancel-upload-document"
+          (click)="onClose()"
+        >
+          Cancelar
+        </button>
         <app-async-btn
           label="Subir documento"
           icon="upload"
           [loading]="isSubmitting()"
           [disabled]="!canSubmit()"
+          llmAction="upload-document"
           (click)="onSubmit()"
         ></app-async-btn>
       </ng-container>

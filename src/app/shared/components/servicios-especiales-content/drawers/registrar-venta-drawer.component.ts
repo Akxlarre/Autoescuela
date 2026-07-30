@@ -8,6 +8,7 @@ import { ServiciosEspecialesFacade } from '@core/facades/servicios-especiales.fa
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.component';
 import { StableWidthDirective } from '@core/directives/stable-width.directive';
+import { formatRut, autocompleteRutDv } from '@core/utils/rut.utils';
 
 /**
  * RegistrarVentaDrawerComponent — Formulario de venta en side-drawer (RF-037).
@@ -74,6 +75,9 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
               id="v-rut"
               type="text"
               formControlName="rut"
+              (input)="onRutInput($event)"
+              (blur)="onRutBlur()"
+              maxlength="12"
               placeholder="12.345.678-9"
               class="w-full h-11 px-3 text-sm rounded-xl border border-border-default bg-surface text-text-primary focus:ring-2 focus:outline-none transition-all"
             />
@@ -219,6 +223,19 @@ export class RegistrarVentaDrawerComponent {
   private esPsicotecnicoOInforme(nombre: string): boolean {
     const n = nombre.toLowerCase();
     return n.includes('psicot') || n.includes('informe');
+  }
+
+  protected onRutInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const formatted = formatRut(input.value);
+    this.ventaForm.get('rut')!.setValue(formatted, { emitEvent: false });
+    input.value = formatted;
+  }
+
+  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  protected onRutBlur(): void {
+    const control = this.ventaForm.get('rut')!;
+    control.setValue(autocompleteRutDv(control.value ?? ''));
   }
 
   protected async submitVenta(): Promise<void> {

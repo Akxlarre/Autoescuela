@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ExAlumnosProfesionalContentComponent } from '@shared/components/ex-alumnos-profesional-content/ex-alumnos-profesional-content.component';
 import { ExAlumnosFacade } from '@core/facades/ex-alumnos.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { ConfirmModalService } from '@core/services/ui/confirm-modal.service';
+import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
+import { SecretariaMatriculaComponent } from '@features/secretaria/matricula/secretaria-matricula.component';
 import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
 
 @Component({
@@ -16,6 +18,7 @@ import type { EgresadoTableRow } from '@core/models/ui/egresado-table.model';
       [egresados]="facade.egresadosProfesionalList()"
       [isLoading]="facade.isLoading()"
       backRoute="/app/secretaria/profesional/alumnos"
+      basePath="/app/secretaria"
       (reEnroll)="reEnroll($event)"
     />
   `,
@@ -24,7 +27,9 @@ export class SecretariaExAlumnosProfesionalComponent implements OnInit, OnDestro
   protected readonly facade = inject(ExAlumnosFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly confirmModal = inject(ConfirmModalService);
+  private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   /** Re-matricula a un egresado profesional: muestra confirmación y abre el wizard con datos precargados. */
   protected async reEnroll(egresado: EgresadoTableRow): Promise<void> {
@@ -36,9 +41,15 @@ export class SecretariaExAlumnosProfesionalComponent implements OnInit, OnDestro
       cancelLabel: 'Cancelar',
     });
     if (!confirmed) return;
-    void this.router.navigate(['/app/secretaria/matricula'], {
+    if (egresado.branchId !== null) {
+      this.branchFacade.selectBranch(egresado.branchId);
+    }
+    void this.router.navigate([], {
+      relativeTo: this.route,
       queryParams: { rut: egresado.rut },
+      queryParamsHandling: 'merge',
     });
+    this.layoutDrawer.open(SecretariaMatriculaComponent, 'Nueva Matrícula', 'plus');
   }
 
   ngOnInit(): void {

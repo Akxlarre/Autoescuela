@@ -28,7 +28,7 @@ Un hotfix aplica cuando **TODAS** estas condiciones se cumplen:
 - Sin `Test de Regresión` obligatorio
 - Sin `Root Cause` detallado
 - **Auto-close**: el track se cierra solo al terminar la sesión
-- Vive en `specs/fixes/hotfixes/` (separado, con sistema de aprendizaje futuro)
+- Vive en `specs/hotfixes/` (separado, con sistema de aprendizaje futuro)
 
 ## Procedimiento
 
@@ -37,17 +37,17 @@ Un hotfix aplica cuando **TODAS** estas condiciones se cumplen:
    - Si tiene contenido → es el título del hotfix
 
 2. Determinar el próximo ID:
-   - Listar `specs/fixes/hotfixes/hotfix-*/` con `Glob` o `Bash`
+   - Listar `specs/hotfixes/hotfix-*/` con `Glob` o `Bash`
    - Tomar el número más alto existente + 1 (formato `hotfix-NNN`, 3 dígitos)
    - Si no hay ninguno, empezar en `hotfix-001`
-   - Si `specs/fixes/hotfixes/` no existe, crearla (mkdir -p o simplemente crear el archivo)
+   - Si `specs/hotfixes/` no existe, crearla (mkdir -p o simplemente crear el archivo)
 
 3. Construir el slug:
    - Título → lowercase → reemplazar espacios/acentos/caracteres especiales por guiones
    - Ejemplo: "TS2345 handlers fileSelected usan Event" → `ts2345-handlers-fileselected-usan-event`
    - ID completo: `hotfix-NNN-<slug>` (ej: `hotfix-001-ts2345-handlers-fileselected-usan-event`)
 
-4. Crear `specs/fixes/hotfixes/<id>/hotfix.md`:
+4. Crear `specs/hotfixes/<id>/hotfix.md`:
    - Usar el template de abajo, rellenando título e ID
    - Completar la sección "Cambio" con el archivo y descripción según `$ARGUMENTS`
 
@@ -55,7 +55,7 @@ Un hotfix aplica cuando **TODAS** estas condiciones se cumplen:
 
 6. Imprimir confirmación:
    ```
-   ✅ Hotfix track creado: specs/fixes/hotfixes/<id>/hotfix.md
+   ✅ Hotfix track creado: specs/hotfixes/<id>/hotfix.md
    ✅ specs/.active actualizado: <id>
 
    Este track se cierra automáticamente al terminar la sesión.
@@ -67,6 +67,7 @@ Un hotfix aplica cuando **TODAS** estas condiciones se cumplen:
 ```markdown
 # Hotfix: {TÍTULO}
 > id: {ID}
+> refs: (ASG-X-NNN si viene de una Asignación, o "—" si es independiente)
 > status: in_progress
 > created: {FECHA_HOY}
 

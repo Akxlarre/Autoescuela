@@ -105,14 +105,23 @@ export interface LoginFormData {
         Así el campo contraseña (#passwordWrapRef) puede colapsar a height:0
         sin dejar huecos de gap residuales en el flex container.
       -->
-      <form #loginForm="ngForm" class="flex flex-col" (ngSubmit)="handleSubmit()" data-llm-form="auth-form">
+      <form
+        #loginForm="ngForm"
+        class="flex flex-col"
+        (ngSubmit)="handleSubmit()"
+        data-llm-form="auth-form"
+      >
         <!-- Email -->
         <div class="flex flex-col gap-2 pb-4">
           <label for="lc-email" class="text-sm font-medium text-text-secondary">
             Correo electrónico
           </label>
           <div class="relative">
-            <app-icon name="mail" [size]="18" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+            <app-icon
+              name="mail"
+              [size]="18"
+              class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+            />
             <input
               id="lc-email"
               type="email"
@@ -132,13 +141,22 @@ export interface LoginFormData {
           Password — siempre en DOM. GSAP: height 0↔auto según modo.
           Inner div con pb-4 para espaciar al botón submit cuando está visible.
         -->
-        <div #passwordWrapRef class="overflow-hidden">
+        <div
+          #passwordWrapRef
+          class="overflow-hidden"
+          [attr.inert]="mode() === 'reset' ? '' : null"
+          [attr.aria-hidden]="mode() === 'reset' ? 'true' : null"
+        >
           <div class="flex flex-col gap-2 pb-4">
             <label for="lc-password" class="text-sm font-medium text-text-secondary">
               Contraseña
             </label>
             <div class="relative">
-              <app-icon name="lock" [size]="18" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted" />
+              <app-icon
+                name="lock"
+                [size]="18"
+                class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted"
+              />
               <input
                 id="lc-password"
                 [type]="showPassword() ? 'text' : 'password'"
@@ -162,18 +180,21 @@ export interface LoginFormData {
               }
             </div>
           </div>
-          
+
           <!-- Recordarme Checkbox -->
           @if (mode() !== 'reset') {
             <div class="flex items-center gap-2 pb-5 ml-0.5">
-              <input 
-                id="lc-remember" 
-                type="checkbox" 
-                [(ngModel)]="rememberMe" 
+              <input
+                id="lc-remember"
+                type="checkbox"
+                [(ngModel)]="rememberMe"
                 name="rememberMe"
                 class="h-4 w-4 cursor-pointer appearance-auto accent-brand focus:ring-brand"
               />
-              <label for="lc-remember" class="cursor-pointer text-sm font-medium text-text-secondary select-none">
+              <label
+                for="lc-remember"
+                class="cursor-pointer text-sm font-medium text-text-secondary select-none"
+              >
                 Mantener sesión iniciada
               </label>
             </div>
@@ -279,6 +300,10 @@ export class LoginCardComponent {
       const el = this.passwordWrapRef()?.nativeElement;
       if (!el) return;
 
+      if (isReset) {
+        this.password = '';
+      }
+
       gsap.to(
         el,
         isReset
@@ -329,10 +354,10 @@ export class LoginCardComponent {
   }
 
   handleSubmit(): void {
-    this.formSubmit.emit({ 
-      email: this.email, 
+    this.formSubmit.emit({
+      email: this.email,
       password: this.password,
-      rememberMe: this.rememberMe 
+      rememberMe: this.rememberMe,
     });
   }
 }

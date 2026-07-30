@@ -578,9 +578,7 @@ function formatCLP(value: number): string {
                       }
                     </td>
                     <td class="text-right tabular-nums">
-                      <span class="font-bold text-brand">{{
-                        formatCLP(totales().total)
-                      }}</span>
+                      <span class="font-bold text-brand">{{ formatCLP(totales().total) }}</span>
                     </td>
                     <td></td>
                   </tr>
@@ -820,7 +818,7 @@ export class LiquidacionesContentComponent implements AfterViewInit {
         color: 'success',
         icon: 'check-circle',
         trend: pct,
-        trendLabel: '%',
+        trendSuffix: '%',
       },
     ];
   });

@@ -14,9 +14,11 @@ interface UserRow {
   paternal_last_name: string;
   maternal_last_name: string | null;
   rut: string | null;
+  email: string | null;
 }
 
 interface StudentRow {
+  id: number;
   users: UserRow | null;
 }
 
@@ -26,11 +28,13 @@ interface CourseRow {
 }
 
 interface BranchRow {
+  id: number;
   name: string;
 }
 
 interface EgresadoRow {
   id: number;
+  number: string | null;
   pending_balance: number | null;
   updated_at: string | null;
   license_group: string | null;
@@ -137,17 +141,20 @@ export class ExAlumnosFacade {
       .select(
         `
         id,
+        number,
         pending_balance,
         updated_at,
         license_group,
         courses!inner ( name, code ),
-        branches ( name ),
+        branches ( id, name ),
         students!inner (
+          id,
           users!inner (
             first_names,
             paternal_last_name,
             maternal_last_name,
-            rut
+            rut,
+            email
           )
         )
       `,
@@ -179,18 +186,24 @@ export class ExAlumnosFacade {
       : '—';
 
     const rut: string = u?.rut ?? '—';
+    const correo: string = u?.email ?? '—';
     const licencia: string = this.deriveLicencia(r.courses?.code ?? '', r.courses?.name ?? '');
     const anio: number | null = r.updated_at ? new Date(r.updated_at).getFullYear() : null;
     const sede: string = r.branches?.name ?? '—';
+    const branchId: number | null = r.branches?.id ?? null;
 
     return {
       id: r.id,
+      studentId: String(r.students?.id ?? ''),
       nombre,
       rut,
+      correo,
+      nroExpediente: r.number,
       licencia,
       licenseGroup: r.license_group === 'professional' ? 'professional' : 'class_b',
       anio,
       sede,
+      branchId,
       nroCertificado: null,
       saldoPendiente: r.pending_balance ?? 0,
     };

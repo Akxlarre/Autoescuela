@@ -3,6 +3,7 @@ import { SupabaseService } from '@core/services/infrastructure/supabase.service'
 import { AuthFacade } from '@core/facades/auth.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { resolveBranchScope } from '@core/utils/branch-scope.utils';
+import { resolveVehicleStatus } from '@core/utils/vehicle-status.utils';
 import type {
   VehicleTableRow,
   VehicleDocSummary,
@@ -47,11 +48,12 @@ export class FlotaFacade {
 
   readonly kpis = computed((): FlotaKpis => {
     const vs = this._vehicles();
+    const statuses = vs.map((v) => resolveVehicleStatus(v.status));
     return {
       total: vs.length,
-      available: vs.filter((v) => v.status === 'available').length,
-      inClass: vs.filter((v) => v.status === 'in_class').length,
-      maintenance: vs.filter((v) => v.status === 'maintenance').length,
+      available: statuses.filter((s) => s === 'available').length,
+      inClass: statuses.filter((s) => s === 'in_class').length,
+      maintenance: statuses.filter((s) => s === 'maintenance').length,
     };
   });
 
@@ -178,7 +180,7 @@ export class FlotaFacade {
       year: v.year,
       vehicleLabel: `${v.brand} ${v.model}`,
       type: this.resolveType(v.brand, v.model),
-      status: this.resolveStatus(v.status),
+      status: resolveVehicleStatus(v.status),
       currentKm: v.current_km ?? 0,
       nextMaintenanceDate: v.last_maintenance ?? null,
       instructorName,
@@ -277,19 +279,6 @@ export class FlotaFacade {
     )
       ? 'professional'
       : 'class_b';
-  }
-
-  private resolveStatus(raw: string | null): VehicleStatus {
-    const map: Record<string, VehicleStatus> = {
-      available: 'available',
-      disponible: 'available',
-      in_class: 'in_class',
-      'en clase': 'in_class',
-      maintenance: 'maintenance',
-      mantenimiento: 'maintenance',
-      out_of_service: 'out_of_service',
-    };
-    return map[raw?.toLowerCase() ?? ''] ?? 'available';
   }
 
   private resolveDocStatus(expiryDate: string | null, rawStatus: string | null): DocStatus {

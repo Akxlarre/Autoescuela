@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, OnInit } from '@a
 import { Router } from '@angular/router';
 
 import { StudentPaymentFacade } from '@core/facades/student-payment.facade';
+import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment-context.facade';
 import type { StudentPaymentHistoryItem } from '@core/models/ui/student-payment.model';
 import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
 import { formatCLP } from '@core/utils/date.utils';
@@ -10,6 +11,7 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
 import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
+import { TabsComponent } from '@shared/components/tabs/tabs.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
@@ -44,6 +46,7 @@ function toCompact(amount: number): { value: number; suffix: string } {
     IconComponent,
     BadgeComponent,
     SkeletonBlockComponent,
+    TabsComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
     CardHoverDirective,
@@ -60,6 +63,18 @@ function toCompact(amount: number): { value: number; suffix: string } {
         [actions]="heroActions()"
         (actionClick)="onHeroAction($event)"
       />
+
+      <!-- ── Selector de matrícula (solo con >1 enrollment) ───────────────── -->
+      @if (context.enrollments().length > 1) {
+        <div class="bento-banner p-2">
+          <app-tabs
+            [tabs]="enrollmentTabs()"
+            [activeId]="activeEnrollmentStr()"
+            variant="pill"
+            (activeIdChange)="selectEnrollment(+$event)"
+          />
+        </div>
+      }
 
       @if (facade.error()) {
         <div class="flex items-start gap-3 p-4 rounded-lg bg-error-subtle" role="alert">
@@ -197,14 +212,27 @@ function toCompact(amount: number): { value: number; suffix: string } {
 })
 export class AlumnoPagosComponent implements OnInit {
   protected readonly facade = inject(StudentPaymentFacade);
+  protected readonly context = inject(StudentEnrollmentContextFacade);
   private readonly router = inject(Router);
 
   protected readonly toCompact = toCompact;
   protected readonly clp = (amount: number) => formatCLP(amount);
 
+  protected readonly enrollmentTabs = computed(() =>
+    this.context.enrollments().map((enr) => ({ id: String(enr.id), label: enr.label })),
+  );
+
+  protected readonly activeEnrollmentStr = computed(() =>
+    String(this.context.activeEnrollmentId()),
+  );
+
   protected readonly heroSubtitle = computed(() => {
+    const enroll = this.facade.enrollment();
+    if (!enroll) {
+      return 'Cargando información de tu matrícula…';
+    }
     if (!this.facade.isClassB()) {
-      return this.facade.enrollment()?.pendingBalance
+      return enroll.pendingBalance
         ? 'Regulariza tu pago directamente en la secretaría'
         : 'Resumen de pagos de tu matrícula profesional';
     }
@@ -239,6 +267,11 @@ export class AlumnoPagosComponent implements OnInit {
     if (actionId === 'pay') {
       void this.router.navigate(['/app/alumno/pagar']);
     }
+  }
+
+  protected selectEnrollment(id: number): void {
+    this.context.setActive(id);
+    void this.facade.initialize();
   }
 
   protected formatDate(dateStr: string): string {

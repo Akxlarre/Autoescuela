@@ -92,6 +92,14 @@ Clases de botón definidas con `@utility` en `src/tailwind.css`. Usar SIEMPRE es
 
 > **Nota cascade:** `btn-danger-ghost`, `btn-danger-solid` y `btn-neutral` usan valores `theme()` de Tailwind, no `var(--)` tokens, por lo que **no son afectados** por los overrides de `.surface-hero`. Usar estos cuando el botón debe mantener su color independientemente del contexto.
 
+**Modificador de tamaño — `btn-sm`** (fix-086-m/ASG-b-008): componible con **cualquiera** de los
+`btn-*` de arriba (`class="btn-primary btn-sm"`, `class="btn-ghost btn-sm"`, etc.) — no crea
+variantes por tipo (`btn-primary-sm` no existe). Aplica `padding: 0.375rem 0.75rem; gap: 0.375rem;
+font-size: var(--text-xs)`. **Declarado en `src/tailwind.css` DESPUÉS de todas las utilities `btn-*`
+base** — necesario para ganar la cascada (misma especificidad de clase única). **PROHIBIDO** seguir
+mutilando `btn-*` a mano con `text-xs`/`px-*`/`py-*`/`rounded-*` sueltos (ARCH-16/AP-013) — usar
+`btn-sm` para cualquier botón compacto nuevo.
+
 ### Badge de estado (`badge-*`)
 
 Clases para indicadores de estado con fondo diluido. Usan tokens `--state-*` del DS — dark-mode aware. Padding compacto `py-0.5 px-2`, `border-radius: var(--radius-md)`, `font-size: 0.75rem`.
@@ -192,37 +200,37 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Token | Usos | Valor |
 |-------|------|-------|
-| `--ds-brand` | 472 | `#38bdf8` |
-| `--text-muted` | 406 | `rgba(255, 255, 255, 0.55)` |
-| `--text-primary` | 266 | `var(--color-primary-text)` |
+| `--ds-brand` | 455 | `#38bdf8` |
+| `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
+| `--text-primary` | 264 | `var(--color-primary-text)` |
 | `--text-secondary` | 227 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 214 | `#f87171` |
-| `--bg-surface` | 203 | `#18181b` |
-| `--state-success` | 175 | `#4ade80` |
+| `--bg-surface` | 201 | `#18181b` |
+| `--state-success` | 173 | `#4ade80` |
 | `--color-primary` | 158 | `#38bdf8` |
-| `--border-default` | 134 | `rgba(255, 255, 255, 0.28)` |
-| `--state-warning` | 124 | `#fbbf24` |
-| `--bg-elevated` | 80 | `#27272a` |
-| `--text-sm` | 65 | `0.875rem` |
+| `--border-default` | 132 | `rgba(255, 255, 255, 0.28)` |
+| `--state-warning` | 122 | `#fbbf24` |
+| `--bg-elevated` | 78 | `#27272a` |
 | `--bg-subtle` | 64 | `rgba(255, 255, 255, 0.1)` |
-| `--duration-fast` | 64 | `200ms` |
+| `--text-sm` | 63 | `0.875rem` |
+| `--duration-fast` | 57 | `200ms` |
 | `--radius-md` | 57 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 51 | `var(--border-subtle)` |
-| `--color-primary-text` | 48 | `#ffffff` |
 | `--bg-base` | 46 | `#09090b` |
+| `--color-primary-text` | 45 | `#ffffff` |
 | `--text-xs` | 45 | `0.75rem` |
 | `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--color-success` | 39 | `—` |
-| `--radius-full` | 31 | `9999px` |
-| `--state-success-bg` | 27 | `rgba(74, 222, 128, 0.1)` |
+| `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
+| `--state-success-bg` | 25 | `rgba(74, 222, 128, 0.1)` |
 
 ## Clases semánticas del Design System
 
 | Clase | Usos en templates | Archivo |
 |-------|------------------|---------|
-| `.card` | 230 | `src/styles/tokens/_variables.scss` |
+| `.card` | 234 | `src/styles/tokens/_variables.scss` |
 | `.kpi-label` | 25 | `src/styles/tokens/_variables.scss` |
 | `.kpi-value` | 15 | `src/styles/tokens/_variables.scss` |
 | `.surface-glass` | 12 | `src/styles/tokens/_variables.scss` |
@@ -325,7 +333,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
 | Tamaño display (`text-4xl/3xl/2xl`) | 57 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1182 | Informativo — legítimo en botones/headers/títulos |
+| Peso de fuente (`font-bold/semibold`) | 1193 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
@@ -334,10 +342,10 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | Repeticiones | Cluster |
 |--------------|---------|
 | 54 | `text-sm font-semibold text-text-primary` |
-| 37 | `text-sm font-bold text-text-primary` |
+| 40 | `text-sm font-bold text-text-primary` |
 | 27 | `text-xs font-semibold uppercase tracking-wide text-text-muted` |
 | 15 | `text-2xs font-bold text-text-muted uppercase tracking-wider` |
-| 15 | `text-sm font-bold text-text-primary truncate` |
+| 15 | `font-bold text-sm text-text-primary truncate` |
 | 14 | `text-sm font-semibold truncate text-text-primary` |
 | 14 | `text-xs font-semibold text-text-muted uppercase tracking-wider` |
 | 14 | `text-xs font-bold text-text-muted uppercase tracking-widest` |
@@ -347,7 +355,7 @@ Combinaciones idénticas de utilidades (que incluyen tipografía) repetidas ≥5
 | 12 | `text-2xs uppercase font-bold lg:hidden mb-1 text-text-muted` |
 | 11 | `text-2xl font-semibold text-text-primary` |
 | 10 | `text-xs font-bold uppercase tracking-wide text-text-muted` |
-| 10 | `text-text-muted mb-0.5 uppercase tracking-tighter font-bold` |
+| 10 | `text-sm font-bold text-warning` |
 
 
 <!-- AUTO-GENERATED:END -->

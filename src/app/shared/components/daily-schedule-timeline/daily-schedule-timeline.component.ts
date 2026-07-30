@@ -30,6 +30,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             class="flex flex-col items-center justify-center px-4 py-3 rounded-2xl shrink-0 min-w-[64px] transition-all duration-200 border"
             [style.background]="getDayPillBg(day)"
             [style.border-color]="getDayPillBorderColor(day)"
+            data-llm-action="select-day"
             (click)="daySelect.emit(day.date)"
           >
             <span
@@ -85,6 +86,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
             class="rounded-3xl p-6 relative overflow-hidden mb-8 shadow-md cursor-pointer border-l-4"
             [style.background]="'var(--color-primary)'"
             [style.border-left-color]="'var(--state-warning)'"
+            data-llm-action="start-session"
             (click)="blockClick.emit(nextBlock)"
           >
             <!-- Decoración sutil -->
@@ -127,7 +129,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
         } @else {
           <!-- Empty day state -->
           <div
-            class="rounded-3xl p-8 mb-8 bg-elevated flex flex-col items-center justify-center min-h-[180px] border border-dashed border-border-subtle"
+            class="rounded-3xl p-8 mb-8 bg-elevated flex flex-col items-center justify-center min-h-45 border border-dashed border-border-subtle"
           >
             <div
               class="w-16 h-16 rounded-full bg-subtle flex items-center justify-center mb-4 border border-border-subtle"
@@ -138,7 +140,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               Agenda Libre
             </h4>
             <p
-              class="text-xs font-medium text-center max-w-[200px]"
+              class="text-xs font-medium text-center max-w-50"
               [style.color]="'var(--text-muted)'"
             >
               No tienes actividades programadas para el día seleccionado.
@@ -151,7 +153,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
           @for (block of daySchedule()?.blocks; track block.sessionId; let last = $last) {
             <div #timelineNode class="flex gap-4 items-stretch w-full">
               <!-- Time label -->
-              <div class="w-[45px] shrink-0 pt-4 flex justify-end">
+              <div class="w-11.25 shrink-0 pt-4 flex justify-end">
                 <span
                   class="font-black text-2xs tracking-tighter"
                   [style.color]="
@@ -166,7 +168,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               <div class="w-4 shrink-0 relative flex justify-center">
                 @if (!last) {
                   <div
-                    class="w-[1px] absolute top-6 bottom-[-16px]"
+                    class="w-px absolute top-6 bottom-[-16px]"
                     class="bg-border-subtle opacity-30"
                   ></div>
                 }
@@ -180,6 +182,7 @@ import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.compone
               <!-- Session card -->
               <div
                 class="flex-1 min-w-0"
+                data-llm-action="open-session"
                 (click)="getStatusVisual(block.status).interactive && blockClick.emit(block)"
               >
                 <div

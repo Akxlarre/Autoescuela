@@ -13,6 +13,8 @@
     "claude:tdd": "claude -p \"Ejecuta las pruebas unitarias (ng test --watch=false). Si fallan, auto-corrige la lógica hasta que el compilador pase en verde.\" --allowedTools Read,Edit,Bash",
     "lint:arch": "node scripts/lint-arch-wrapper.js",
     "indices:sync": "node scripts/indices-sync.js",
+    "assignments:audit": "node scripts/assignments-audit.js",
+    "assignments:sync": "node scripts/assignments-sync.js",
     "test:ci": "vitest run --reporter=verbose",
     "test:coverage": "vitest run --coverage"
   },

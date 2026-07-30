@@ -12,7 +12,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
 import { BranchFacade } from '@core/facades/branch.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
-import { formatRut, validateRut } from '@core/utils/rut.utils';
+import { formatRut, validateRut, autocompleteRutDv } from '@core/utils/rut.utils';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import type { InstructorType } from '@core/models/ui/instructor-table.model';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -163,6 +163,7 @@ import { StableWidthDirective } from '@core/directives/stable-width.directive';
                 maxlength="12"
                 [ngModel]="rut()"
                 (input)="onRutInput($event)"
+                (blur)="onRutBlur()"
                 data-llm-description="RUT chileno del instructor, formato 12.345.678-9"
                 aria-required="true"
               />
@@ -546,6 +547,12 @@ export class AdminInstructorCrearDrawerComponent {
     const formatted = formatRut(input.value);
     this.rut.set(formatted);
     input.value = formatted;
+  }
+
+  /** Al perder el foco: autocompleta el DV (módulo 11, ASG-047). */
+  protected onRutBlur(): void {
+    this.rutTouched.set(true);
+    this.rut.set(autocompleteRutDv(this.rut()));
   }
 
   protected async submit(): Promise<void> {

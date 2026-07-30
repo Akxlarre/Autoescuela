@@ -28,7 +28,12 @@ process.stdin.on('end', () => {
     if (!activeId.startsWith('hotfix-')) return process.exit(0);
 
     // Ubicar hotfix.md
-    const hotfixDir = path.join(specsDir, 'fixes', 'hotfixes', activeId);
+    const hotfixDir =
+      [
+        path.join(specsDir, 'hotfixes', activeId),
+        path.join(specsDir, 'fixes', 'hotfixes', activeId), // legacy pre-migracion
+      ].find((d) => fs.existsSync(path.join(d, 'hotfix.md'))) ||
+      path.join(specsDir, 'hotfixes', activeId);
     const hotfixMd = path.join(hotfixDir, 'hotfix.md');
 
     if (fs.existsSync(hotfixMd)) {

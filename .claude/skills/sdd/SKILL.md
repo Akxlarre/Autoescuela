@@ -30,12 +30,12 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 
 | Fase | Comando | Artefacto | Responsable |
 |------|---------|-----------|-------------|
-| 1. Spec | `/spec-new "título"` | `specs/NNNN-slug/spec.md` | Usuario aprueba; Claude puede redactar borrador |
+| 1. Spec | `/spec-new "título"` | `specs/specs/NNNN-slug/spec.md` | Usuario aprueba; Claude puede redactar borrador |
 | 2. Activar | `/spec-activate NNNN` | `specs/.active` | Usuario |
-| 3. Plan | `/spec-plan` | `specs/NNNN-slug/plan.md` | Claude redacta basado en spec + índices |
-| 4. Tareas | `/spec-tasks` | `specs/NNNN-slug/tasks.md` | Claude descompone plan en checklist atómico |
+| 3. Plan | `/spec-plan` | `specs/specs/NNNN-slug/plan.md` | Claude redacta basado en spec + índices |
+| 4. Tareas | `/spec-tasks` | `specs/specs/NNNN-slug/tasks.md` | Claude descompone plan en checklist atómico |
 | 5. Implementar | (libre) | código + tests | Claude ejecuta tareas; hooks validan |
-| 6. Verificar | `/spec-verify` | `specs/NNNN-slug/acceptance.md` | AC verifier (Haiku) marca AC con evidencia |
+| 6. Verificar | `/spec-verify` | `specs/specs/NNNN-slug/acceptance.md` | AC verifier (Haiku) marca AC con evidencia |
 
 ## Estructura canónica de un proyecto con SDD activo
 
@@ -45,13 +45,20 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash
 │   ├── ROADMAP.md              # índice vivo de todas las specs (estado, prioridad, dueño)
 │   ├── ASSIGNMENTS.md          # tablero de Asignaciones de equipo (previo a un track) — opcional
 │   ├── assignments/
-│   │   └── ASG-NNN-slug.md     # brief de una Asignación (contexto para quien la reclame)
-│   ├── .active                 # contiene el ID de la spec en ejecución, o vacío
-│   └── NNNN-slug/
-│       ├── spec.md             # QUÉ + POR QUÉ + AC + out-of-scope
-│       ├── plan.md             # CÓMO técnicamente
-│       ├── tasks.md            # checklist atomizado con DoD
-│       └── acceptance.md       # AC marcados con evidencia (commit, test, screenshot)
+│   │   └── ASG-X-NNN-slug.md     # brief de una Asignación (contexto para quien la reclame)
+│   ├── .active                 # contiene el ID del track en ejecución, o vacío
+│   ├── specs/
+│   │   └── NNNN-X-slug/
+│   │       ├── spec.md         # QUÉ + POR QUÉ + AC + out-of-scope
+│   │       ├── plan.md         # CÓMO técnicamente
+│   │       ├── tasks.md        # checklist atomizado con DoD
+│   │       └── acceptance.md   # AC marcados con evidencia (commit, test, screenshot)
+│   ├── fixes/
+│   │   └── fix-NNN-X-slug/
+│   │       └── fix.md          # Root Cause + ACs afectados + test de regresión
+│   └── hotfixes/
+│       └── hotfix-NNN-X-slug/
+│           └── hotfix.md       # Problema + Cambios (auto-cerrado al fin de sesión)
 └── .claude/
     └── settings.json           # engancha los 3 hooks SDD globales
 ```
@@ -71,9 +78,10 @@ track real a partir de ahí, con contexto pre-cargado.
                            → de ahí en más, flujo SDD normal (/spec-plan, /spec-tasks, etc.)
 ```
 
-- Vive en `specs/ASSIGNMENTS.md` (índice) + `specs/assignments/ASG-NNN-slug.md` (un archivo liviano por asignación).
-- `ASG-NNN` es un contador **global** (no por autor) — a diferencia de spec/fix/hotfix.
-- Cerrar una Asignación como "Completada" es manual (se edita `ASSIGNMENTS.md` cuando el track resultante cierra), igual que `ROADMAP.md` ya se mantiene manualmente.
+- Vive en `specs/ASSIGNMENTS.md` (índice) + `specs/assignments/ASG-X-NNN-slug.md` (un archivo liviano por asignación).
+- `ASG-<autor>-NNN` usa contador **por autor**, igual que spec/fix/hotfix (ver `specs/AUTHORS.md`). Un contador global provoca que dos devs en ramas distintas saquen el mismo ID y que git auto-resuelva el merge sin conflicto.
+- Las tablas "Reclamadas / En curso" y "Completadas" de `ASSIGNMENTS.md` son **auto-generadas** por `npm run assignments:sync` desde el frontmatter de cada `ASG-*.md`, cruzado con el `status`/`closed` del track resultante. Solo "Pendientes" se mantiene a mano (tiene curación: flags de bloqueo, notas de solape, agrupación por reunión).
+- `npm run assignments:audit` verifica integridad (naming, colisiones de numeración, refs colgantes, filas stale) sin escribir nada.
 - **Riesgo multi-rama**: si cada dev trabaja en su propia rama, el tablero puede quedar desactualizado entre ramas. `/assign-new` y `/assign-claim` hacen un chequeo best-effort (`git fetch` + diff contra `origin/main`) y recuerdan commitear/pushear la reclamación de inmediato, separada del resto del trabajo de feature — ver la sección "Conflictos entre ramas" en `specs/ASSIGNMENTS.md`.
 - Si el equipo no la necesita (proyecto de una sola persona), simplemente no se usa — `/spec-new` sigue funcionando exactamente igual sin que exista `ASSIGNMENTS.md`.
 

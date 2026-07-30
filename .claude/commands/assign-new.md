@@ -51,11 +51,22 @@ Si hay diferencias (tu copia local está atrás), avisa:
 
 y pregúntale al usuario si quiere continuar igual o hacer `git pull` primero. Si el repo no tiene remoto configurado o el fetch falla, sigue sin bloquear (no es un error fatal, solo una advertencia best-effort).
 
-### 3. Determinar el próximo ID
+### 3. Determinar el próximo ID (contador POR AUTOR)
 
-- Listar archivos existentes bajo `specs/assignments/` con patrón `ASG-NNN-*.md`
-- El próximo ID es el máximo encontrado + 1, formateado a 3 dígitos (`001`, `002`, …)
-- Si no hay ninguno, empezar en `001`
+El formato es `ASG-<mi_codigo>-NNN`, con contador **propio de cada autor** — exactamente la
+misma regla que los tracks (ver `specs/AUTHORS.md`). Si Benjamín va en `ASG-b-051` y Matías
+crea su primera, la suya es `ASG-m-001`, **no** `ASG-b-052`.
+
+1. Resolver tu código de autor leyendo `.claude/author.local.json`. Si no existe, pregúntale
+   al usuario su código y créalo desde `.claude/author.local.json.example` (mismo bootstrap
+   que `/spec-new` y `/fix-new`).
+2. Listar `specs/assignments/ASG-<mi_codigo>-*.md` — **solo los tuyos**.
+3. Tomar el número más alto de ESE autor + 1, a 3 dígitos. Si no hay ninguno, empezar en `001`.
+
+> **Por qué por autor y no global:** el contador global provocaba que dos personas en ramas
+> distintas sacaran el mismo `ASG-052`; al mergear, git auto-resuelve sin conflicto y quedan
+> dos asignaciones con el mismo ID (fallo silencioso). Es el mismo problema que los tracks
+> ya resolvieron en julio con el código de autor.
 
 ### 4. Generar slug del título
 
@@ -70,10 +81,10 @@ y pregúntale al usuario si quiere continuar igual o hacer `git pull` primero. S
 - **Contexto/Objetivo breve**: 2-4 frases de qué hay que lograr y por qué — esto es lo más importante, porque se pre-carga tal cual cuando alguien reclame la asignación.
 - **Archivos involucrados (opcional)**: si ya sabes qué archivos/paths probablemente toca, pídeselos al usuario o infiérelos tú mismo del contexto que te dio (sin inventar rutas que no puedas verificar — si dudas, déjalo en blanco). Esto alimenta el chequeo de solapes de `/assign-claim`.
 
-### 6. Crear `specs/assignments/ASG-NNN-slug.md`
+### 6. Crear `specs/assignments/ASG-X-NNN-slug.md`
 
 Lee la plantilla `.claude/skills/sdd/templates/assignment.md` y reemplaza:
-- `{{ID}}` → `ASG-NNN`
+- `{{ID}}` → `ASG-X-NNN`
 - `{{TITLE}}`, `{{DATE}}` (fecha actual `YYYY-MM-DD`), `{{OWNER}}`, `{{CREATED_BY}}` (código de autor de quien corre el comando, si `.claude/author.local.json` existe; si no, déjalo en blanco)
 - `{{spec|fix|hotfix}}` → el tipo sugerido
 - `{{P0|P1|P2}}` → la prioridad
@@ -86,25 +97,25 @@ Lee la plantilla `.claude/skills/sdd/templates/assignment.md` y reemplaza:
 Agrega una fila a la tabla "Pendientes":
 
 ```
-| ASG-NNN | {{título}} | {{owner}} | {{tipo}} | {{prioridad}} | {{created_by}} | — |
+| ASG-X-NNN | {{título}} | {{owner}} | {{tipo}} | {{prioridad}} | {{created_by}} | — |
 ```
 
 ### 8. Reportar al usuario
 
 ```
-✅ Asignación ASG-NNN creada en specs/assignments/ASG-NNN-slug.md
+✅ Asignación ASG-X-NNN creada en specs/assignments/ASG-X-NNN-slug.md
 ✅ specs/ASSIGNMENTS.md actualizado (tabla "Pendientes")
 
 Asignada a: <owner>  |  Tipo sugerido: <tipo>  |  Prioridad: <prioridad>
 
 ⚠️  Multi-rama: haz commit y push de este cambio (specs/ASSIGNMENTS.md +
-    specs/assignments/ASG-NNN-*.md) AHORA MISMO a la rama principal compartida,
+    specs/assignments/ASG-X-NNN-*.md) AHORA MISMO a la rama principal compartida,
     antes de seguir trabajando en otra cosa — así el resto del equipo ve la
     asignación nueva sin demora.
 
 Próximos pasos:
   - Avísale a <owner> (o al equipo, si es "cualquiera")
-  - Esa persona corre /assign-list para verla, y /assign-claim ASG-NNN para tomarla
+  - Esa persona corre /assign-list para verla, y /assign-claim ASG-X-NNN para tomarla
 ```
 
 ## Reglas

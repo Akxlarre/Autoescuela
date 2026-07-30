@@ -25,7 +25,6 @@ import { InputTextModule } from 'primeng/inputtext';
 
 // Shared Components
 import { IconComponent } from '../icon/icon.component';
-import { ActionKpiCardComponent } from '../kpi-card/action-kpi-card.component';
 import { EmptyStateComponent } from '../empty-state/empty-state.component';
 import { SkeletonBlockComponent } from '../skeleton-block/skeleton-block.component';
 import { SectionHeroComponent } from '../section-hero/section-hero.component';
@@ -72,7 +71,6 @@ import type {
     TooltipModule,
     InputTextModule,
     IconComponent,
-    ActionKpiCardComponent,
     EmptyStateComponent,
     SkeletonBlockComponent,
     SectionHeroComponent,
@@ -94,26 +92,6 @@ import type {
         [actions]="heroActions()"
         (actionClick)="handleHeroAction($event)"
       />
-
-      <!-- KPI Acción: Mantenimiento -->
-      <div class="bento-square">
-        <app-action-kpi-card
-          label="En Taller"
-          [value]="kpis().maintenance"
-          icon="wrench"
-          color="warning"
-          [loading]="isLoading()"
-          (click)="onStatusChange('maintenance')"
-        >
-          <div
-            footer
-            class="flex items-center gap-1 text-xs text-text-muted mt-2 group-hover:text-text-primary transition-colors"
-          >
-            <span>Filtrar activos</span>
-            <app-icon name="arrow-right" [size]="12" />
-          </div>
-        </app-action-kpi-card>
-      </div>
 
       <!-- TABLA CARD (Dual-Viewport) -->
       <div
@@ -552,6 +530,13 @@ export class FlotaListContentComponent {
       color: 'success',
     },
     { id: 'en-clase', label: 'En Clase', value: this.kpis().inClass, icon: 'graduation-cap' },
+    {
+      id: 'en-taller',
+      label: 'En Taller',
+      value: this.kpis().maintenance,
+      icon: 'wrench',
+      color: 'warning',
+    },
   ]);
 
   readonly heroActions = computed((): SectionHeroAction[] => [
