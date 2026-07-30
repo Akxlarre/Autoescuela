@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { LowerCasePipe } from '@angular/common';
 import { InstructoresFacade } from '@core/facades/instructores.facade';
+import { DmsFacade } from '@core/facades/dms.facade';
 import { LayoutDrawerFacadeService } from '@core/services/ui/layout-drawer.facade.service';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
@@ -323,6 +324,14 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
                 Ver horario
               </button>
               <button
+                class="quick-action-btn"
+                (click)="verDocumentos(inst)"
+                data-llm-action="ver-documentos-instructor"
+              >
+                <app-icon name="shield-check" [size]="16" />
+                Ver documentos
+              </button>
+              <button
                 class="quick-action-btn border-brand text-brand"
                 data-llm-action="ver-clases-activas-instructor"
               >
@@ -409,6 +418,7 @@ import { DrawerFormComponent } from '@shared/components/drawer-form/drawer-form.
 })
 export class AdminInstructorVerDrawerComponent {
   protected readonly facade = inject(InstructoresFacade);
+  protected readonly dmsFacade = inject(DmsFacade);
   protected readonly layoutDrawer = inject(LayoutDrawerFacadeService);
 
   protected editar(): void {
@@ -417,5 +427,9 @@ export class AdminInstructorVerDrawerComponent {
 
   protected verHorario(): void {
     this.layoutDrawer.push(AdminInstructorHorarioDrawerComponent, 'Horario', 'calendar');
+  }
+
+  protected verDocumentos(inst: { id: number; nombre: string }): void {
+    this.dmsFacade.openInstructorDocsDrawer(inst.id, inst.nombre);
   }
 }
