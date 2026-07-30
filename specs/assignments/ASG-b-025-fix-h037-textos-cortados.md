@@ -1,14 +1,14 @@
 # Asignación ASG-b-025 — Fix H-037: botones y títulos recortados a mitad de palabra
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** i
 > **tipo_sugerido:** fix
 > **priority:** P2
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** i
+> **claimed_at:** 2026-07-30
+> **resulting_track:** fix-003-i-textos-recortados-flex-truncate
 
 ---
 
