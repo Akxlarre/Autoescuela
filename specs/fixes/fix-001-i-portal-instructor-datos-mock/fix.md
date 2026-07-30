@@ -1,6 +1,6 @@
 # Fix: Portal Instructor corre sobre datos MOCK
 > id: fix-001-i-portal-instructor-datos-mock
-> refs: ASG-010
+> refs: ASG-b-010
 > status: done
 > closed: 2026-07-29
 > created: 2026-07-28
