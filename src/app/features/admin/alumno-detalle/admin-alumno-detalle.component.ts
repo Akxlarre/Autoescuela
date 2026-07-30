@@ -1406,6 +1406,7 @@ export class AdminAlumnoDetalleComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('scroll', this.repositionCardMenuListener, true);
     window.removeEventListener('resize', this.repositionCardMenuListener);
+    this.facade.destroyRealtime();
   }
 
   // ── Handlers de Hero ────────────────────────────────────────────────────────

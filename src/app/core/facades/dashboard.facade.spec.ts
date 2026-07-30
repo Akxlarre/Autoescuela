@@ -172,4 +172,60 @@ describe('DashboardFacade', () => {
       expect(data?.kpis).toEqual([]);
     });
   });
+
+  describe('Realtime lifecycle (fix-004-i)', () => {
+    function makeChannelMock() {
+      const channel = { on: vi.fn(() => channel), subscribe: vi.fn(() => channel) };
+      return {
+        client: {
+          channel: vi.fn(() => channel),
+          removeChannel: vi.fn(),
+        },
+        channel,
+      };
+    }
+
+    it('setupRealtime() ya no agenda polling con setInterval (anti-patrón prohibido por swr-pattern.md)', () => {
+      const mock = makeChannelMock();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+      const refreshSpy = vi.spyOn(dashFacade, 'refreshLiveClassesOnly');
+
+      vi.useFakeTimers();
+      dashFacade.setupRealtime();
+      vi.advanceTimersByTime(120000); // 2 minutos: si hubiera setInterval(60s), ya habría disparado 2 veces
+      vi.useRealTimers();
+
+      expect(refreshSpy).not.toHaveBeenCalled();
+    });
+
+    it('destroyRealtime() remueve el canal Realtime suscrito', () => {
+      const mock = makeChannelMock();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [HttpClientTestingModule],
+        providers: [
+          DashboardFacade,
+          { provide: SupabaseService, useValue: mock },
+          { provide: AuthFacade, useValue: {} },
+          { provide: BranchFacade, useValue: {} },
+        ],
+      });
+      const dashFacade = TestBed.inject(DashboardFacade);
+
+      dashFacade.setupRealtime();
+      dashFacade.destroyRealtime();
+
+      expect(mock.client.removeChannel).toHaveBeenCalledWith(mock.channel);
+    });
+  });
 });

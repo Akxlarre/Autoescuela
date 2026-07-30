@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 
 // Facades
 import { FlotaFacade } from '@core/facades/flota.facade';
@@ -45,10 +52,13 @@ export class AdminFlotaComponent {
   protected readonly facade = inject(FlotaFacade);
   private readonly branchFacade = inject(BranchFacade);
   private readonly layoutDrawer = inject(LayoutDrawerFacadeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly localSearchTerm = signal('');
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.facade.destroyRealtime());
+
     effect(() => {
       this.branchFacade.selectedBranchId();
       void this.facade.initialize();

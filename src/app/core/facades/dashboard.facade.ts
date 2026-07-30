@@ -21,17 +21,11 @@ export class DashboardFacade {
   private _initialized = false;
   private _lastBranchId: number | null = null;
   private _realtimeChannel: any | null = null;
-  private _liveClassesInterval: any | null = null;
 
   // ── 2. MÉTODOS DE ACCIÓN ─────────────────────────────────────────────────────
 
   setupRealtime(): void {
     if (this._realtimeChannel) return;
-
-    // Intervalo local cada 1 minuto para recalcular el tiempo relativo y clases actuales
-    this._liveClassesInterval = setInterval(() => {
-      void this.refreshLiveClassesOnly();
-    }, 60000);
 
     this._realtimeChannel = this.supabase.client
       .channel('dashboard-realtime')
@@ -57,10 +51,6 @@ export class DashboardFacade {
     if (this._realtimeChannel) {
       void this.supabase.client.removeChannel(this._realtimeChannel);
       this._realtimeChannel = null;
-    }
-    if (this._liveClassesInterval) {
-      clearInterval(this._liveClassesInterval);
-      this._liveClassesInterval = null;
     }
   }
 

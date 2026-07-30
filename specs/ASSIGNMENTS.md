@@ -21,7 +21,6 @@
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
 | ASG-b-001 | Fase 5 QA visual restante: skeletons en carga real, capturas claro/oscuro/mobile de páginas sin cobertura, regla 3-2-1 de marca | `b` | fix | Media | b | Iteraciones 19-21 de `indices/FLOWS-QA-AUDIT.md` (Fase 5) — bloqueadas por indisponibilidad temporal del clasificador de Playwright, requieren navegador |
-| ASG-b-003 | Fix H-040: 7 facades con canal Realtime que nunca se limpia + polling prohibido (`setInterval`) en `dashboard.facade.ts` | `i` | fix | Media | b | Ver `indices/FLOWS-QA-AUDIT.md` H-040. Archivos: `dashboard`/`admin-alumnos`/`admin-alumno-detalle`/`flota`/`pagos`/`liquidaciones`/`cuadratura` facades + sus Smart Components |
 | ASG-b-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/006/007 |
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
 | ASG-b-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
@@ -109,6 +108,7 @@
 | ASG-b-041 | Fecha de obtención de licencia B + advertencia de los 2 años (Profesional) | [fix-089-m-licencia-b-dos-anos-profesional](fixes/fix-089-m-licencia-b-dos-anos-profesional/fix.md) | 2026-07-29 |
 | ASG-b-047 | Dígito verificador del RUT automático en Matrícula | [fix-064-b-rut-dv-automatico](fixes/fix-064-b-rut-dv-automatico/fix.md) | 2026-07-29 |
 | ASG-b-052 | Firma del contrato no se persiste en el draft de matrícula pública | [fix-070-b-firma-contrato-no-persistida-draft](fixes/fix-070-b-firma-contrato-no-persistida-draft/fix.md) | 2026-07-29 |
+| ASG-b-003 | Fix H-040: Realtime sin limpiar + polling prohibido en Dashboard | [fix-004-i-realtime-sin-dispose-dashboard-polling](fixes/fix-004-i-realtime-sin-dispose-dashboard-polling/fix.md) | 2026-07-30 |
 | ASG-b-021 | Fix H-006: Configuración Web usa voseo argentino | [fix-002-i-voseo-configuracion-web](fixes/fix-002-i-voseo-configuracion-web/fix.md) | 2026-07-30 |
 <!-- AUTO-GENERATED:END -->
 

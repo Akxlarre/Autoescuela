@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   effect,
   inject,
   afterNextRender,
@@ -343,6 +344,7 @@ export class DashboardComponent {
   private readonly agendaFacade = inject(AgendaFacade);
   private readonly asistenciaFacade = inject(AsistenciaClaseBFacade);
   private readonly pagosFacade = inject(PagosFacade);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly bentoGrid = viewChild<ElementRef<HTMLElement>>('bentoGrid');
 
   // ── Estado ────────────────────────────────────────────────────────────────
@@ -417,6 +419,8 @@ export class DashboardComponent {
   );
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.dashboardFacade.destroyRealtime());
+
     effect(() => {
       this.branchFacade.selectedBranchId(); // tracking reactivo
       void this.dashboardFacade.initialize();
