@@ -1,14 +1,14 @@
 # Asignación ASG-b-001 — Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1
 
-> **status:** pendiente
+> **status:** reclamada
 > **owner:** b
 > **tipo_sugerido:** fix
 > **priority:** P1
 > **created:** 2026-07-22
 > **created_by:** b
-> **claimed_by:** —
-> **claimed_at:** —
-> **resulting_track:** —
+> **claimed_by:** b
+> **claimed_at:** 2026-07-31
+> **resulting_track:** fix-071-b-fase-5-qa-visual-restante
 
 ---
 

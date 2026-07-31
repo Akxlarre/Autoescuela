@@ -20,7 +20,6 @@
 
 | ID | Título | Asignado a | Tipo sugerido | Prioridad | Creado por | Notas |
 |----|--------|-----------|---------------|-----------|------------|-------|
-| ASG-b-001 | Fase 5 QA visual restante: skeletons en carga real, capturas claro/oscuro/mobile de páginas sin cobertura, regla 3-2-1 de marca | `b` | fix | Media | b | Iteraciones 19-21 de `indices/FLOWS-QA-AUDIT.md` (Fase 5) — bloqueadas por indisponibilidad temporal del clasificador de Playwright, requieren navegador |
 | ASG-b-005 | Cobertura `data-llm-*` — lote 2: terminar `hero-tab` (19 elementos restantes) + Config Web resto + Admin varios + Auth + Dashboard + Instructor (7 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/006/007 |
 | ASG-b-007 | Cobertura `data-llm-*` — lote 4: shared/components parte 2 (9 archivos) | `i` | fix | Baja | b | Ver lista exacta en `indices/FLOWS-QA-AUDIT.md` Fase 5.9. No se superpone con ASG-b-004/005/006 |
 | ASG-b-014 | Fix H-025 + H-012: Certificado Clase B se puede emitir sin validar 12 prácticas completadas (server-side) + falta indicador visual de que el criterio "elegible" difiere entre admin y secretaría | `i` | fix | Alta | b | Archivo principal: `supabase/functions/generate-certificate-b-pdf/index.ts` (agregar gate real) + UI de `admin/certificacion` |
@@ -67,6 +66,7 @@
 | ID | Título | Reclamado por | Track resultante | Fecha |
 |----|--------|----------------|-------------------|-------|
 | ASG-b-035 | Promociones automáticas: cadencia, convalidaciones y matrícula tardía | `m` | [0002-m-promociones-cadencia-automatica](specs/0002-m-promociones-cadencia-automatica/spec.md) | 2026-07-28 |
+| ASG-b-001 | Fase 5 QA visual restante: skeletons, capturas, regla 3-2-1 | `b` | [fix-071-b-fase-5-qa-visual-restante](fixes/fix-071-b-fase-5-qa-visual-restante/fix.md) | 2026-07-31 |
 <!-- AUTO-GENERATED:END -->
 
 ---
@@ -104,12 +104,12 @@
 | ASG-b-042 | Repositorio de documentos: sección Instructores + poder abrir el archivo | [0003-m-repositorio-documentos-instructores](specs/0003-m-repositorio-documentos-instructores/spec.md) | 2026-07-29 |
 | ASG-b-047 | Dígito verificador del RUT automático en Matrícula | [fix-064-b-rut-dv-automatico](fixes/fix-064-b-rut-dv-automatico/fix.md) | 2026-07-29 |
 | ASG-b-052 | Firma del contrato no se persiste en el draft de matrícula pública | [fix-070-b-firma-contrato-no-persistida-draft](fixes/fix-070-b-firma-contrato-no-persistida-draft/fix.md) | 2026-07-29 |
-| ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | [fix-090-m-drawers-scope-sede](fixes/fix-090-m-drawers-scope-sede/fix.md) | 2026-07-30 |
 | ASG-b-003 | Fix H-040: Realtime sin limpiar + polling prohibido en Dashboard | [fix-004-i-realtime-sin-dispose-dashboard-polling](fixes/fix-004-i-realtime-sin-dispose-dashboard-polling/fix.md) | 2026-07-30 |
 | ASG-b-021 | Fix H-006: Configuración Web usa voseo argentino | [fix-002-i-voseo-configuracion-web](fixes/fix-002-i-voseo-configuracion-web/fix.md) | 2026-07-30 |
 | ASG-b-025 | Fix H-037: botones y títulos recortados a mitad de palabra | [fix-003-i-textos-recortados-flex-truncate](fixes/fix-003-i-textos-recortados-flex-truncate/fix.md) | 2026-07-30 |
 | ASG-b-027 | Fix H-003: Ex-Alumnos B — conteo de egresados discrepante (2 vs 16) | [fix-005-i-exalumnos-egresados-discrepancia](fixes/fix-005-i-exalumnos-egresados-discrepancia/fix.md) | 2026-07-30 |
 | ASG-b-039 | Botón "Registrar egreso" accesible + atajo para carga de combustible | [fix-006-i-registrar-egreso-dashboard-boton](fixes/fix-006-i-registrar-egreso-dashboard-boton/fix.md) | 2026-07-30 |
+| ASG-b-043 | Drawers muestran datos de todas las sedes en vez de una | [fix-090-m-drawers-scope-sede](fixes/fix-090-m-drawers-scope-sede/fix.md) | 2026-07-30 |
 <!-- AUTO-GENERATED:END -->
 
 ---
