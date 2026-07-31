@@ -18,11 +18,15 @@ import { StudentEnrollmentContextFacade } from '@core/facades/student-enrollment
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
 import { TabsComponent } from '@shared/components/tabs/tabs.component';
-import type { SectionHeroAction, SectionHeroChip } from '@core/models/ui/section-hero.model';
+import type {
+  SectionHeroAction,
+  SectionHeroChip,
+  SectionHeroKpi,
+} from '@core/models/ui/section-hero.model';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 
 type TabId = 'practice' | 'theory';
 
@@ -36,7 +40,6 @@ type TabId = 'practice' | 'theory';
     AnimateInDirective,
     CardHoverDirective,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     IconComponent,
     BadgeComponent,
@@ -47,13 +50,16 @@ type TabId = 'practice' | 'theory';
     <section class="bento-grid" appBentoReveal appBentoGridLayout aria-label="Mis clases">
       <!-- ── HERO ────────────────────────────────────────────────────────────── -->
       <app-section-hero
-        class="bento-hero"
         icon="clipboard-list"
         title="Mis Clases"
         [contextLine]="heroContextLine()"
         [chips]="heroChips()"
         [actions]="[]"
         [animateOnInit]="false"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="loading()"
+        [loadingKpiCount]="2"
       />
 
       <!-- ── Selector de matrícula ──────────────────────────────────────────── -->
@@ -64,44 +70,6 @@ type TabId = 'practice' | 'theory';
             [activeId]="activeEnrollmentStr()"
             variant="pill"
             (activeIdChange)="selectEnrollment(+$event)"
-          />
-        </div>
-      }
-
-      <!-- ── KPIs ─────────────────────────────────────────────────────────────── -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          [label]="licenseGroup() === 'class_b' ? 'Prácticas completadas' : 'Prácticas'"
-          [value]="kpis()?.completedPractices ?? 0"
-          [suffix]="licenseGroup() === 'class_b' ? '/12' : ''"
-          icon="car"
-          color="default"
-          [accent]="true"
-          [loading]="loading()"
-        />
-      </div>
-
-      @if (licenseGroup() !== 'class_b') {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Asistencia teoría"
-            [value]="kpis()?.theoryPct ?? 0"
-            suffix="%"
-            icon="clipboard-check"
-            [color]="theoryColor()"
-            [loading]="loading()"
-          />
-        </div>
-      }
-
-      @if (licenseGroup() === 'class_b') {
-        <div class="bento-square">
-          <app-kpi-card-variant
-            label="Próximas agendadas"
-            [value]="kpis()?.scheduledUpcoming ?? 0"
-            icon="calendar"
-            color="default"
-            [loading]="loading()"
           />
         </div>
       }
@@ -349,6 +317,41 @@ export class AlumnoClasesComponent {
     if (pct >= 75) return 'success' as const;
     if (pct >= 50) return 'warning' as const;
     return 'error' as const;
+  });
+
+  /**
+   * KPIs del strip del hero slim (antes: hasta 2 celdas `bento-square` sueltas,
+   * la 2ª condicional a `licenseGroup`). Valores pre-formateados: el strip
+   * renderiza `{{ kpi.value }}` crudo y no pasa por `animateCounter`.
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const group = this.licenseGroup();
+    const k = this.kpis();
+    const kpis: SectionHeroKpi[] = [
+      {
+        id: 'practicas',
+        label: group === 'class_b' ? 'Prácticas completadas' : 'Prácticas',
+        value: formatKpiEsCl(k?.completedPractices ?? 0),
+        suffix: group === 'class_b' ? '/12' : '',
+      },
+    ];
+    if (group !== 'class_b') {
+      kpis.push({
+        id: 'teoria',
+        label: 'Asistencia teoría',
+        value: formatKpiEsCl(k?.theoryPct ?? 0),
+        suffix: '%',
+        color: this.theoryColor(),
+      });
+    }
+    if (group === 'class_b') {
+      kpis.push({
+        id: 'proximas',
+        label: 'Próximas agendadas',
+        value: formatKpiEsCl(k?.scheduledUpcoming ?? 0),
+      });
+    }
+    return kpis;
   });
 
   readonly heroContextLine = computed(() => {

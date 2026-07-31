@@ -14,12 +14,12 @@ import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
 import { WeeklyScheduleGridComponent } from '@shared/components/weekly-schedule-grid/weekly-schedule-grid.component';
 import { DailyScheduleTimelineComponent } from '@shared/components/daily-schedule-timeline/daily-schedule-timeline.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.directive';
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import type { ScheduleBlock, DaySchedule } from '@core/models/ui/instructor-portal.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 
 @Component({
   selector: 'app-instructor-horario',
@@ -29,14 +29,12 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
     SectionHeroComponent,
     WeeklyScheduleGridComponent,
     DailyScheduleTimelineComponent,
-    KpiCardVariantComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
   ],
   template: `
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <app-section-hero
-        class="bento-hero"
         [animateOnInit]="false"
         title="Mi Horario"
         [subtitle]="weekLabel()"
@@ -44,43 +42,11 @@ import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
         backLabel="Dashboard"
         [actions]="heroActions"
         [chips]="heroChips()"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="isDataLoading()"
+        [loadingKpiCount]="4"
       />
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Clases Hoy"
-          [value]="facade.weeklySchedule()?.kpis?.clasesHoy || 0"
-          icon="calendar-check"
-          [loading]="isDataLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Agendadas"
-          [value]="facade.weeklySchedule()?.kpis?.clasesAgendadas || 0"
-          icon="calendar-days"
-          [loading]="isDataLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Completadas"
-          [value]="facade.weeklySchedule()?.kpis?.clasesCompletadas || 0"
-          icon="check-circle"
-          color="success"
-          [loading]="isDataLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Horas Semana"
-          [value]="facade.weeklySchedule()?.kpis?.horasSemana || 0"
-          suffix="h"
-          icon="clock"
-          [loading]="isDataLoading()"
-        />
-      </div>
 
       <!-- Schedule content -->
       <div class="bento-banner">
@@ -120,7 +86,8 @@ export class InstructorHorarioComponent implements OnInit {
   readonly isDataLoading = computed(() => {
     if (this.facade.weeklySchedule()) return false;
     return this._localLoading() || this.facade.isLoading();
-  });  private router = inject(Router);
+  });
+  private router = inject(Router);
   private currentWeekDate: string = new Date().toISOString();
 
   // Mobile day selection
@@ -200,6 +167,31 @@ export class InstructorHorarioComponent implements OnInit {
   });
 
   readonly heroActions: SectionHeroAction[] = [];
+
+  /**
+   * KPIs del strip del hero slim (antes: 4 celdas `bento-square` sueltas).
+   * Los valores van pre-formateados: el strip renderiza `{{ kpi.value }}` crudo
+   * y no pasa por `animateCounter`, que era quien localizaba a es-CL.
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const k = this.facade.weeklySchedule()?.kpis;
+    return [
+      { id: 'hoy', label: 'Clases Hoy', value: formatKpiEsCl(k?.clasesHoy ?? 0) },
+      { id: 'agendadas', label: 'Agendadas', value: formatKpiEsCl(k?.clasesAgendadas ?? 0) },
+      {
+        id: 'completadas',
+        label: 'Completadas',
+        value: formatKpiEsCl(k?.clasesCompletadas ?? 0),
+        color: 'success',
+      },
+      {
+        id: 'horas-semana',
+        label: 'Horas Semana',
+        value: formatKpiEsCl(k?.horasSemana ?? 0),
+        suffix: 'h',
+      },
+    ];
+  });
 
   async ngOnInit() {
     try {

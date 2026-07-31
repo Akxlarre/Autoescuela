@@ -39,7 +39,7 @@ ngAfterViewInit() { this.gsap.animateBentoGrid(grid); }   // un solo stagger, si
 |-----------|--------|-----------|
 | Raíz `.bento-grid` | 🟡 | 4 páginas con wrapper (`page-wide`/`p-6`) sobre un `*-content` que ya trae grid |
 | Páginas sin bento (stubs `p-6`) | 🔴 | 14 páginas enrutables legacy (+8 relator fuera de scope) |
-| Hero como celda directa (`bento-hero`) | 🟡 | ~19 páginas envuelven el hero en `<div class="bento-banner">` |
+| Hero como celda directa (`bento-hero`) | ✅ | Resuelto — ver nota 2026-07-31 en Tier C. Las ~19 páginas listadas ya aplican `class="bento-hero"` (o `density="slim"`) directo en `<app-section-hero>`, sin wrapper `<div>` |
 | Bento plano (no fragmentado) | 🔴 | `liquidaciones-content`: hero suelto + grid de KPIs aparte → KPIs desalineados |
 | Entrada GSAP única | 🟡 | ~20 páginas bento con `animateHero` + `animateBentoGrid` (doble) |
 
@@ -131,7 +131,17 @@ La raíz es bento correcto, pero el hero se envuelve en un div en vez de aplicar
 **Variante menor:** `/app/alumno/pruebas-online` (`alumno-pruebas-online.component.ts:43`) envuelve en `<div class="bento-hero">` (mejor que banner, pero sigue siendo un div wrapper innecesario).
 **Verificar:** `/app/instructor/alumnos/:id/ficha` (`instructor-ficha.component.ts`) — raíz bento ok, confirmar placement del hero.
 
----
+> **✅ Resuelto (verificado 2026-07-31, fix-071-b-fase-5-qa-visual-restante):** re-barrido por
+> código de las 19 rutas de esta tabla + `admin/alumno-detalle`. Ninguna envuelve ya el hero en
+> `<div class="bento-banner">` — todas aplican `class="bento-hero"` directo en
+> `<app-section-hero>` (heroes "full" con KPIs, ej. `instructor/alumnos`, `alumno/dashboard`) o
+> `density="slim"` (heroes compactos, ej. `admin/instructores`, `secretaria/instructores`,
+> `admin/alumno-detalle`), ambos patrones válidos por diseño desde spec 0015 (Header Slim Mode).
+> Esta sección quedó desactualizada — el fix se hizo en algún punto entre 2026-06-18 (spec 0015)
+> y ahora sin que se reflejara acá. **No confirmado visualmente en navegador** (sin credenciales
+> de sesión ni Playwright MCP disponibles en este entorno — ver fix.md para el detalle del
+> bloqueo); esta nota certifica solo la estructura DOM/clases por lectura de código, no el
+> render final (colores/gradiente/dark mode).
 
 ### 🟡 Tier D — Doble animación de entrada (GSAP)
 Páginas bento que llaman `animateHero(hero)` **y** `animateBentoGrid(grid)`. Con el canon fijado (**solo `animateBentoGrid`**), el hero ya entra en el stagger del grid → la llamada extra a `animateHero` es redundante y puede causar doble animación.

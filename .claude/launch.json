@@ -1,0 +1,9 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "autoescuela-dev-attach",
+      "url": "http://localhost:4200"
+    }
+  ]
+}

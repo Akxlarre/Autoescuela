@@ -9,7 +9,6 @@ import {
   signal,
 } from '@angular/core';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { TaskListContentComponent } from '@shared/components/task-list-content/task-list-content.component';
 import { TaskDetailModalComponent } from '@features/tareas/task-detail-modal.component';
 import { TasksFacade } from '@core/facades/tasks.facade';
@@ -19,6 +18,7 @@ import { BentoGridLayoutDirective } from '@core/directives/bento-grid-layout.dir
 import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
 import type { TaskType } from '@core/models/ui/task.model';
+import type { SectionHeroKpi } from '@core/models/ui/section-hero.model';
 
 type TaskTypeFilter = 'all' | TaskType;
 
@@ -33,42 +33,24 @@ interface FilterTab {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     SectionHeroComponent,
-    KpiCardVariantComponent,
     TaskListContentComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
     CardHoverDirective,
   ],
   template: `
-    <div class="bento-grid bento-grid--fill-screen-kpi" appBentoReveal appBentoGridLayout>
+    <div class="bento-grid bento-grid--fill-screen" appBentoReveal appBentoGridLayout>
       <!-- Hero (sin CTA — instructor es receptor puro en v1) -->
       <app-section-hero
-        class="bento-hero"
+        density="slim"
         title="Comunicación"
         contextLine="Tareas y consultas asignadas por secretaría"
         icon="message-circle"
         [actions]="[]"
+        [kpis]="heroKpis()"
+        [loading]="facade.isLoading()"
+        [loadingKpiCount]="2"
       />
-
-      <!-- KPIs -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Pendientes"
-          [value]="facade.pendingCount()"
-          [loading]="facade.isLoading()"
-          icon="clock"
-          color="warning"
-          [accent]="true"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="En progreso"
-          [value]="inProgressCount()"
-          [loading]="facade.isLoading()"
-          icon="activity"
-        />
-      </div>
 
       <!-- Lista de tareas + densidad adaptativa (spec 0028/0029) -->
       <app-task-list-content
@@ -144,6 +126,23 @@ export class InstructorTareasComponent implements OnInit, AfterViewInit {
   protected readonly inProgressCount = computed(
     () => this.facade.receivedTasks().filter((t) => t.status === 'in_progress').length,
   );
+
+  /** KPIs del strip del hero slim (antes: 2 celdas `bento-square` sueltas). */
+  protected readonly heroKpis = computed<SectionHeroKpi[]>(() => [
+    {
+      id: 'pendientes',
+      label: 'Pendientes',
+      value: this.facade.pendingCount(),
+      icon: 'clock',
+      color: 'warning',
+    },
+    {
+      id: 'en-progreso',
+      label: 'En progreso',
+      value: this.inProgressCount(),
+      icon: 'activity',
+    },
+  ]);
 
   // ── empty state contextual ───────────────────────────────────────────────────
   protected readonly emptyMessage = computed(() => {

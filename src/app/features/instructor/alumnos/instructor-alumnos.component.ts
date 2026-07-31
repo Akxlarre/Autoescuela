@@ -14,7 +14,6 @@ import { DatePipe } from '@angular/common';
 import { TagModule } from 'primeng/tag';
 import { InstructorAlumnosFacade } from '@core/facades/instructor-alumnos.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
 import { SkeletonBlockComponent } from '@shared/components/skeleton-block/skeleton-block.component';
@@ -24,7 +23,8 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { SelectModule } from 'primeng/select';
 import { StudentDrawerDetailComponent } from './components/student-drawer-detail.component';
 import type { InstructorStudentCard } from '@core/models/ui/instructor-portal.model';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
+import { formatKpiEsCl } from '@core/utils/kpi-es-cl-format.util';
 
 const AVATAR_PALETTES = [
   { bg: 'linear-gradient(135deg,#6366f1,#8b5cf6)', text: '#fff' },
@@ -54,7 +54,6 @@ const PAGE_SIZE = 9;
     DatePipe,
     TagModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     EmptyStateComponent,
     IconComponent,
     SkeletonBlockComponent,
@@ -66,49 +65,15 @@ const PAGE_SIZE = 9;
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- ══ HERO ══ -->
       <app-section-hero
-        class="bento-hero"
         [animateOnInit]="false"
         title="Mis Alumnos"
         subtitle="Gestiona y haz seguimiento a tus alumnos asignados"
         [actions]="heroActions"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="facade.isLoading()"
+        [loadingKpiCount]="4"
       />
-
-      <!-- ══ KPIs ══ -->
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Total Alumnos"
-          [value]="facade.kpis().totalAlumnos"
-          icon="users"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Activos"
-          [value]="facade.kpis().activos"
-          icon="user-check"
-          color="success"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Progreso Promedio"
-          [value]="facade.kpis().promedioProgreso"
-          suffix="%"
-          icon="trending-up"
-          [loading]="facade.isLoading()"
-        />
-      </div>
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Por Certificar"
-          [value]="facade.kpis().porCertificar"
-          icon="award"
-          color="warning"
-          [loading]="facade.isLoading()"
-        />
-      </div>
 
       <!-- ══ MAIN CONTENT ══ -->
       <div class="bento-banner flex flex-col gap-6">
@@ -226,7 +191,12 @@ const PAGE_SIZE = 9;
               }
             } @else {
               @for (s of pagedStudents(); track s.studentId) {
-                <div class="student-card group bento-wide" appCardHover (click)="openDetail(s)" data-col-span="4">
+                <div
+                  class="student-card group bento-wide"
+                  appCardHover
+                  (click)="openDetail(s)"
+                  data-col-span="4"
+                >
                   <!-- Accent gradient top bar -->
                   <div
                     class="student-card__accent"
@@ -551,6 +521,31 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   readonly skeletonItems = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   readonly heroActions: SectionHeroAction[] = [];
 
+  /**
+   * KPIs del strip del hero slim (antes: 4 celdas `bento-square` sueltas).
+   * Los valores van pre-formateados: el strip renderiza `{{ kpi.value }}` crudo
+   * y no pasa por `animateCounter`, que era quien localizaba a es-CL.
+   */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => {
+    const k = this.facade.kpis();
+    return [
+      { id: 'total', label: 'Total Alumnos', value: formatKpiEsCl(k.totalAlumnos) },
+      { id: 'activos', label: 'Activos', value: formatKpiEsCl(k.activos), color: 'success' },
+      {
+        id: 'progreso',
+        label: 'Progreso Promedio',
+        value: formatKpiEsCl(k.promedioProgreso),
+        suffix: '%',
+      },
+      {
+        id: 'por-certificar',
+        label: 'Por Certificar',
+        value: formatKpiEsCl(k.porCertificar),
+        color: 'warning',
+      },
+    ];
+  });
+
   readonly statusFilters = [
     { value: 'all' as const, label: 'Todos', count: () => this.facade.students().length },
     { value: 'active' as const, label: 'Activos', count: () => this.facade.kpis().activos },
@@ -630,6 +625,6 @@ export class InstructorAlumnosComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit() {
-    requestAnimationFrame(() => {    });
+    requestAnimationFrame(() => {});
   }
 }

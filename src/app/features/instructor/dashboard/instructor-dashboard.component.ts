@@ -13,7 +13,6 @@ import { InstructorClasesFacade } from '@core/facades/instructor-clases.facade';
 import { InstructorProfileFacade } from '@core/facades/instructor-profile.facade';
 import { InstructorHorasFacade } from '@core/facades/instructor-horas.facade';
 import { SectionHeroComponent } from '@shared/components/section-hero/section-hero.component';
-import { KpiCardVariantComponent } from '@shared/components/kpi-card/kpi-card-variant.component';
 import { EmptyStateComponent } from '@shared/components/empty-state/empty-state.component';
 import { AlertCardComponent } from '@shared/components/alert-card/alert-card.component';
 import { IconComponent } from '@shared/components/icon/icon.component';
@@ -23,7 +22,7 @@ import { BentoRevealDirective } from '@core/directives/bento-reveal.directive';
 import { ScrollRevealDirective } from '@core/directives/scroll-reveal.directive';
 import { AnimateInDirective } from '@core/directives/animate-in.directive';
 import { CardHoverDirective } from '@core/directives/card-hover.directive';
-import type { SectionHeroAction } from '@core/models/ui/section-hero.model';
+import type { SectionHeroAction, SectionHeroKpi } from '@core/models/ui/section-hero.model';
 import { BadgeComponent } from '@shared/components/badge/badge.component';
 
 @Component({
@@ -35,7 +34,6 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     RouterLink,
     TagModule,
     SectionHeroComponent,
-    KpiCardVariantComponent,
     SkeletonBlockComponent,
     BentoGridLayoutDirective,
     BentoRevealDirective,
@@ -50,72 +48,15 @@ import { BadgeComponent } from '@shared/components/badge/badge.component';
     <div class="bento-grid" appBentoReveal appBentoGridLayout>
       <!-- HERO -->
       <app-section-hero
-        class="bento-hero"
         title="Mi Día"
         subtitle="Resumen de tus clases programadas para hoy"
         [actions]="heroActions"
         [animateOnInit]="false"
+        density="slim"
+        [kpis]="heroKpis()"
+        [loading]="isDataLoading()"
+        [loadingKpiCount]="4"
       />
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Clases de Hoy"
-          [value]="clasesFacade.kpis().clasesHoy"
-          icon="calendar"
-          [loading]="clasesFacade.isLoading()"
-        />
-      </div>
-
-      <!-- KPI Próxima: muestra hora (texto), no número -->
-      <div class="bento-square">
-        @if (clasesFacade.isLoading()) {
-          <div class="bento-card flex flex-col gap-2 h-full">
-            <div class="flex items-start justify-between gap-3 mb-2">
-              <app-skeleton-block variant="text" width="60%" height="12px" />
-            </div>
-            <app-skeleton-block variant="rect" width="80%" height="40px" />
-            <div class="flex items-center gap-2 mt-auto pt-2">
-              <app-skeleton-block variant="text" width="40%" height="12px" />
-            </div>
-          </div>
-        } @else {
-          <div class="bento-card flex flex-col gap-2 h-full" appCardHover>
-            <div class="flex items-start justify-between gap-3 mb-2">
-              <span class="text-xs font-semibold text-brand">PRÓXIMA</span>
-            </div>
-            <p class="flex items-baseline gap-1 m-0 truncate">
-              <span class="text-3xl md:text-4xl font-bold text-brand">
-                {{ proximaHora() }}
-              </span>
-            </p>
-            @if (clasesFacade.nextClass(); as next) {
-              <div class="flex items-center gap-1 mt-auto flex-wrap pt-2">
-                <span class="text-xs truncate text-text-muted">{{ next.studentName }}</span>
-              </div>
-            }
-          </div>
-        }
-      </div>
-
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Completadas (Mes)"
-          [value]="completadasMes()"
-          icon="check-circle"
-          color="success"
-          [loading]="horasFacade.isLoading()"
-        />
-      </div>
-
-      <div class="bento-square">
-        <app-kpi-card-variant
-          label="Horas Este Mes"
-          [value]="horasFacade.liquidacionKpis().totalHorasMes"
-          suffix=" hrs"
-          icon="clock"
-          [loading]="horasFacade.isLoading()"
-        />
-      </div>
-
       <!-- Main grid: clases + sidebar -->
       <div class="bento-banner" appScrollReveal>
         <div class="grid lg:grid-cols-3 gap-6">
@@ -360,6 +301,42 @@ export class InstructorDashboardComponent implements OnInit {
   readonly completadasMes = computed(
     () => this.horasFacade.monthlyHours()[0]?.practicalSessions ?? 0,
   );
+
+  /** KPIs del strip del hero slim (antes: 4 celdas `bento-square` sueltas). */
+  readonly heroKpis = computed<SectionHeroKpi[]>(() => [
+    {
+      id: 'clases-hoy',
+      label: 'Clases de Hoy',
+      value: this.clasesFacade.kpis().clasesHoy,
+      icon: 'calendar',
+    },
+    {
+      id: 'proxima',
+      label: 'Próxima',
+      value: this.proximaHora(),
+      icon: 'clock',
+      subValue: this.clasesFacade.nextClass()?.studentName,
+    },
+    {
+      id: 'completadas-mes',
+      label: 'Completadas (Mes)',
+      value: this.completadasMes(),
+      icon: 'check-circle',
+      color: 'success',
+    },
+    {
+      id: 'horas-mes',
+      // El strip del hero renderiza `{{ kpi.value }}` crudo, sin DecimalPipe —
+      // a diferencia de `app-kpi-card-variant`. Se formatea acá para no perder
+      // la coma decimal de es-CL al migrar a slim.
+      label: 'Horas Este Mes',
+      value: this.horasFacade
+        .liquidacionKpis()
+        .totalHorasMes.toLocaleString('es-CL', { maximumFractionDigits: 1 }),
+      suffix: ' hrs',
+      icon: 'clock',
+    },
+  ]);
 
   readonly heroActions: SectionHeroAction[] = [
     {

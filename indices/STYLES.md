@@ -203,7 +203,7 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--ds-brand` | 455 | `#38bdf8` |
 | `--text-muted` | 404 | `rgba(255, 255, 255, 0.55)` |
 | `--text-primary` | 264 | `var(--color-primary-text)` |
-| `--text-secondary` | 227 | `rgba(255, 255, 255, 0.78)` |
+| `--text-secondary` | 228 | `rgba(255, 255, 255, 0.78)` |
 | `--border-subtle` | 220 | `rgba(255, 255, 255, 0.18)` |
 | `--state-error` | 214 | `#f87171` |
 | `--bg-surface` | 201 | `#18181b` |
@@ -218,9 +218,9 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 | `--radius-md` | 57 | `10px` |
 | `--font-display` | 53 | `'Bricolage Grotesque', system-ui, sans-serif` |
 | `--border-muted` | 51 | `var(--border-subtle)` |
+| `--color-primary-muted` | 46 | `rgba(56, 189, 248, 0.15)` |
 | `--bg-base` | 46 | `#09090b` |
 | `--text-xs` | 45 | `0.75rem` |
-| `--color-primary-muted` | 44 | `rgba(56, 189, 248, 0.15)` |
 | `--color-primary-text` | 43 | `#ffffff` |
 | `--color-success` | 39 | `—` |
 | `--state-error-bg` | 25 | `rgba(248, 113, 113, 0.1)` |
@@ -332,8 +332,8 @@ Fuente única de verdad para los campos de formulario (drawers/modales/páginas)
 
 | Categoría | Usos | Interpretación |
 |-----------|------|----------------|
-| Tamaño display (`text-4xl/3xl/2xl`) | 56 | Candidatas a `.kpi-value` o heading semántico |
-| Peso de fuente (`font-bold/semibold`) | 1194 | Informativo — legítimo en botones/headers/títulos |
+| Tamaño display (`text-4xl/3xl/2xl`) | 54 | Candidatas a `.kpi-value` o heading semántico |
+| Peso de fuente (`font-bold/semibold`) | 1192 | Informativo — legítimo en botones/headers/títulos |
 
 ### Clusters repetidos (candidatos a clase semántica)
 
